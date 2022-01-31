@@ -37,14 +37,23 @@ from modin.pandas.test.utils import (
     eval_general,
     generate_multiindex,
     extra_test_parameters,
+    default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
 from modin.utils import get_current_execution
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+# TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
+# of defaulting to pandas.
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 def eval_setitem(md_df, pd_df, value, col=None, loc=None):
@@ -675,7 +684,7 @@ def test_reindex_like():
         columns=["temp_celsius", "windspeed"],
         index=pd.DatetimeIndex(["2014-02-12", "2014-02-13", "2014-02-15"]),
     )
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df2.reindex_like(df1)
 
 
@@ -1420,7 +1429,7 @@ def test_xs():
     }
     df = pd.DataFrame(data=d)
     df = df.set_index(["class", "animal", "locomotion"])
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df.xs("mammal")
 
 
@@ -1727,6 +1736,16 @@ def test___setitem__single_item_in_series():
     modin_series[:1] = pd.Series(100)
     pandas_series[:1] = pandas.Series(100)
     df_equals(modin_series, pandas_series)
+
+
+def test___setitem__assigning_single_categorical_sets_correct_dtypes():
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/3895
+    modin_df = pd.DataFrame({"categories": ["A"]})
+    modin_df["categories"] = pd.Categorical(["A"])
+    pandas_df = pandas.DataFrame({"categories": ["A"]})
+    pandas_df["categories"] = pandas.Categorical(["A"])
+    df_equals(modin_df, pandas_df)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

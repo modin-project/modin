@@ -31,10 +31,18 @@ from .utils import (
     test_groupby_data,
     dict_equals,
     value_equals,
+    default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
 
 NPartitions.put(4)
+
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+# TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
+# of defaulting to pandas.
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):
@@ -77,7 +85,7 @@ def build_types_asserter(comparator):
 
 @pytest.mark.parametrize("as_index", [True, False])
 def test_mixed_dtypes_groupby(as_index):
-    frame_data = np.random.randint(97, 198, size=(2 ** 6, 2 ** 4))
+    frame_data = np.random.randint(97, 198, size=(2**6, 2**4))
     pandas_df = pandas.DataFrame(frame_data).add_prefix("col")
     # Convert every other column to string
     for col in pandas_df.iloc[
@@ -173,7 +181,7 @@ def test_mixed_dtypes_groupby(as_index):
             {"col2": sum},
             {"col2": "max", "col4": "sum", "col5": "min"},
             {"col2": max, "col4": sum, "col5": "min"},
-            # Intersection of 'by' and agg cols for MapReduce impl
+            # Intersection of 'by' and agg cols for TreeReduce impl
             {"col0": "count", "col1": "count", "col2": "count"},
             # Intersection of 'by' and agg cols for FullAxis impl
             {"col0": "nunique", "col1": "nunique", "col2": "nunique"},
@@ -308,6 +316,9 @@ def test_simple_row_groupby(by, as_index, col1_category):
 
     if col1_category:
         pandas_df = pandas_df.astype({"col1": "category"})
+        # As of pandas 1.4.0 operators like min cause TypeErrors to be raised on unordered
+        # categorical columns. We need to specify the categorical column as ordered to bypass this.
+        pandas_df["col1"] = pandas_df["col1"].cat.as_ordered()
 
     modin_df = from_pandas(pandas_df)
     n = 1
@@ -383,7 +394,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
         "max",
         min,
         sum,
-        # Intersection of 'by' and agg cols for MapReduce impl
+        # Intersection of 'by' and agg cols for TreeReduce impl
         {"col1": "count", "col2": "count"},
         # Intersection of 'by' and agg cols for FullAxis impl
         {"col1": "nunique", "col2": "nunique"},
@@ -874,13 +885,13 @@ def test_simple_col_groupby():
 
 
 @pytest.mark.parametrize(
-    "by", [np.random.randint(0, 100, size=2 ** 8), lambda x: x % 3, None]
+    "by", [np.random.randint(0, 100, size=2**8), lambda x: x % 3, None]
 )
 @pytest.mark.parametrize("as_index_series_or_dataframe", [0, 1, 2])
 def test_series_groupby(by, as_index_series_or_dataframe):
     if as_index_series_or_dataframe <= 1:
         as_index = as_index_series_or_dataframe == 1
-        series_data = np.random.randint(97, 198, size=2 ** 8)
+        series_data = np.random.randint(97, 198, size=2**8)
         modin_series = pd.Series(series_data)
         pandas_series = pandas.Series(series_data)
     else:
@@ -1281,7 +1292,7 @@ def eval_shift(modin_groupby, pandas_groupby):
 
 
 def test_groupby_on_index_values_with_loop():
-    length = 2 ** 6
+    length = 2**6
     data = {
         "a": np.random.randint(0, 100, size=length),
         "b": np.random.randint(0, 100, size=length),
@@ -1321,7 +1332,7 @@ def test_groupby_on_index_values_with_loop():
     ],
 )
 def test_groupby_multiindex(groupby_kwargs):
-    frame_data = np.random.randint(0, 100, size=(2 ** 6, 2 ** 4))
+    frame_data = np.random.randint(0, 100, size=(2**6, 2**4))
     modin_df = pd.DataFrame(frame_data)
     pandas_df = pandas.DataFrame(frame_data)
 
@@ -1389,13 +1400,14 @@ def test_groupby_with_kwarg_dropna(groupby_kwargs, dropna):
         modin_df = modin_df.T
         pandas_df = pandas_df.T
 
-    md_grp, pd_grp = modin_df.groupby(
-        **groupby_kwargs, dropna=dropna
-    ), pandas_df.groupby(**groupby_kwargs, dropna=dropna)
+    md_grp, pd_grp = (
+        modin_df.groupby(**groupby_kwargs, dropna=dropna),
+        pandas_df.groupby(**groupby_kwargs, dropna=dropna),
+    )
     modin_groupby_equals_pandas(md_grp, pd_grp)
 
     by_kwarg = groupby_kwargs.get("by", [])
-    # Disabled because of broken `dropna=False` for MapReduce implemented aggs:
+    # Disabled because of broken `dropna=False` for TreeReduce implemented aggs:
     # https://github.com/modin-project/modin/issues/3817
     if not (
         not dropna
@@ -1525,7 +1537,7 @@ def test_agg_func_None_rename(by_and_agg_dict, as_index):
 @pytest.mark.parametrize(
     "agg_fns",
     [["sum", "min", "max"], ["mean", "quantile"]],
-    ids=["reduction", "aggregation"],
+    ids=["reduce", "aggregation"],
 )
 @pytest.mark.parametrize(
     "intersection_with_by_cols",
@@ -1791,7 +1803,7 @@ def test_unknown_groupby(columns):
                     list(test_data_values[0].keys())[-1]: (sum, min, max),
                 }
             ),
-            id="Agg_and_by_intersection_MapReduce_implementation",
+            id="Agg_and_by_intersection_TreeReduce_implementation",
         ),
         pytest.param(
             lambda grp: grp.agg(

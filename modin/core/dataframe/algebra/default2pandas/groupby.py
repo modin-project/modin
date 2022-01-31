@@ -88,21 +88,18 @@ class GroupBy:
         """
         inplace_args = [] if func is None else [func]
 
-        def inplace_applyier(grp, **func_kwargs):
-            return key(grp, *inplace_args, **func_kwargs)
+        def inplace_applyier(grp, *func_args, **func_kwargs):
+            return key(grp, *inplace_args, *func_args, **func_kwargs)
 
         return inplace_applyier
 
     @classmethod
-    # FIXME: `grp` parameter is redundant and should be removed
-    def get_func(cls, grp, key, **kwargs):
+    def get_func(cls, key, **kwargs):
         """
         Extract aggregation function from groupby arguments.
 
         Parameters
         ----------
-        grp : pandas.DataFrameGroupBy
-            GroupBy object to apply aggregation on.
         key : callable or str
             Default aggregation function. If aggregation function is not specified
             via groupby arguments, then `key` function is used.
@@ -116,14 +113,14 @@ class GroupBy:
 
         Notes
         -----
-        There is two ways of how groupby aggregation can be invoked:
+        There are two ways of how groupby aggregation can be invoked:
             1. Explicitly with query compiler method: `qc.groupby_sum()`.
             2. By passing aggregation function as an argument: `qc.groupby_agg("sum")`.
         Both are going to produce the same result, however in the first case actual aggregation
         function can be extracted from the method name, while for the second only from the method arguments.
         """
         if "agg_func" in kwargs:
-            return kwargs["agg_func"]
+            return cls.inplace_applyier_builder(key, kwargs["agg_func"])
         elif "func_dict" in kwargs:
             return cls.inplace_applyier_builder(key, kwargs["func_dict"])
         else:
@@ -149,23 +146,19 @@ class GroupBy:
         def fn(
             df,
             by,
-            groupby_args,
+            axis,
+            groupby_kwargs,
             agg_args,
-            axis=0,
-            is_multi_by=None,
+            agg_kwargs,
             drop=False,
-            **kwargs
+            **kwargs,
         ):
             """Group DataFrame and apply aggregation function to each group."""
             by = cls.validate_by(by)
 
-            grp = df.groupby(by, axis=axis, **groupby_args)
-            agg_func = cls.get_func(grp, key, **kwargs)
-            result = (
-                grp.agg(agg_func, **agg_args)
-                if isinstance(agg_func, dict)
-                else agg_func(grp, **agg_args)
-            )
+            grp = df.groupby(by, axis=axis, **groupby_kwargs)
+            agg_func = cls.get_func(key, **kwargs)
+            result = agg_func(grp, *agg_args, **agg_kwargs)
 
             return result
 
@@ -189,24 +182,18 @@ class GroupBy:
         """
 
         def fn(
-            df,
-            by,
-            axis,
-            groupby_args,
-            map_args,
-            numeric_only=True,
-            drop=False,
-            **kwargs
+            df, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False, **kwargs
         ):
             """Group DataFrame and apply aggregation function to each group."""
             if not isinstance(by, (pandas.Series, pandas.DataFrame)):
                 by = cls.validate_by(by)
-                return agg_func(
-                    df.groupby(by=by, axis=axis, **groupby_args), **map_args
+                grp = df.groupby(by, axis=axis, **groupby_kwargs)
+                grp_agg_func = cls.get_func(agg_func, **kwargs)
+                return grp_agg_func(
+                    grp,
+                    *agg_args,
+                    **agg_kwargs,
                 )
-
-            if numeric_only:
-                df = df.select_dtypes(include="number")
 
             if isinstance(by, pandas.DataFrame):
                 by = by.squeeze(axis=1)
@@ -221,12 +208,13 @@ class GroupBy:
                 df = pandas.concat([df] + [by[[o for o in by if o not in df]]], axis=1)
                 by = list(by.columns)
 
-            groupby_args = groupby_args.copy()
-            as_index = groupby_args.pop("as_index", True)
-            groupby_args["as_index"] = True
+            groupby_kwargs = groupby_kwargs.copy()
+            as_index = groupby_kwargs.pop("as_index", True)
+            groupby_kwargs["as_index"] = True
 
-            grp = df.groupby(by, axis=axis, **groupby_args)
-            result = agg_func(grp, **map_args)
+            grp = df.groupby(by, axis=axis, **groupby_kwargs)
+            func = cls.get_func(agg_func, **kwargs)
+            result = func(grp, *agg_args, **agg_kwargs)
 
             if isinstance(result, pandas.Series):
                 result = result.to_frame()
@@ -550,3 +538,35 @@ class GroupByDefault(DefaultMethod):
             aggregation.
         """
         return cls.call(GroupBy.build_groupby(func), fn_name=func.__name__, **kwargs)
+
+    # This specifies a `pandas.DataFrameGroupBy` method to pass the `agg_func` to,
+    # it's based on `how` to apply it. Going by pandas documentation:
+    #   1. `.aggregate(func)` applies func row/column wise.
+    #   2. `.apply(func)` applies func to a DataFrames, holding a whole group (group-wise).
+    #   3. `.transform(func)` is the same as `.apply()` but also broadcast the `func`
+    #      result to the group's original shape.
+    __aggregation_methods_dict = {
+        "axis_wise": pandas.core.groupby.DataFrameGroupBy.aggregate,
+        "group_wise": pandas.core.groupby.DataFrameGroupBy.apply,
+        "transform": pandas.core.groupby.DataFrameGroupBy.transform,
+    }
+
+    @classmethod
+    def get_aggregation_method(cls, how):
+        """
+        Return `pandas.DataFrameGroupBy` method that implements the passed `how` UDF applying strategy.
+
+        Parameters
+        ----------
+        how : {"axis_wise", "group_wise", "transform"}
+            `how` parameter of the ``BaseQueryCompiler.groupby_agg``.
+
+        Returns
+        -------
+        callable(pandas.DataFrameGroupBy, callable, *args, **kwargs) -> [pandas.DataFrame | pandas.Series]
+
+        Notes
+        -----
+        Visit ``BaseQueryCompiler.groupby_agg`` doc-string for more information about `how` parameter.
+        """
+        return cls.__aggregation_methods_dict[how]

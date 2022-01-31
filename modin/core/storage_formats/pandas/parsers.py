@@ -189,6 +189,9 @@ class PandasParser(object):
 
             bio.seek(start)
             to_read = header + bio.read(end - start)
+        if "memory_map" in kwargs:
+            kwargs = kwargs.copy()
+            del kwargs["memory_map"]
         pandas_df = callback(BytesIO(to_read), **kwargs)
         index = (
             pandas_df.index
@@ -509,14 +512,14 @@ class PandasExcelParser(PandasParser):
             """
             b = match.group(0)
             return re.sub(
-                br"\d+",
+                rb"\d+",
                 lambda c: str(int(c.group(0).decode("utf-8")) - _skiprows).encode(
                     "utf-8"
                 ),
                 b,
             )
 
-        bytes_data = re.sub(br'r="[A-Z]*\d+"', update_row_nums, bytes_data)
+        bytes_data = re.sub(rb'r="[A-Z]*\d+"', update_row_nums, bytes_data)
         bytesio = BytesIO(excel_header + bytes_data + footer)
         # Use openpyxl to read/parse sheet data
         reader = WorksheetReader(ws, bytesio, ex.shared_strings, False)

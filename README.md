@@ -3,7 +3,7 @@
 
 <p align="center">
 <a href="https://discuss.modin.org"><img alt="" src="https://img.shields.io/badge/discourse-forum-purple.svg?logo=discourse&logoColor=white" align="center"></a>
-<a href='https://modin.org/slack.html'><img src='https://img.shields.io/static/v1?label=chat&logo=slack&message=Slack&color=brightgreen' alt='Slack'  align="center"/></a>
+<a href='https://join.slack.com/t/modin-project/shared_invite/zt-yvk5hr3b-f08p_ulbuRWsAfg9rMY3uA'><img src='https://img.shields.io/static/v1?label=chat&logo=slack&message=Slack&color=brightgreen' alt='Slack'  align="center"/></a>
 <a href="https://codecov.io/gh/modin-project/modin"><img src="https://codecov.io/gh/modin-project/modin/branch/master/graph/badge.svg" align="center"/></a>
 <a href="https://github.com/modin-project/modin/actions"><img src="https://github.com/modin-project/modin/workflows/master/badge.svg" align="center"></a>
 <a href="https://modin.readthedocs.io/en/latest/?badge=latest"><img alt="" src="https://readthedocs.org/projects/modin/badge/?version=latest" align="center"></a>
@@ -13,7 +13,10 @@
 
 ### What is Modin?
 
-Modin is a drop-in replacement for [pandas](https://github.com/pandas-dev/pandas) that scales the single-threaded pandas to become multi-threaded, using all of your cores and offering instant speedup to your workflows. Modin works especially well on larger datasets, where pandas becomes painfully slow or runs out of memory.
+Modin is a drop-in replacement for [pandas](https://github.com/pandas-dev/pandas). While pandas is
+single-threaded, Modin lets you instantly speed up your workflows by scaling pandas so it uses all of your
+cores. Modin works especially well on larger datasets, where pandas becomes painfully slow or runs
+[out of memory](https://modin.readthedocs.io/en/latest/getting_started/why_modin/out_of_core.html).
 
 Using modin is as simple as replacing the pandas import:
 
@@ -26,7 +29,7 @@ import modin.pandas as pd
 
 #### From PyPI
 
-Modin can be installed with `pip`:
+Modin can be installed with `pip` on Linux, Windows and MacOS:
 
 ```bash
 pip install modin[all] # (Recommended) Install Modin with all of Modin's currently supported engines.
@@ -43,8 +46,9 @@ Modin automatically detects which engine(s) you have installed and uses that for
 
 #### From conda-forge
 
-Installing from conda forge using `modin-all` will install Modin and 3 engines: ([Ray](https://github.com/ray-project/ray),
-[Dask](https://github.com/dask/dask) and [Omnisci](https://modin.readthedocs.io/en/latest/UsingOmnisci/index.html))
+Installing from [conda forge](https://github.com/conda-forge/modin-feedstock) using `modin-all`
+will install Modin and three engines: [Ray](https://github.com/ray-project/ray),
+[Dask](https://github.com/dask/dask), and [Omnisci](https://www.omnisci.com/platform/omniscidb).
 
 ```bash
 conda install -c conda-forge modin-all
@@ -57,6 +61,40 @@ conda install -c conda-forge modin-ray  # Install Modin dependencies and Ray.
 conda install -c conda-forge modin-dask # Install Modin dependencies and Dask.
 conda install -c conda-forge modin-omnisci # Install Modin dependencies and Omnisci.
 ```
+
+#### Choosing a Compute Engine
+
+If you want to choose a specific compute engine to run on, you can set the environment
+variable `MODIN_ENGINE` and Modin will do computation with that engine:
+
+```bash
+export MODIN_ENGINE=ray  # Modin will use Ray
+export MODIN_ENGINE=dask  # Modin will use Dask
+```
+
+This can also be done within a notebook/interpreter before you import Modin:
+
+```python
+from modin.config import Engine
+
+Engine.put("ray")  # Modin will use Ray
+Engine.put("dask")  # Modin will use Dask
+```
+
+Check [this Modin docs section](https://modin.readthedocs.io/en/latest/development/using_omnisci.html) for Omnisci engine setup.
+
+_Note: You should not change the engine after your first operation with Modin as it will result in undefined behavior._
+
+#### Which engine should I use?
+
+On Linux, MacOS, and Windows you can install and use either Ray or Dask. There is no knowledge required
+to use either of these engines as Modin abstracts away all of the complexity, so feel
+free to pick either!
+
+On Linux you also can choose [Omnisci](https://modin.readthedocs.io/en/latest/development/using_omnisci.html), which is an experimental
+engine based on [OmnisciDB](https://www.omnisci.com/platform/omniscidb) and included in the
+[Intel® Distribution of Modin](https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html),
+which is a part of [Intel® oneAPI AI Analytics Toolkit (AI Kit)](https://www.intel.com/content/www/us/en/developer/tools/oneapi/ai-analytics-toolkit.html).
 
 ### Pandas API Coverage
 
@@ -75,113 +113,37 @@ conda install -c conda-forge modin-omnisci # Install Modin dependencies and Omni
 | `pd.read_json`    | [✳️](https://github.com/modin-project/modin/issues/554)                                         | [✳️](https://github.com/modin-project/modin/issues/554) |
 | `pd.read_<other>` | [✴️](https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html) | [✴️](https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html) |
 
-
 </p>
-Some pandas APIs are easier to implement than other, so if something is missing feel
+Some pandas APIs are easier to implement than others, so if something is missing feel
 free to open an issue!
 
+### More about Modin
 
-##### Choosing a Compute Engine
+For the complete documentation on Modin, visit our [ReadTheDocs](https://modin.readthedocs.io/en/latest/index.html) page.
 
-If you want to choose a specific compute engine to run on, you can set the environment
-variable `MODIN_ENGINE` and Modin will do computation with that engine:
+#### Scale your pandas workflow by changing a single line of code.
 
-```bash
-export MODIN_ENGINE=ray  # Modin will use Ray
-export MODIN_ENGINE=dask  # Modin will use Dask
-```
+_Note: In local mode (without a cluster), Modin will create and manage a local (Dask or Ray) cluster for the execution._
 
-This can also be done within a notebook/interpreter before you import Modin:
-
-```python
-import os
-
-os.environ["MODIN_ENGINE"] = "ray"  # Modin will use Ray
-os.environ["MODIN_ENGINE"] = "dask"  # Modin will use Dask
-
-import modin.pandas as pd
-```
-
-Check [this Modin docs section](https://modin.readthedocs.io/en/latest/UsingOmnisci/index.html) for Omnisci engine setup.
-
-**Note: You should not change the engine after you have imported Modin as it will result in undefined behavior**
-
-##### Which engine should I use?
-
-If you are on Windows, you must use Dask. Ray does not support Windows. If you are on
-Linux or Mac OS, you can install and use either engine. There is no knowledge required
-to use either of these engines as Modin abstracts away all of the complexity, so feel
-free to pick either!
-
-On Linux you also can choose [Omnisci](https://modin.readthedocs.io/en/latest/UsingOmnisci/index.html) which is an experimental
-engine based on [OmnisciDB](https://www.omnisci.com/platform/omniscidb) and included into [Intel® Distribution of Modin](https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html) which is a part of [Intel® oneAPI AI Analytics Toolkit (AI Kit)](https://www.intel.com/content/www/us/en/developer/tools/oneapi/ai-analytics-toolkit.html)
-
-##### Advanced usage
-
-In Modin, you can start a custom environment in Dask or Ray and Modin will connect to
-that environment automatically. For example, if you'd like to limit the amount of
-resources that Modin uses, you can start a Dask Client or Initialize Ray and Modin will
-use those instances. Make sure you've set the correct environment variable so Modin
-knows which engine to connect to!
-
-For Ray:
-```python
-import ray
-ray.init(plasma_directory="/path/to/custom/dir", object_store_memory=10**10)
-# Modin will connect to the existing Ray environment
-import modin.pandas as pd
-```
-
-For Dask:
-```python
-from distributed import Client
-client = Client(n_workers=6)
-# Modin will connect to the Dask Client
-import modin.pandas as pd
-```
-
-This gives you the flexibility to start with custom resource constraints and limit the
-amount of resources Modin uses.
-
-
-### Full Documentation
-
-Visit the complete documentation on readthedocs: https://modin.readthedocs.io
-
-### Scale your pandas workflow by changing a single line of code.
-
-
-```python
-import modin.pandas as pd
-import numpy as np
-
-frame_data = np.random.randint(0, 100, size=(2**10, 2**8))
-df = pd.DataFrame(frame_data)
-```
-**In local (without a cluster) modin will create and manage a local (dask or ray) cluster for the execution**
-
-
-To use Modin, you do not need to know how many cores your system has and you do not need
-to  specify how to distribute the data. In fact, you can continue using your previous
+To use Modin, you do not need to specify how to distribute the data, or even know how many
+cores your system has. In fact, you can continue using your previous
 pandas notebooks while experiencing a considerable speedup from Modin, even on a single
 machine. Once you've changed your import statement, you're ready to use Modin just like
-you would pandas.
-
+you would with pandas!
 
 #### Faster pandas, even on your laptop
 
 <img align="right" style="display:inline;" height="350" width="300" src="https://github.com/modin-project/modin/blob/master/docs/img/read_csv_benchmark.png?raw=true"></a>
 
-The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame. Modin 
-transparently distributes the data and computation so that all you need to do is
-continue using the pandas API as you were before installing Modin. Unlike other parallel
-DataFrame systems, Modin is an extremely light-weight, robust DataFrame. Because it is
-so light-weight, Modin provides speed-ups of up to 4x on a laptop with 4 physical cores.
+The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame.
+Modin transparently distributes the data and computation so that you can continue using the same pandas API
+while working with more data faster. Because it is so light-weight,
+Modin provides speed-ups of up to 4x on a laptop with 4 physical cores.
 
 In pandas, you are only able to use one core at a time when you are doing computation of
-any kind. With Modin, you are able to use all of the CPU cores on your machine. Even in
-`read_csv`, we see large gains by efficiently distributing the work across your entire
-machine.
+any kind. With Modin, you are able to use all of the CPU cores on your machine. Even with a
+traditionally synchronous task like `read_csv`, we see large speedups by efficiently
+distributing the work across your entire machine.
 
 ```python
 import modin.pandas as pd
@@ -189,36 +151,62 @@ import modin.pandas as pd
 df = pd.read_csv("my_dataset.csv")
 ```
 
-#### Modin is a DataFrame designed for datasets from 1MB to 1TB+ 
+#### Modin can handle the datasets that pandas can't 
 
-We have focused heavily on bridging the solutions between DataFrames for small data 
-(e.g. pandas) and large data. Often data scientists require different tools for doing
-the same thing on different sizes of data. The DataFrame solutions that exist for 1KB do
-not scale to 1TB+, and the overheads of the solutions for 1TB+ are too costly for 
-datasets in the 1KB range. With Modin, because of its light-weight, robust, and scalable
-nature, you get a fast DataFrame at small and large data. With preliminary [cluster](https://modin.readthedocs.io/en/latest/using_modin.html#using-modin-on-a-cluster)
-and [out of core](https://modin.readthedocs.io/en/latest/out_of_core.html)
-support, Modin is a DataFrame library with great single-node performance and high
+Often data scientists have to switch between different tools
+for operating on datasets of different sizes. Processing large dataframes with pandas
+is slow, and pandas does not support working with dataframes that are too large to fit
+into the available memory. As a result, pandas workflows that work well
+for prototyping on a few MBs of data do not scale to tens or hundreds of GBs (depending on the size
+of your machine). Modin supports operating on data that does not fit in memory, so that you can comfortably
+work with hundreds of GBs without worrying about substantial slowdown or memory errors.
+With [cluster](https://modin.readthedocs.io/en/latest/getting_started/using_modin/using_modin_cluster.html)
+and [out of core](https://modin.readthedocs.io/en/latest/getting_started/why_modin/out_of_core.html)
+support, Modin is a DataFrame library with both great single-node performance and high
 scalability in a cluster.
 
 #### Modin Architecture
 
-We designed Modin to be modular so we can plug in different components as they develop
-and improve:
+We designed [Modin's architecture](https://modin.readthedocs.io/en/latest/development/architecture.html)
+to be modular so we can plug in different components as they develop and improve:
 
-![Architecture](docs/img/modin_architecture.png)
+<img src="docs/img/modin_architecture.png" alt="Modin's architecture" width="75%"></img>
 
-Visit the [Documentation](https://modin.readthedocs.io/en/latest/developer/architecture.html) for
-more information, and checkout [the difference between Modin and Dask!](https://github.com/modin-project/modin/tree/master/docs/modin_vs_dask.md)
+### Other Resources
 
-**`modin.pandas` is currently under active development. Requests and contributions are welcome!**
+#### Getting Started with Modin
 
+- [Documentation](https://modin.readthedocs.io/en/latest/)
+- [10-min Quickstart Guide](https://modin.readthedocs.io/en/latest/getting_started/quickstart.html)
+- [Examples and Tutorials](https://modin.readthedocs.io/en/latest/getting_started/examples.html)
+- [Videos and Blogposts](https://modin.readthedocs.io/en/latest/getting_started/examples.html#talks-podcasts)
 
-### More information and Getting Involved
+#### Modin Community
 
-- Read the [documentation](https://modin.readthedocs.io/en/latest/) for more information.
-- Check out [our paper](http://www.vldb.org/pvldb/vol13/p2033-petersohn.pdf) to learn more about the theory underlying Modin.
-- Ask questions or participate in discussions on our [Discourse](https://discuss.modin.org).
-- Let us know how you're using Modin! Join our community [Slack](https://modin.org/slack.html) to discuss and ask questions.
-- Submit bug reports to our [GitHub Issues Page](https://github.com/modin-project/modin/issues).
-- Contributions are welcome! Open a [pull request](https://github.com/modin-project/modin/pulls).
+- [Slack](https://join.slack.com/t/modin-project/shared_invite/zt-yvk5hr3b-f08p_ulbuRWsAfg9rMY3uA)
+- [Discourse](https://discuss.modin.org)
+- [Twitter](https://twitter.com/modin_project)
+- [Mailing List](https://groups.google.com/g/modin-dev)
+- [GitHub Issues](https://github.com/modin-project/modin/issues)
+- [StackOverflow](https://stackoverflow.com/questions/tagged/modin)
+
+#### Learn More about Modin
+
+- [Frequently Asked Questions (FAQs)](https://modin.readthedocs.io/en/latest/getting_started/faq.html)
+- [Troubleshooting Guide](https://modin.readthedocs.io/en/latest/getting_started/troubleshooting.html)
+- [Development Guide](https://modin.readthedocs.io/en/latest/development/index.html)
+- Modin is built on many years of research and development at UC Berkeley. Check out these selected papers to learn more about how Modin works:
+  - [Flexible Rule-Based Decomposition and Metadata Independence in Modin](https://people.eecs.berkeley.edu/~totemtang/paper/Modin.pdf) (VLDB 2021)
+  - [Dataframe Systems: Theory, Architecture, and Implementation](https://www2.eecs.berkeley.edu/Pubs/TechRpts/2021/EECS-2021-193.pdf) (PhD Dissertation 2021)
+  - [Towards Scalable Dataframe Systems](https://arxiv.org/pdf/2001.00888.pdf) (VLDB 2020)
+
+#### Getting Involved
+
+***`modin.pandas` is currently under active development. Requests and contributions are welcome!***
+
+For more information on how to contribute to Modin, check out the
+[Modin Contribution Guide](https://modin.readthedocs.io/en/latest/development/contributing.html).
+
+### License
+
+[Apache License 2.0](LICENSE)

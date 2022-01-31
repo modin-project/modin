@@ -20,17 +20,20 @@ for pandas storage format.
 from collections import OrderedDict
 import numpy as np
 import pandas
+import datetime
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
-from typing import List, Hashable
+from typing import List, Hashable, Optional, Callable, Union, Dict
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.parsers import (
     find_common_type_cat as find_common_type,
 )
+from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
+from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
 from modin.pandas.indexing import is_range_like
-from modin.pandas.utils import is_full_grab_slice
+from modin.pandas.utils import is_full_grab_slice, check_both_not_none
 
 
 def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
@@ -261,7 +264,7 @@ class PandasDataframe(object):
 
     def _compute_dtypes(self):
         """
-        Compute the data types via MapReduce pattern.
+        Compute the data types via TreeReduce pattern.
 
         Returns
         -------
@@ -272,11 +275,11 @@ class PandasDataframe(object):
         def dtype_builder(df):
             return df.apply(lambda col: find_common_type(col.values), axis=0)
 
-        map_func = self._build_mapreduce_func(0, lambda df: df.dtypes)
-        reduce_func = self._build_mapreduce_func(0, dtype_builder)
+        map_func = self._build_treereduce_func(0, lambda df: df.dtypes)
+        reduce_func = self._build_treereduce_func(0, dtype_builder)
         # For now we will use a pandas Series for the dtypes.
         if len(self.columns) > 0:
-            dtypes = self.map_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
+            dtypes = self.tree_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
         else:
             dtypes = pandas.Series([])
         # reset name to None because we use "__reduced__" internally
@@ -529,32 +532,33 @@ class PandasDataframe(object):
                     for i in range(len(self._partitions))
                 ]
             )
+            self._deferred_column = False
+        else:
             ErrorMessage.catch_bugs_and_request_email(
                 axis is not None and axis not in [0, 1]
             )
-            self._deferred_column = False
 
     @lazy_metadata_decorator(apply_axis=None)
     def mask(
         self,
-        row_indices=None,
-        row_numeric_idx=None,
-        col_indices=None,
-        col_numeric_idx=None,
-    ):
+        row_labels: Optional[List[Hashable]] = None,
+        row_positions: Optional[List[int]] = None,
+        col_labels: Optional[List[Hashable]] = None,
+        col_positions: Optional[List[int]] = None,
+    ) -> "PandasDataframe":
         """
         Lazily select columns or rows from given indices.
 
         Parameters
         ----------
-        row_indices : list of hashable, optional
+        row_labels : list of hashable, optional
             The row labels to extract.
-        row_numeric_idx : list-like of ints, optional
-            The row indices to extract.
-        col_indices : list of hashable, optional
+        row_positions : list-like of ints, optional
+            The row positions to extract.
+        col_labels : list of hashable, optional
             The column labels to extract.
-        col_numeric_idx : list-like of ints, optional
-            The column indices to extract.
+        col_positions : list-like of ints, optional
+            The column positions to extract.
 
         Returns
         -------
@@ -563,11 +567,19 @@ class PandasDataframe(object):
 
         Notes
         -----
-        If both `row_indices` and `row_numeric_idx` are set, `row_indices` will be used.
-        The same rule applied to `col_indices` and `col_numeric_idx`.
+        If both `row_labels` and `row_positions` are provided, a ValueError is raised.
+        The same rule applies for `col_labels` and `col_positions`.
         """
+        if check_both_not_none(row_labels, row_positions):
+            raise ValueError(
+                "Both row_labels and row_positions were provided - please provide only one of row_labels and row_positions."
+            )
+        if check_both_not_none(col_labels, col_positions):
+            raise ValueError(
+                "Both col_labels and col_positions were provided - please provide only one of col_labels and col_positions."
+            )
         indexers = []
-        for axis, indexer in enumerate((row_numeric_idx, col_numeric_idx)):
+        for axis, indexer in enumerate((row_positions, col_positions)):
             if is_range_like(indexer):
                 if indexer.step == 1 and len(indexer) == len(self.axes[axis]):
                     # By this function semantics, `None` indexer is a full-axis access
@@ -584,22 +596,22 @@ class PandasDataframe(object):
                     extra_log=f"Mask takes only list-like numeric indexers, received: {type(indexer)}",
                 )
             indexers.append(indexer)
-        row_numeric_idx, col_numeric_idx = indexers
+        row_positions, col_positions = indexers
 
         if (
-            row_indices is None
-            and row_numeric_idx is None
-            and col_indices is None
-            and col_numeric_idx is None
+            col_labels is None
+            and col_positions is None
+            and row_labels is None
+            and row_positions is None
         ):
             return self.copy()
-        # Get numpy array of positions of values from `row_indices`
-        if row_indices is not None:
-            row_numeric_idx = self.index.get_indexer_for(row_indices)
-        if row_numeric_idx is not None:
+        # Get numpy array of positions of values from `row_labels`
+        if row_labels is not None:
+            row_positions = self.index.get_indexer_for(row_labels)
+        if row_positions is not None:
             # Get dict of row_parts as {row_index: row_internal_indices}
             # TODO: Rename `row_partitions_list`->`row_partitions_dict`
-            row_partitions_list = self._get_dict_of_block_index(0, row_numeric_idx)
+            row_partitions_list = self._get_dict_of_block_index(0, row_positions)
             new_row_lengths = [
                 len(
                     # Row lengths for slice are calculated as the length of the slice
@@ -613,10 +625,10 @@ class PandasDataframe(object):
             ]
             new_index = self.index[
                 # pandas Index is more likely to preserve its metadata if the indexer is slice
-                slice(row_numeric_idx.start, row_numeric_idx.stop, row_numeric_idx.step)
+                slice(row_positions.start, row_positions.stop, row_positions.step)
                 # TODO: Fast range processing of non-1-step ranges is not yet supported
-                if is_range_like(row_numeric_idx) and row_numeric_idx.step > 0
-                else sorted(row_numeric_idx)
+                if is_range_like(row_positions) and row_positions.step > 0
+                else sorted(row_positions)
             ]
         else:
             row_partitions_list = {
@@ -625,12 +637,12 @@ class PandasDataframe(object):
             new_row_lengths = self._row_lengths
             new_index = self.index
 
-        # Get numpy array of positions of values from `col_indices`
-        if col_indices is not None:
-            col_numeric_idx = self.columns.get_indexer_for(col_indices)
-        if col_numeric_idx is not None:
+        # Get numpy array of positions of values from `col_labels`
+        if col_labels is not None:
+            col_positions = self.columns.get_indexer_for(col_labels)
+        if col_positions is not None:
             # Get dict of col_parts as {col_index: col_internal_indices}
-            col_partitions_list = self._get_dict_of_block_index(1, col_numeric_idx)
+            col_partitions_list = self._get_dict_of_block_index(1, col_positions)
             new_col_widths = [
                 len(
                     # Column widths for slice are calculated as the length of the slice
@@ -644,17 +656,17 @@ class PandasDataframe(object):
             ]
             # Use the slice to calculate the new columns
             # TODO: Support fast processing of negative-step ranges
-            if is_range_like(col_numeric_idx) and col_numeric_idx.step > 0:
+            if is_range_like(col_positions) and col_positions.step > 0:
                 # pandas Index is more likely to preserve its metadata if the indexer is slice
                 monotonic_col_idx = slice(
-                    col_numeric_idx.start, col_numeric_idx.stop, col_numeric_idx.step
+                    col_positions.start, col_positions.stop, col_positions.step
                 )
             else:
-                monotonic_col_idx = sorted(col_numeric_idx)
+                monotonic_col_idx = sorted(col_positions)
             new_columns = self.columns[monotonic_col_idx]
             ErrorMessage.catch_bugs_and_request_email(
                 failure_condition=sum(new_col_widths) != len(new_columns),
-                extra_log=f"{sum(new_col_widths)} != {len(new_columns)}.\n{col_numeric_idx}\n{self._column_widths}\n{col_partitions_list}",
+                extra_log=f"{sum(new_col_widths)} != {len(new_columns)}.\n{col_positions}\n{self._column_widths}\n{col_partitions_list}",
             )
             if self._dtypes is not None:
                 new_dtypes = self.dtypes.iloc[monotonic_col_idx]
@@ -696,17 +708,17 @@ class PandasDataframe(object):
         # Check if monotonically increasing, return if it is. Fast track code path for
         # common case to keep it fast.
         if (
-            row_numeric_idx is None
+            row_positions is None
             # Fast range processing of non-1-step ranges is not yet supported
-            or (is_range_like(row_numeric_idx) and row_numeric_idx.step > 0)
-            or len(row_numeric_idx) == 1
-            or np.all(row_numeric_idx[1:] >= row_numeric_idx[:-1])
+            or (is_range_like(row_positions) and row_positions.step > 0)
+            or len(row_positions) == 1
+            or np.all(row_positions[1:] >= row_positions[:-1])
         ) and (
-            col_numeric_idx is None
+            col_positions is None
             # Fast range processing of non-1-step ranges is not yet supported
-            or (is_range_like(col_numeric_idx) and col_numeric_idx.step > 0)
-            or len(col_numeric_idx) == 1
-            or np.all(col_numeric_idx[1:] >= col_numeric_idx[:-1])
+            or (is_range_like(col_positions) and col_positions.step > 0)
+            or len(col_positions) == 1
+            or np.all(col_positions[1:] >= col_positions[:-1])
         ):
             return intermediate
         # The new labels are often smaller than the old labels, so we can't reuse the
@@ -715,22 +727,22 @@ class PandasDataframe(object):
         # We create a dictionary mapping the position of the numeric index with respect
         # to all others, then recreate that order by mapping the new order values from
         # the old. This information is sent to `_reorder_labels`.
-        if row_numeric_idx is not None:
+        if row_positions is not None:
             row_order_mapping = dict(
-                zip(sorted(row_numeric_idx), range(len(row_numeric_idx)))
+                zip(sorted(row_positions), range(len(row_positions)))
             )
-            new_row_order = [row_order_mapping[idx] for idx in row_numeric_idx]
+            new_row_order = [row_order_mapping[idx] for idx in row_positions]
         else:
             new_row_order = None
-        if col_numeric_idx is not None:
+        if col_positions is not None:
             col_order_mapping = dict(
-                zip(sorted(col_numeric_idx), range(len(col_numeric_idx)))
+                zip(sorted(col_positions), range(len(col_positions)))
             )
-            new_col_order = [col_order_mapping[idx] for idx in col_numeric_idx]
+            new_col_order = [col_order_mapping[idx] for idx in col_positions]
         else:
             new_col_order = None
         return intermediate._reorder_labels(
-            row_numeric_idx=new_row_order, col_numeric_idx=new_col_order
+            row_positions=new_row_order, col_positions=new_col_order
         )
 
     @lazy_metadata_decorator(apply_axis="rows")
@@ -825,28 +837,26 @@ class PandasDataframe(object):
         PandasDataframe
             A new PandasDataframe that has the updated labels.
         """
-        extracted_columns = self.mask(col_indices=column_list).to_pandas()
+        extracted_columns = self.mask(col_labels=column_list).to_pandas()
         if len(column_list) == 1:
             new_labels = pandas.Index(extracted_columns.squeeze(axis=1))
         else:
             new_labels = pandas.MultiIndex.from_frame(extracted_columns)
-        result = self.mask(
-            col_indices=[i for i in self.columns if i not in column_list]
-        )
+        result = self.mask(col_labels=[i for i in self.columns if i not in column_list])
         result.index = new_labels
         return result
 
     @lazy_metadata_decorator(apply_axis="both")
-    def _reorder_labels(self, row_numeric_idx=None, col_numeric_idx=None):
+    def _reorder_labels(self, row_positions=None, col_positions=None):
         """
         Reorder the column and or rows in this DataFrame.
 
         Parameters
         ----------
-        row_numeric_idx : list of int, optional
+        row_positions : list of int, optional
             The ordered list of new row orders such that each position within the list
             indicates the new position.
-        col_numeric_idx : list of int, optional
+        col_positions : list of int, optional
             The ordered list of new column orders such that each position within the
             list indicates the new position.
 
@@ -855,19 +865,19 @@ class PandasDataframe(object):
         PandasDataframe
             A new PandasDataframe with reordered columns and/or rows.
         """
-        if row_numeric_idx is not None:
+        if row_positions is not None:
             ordered_rows = self._partition_mgr_cls.map_axis_partitions(
-                0, self._partitions, lambda df: df.iloc[row_numeric_idx]
+                0, self._partitions, lambda df: df.iloc[row_positions]
             )
-            row_idx = self.index[row_numeric_idx]
+            row_idx = self.index[row_positions]
         else:
             ordered_rows = self._partitions
             row_idx = self.index
-        if col_numeric_idx is not None:
+        if col_positions is not None:
             ordered_cols = self._partition_mgr_cls.map_axis_partitions(
-                1, ordered_rows, lambda df: df.iloc[:, col_numeric_idx]
+                1, ordered_rows, lambda df: df.iloc[:, col_positions]
             )
-            col_idx = self.columns[col_numeric_idx]
+            col_idx = self.columns[col_positions]
         else:
             ordered_cols = ordered_rows
             col_idx = self.columns
@@ -995,13 +1005,13 @@ class PandasDataframe(object):
         PandasDataframe
             A new dataframe with the updated labels.
         """
-        new_labels = self.axes[axis].map(lambda x: str(prefix) + str(x))
-        new_frame = self.copy()
+
+        def new_labels_mapper(x, prefix=str(prefix)):
+            return prefix + str(x)
+
         if axis == 0:
-            new_frame.index = new_labels
-        else:
-            new_frame.columns = new_labels
-        return new_frame
+            return self.rename(new_row_labels=new_labels_mapper)
+        return self.rename(new_col_labels=new_labels_mapper)
 
     def add_suffix(self, suffix, axis):
         """
@@ -1019,13 +1029,13 @@ class PandasDataframe(object):
         PandasDataframe
             A new dataframe with the updated labels.
         """
-        new_labels = self.axes[axis].map(lambda x: str(x) + str(suffix))
-        new_frame = self.copy()
+
+        def new_labels_mapper(x, suffix=str(suffix)):
+            return str(x) + suffix
+
         if axis == 0:
-            new_frame.index = new_labels
-        else:
-            new_frame.columns = new_labels
-        return new_frame
+            return self.rename(new_row_labels=new_labels_mapper)
+        return self.rename(new_col_labels=new_labels_mapper)
 
     # END Metadata modification methods
 
@@ -1275,9 +1285,9 @@ class PandasDataframe(object):
     # These methods are for building the correct answer in a modular way.
     # Please be careful when changing these!
 
-    def _build_mapreduce_func(self, axis, func):
+    def _build_treereduce_func(self, axis, func):
         """
-        Properly formats a MapReduce result so that the partitioning is correct.
+        Properly formats a TreeReduce result so that the partitioning is correct.
 
         Parameters
         ----------
@@ -1293,16 +1303,16 @@ class PandasDataframe(object):
 
         Notes
         -----
-        This should be used for any MapReduce style operation that results in a
+        This should be used for any TreeReduce style operation that results in a
         reduced data dimensionality (dataframe -> series).
         """
 
-        def _map_reduce_func(df, *args, **kwargs):
-            """Map-reducer function itself executing `func`, presenting the resulting pandas.Series as pandas.DataFrame."""
+        def _tree_reduce_func(df, *args, **kwargs):
+            """Tree-reducer function itself executing `func`, presenting the resulting pandas.Series as pandas.DataFrame."""
             series_result = func(df, *args, **kwargs)
             if axis == 0 and isinstance(series_result, pandas.Series):
                 # In the case of axis=0, we need to keep the shape of the data
-                # consistent with what we have done. In the case of a reduction, the
+                # consistent with what we have done. In the case of a reduce, the
                 # data for axis=0 should be a single value for each column. By
                 # transposing the data after we convert to a DataFrame, we ensure that
                 # the columns of the result line up with the columns from the data.
@@ -1317,9 +1327,9 @@ class PandasDataframe(object):
                     result.columns = ["__reduced__"]
             return result
 
-        return _map_reduce_func
+        return _tree_reduce_func
 
-    def _compute_map_reduce_metadata(self, axis, new_parts):
+    def _compute_tree_reduce_metadata(self, axis, new_parts):
         """
         Compute the metadata for the result of reduce function.
 
@@ -1353,70 +1363,95 @@ class PandasDataframe(object):
         return result
 
     @lazy_metadata_decorator(apply_axis="both")
-    def fold_reduce(self, axis, func):
+    def reduce(
+        self,
+        axis: Union[int, Axis],
+        function: Callable,
+        dtypes: Optional[str] = None,
+    ) -> "PandasDataframe":
         """
-        Apply function that reduces Frame Manager to series but requires knowledge of full axis.
+        Perform a user-defined aggregation on the specified axis, where the axis reduces down to a singleton. Requires knowledge of the full axis for the reduction.
 
         Parameters
         ----------
-        axis : {0, 1}
-            The axis to apply the function to (0 - index, 1 - columns).
-        func : callable
-            The function to reduce the Manager by. This function takes in a Manager.
+        axis : int or modin.core.dataframe.base.utils.Axis
+            The axis to perform the reduce over.
+        function : callable(row|col) -> single value
+            The reduce function to apply to each column.
+        dtypes : str, optional
+            The data types for the result. This is an optimization
+            because there are functions that always result in a particular data
+            type, and this allows us to avoid (re)computing it.
 
         Returns
         -------
         PandasDataframe
             Modin series (1xN frame) containing the reduced data.
+
+        Notes
+        -----
+        The user-defined function must reduce to a single value.
         """
-        func = self._build_mapreduce_func(axis, func)
+        axis = Axis(axis)
+        function = self._build_treereduce_func(axis.value, function)
         new_parts = self._partition_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func
+            axis.value, self._partitions, function
         )
-        return self._compute_map_reduce_metadata(axis, new_parts)
+        return self._compute_tree_reduce_metadata(axis.value, new_parts)
 
     @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
-    def map_reduce(self, axis, map_func, reduce_func=None):
+    def tree_reduce(
+        self,
+        axis: Union[int, Axis],
+        map_func: Callable,
+        reduce_func: Optional[Callable] = None,
+        dtypes: Optional[str] = None,
+    ) -> "PandasDataframe":
         """
         Apply function that will reduce the data to a pandas Series.
 
         Parameters
         ----------
-        axis : {0, 1}
-            0 for columns and 1 for rows.
-        map_func : callable
+        axis : int or modin.core.dataframe.base.utils.Axis
+            The axis to perform the tree reduce over.
+        map_func : callable(row|col) -> row|col
             Callable function to map the dataframe.
-        reduce_func : callable, default: None
+        reduce_func : callable(row|col) -> single value, optional
             Callable function to reduce the dataframe.
             If none, then apply map_func twice.
+        dtypes : str, optional
+            The data types for the result. This is an optimization
+            because there are functions that always result in a particular data
+            type, and this allows us to avoid (re)computing it.
 
         Returns
         -------
         PandasDataframe
             A new dataframe.
         """
-        map_func = self._build_mapreduce_func(axis, map_func)
+        axis = Axis(axis)
+        map_func = self._build_treereduce_func(axis.value, map_func)
         if reduce_func is None:
             reduce_func = map_func
         else:
-            reduce_func = self._build_mapreduce_func(axis, reduce_func)
+            reduce_func = self._build_treereduce_func(axis.value, reduce_func)
 
         map_parts = self._partition_mgr_cls.map_partitions(self._partitions, map_func)
         reduce_parts = self._partition_mgr_cls.map_axis_partitions(
-            axis, map_parts, reduce_func
+            axis.value, map_parts, reduce_func
         )
-        return self._compute_map_reduce_metadata(axis, reduce_parts)
+        return self._compute_tree_reduce_metadata(axis.value, reduce_parts)
 
     @lazy_metadata_decorator(apply_axis=None)
-    def map(self, func, dtypes=None):
+    def map(self, func: Callable, dtypes: Optional[str] = None) -> "PandasDataframe":
         """
         Perform a function that maps across the entire dataset.
 
         Parameters
         ----------
-        func : callable
+        func : callable(row|col|cell) -> row|col|cell
             The function to apply.
-        dtypes : dtypes of the result, default: None
+        dtypes : dtypes of the result, optional
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
@@ -1441,6 +1476,41 @@ class PandasDataframe(object):
             self._column_widths_cache,
             dtypes=dtypes,
         )
+
+    def window(
+        self,
+        axis: Union[int, Axis],
+        reduce_fn: Callable,
+        window_size: int,
+        result_schema: Optional[Dict[Hashable, type]] = None,
+    ) -> "PandasDataframe":
+        """
+        Apply a sliding window operator that acts as a GROUPBY on each window, and reduces down to a single row (column) per window.
+
+        Parameters
+        ----------
+        axis : int or modin.core.dataframe.base.utils.Axis
+            The axis to slide over.
+        reduce_fn : callable(rowgroup|colgroup) -> row|col
+            The reduce function to apply over the data.
+        window_size : int
+            The number of row/columns to pass to the function.
+            (The size of the sliding window).
+        result_schema : dict, optional
+            Mapping from column labels to data types that represents the types of the output dataframe.
+
+        Returns
+        -------
+        PandasDataframe
+            A new PandasDataframe with the reduce function applied over windows of the specified
+                axis.
+
+        Notes
+        -----
+        The user-defined reduce function must reduce each window’s column
+        (row if axis=1) down to a single value.
+        """
+        pass
 
     @lazy_metadata_decorator(apply_axis="both")
     def fold(self, axis, func):
@@ -1474,16 +1544,162 @@ class PandasDataframe(object):
             self._column_widths,
         )
 
+    def infer_types(self, columns_list: List[str]) -> "PandasDataframe":
+        """
+        Determine the compatible type shared by all values in the specified columns, and coerce them to that type.
+
+        Parameters
+        ----------
+        columns_list : list
+            List of column labels to infer and induce types over.
+
+        Returns
+        -------
+        PandasDataframe
+            A new PandasDataframe with the inferred schema.
+        """
+        pass
+
+    def join(
+        self,
+        axis: Union[int, Axis],
+        condition: Callable,
+        other: ModinDataframe,
+        join_type: Union[str, JoinType],
+    ) -> "PandasDataframe":
+        """
+        Join this dataframe with the other.
+
+        Parameters
+        ----------
+        axis : int or modin.core.dataframe.base.utils.Axis
+            The axis to perform the join on.
+        condition : callable
+            Function that determines which rows should be joined. The condition can be a
+            simple equality, e.g. "left.col1 == right.col1" or can be arbitrarily complex.
+        other : ModinDataframe
+            The other data to join with, i.e. the right dataframe.
+        join_type : string {"inner", "left", "right", "outer"} or modin.core.dataframe.base.utils.JoinType
+            The type of join to perform.
+
+        Returns
+        -------
+        PandasDataframe
+            A new PandasDataframe that is the result of applying the specified join over the two
+            dataframes.
+
+        Notes
+        -----
+        During the join, this dataframe is considered the left, while the other is
+        treated as the right.
+
+        Only inner joins, left outer, right outer, and full outer joins are currently supported.
+        Support for other join types (e.g. natural join) may be implemented in the future.
+        """
+        pass
+
+    def rename(
+        self,
+        new_row_labels: Optional[Union[Dict[Hashable, Hashable], Callable]] = None,
+        new_col_labels: Optional[Union[Dict[Hashable, Hashable], Callable]] = None,
+        level: Optional[Union[int, List[int]]] = None,
+    ) -> "PandasDataframe":
+        """
+        Replace the row and column labels with the specified new labels.
+
+        Parameters
+        ----------
+        new_row_labels : dictionary or callable, optional
+            Mapping or callable that relates old row labels to new labels.
+        new_col_labels : dictionary or callable, optional
+            Mapping or callable that relates old col labels to new labels.
+        level : int, optional
+            Level whose row labels to replace.
+
+        Returns
+        -------
+        PandasDataframe
+            A new PandasDataframe with the new row and column labels.
+
+        Notes
+        -----
+        If level is not specified, the default behavior is to replace row labels in all levels.
+        """
+        new_index = self.index.copy()
+
+        def make_label_swapper(label_dict):
+            if isinstance(label_dict, dict):
+                return lambda label: label_dict.get(label, label)
+            return label_dict
+
+        def swap_labels_levels(index_tuple):
+            if isinstance(new_row_labels, dict):
+                return tuple(new_row_labels.get(label, label) for label in index_tuple)
+            return tuple(new_row_labels(label) for label in index_tuple)
+
+        if new_row_labels:
+            swap_row_labels = make_label_swapper(new_row_labels)
+            if isinstance(self.index, pandas.MultiIndex):
+                if level is not None:
+                    new_index.set_levels(
+                        new_index.levels[level].map(swap_row_labels), level
+                    )
+                else:
+                    new_index = new_index.map(swap_labels_levels)
+            else:
+                new_index = new_index.map(swap_row_labels)
+        new_cols = self.columns.copy()
+        if new_col_labels:
+            new_cols = new_cols.map(make_label_swapper(new_col_labels))
+
+        def map_fn(df):
+            return df.rename(index=new_row_labels, columns=new_col_labels, level=level)
+
+        new_parts = self._partition_mgr_cls.map_partitions(self._partitions, map_fn)
+        return self.__constructor__(
+            new_parts,
+            new_index,
+            new_cols,
+            self._row_lengths,
+            self._column_widths,
+            self._dtypes,
+        )
+
+    def sort_by(
+        self,
+        axis: Union[int, Axis],
+        columns: Union[str, List[str]],
+        ascending: bool = True,
+    ) -> "PandasDataframe":
+        """
+        Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
+
+        Parameters
+        ----------
+        axis : int or modin.core.dataframe.base.utils.Axis
+            The axis to perform the sort over.
+        columns : string or list
+            Column label(s) to use to determine lexicographical ordering.
+        ascending : boolean, default: True
+            Whether to sort in ascending or descending order.
+
+        Returns
+        -------
+        PandasDataframe
+            A new PandasDataframe sorted into lexicographical order by the specified column(s).
+        """
+        pass
+
     @lazy_metadata_decorator(apply_axis="both")
-    def filter_full_axis(self, axis, func):
+    def filter(self, axis: Union[Axis, int], condition: Callable) -> "PandasDataframe":
         """
         Filter data based on the function provided along an entire axis.
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.core.dataframe.base.utils.Axis
             The axis to filter over.
-        func : callable
+        condition : callable(row|col) -> bool
             The function to use for the filter. This function should filter the
             data itself.
 
@@ -1492,16 +1708,26 @@ class PandasDataframe(object):
         PandasDataframe
             A new filtered dataframe.
         """
+        axis = Axis(axis)
+        assert axis in (
+            Axis.ROW_WISE,
+            Axis.COL_WISE,
+        ), "Axis argument to filter operator must be 0 (rows) or 1 (columns)"
+
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func, keep_partitioning=True
+            axis.value, self._partitions, condition, keep_partitioning=True
         )
         new_axes, new_lengths = [0, 0], [0, 0]
 
-        new_axes[axis] = self.axes[axis]
-        new_axes[axis ^ 1] = self._compute_axis_labels(axis ^ 1, new_partitions)
+        new_axes[axis.value] = self.axes[axis.value]
+        new_axes[axis.value ^ 1] = self._compute_axis_labels(
+            axis.value ^ 1, new_partitions
+        )
 
-        new_lengths[axis] = self._axes_lengths[axis]
-        new_lengths[axis ^ 1] = None  # We do not know what the resulting widths will be
+        new_lengths[axis.value] = self._axes_lengths[axis.value]
+        new_lengths[
+            axis.value ^ 1
+        ] = None  # We do not know what the resulting widths will be
 
         return self.__constructor__(
             new_partitions,
@@ -1510,14 +1736,32 @@ class PandasDataframe(object):
             self.dtypes if axis == 0 else None,
         )
 
+    def filter_by_types(self, types: List[Hashable]) -> "PandasDataframe":
+        """
+        Allow the user to specify a type or set of types by which to filter the columns.
+
+        Parameters
+        ----------
+        types : list
+            The types to filter columns by.
+
+        Returns
+        -------
+        PandasDataframe
+             A new PandasDataframe from the filter provided.
+        """
+        return self.mask(
+            col_positions=[i for i, dtype in enumerate(self.dtypes) if dtype in types]
+        )
+
     @lazy_metadata_decorator(apply_axis="both")
-    def explode(self, axis, func):
+    def explode(self, axis: Union[int, Axis], func: Callable) -> "PandasDataframe":
         """
         Explode list-like entries along an entire axis.
 
         Parameters
         ----------
-        axis : int
+        axis : int or modin.core.dataframe.base.utils.Axis
             The axis specifying how to explode. If axis=1, explode according
             to columns.
         func : callable
@@ -1528,10 +1772,11 @@ class PandasDataframe(object):
         PandasFrame
             A new filtered dataframe.
         """
+        axis = Axis(axis)
         partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func, keep_partitioning=True
+            axis.value, self._partitions, func, keep_partitioning=True
         )
-        if axis == 1:
+        if axis == Axis.COL_WISE:
             new_index = self._compute_axis_labels(0, partitions)
             new_columns = self.columns
         else:
@@ -1654,8 +1899,8 @@ class PandasDataframe(object):
         axis,
         func,
         apply_indices=None,
-        row_indices=None,
-        col_indices=None,
+        row_labels=None,
+        col_labels=None,
         new_index=None,
         new_columns=None,
         keep_remaining=False,
@@ -1672,12 +1917,12 @@ class PandasDataframe(object):
             The function to apply.
         apply_indices : list-like, default: None
             The labels to apply over. Must be given if axis is provided.
-        row_indices : list-like, default: None
-            The row indices to apply over. Must be provided with
-            `col_indices` to apply over both axes.
-        col_indices : list-like, default: None
-            The column indices to apply over. Must be provided
-            with `row_indices` to apply over both axes.
+        row_labels : list-like, default: None
+            The row labels to apply over. Must be provided with
+            `col_labels` to apply over both axes.
+        col_labels : list-like, default: None
+            The column labels to apply over. Must be provided
+            with `row_labels` to apply over both axes.
         new_index : list-like, optional
             The index of the result. We may know this in advance,
             and if not provided it must be computed.
@@ -1731,11 +1976,11 @@ class PandasDataframe(object):
         else:
             # We are applying over both axes here, so make sure we have all the right
             # variables set.
-            assert row_indices is not None and col_indices is not None
+            assert row_labels is not None and col_labels is not None
             assert keep_remaining
             assert item_to_distribute is not None
-            row_partitions_list = self._get_dict_of_block_index(0, row_indices).items()
-            col_partitions_list = self._get_dict_of_block_index(1, col_indices).items()
+            row_partitions_list = self._get_dict_of_block_index(0, row_labels).items()
+            col_partitions_list = self._get_dict_of_block_index(1, col_labels).items()
             new_partitions = self._partition_mgr_cls.apply_func_to_indices_both_axis(
                 self._partitions,
                 func,
@@ -1998,7 +2243,7 @@ class PandasDataframe(object):
             axis=axis,
             left=self._partitions,
             right=other,
-            apply_func=self._build_mapreduce_func(axis, func),
+            apply_func=self._build_treereduce_func(axis, func),
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
             keep_partitioning=True,
@@ -2171,13 +2416,19 @@ class PandasDataframe(object):
         return self.__constructor__(new_frame, joined_index, new_columns, None, None)
 
     @lazy_metadata_decorator(apply_axis="both")
-    def concat(self, axis, others, how, sort):
+    def concat(
+        self,
+        axis: Union[int, Axis],
+        others: Union["PandasDataframe", List["PandasDataframe"]],
+        how,
+        sort,
+    ) -> "PandasDataframe":
         """
         Concatenate `self` with one or more other Modin DataFrames.
 
         Parameters
         ----------
-        axis : {0, 1}
+        axis : int or modin.core.dataframe.base.utils.Axis
             Axis to concatenate over.
         others : list
             List of Modin DataFrames to concatenate with.
@@ -2191,21 +2442,20 @@ class PandasDataframe(object):
         PandasDataframe
             New Modin DataFrame.
         """
+        axis = Axis(axis)
         # Fast path for equivalent columns and partitioning
         if (
-            axis == 0
+            axis == Axis.ROW_WISE
             and all(o.columns.equals(self.columns) for o in others)
             and all(o._column_widths == self._column_widths for o in others)
         ):
             joined_index = self.columns
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
-            new_lengths = self._row_lengths + [
-                length for o in others for length in o._row_lengths
-            ]
+            new_lengths = None
             new_widths = self._column_widths
         elif (
-            axis == 1
+            axis == Axis.COL_WISE
             and all(o.index.equals(self.index) for o in others)
             and all(o._row_lengths == self._row_lengths for o in others)
         ):
@@ -2218,12 +2468,14 @@ class PandasDataframe(object):
             ]
         else:
             left_parts, right_parts, joined_index = self._copartition(
-                axis ^ 1, others, how, sort, force_repartition=False
+                axis.value ^ 1, others, how, sort, force_repartition=False
             )
             new_lengths = None
             new_widths = None
-        new_partitions = self._partition_mgr_cls.concat(axis, left_parts, right_parts)
-        if axis == 0:
+        new_partitions = self._partition_mgr_cls.concat(
+            axis.value, left_parts, right_parts
+        )
+        if axis == Axis.ROW_WISE:
             new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
             # TODO: Can optimize by combining if all dtypes are materialized
@@ -2238,6 +2490,48 @@ class PandasDataframe(object):
         return self.__constructor__(
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
+
+    def groupby(
+        self,
+        axis: Union[int, Axis],
+        by: Union[str, List[str]],
+        operator: Callable,
+        result_schema: Optional[Dict[Hashable, type]] = None,
+    ) -> "PandasDataframe":
+        """
+        Generate groups based on values in the input column(s) and perform the specified operation on each.
+
+        Parameters
+        ----------
+        axis : int or modin.core.dataframe.base.utils.Axis
+            The axis to apply the grouping over.
+        by : string or list of strings
+            One or more column labels to use for grouping.
+        operator : callable
+            The operation to carry out on each of the groups. The operator is another
+            algebraic operator with its own user-defined function parameter, depending
+            on the output desired by the user.
+        result_schema : dict, optional
+            Mapping from column labels to data types that represents the types of the output dataframe.
+
+        Returns
+        -------
+        PandasDataframe
+            A new PandasDataframe containing the groupings specified, with the operator
+                applied to each group.
+
+        Notes
+        -----
+        No communication between groups is allowed in this algebra implementation.
+
+        The number of rows (columns if axis=1) returned by the user-defined function
+        passed to the groupby may be at most the number of rows in the group, and
+        may be as small as a single row.
+
+        Unlike the pandas API, an intermediate “GROUP BY” object is not present in this
+        algebra implementation.
+        """
+        pass
 
     @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
     def groupby_reduce(
@@ -2377,7 +2671,18 @@ class PandasDataframe(object):
         object
             Any dtype compatible with pandas.
         """
-        res = arrow_type.to_pandas_dtype()
+        import pyarrow
+
+        try:
+            res = arrow_type.to_pandas_dtype()
+        # Conversion to pandas is not implemented for some arrow types,
+        # perform manual conversion for them:
+        except NotImplementedError:
+            if pyarrow.types.is_time(arrow_type):
+                res = np.dtype(datetime.time)
+            else:
+                raise
+
         if not isinstance(res, (np.dtype, str)):
             return np.dtype(res)
         return res

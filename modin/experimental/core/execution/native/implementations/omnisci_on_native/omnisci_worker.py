@@ -203,8 +203,8 @@ class OmnisciServer:
             cpu_count = os.cpu_count()
             if cpu_count is not None:
                 fragment_size = table.num_rows // cpu_count
-                fragment_size = min(fragment_size, 2 ** 25)
-                fragment_size = max(fragment_size, 2 ** 18)
+                fragment_size = min(fragment_size, 2**25)
+                fragment_size = max(fragment_size, 2**18)
             else:
                 fragment_size = 0
         else:

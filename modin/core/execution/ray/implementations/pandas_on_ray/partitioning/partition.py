@@ -52,7 +52,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
     def __init__(self, object_id, length=None, width=None, ip=None, call_queue=None):
         assert isinstance(object_id, ObjectIDType)
-
         self.oid = object_id
         if call_queue is None:
             call_queue = []
@@ -209,34 +208,34 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         """
         return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
 
-    def mask(self, row_indices, col_indices):
+    def mask(self, row_labels, col_labels):
         """
         Lazily create a mask that extracts the indices provided.
 
         Parameters
         ----------
-        row_indices : list-like, slice or label
-            The indices for the rows to extract.
-        col_indices : list-like, slice or label
-            The indices for the columns to extract.
+        row_labels : list-like, slice or label
+            The row labels for the rows to extract.
+        col_labels : list-like, slice or label
+            The column labels for the columns to extract.
 
         Returns
         -------
         PandasOnRayDataframePartition
             A new ``PandasOnRayDataframePartition`` object.
         """
-        new_obj = super().mask(row_indices, col_indices)
-        if isinstance(row_indices, slice) and isinstance(
+        new_obj = super().mask(row_labels, col_labels)
+        if isinstance(row_labels, slice) and isinstance(
             self._length_cache, ObjectIDType
         ):
             new_obj._length_cache = compute_sliced_len.remote(
-                row_indices, self._length_cache
+                row_labels, self._length_cache
             )
-        if isinstance(col_indices, slice) and isinstance(
+        if isinstance(col_labels, slice) and isinstance(
             self._width_cache, ObjectIDType
         ):
             new_obj._width_cache = compute_sliced_len.remote(
-                col_indices, self._width_cache
+                col_labels, self._width_cache
             )
         return new_obj
 

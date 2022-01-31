@@ -42,9 +42,9 @@ extra_test_parameters = False
 random_state = np.random.RandomState(seed=42)
 
 DATASET_SIZE_DICT = {
-    "Small": (2 ** 2, 2 ** 3),
-    "Normal": (2 ** 6, 2 ** 8),
-    "Big": (2 ** 7, 2 ** 12),
+    "Small": (2**2, 2**3),
+    "Normal": (2**6, 2**8),
+    "Big": (2**7, 2**12),
 }
 
 # Size of test dataframes
@@ -458,6 +458,8 @@ encoding_types = [
 # the type of this exceptions are the same
 io_ops_bad_exc = [TypeError, FileNotFoundError]
 
+default_to_pandas_ignore_string = "default:.*defaulting to pandas.*:UserWarning"
+
 # Files compression to extension mapping
 COMP_TO_EXT = {"gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
 
@@ -478,8 +480,10 @@ def df_categories_equals(df1, df2):
         else:
             return True
 
-    categories_columns = df1.select_dtypes(include="category").columns
-    for column in categories_columns:
+    df1_categorical_columns = df1.select_dtypes(include="category").columns
+    df2_categorical_columns = df2.select_dtypes(include="category").columns
+    assert df1_categorical_columns.equals(df2_categorical_columns)
+    for column in df1_categorical_columns:
         assert_extension_array_equal(
             df1[column].values,
             df2[column].values,
