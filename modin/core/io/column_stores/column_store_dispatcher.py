@@ -163,17 +163,16 @@ class ColumnStoreDispatcher(FileDispatcher):
         columns_length = len(columns)
         if columns_length == 0:
             return [], []
-        else:
-            num_partitions = NPartitions.get()
-            column_splits = (
-                columns_length // num_partitions
-                if columns_length % num_partitions == 0
-                else columns_length // num_partitions + 1
-            )
-            col_partitions = [
-                columns[i : i + column_splits]
-                for i in range(0, columns_length, column_splits)
-            ]
+        num_partitions = NPartitions.get()
+        column_splits = (
+            columns_length // num_partitions
+            if columns_length % num_partitions == 0
+            else columns_length // num_partitions + 1
+        )
+        col_partitions = [
+            columns[i : i + column_splits]
+            for i in range(0, len(columns), column_splits)
+        ]
         column_widths = [len(c) for c in col_partitions]
         return col_partitions, column_widths
 
