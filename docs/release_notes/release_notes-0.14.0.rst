@@ -4,7 +4,7 @@ Key Features and Updates
 ------------------------
 
 * Stability and Bugfixes
-  *
+  * FIX-#4058: Allow pickling empty dataframes and series (#4095)
 * Performance enhancements
   *
 * Benchmarking enhancements

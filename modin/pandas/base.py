@@ -91,6 +91,7 @@ _DEFAULT_BEHAVIOUR = {
     "_inflate_light",
     "_inflate_full",
     "__reduce__",
+    "__reduce_ex__",
 } | _ATTRS_NO_LOOKUP
 
 
