@@ -149,7 +149,7 @@ def test_ignore_index_concat():
 
 
 def test_concat_non_subscriptable_keys():
-    frame_data = np.random.randint(0, 100, size=(2 ** 10, 2 ** 6))
+    frame_data = np.random.randint(0, 100, size=(2**10, 2**6))
     df = pd.DataFrame(frame_data).add_prefix("col")
     pdf = pandas.DataFrame(frame_data).add_prefix("col")
 

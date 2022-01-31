@@ -13,3 +13,4 @@ git+https://github.com/modin-project/modin.git@master#egg=modin[all]
 sphinxcontrib_plantuml
 sphinx-issues
 xgboost
+pip
