@@ -315,16 +315,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
-      - run: |
-          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import # One-time step
-          curl -Os https://uploader.codecov.io/latest/linux/codecov
-          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
-          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
-          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
-          shasum -a 256 -c codecov.SHA256SUM
-          chmod +x codecov
-          ./codecov
-
+      - uses: codecov/codecov-action@v2
 
   test-omnisci:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -356,15 +347,7 @@ jobs:
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv --verbose
-      - run: |
-          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import # One-time step
-          curl -Os https://uploader.codecov.io/latest/linux/codecov
-          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
-          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
-          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
-          shasum -a 256 -c codecov.SHA256SUM
-          chmod +x codecov
-          ./codecov
+      - uses: codecov/codecov-action@v2
 
   test-asv-benchmarks:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -486,15 +469,7 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && pytest modin/experimental/sql/test/test_sql.py
-      - run: |
-          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import # One-time step
-          curl -Os https://uploader.codecov.io/latest/linux/codecov
-          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
-          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
-          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
-          shasum -a 256 -c codecov.SHA256SUM
-          chmod +x codecov
-          ./codecov
+      - uses: codecov/codecov-action@v2
 
   test-experimental:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -525,15 +500,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
-      - run: |
-          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import # One-time step
-          curl -Os https://uploader.codecov.io/latest/linux/codecov
-          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
-          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
-          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
-          shasum -a 256 -c codecov.SHA256SUM
-          chmod +x codecov
-          ./codecov
+      - uses: codecov/codecov-action@v2
 
   test-cloud:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -567,15 +534,7 @@ jobs:
       - run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_default.py::test_kurt_kurtosis --verbose
       - # When running without parameters, some of the tests fail
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]
-      - run: |
-          curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --import # One-time step
-          curl -Os https://uploader.codecov.io/latest/linux/codecov
-          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
-          curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
-          gpg --verify codecov.SHA256SUM.sig codecov.SHA256SUM
-          shasum -a 256 -c codecov.SHA256SUM
-          chmod +x codecov
-          ./codecov
+      - uses: codecov/codecov-action@v2
 
   test-windows:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
@@ -630,8 +589,7 @@ jobs:
       - timeout-minutes: 30
         run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
-      - run: choco install codecov
-      - run: codecov -f ./coverage.xml
+      - uses: codecov/codecov-action@v2
 
   test-pyarrow:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
