@@ -25,7 +25,7 @@ Key Features and Updates
   * DOCS-#4077: Add release notes template to docs folder (#4078)
   * DOCS-#4082: Add pdf/epub/htmlzip formats for doc builds (#4083)
 * Dependencies
-  *
+  * FIX-#4113: Apply new version of black (#4114)
 
 Contributors
 ------------

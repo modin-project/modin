@@ -55,7 +55,7 @@ pd.DataFrame([])
 
 @pytest.mark.parametrize("axis", [None, 0, 1])
 def test_unwrap_partitions(axis):
-    data = np.random.randint(0, 100, size=(2 ** 16, 2 ** 8))
+    data = np.random.randint(0, 100, size=(2**16, 2**8))
     df = pd.DataFrame(data)
 
     if axis is None:
@@ -108,8 +108,8 @@ def test_unwrap_partitions(axis):
 @pytest.mark.parametrize("index", [None, "index"])
 @pytest.mark.parametrize("axis", [None, 0, 1])
 def test_from_partitions(axis, index, columns, row_lengths, column_widths):
-    num_rows = 2 ** 16
-    num_cols = 2 ** 8
+    num_rows = 2**16
+    num_cols = 2**8
     data = np.random.randint(0, 100, size=(num_rows, num_cols))
     df1, df2 = pandas.DataFrame(data), pandas.DataFrame(data)
     expected_df = pandas.concat([df1, df2], axis=1 if axis is None else axis)
@@ -157,8 +157,8 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
 @pytest.mark.parametrize("index", ["original_idx", "new_idx"])
 @pytest.mark.parametrize("axis", [None, 0, 1])
 def test_from_partitions_mismatched_labels(axis, index, columns):
-    num_rows = 2 ** 16
-    num_cols = 2 ** 8
+    num_rows = 2**16
+    num_cols = 2**8
     expected_df = pd.DataFrame(np.random.randint(0, 100, size=(num_rows, num_cols)))
     partitions = unwrap_partitions(expected_df, axis=axis)
 
