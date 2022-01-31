@@ -5,6 +5,7 @@ Key Features and Updates
 
 * Stability and Bugfixes
   * FIX-#4058: Allow pickling empty dataframes and series (#4095)
+  * FIX-#3221: Fix support of dictionary functions at `df.apply()` (#3944)
 * Performance enhancements
   *
 * Benchmarking enhancements
@@ -30,3 +31,4 @@ Key Features and Updates
 Contributors
 ------------
 @prutskov
+@dchigarev
