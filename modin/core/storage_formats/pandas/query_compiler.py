@@ -2377,7 +2377,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             kwargs["axis"] = axis
 
         # Hopefully, this is a full list of non-reduction DataFrame methods that are
-        # available in `apply()`, otherwise labels precomputation would work incorrect:
+        # available in `apply()`, otherwise labels precomputation would work incorrectly:
         non_reduction_methods = (
             "bfill",
             "cummax",
@@ -2463,7 +2463,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # }:
                 #               reduction_1   reduction_2
                 # __reduced__      result_1      result_2
-                # That's why the order of index and columns is inversed:
+                # That's why the order of index and columns is reversed:
                 new_index = ["__reduced__"]
                 new_columns = meta_df.index
                 if axis == 1:
