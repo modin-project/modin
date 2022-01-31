@@ -45,6 +45,8 @@ for mod_name in ("cudf", "cupy"):
         )
 if not hasattr(sys.modules["cudf"], "DataFrame"):
     sys.modules["cudf"].DataFrame = type("DataFrame", (object,), {})
+if not hasattr(sys.modules["cupy"], "ndarray"):
+    sys.modules["cupy"].ndarray = type("ndarray", (object,), {})
 
 logging.basicConfig(
     stream=sys.stdout, format="%(levelname)s:%(message)s", level=logging.INFO
