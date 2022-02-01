@@ -1396,10 +1396,6 @@ class TestParquet:
         finally:
             teardown_test_files([parquet_fname, csv_fname])
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_read_empty_parquet_file(self):
         test_df = pandas.DataFrame()
 
