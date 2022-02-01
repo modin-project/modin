@@ -6,7 +6,7 @@ Key Features and Updates
 * Stability and Bugfixes
   * FIX-#4058: Allow pickling empty dataframes and series (#4095)
 * Performance enhancements
-  *
+  * FIX-#4138: optimize internal '.mask()' flow (#4140)
 * Benchmarking enhancements
   *
 * Refactor Codebase
@@ -30,3 +30,4 @@ Key Features and Updates
 Contributors
 ------------
 @prutskov
+@dchigarev
