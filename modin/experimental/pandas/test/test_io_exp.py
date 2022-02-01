@@ -126,7 +126,7 @@ class TestCsvGlob:
     )
     def test_read_single_csv_with_parse_dates(self, parse_dates):
         try:
-            pandas_df = pd.read_csv_glob(time_parsing_csv_path, parse_dates=parse_dates)
+            pandas_df = pandas.read_csv(time_parsing_csv_path, parse_dates=parse_dates)
         except Exception as pandas_exception:
             with pytest.raises(Exception) as modin_exception:
                 modin_df = pd.read_csv_glob(
