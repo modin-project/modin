@@ -890,7 +890,19 @@ class TestCsv:
         "names",
         [
             None,
-            ["timestamp", "symbol", "high", "low", "open", "close", "spread", "volume"],
+            [
+                "timestamp",
+                "year",
+                "month",
+                "date",
+                "symbol",
+                "high",
+                "low",
+                "open",
+                "close",
+                "spread",
+                "volume",
+            ],
         ],
     )
     def test_read_csv_parse_dates(
