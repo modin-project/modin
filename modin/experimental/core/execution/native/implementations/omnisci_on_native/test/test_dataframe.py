@@ -142,6 +142,9 @@ class TestCSV:
                 "skiprows": 1,
                 "names": [
                     "timestamp",
+                    "year",
+                    "month",
+                    "date",
                     "symbol",
                     "high",
                     "low",
