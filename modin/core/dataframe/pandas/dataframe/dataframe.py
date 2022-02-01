@@ -1117,9 +1117,6 @@ class PandasDataframe(object):
         if isinstance(indices, slice) or (is_range_like(indices) and indices.step == 1):
             # Converting range-like indexer to slice
             indices = slice(indices.start, indices.stop, indices.step)
-            # Empty selection case
-            if indices.start == indices.stop:
-                return OrderedDict()
             if is_full_grab_slice(indices, sequence_len=len(self.axes[axis])):
                 return OrderedDict(
                     zip(
@@ -1127,6 +1124,9 @@ class PandasDataframe(object):
                         [slice(None)] * self._partitions.shape[axis],
                     )
                 )
+            # Empty selection case
+            if indices.start == indices.stop and indices.start is not None:
+                return OrderedDict()
             if indices.start is None or indices.start == 0:
                 last_part, last_idx = list(
                     self._get_dict_of_block_index(axis, [indices.stop]).items()
