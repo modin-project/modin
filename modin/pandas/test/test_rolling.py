@@ -236,3 +236,15 @@ def test_issue_3512():
     pandas_ans = pandas_df[0:33].rolling(window=21).mean()
 
     df_equals(modin_ans, pandas_ans)
+
+
+def test_dropping_nuisance_columns():
+    # This tests that when we perform a rolling operation on a dataframe
+    # where the operation is invalid for at least one column, we drop any
+    # such "nuisance columns". That behavior is deprecated in pandas, but
+    # we need to test for it as long as pandas supports it.
+    # https://pandas.pydata.org/pandas-docs/stable/whatsnew/v1.3.0.html#deprecated-dropping-nuisance-columns-in-dataframe-reductions-and-dataframegroupby-operations
+    data = {"a": [1], "b": ["x"]}
+    modin_df = pd.DataFrame(data)
+    pandas_df = pd.DataFrame(data)
+    df_equals(modin_df.rolling(window=1).min(), pandas_df.rolling(window=1).min())
