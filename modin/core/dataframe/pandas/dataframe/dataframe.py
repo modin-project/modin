@@ -1528,7 +1528,6 @@ class PandasDataframe(object):
         -------
         PandasDataframe
             A new dataframe.
-
         """
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True
