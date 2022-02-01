@@ -30,4 +30,6 @@ Key Features and Updates
 
 Contributors
 ------------
-@prutskov @amyskov @dchigarev
+@prutskov
+@amyskov
+@dchigarev
