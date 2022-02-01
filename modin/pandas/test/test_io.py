@@ -59,6 +59,8 @@ from .utils import (
     teardown_test_files,
     generate_dataframe,
     default_to_pandas_ignore_string,
+    parse_dates_values_by_id,
+    time_parsing_csv_path,
 )
 
 if StorageFormat.get() == "Omnisci":
@@ -878,14 +880,11 @@ class TestCsv:
 
     @pytest.mark.parametrize("encoding", [None, "utf-8"])
     @pytest.mark.parametrize("encoding_errors", ["strict", "ignore"])
-    # Test an empty list of parse_dates, as well as a list of a single
-    # nonexistent column: shouldn't change behavior, but shouldn't cause an
-    # error either. Those cases are inspired by
-    # https://github.com/modin-project/modin/issues/4056
     @pytest.mark.parametrize(
-        "parse_dates", [False, ["timestamp"], [], ["nonexistent_column"]]
+        "parse_dates",
+        [pytest.param(value, id=id) for id, value in parse_dates_values_by_id.items()],
     )
-    @pytest.mark.parametrize("index_col", [None, 0, 2])
+    @pytest.mark.parametrize("index_col", [None, 0, 5])
     @pytest.mark.parametrize("header", ["infer", 0])
     @pytest.mark.parametrize(
         "names",
@@ -905,7 +904,7 @@ class TestCsv:
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
-            filepath_or_buffer="modin/pandas/test/data/test_time_parsing.csv",
+            filepath_or_buffer=time_parsing_csv_path,
             names=names,
             header=header,
             index_col=index_col,

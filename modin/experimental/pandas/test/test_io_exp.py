@@ -20,6 +20,7 @@ from modin.config import Engine
 from modin.utils import get_current_execution
 from modin.pandas.test.utils import df_equals, teardown_test_files, test_data
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.pandas.test.utils import parse_dates_values_by_id, time_parsing_csv_path
 
 
 @pytest.mark.skipif(
@@ -119,11 +120,26 @@ class TestCsvGlob:
             with pytest.raises(FileNotFoundError):
                 pd.read_csv_glob("s3://nyc-tlc/trip data/yellow_tripdata_2020-")
 
-    # This addresses https://github.com/modin-project/modin/issues/4056
-    def test_read_single_csv_with_invalid_parse_dates(self):
-        modin_df = pd.read_csv_glob(pytest.files[0], parse_dates=[])
-        pandas_df = pandas.read_csv(pytest.files[0], parse_dates=[])
-        df_equals(modin_df, pandas_df)
+    @pytest.mark.parametrize(
+        "parse_dates",
+        [pytest.param(value, id=id) for id, value in parse_dates_values_by_id.items()],
+    )
+    def test_read_single_csv_with_parse_dates(self, parse_dates):
+        try:
+            pandas_df = pd.read_csv_glob(time_parsing_csv_path, parse_dates=parse_dates)
+        except Exception as pandas_exception:
+            with pytest.raises(Exception) as modin_exception:
+                modin_df = pd.read_csv_glob(
+                    time_parsing_csv_path, parse_dates=parse_dates
+                )
+            assert isinstance(
+                modin_exception.value, type(pandas_exception)
+            ), "Got Modin Exception type {}, but pandas Exception type {} was expected".format(
+                type(modin_exception.value), type(pandas_exception)
+            )
+        else:
+            modin_df = pd.read_csv_glob(time_parsing_csv_path, parse_dates=parse_dates)
+            df_equals(modin_df, pandas_df)
 
 
 @pytest.mark.skipif(

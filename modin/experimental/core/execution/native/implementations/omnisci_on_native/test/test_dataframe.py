@@ -35,6 +35,7 @@ from modin.pandas.test.utils import (
     generate_multiindex,
     eval_general,
     df_equals_with_non_stable_indices,
+    time_parsing_csv_path,
 )
 from modin.utils import try_cast_to_pandas
 from modin.pandas.utils import from_arrow
@@ -135,9 +136,7 @@ class TestCSV:
             )
 
     def test_time_parsing(self):
-        csv_file = os.path.join(
-            self.root, "modin/pandas/test/data", "test_time_parsing.csv"
-        )
+        csv_file = os.path.join(self.root, time_parsing_csv_path)
         for kwargs in (
             {
                 "skiprows": 1,
@@ -287,7 +286,7 @@ class TestCSV:
 
         parse_dates_unsupported = isinstance(parse_dates, dict) or (
             isinstance(parse_dates, list)
-            and all(isinstance(date, list) for date in parse_dates)
+            and any(isinstance(date, list) for date in parse_dates)
         )
         if parse_dates_unsupported and engine == "arrow" and not names:
             pytest.skip(
