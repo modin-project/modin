@@ -289,10 +289,7 @@ class TestCSV:
 
         parse_dates_unsupported = isinstance(parse_dates, dict) or (
             isinstance(parse_dates, list)
-            and any(
-                isinstance(date, list) or not isinstance(date, str)
-                for date in parse_dates
-            )
+            and any(not isinstance(date, str) for date in parse_dates)
         )
         if parse_dates_unsupported and engine == "arrow" and not names:
             pytest.skip(
