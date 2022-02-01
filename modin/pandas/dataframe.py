@@ -225,8 +225,8 @@ class DataFrame(BasePandasDataset):
         -------
         str
         """
-        num_rows = pandas.get_option("max_rows") or 60
-        num_cols = pandas.get_option("max_columns") or 20
+        num_rows = pandas.get_option("display.max_rows") or 60
+        num_cols = pandas.get_option("display.max_columns") or 20
 
         # We use pandas _repr_html_ to get a string of the HTML representation
         # of the dataframe.
