@@ -238,7 +238,8 @@ def test_issue_3512():
     df_equals(modin_ans, pandas_ans)
 
 
-def test_dropping_nuisance_columns():
+@pytest.mark.parametrize("axis", [0, 1])
+def test_dropping_nuisance_columns(axis):
     # This tests that when we perform a rolling operation on a dataframe
     # where the operation is invalid for at least one column, we drop any
     # such "nuisance columns". That behavior is deprecated in pandas, but
@@ -247,4 +248,9 @@ def test_dropping_nuisance_columns():
     data = {"a": [1], "b": ["x"]}
     modin_df = pd.DataFrame(data)
     pandas_df = pd.DataFrame(data)
-    df_equals(modin_df.rolling(window=1).min(), pandas_df.rolling(window=1).min())
+    df_equals(
+        modin_df.rolling(window=1, axis=axis).min(), pandas_df.rolling(window=1).min()
+    )
+    df_equals(
+        modin_df.rolling(window=1, axis=axis).min(), pandas_df.rolling(window=1).min()
+    )
