@@ -7,6 +7,7 @@ Key Features and Updates
   * FIX-#4058: Allow pickling empty dataframes and series (#4095)
   * FIX-#4136: Fix exercise_3.ipynb example notebook (#4137)
   * FIX-#4105: Fix names of pandas options to avoid `OptionError` (#4109)
+  * FIX-#3417: Fix read_csv with skiprows and header parameters (#3419)
 * Performance enhancements
   *
 * Benchmarking enhancements
