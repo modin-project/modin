@@ -34,6 +34,7 @@ from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.utils import _inherit_docstrings
 from modin.core.io.text.utils import CustomNewlineIterator
 from modin.config import NPartitions
+from modin.error_message import ErrorMessage
 
 ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
 IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
@@ -615,6 +616,8 @@ class TextFileDispatcher(FileDispatcher):
         cls,
         filepath_or_buffer,
         read_kwargs: dict,
+        skiprows_md: Union[Sequence, callable, int],
+        header_size: int,
     ) -> bool:
         """
         Check support of only general parameters of `read_*` function.
@@ -625,12 +628,17 @@ class TextFileDispatcher(FileDispatcher):
             `filepath_or_buffer` parameter of `read_*` function.
         read_kwargs : dict
             Parameters of `read_*` function.
+        skiprows_md : int, array or callable
+            `skiprows` parameter modified for easier handling by Modin.
+        header_size : int
+            Number of rows that are used by header.
 
         Returns
         -------
         bool
             Whether passed parameters are supported or not.
         """
+        skiprows = read_kwargs.get("skiprows")
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(filepath_or_buffer):
                 return False
@@ -638,6 +646,24 @@ class TextFileDispatcher(FileDispatcher):
             return False
 
         if read_kwargs["chunksize"] is not None:
+            return False
+
+        skiprows_supported = True
+        if is_list_like(skiprows_md) and skiprows_md[0] < header_size:
+            skiprows_supported = False
+        elif callable(skiprows):
+            # check if `skiprows` callable gives True for any of header indices
+            is_intersection = any(
+                cls._get_skip_mask(pandas.RangeIndex(header_size), skiprows)
+            )
+            if is_intersection:
+                skiprows_supported = False
+
+        if not skiprows_supported:
+            ErrorMessage.single_warning(
+                "Values of `header` and `skiprows` parameters have intersections. "
+                "This case is unsupported by Modin, so pandas implementation will be used"
+            )
             return False
 
         return True
@@ -758,7 +784,7 @@ class TextFileDispatcher(FileDispatcher):
                 )
                 skiprows_partitioning = len(skiprows_md)
                 skiprows_md = 0
-            else:
+            elif skiprows_md[0] > header_size:
                 skiprows_md = skiprows_md - header_size
         elif callable(skiprows):
 
@@ -963,6 +989,8 @@ class TextFileDispatcher(FileDispatcher):
         use_modin_impl = cls.check_parameters_support(
             filepath_or_buffer,
             kwargs,
+            skiprows_md,
+            header_size,
         )
         if not use_modin_impl:
             return cls.single_worker_read(
