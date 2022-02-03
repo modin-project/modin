@@ -13,11 +13,19 @@
 
 # test BenchmarkMode == True
 
+from contextlib import nullcontext
 import modin.pandas as pd
 from modin.pandas.test.utils import test_data_values
-from modin.config import BenchmarkMode
+from modin.config import BenchmarkMode, StorageFormat
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 
 def test_syncronous_mode():
     assert BenchmarkMode.get()
-    pd.DataFrame(test_data_values[0]).mean()
+    # On Omnisci storage, transpose() defaults to Pandas.
+    with (
+        warns_that_defaulting_to_pandas()
+        if StorageFormat.get() == "Omnisci"
+        else nullcontext()
+    ):
+        pd.DataFrame(test_data_values[0]).mean()

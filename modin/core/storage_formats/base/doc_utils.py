@@ -209,7 +209,7 @@ def doc_binary_method(operation, sign, self_on_right=False, op_type="arithmetic"
 
 def doc_reduce_agg(method, refer_to, params=None, extra_params=None):
     """
-    Build decorator which adds docstring for the reduction method.
+    Build decorator which adds docstring for the reduce method.
 
     Parameters
     ----------
@@ -325,9 +325,9 @@ doc_resample = partial(
 )
 
 
-def doc_resample_reduction(result, refer_to, params=None, compatibility_params=True):
+def doc_resample_reduce(result, refer_to, params=None, compatibility_params=True):
     """
-    Build decorator which adds docstring for the resample reduction method.
+    Build decorator which adds docstring for the resample reduce method.
 
     Parameters
     ----------
@@ -624,7 +624,7 @@ def doc_groupby_method(result, refer_to, action=None):
     Parameters
     ----------
     result : str
-        The result of reduction.
+        The result of reduce.
     refer_to : str
         Method name in ``modin.pandas.groupby`` module to refer to
         for more information about parameters and output format.
@@ -643,18 +643,14 @@ def doc_groupby_method(result, refer_to, action=None):
     by : BaseQueryCompiler, column or index label, Grouper or list of such
         Object that determine groups.
     axis : {{0, 1}}
-        Axis to group and apply reduction function along.
+        Axis to group and apply aggregation function along.
         0 is for index, when 1 is for columns.
-    groupby_args : dict
+    groupby_kwargs : dict
         GroupBy parameters as expected by ``modin.pandas.DataFrame.groupby`` signature.
-    map_args : dict
-        Keyword arguments to pass to the reduction function. If GroupBy is implemented via MapReduce
-        approach, this argument is passed at the map phase only.
-    reduce_args : dict, optional
-        If GroupBy is implemented with MapReduce approach, specifies arguments to pass to
-        the reduction function at the reduce phase, has no effect otherwise.
-    numeric_only : bool, default: True
-        Whether or not to drop non-numeric columns before executing GroupBy.
+    agg_args : list-like
+        Positional arguments to pass to the `agg_func`.
+    agg_kwargs : dict
+        Key arguments to pass to the `agg_func`.
     drop : bool, default: False
         If `by` is a QueryCompiler indicates whether or not by-data came
         from the `self`.
@@ -662,7 +658,7 @@ def doc_groupby_method(result, refer_to, action=None):
     Returns
     -------
     BaseQueryCompiler
-        QueryCompiler containing the result of groupby reduction built by the
+        QueryCompiler containing the result of groupby reduce built by the
         following rules:
 
         - Labels on the opposit of specified axis are preserved.
@@ -675,7 +671,7 @@ def doc_groupby_method(result, refer_to, action=None):
 
     .. warning
         `map_args` and `reduce_args` parameters are deprecated. They're leaked here from
-        ``PandasQueryCompiler.groupby_*``, pandas storage format implements groupby via MapReduce
+        ``PandasQueryCompiler.groupby_*``, pandas storage format implements groupby via TreeReduce
         approach, but for other storage formats these parameters make no sense, and so they'll be removed in the future.
     """
     if action is None:

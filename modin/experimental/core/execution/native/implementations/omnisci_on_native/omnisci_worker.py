@@ -14,23 +14,12 @@
 """Module provides ``OmnisciServer`` class."""
 
 import uuid
-import sys
 import os
 
 import pyarrow as pa
 import numpy as np
 
-if sys.platform == "linux":
-    prev = sys.getdlopenflags()
-    sys.setdlopenflags(1 | 256)  # RTLD_LAZY+RTLD_GLOBAL
-
-try:
-    from omniscidbe import PyDbEngine
-except ModuleNotFoundError:  # fallback for older omniscidbe4py package naming
-    from dbe import PyDbEngine
-
-if sys.platform == "linux":
-    sys.setdlopenflags(prev)
+from .utils import PyDbEngine
 
 from modin.config import OmnisciFragmentSize, OmnisciLaunchParameters
 
@@ -214,8 +203,8 @@ class OmnisciServer:
             cpu_count = os.cpu_count()
             if cpu_count is not None:
                 fragment_size = table.num_rows // cpu_count
-                fragment_size = min(fragment_size, 2 ** 25)
-                fragment_size = max(fragment_size, 2 ** 18)
+                fragment_size = min(fragment_size, 2**25)
+                fragment_size = max(fragment_size, 2**18)
             else:
                 fragment_size = 0
         else:

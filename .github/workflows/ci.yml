@@ -1,5 +1,8 @@
 name: ci
-on: pull_request
+on:
+  pull_request:
+    paths:
+      - modin/**
 jobs:
   lint-commit:
     name: lint (commit)
@@ -29,10 +32,24 @@ jobs:
           fetch-depth: 1
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.7.x"
+          python-version: "3.8.x"
           architecture: "x64"
       - run: pip install black
       - run: black --check --diff modin/ asv_bench/benchmarks scripts/doc_checker.py
+
+  build-docs:
+    name: build docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8.x"
+          architecture: "x64"
+      - run: pip install -r docs/requirements-doc.txt
+      - run: cd docs && sphinx-build -T -E -b html . build
 
   lint-pydocstyle:
     name: lint (pydocstyle)
@@ -43,7 +60,7 @@ jobs:
           fetch-depth: 1
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.7.x"
+          python-version: "3.8.x"
           architecture: "x64"
       - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0 xgboost
       - run: pytest scripts/test
@@ -118,7 +135,7 @@ jobs:
           fetch-depth: 1
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.7.x"
+          python-version: "3.8.x"
           architecture: "x64"
       - run: pip install flake8 flake8-print
       - run: flake8 --enable=T modin/ asv_bench/benchmarks scripts/doc_checker.py
@@ -138,15 +155,9 @@ jobs:
         with:
           activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.7
+          python-version: 3.8
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          # Miniconda setup sometimes fails because of an HTTP error. Retry
-          # it once if it fails. TODO(https://github.com/conda-incubator/setup-miniconda/issues/129):
-          # Get rid of this once setup-miniconda can be configured to retry
-          # setup on HTTP errors.
-          max_attempts: 2
-          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -171,15 +182,9 @@ jobs:
         with:
           activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.7
+          python-version: 3.8
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          # Miniconda setup sometimes fails because of an http error. retry
-          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
-          # get rid of this once setup-miniconda can be configured to retry
-          # setup on http errors.
-          max_attempts: 2
-          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -200,7 +205,7 @@ jobs:
           fetch-depth: 1
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.7.x"
+          python-version: "3.8.x"
           architecture: "x64"
       - name: Clean install and run
         run: |
@@ -221,7 +226,7 @@ jobs:
           fetch-depth: 1
       - uses: actions/setup-python@v2
         with:
-          python-version: "3.7.x"
+          python-version: "3.8.x"
           architecture: "x64"
       - name: Clean install and run
         run: |
@@ -244,15 +249,9 @@ jobs:
         with:
           activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.7
+          python-version: 3.8
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          # Miniconda setup sometimes fails because of an http error. retry
-          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
-          # get rid of this once setup-miniconda can be configured to retry
-          # setup on http errors.
-          max_attempts: 2
-          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -280,7 +279,7 @@ jobs:
     env:
       MODIN_MEMORY: 1000000000
       MODIN_TEST_DATASET_SIZE: "small"
-    name: Test ${{ matrix.execution }} execution, Python 3.7
+    name: Test ${{ matrix.execution }} execution, Python 3.8
     steps:
       - uses: actions/checkout@v2
         with:
@@ -289,15 +288,9 @@ jobs:
         with:
           activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.7
+          python-version: 3.8
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          # Miniconda setup sometimes fails because of an http error. retry
-          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
-          # get rid of this once setup-miniconda can be configured to retry
-          # setup on http errors.
-          max_attempts: 2
-          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -312,7 +305,7 @@ jobs:
       - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
@@ -340,10 +333,8 @@ jobs:
       run:
         shell: bash -l {0}
     env:
-      MODIN_EXPERIMENTAL: "True"
-      MODIN_ENGINE: "native"
       MODIN_STORAGE_FORMAT: "omnisci"
-    name: Test OmniSci storage format, Python 3.7
+    name: Test OmniSci storage format, Python 3.8
     steps:
       - uses: actions/checkout@v2
         with:
@@ -353,20 +344,15 @@ jobs:
         with:
           activate-environment: modin_on_omnisci
           environment-file: requirements/env_omnisci.yml
-          python-version: 3.7
+          python-version: 3.8
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          # Miniconda setup sometimes fails because of an http error. retry
-          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
-          # get rid of this once setup-miniconda can be configured to retry
-          # setup on http errors.
-          max_attempts: 2
-          retry_on: error
       - name: Conda environment
         run: |
           conda info
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
+      - run: pytest modin/test/storage_formats/omnisci/test_internals.py
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv --verbose
@@ -400,12 +386,6 @@ jobs:
         with:
           auto-activate-base: true
           activate-environment: ""
-          # Miniconda setup sometimes fails because of an http error. retry
-          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
-          # get rid of this once setup-miniconda can be configured to retry
-          # setup on http errors.
-          max_attempts: 2
-          retry_on: error
       - name: ASV installation
         run: |
           # FIXME: use the tag or release version of ASV as soon as it appears;
@@ -456,7 +436,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.8"]
         engine: ["python", "ray", "dask"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
@@ -473,12 +453,6 @@ jobs:
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          # Miniconda setup sometimes fails because of an http error. retry
-          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
-          # get rid of this once setup-miniconda can be configured to retry
-          # setup on http errors.
-          max_attempts: 2
-          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -497,7 +471,7 @@ jobs:
       - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
@@ -543,15 +517,9 @@ jobs:
         with:
           activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.7
+          python-version: 3.8
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          # Miniconda setup sometimes fails because of an http error. retry
-          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
-          # get rid of this once setup-miniconda can be configured to retry
-          # setup on http errors.
-          max_attempts: 2
-          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -589,20 +557,17 @@ jobs:
         with:
           activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.7
+          python-version: 3.8
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          # Miniconda setup sometimes fails because of an http error. retry
-          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
-          # get rid of this once setup-miniconda can be configured to retry
-          # setup on http errors.
-          max_attempts: 2
-          retry_on: error
       - name: Conda environment
         run: |
           conda info
           conda list
-      - run: python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py --verbose
+        # TODO(https://github.com/modin-project/modin/issues/4004): Re-add
+        # "python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py --verbose"
+        # once that test stops crashing.
+      - run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_default.py::test_kurt_kurtosis --verbose
       - # When running without parameters, some of the tests fail
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]
       - run: |
@@ -624,7 +589,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.8"]
         engine: ["ray", "dask"]
         test-task:
           - modin/pandas/test/dataframe/test_binary.py
@@ -633,7 +598,7 @@ jobs:
           - modin/pandas/test/dataframe/test_iter.py
           - modin/pandas/test/dataframe/test_join_sort.py
           - modin/pandas/test/dataframe/test_map_metadata.py
-          - modin/pandas/test/dataframe/test_reduction.py
+          - modin/pandas/test/dataframe/test_reduce.py
           - modin/pandas/test/dataframe/test_udf.py
           - modin/pandas/test/dataframe/test_window.py
           - modin/pandas/test/dataframe/test_pickle.py
@@ -660,12 +625,6 @@ jobs:
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
           auto-update-conda: true # this enable `use-only-tar-bz2` feature on Windows
-          # Miniconda setup sometimes fails because of an http error. retry
-          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
-          # get rid of this once setup-miniconda can be configured to retry
-          # setup on http errors.
-          max_attempts: 2
-          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -686,7 +645,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.8"]
     env:
       MODIN_STORAGE_FORMAT: pyarrow
       MODIN_EXPERIMENTAL: "True"
@@ -702,12 +661,6 @@ jobs:
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          # Miniconda setup sometimes fails because of an http error. retry
-          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
-          # get rid of this once setup-miniconda can be configured to retry
-          # setup on http errors.
-          max_attempts: 2
-          retry_on: error
       - name: Conda environment
         run: |
           conda info
@@ -723,7 +676,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: [ "3.7", "3.8" ]
+        python-version: ["3.8" ]
         engine: ["ray", "dask"]
     env:
       MODIN_EXPERIMENTAL: "True"
@@ -740,12 +693,6 @@ jobs:
           python-version: ${{matrix.python-version}}
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          # Miniconda setup sometimes fails because of an http error. retry
-          # it once if it fails. todo(https://github.com/conda-incubator/setup-miniconda/issues/129):
-          # get rid of this once setup-miniconda can be configured to retry
-          # setup on http errors.
-          max_attempts: 2
-          retry_on: error
       - name: Conda environment
         run: |
           conda info

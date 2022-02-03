@@ -27,7 +27,6 @@ from csv import QUOTE_NONE
 import numpy as np
 import pandas
 import pandas._libs.lib as lib
-from pandas._typing import FilePathOrBuffer
 from pandas.core.dtypes.common import is_list_like
 
 from modin.core.io.file_dispatcher import FileDispatcher, OpenFile
@@ -37,7 +36,7 @@ from modin.core.io.text.utils import CustomNewlineIterator
 from modin.config import NPartitions
 from modin.error_message import ErrorMessage
 
-ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex, pandas.Int64Index]]
+ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
 IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
 
 
@@ -555,7 +554,7 @@ class TextFileDispatcher(FileDispatcher):
         """
         # This is the number of splits for the columns
         num_splits = min(len(column_names) or 1, NPartitions.get())
-        column_chunksize = compute_chunksize(df, num_splits, axis=1)
+        column_chunksize = compute_chunksize(df.shape[1], num_splits)
         if column_chunksize > len(column_names):
             column_widths = [len(column_names)]
             # This prevents us from unnecessarily serializing a bunch of empty
@@ -615,7 +614,7 @@ class TextFileDispatcher(FileDispatcher):
     @classmethod
     def check_parameters_support(
         cls,
-        filepath_or_buffer: FilePathOrBuffer,
+        filepath_or_buffer,
         read_kwargs: dict,
         skiprows_md: Union[Sequence, callable, int],
         header_size: int,
@@ -938,7 +937,7 @@ class TextFileDispatcher(FileDispatcher):
         return new_query_compiler
 
     @classmethod
-    def _read(cls, filepath_or_buffer: FilePathOrBuffer, **kwargs):
+    def _read(cls, filepath_or_buffer, **kwargs):
         """
         Read data from `filepath_or_buffer` according to `kwargs` parameters.
 

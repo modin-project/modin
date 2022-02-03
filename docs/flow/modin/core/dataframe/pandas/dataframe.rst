@@ -1,7 +1,10 @@
 PandasDataframe
 """""""""""""""
 
-The class is base for any frame class of ``pandas`` storage format and serves as the intermediate level
+:py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe` is a direct descendant of :py:class:`~modin.core.dataframe.base.dataframe.dataframe.ModinDataframe`. Its purpose is to implement the abstract interfaces for usage with all ``pandas``-based :doc:`storage formats<flow/modin/core/storage_formats/index.html>`.
+:py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe` could be inherited and augmented further by any specific implementation which needs it to take special care of some behavior or to improve performance for certain execution engine.
+
+The class serves as the intermediate level
 between ``pandas`` query compiler and conforming partition manager. All queries formed
 at the query compiler layer are ingested by this class and then conveyed jointly with the stored partitions
 into the partition manager for processing. Direct partitions manipulation by this class is prohibited except

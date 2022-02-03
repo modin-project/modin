@@ -31,9 +31,10 @@ import itertools
 import functools
 import numpy as np
 import sys
-from typing import IO, Optional, Union, Mapping, Iterator
+from typing import IO, Optional, Union, Iterator
 import warnings
 
+from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, to_pandas, hashable
 from modin.config import Engine, IsExperimental, PersistentPickle
@@ -224,8 +225,8 @@ class DataFrame(BasePandasDataset):
         -------
         str
         """
-        num_rows = pandas.get_option("max_rows") or 60
-        num_cols = pandas.get_option("max_columns") or 20
+        num_rows = pandas.get_option("display.max_rows") or 60
+        num_cols = pandas.get_option("display.max_columns") or 20
 
         # We use pandas _repr_html_ to get a string of the HTML representation
         # of the dataframe.
@@ -363,42 +364,25 @@ class DataFrame(BasePandasDataset):
             func, axis=axis, raw=raw, result_type=result_type, args=args, **kwargs
         )
         if not isinstance(query_compiler, type(self._query_compiler)):
+            # A scalar was returned
             return query_compiler
-        # This is the simplest way to determine the return type, but there are checks
-        # in pandas that verify that some results are created. This is a challenge for
-        # empty DataFrames, but fortunately they only happen when the `func` type is
-        # a list or a dictionary, which means that the return type won't change from
-        # type(self), so we catch that error and use `type(self).__name__` for the return
-        # type.
-        try:
-            if axis == 0:
-                init_kwargs = {"index": self.index}
-            else:
-                init_kwargs = {"columns": self.columns}
-            return_type = type(
-                getattr(pandas, type(self).__name__)(**init_kwargs).apply(
-                    func,
-                    axis=axis,
-                    raw=raw,
-                    result_type=result_type,
-                    args=args,
-                    **kwargs,
-                )
-            ).__name__
-        except Exception:
-            return_type = type(self).__name__
-        if return_type not in ["DataFrame", "Series"]:
-            return query_compiler.to_pandas().squeeze()
+
+        if result_type == "reduce":
+            output_type = Series
+        elif result_type == "broadcast":
+            output_type = DataFrame
+        # the 'else' branch also handles 'result_type == "expand"' since it makes the output type
+        # depend on the `func` result (Series for a scalar, DataFrame for list-like)
         else:
-            result = getattr(sys.modules[self.__module__], return_type)(
-                query_compiler=query_compiler
-            )
-            if isinstance(result, Series):
-                if axis == 0 and result.name == self.index[0] or result.name == 0:
-                    result.name = None
-                elif axis == 1 and result.name == self.columns[0] or result.name == 0:
-                    result.name = None
-            return result
+            reduced_index = pandas.Index(["__reduced__"])
+            if query_compiler.get_axis(axis).equals(
+                reduced_index
+            ) or query_compiler.get_axis(axis ^ 1).equals(reduced_index):
+                output_type = Series
+            else:
+                output_type = DataFrame
+
+        return output_type(query_compiler=query_compiler)
 
     def groupby(
         self,
@@ -1171,14 +1155,16 @@ class DataFrame(BasePandasDataset):
             ):
                 raise ValueError("Length of values does not match length of index")
             if not allow_duplicates and column in self.columns:
-                raise ValueError("cannot insert {0}, already exists".format(column))
+                raise ValueError(f"cannot insert {column}, already exists")
             if loc > len(self.columns):
                 raise IndexError(
-                    "index {0} is out of bounds for axis 0 with size {1}".format(
-                        loc, len(self.columns)
-                    )
+                    f"index {loc} is out of bounds for axis 0 with size {len(self.columns)}"
                 )
             if loc < 0:
+                if loc < -len(self.columns):
+                    raise IndexError(
+                        f"index {loc} is out of bounds for axis 0 with size {len(self.columns)}"
+                    )
                 raise ValueError("unbounded slice")
             if isinstance(value, Series):
                 value = value._query_compiler
@@ -1631,7 +1617,7 @@ class DataFrame(BasePandasDataset):
     def prod(
         self,
         axis=None,
-        skipna=None,
+        skipna=True,
         level=None,
         numeric_only=None,
         min_count=0,
@@ -1641,8 +1627,7 @@ class DataFrame(BasePandasDataset):
         Return the product of the values over the requested axis.
         """
         axis = self._get_axis_number(axis)
-        if skipna is None:
-            skipna = True
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)
@@ -1787,11 +1772,11 @@ class DataFrame(BasePandasDataset):
     def replace(
         self,
         to_replace=None,
-        value=None,
-        inplace=False,
+        value=no_default,
+        inplace: "bool" = False,
         limit=None,
-        regex=False,
-        method="pad",
+        regex: "bool" = False,
+        method: "str | NoDefault" = no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -2026,7 +2011,7 @@ class DataFrame(BasePandasDataset):
     def sum(
         self,
         axis=None,
-        skipna=None,
+        skipna=True,
         level=None,
         numeric_only=None,
         min_count=0,
@@ -2036,8 +2021,7 @@ class DataFrame(BasePandasDataset):
         Return the sum of the values over the requested axis.
         """
         axis = self._get_axis_number(axis)
-        if skipna is None:
-            skipna = True
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis_to_apply = self.columns if axis else self.index
         if (
             skipna is not False
@@ -2227,17 +2211,19 @@ class DataFrame(BasePandasDataset):
 
     def to_stata(
         self,
-        path,
-        convert_dates=None,
-        write_index=True,
-        byteorder=None,
-        time_stamp=None,
-        data_label=None,
-        variable_labels=None,
-        version=114,
-        convert_strl=None,
-        compression: Union[str, Mapping[str, str], None] = "infer",
-        storage_options: StorageOptions = None,
+        path: "FilePath | WriteBuffer[bytes]",
+        convert_dates: "dict[Hashable, str] | None" = None,
+        write_index: "bool" = True,
+        byteorder: "str | None" = None,
+        time_stamp: "datetime.datetime | None" = None,
+        data_label: "str | None" = None,
+        variable_labels: "dict[Hashable, str] | None" = None,
+        version: "int | None" = 114,
+        convert_strl: "Sequence[Hashable] | None" = None,
+        compression: "CompressionOptions" = "infer",
+        storage_options: "StorageOptions" = None,
+        *,
+        value_labels: "dict[Hashable, dict[float | int, str]] | None" = None,
     ):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Export ``DataFrame`` object to Stata data format.
@@ -2255,6 +2241,7 @@ class DataFrame(BasePandasDataset):
             convert_strl=convert_strl,
             compression=compression,
             storage_options=storage_options,
+            value_labels=value_labels,
         )
 
     def to_timestamp(
@@ -2345,7 +2332,7 @@ class DataFrame(BasePandasDataset):
     def where(
         self,
         cond,
-        other=np.nan,
+        other=no_default,
         inplace=False,
         axis=None,
         level=None,
@@ -2550,7 +2537,7 @@ class DataFrame(BasePandasDataset):
                 value = value.T.reshape(-1)
                 if len(self) > 0:
                     value = value[: len(self)]
-            if not isinstance(value, Series):
+            if not isinstance(value, (Series, Categorical)):
                 value = list(value)
 
         if not self._query_compiler.lazy_execution and len(self.index) == 0:

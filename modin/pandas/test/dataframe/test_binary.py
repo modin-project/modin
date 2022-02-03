@@ -23,13 +23,20 @@ from modin.pandas.test.utils import (
     eval_general,
     test_data,
     create_test_dfs,
+    default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 @pytest.mark.parametrize(
@@ -65,7 +72,7 @@ def test_math_functions(other, axis, op):
 
 @pytest.mark.parametrize(
     "other",
-    [lambda df: df[: -(2 ** 4)], lambda df: df[df.columns[0]].reset_index(drop=True)],
+    [lambda df: df[: -(2**4)], lambda df: df[df.columns[0]].reset_index(drop=True)],
     ids=["check_missing_value", "check_different_index"],
 )
 @pytest.mark.parametrize("fill_value", [None, 3.0])
@@ -101,7 +108,7 @@ def test_math_functions_level(op):
     )
 
     # Defaults to pandas
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         # Operation against self for sanity check
         getattr(modin_df, op)(modin_df, axis=0, level=1)
 
@@ -155,7 +162,7 @@ def test_multi_level_comparison(data, op):
     modin_df_multi_level.index = new_idx
 
     # Defaults to pandas
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         # Operation against self for sanity check
         getattr(modin_df_multi_level, op)(modin_df_multi_level, axis=0, level=1)
 

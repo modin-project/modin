@@ -23,7 +23,7 @@ from typing import Any, Optional
 
 import pandas
 import pandas._libs.lib as lib
-from pandas._typing import CompressionOptions, FilePathOrBuffer, StorageOptions
+from pandas._typing import CompressionOptions, StorageOptions
 from pandas.util._decorators import doc
 
 from modin.db_conn import ModinDatabaseConnection
@@ -271,7 +271,7 @@ class BaseIO(object):
         return pd_obj
 
     @classmethod
-    @_inherit_docstrings(pandas.read_json, apilink="pandas.io.json.read_json")
+    @_inherit_docstrings(pandas.read_json, apilink="pandas.read_json")
     @doc(
         _doc_default_io_method,
         summary="Convert a JSON string to query compiler",
@@ -826,7 +826,7 @@ class BaseIO(object):
     def to_pickle(
         cls,
         obj: Any,
-        filepath_or_buffer: FilePathOrBuffer,
+        filepath_or_buffer,
         compression: CompressionOptions = "infer",
         protocol: int = pickle.HIGHEST_PROTOCOL,
         storage_options: StorageOptions = None,

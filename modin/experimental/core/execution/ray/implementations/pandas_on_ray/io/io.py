@@ -42,45 +42,6 @@ from modin.config import NPartitions
 import ray
 
 
-# Ray functions are not detected by codecov (thus pragma: no cover)
-@ray.remote
-def _read_parquet_columns(path, columns, num_splits, kwargs):  # pragma: no cover
-    """
-    Read columns from Parquet file into a ``pandas.DataFrame`` using Ray task.
-
-    Parameters
-    ----------
-    path : str or List[str]
-        The path of the Parquet file.
-    columns : List[str]
-        The list of column names to read.
-    num_splits : int
-        The number of partitions to split the column into.
-    kwargs : dict
-        Keyward arguments to pass into ``pyarrow.parquet.read`` function.
-
-    Returns
-    -------
-    list
-        A list containing the splitted ``pandas.DataFrame``-s and the Index as the last
-        element.
-
-    Notes
-    -----
-    ``pyarrow.parquet.read`` is used internally as the parse function.
-    """
-    import pyarrow.parquet as pq
-
-    df = (
-        pq.ParquetDataset(path, **kwargs)
-        .read(columns=columns, use_pandas_metadata=True)
-        .to_pandas()
-    )
-    df = df[columns]
-    # Append the length of the index here to build it externally
-    return _split_result_for_readers(0, num_splits, df) + [len(df.index)]
-
-
 class ExperimentalPandasOnRayIO(PandasOnRayIO):
     """
     Class for handling experimental IO functionality with pandas storage format and Ray engine.
@@ -102,7 +63,6 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         (RayTask, PandasPickleExperimentalParser, PickleExperimentalDispatcher),
         build_args,
     )._read
-    read_parquet_remote_task = _read_parquet_columns
 
     @classmethod
     def read_sql(
@@ -122,6 +82,10 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
     ):
         """
         Read SQL query or database table into a DataFrame.
+
+        The function extended with `Spark-like parameters <https://spark.apache.org/docs/2.0.0/api/R/read.jdbc.html>`_
+        such as ``partition_column``, ``lower_bound`` and ``upper_bound``. With these
+        parameters, the user will be able to specify how to partition the imported data.
 
         Parameters
         ----------

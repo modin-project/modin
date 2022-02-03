@@ -14,7 +14,6 @@
 """Module houses `FWFDispatcher` class, that is used for reading of tables with fixed-width formatted lines."""
 
 import pandas
-from pandas._typing import FilePathOrBuffer
 from typing import Union, Sequence
 
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
@@ -28,7 +27,7 @@ class FWFDispatcher(TextFileDispatcher):
     @classmethod
     def check_parameters_support(
         cls,
-        filepath_or_buffer: FilePathOrBuffer,
+        filepath_or_buffer,
         read_kwargs: dict,
         skiprows_md: Union[Sequence, callable, int],
         header_size: int,

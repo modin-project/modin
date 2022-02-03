@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import re
 import pytest
 import numpy as np
 import math
@@ -41,9 +42,9 @@ extra_test_parameters = False
 random_state = np.random.RandomState(seed=42)
 
 DATASET_SIZE_DICT = {
-    "Small": (2 ** 2, 2 ** 3),
-    "Normal": (2 ** 6, 2 ** 8),
-    "Big": (2 ** 7, 2 ** 12),
+    "Small": (2**2, 2**3),
+    "Normal": (2**6, 2**8),
+    "Big": (2**7, 2**12),
 }
 
 # Size of test dataframes
@@ -294,6 +295,10 @@ agg_func = {
     "str": str,
     "sum mean": ["sum", "mean"],
     "sum df sum": ["sum", lambda df: df.sum()],
+    # The case verifies that returning a scalar that is based on a frame's data doesn't cause a problem
+    "sum of certain elements": lambda axis: (
+        axis.iloc[0] + axis.iloc[-1] if isinstance(axis, pandas.Series) else axis + axis
+    ),
     "should raise TypeError": 1,
 }
 agg_func_keys = list(agg_func.keys())
@@ -310,13 +315,13 @@ agg_func_except_values = list(agg_func_except.values())
 numeric_agg_funcs = ["sum mean", "sum sum", "sum df sum"]
 
 udf_func = {
-    "return self": lambda df: lambda x, *args, **kwargs: type(x)(x.values),
-    "change index": lambda df: lambda x, *args, **kwargs: pandas.Series(
+    "return self": lambda x, *args, **kwargs: type(x)(x.values),
+    "change index": lambda x, *args, **kwargs: pandas.Series(
         x.values, index=np.arange(-1, len(x.index) - 1)
     ),
-    "return none": lambda df: lambda x, *args, **kwargs: None,
-    "return empty": lambda df: lambda x, *args, **kwargs: pandas.Series(),
-    "access self": lambda df: lambda x, other, *args, **kwargs: pandas.Series(
+    "return none": lambda x, *args, **kwargs: None,
+    "return empty": lambda x, *args, **kwargs: pandas.Series(),
+    "access self": lambda x, other, *args, **kwargs: pandas.Series(
         x.values, index=other.index
     ),
 }
@@ -453,6 +458,8 @@ encoding_types = [
 # the type of this exceptions are the same
 io_ops_bad_exc = [TypeError, FileNotFoundError]
 
+default_to_pandas_ignore_string = "default:.*defaulting to pandas.*:UserWarning"
+
 # Files compression to extension mapping
 COMP_TO_EXT = {"gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
 
@@ -473,8 +480,10 @@ def df_categories_equals(df1, df2):
         else:
             return True
 
-    categories_columns = df1.select_dtypes(include="category").columns
-    for column in categories_columns:
+    df1_categorical_columns = df1.select_dtypes(include="category").columns
+    df2_categorical_columns = df2.select_dtypes(include="category").columns
+    assert df1_categorical_columns.equals(df2_categorical_columns)
+    for column in df1_categorical_columns:
         assert_extension_array_equal(
             df1[column].values,
             df2[column].values,
@@ -1101,10 +1110,17 @@ def check_file_leaks(func):
                 try:
                     fstart.remove(item)
                 except ValueError:
-                    # ignore files in /proc/, as they have nothing to do with
-                    # modin reading any data (and this is what we care about)
-                    if not item[0].startswith("/proc/"):
-                        leaks.append(item)
+                    # Ignore files in /proc/, as they have nothing to do with
+                    # modin reading any data (and this is what we care about).
+                    if item[0].startswith("/proc/"):
+                        continue
+                    # Ignore files in /tmp/ray/session_*/logs (ray session logs)
+                    # because Ray intends to keep these logs open even after
+                    # work has been done.
+                    if re.search(r"/tmp/ray/session_.*/logs", item[0]):
+                        continue
+                    leaks.append(item)
+
             assert (
                 not leaks
             ), f"Unexpected open handles left for: {', '.join(item[0] for item in leaks)}"
@@ -1353,12 +1369,16 @@ def make_default_file(file_type: str):
     return _make_default_file, filenames
 
 
+def value_equals(obj1, obj2):
+    """Check wherher two scalar or list-like values are equal and raise an ``AssertionError`` if they aren't."""
+    if is_list_like(obj1):
+        np.testing.assert_array_equal(obj1, obj2)
+    else:
+        assert (obj1 == obj2) or (np.isnan(obj1) and np.isnan(obj2))
+
+
 def dict_equals(dict1, dict2):
     """Check whether two dictionaries are equal and raise an ``AssertionError`` if they aren't."""
     for key1, key2 in itertools.zip_longest(sorted(dict1), sorted(dict2)):
-        assert (key1 == key2) or (np.isnan(key1) and np.isnan(key2))
-        value1, value2 = dict1[key1], dict2[key2]
-        if is_list_like(value1):
-            np.testing.assert_array_equal(value1, value2)
-        else:
-            assert value1 == value2
+        value_equals(key1, key2)
+        value_equals(dict1[key1], dict2[key2])

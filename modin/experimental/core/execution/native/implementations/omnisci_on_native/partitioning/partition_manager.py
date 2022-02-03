@@ -191,15 +191,23 @@ class OmnisciOnNativeDataframePartitionManager(PandasDataframePartitionManager):
             else:
                 obj = at
 
+        def is_supported_dtype(dtype):
+            """Check whether the passed pyarrow `dtype` is supported by OmniSci."""
+            if (
+                pyarrow.types.is_string(dtype)
+                or pyarrow.types.is_time(dtype)
+                or pyarrow.types.is_dictionary(dtype)
+            ):
+                return True
+            try:
+                pandas_dtype = dtype.to_pandas_dtype()
+                return pandas_dtype != np.dtype("O")
+            except NotImplementedError:
+                return False
+
         return (
             obj,
-            [
-                field.name
-                for field in obj.schema
-                if not isinstance(field.type, pyarrow.DictionaryType)
-                and field.type.to_pandas_dtype() == np.dtype("O")
-                and field.type != "string"
-            ],
+            [field.name for field in obj.schema if not is_supported_dtype(field.type)],
         )
 
     @classmethod
@@ -251,9 +259,13 @@ class OmnisciOnNativeDataframePartitionManager(PandasDataframePartitionManager):
 
         curs = omniSession.executeRA(cmd_prefix + calcite_json)
         assert curs
-        rb = curs.getArrowRecordBatch()
-        assert rb is not None
-        at = pyarrow.Table.from_batches([rb])
+        if hasattr(curs, "getArrowTable"):
+            at = curs.getArrowTable()
+        else:
+            rb = curs.getArrowRecordBatch()
+            assert rb is not None
+            at = pyarrow.Table.from_batches([rb])
+        assert at is not None
 
         res = np.empty((1, 1), dtype=np.dtype(object))
         # workaround for https://github.com/modin-project/modin/issues/1851

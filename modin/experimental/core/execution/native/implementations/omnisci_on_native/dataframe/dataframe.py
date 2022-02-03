@@ -14,6 +14,7 @@
 """Module provides ``OmnisciOnNativeDataframe`` class implementing lazy frame."""
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
 from modin.experimental.core.storage_formats.omnisci.query_compiler import (
     DFAlgQueryCompiler,
 )
@@ -24,6 +25,7 @@ from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
 from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
 import pandas as pd
+from typing import List, Hashable, Optional, Tuple, Union
 
 from ..df_algebra import (
     MaskNode,
@@ -52,6 +54,7 @@ from collections import OrderedDict
 import numpy as np
 import pyarrow
 import re
+from modin.pandas.utils import check_both_not_none
 
 
 class OmnisciOnNativeDataframe(PandasDataframe):
@@ -267,37 +270,53 @@ class OmnisciOnNativeDataframe(PandasDataframe):
 
     def mask(
         self,
-        row_indices=None,
-        row_numeric_idx=None,
-        col_indices=None,
-        col_numeric_idx=None,
-    ):
+        row_labels: Optional[List[Hashable]] = None,
+        row_positions: Optional[List[int]] = None,
+        col_labels: Optional[List[Hashable]] = None,
+        col_positions: Optional[List[int]] = None,
+    ) -> "OmnisciOnNativeDataframe":
         """
-        Mask operation.
+        Mask rows and columns in the dataframe.
+
+        Allow users to perform selection and projection on the row and column labels (named notation),
+        in addition to the row and column number (positional notation).
 
         Parameters
         ----------
-        row_indices : list, optional
-            Indices of rows to select.
-        row_numeric_idx : list-like of ints, optional
-            Numeric indices of rows to select.
-        col_indices : list, optional
-            Indices of columns to select.
-        col_numeric_idx : list-like of ints, optional
-            Numeric indices of columns to select.
+        row_labels : list of hashable, optional
+            The row labels to extract.
+        row_positions : list of int, optional
+            The row positions to extract.
+        col_labels : list of hashable, optional
+            The column labels to extract.
+        col_positions : list of int, optional
+            The column positions to extract.
 
         Returns
         -------
         OmnisciOnNativeDataframe
             The new frame.
+
+        Notes
+        -----
+        If both `row_labels` and `row_positions` are provided, a ValueError is raised.
+        The same rule applies for `col_labels` and `col_positions`.
         """
+        if check_both_not_none(row_labels, row_positions):
+            raise ValueError(
+                "Both row_labels and row_positions were provided - please provide only one of row_labels and row_positions."
+            )
+        if check_both_not_none(col_labels, col_positions):
+            raise ValueError(
+                "Both col_labels and col_positions were provided - please provide only one of col_labels and col_positions."
+            )
         base = self
 
-        if col_indices is not None or col_numeric_idx is not None:
-            if col_indices is not None:
-                new_columns = col_indices
-            elif col_numeric_idx is not None:
-                new_columns = base.columns[col_numeric_idx]
+        if col_labels is not None or col_positions is not None:
+            if col_labels is not None:
+                new_columns = col_labels
+            elif col_positions is not None:
+                new_columns = base.columns[col_positions]
             exprs = self._index_exprs()
             for col in new_columns:
                 exprs[col] = base.ref(col)
@@ -310,10 +329,8 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 force_execution_mode=self._force_execution_mode,
             )
 
-        if row_indices is not None or row_numeric_idx is not None:
-            op = MaskNode(
-                base, row_indices=row_indices, row_numeric_idx=row_numeric_idx
-            )
+        if row_labels is not None or row_positions is not None:
+            op = MaskNode(base, row_labels=row_labels, row_positions=row_positions)
             return self.__constructor__(
                 columns=base.columns,
                 dtypes=base._dtypes,
@@ -420,7 +437,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                     else:
                         raise NotImplementedError("unsupported groupby args")
                 by_cols = Index.__new__(Index, data=by_cols, dtype=self.columns.dtype)
-                by_frame = self.mask(col_indices=by_cols)
+                by_frame = self.mask(col_labels=by_cols)
                 if by_frames:
                     by_frame = by_frame.concat(
                         axis=1, other_modin_frames=by_frames, ignore_index=True
@@ -545,7 +562,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 if not (isinstance(col, str) and re.match(col_to_delete, col))
             ]
             if len(filtered_columns) != len(new_frame.columns):
-                new_frame = new_frame.mask(col_indices=filtered_columns)
+                new_frame = new_frame.mask(col_labels=filtered_columns)
         return new_frame
 
     def agg(self, agg):
@@ -777,12 +794,12 @@ class OmnisciOnNativeDataframe(PandasDataframe):
 
     def join(
         self,
-        other,
-        how="inner",
-        left_on=None,
-        right_on=None,
-        sort=False,
-        suffixes=("_x", "_y"),
+        other: "OmnisciOnNativeDataframe",
+        how: Optional[Union[str, JoinType]] = JoinType.INNER,
+        left_on: Optional[List[str]] = None,
+        right_on: Optional[List[str]] = None,
+        sort: Optional[bool] = False,
+        suffixes: Optional[Tuple[str]] = ("_x", "_y"),
     ):
         """
         Join operation.
@@ -791,7 +808,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         ----------
         other : OmnisciOnNativeDataframe
             A frame to join with.
-        how : str, default: "inner"
+        how : str or modin.core.dataframe.base.utils.JoinType, default: JoinType.INNER
             A type of join.
         left_on : list of str, optional
             A list of columns for the left frame to join on.
@@ -808,6 +825,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         OmnisciOnNativeDataframe
             The new frame.
         """
+        how = JoinType(how)
         assert (
             left_on is not None and right_on is not None
         ), "Merge with unspecified 'left_on' or 'right_on' parameter is not supported in the engine"
@@ -844,7 +862,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         op = JoinNode(
             self,
             other,
-            how=how,
+            how=how.value,
             exprs=exprs,
             condition=condition,
         )
@@ -1105,14 +1123,19 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         return lhs
 
     def concat(
-        self, axis, other_modin_frames, join="outer", sort=False, ignore_index=False
+        self,
+        axis: Union[int, Axis],
+        other_modin_frames: List["OmnisciOnNativeDataframe"],
+        join: Optional[str] = "outer",
+        sort: Optional[bool] = False,
+        ignore_index: Optional[bool] = False,
     ):
         """
         Concatenate frames along a particular axis.
 
         Parameters
         ----------
-        axis : 0 or 1
+        axis : int or modin.core.dataframe.base.utils.Axis
             The axis to concatenate along.
         other_modin_frames : list of OmnisciOnNativeDataframe
             Frames to concat.
@@ -1129,11 +1152,14 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         OmnisciOnNativeDataframe
             The new frame.
         """
+        axis = Axis(axis)
         if not other_modin_frames:
             return self
 
-        if axis == 0:
-            return self._union_all(axis, other_modin_frames, join, sort, ignore_index)
+        if axis == Axis.ROW_WISE:
+            return self._union_all(
+                axis.value, other_modin_frames, join, sort, ignore_index
+            )
 
         base = self
         for frame in other_modin_frames:
@@ -1685,13 +1711,11 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             return self._has_arrow_table()
         elif isinstance(self._op, MaskNode):
             return (
-                self._op.row_indices is None and self._op.input[0]._can_execute_arrow()
+                self._op.row_labels is None and self._op.input[0]._can_execute_arrow()
             )
         elif isinstance(self._op, TransformNode):
             return (
-                not self._uses_rowid
-                and self._op.is_simple_select()
-                and self._op.input[0]._can_execute_arrow()
+                self._op.is_simple_select() and self._op.input[0]._can_execute_arrow()
             )
         elif isinstance(self._op, UnionNode):
             return all(frame._can_execute_arrow() for frame in self._op.input)
@@ -1714,7 +1738,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 assert self._partitions.size == 1
                 return self._partitions[0][0].get()
         elif isinstance(self._op, MaskNode):
-            return self._op.input[0]._arrow_row_slice(self._op.row_numeric_idx)
+            return self._op.input[0]._arrow_row_slice(self._op.row_positions)
         elif isinstance(self._op, TransformNode):
             return self._op.input[0]._arrow_select(self._op.exprs)
         elif isinstance(self._op, UnionNode):
@@ -1737,13 +1761,16 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             The resulting table.
         """
         table = self._execute_arrow()
-        schema = table.schema
 
         new_fields = []
         new_columns = []
 
         for col, expr in exprs.items():
-            field = schema.field(f"F_{expr.column}")
+            if expr.column == "__rowid__" and "F___rowid__" not in table.schema.names:
+                arr = pyarrow.array(np.arange(0, table.num_rows))
+                table = table.append_column("F___rowid__", arr)
+
+            field = table.schema.field(f"F_{expr.column}")
             if col != expr.column:
                 field = field.with_name(f"F_{col}")
             new_fields.append(field)
@@ -1753,14 +1780,14 @@ class OmnisciOnNativeDataframe(PandasDataframe):
 
         return pyarrow.Table.from_arrays(new_columns, schema=new_schema)
 
-    def _arrow_row_slice(self, row_numeric_idx):
+    def _arrow_row_slice(self, row_positions):
         """
         Perform row selection on the frame using Arrow API.
 
         Parameters
         ----------
-        row_numeric_idx : list of int
-            Numeric indices of rows to select.
+        row_positions : list of int
+            Row positions to select.
 
         Returns
         -------
@@ -1769,24 +1796,22 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         """
         table = self._execute_arrow()
 
-        if not isinstance(row_numeric_idx, slice) and not is_range_like(
-            row_numeric_idx
-        ):
-            if not isinstance(row_numeric_idx, (pyarrow.Array, np.ndarray, list)):
-                row_numeric_idx = pyarrow.array(row_numeric_idx)
-            return table.take(row_numeric_idx)
+        if not isinstance(row_positions, slice) and not is_range_like(row_positions):
+            if not isinstance(row_positions, (pyarrow.Array, np.ndarray, list)):
+                row_positions = pyarrow.array(row_positions)
+            return table.take(row_positions)
 
-        if isinstance(row_numeric_idx, slice):
-            row_numeric_idx = range(*row_numeric_idx.indices(table.num_rows))
+        if isinstance(row_positions, slice):
+            row_positions = range(*row_positions.indices(table.num_rows))
 
         start, stop, step = (
-            row_numeric_idx.start,
-            row_numeric_idx.stop,
-            row_numeric_idx.step,
+            row_positions.start,
+            row_positions.stop,
+            row_positions.step,
         )
 
         if step == 1:
-            return table.slice(start, len(row_numeric_idx))
+            return table.slice(start, len(row_positions))
         else:
             indices = np.arange(start, stop, step)
             return table.take(indices)
