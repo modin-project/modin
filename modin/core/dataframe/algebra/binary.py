@@ -88,11 +88,15 @@ class Binary(Operator):
                         )
                     )
                 else:
+                    new_index = kwargs.pop("new_index", None)
+                    new_columns = kwargs.pop("new_columns", None)
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.binary_op(
                             lambda x, y: func(x, y, *args, **kwargs),
                             other._modin_frame,
                             join_type=join_type,
+                            new_index=new_index,
+                            new_columns=new_columns,
                         )
                     )
             else:

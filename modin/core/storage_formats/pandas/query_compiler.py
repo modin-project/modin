@@ -368,6 +368,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     combine = Binary.register(pandas.DataFrame.combine)
     combine_first = Binary.register(pandas.DataFrame.combine_first)
     eq = Binary.register(pandas.DataFrame.eq)
+    equals = Binary.register(
+        lambda x, y: pandas.DataFrame([[pandas.DataFrame.equals(x, y)]])
+    )
     floordiv = Binary.register(pandas.DataFrame.floordiv)
     ge = Binary.register(pandas.DataFrame.ge)
     gt = Binary.register(pandas.DataFrame.gt)

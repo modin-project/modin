@@ -951,11 +951,12 @@ class Series(BasePandasDataset):
         """
         Test whether two objects contain the same elements.
         """
-        return (
-            self.name == other.name
-            and self.index.equals(other.index)
-            and self.eq(other).all()
-        )
+        if isinstance(other, pandas.Series):
+            other = Series(other)
+        if not (isinstance(other, type(self))):
+            return False
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).equals(new_other, axis=0)
 
     def explode(self, ignore_index: bool = False):  # noqa: PR01, RT01, D200
         """

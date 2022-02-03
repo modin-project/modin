@@ -423,6 +423,7 @@ class BasePandasDataset(object):
             "__ror__",
             "__xor__",
             "__rxor__",
+            "equals",
         ]
         if op in exclude_list:
             kwargs.pop("axis")
@@ -1415,6 +1416,19 @@ class BasePandasDataset(object):
         if ignore_index:
             exploded = exploded.reset_index(drop=True)
         return exploded
+
+    def equals(self, other, axis=None):
+        return (
+            self._binary_op(
+                "equals",
+                other,
+                new_index=pandas.Index([0]),
+                new_columns=pandas.Index([0]),
+                axis=axis,
+            )
+            .all()
+            .all()
+        )
 
     def ewm(
         self,

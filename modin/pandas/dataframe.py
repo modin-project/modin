@@ -784,12 +784,13 @@ class DataFrame(BasePandasDataset):
         Test whether two objects contain the same elements.
         """
         if isinstance(other, pandas.DataFrame):
-            # Copy into a Modin DataFrame to simplify logic below
             other = DataFrame(other)
+        if not (isinstance(other, type(self))):
+            return False
         return (
             self.index.equals(other.index)
             and self.columns.equals(other.columns)
-            and self.eq(other).all().all()
+            and super(DataFrame, self).equals(other)
         )
 
     def _update_var_dicts_in_kwargs(self, expr, kwargs):

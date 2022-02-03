@@ -2458,7 +2458,14 @@ class PandasDataframe(object):
         return reindexed_frames[0], reindexed_frames[1:], joined_index
 
     @lazy_metadata_decorator(apply_axis="both")
-    def binary_op(self, op, right_frame, join_type="outer"):
+    def binary_op(
+        self,
+        op,
+        right_frame,
+        join_type="outer",
+        new_index: Optional[pandas.Index] = None,
+        new_columns: Optional[pandas.Index] = None,
+    ):
         """
         Perform an operation that requires joining with another Modin DataFrame.
 
@@ -2470,22 +2477,29 @@ class PandasDataframe(object):
             Modin DataFrame to join with.
         join_type : str, default: "outer"
             Type of join to apply.
+        new_index : pandas.Index, optional
+            New index of the frame resulting from the binary operation
+        new_columns: pandas.Index, optional
+            New columns of the frame reuslting from the binary operation
 
         Returns
         -------
         PandasDataframe
             New Modin DataFrame.
         """
-        left_parts, right_parts, joined_index = self._copartition(
+        left_parts, right_parts, possible_new_index = self._copartition(
             0, right_frame, join_type, sort=True
         )
+        if new_index is None:
+            new_index = possible_new_index
         # unwrap list returned by `copartition`.
         right_parts = right_parts[0]
         new_frame = self._partition_mgr_cls.binary_operation(
             1, left_parts, lambda l, r: op(l, r), right_parts
         )
-        new_columns = self.columns.join(right_frame.columns, how=join_type)
-        return self.__constructor__(new_frame, joined_index, new_columns, None, None)
+        if new_columns is None:
+            new_columns = self.columns.join(right_frame.columns, how=join_type)
+        return self.__constructor__(new_frame, new_index, new_columns, None, None)
 
     @lazy_metadata_decorator(apply_axis="both")
     def concat(
