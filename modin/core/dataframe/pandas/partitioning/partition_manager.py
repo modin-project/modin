@@ -542,7 +542,7 @@ class PandasDataframePartitionManager(ABC):
         Parameters
         ----------
         partitions : np.ndarray
-            A NumPy 2D array of partitions to perform operation on.
+            A NumPy 2D array of partitions housing the data of a ModinDataframe backed by pandas.
         map_func : callable
             Function to apply.
 
@@ -569,7 +569,7 @@ class PandasDataframePartitionManager(ABC):
         Parameters
         ----------
         partitions : np.ndarray
-            A NumPy 2D array of partitions to perform operation on.
+            A NumPy 2D array of partitions housing the data of a ModinDataframe backed by pandas.
         map_func : callable
             Function to apply.
 
@@ -606,7 +606,7 @@ class PandasDataframePartitionManager(ABC):
         axis : {0, 1}
             Axis to perform the map across (0 - index, 1 - columns).
         partitions : np.ndarray
-            A NumPy 2D array of partitions to perform operation on.
+            A NumPy 2D array of partitions housing the data of a ModinDataframe backed by pandas.
         map_func : callable
             Function to apply.
         keep_partitioning : bool, default: False
