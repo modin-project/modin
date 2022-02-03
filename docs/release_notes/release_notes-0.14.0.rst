@@ -8,6 +8,7 @@ Key Features and Updates
   * FIX-#4136: Fix exercise_3.ipynb example notebook (#4137)
   * FIX-#4105: Fix names of pandas options to avoid `OptionError` (#4109)
   * FIX-#3417: Fix read_csv with skiprows and header parameters (#3419)
+  * FIX-#4142: Fix OmniSci enabling (#4146)
 * Performance enhancements
   *
 * Benchmarking enhancements
@@ -33,4 +34,4 @@ Key Features and Updates
 
 Contributors
 ------------
-@prutskov, @amyskov, @paulovn, @anmyachev
+@prutskov, @amyskov, @paulovn, @anmyachev, @YarShev
