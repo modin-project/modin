@@ -663,7 +663,7 @@ class TextFileDispatcher(FileDispatcher):
         if not skiprows_supported:
             ErrorMessage.single_warning(
                 "Values of `header` and `skiprows` parameters have intersections. "
-                "This case doesn't supported by Modin, so pandas implementation will be used!"
+                "This case is unsupported by Modin, so pandas implementation will be used"
             )
             return False
 
@@ -787,7 +787,6 @@ class TextFileDispatcher(FileDispatcher):
                 skiprows_md = 0
             elif skiprows_md[0] > header_size:
                 skiprows_md = skiprows_md - header_size
-
         elif callable(skiprows):
 
             def skiprows_func(x):
