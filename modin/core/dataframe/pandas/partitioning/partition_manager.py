@@ -887,7 +887,6 @@ class PandasDataframePartitionManager(ABC):
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
     @classmethod
-    @progress_bar_wrapper
     def _apply_func_to_list_of_partitions_broadcast(
         cls, func, partitions, other, **kwargs
     ):
