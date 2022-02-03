@@ -6,6 +6,7 @@ Key Features and Updates
 * Stability and Bugfixes
   * FIX-#4058: Allow pickling empty dataframes and series (#4095)
   * FIX-#4136: Fix exercise_3.ipynb example notebook (#4137)
+  * FIX-#4105: Fix names of pandas options to avoid `OptionError` (#4109)
 * Performance enhancements
   * FIX-#4138: optimize internal '.mask()' flow (#4140)
 * Benchmarking enhancements
@@ -32,4 +33,5 @@ Contributors
 ------------
 @prutskov
 @amyskov
+paulovn
 @dchigarev
