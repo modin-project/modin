@@ -638,7 +638,7 @@ class PandasDataframe(object):
             new_index = self.index[
                 # pandas Index is more likely to preserve its metadata if the indexer is slice
                 slice(row_positions.start, row_positions.stop, row_positions.step)
-                # TODO: Fast range processing of non-1-step ranges is not yet supported
+                # TODO: Fast range processing of non-positive-step ranges is not yet supported
                 if is_range_like(row_positions) and row_positions.step > 0
                 else sorted_row_positions
             ]
@@ -733,13 +733,13 @@ class PandasDataframe(object):
         # common case to keep it fast.
         if (
             row_positions is None
-            # Fast range processing of non-1-step ranges is not yet supported
+            # Fast range processing of non-positive-step ranges is not yet supported
             or (is_range_like(row_positions) and row_positions.step > 0)
             or len(row_positions) == 1
             or np.all(row_positions[1:] >= row_positions[:-1])
         ) and (
             col_positions is None
-            # Fast range processing of non-1-step ranges is not yet supported
+            # Fast range processing of non-positive-step ranges is not yet supported
             or (is_range_like(col_positions) and col_positions.step > 0)
             or len(col_positions) == 1
             or np.all(col_positions[1:] >= col_positions[:-1])
@@ -1188,7 +1188,7 @@ class PandasDataframe(object):
                 else np.array(indices, dtype=np.int64)
             )
             indices[negative_mask] = indices[negative_mask] % len(self.axes[axis])
-        # If the `indices` array was modified because of the negative indices convertion
+        # If the `indices` array was modified because of the negative indices conversion
         # then the original order was broken and so we have to sort anyway:
         if not has_negative and not are_indices_sorted:
             indices = np.sort(indices)
