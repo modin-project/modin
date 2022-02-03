@@ -76,16 +76,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
-      - run: |
-          curl -o codecov https://codecov.io/bash
-          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
-          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
-          if sha512sum -c --ignore-missing --status SHA512SUM; then
-              bash ./codecov
-          else
-              echo 'CORRUPTED CODECOV SCRIPT!!!'
-              exit 10
-          fi
+      - uses: codecov/codecov-action@v2
 
   test-omnisci:
     runs-on: ubuntu-latest
@@ -117,16 +108,7 @@ jobs:
       - run: pytest modin/test/storage_formats/omnisci/test_internals.py
       - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv
-      - run: |
-          curl -o codecov https://codecov.io/bash
-          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
-          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
-          if sha512sum -c --ignore-missing --status SHA512SUM; then
-              bash ./codecov
-          else
-              echo 'CORRUPTED CODECOV SCRIPT!!!'
-              exit 10
-          fi
+      - uses: codecov/codecov-action@v2
 
   test-all:
     runs-on: ubuntu-latest
@@ -184,16 +166,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
       - run: python -m pytest modin/pandas/test/test_io.py
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - run: |
-          curl -o codecov https://codecov.io/bash
-          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
-          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
-          if sha512sum -c --ignore-missing --status SHA512SUM; then
-              bash ./codecov
-          else
-              echo 'CORRUPTED CODECOV SCRIPT!!!'
-              exit 10
-          fi
+      - uses: codecov/codecov-action@v2
 
   test-windows:
     runs-on: windows-latest
@@ -247,8 +220,7 @@ jobs:
       - timeout-minutes: 30
         run: python -m pytest modin/pandas/test/test_io.py
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
-      - run: choco install codecov
-      - run: codecov -f ./coverage.xml
+      - uses: codecov/codecov-action@v2
 
   test-pyarrow:
     runs-on: ubuntu-latest
