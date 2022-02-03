@@ -37,7 +37,7 @@ from pandas.core.dtypes.common import is_scalar
 import pandas.core.resample
 import pandas
 import numpy as np
-from typing import List, Hashable
+from typing import List, Hashable, Optional
 
 
 def _get_axis(axis):
@@ -482,6 +482,41 @@ class BaseQueryCompiler(abc.ABC):
     @doc_utils.doc_binary_method(operation="equality comparison", sign="==")
     def eq(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.eq)(self, other=other, **kwargs)
+
+    def equals(
+        self,
+        other,
+        new_index: Optional[pandas.Index] = None,
+        new_columns: Optional[pandas.Index] = None,
+    ):
+        """
+        Test whether two objects contain the same elements.
+
+        If axes are not equal, perform frames alignment first. Note that
+        because frame alignment includes filling in empty values with NaN,
+        the query compiler for DataFrame([[1], [np.NaN]]) is equal to the query
+        compiler for DataFrame([[1]]]). In that case, the latter dataframe's
+        partition is expanded to DataFrame([[1], [np.NaN]]]).
+
+        Parameters
+        ----------
+        other : BaseQueryCompiler
+            The other compiler to be compared with the first.
+        new_index : pandas.Index, optional
+            New index of the frame resulting from the binary operation.
+        new_columns : pandas.Index, optional
+            New columns of the frame reuslting from the binary operation.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Result where each.
+        """
+        return BinaryDefault.register(
+            lambda x, y: pandas.DataFrame(
+                pandas.DataFrame.equals(x, y), index=new_index, columns=new_columns
+            )
+        )(self, other=other)
 
     @doc_utils.doc_binary_method(operation="integer division", sign="//")
     def floordiv(self, other, **kwargs):  # noqa: PR02

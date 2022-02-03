@@ -2478,9 +2478,9 @@ class PandasDataframe(object):
         join_type : str, default: "outer"
             Type of join to apply.
         new_index : pandas.Index, optional
-            New index of the frame resulting from the binary operation
-        new_columns: pandas.Index, optional
-            New columns of the frame reuslting from the binary operation
+            New index of the frame resulting from the binary operation.
+        new_columns : pandas.Index, optional
+            New columns of the frame reuslting from the binary operation.
 
         Returns
         -------
