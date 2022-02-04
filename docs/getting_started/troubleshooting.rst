@@ -217,5 +217,76 @@ This can happen when you use OmniSci engine along with ``pyarrow.gandiva``:
 
 Do not use OmniSci engine along with ``pyarrow.gandiva``.
 
+Error when using Dask engine in a separate .py module
+"""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+The following `script.py` uses Modin on Dask engine and produces errors:
+
+.. code-block:: python
+
+  # script.py
+  import modin.pandas as pd
+  import modin.config as cfg
+
+  cfg.Engine.put("dask")
+
+  df = pd.DataFrame([0,1,2,3])
+  print(df)
+
+A part of produced by ``python script.py`` errors:
+
+.. code-block::
+
+  File "/path/python3.9/multiprocessing/spawn.py", line 134, in _check_not_importing_main
+    raise RuntimeError('''
+    RuntimeError: 
+        An attempt has been made to start a new process before the
+        current process has finished its bootstrapping phase.
+
+        This probably means that you are not using fork to start your
+        child processes and you have forgotten to use the proper idiom
+        in the main module:
+
+            if __name__ == '__main__':
+                freeze_support()
+                ...
+
+        The "freeze_support()" line can be omitted if the program
+        is not going to be frozen to produce an executable.
+
+This is happened because Dask Client uses fork to start processes. To avoid the problem need to
+move Dask Client creating in ``__main__`` scope of the module. See more details in `multiprocessing guidelines
+<https://docs.python.org/3/library/multiprocessing.html#multiprocessing-programming>`_.
+
+The fixed `script.py` is the following:
+
+.. code-block:: python
+
+  # script.py
+  import modin.pandas as pd
+  import modin.config as cfg
+
+  cfg.Engine.put("dask")
+
+  if __name__ == "__main__":
+    df = pd.DataFrame([0,1,2,3]) # Dask Client creating is hidden in a first call of Modin functionality.
+    print(df)
+
+or
+
+.. code-block:: python
+
+  # script.py
+  from distributed import Client
+  import modin.pandas as pd
+  import modin.config as cfg
+
+  cfg.Engine.put("dask")
+
+  if __name__ == "__main__":
+    client = Client() # Explicit Dask Client creating.
+    df = pd.DataFrame([0,1,2,3])
+    print(df)
+
 .. _issue: https://github.com/modin-project/modin/issues
 .. _Slack: https://modin.org/slack.html
