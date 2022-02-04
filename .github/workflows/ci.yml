@@ -1,9 +1,17 @@
 name: ci
 on:
   pull_request:
-    paths-ignore:
-      - "**.rst"
-      - "**.md"
+    paths:
+      - .github/**
+      - asv_bench/**
+      - modin/**
+      - requirements/**
+      - scripts/**
+      - environment-dev.yml
+      - requirements-dev.txt
+      - setup.cfg
+      - setup.py
+      - versioneer.py
 jobs:
   lint-black:
     name: lint (black)
