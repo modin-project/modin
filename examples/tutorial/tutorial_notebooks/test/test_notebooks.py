@@ -17,8 +17,8 @@ from nbconvert.preprocessors import ExecutePreprocessor
 ep = ExecutePreprocessor(timeout=600, kernel_name="python3")
 
 download_taxi_dataset = """import os
+import urllib.request
 if not os.path.exists("taxi.csv"):
-    import urllib.request
     url_path = "https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv"
     urllib.request.urlretrieve(url_path, "taxi.csv")
     """

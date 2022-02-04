@@ -20,7 +20,7 @@ jobs:
         uses: actions/cache@v2
         with:
           path: taxi.csv
-          # update cache only notebooks need it are changed
+          # update cache only if notebooks need it are changed
           key: hashFiles("examples/tutorial/tutorial_notebooks/introduction/**")
       - run: pip install pytest pytest-cov tqdm black flake8 flake8-print
       - run: pip install -e .[all]
