@@ -19,6 +19,7 @@ JoinType is an enum that represents the `join_type` or `how` argument for the jo
 """
 
 from enum import Enum
+import sentinels
 
 
 class Axis(Enum):  # noqa: PR01
@@ -48,3 +49,9 @@ class JoinType(Enum):  # noqa: PR01
     LEFT = "left"
     RIGHT = "right"
     OUTER = "outer"
+
+
+# This value signals that when using a Modin frame method that takes an item to
+# distribute, we don't want to provide an item to distribute. We need a sentinel
+# because sometimes we do want to distribute the scalar None.
+no_item_to_distribute = sentinels.Sentinel("NoItemToDistribute")
