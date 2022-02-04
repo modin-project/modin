@@ -22,6 +22,7 @@ jobs:
           path: taxi.csv
           # update cache only notebooks need it are changed
           key: ${{ hashFiles("examples/tutorial/tutorial_notebooks/introduction/exercise_2.ipynb") }}-${{ hashFiles("examples/tutorial/tutorial_notebooks/introduction/exercise_4.ipynb") }}
+      - run: ls
       - run: pip install pytest black flake8 flake8-print
       - run: pip install -e .[all]
       - run: black --check --diff examples/tutorial/tutorial_notebooks/test/test_notebooks.py
