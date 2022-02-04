@@ -175,7 +175,7 @@ jobs:
         run: python -m pytest modin/test/test_headers.py
 
   test-clean-install-ubuntu:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -196,7 +196,7 @@ jobs:
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
 
   test-clean-install-windows:
-    needs: [ lint-commit, lint-flake8, lint-black, test-api, test-headers ]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: windows-latest
     defaults:
       run:
@@ -217,7 +217,7 @@ jobs:
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
 
   test-internals:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -250,7 +250,7 @@ jobs:
       - run: python -m pytest asv_bench/test/test_utils.py
 
   test-defaults:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -300,7 +300,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-omnisci:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -332,7 +332,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-asv-benchmarks:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -393,7 +393,7 @@ jobs:
         if: failure()
 
   test-all:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -454,7 +454,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-experimental:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -485,7 +485,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-cloud:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -519,7 +519,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-windows:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: windows-latest
     defaults:
       run:
@@ -574,7 +574,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-pyarrow:
-    needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -605,7 +605,7 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_io.py::TestCsv --verbose
 
   test-spreadsheet:
-    needs: [ lint-commit, lint-flake8, lint-black, test-api, test-headers ]
+    needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
