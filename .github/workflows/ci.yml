@@ -1,9 +1,5 @@
-name: ci
-on:
-  pull_request:
-    paths:
-      - modin/**
-      - .github/**
+name: ci-required
+on: pull_request
 jobs:
   lint-commit:
     name: lint (commit)
@@ -24,6 +20,13 @@ jobs:
       - run: git fetch upstream
       - run: npx commitlint --from upstream/master --to $(git log upstream/master..HEAD --pretty=format:"%h" | tail -1) --verbose
 
+name: ci
+on:
+  pull_request:
+    paths-ignore:
+      - "**.rst"
+      - "**.md"
+jobs:
   lint-black:
     name: lint (black)
     runs-on: ubuntu-latest
