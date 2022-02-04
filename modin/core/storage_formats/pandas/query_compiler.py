@@ -3155,3 +3155,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 other._modin_frame,
             )
         )
+
+    def num_chunks(self):
+        """
+        Return the number of chunks the column consists of.
+        """
+        self._modin_frame.num_chunks()

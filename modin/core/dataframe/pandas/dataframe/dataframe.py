@@ -2826,3 +2826,9 @@ class PandasDataframe(object):
         that were used to build it.
         """
         self._partition_mgr_cls.finalize(self._partitions)
+
+    def num_chunks(self):
+        """
+        Return the number of chunks the column consists of.
+        """
+        self._partitions.size()
