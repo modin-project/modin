@@ -4644,6 +4644,6 @@ class BaseQueryCompiler(abc.ABC):
 
     def num_chunks(self):
         """
-        Return the number of chunks the column consists of.
+        Return the number of chunks the DataFrame consists of.
         """
         raise NotImplementedError("BaseOnPython doesn't implement chunking.")

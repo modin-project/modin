@@ -254,8 +254,8 @@ def __dataframe__(cls, nan_as_null : bool = False,
 
 
 # Monkeypatch the Pandas DataFrame class to support the interchange protocol
-pandas.DataFrame.__dataframe__ = __dataframe__
-pandas.DataFrame._buffers = []
+pd.DataFrame.__dataframe__ = __dataframe__
+pd.DataFrame._buffers = []
 
 
 # Implementation of interchange protocol
@@ -354,12 +354,12 @@ class _ModinPandasBuffer:
 
 class _ModinPandasColumn:
     """
-    A column object, with only the methods and properties required by the
-    interchange protocol defined.
+    A column object, with only the methods and properties required by the interchange protocol defined.
+
     A column can contain one or more chunks. Each chunk can contain up to three
     buffers - a data buffer, a mask buffer (depending on null representation),
-    and an offsets buffer (if variable-size binary; e.g., variable-length
-    strings).
+    and an offsets buffer (if variable-size binary; e.g., variable-length strings).
+
     TBD: Arrow has a separate "null" dtype, and has no separate mask concept.
          Instead, it seems to use "children" for both columns with a bit mask,
          and for nested dtypes. Unclear whether this is elegant or confusing.
@@ -389,13 +389,12 @@ class _ModinPandasColumn:
           doesn't need its own version or ``__column__`` protocol.
     """
 
-    def __init__(self, column : pandas.Series,
-                 allow_copy : bool = True) -> None:
+    def __init__(self, column : pd.Series, allow_copy : bool = True) -> None:
         """
         Note: doesn't deal with extension arrays yet, just assume a regular
         Series/ndarray for now.
         """
-        if not isinstance(column, pandas.Series):
+        if not isinstance(column, pd.Series):
             raise NotImplementedError("Columns of type {} not handled "
                                       "yet".format(type(column)))
 
@@ -407,6 +406,7 @@ class _ModinPandasColumn:
     def size(self) -> int:
         """
         Size of the column, in elements.
+
         Corresponds to DataFrame.num_rows() if column is a single chunk;
         equal to size of this current chunk otherwise.
         """
@@ -416,6 +416,7 @@ class _ModinPandasColumn:
     def offset(self) -> int:
         """
         Dtype description as a tuple ``(kind, bit-width, format string, endianness)``.
+
         Kind :
             - INT = 0
             - UINT = 1
@@ -506,7 +507,7 @@ class _ModinPandasColumn:
         kind = _np_kinds.get(dtype.kind, None)
         if kind is None:
             # Not a NumPy dtype. Check if it's a categorical maybe
-            if isinstance(dtype, pandas.CategoricalDtype):
+            if isinstance(dtype, pd.CategoricalDtype):
                 kind = 23
             else:
                 raise ValueError(f"Data type {dtype} not supported by exchange"
@@ -773,8 +774,7 @@ class _ModinPandasDataFrame(pd.DataFrame):
     as objects with the methods and attributes defined on this class.
 
     A "data frame" represents an ordered collection of named columns.
-    A column's "name" must be a unique string.
-    Columns may be accessed by name or by position.
+    A column's "name" must be a unique string. Columns may be accessed by name or by position.
     This could be a public data frame class, or an object with the methods and
     attributes defined on this DataFrame class could be returned from the
     ``__dataframe__`` method of a public data frame class in a library adhering
@@ -799,18 +799,15 @@ class _ModinPandasDataFrame(pd.DataFrame):
     def __init__(self, df : pd.DataFrame, nan_as_null : bool = False,
                  allow_copy : bool = True) -> None:
         self._df = df
-        # ``nan_as_null`` is a keyword intended for the consumer to tell the
-        # producer to overwrite null values in the data with ``NaN`` (or ``NaT``).
-        # This currently has no effect; once support for nullable extension
-        # dtypes is added, this value should be propagated to columns.
         self._nan_as_null = nan_as_null
         self._allow_copy = allow_copy
 
     @property
     def metadata(self):
         """
-        The metadata for the data frame, as a dictionary with string keys. The
-        contents of `metadata` may be anything, they are meant for a library
+        The metadata for the data frame, as a dictionary with string keys.
+
+        The contents of `metadata` may be anything, they are meant for a library
         to store information that it needs to, e.g., roundtrip losslessly or
         for two implementations to share data that is not (yet) part of the
         interchange protocol specification. For avoiding collisions with other
@@ -819,7 +816,7 @@ class _ModinPandasDataFrame(pd.DataFrame):
         """
         # `index` isn't a regular column, and the protocol doesn't support row
         # labels - so we export it as pandas-specific metadata here.
-        return {"pandas.index": self._df.index}
+        return {"modin.pandas.index": self._df.index}
 
     def num_columns(self) -> int:
         """
