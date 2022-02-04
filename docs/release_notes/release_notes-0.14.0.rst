@@ -9,6 +9,7 @@ Key Features and Updates
   * FIX-#4105: Fix names of pandas options to avoid `OptionError` (#4109)
   * FIX-#3417: Fix read_csv with skiprows and header parameters (#3419)
   * FIX-#4142: Fix OmniSci enabling (#4146)
+  * FIX-#4158: Do not pring OmniSci logs to stdout by default (#4159)
 * Performance enhancements
   *
 * Benchmarking enhancements
@@ -34,4 +35,9 @@ Key Features and Updates
 
 Contributors
 ------------
-@prutskov, @amyskov, @paulovn, @anmyachev, @YarShev
+@prutskov
+@amyskov
+@paulovn
+@anmyachev
+@YarShev
+@dchigarev
