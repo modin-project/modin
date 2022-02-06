@@ -9,6 +9,7 @@ Key Features and Updates
   * FIX-#4105: Fix names of pandas options to avoid `OptionError` (#4109)
   * FIX-#3417: Fix read_csv with skiprows and header parameters (#3419)
   * FIX-#4142: Fix OmniSci enabling (#4146)
+  * FIX-#4162: Use `skipif` instead of `skip` for compatibility with pytest 7.0 (#4163)
 * Performance enhancements
   *
 * Benchmarking enhancements
@@ -34,4 +35,4 @@ Key Features and Updates
 
 Contributors
 ------------
-@prutskov, @amyskov, @paulovn, @anmyachev, @YarShev
+@prutskov, @amyskov, @paulovn, @anmyachev, @YarShev, @RehanSD, @devin-petersohn
