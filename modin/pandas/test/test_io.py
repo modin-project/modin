@@ -619,7 +619,7 @@ class TestCsv:
             "utf8",
             pytest.param(
                 "unicode_escape",
-                marks=pytest.mark.skip(
+                marks=pytest.mark.skipif(
                     condition=sys.version_info < (3, 9),
                     reason="https://bugs.python.org/issue45461",
                 ),
