@@ -353,6 +353,11 @@ class PandasDataframePartitionManager(ABC):
         This will often be overridden by implementations. It materializes the
         entire partitions of the right and applies them to the left through `apply`.
         """
+        # This check will no longer be necessary here if we transfer this responsibility
+        # to, for example, the `axis_partition` constructor everywhere.
+        # On the other hand, it looks like a better solution here is to make this function
+        # internal, so that the partition itself calls this function when necessary.
+        [obj.drain_call_queue() for row in right for obj in row]
 
         def map_func(df, *others):
             other = pandas.concat(others, axis=axis ^ 1)
