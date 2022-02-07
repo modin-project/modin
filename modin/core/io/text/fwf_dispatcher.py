@@ -14,6 +14,7 @@
 """Module houses `FWFDispatcher` class, that is used for reading of tables with fixed-width formatted lines."""
 
 import pandas
+from typing import Union, Sequence
 
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 
@@ -28,6 +29,8 @@ class FWFDispatcher(TextFileDispatcher):
         cls,
         filepath_or_buffer,
         read_kwargs: dict,
+        skiprows_md: Union[Sequence, callable, int],
+        header_size: int,
     ):
         """
         Check support of parameters of `read_fwf` function.
@@ -38,6 +41,10 @@ class FWFDispatcher(TextFileDispatcher):
             `filepath_or_buffer` parameter of `read_fwf` function.
         read_kwargs : dict
             Parameters of `read_fwf` function.
+        skiprows_md : int, array or callable
+            `skiprows` parameter modified for easier handling by Modin.
+        header_size : int
+            Number of rows that are used by header.
 
         Returns
         -------
@@ -48,4 +55,6 @@ class FWFDispatcher(TextFileDispatcher):
             # If infer_nrows is a significant portion of the number of rows, pandas may be
             # faster.
             return False
-        return super().check_parameters_support(filepath_or_buffer, read_kwargs)
+        return super().check_parameters_support(
+            filepath_or_buffer, read_kwargs, skiprows_md, header_size
+        )

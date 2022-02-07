@@ -619,7 +619,7 @@ class TestCsv:
             "utf8",
             pytest.param(
                 "unicode_escape",
-                marks=pytest.mark.skip(
+                marks=pytest.mark.skipif(
                     condition=sys.version_info < (3, 9),
                     reason="https://bugs.python.org/issue45461",
                 ),
@@ -1145,7 +1145,13 @@ class TestCsv:
     @pytest.mark.parametrize(
         "skiprows",
         [
+            [x for x in range(10)],
+            [x + 5 for x in range(15)],
+            [x for x in range(10) if x % 2 == 0],
+            [x + 5 for x in range(15) if x % 2 == 0],
+            lambda x: x % 2,
             lambda x: x > 20,
+            lambda x: x < 20,
             lambda x: True,
             lambda x: x in [10, 20],
             pytest.param(
@@ -1157,13 +1163,16 @@ class TestCsv:
             ),
         ],
     )
-    def test_read_csv_skiprows_corner_cases(self, skiprows):
+    @pytest.mark.parametrize("header", ["infer", None, 0, 1, 150])
+    def test_read_csv_skiprows_corner_cases(self, skiprows, header):
         eval_io(
             fn_name="read_csv",
             check_kwargs_callable=not callable(skiprows),
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             skiprows=skiprows,
+            header=header,
+            dtype="str",  # to avoid issues with heterogeneous data
         )
 
     def test_to_csv_with_index(self):

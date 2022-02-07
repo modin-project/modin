@@ -114,13 +114,14 @@ def _update_engine(publisher: Parameter):
     ):
         publisher.put("Native")
         IsExperimental.put(True)
-    elif (
+    if (
         publisher.get() == "Native"
         and StorageFormat.get_value_source() == ValueSource.DEFAULT
     ):
         StorageFormat.put("Omnisci")
         IsExperimental.put(True)
-    elif publisher.get() == "Ray":
+
+    if publisher.get() == "Ray":
         if _is_first_update.get("Ray", True):
             from modin.core.execution.ray.common.utils import initialize_ray
 
