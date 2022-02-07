@@ -10,6 +10,7 @@ Key Features and Updates
   * FIX-#3417: Fix read_csv with skiprows and header parameters (#3419)
   * FIX-#4142: Fix OmniSci enabling (#4146)
   * FIX-#4162: Use `skipif` instead of `skip` for compatibility with pytest 7.0 (#4163)
+  * FIX-#4158: Do not print OmniSci logs to stdout by default (#4159)
 * Performance enhancements
   *
 * Benchmarking enhancements
@@ -35,4 +36,11 @@ Key Features and Updates
 
 Contributors
 ------------
-@prutskov, @amyskov, @paulovn, @anmyachev, @YarShev, @RehanSD, @devin-petersohn
+@prutskov
+@amyskov
+@paulovn
+@anmyachev
+@YarShev
+@RehanSD
+@devin-petersohn
+@dchigarev

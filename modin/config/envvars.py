@@ -384,6 +384,7 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
         "enable_lazy_fetch": 0,
         "null_div_by_zero": 1,
         "enable_watchdog": 0,
+        "enable_thrift_logs": 0,
     }
 
     @classmethod
