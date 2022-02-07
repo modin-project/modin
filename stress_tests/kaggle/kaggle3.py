@@ -85,7 +85,7 @@ for index, value in data[["Attack"]][0:1].iterrows():
 
 
 def tuble_ex():
-    """ return defined t tuble"""
+    """return defined t tuble"""
     t = (1, 2, 3)
     return t
 
@@ -117,10 +117,10 @@ dir(builtins)
 
 
 def square():
-    """ return square of value """
+    """return square of value"""
 
     def add():
-        """ add two local variable """
+        """add two local variable"""
         x = 2
         y = 3
         z = x + y
@@ -152,7 +152,7 @@ f(1, 2, 3, 4)
 
 
 def f(**kwargs):
-    """ print key and value of dictionary"""
+    """print key and value of dictionary"""
     for (
         key,
         value,
@@ -223,8 +223,8 @@ data.dtypes
 data.info()
 data["Type 2"].value_counts(dropna=False)
 data1 = (
-    data
-)  # also we will use data to fill missing value so I assign it to data1 variable
+    data  # also we will use data to fill missing value so I assign it to data1 variable
+)
 data1["Type 2"].dropna(
     inplace=True
 )  # inplace = True means we do not assign it to new variable. Changes automatically assigned to data

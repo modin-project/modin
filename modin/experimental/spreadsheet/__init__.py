@@ -18,13 +18,7 @@ except ImportError:
         "Please `pip install modin[spreadsheet]` to install the spreadsheet extension"
     )
 
-<<<<<<< HEAD:modin/experimental/spreadsheet/__init__.py
 from .general import from_dataframe, to_dataframe
-=======
-import modin.pandas as pd
-from modin.test.pandas.utils import test_data_values
-from modin.config import BenchmarkMode
->>>>>>> REFACTOR-#3622: Centralize Tests for modin.pandas:modin/test/pandas/internals/test_benchmark_mode.py
 
 __all__ = ["from_dataframe", "to_dataframe"]
 

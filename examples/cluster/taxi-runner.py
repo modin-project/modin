@@ -50,7 +50,9 @@ with test_cluster:
 
         OmnisciServer = (
             get_connection()
-            .modules["modin.experimental.engines.omnisci_on_native.frame.omnisci_worker"]
+            .modules[
+                "modin.experimental.engines.omnisci_on_native.frame.omnisci_worker"
+            ]
             .OmnisciServer
         )
         modin.experimental.engines.omnisci_on_native.frame.omnisci_worker.OmnisciServer = (

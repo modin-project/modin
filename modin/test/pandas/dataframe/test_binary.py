@@ -72,7 +72,7 @@ def test_math_functions(other, axis, op):
 
 @pytest.mark.parametrize(
     "other",
-    [lambda df: df[: -(2**4)], lambda df: df[df.columns[0]].reset_index(drop=True)],
+    [lambda df: df[: -(2 ** 4)], lambda df: df[df.columns[0]].reset_index(drop=True)],
     ids=["check_missing_value", "check_different_index"],
 )
 @pytest.mark.parametrize("fill_value", [None, 3.0])

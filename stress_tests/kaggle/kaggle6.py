@@ -140,7 +140,7 @@ X_val_errors = X_val[errors]
 
 
 def display_errors(errors_index, img_errors, pred_errors, obs_errors):
-    """ This function shows 6 images with their predicted and real labels"""
+    """This function shows 6 images with their predicted and real labels"""
     n = 0
     nrows = 2
     ncols = 3

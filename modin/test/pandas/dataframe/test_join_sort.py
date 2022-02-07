@@ -64,20 +64,20 @@ def test_combine(data):
     "test_data, test_data2",
     [
         (
-            np.random.uniform(0, 100, size=(2**6, 2**6)),
-            np.random.uniform(0, 100, size=(2**7, 2**6)),
+            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
+            np.random.uniform(0, 100, size=(2 ** 7, 2 ** 6)),
         ),
         (
-            np.random.uniform(0, 100, size=(2**7, 2**6)),
-            np.random.uniform(0, 100, size=(2**6, 2**6)),
+            np.random.uniform(0, 100, size=(2 ** 7, 2 ** 6)),
+            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
         ),
         (
-            np.random.uniform(0, 100, size=(2**6, 2**6)),
-            np.random.uniform(0, 100, size=(2**6, 2**7)),
+            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
+            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 7)),
         ),
         (
-            np.random.uniform(0, 100, size=(2**6, 2**7)),
-            np.random.uniform(0, 100, size=(2**6, 2**6)),
+            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 7)),
+            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
         ),
     ],
 )
@@ -162,20 +162,20 @@ def test_join(test_data, test_data2):
     "test_data, test_data2",
     [
         (
-            np.random.uniform(0, 100, size=(2**6, 2**6)),
-            np.random.uniform(0, 100, size=(2**7, 2**6)),
+            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
+            np.random.uniform(0, 100, size=(2 ** 7, 2 ** 6)),
         ),
         (
-            np.random.uniform(0, 100, size=(2**7, 2**6)),
-            np.random.uniform(0, 100, size=(2**6, 2**6)),
+            np.random.uniform(0, 100, size=(2 ** 7, 2 ** 6)),
+            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
         ),
         (
-            np.random.uniform(0, 100, size=(2**6, 2**6)),
-            np.random.uniform(0, 100, size=(2**6, 2**7)),
+            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
+            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 7)),
         ),
         (
-            np.random.uniform(0, 100, size=(2**6, 2**7)),
-            np.random.uniform(0, 100, size=(2**6, 2**6)),
+            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 7)),
+            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
         ),
     ],
 )
