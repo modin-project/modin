@@ -175,17 +175,18 @@ in conjunction with python multiprocessing because that can lead to undefined be
 One of such examples is shown below:
 
 .. code-block:: python
+
   import modin.pandas as pd
-  
+
   # Ray engine is used by default
   df = pandas.DataFrame([1, 2, 3])
-  
+
   def f(arg):
     return df + arg
 
   if __name__ == '__main__':
     from multiprocessing import Pool
-    
+
     with Pool(5) as p:
         print(p.map(f, [1]))
 
@@ -209,9 +210,9 @@ This can happen when you use OmniSci engine along with ``pyarrow.gandiva``:
   cfg.IsExperimental.put(True)
   import modin.pandas as pd
   import pyarrow.gandiva as gandiva  # Error
-  CommandLine Error: Option 'enable-vfe' registered more than once!
-  LLVM ERROR: inconsistency in registered CommandLine options
-  Aborted (core dumped)
+  # CommandLine Error: Option 'enable-vfe' registered more than once!
+  # LLVM ERROR: inconsistency in registered CommandLine options
+  # Aborted (core dumped)
 
 **Solution**
 
