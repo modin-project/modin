@@ -860,6 +860,7 @@ class DataFrame(object):
         self._nan_as_null = nan_as_null
         self._allow_copy = allow_copy
 
+    # ``What should we return???``
     @property
     def metadata(self):
         """
@@ -871,96 +872,124 @@ class DataFrame(object):
         interchange protocol specification. For avoiding collisions with other
         entries, please add name the keys with the name of the library
         followed by a period and the desired name, e.g, ``pandas.indexcol``.
-
-        ``???``.
         """
         # `index` isn't a regular column, and the protocol doesn't support row
         # labels - so we export it as pandas-specific metadata here.
-        return {"modin.pandas.index": self._df.index}
+        return {"pandas.index": self._df.index}
 
+    # ``IMPLEMENTED``
     def num_columns(self) -> int:
         """
         Return the number of columns in the DataFrame.
-
-        ``IMPLEMENTED``.
         """
         return len(self._df.columns)
 
+    # ``IMPLEMENTED``
     def num_rows(self) -> int:
         # TODO: not happy with Optional, but need to flag it may be expensive
         #       why include it if it may be None - what do we expect consumers
         #       to do here?
         """
         Return the number of rows in the DataFrame, if available.
-
-        ``IMPLEMENTED``.
         """
-        return len(self._df)
+        return len(self._df.index)
 
+    # ``IMPLEMENTED``
     def num_chunks(self) -> int:
         """
         Return the number of chunks the DataFrame consists of.
         """
         return self._df._partitions.shape[0]
 
+    # ``IMPLEMENTED``
     def column_names(self) -> Iterable[str]:
         """
         Return an iterator yielding the column names.
         """
         return self._df.columns.tolist()
 
+    # ``IMPLEMENTED``
     def get_column(self, i: int) -> Column:
         """
         Return the column at the indicated position.
         """
-        return Column(self._df.iloc[:, i], allow_copy=self._allow_copy)
+        return Column(
+            self._df.mask(row_positions=None, col_positions=[i]),
+            allow_copy=self._allow_copy,
+        )
 
+    # ``IMPLEMENTED``
     def get_column_by_name(self, name: str) -> Column:
         """
         Return the column whose name is the indicated name.
         """
-        return Column(self._df[name], allow_copy=self._allow_copy)
+        return Column(
+            self._df.mask(row_positions=None, col_labels=[name]),
+            allow_copy=self._allow_copy,
+        )
 
+    # ``IMPLEMENTED``
     def get_columns(self) -> Iterable[Column]:
         """
         Return an iterator yielding the columns.
         """
         return [
-            Column(self._df[name], allow_copy=self._allow_copy)
+            Column(
+                self._df.mask(row_positions=None, col_labels=[name]),
+                allow_copy=self._allow_copy,
+            )
             for name in self._df.columns
         ]
 
-    def select_columns(self, indices: Sequence[int]) -> object:
+    # ``IMPLEMENTED``
+    def select_columns(self, indices: Sequence[int]) -> "DataFrame":
         """
         Create a new DataFrame by selecting a subset of columns by index.
         """
         if not isinstance(indices, collections.Sequence):
             raise ValueError("`indices` is not a sequence")
 
-        return DataFrame(self._df.ilocobject)
+        return DataFrame(self._df.mask(row_positions=None, col_positions=indices))
 
-    # def select_columns_by_name(self, names: Sequence[str]) -> object':
-    #     """
-    #     Create a new DataFrame by selecting a subset of columns by name.
-    #     """
-    #     if not isinstance(names, collections.Sequence):
-    #         raise ValueError("`names` is not a sequence")
+    # ``IMPLEMENTED``
+    def select_columns_by_name(self, names: Sequence[str]) -> "DataFrame":
+        """
+        Create a new DataFrame by selecting a subset of columns by name.
+        """
+        if not isinstance(names, collections.Sequence):
+            raise ValueError("`names` is not a sequence")
 
-    #     return DataFrame(self._df.xs(indices, axis='object))
+        return DataFrame(self._df.mask(row_positions=None, col_labels=names))
 
-    def get_chunks(self, n_chunks: Optional[int] = None) -> Iterable[object]:
+    # ``IMPLEMENTED``
+    def get_chunks(self, n_chunks: Optional[int] = None) -> Iterable["DataFrame"]:
         """
         Return an iterator yielding the chunks.
 
-        By default ``n_chunks=None``, yields the chunks
-        that the data is stored as by the producer.
+        By default ``n_chunks=None``, yields the chunks that the data is stored as by the producer.
         If given, ``n_chunks`` must be a multiple of ``self.num_chunks()``,
         meaning the producer must subdivide each chunk before yielding it.
+
+        Parameters
+        ----------
+        n_chunks : int, optional
+            Number of chunks to yield.
+
+        Yields
+        ------
+        DataFrame
+            A ``DataFrame`` object(s).
         """
         if n_chunks is None:
-            return (self,)
+            for length in self._row_lengths:
+                yield DataFrame(
+                    self._df.mask(row_positions=list(range(length)), col_positions=None)
+                )
         else:
-            return self
+            for length in self._row_lengths[:n_chunks]:
+                yield DataFrame(
+                    self._df.mask(row_positions=list(range(length)), col_positions=None)
+                )
 
 
 # Roundtrip testing
