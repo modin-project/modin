@@ -3156,8 +3156,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         )
 
-    def num_chunks(self):
-        """
-        Return the number of chunks the DataFrame consists of.
-        """
-        self._modin_frame.num_chunks()
+    def _get_df_protocol(
+        self, nan_as_null: bool = False, allow_copy: bool = True
+    ) -> dict:
+        return self._modin_frame.__dataframe__(
+            nan_as_null=nan_as_null, allow_copy=allow_copy
+        )

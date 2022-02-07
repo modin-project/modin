@@ -1,3 +1,22 @@
+# Licensed to Modin Development Team under one or more contributor license agreements.
+# See the NOTICE file distributed with this work for additional information regarding
+# copyright ownership.  The Modin Development Team licenses this file to you under the
+# Apache License, Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
+# ANY KIND, either express or implied. See the License for the specific language
+# governing permissions and limitations under the License.
+
+"""
+Dataframe exchange protocol implementation.
+
+See more in https://data-apis.org/dataframe-protocol/latest/index.html.
+"""
+
 """
 Implementation of the dataframe exchange protocol.
 
@@ -22,8 +41,9 @@ from typing import Any, Optional, Tuple, Dict, Iterable, Sequence
 import modin.pandas as pd
 import numpy as np
 import pandas.testing as tm
+import pandas
 import pytest
-
+from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
 
 # A typing protocol could be added later to let Mypy validate code using
 # `from_dataframe` better.
@@ -31,8 +51,7 @@ DataFrameObject = Any
 ColumnObject = Any
 
 
-def from_dataframe(df : DataFrameObject,
-                   allow_copy : bool = True) -> pandas.DataFrame:
+def from_dataframe(df: DataFrameObject, allow_copy: bool = True) -> pandas.DataFrame:
     """
     Construct a modin.pandas.DataFrame from ``df`` if it supports ``__dataframe__``
     """
@@ -40,13 +59,13 @@ def from_dataframe(df : DataFrameObject,
     # if isinstance(df, pandas.DataFrame):
     #     return df
 
-    if not hasattr(df, '__dataframe__'):
+    if not hasattr(df, "__dataframe__"):
         raise ValueError("`df` does not support __dataframe__")
 
     return _from_dataframe(df.__dataframe__(allow_copy=allow_copy))
 
 
-def _from_dataframe(df : DataFrameObject) -> pandas.DataFrame:
+def _from_dataframe(df: DataFrameObject) -> pandas.DataFrame:
     """
     Note: not all cases are handled yet, only ones that can be implemented with
     only Pandas. Later, we need to implement/test support for categoricals,
@@ -89,12 +108,12 @@ class _DtypeKind(enum.IntEnum):
     UINT = 1
     FLOAT = 2
     BOOL = 20
-    STRING = 21   # UTF-8
+    STRING = 21  # UTF-8
     DATETIME = 22
     CATEGORICAL = 23
 
 
-def convert_column_to_ndarray(col : ColumnObject) -> np.ndarray:
+def convert_column_to_ndarray(col: ColumnObject) -> np.ndarray:
     """
     Convert an int, uint, float or bool column to a numpy array.
     """
@@ -102,8 +121,9 @@ def convert_column_to_ndarray(col : ColumnObject) -> np.ndarray:
         raise NotImplementedError("column.offset > 0 not handled yet")
 
     if col.describe_null[0] not in (0, 1):
-        raise NotImplementedError("Null values represented as masks or "
-                                  "sentinel values not handled yet")
+        raise NotImplementedError(
+            "Null values represented as masks or " "sentinel values not handled yet"
+        )
 
     _buffer, _dtype = col.get_buffers()["data"]
     return buffer_to_ndarray(_buffer, _dtype), _buffer
@@ -131,19 +151,18 @@ def buffer_to_ndarray(_buffer, _dtype) -> np.ndarray:
     # NOTE: `x` does not own its memory, so the caller of this function must
     #       either make a copy or hold on to a reference of the column or
     #       buffer! (not done yet, this is pretty awful ...)
-    x = np.ctypeslib.as_array(data_pointer,
-                              shape=(_buffer.bufsize // (bitwidth//8),))
+    x = np.ctypeslib.as_array(data_pointer, shape=(_buffer.bufsize // (bitwidth // 8),))
 
     return x
 
 
-def convert_categorical_column(col : ColumnObject) -> pandas.Series:
+def convert_categorical_column(col: ColumnObject) -> pandas.Series:
     """
     Convert a categorical column to a Series instance.
     """
     ordered, is_dict, mapping = col.describe_categorical
     if not is_dict:
-        raise NotImplementedError('Non-dictionary categoricals not supported yet')
+        raise NotImplementedError("Non-dictionary categoricals not supported yet")
 
     # If you want to cheat for testing (can't use `_col` in real-world code):
     #    categories = col._col.values.categories.values
@@ -162,13 +181,14 @@ def convert_categorical_column(col : ColumnObject) -> pandas.Series:
         sentinel = col.describe_null[1]
         series[codes == sentinel] = np.nan
     else:
-        raise NotImplementedError("Only categorical columns with sentinel "
-                                  "value supported at the moment")
+        raise NotImplementedError(
+            "Only categorical columns with sentinel " "value supported at the moment"
+        )
 
     return series, codes_buffer
 
 
-def convert_string_column(col : ColumnObject) -> np.ndarray:
+def convert_string_column(col: ColumnObject) -> np.ndarray:
     """
     Convert a string column to a NumPy array.
     """
@@ -188,7 +208,12 @@ def convert_string_column(col : ColumnObject) -> np.ndarray:
     null_kind, null_value = col.describe_null
 
     # Convert the buffers to NumPy arrays
-    dt = (_DtypeKind.UINT, 8, None, None)  # note: in order to go from STRING to an equivalent ndarray, we claim that the buffer is uint8 (i.e., a byte array)
+    dt = (
+        _DtypeKind.UINT,
+        8,
+        None,
+        None,
+    )  # note: in order to go from STRING to an equivalent ndarray, we claim that the buffer is uint8 (i.e., a byte array)
     dbuf = buffer_to_ndarray(dbuffer, dt)
 
     obuf = buffer_to_ndarray(obuffer, odtype)
@@ -196,14 +221,14 @@ def convert_string_column(col : ColumnObject) -> np.ndarray:
 
     # Assemble the strings from the code units
     str_list = []
-    for i in range(obuf.size-1):
+    for i in range(obuf.size - 1):
         # Check for missing values
         if null_kind == 3:  # bit mask
-            v = mbuf[i/8]
+            v = mbuf[i / 8]
             if null_value == 1:
                 v = ~v
 
-            if v & (1<<(i%8)):
+            if v & (1 << (i % 8)):
                 str_list.append(np.nan)
                 continue
 
@@ -212,7 +237,7 @@ def convert_string_column(col : ColumnObject) -> np.ndarray:
             continue
 
         # Extract a range of code units
-        units = dbuf[obuf[i]:obuf[i+1]];
+        units = dbuf[obuf[i] : obuf[i + 1]]
 
         # Convert the list of code units to bytes
         b = bytes(units)
@@ -227,8 +252,7 @@ def convert_string_column(col : ColumnObject) -> np.ndarray:
     return np.asarray(str_list, dtype="object"), buffers
 
 
-def __dataframe__(cls, nan_as_null : bool = False,
-                  allow_copy : bool = True) -> dict:
+def __dataframe__(cls, nan_as_null: bool = False, allow_copy: bool = True) -> dict:
     """
     The public method to attach to modin.pandas.DataFrame.
 
@@ -249,8 +273,7 @@ def __dataframe__(cls, nan_as_null : bool = False,
         specifies contiguous buffers. Currently, if the flag is set to ``False``
         and a copy is needed, a ``RuntimeError`` will be raised.
     """
-    return _ModinPandasDataFrame(
-        cls, nan_as_null=nan_as_null, allow_copy=allow_copy)
+    objecte(cls, nan_as_null=nan_as_null, allow_copy=allow_copy)
 
 
 # Monkeypatch the Pandas DataFrame class to support the interchange protocol
@@ -261,7 +284,8 @@ pd.DataFrame._buffers = []
 # Implementation of interchange protocol
 # --------------------------------------
 
-class _ModinPandasBuffer:
+
+class Buffer:
     """
     Data in the buffer is guaranteed to be contiguous in memory.
 
@@ -276,7 +300,7 @@ class _ModinPandasBuffer:
     fixed number of bytes per element.
     """
 
-    def __init__(self, x : np.ndarray, allow_copy : bool = True) -> None:
+    def __init__(self, x: np.ndarray, allow_copy: bool = True) -> None:
         """
         Handle only regular columns (= numpy arrays) for now.
         """
@@ -286,8 +310,10 @@ class _ModinPandasBuffer:
             if allow_copy:
                 x = x.copy()
             else:
-                raise RuntimeError("Exports cannot be zero-copy in the case "
-                                   "of a non-contiguous buffer")
+                raise RuntimeError(
+                    "Exports cannot be zero-copy in the case "
+                    "of a non-contiguous buffer"
+                )
 
         # Store the numpy array in which the data resides as a private
         # attribute, so we can use it to retrieve the public attributes
@@ -305,7 +331,7 @@ class _ModinPandasBuffer:
         """
         Pointer to start of the buffer as an integer.
         """
-        return self._x.__array_interface__['data'][0]
+        return self._x.__array_interface__["data"][0]
 
     def __dlpack__(self):
         """
@@ -334,6 +360,7 @@ class _ModinPandasBuffer:
             - ROCM = 10
         Note: must be implemented even if ``__dlpack__`` is not.
         """
+
         class Device(enum.IntEnum):
             CPU = 1
 
@@ -341,18 +368,26 @@ class _ModinPandasBuffer:
 
     def __repr__(self) -> str:
         """
-        Return a string representation for a particular ``_ModinPandasBuffer``.
+        Return a string representation for a particular ``Buffer``.
 
         Returns
         -------
         str
         """
-        return '_ModinPandasBuffer(' + str({'bufsize': self.bufsize,
-                                      'ptr': self.ptr,
-                                      'device': self.__dlpack_device__()[0].name}
-                                      ) + ')'
+        return (
+            "Buffer("
+            + str(
+                {
+                    "bufsize": self.bufsize,
+                    "ptr": self.ptr,
+                    "device": self.__dlpack_device__()[0].name,
+                }
+            )
+            + ")"
+        )
 
-class _ModinPandasColumn:
+
+class Column:
     """
     A column object, with only the methods and properties required by the interchange protocol defined.
 
@@ -389,14 +424,15 @@ class _ModinPandasColumn:
           doesn't need its own version or ``__column__`` protocol.
     """
 
-    def __init__(self, column : pd.Series, allow_copy : bool = True) -> None:
+    def __init__(self, column: pd.Series, allow_copy: bool = True) -> None:
         """
         Note: doesn't deal with extension arrays yet, just assume a regular
         Series/ndarray for now.
         """
         if not isinstance(column, pd.Series):
-            raise NotImplementedError("Columns of type {} not handled "
-                                      "yet".format(type(column)))
+            raise NotImplementedError(
+                "Columns of type {} not handled " "yet".format(type(column))
+            )
 
         # Store the column as a private attribute
         self._col = column
@@ -488,8 +524,8 @@ class _ModinPandasColumn:
         dtype = self._col.dtype
 
         # For now, assume that, if the column dtype is 'O' (i.e., `object`), then we have an array of strings
-        if not isinstance(dtype, pandas.CategoricalDtype) and dtype.kind == 'O':
-            return (_DtypeKind.STRING, 8, 'u', '=')
+        if not isinstance(dtype, pd.CategoricalDtype) and dtype.kind == "O":
+            return (_DtypeKind.STRING, 8, "u", "=")
 
         return self._dtype_from_pandasdtype(dtype)
 
@@ -501,26 +537,32 @@ class _ModinPandasColumn:
         #       'b', 'B' (bytes), 'S', 'a', (old-style string) 'V' (void) not handled
         #       datetime and timedelta both map to datetime (is timedelta handled?)
         _k = _DtypeKind
-        _np_kinds = {"i": _k.INT, "u": _k.UINT, "f": _k.FLOAT, "b": _k.BOOL,
-                     "U": _k.STRING,
-                     "M": _k.DATETIME, "m": _k.DATETIME}
+        _np_kinds = {
+            "i": _k.INT,
+            "u": _k.UINT,
+            "f": _k.FLOAT,
+            "b": _k.BOOL,
+            "U": _k.STRING,
+            "M": _k.DATETIME,
+            "m": _k.DATETIME,
+        }
         kind = _np_kinds.get(dtype.kind, None)
         if kind is None:
             # Not a NumPy dtype. Check if it's a categorical maybe
             if isinstance(dtype, pd.CategoricalDtype):
                 kind = 23
             else:
-                raise ValueError(f"Data type {dtype} not supported by exchange"
-                                 "protocol")
+                raise ValueError(
+                    f"Data type {dtype} not supported by exchange" "protocol"
+                )
 
         if kind not in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL, _k.CATEGORICAL, _k.STRING):
             raise NotImplementedError(f"Data type {dtype} not handled yet")
 
         bitwidth = dtype.itemsize * 8
         format_str = dtype.str
-        endianness = dtype.byteorder if not kind == _k.CATEGORICAL else '='
+        endianness = dtype.byteorder if not kind == _k.CATEGORICAL else "="
         return (kind, bitwidth, format_str, endianness)
-
 
     @property
     def describe_categorical(self) -> Dict[str, Any]:
@@ -539,8 +581,10 @@ class _ModinPandasColumn:
         TBD: are there any other in-memory representations that are needed?
         """
         if not self.dtype[0] == _DtypeKind.CATEGORICAL:
-            raise TypeError("`describe_categorical only works on a column with "
-                            "categorical dtype!")
+            raise TypeError(
+                "`describe_categorical only works on a column with "
+                "categorical dtype!"
+            )
 
         ordered = self._col.dtype.ordered
         is_dictionary = True
@@ -585,7 +629,9 @@ class _ModinPandasColumn:
             value = -1
         elif kind == _k.STRING:
             null = 4
-            value = 0  # follow Arrow in using 1 as valid value and 0 for missing/null value
+            value = (
+                0  # follow Arrow in using 1 as valid value and 0 for missing/null value
+            )
         else:
             raise NotImplementedError(f"Data type {self.dtype} not yet supported")
 
@@ -612,7 +658,7 @@ class _ModinPandasColumn:
         """
         return 1
 
-    def get_chunks(self, n_chunks : Optional[int] = None) -> Iterable['_ModinPandasColumn']:
+    def get_chunks(self, n_chunks: Optional[int] = None) -> Iterable["Column"]:
         """
         Return an iterator yielding the chunks.
         See `DataFrame.get_chunks` for details on ``n_chunks``.
@@ -622,21 +668,21 @@ class _ModinPandasColumn:
     def get_buffers(self) -> Dict[str, Any]:
         """
         Return a dictionary containing the underlying buffers.
+
         The returned dictionary has the following contents:
             - "data": a two-element tuple whose first element is a buffer
-                      containing the data and whose second element is the data
-                      buffer's associated dtype.
-            - "validity": a two-element tuple whose first element is a buffer
-                          containing mask values indicating missing data and
-                          whose second element is the mask value buffer's
-                          associated dtype. None if the null representation is
-                          not a bit or byte mask.
+            containing the data and whose second element is the data
+            buffer's associated dtype.
+        - "validity": a two-element tuple whose first element is a buffer
+            containing mask values indicating missing data and
+            whose second element is the mask value buffer's
+            associated dtype. None if the null representation is
+            not a bit or byte mask.
             - "offsets": a two-element tuple whose first element is a buffer
-                         containing the offset values for variable-size binary
-                         data (e.g., variable-length strings) and whose second
-                         element is the offsets buffer's associated dtype. None
-                         if the data buffer does not have an associated offsets
-                         buffer.
+            containing the offset values for variable-size binary
+            data (e.g., variable-length strings) and whose second
+            element is the offsets buffer's associated dtype. None
+            if the data buffer does not have an associated offsets buffer.
         """
         buffers = {}
         buffers["data"] = self._get_data_buffer()
@@ -652,19 +698,17 @@ class _ModinPandasColumn:
 
         return buffers
 
-    def _get_data_buffer(self) -> Tuple[_ModinPandasBuffer, Any]:  # Any is for self.dtype tuple
+    def _get_data_buffer(self) -> Tuple[Buffer, Any]:  # Any is for self.dtype tuple
         """
         Return the buffer containing the data and the buffer's associated dtype.
         """
         _k = _DtypeKind
         if self.dtype[0] in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL):
-            buffer = _ModinPandasBuffer(
-                self._col.to_numpy(), allow_copy=self._allow_copy)
+            buffer = Buffer(self._col.to_numpy(), allow_copy=self._allow_copy)
             dtype = self.dtype
         elif self.dtype[0] == _k.CATEGORICAL:
             codes = self._col.values.codes
-            buffer = _ModinPandasBuffer(
-                codes, allow_copy=self._allow_copy)
+            buffer = Buffer(codes, allow_copy=self._allow_copy)
             dtype = self._dtype_from_pandasdtype(codes.dtype)
         elif self.dtype[0] == _k.STRING:
             # Marshal the strings from a NumPy object array into a byte array
@@ -677,16 +721,21 @@ class _ModinPandasColumn:
                     b.extend(buf[i].encode(encoding="utf-8"))
 
             # Convert the byte array to a Pandas "buffer" using a NumPy array as the backing store
-            buffer = _ModinPandasBuffer(np.frombuffer(b, dtype="uint8"))
+            buffer = Buffer(np.frombuffer(b, dtype="uint8"))
 
             # Define the dtype for the returned buffer
-            dtype = (_k.STRING, 8, "u", "=")  # note: currently only support native endianness
+            dtype = (
+                _k.STRING,
+                8,
+                "u",
+                "=",
+            )  # note: currently only support native endianness
         else:
             raise NotImplementedError(f"Data type {self._col.dtype} not handled yet")
 
         return buffer, dtype
 
-    def _get_validity_buffer(self) -> Tuple[_ModinPandasBuffer, Any]:
+    def _get_validity_buffer(self) -> Tuple[Buffer, Any]:
         """
         Return the buffer containing the mask values indicating missing data and
         the buffer's associated dtype.
@@ -708,14 +757,14 @@ class _ModinPandasColumn:
 
             for i in range(buf.size):
                 if type(buf[i]) == str:
-                    v = valid;
+                    v = valid
                 else:
-                    v = invalid;
+                    v = invalid
 
                 mask.append(v)
 
             # Convert the mask array to a Pandas "buffer" using a NumPy array as the backing store
-            buffer = _ModinPandasBuffer(np.asarray(mask, dtype="uint8"))
+            buffer = Buffer(np.asarray(mask, dtype="uint8"))
 
             # Define the dtype of the returned buffer
             dtype = (_k.UINT, 8, "C", "=")
@@ -731,7 +780,7 @@ class _ModinPandasColumn:
 
         raise RuntimeError(msg)
 
-    def _get_offsets_buffer(self) -> Tuple[_ModinPandasBuffer, Any]:
+    def _get_offsets_buffer(self) -> Tuple[Buffer, Any]:
         """
         Return the buffer containing the offset values for variable-size binary
         data (e.g., variable-length strings) and the buffer's associated dtype.
@@ -756,17 +805,24 @@ class _ModinPandasColumn:
             buf = np.asarray(offsets, dtype="int64")
 
             # Convert the offsets to a Pandas "buffer" using the NumPy array as the backing store
-            buffer = _ModinPandasBuffer(buf)
+            buffer = Buffer(buf)
 
             # Assemble the buffer dtype info
-            dtype = (_k.INT, 64, 'l', "=")  # note: currently only support native endianness
+            dtype = (
+                _k.INT,
+                64,
+                "l",
+                "=",
+            )  # note: currently only support native endianness
         else:
-            raise RuntimeError("This column has a fixed-length dtype so does not have an offsets buffer")
+            raise RuntimeError(
+                "This column has a fixed-length dtype so does not have an offsets buffer"
+            )
 
         return buffer, dtype
 
 
-class _ModinPandasDataFrame(pd.DataFrame):
+class DataFrame(object):
     """
     A data frame class, with only the methods required by the interchange protocol defined.
 
@@ -782,8 +838,8 @@ class _ModinPandasDataFrame(pd.DataFrame):
 
     Parameters
     ----------
-    df : modin.pandas.DataFrame
-        A ``modin.pandas.DataFrame`` object.
+    df : ModinDataframe
+        A ``ModinDataframe`` object.
     nan_as_null : bool, default:False
         A keyword intended for the consumer to tell the producer
         to overwrite null values in the data with ``NaN`` (or ``NaT``).
@@ -796,8 +852,10 @@ class _ModinPandasDataFrame(pd.DataFrame):
         specifies contiguous buffers. Currently, if the flag is set to ``False``
         and a copy is needed, a ``RuntimeError`` will be raised.
     """
-    def __init__(self, df : pd.DataFrame, nan_as_null : bool = False,
-                 allow_copy : bool = True) -> None:
+
+    def __init__(
+        self, df: ModinDataframe, nan_as_null: bool = False, allow_copy: bool = True
+    ) -> None:
         self._df = df
         self._nan_as_null = nan_as_null
         self._allow_copy = allow_copy
@@ -813,6 +871,8 @@ class _ModinPandasDataFrame(pd.DataFrame):
         interchange protocol specification. For avoiding collisions with other
         entries, please add name the keys with the name of the library
         followed by a period and the desired name, e.g, ``pandas.indexcol``.
+
+        ``???``.
         """
         # `index` isn't a regular column, and the protocol doesn't support row
         # labels - so we export it as pandas-specific metadata here.
@@ -821,6 +881,8 @@ class _ModinPandasDataFrame(pd.DataFrame):
     def num_columns(self) -> int:
         """
         Return the number of columns in the DataFrame.
+
+        ``IMPLEMENTED``.
         """
         return len(self._df.columns)
 
@@ -830,6 +892,8 @@ class _ModinPandasDataFrame(pd.DataFrame):
         #       to do here?
         """
         Return the number of rows in the DataFrame, if available.
+
+        ``IMPLEMENTED``.
         """
         return len(self._df)
 
@@ -837,7 +901,7 @@ class _ModinPandasDataFrame(pd.DataFrame):
         """
         Return the number of chunks the DataFrame consists of.
         """
-        return self._df._query_compiler.num_chunks()
+        return self._df._partitions.shape[0]
 
     def column_names(self) -> Iterable[str]:
         """
@@ -845,60 +909,65 @@ class _ModinPandasDataFrame(pd.DataFrame):
         """
         return self._df.columns.tolist()
 
-    def get_column(self, i: int) -> _ModinPandasColumn:
+    def get_column(self, i: int) -> Column:
         """
         Return the column at the indicated position.
         """
-        return _ModinPandasColumn(
-            self._df.iloc[:, i], allow_copy=self._allow_copy)
+        return Column(self._df.iloc[:, i], allow_copy=self._allow_copy)
 
-    def get_column_by_name(self, name: str) -> _ModinPandasColumn:
+    def get_column_by_name(self, name: str) -> Column:
         """
         Return the column whose name is the indicated name.
         """
-        return _ModinPandasColumn(
-            self._df[name], allow_copy=self._allow_copy)
+        return Column(self._df[name], allow_copy=self._allow_copy)
 
-    def get_columns(self) -> Iterable[_ModinPandasColumn]:
+    def get_columns(self) -> Iterable[Column]:
         """
         Return an iterator yielding the columns.
         """
-        return [_ModinPandasColumn(self._df[name], allow_copy=self._allow_copy)
-                for name in self._df.columns]
+        return [
+            Column(self._df[name], allow_copy=self._allow_copy)
+            for name in self._df.columns
+        ]
 
-    def select_columns(self, indices: Sequence[int]) -> '_ModinPandasDataFrame':
+    def select_columns(self, indices: Sequence[int]) -> object:
         """
         Create a new DataFrame by selecting a subset of columns by index.
         """
         if not isinstance(indices, collections.Sequence):
             raise ValueError("`indices` is not a sequence")
 
-        return _ModinPandasDataFrame(self._df.iloc[:, indices])
+        return DataFrame(self._df.ilocobject)
 
-    def select_columns_by_name(self, names: Sequence[str]) -> '_ModinPandasDataFrame':
-        """
-        Create a new DataFrame by selecting a subset of columns by name.
-        """
-        if not isinstance(names, collections.Sequence):
-            raise ValueError("`names` is not a sequence")
+    # def select_columns_by_name(self, names: Sequence[str]) -> object':
+    #     """
+    #     Create a new DataFrame by selecting a subset of columns by name.
+    #     """
+    #     if not isinstance(names, collections.Sequence):
+    #         raise ValueError("`names` is not a sequence")
 
-        return _ModinPandasDataFrame(self._df.xs(indices, axis='columns'))
+    #     return DataFrame(self._df.xs(indices, axis='object))
 
-    def get_chunks(self, n_chunks : Optional[int] = None) -> Iterable['_ModinPandasDataFrame']:
+    def get_chunks(self, n_chunks: Optional[int] = None) -> Iterable[object]:
         """
         Return an iterator yielding the chunks.
-        By default (None), yields the chunks that the data is stored as by the
-        producer. If given, ``n_chunks`` must be a multiple of
-        ``self.num_chunks()``, meaning the producer must subdivide each chunk
-        before yielding it.
+
+        By default ``n_chunks=None``, yields the chunks
+        that the data is stored as by the producer.
+        If given, ``n_chunks`` must be a multiple of ``self.num_chunks()``,
+        meaning the producer must subdivide each chunk before yielding it.
         """
-        return (self,)
+        if n_chunks is None:
+            return (self,)
+        else:
+            return self
 
 
 # Roundtrip testing
 # -----------------
 
-def assert_buffer_equal(buffer_dtype: Tuple[_ModinPandasBuffer, Any], pdcol:pandas.Series):
+
+def assert_buffer_equal(buffer_dtype: Tuple[Buffer, Any], pdcol: pandas.Series):
     buf, dtype = buffer_dtype
     pytest.raises(NotImplementedError, buf.__dlpack__)
     assert buf.__dlpack_device__() == (1, None)
@@ -914,7 +983,7 @@ def assert_buffer_equal(buffer_dtype: Tuple[_ModinPandasBuffer, Any], pdcol:pand
     # assert dtype[2] == col.dtype.str, f"{dtype[2]} is not {col.dtype.str}"
 
 
-def assert_column_equal(col: _ModinPandasColumn, pdcol:pandas.Series):
+def assert_column_equal(col: Column, pdcol: pandas.Series):
     assert col.size == pdcol.size
     assert col.offset == 0
     assert col.null_count == pdcol.isnull().sum()
@@ -923,13 +992,15 @@ def assert_column_equal(col: _ModinPandasColumn, pdcol:pandas.Series):
         pytest.raises(RuntimeError, col._get_validity_buffer)
     assert_buffer_equal(col._get_data_buffer(), pdcol)
 
-def assert_dataframe_equal(dfo: DataFrameObject, df:pandas.DataFrame):
+
+def assert_dataframe_equal(dfo: DataFrameObject, df: pandas.DataFrame):
     assert dfo.num_columns() == len(df.columns)
     assert dfo.num_rows() == len(df)
     assert dfo.num_chunks() == 1
     assert dfo.column_names() == list(df.columns)
     for col in df.columns:
         assert_column_equal(dfo.get_column_by_name(col), df[col])
+
 
 def test_float_only():
     df = pandas.DataFrame(data=dict(a=[1.5, 2.5, 3.5], b=[9.2, 10.5, 11.8]))
@@ -939,8 +1010,9 @@ def test_float_only():
 
 
 def test_mixed_intfloat():
-    df = pandas.DataFrame(data=dict(a=[1, 2, 3], b=[3, 4, 5],
-                                c=[1.5, 2.5, 3.5], d=[9, 10, 11]))
+    df = pandas.DataFrame(
+        data=dict(a=[1, 2, 3], b=[3, 4, 5], c=[1.5, 2.5, 3.5], d=[9, 10, 11])
+    )
     df2 = from_dataframe(df)
     assert_dataframe_equal(df.__dataframe__(), df)
     tm.assert_frame_equal(df, df2)
@@ -948,8 +1020,8 @@ def test_mixed_intfloat():
 
 def test_noncontiguous_columns():
     arr = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-    df = pandas.DataFrame(arr, columns=['a', 'b', 'c'])
-    assert df['a'].to_numpy().strides == (24,)
+    df = pandas.DataFrame(arr, columns=["a", "b", "c"])
+    assert df["a"].to_numpy().strides == (24,)
     df2 = from_dataframe(df)  # uses default of allow_copy=True
     assert_dataframe_equal(df.__dataframe__(), df)
     tm.assert_frame_equal(df, df2)
@@ -961,10 +1033,10 @@ def test_noncontiguous_columns():
 def test_categorical_dtype():
     df = pandas.DataFrame({"A": [1, 2, 5, 1]})
     df["B"] = df["A"].astype("category")
-    df.at[1, 'B'] = np.nan  # Set one item to null
+    df.at[1, "B"] = np.nan  # Set one item to null
 
     # Some detailed testing for correctness of dtype and null handling:
-    col = df.__dataframe__().get_column_by_name('B')
+    col = df.__dataframe__().get_column_by_name("B")
     assert col.dtype[0] == _DtypeKind.CATEGORICAL
     assert col.null_count == 1
     assert col.describe_null == (2, -1)  # sentinel value -1
@@ -990,8 +1062,9 @@ def test_string_dtype():
 
     assert_dataframe_equal(df.__dataframe__(), df)
 
+
 def test_metadata():
-    df = pandas.DataFrame({'A': [1, 2, 3, 4],'B': [1, 2, 3, 4]})
+    df = pandas.DataFrame({"A": [1, 2, 3, 4], "B": [1, 2, 3, 4]})
 
     # Check the metadata from the dataframe
     df_metadata = df.__dataframe__().metadata
@@ -1010,7 +1083,7 @@ def test_metadata():
     tm.assert_frame_equal(df, df2)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_categorical_dtype()
     test_float_only()
     test_mixed_intfloat()

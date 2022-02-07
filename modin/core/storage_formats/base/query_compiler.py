@@ -4642,8 +4642,33 @@ class BaseQueryCompiler(abc.ABC):
 
     # End of DataFrame methods
 
-    def num_chunks(self):
+    def _get_df_protocol(
+        self, nan_as_null: bool = False, allow_copy: bool = True
+    ) -> dict:
         """
-        Return the number of chunks the DataFrame consists of.
+        Get a Modin DataFrame that implements the dataframe exchange protocol.
+
+        See more about the protocol in https://data-apis.org/dataframe-protocol/latest/index.html.
+
+        Parameters
+        ----------
+        nan_as_null : bool, default:False
+            A keyword intended for the consumer to tell the producer
+            to overwrite null values in the data with ``NaN`` (or ``NaT``).
+            This currently has no effect; once support for nullable extension
+            dtypes is added, this value should be propagated to columns.
+        allow_copy : bool, default: True
+            A keyword that defines whether or not the library is allowed
+            to make a copy of the data. For example, copying data would be necessary
+            if a library supports strided buffers, given that this protocol
+            specifies contiguous buffers. Currently, if the flag is set to ``False``
+            and a copy is needed, a ``RuntimeError`` will be raised.
+
+        Returns
+        -------
+        dict
+            A dictionary object following the dataframe protocol specification.
         """
-        raise NotImplementedError("BaseOnPython doesn't implement chunking.")
+        raise NotImplementedError(
+            "BaseOnPython doesn't implement `_get_df_protocol` method."
+        )
