@@ -11,6 +11,7 @@ Key Features and Updates
   * FIX-#4142: Fix OmniSci enabling (#4146)
   * FIX-#4162: Use `skipif` instead of `skip` for compatibility with pytest 7.0 (#4163)
   * FIX-#4158: Do not print OmniSci logs to stdout by default (#4159)
+  * FIX-#4135: Drop nuisance columns after rolling functions (#4141)
 * Performance enhancements
   *
 * Benchmarking enhancements
@@ -46,3 +47,4 @@ Contributors
 @RehanSD
 @devin-petersohn
 @dchigarev
+@mvashishtha

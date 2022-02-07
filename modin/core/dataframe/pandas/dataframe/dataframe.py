@@ -1528,20 +1528,24 @@ class PandasDataframe(object):
         -------
         PandasDataframe
             A new dataframe.
-
-        Notes
-        -----
-        The data shape is not changed (length and width of the table).
         """
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True
         )
+        # Folding an operation for pandas.Daframe.Rolling can cause columns
+        # to be dropped, in which case we have to recompute column labels.
+        if Axis(axis) == Axis.ROW_WISE:
+            new_columns = self._compute_axis_labels(axis ^ 1, new_partitions)
+            new_column_widths = None
+        else:
+            new_columns = self.columns
+            new_column_widths = self._column_widths
         return self.__constructor__(
             new_partitions,
             self.index,
-            self.columns,
+            new_columns,
             self._row_lengths,
-            self._column_widths,
+            new_column_widths,
         )
 
     def infer_types(self, columns_list: List[str]) -> "PandasDataframe":
