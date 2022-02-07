@@ -217,10 +217,10 @@ This can happen when you use OmniSci engine along with ``pyarrow.gandiva``:
 
 Do not use OmniSci engine along with ``pyarrow.gandiva``.
 
-Error when using Dask engine in a separate .py module
-"""""""""""""""""""""""""""""""""""""""""""""""""""""
+Error when using Dask engine: ``RuntimeError: if __name__ == '__main__':``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-The following `script.py` uses Modin on Dask engine and produces errors:
+The following `script.py` uses Modin with Dask as an execution engine and produces errors:
 
 .. code-block:: python
 
@@ -233,7 +233,7 @@ The following `script.py` uses Modin on Dask engine and produces errors:
   df = pd.DataFrame([0,1,2,3])
   print(df)
 
-A part of produced by ``python script.py`` errors:
+A part of the produced errors by the script above would be the following:
 
 .. code-block::
 
@@ -254,9 +254,12 @@ A part of produced by ``python script.py`` errors:
         The "freeze_support()" line can be omitted if the program
         is not going to be frozen to produce an executable.
 
-This is happened because Dask Client uses fork to start processes. To avoid the problem need to
-move Dask Client creating in ``__main__`` scope of the module. See more details in `multiprocessing guidelines
-<https://docs.python.org/3/library/multiprocessing.html#multiprocessing-programming>`_.
+This happens because Dask Client uses `fork <https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods>`_
+to start processes.
+
+**Solution**
+
+To avoid the problem need to move Dask Client creating in ``__main__`` scope of the module
 
 The fixed `script.py` is the following:
 
