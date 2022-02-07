@@ -259,9 +259,9 @@ to start processes.
 
 **Solution**
 
-To avoid the problem need to move Dask Client creating in ``__main__`` scope of the module
+To avoid the problem Dask Client creation needs to be moved into ``__main__`` scope of the module.
 
-The fixed `script.py` is the following:
+The corrected `script.py` would look like:
 
 .. code-block:: python
 
@@ -272,7 +272,7 @@ The fixed `script.py` is the following:
   cfg.Engine.put("dask")
 
   if __name__ == "__main__":
-    df = pd.DataFrame([0,1,2,3]) # Dask Client creating is hidden in a first call of Modin functionality.
+    df = pd.DataFrame([0, 1, 2, 3]) # Dask Client creation is hidden in the first call of Modin functionality.
     print(df)
 
 or
@@ -287,8 +287,8 @@ or
   cfg.Engine.put("dask")
 
   if __name__ == "__main__":
-    client = Client() # Explicit Dask Client creating.
-    df = pd.DataFrame([0,1,2,3])
+    client = Client() # Explicit Dask Client creation.
+    df = pd.DataFrame([0, 1, 2, 3])
     print(df)
 
 .. _issue: https://github.com/modin-project/modin/issues
