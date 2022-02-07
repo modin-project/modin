@@ -34,7 +34,7 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
     _row_partition_class = PandasOnDaskDataframeRowPartition
 
     @classmethod
-    def get_object_from_partitions(cls, partitions):
+    def get_objects_from_partitions(cls, partitions):
         """
         Get the objects wrapped by `partitions` in parallel.
 

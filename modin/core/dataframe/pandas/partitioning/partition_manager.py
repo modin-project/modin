@@ -775,7 +775,7 @@ class PandasDataframePartitionManager(ABC):
         return cls.from_pandas(at.to_pandas(), return_dims=return_dims)
 
     @classmethod
-    def get_object_from_partitions(cls, partitions):
+    def get_objects_from_partitions(cls, partitions):
         """
         Get the objects wrapped by `partitions`.
 
@@ -833,7 +833,7 @@ class PandasDataframePartitionManager(ABC):
             new_idx = (
                 [idx.apply(func) for idx in partitions[0]] if len(partitions) else []
             )
-        new_idx = cls.get_object_from_partitions(new_idx)
+        new_idx = cls.get_objects_from_partitions(new_idx)
         # TODO FIX INFORMATION LEAK!!!!1!!1!!
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
