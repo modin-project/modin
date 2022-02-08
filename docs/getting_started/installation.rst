@@ -127,9 +127,9 @@ or explicitly:
 Using Intel\ |reg| Distribution of Modin
 """"""""""""""""""""""""""""""""""""""""
 
-With ``conda`` it is also possible to install Intel Distribution of Modin, a special version of Modin
+With ``conda`` it is also possible to install `Intel\ |reg| Distribution of Modin`_, a special version of Modin
 that is part of Intel\ |reg| oneAPI AI Analytics Toolkit. This version of Modin is powered by :doc:`OmniSci</development/using_omnisci>`
-engine that contains a bunch of optimizations for Intel hardware. More details can be found on `Intel Distribution of Modin`_ page.
+engine that contains a bunch of optimizations for Intel hardware. More details to get started can be found in the `Intel\ |reg| Distribution of Modin Getting Started`_ guide.
 
 Installing from the GitHub master branch
 ----------------------------------------
@@ -185,6 +185,7 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
 .. _Ray: http://ray.readthedocs.io
 .. _Dask: https://github.com/dask/dask
 .. _OmniSci: https://www.omnisci.com/platform/omniscidb
-.. _`Intel Distribution of Modin`: https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html#gs.86stqv
+.. _`Intel\ |reg| Distribution of Modin`: https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html#gs.86stqv
+.. _`Intel\ |reg| Distribution of Modin Getting Started`: https://www.intel.com/content/www/us/en/developer/articles/technical/intel-distribution-of-modin-getting-started-guide.html
 .. |reg|    unicode:: U+000AE .. REGISTERED SIGN
 .. _Colab: https://colab.research.google.com/
