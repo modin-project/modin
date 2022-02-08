@@ -194,9 +194,9 @@ class FileDispatcher:
 
         Parameters
         ----------
-        file_path : str
-            String that represents the path to the file (paths to S3 buckets
-            are also acceptable).
+        file_path : str, os.PathLike[str] object or file-like object
+            The file, or a path to the file. Paths to S3 buckets are also
+            acceptable.
 
         Returns
         -------
@@ -208,7 +208,7 @@ class FileDispatcher:
         if `file_path` is an S3 bucket, parameter will be returned as is, otherwise
         absolute path will be returned.
         """
-        if S3_ADDRESS_REGEX.search(file_path):
+        if isinstance(file_path, str) and S3_ADDRESS_REGEX.search(file_path):
             return file_path
         else:
             return os.path.abspath(file_path)
