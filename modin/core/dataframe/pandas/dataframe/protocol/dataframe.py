@@ -22,8 +22,8 @@ Implementation of the dataframe exchange protocol.
 
 Public API
 ----------
-from_dataframe : construct a modin.pandas.DataFrame from an input data frame which
-                 implements the exchange protocol
+from_dataframe : construct a DataFrame from an input data frame which
+                 implements the exchange protocol.
 Notes
 -----
 - Interpreting a raw pointer (as in ``Buffer.ptr``) is annoying and unsafe to
@@ -45,15 +45,15 @@ import pandas
 import pytest
 from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
 
-# A typing protocol could be added later to let Mypy validate code using
-# `from_dataframe` better.
+# A typing protocol could be added later
+# to let Mypy validate code using `from_dataframe` better.
 DataFrameObject = Any
 ColumnObject = Any
 
 
-def from_dataframe(df: DataFrameObject, allow_copy: bool = True) -> pandas.DataFrame:
+def from_dataframe(df: DataFrameObject, allow_copy: bool = True) -> "DataFrame":
     """
-    Construct a modin.pandas.DataFrame from ``df`` if it supports ``__dataframe__``
+    Construct a ``DataFrame`` from ``df`` if it supports ``__dataframe__``.
     """
     # NOTE: commented out for roundtrip testing
     # if isinstance(df, pandas.DataFrame):
@@ -65,7 +65,7 @@ def from_dataframe(df: DataFrameObject, allow_copy: bool = True) -> pandas.DataF
     return _from_dataframe(df.__dataframe__(allow_copy=allow_copy))
 
 
-def _from_dataframe(df: DataFrameObject) -> pandas.DataFrame:
+def _from_dataframe(df: DataFrameObject) -> "DataFrame":
     """
     Note: not all cases are handled yet, only ones that can be implemented with
     only Pandas. Later, we need to implement/test support for categoricals,
@@ -78,7 +78,7 @@ def _from_dataframe(df: DataFrameObject) -> pandas.DataFrame:
     # We need a dict of columns here, with each column being a numpy array (at
     # least for now, deal with non-numpy dtypes later).
     columns = dict()
-    _k = _DtypeKind
+    _k = DTypeKind
     _buffers = []  # hold on to buffers, keeps memory alive
     for name in df.column_names():
         if not isinstance(name, str):
@@ -103,7 +103,7 @@ def _from_dataframe(df: DataFrameObject) -> pandas.DataFrame:
     return df_new
 
 
-class _DtypeKind(enum.IntEnum):
+class DTypeKind(enum.IntEnum):
     INT = 0
     UINT = 1
     FLOAT = 2
@@ -133,7 +133,7 @@ def buffer_to_ndarray(_buffer, _dtype) -> np.ndarray:
     # Handle the dtype
     kind = _dtype[0]
     bitwidth = _dtype[1]
-    _k = _DtypeKind
+    _k = DTypeKind
     if _dtype[0] not in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL):
         raise RuntimeError("Not a boolean, integer or floating-point dtype")
 
@@ -209,7 +209,7 @@ def convert_string_column(col: ColumnObject) -> np.ndarray:
 
     # Convert the buffers to NumPy arrays
     dt = (
-        _DtypeKind.UINT,
+        DTypeKind.UINT,
         8,
         None,
         None,
@@ -424,12 +424,12 @@ class Column:
           doesn't need its own version or ``__column__`` protocol.
     """
 
-    def __init__(self, column: pd.Series, allow_copy: bool = True) -> None:
+    def __init__(self, column: "DataFrame", allow_copy: bool = True) -> None:
         """
         Note: doesn't deal with extension arrays yet, just assume a regular
         Series/ndarray for now.
         """
-        if not isinstance(column, pd.Series):
+        if not isinstance(column, DataFrame):
             raise NotImplementedError(
                 "Columns of type {} not handled " "yet".format(type(column))
             )
@@ -438,6 +438,7 @@ class Column:
         self._col = column
         self._allow_copy = allow_copy
 
+    # ``IMPLEMENTED``
     @property
     def size(self) -> int:
         """
@@ -446,7 +447,7 @@ class Column:
         Corresponds to DataFrame.num_rows() if column is a single chunk;
         equal to size of this current chunk otherwise.
         """
-        return self._col.size
+        return sum(self._col._row_lengths)
 
     @property
     def offset(self) -> int:
@@ -486,6 +487,7 @@ class Column:
         """
         return 0
 
+    # ``PARTIALLY IMPLEMENTED``
     @property
     def dtype(self) -> Tuple[enum.IntEnum, int, str, str]:
         """
@@ -521,14 +523,15 @@ class Column:
             - Data types not included: complex, Arrow-style null, binary, decimal,
               and nested (list, struct, map, union) dtypes.
         """
-        dtype = self._col.dtype
+        dtype = self._col.dtypes
 
         # For now, assume that, if the column dtype is 'O' (i.e., `object`), then we have an array of strings
         if not isinstance(dtype, pd.CategoricalDtype) and dtype.kind == "O":
-            return (_DtypeKind.STRING, 8, "u", "=")
+            return (DTypeKind.STRING, 8, "u", "=")
 
         return self._dtype_from_pandasdtype(dtype)
 
+    # ``PARTIALLY IMPLEMENTED``
     def _dtype_from_pandasdtype(self, dtype) -> Tuple[enum.IntEnum, int, str, str]:
         """
         See `self.dtype` for details.
@@ -536,7 +539,7 @@ class Column:
         # Note: 'c' (complex) not handled yet (not in array spec v1).
         #       'b', 'B' (bytes), 'S', 'a', (old-style string) 'V' (void) not handled
         #       datetime and timedelta both map to datetime (is timedelta handled?)
-        _k = _DtypeKind
+        _k = DTypeKind
         _np_kinds = {
             "i": _k.INT,
             "u": _k.UINT,
@@ -550,10 +553,11 @@ class Column:
         if kind is None:
             # Not a NumPy dtype. Check if it's a categorical maybe
             if isinstance(dtype, pd.CategoricalDtype):
+                # 23 matches CATEGORICAL type in DTypeKind
                 kind = 23
             else:
                 raise ValueError(
-                    f"Data type {dtype} not supported by exchange" "protocol"
+                    f"Data type {dtype} not supported by exchange protocol"
                 )
 
         if kind not in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL, _k.CATEGORICAL, _k.STRING):
@@ -580,7 +584,7 @@ class Column:
                           None if not a dictionary-style categorical.
         TBD: are there any other in-memory representations that are needed?
         """
-        if not self.dtype[0] == _DtypeKind.CATEGORICAL:
+        if not self.dtype[0] == DTypeKind.CATEGORICAL:
             raise TypeError(
                 "`describe_categorical only works on a column with "
                 "categorical dtype!"
@@ -611,7 +615,7 @@ class Column:
         mask or a byte mask, the value (0 or 1) indicating a missing value. None
         otherwise.
         """
-        _k = _DtypeKind
+        _k = DTypeKind
         kind = self.dtype[0]
         value = None
         if kind == _k.FLOAT:
@@ -637,13 +641,17 @@ class Column:
 
         return null, value
 
+    # ``IMPLEMENTED``
     @property
     def null_count(self) -> int:
         """
         Number of null elements, if known.
         Note: Arrow uses -1 to indicate "unknown", but None seems cleaner.
         """
-        return self._col.isna().sum()
+        def map_func(df):
+            df.isna().sum()
+
+        return self._col.map(func=map_func).to_pandas().squeeze()
 
     @property
     def metadata(self) -> Dict[str, Any]:
@@ -652,18 +660,46 @@ class Column:
         """
         return {}
 
+    # ``IMPLEMENTED``
     def num_chunks(self) -> int:
         """
         Return the number of chunks the column consists of.
         """
-        return 1
+        return self._col._partitions.shape[0]
 
+    # ``IMPLEMENTED``
     def get_chunks(self, n_chunks: Optional[int] = None) -> Iterable["Column"]:
         """
         Return an iterator yielding the chunks.
-        See `DataFrame.get_chunks` for details on ``n_chunks``.
+
+        By default ``n_chunks=None``, yields the chunks that the data is stored as by the producer.
+        If given, ``n_chunks`` must be a multiple of ``self.num_chunks()``,
+        meaning the producer must subdivide each chunk before yielding it.
+
+        Parameters
+        ----------
+        n_chunks : int, optional
+            Number of chunks to yield.
+
+        Yields
+        ------
+        DataFrame
+            A ``DataFrame`` object(s).
         """
-        return (self,)
+        if n_chunks is None:
+            for length in self._row_lengths:
+                yield Column(
+                    DataFrame(
+                        self._df.mask(row_positions=list(range(length)), col_positions=None)
+                    )
+                )
+        else:
+            for length in self._row_lengths[:n_chunks]:
+                yield Column(
+                    DataFrame(
+                        self._df.mask(row_positions=list(range(length)), col_positions=None)
+                    )
+                )
 
     def get_buffers(self) -> Dict[str, Any]:
         """
@@ -702,7 +738,7 @@ class Column:
         """
         Return the buffer containing the data and the buffer's associated dtype.
         """
-        _k = _DtypeKind
+        _k = DTypeKind
         if self.dtype[0] in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL):
             buffer = Buffer(self._col.to_numpy(), allow_copy=self._allow_copy)
             dtype = self.dtype
@@ -743,7 +779,7 @@ class Column:
         """
         null, invalid = self.describe_null
 
-        _k = _DtypeKind
+        _k = DTypeKind
         if self.dtype[0] == _k.STRING:
             # For now, have the mask array be comprised of bytes, rather than a bit array
             buf = self._col.to_numpy()
@@ -787,7 +823,7 @@ class Column:
         Raises RuntimeError if the data buffer does not have an associated
         offsets buffer.
         """
-        _k = _DtypeKind
+        _k = DTypeKind
         if self.dtype[0] == _k.STRING:
             # For each string, we need to manually determine the next offset
             values = self._col.to_numpy()
@@ -1017,7 +1053,7 @@ def assert_column_equal(col: Column, pdcol: pandas.Series):
     assert col.offset == 0
     assert col.null_count == pdcol.isnull().sum()
     assert col.num_chunks() == 1
-    if col.dtype[0] != _DtypeKind.STRING:
+    if col.dtype[0] != DTypeKind.STRING:
         pytest.raises(RuntimeError, col._get_validity_buffer)
     assert_buffer_equal(col._get_data_buffer(), pdcol)
 
@@ -1066,7 +1102,7 @@ def test_categorical_dtype():
 
     # Some detailed testing for correctness of dtype and null handling:
     col = df.__dataframe__().get_column_by_name("B")
-    assert col.dtype[0] == _DtypeKind.CATEGORICAL
+    assert col.dtype[0] == DTypeKind.CATEGORICAL
     assert col.null_count == 1
     assert col.describe_null == (2, -1)  # sentinel value -1
     assert col.num_chunks() == 1
@@ -1084,7 +1120,7 @@ def test_string_dtype():
 
     # Test for correctness and null handling:
     col = df.__dataframe__().get_column_by_name("B")
-    assert col.dtype[0] == _DtypeKind.STRING
+    assert col.dtype[0] == DTypeKind.STRING
     assert col.null_count == 1
     assert col.describe_null == (4, 0)
     assert col.num_chunks() == 1

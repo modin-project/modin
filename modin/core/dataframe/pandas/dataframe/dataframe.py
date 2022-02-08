@@ -2852,7 +2852,7 @@ class PandasDataframe(object):
         dict
             A dictionary object following the dataframe protocol specification.
         """
-        from modin.core.dataframe.protocol import DataFrame
+        from .protocol import DataFrame
 
         return {
             "dataframe": DataFrame(
