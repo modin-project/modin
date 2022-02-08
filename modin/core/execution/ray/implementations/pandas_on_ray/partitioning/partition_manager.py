@@ -18,7 +18,6 @@ import numpy as np
 import threading
 
 from modin.config import ProgressBar, NPartitions
-from modin.core.dataframe.base.dataframe.utils import no_item_to_distribute
 from modin.core.execution.ray.generic.partitioning.partition_manager import (
     GenericRayDataframePartitionManager,
 )
@@ -31,6 +30,7 @@ from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.error_message import ErrorMessage
 import pandas
+from pandas._libs.lib import no_default
 
 import ray
 
@@ -551,7 +551,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         func,
         row_partitions_list,
         col_partitions_list,
-        item_to_distribute=no_item_to_distribute,
+        item_to_distribute=no_default,
         row_lengths=None,
         col_widths=None,
     ):
@@ -568,7 +568,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             List of row partitions.
         col_partitions_list : list
             List of column partitions.
-        item_to_distribute : np.ndarray, Sentinel, or scalar, default: no_item_to_distribute
+        item_to_distribute : np.ndarray, Sentinel, or scalar, default: no_default
             The item to split up so it can be applied over both axes.
         row_lengths : list of ints, optional
             Lengths of partitions for every row. If not specified this information

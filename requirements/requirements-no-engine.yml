@@ -30,7 +30,6 @@ dependencies:
   - rpyc==4.1.5
   - cloudpickle
   - boto3
-  - sentinels
   - pip:
       - xgboost>=1.3
       - modin-spreadsheet>=0.1.1
