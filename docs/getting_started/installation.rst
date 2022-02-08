@@ -124,6 +124,14 @@ or explicitly:
 
   conda install -c conda-forge modin-ray modin-dask modin-omnisci
 
+``conda`` may be rather slow, especially installing ``modin-all`` package so it's worth to run 
+
+.. code-block:: bash
+
+  conda config --set channel_priority strict
+
+prior the installation process
+
 Using Intel\ |reg| Distribution of Modin
 """"""""""""""""""""""""""""""""""""""""
 
