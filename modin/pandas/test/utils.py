@@ -133,6 +133,7 @@ parse_dates_values_by_id = {
     "list_of_string_and_list_of_strings": ["timestamp", ["year", "month", "date"]],
     "empty_list": [],
     "nonexistent_string_column": ["z"],
+    "nonexistent_int_column": [99],
 }
 
 # See details in #1403

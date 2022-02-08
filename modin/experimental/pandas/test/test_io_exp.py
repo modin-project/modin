@@ -132,6 +132,8 @@ class TestCsvGlob:
                 modin_df = pd.read_csv_glob(
                     time_parsing_csv_path, parse_dates=parse_dates
                 )
+                # Call __repr__ on the modin df to force it to materialize.
+                repr(modin_df)
             assert isinstance(
                 modin_exception.value, type(pandas_exception)
             ), "Got Modin Exception type {}, but pandas Exception type {} was expected".format(
