@@ -3,7 +3,7 @@ on:
   pull_request:
     paths:
       - modin/**
-      - examples/**
+      - examples/tutorial/tutorial_notebooks/introduction/**
 jobs:
   test-notebooks:
     name: test notebooks
