@@ -24,12 +24,38 @@ if not os.path.exists("taxi.csv"):
     """
 
 
-def _execute_notebook(notebook_path):
-    nb = nbformat.read(notebook_path, as_version=nbformat.NO_CONVERT)
+def _execute_notebook(notebook):
+    """
+    Execute jupyter notebook.
+
+    Parameters
+    ----------
+    notebook : file-like or str
+        File-like object or path to notebook to execute.
+    """
+    nb = nbformat.read(notebook, as_version=nbformat.NO_CONVERT)
     ep.preprocess(nb)
 
 
 def _find_code_cell_idx(nb, identifier):
+    """
+    Find code cell index by provided ``identifier``.
+
+    Parameters
+    ----------
+    identifier : str
+        Unique string which target code cell should contain.
+
+    Returns
+    -------
+    int
+        Code cell index with ``identifier``.
+
+    Notes
+    -----
+    Assertion will be raised if ``identifier`` will be found in
+    several code cells or won't be found at all.
+    """
     import_cell_idx = [
         idx
         for idx, cell in enumerate(nb["cells"])
@@ -40,6 +66,23 @@ def _find_code_cell_idx(nb, identifier):
 
 
 def _replace_str(nb, original_str, str_to_relace):
+    """
+    Replace ``original_str`` with ``str_to_relace`` in the provided notebook.
+
+    Parameters
+    ----------
+    nb : dict
+        Dictionary representation of notebook which requires replacement.
+    original_str : str
+        Original string which should be replaced.
+    str_to_relace : str
+        String to replace original string.
+
+    Notes
+    -----
+    Assertion will be raised if ``original_str`` will be found in
+    several code cells or won't be found at all.
+    """
     import_cell_idx = _find_code_cell_idx(nb, original_str)
     nb["cells"][import_cell_idx]["source"] = nb["cells"][import_cell_idx][
         "source"
