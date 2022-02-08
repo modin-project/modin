@@ -1602,17 +1602,17 @@ class TestExcel:
 
     @check_file_leaks
     def test_read_excel_empty_rows(self):
-        path = "modin/pandas/test/data/test_empty_rows.xlsx"
-        modin_df = pd.read_excel(path)
-        pandas_df = pandas.read_excel(path)
-        df_equals(modin_df, pandas_df)
+        eval_io(
+            fn_name="read_excel",
+            io="modin/pandas/test/data/test_empty_rows.xlsx",
+        )
 
     @check_file_leaks
     def test_read_excel_border_rows(self):
-        path = "modin/pandas/test/data/test_border_rows.xlsx"
-        modin_df = pd.read_excel(path)
-        pandas_df = pandas.read_excel(path)
-        df_equals(modin_df, pandas_df)
+        eval_io(
+            fn_name="read_excel",
+            io="modin/pandas/test/data/test_border_rows.xlsx",
+        )
 
     @pytest.mark.parametrize(
         "sheet_name",
