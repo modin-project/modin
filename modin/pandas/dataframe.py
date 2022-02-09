@@ -176,6 +176,9 @@ class DataFrame(BasePandasDataset):
             self._query_compiler = from_pandas(pandas_df)._query_compiler
         else:
             self._query_compiler = query_compiler
+        # Siblings are other dataframes that share the same query compiler. We
+        # use this list to update inplace when there is a shallow copy.
+        self._siblings = []
 
     def __repr__(self):
         """
