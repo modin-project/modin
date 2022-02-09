@@ -43,6 +43,8 @@ def _find_code_cell_idx(nb, identifier):
 
     Parameters
     ----------
+    nb : dict
+        Dictionary representation of the notebook to look for.
     identifier : str
         Unique string which target code cell should contain.
 
