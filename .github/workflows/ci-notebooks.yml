@@ -22,8 +22,14 @@ jobs:
           path: taxi.csv
           # update cache only if notebooks require it to be changed
           key: hashFiles("examples/tutorial/tutorial_notebooks/introduction/**")
-      - run: pip install pytest pytest-cov tqdm black flake8 flake8-print
-      - run: pip install -e .[all]
+      # replace modin[all] with .[ray] in the tutorial requirements file since we need
+      # modin built from sources with ray engine only
+      - run: sed -i 's/modin\[all]/.\[ray\]/g' examples/tutorial/requirements.txt
+      # install dependencies needed for notebooks execution
+      - run: pip install -r examples/tutorial/requirements.txt
+      # install test dependencies
+      - run: pip install pytest pytest-cov black flake8 flake8-print
+      - run: pip list
       - run: black --check --diff examples/tutorial/tutorial_notebooks/test/test_notebooks.py
       - run: flake8 --enable=T examples/tutorial/tutorial_notebooks/test/test_notebooks.py
       - run: pytest examples/tutorial/tutorial_notebooks/test/test_notebooks.py
