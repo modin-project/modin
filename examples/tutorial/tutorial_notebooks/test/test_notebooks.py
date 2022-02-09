@@ -26,12 +26,12 @@ if not os.path.exists("taxi.csv"):
 
 def _execute_notebook(notebook):
     """
-    Execute jupyter notebook.
+    Execute a jupyter notebook.
 
     Parameters
     ----------
     notebook : file-like or str
-        File-like object or path to notebook to execute.
+        File-like object or path to the notebook to execute.
     """
     nb = nbformat.read(notebook, as_version=nbformat.NO_CONVERT)
     ep.preprocess(nb)
@@ -49,12 +49,12 @@ def _find_code_cell_idx(nb, identifier):
     Returns
     -------
     int
-        Code cell index with ``identifier``.
+        Code cell index by provided ``identifier``.
 
     Notes
     -----
-    Assertion will be raised if ``identifier`` will be found in
-    several code cells or won't be found at all.
+    Assertion will be raised if ``identifier`` is found in
+    several code cells or isn't found at all.
     """
     import_cell_idx = [
         idx
@@ -65,28 +65,28 @@ def _find_code_cell_idx(nb, identifier):
     return import_cell_idx[0]
 
 
-def _replace_str(nb, original_str, str_to_relace):
+def _replace_str(nb, original_str, str_to_replace):
     """
-    Replace ``original_str`` with ``str_to_relace`` in the provided notebook.
+    Replace ``original_str`` with ``str_to_replace`` in the provided notebook.
 
     Parameters
     ----------
     nb : dict
-        Dictionary representation of notebook which requires replacement.
+        Dictionary representation of the notebook which requires replacement.
     original_str : str
         Original string which should be replaced.
-    str_to_relace : str
+    str_to_replace : str
         String to replace original string.
 
     Notes
     -----
-    Assertion will be raised if ``original_str`` will be found in
-    several code cells or won't be found at all.
+    Assertion will be raised if ``original_str`` is found in
+    several code cells or isn't found at all.
     """
     import_cell_idx = _find_code_cell_idx(nb, original_str)
     nb["cells"][import_cell_idx]["source"] = nb["cells"][import_cell_idx][
         "source"
-    ].replace(original_str, str_to_relace)
+    ].replace(original_str, str_to_replace)
 
 
 # in this notebook user should replace 'import pandas as pd' with
