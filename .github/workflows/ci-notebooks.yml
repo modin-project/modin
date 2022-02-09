@@ -22,9 +22,9 @@ jobs:
           path: taxi.csv
           # update cache only if notebooks require it to be changed
           key: hashFiles("examples/tutorial/tutorial_notebooks/introduction/**")
-      # replace modin[all] with .[ray] in the tutorial requirements file since we need
-      # modin built from sources with ray engine only
-      - run: sed -i 's/modin\[all]/.\[ray\]/g' examples/tutorial/requirements.txt
+      # replace modin[all] with .[all] in the tutorial requirements file since we need
+      # modin built from sources
+      - run: sed -i 's/modin/./g' examples/tutorial/requirements.txt
       # install dependencies needed for notebooks execution
       - run: pip install -r examples/tutorial/requirements.txt
       # install test dependencies
