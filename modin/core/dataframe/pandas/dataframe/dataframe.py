@@ -1190,7 +1190,7 @@ class PandasDataframe(object):
             indices[negative_mask] = indices[negative_mask] % len(self.axes[axis])
         # If the `indices` array was modified because of the negative indices conversion
         # then the original order was broken and so we have to sort anyway:
-        if not has_negative and not are_indices_sorted:
+        if has_negative or not are_indices_sorted:
             indices = np.sort(indices)
         if axis == 0:
             bins = np.array(self._row_lengths)
