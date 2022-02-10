@@ -16,7 +16,7 @@ Key Features and Updates
 * Benchmarking enhancements
   *
 * Refactor Codebase
-  *
+  * REFACTOR-#3997: remove code duplication for `broadcast_apply` method (#3996)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
