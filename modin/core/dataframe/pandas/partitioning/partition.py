@@ -123,7 +123,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         only need to call `get`.
         """
         dataframe = self.get()
-        assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
+        assert isinstance(dataframe, (pandas.DataFrame, pandas.Series))
         return dataframe
 
     def to_numpy(self, **kwargs):
