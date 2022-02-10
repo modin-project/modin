@@ -12,11 +12,7 @@
 # governing permissions and limitations under the License.
 
 """
-Base Modin Dataframe functionality related to the dataframe exchange protocol.
+Tests related to the dataframe exchange protocol implementation correctness.
 
 See more in https://data-apis.org/dataframe-protocol/latest/index.html.
 """
-
-from .dataframe import DataFrame, Column, Buffer
-
-__all__ = ["DataFrame", "Column", "Buffer"]
