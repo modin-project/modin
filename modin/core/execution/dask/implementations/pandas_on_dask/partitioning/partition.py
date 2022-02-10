@@ -13,12 +13,10 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
-import pandas
 from distributed import Future
 from distributed.utils import get_ip
 from dask.distributed import wait
 
-from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
 from modin.core.execution.dask.common.task_wrapper import DaskWrapper
