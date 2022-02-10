@@ -175,17 +175,18 @@ in conjunction with python multiprocessing because that can lead to undefined be
 One of such examples is shown below:
 
 .. code-block:: python
+
   import modin.pandas as pd
-  
+
   # Ray engine is used by default
   df = pandas.DataFrame([1, 2, 3])
-  
+
   def f(arg):
     return df + arg
 
   if __name__ == '__main__':
     from multiprocessing import Pool
-    
+
     with Pool(5) as p:
         print(p.map(f, [1]))
 
@@ -209,13 +210,87 @@ This can happen when you use OmniSci engine along with ``pyarrow.gandiva``:
   cfg.IsExperimental.put(True)
   import modin.pandas as pd
   import pyarrow.gandiva as gandiva  # Error
-  CommandLine Error: Option 'enable-vfe' registered more than once!
-  LLVM ERROR: inconsistency in registered CommandLine options
-  Aborted (core dumped)
+  # CommandLine Error: Option 'enable-vfe' registered more than once!
+  # LLVM ERROR: inconsistency in registered CommandLine options
+  # Aborted (core dumped)
 
 **Solution**
 
 Do not use OmniSci engine along with ``pyarrow.gandiva``.
+
+Error when using Dask engine: ``RuntimeError: if __name__ == '__main__':``
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+The following `script.py` uses Modin with Dask as an execution engine and produces errors:
+
+.. code-block:: python
+
+  # script.py
+  import modin.pandas as pd
+  import modin.config as cfg
+
+  cfg.Engine.put("dask")
+
+  df = pd.DataFrame([0,1,2,3])
+  print(df)
+
+A part of the produced errors by the script above would be the following:
+
+.. code-block::
+
+  File "/path/python3.9/multiprocessing/spawn.py", line 134, in _check_not_importing_main
+    raise RuntimeError('''
+    RuntimeError: 
+        An attempt has been made to start a new process before the
+        current process has finished its bootstrapping phase.
+
+        This probably means that you are not using fork to start your
+        child processes and you have forgotten to use the proper idiom
+        in the main module:
+
+            if __name__ == '__main__':
+                freeze_support()
+                ...
+
+        The "freeze_support()" line can be omitted if the program
+        is not going to be frozen to produce an executable.
+
+This happens because Dask Client uses `fork <https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods>`_
+to start processes.
+
+**Solution**
+
+To avoid the problem Dask Client creation needs to be moved into ``__main__`` scope of the module.
+
+The corrected `script.py` would look like:
+
+.. code-block:: python
+
+  # script.py
+  import modin.pandas as pd
+  import modin.config as cfg
+
+  cfg.Engine.put("dask")
+
+  if __name__ == "__main__":
+    df = pd.DataFrame([0, 1, 2, 3]) # Dask Client creation is hidden in the first call of Modin functionality.
+    print(df)
+
+or
+
+.. code-block:: python
+
+  # script.py
+  from distributed import Client
+  import modin.pandas as pd
+  import modin.config as cfg
+
+  cfg.Engine.put("dask")
+
+  if __name__ == "__main__":
+    client = Client() # Explicit Dask Client creation.
+    df = pd.DataFrame([0, 1, 2, 3])
+    print(df)
 
 .. _issue: https://github.com/modin-project/modin/issues
 .. _Slack: https://modin.org/slack.html
