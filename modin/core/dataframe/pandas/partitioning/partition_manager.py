@@ -791,7 +791,7 @@ class PandasDataframePartitionManager(ABC):
 
         Notes
         -----
-        This method can be more efficient implemented for engines that support
+        This method should be implemented in a more efficient way for engines that support
         getting objects in parallel.
         """
         return [partition.get() for partition in partitions]
