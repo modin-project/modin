@@ -18,7 +18,11 @@ from pandas.errors import ParserWarning
 import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
 from collections import OrderedDict
-from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
+from modin.db_conn import (
+    ModinDatabaseConnection,
+    UnsupportedDatabaseException,
+    UnsupportedSqlDialectException,
+)
 from modin.config import TestDatasetSize, Engine, StorageFormat, IsExperimental
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
@@ -1796,13 +1800,31 @@ class TestSql:
         )
 
         modin_df = pd.read_sql(
-            sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
+            sql=query, con=ModinDatabaseConnection("sqlalchemy", "postgres", conn)
         )
         pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
         df_equals(modin_df, pandas_df)
 
+    def test_read_sql_from_sql_server(self):
+        query = "SELECT * FROM test_1000x256"
+        sqlalchemy_connection_string = (
+            "mssql+pymssql://sa:Strong.Pwd-123@localhost:1433/master"
+        )
+        modin_df = pd.read_sql(
+            query,
+            ModinDatabaseConnection(
+                "sqlalchemy", "microsoft_sql", sqlalchemy_connection_string
+            ),
+        )
+        pandas_df = pandas.read_sql(query, sqlalchemy_connection_string)
+        df_equals(modin_df, pandas_df)
+
+    def test_invalid_modin_database_connections(self):
         with pytest.raises(UnsupportedDatabaseException):
             ModinDatabaseConnection("unsupported_database")
+
+        with pytest.raises(UnsupportedSqlDialectException):
+            ModinDatabaseConnection("sqlalchemy", "unknown_dialect")
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",

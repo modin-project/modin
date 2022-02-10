@@ -347,6 +347,7 @@ jobs:
       - run: pytest modin/test/storage_formats/omnisci/test_internals.py
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
+      - run: ./set_up_sql_server.sh
       - run: pytest modin/pandas/test/test_io.py::TestCsv --verbose
       - uses: codecov/codecov-action@v2
 
@@ -467,6 +468,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
+      - run: ./set_up_sql_server.sh
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && pytest modin/experimental/sql/test/test_sql.py
@@ -500,6 +502,7 @@ jobs:
           conda list
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+      - run: ./set_up_sql_server.sh
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - uses: codecov/codecov-action@v2
 
