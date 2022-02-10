@@ -16,7 +16,7 @@ Key Features and Updates
 * Benchmarking enhancements
   *
 * Refactor Codebase
-  *
+  * REFACTOR-#3990: remove code duplication in `PandasDataframePartition` hierarchy (#3991)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements

@@ -13,15 +13,12 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
-import pandas
-
-from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
-from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
-from modin.pandas.indexing import compute_sliced_len
-
 import ray
 from ray.util import get_node_ip_address
 from packaging import version
+
+from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
+from modin.pandas.indexing import compute_sliced_len
 
 ObjectIDType = ray.ObjectRef
 if version.parse(ray.__version__) >= version.parse("1.2.0"):
@@ -181,33 +178,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             call_queue=self.call_queue,
         )
 
-    def to_pandas(self):
-        """
-        Convert the object wrapped by this partition to a ``pandas.DataFrame``.
-
-        Returns
-        -------
-        pandas DataFrame.
-        """
-        dataframe = self.get()
-        assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
-        return dataframe
-
-    def to_numpy(self, **kwargs):
-        """
-        Convert the object wrapped by this partition to a NumPy array.
-
-        Parameters
-        ----------
-        **kwargs : dict
-            Additional keyword arguments to be passed in ``to_numpy``.
-
-        Returns
-        -------
-        np.ndarray
-        """
-        return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
-
     def mask(self, row_labels, col_labels):
         """
         Lazily create a mask that extracts the indices provided.
@@ -332,42 +302,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         if isinstance(self._ip_cache, ObjectIDType):
             self._ip_cache = ray.get(self._ip_cache)
         return self._ip_cache
-
-    @classmethod
-    def _length_extraction_fn(cls):
-        """
-        Return the function that computes the length of the object wrapped by this partition.
-
-        Returns
-        -------
-        callable
-            The function that computes the length of the object wrapped by this partition.
-        """
-        return length_fn_pandas
-
-    @classmethod
-    def _width_extraction_fn(cls):
-        """
-        Return the function that computes the width of the object wrapped by this partition.
-
-        Returns
-        -------
-        callable
-            The function that computes the width of the object wrapped by this partition.
-        """
-        return width_fn_pandas
-
-    @classmethod
-    def empty(cls):
-        """
-        Create a new partition that wraps an empty pandas DataFrame.
-
-        Returns
-        -------
-        PandasOnRayDataframePartition
-            A new ``PandasOnRayDataframePartition`` object.
-        """
-        return cls.put(pandas.DataFrame())
 
 
 @ray.remote(num_returns=2)
