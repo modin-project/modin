@@ -31,8 +31,6 @@ from .partition import PandasOnRayDataframePartition
 from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 
-import ray
-
 
 def progress_bar_wrapper(f):
     """
