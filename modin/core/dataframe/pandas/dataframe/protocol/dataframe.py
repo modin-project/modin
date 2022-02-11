@@ -37,7 +37,7 @@ import numpy as np
 import pandas
 
 import modin.pandas as pd
-from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
+from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.pandas.utils import from_pandas
 
 # A typing protocol could be added later
@@ -49,6 +49,23 @@ ColumnObject = Any
 def from_dataframe(df: DataFrameObject, allow_copy: bool = True) -> "DataFrame":
     """
     Construct a ``DataFrame`` from ``df`` if it supports ``__dataframe__``.
+
+    Parameters
+    ----------
+    df : DataFrameObject
+        An object to create a DataFrame from.
+    allow_copy : bool, default: True
+        A keyword that defines whether or not the library is allowed
+        to make a copy of the data. For example, copying data would be necessary
+        if a library supports strided buffers, given that this protocol
+        specifies contiguous buffers. Currently, if the flag is set to ``False``
+        and a copy is needed, a ``RuntimeError`` will be raised.
+
+    Notes
+    -----
+    Not all cases are handled yet, only ones that can be implemented with
+    only pandas. Later, we need to implement/test support for categoricals,
+    bit/byte masks, chunk handling, etc.
     """
     # NOTE: commented out for roundtrip testing
     # if isinstance(df, pandas.DataFrame):
@@ -57,20 +74,7 @@ def from_dataframe(df: DataFrameObject, allow_copy: bool = True) -> "DataFrame":
     if not hasattr(df, "__dataframe__"):
         raise ValueError("`df` does not support __dataframe__")
 
-    return _from_dataframe(df.__dataframe__(allow_copy=allow_copy))
-
-
-def _from_dataframe(df: DataFrameObject) -> "DataFrame":
-    """
-    Create a ``DataFrame`` object from ``df`` provided as an argument.
-
-    Notes
-    -----
-    Not all cases are handled yet, only ones that can be implemented with
-    only pandas. Later, we need to implement/test support for categoricals,
-    bit/byte masks, chunk handling, etc.
-    """
-    # Check number of chunks, if there's more than one we need to iterate
+    # TODO: Check number of chunks, if there's more than one we need to iterate
     if df.num_chunks() > 1:
         raise NotImplementedError
 
@@ -115,7 +119,17 @@ class DTypeKind(enum.IntEnum):
 
 def convert_column_to_ndarray(col: ColumnObject) -> np.ndarray:
     """
-    Convert an int, uint, float or bool column to a numpy array.
+    Convert an int, uint, float or bool column to a NumPy array.
+
+    Parameters
+    ----------
+    col : ColumnObject
+        A column to convert to a NumPy array from.
+
+    Returns
+    -------
+    np.ndarray
+        NumPy array.
     """
     if col.offset != 0:
         raise NotImplementedError("column.offset > 0 not handled yet")
@@ -130,6 +144,21 @@ def convert_column_to_ndarray(col: ColumnObject) -> np.ndarray:
 
 
 def buffer_to_ndarray(_buffer, _dtype) -> np.ndarray:
+    """
+    Convert a ``Buffer`` object to a NumPy array.
+
+    Parameters
+    ----------
+    col : Buffer
+        A buffer to convert to a NumPy array from.
+    _dtype : any
+        A dtype object.
+
+    Returns
+    -------
+    np.ndarray
+        NumPy array.
+    """
     # Handle the dtype
     kind = _dtype[0]
     bitwidth = _dtype[1]
@@ -158,7 +187,17 @@ def buffer_to_ndarray(_buffer, _dtype) -> np.ndarray:
 
 def convert_categorical_column(col: ColumnObject) -> pandas.Series:
     """
-    Convert a categorical column to a Series instance.
+    Convert a categorical column to a pandas Series instance.
+
+    Parameters
+    ----------
+    col : ColumnObject
+        A column to convert to to a pandas Series instance from.
+
+    Returns
+    -------
+    pandas.Series
+        A pandas Series instance.
     """
     ordered, is_dict, mapping = col.describe_categorical
     if not is_dict:
@@ -191,6 +230,16 @@ def convert_categorical_column(col: ColumnObject) -> pandas.Series:
 def convert_string_column(col: ColumnObject) -> np.ndarray:
     """
     Convert a string column to a NumPy array.
+
+    Parameters
+    ----------
+    col : ColumnObject
+        A string column to convert to a NumPy array from.
+
+    Returns
+    -------
+    np.ndarray
+        NumPy array object.
     """
     # Retrieve the data buffers
     buffers = col.get_buffers()
@@ -301,7 +350,6 @@ class Buffer:
         # attribute, so we can use it to retrieve the public attributes
         self._x = x
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     @property
     def bufsize(self) -> int:
         """
@@ -309,7 +357,6 @@ class Buffer:
         """
         return self._x.size * self._x.dtype.itemsize
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     @property
     def ptr(self) -> int:
         """
@@ -317,7 +364,6 @@ class Buffer:
         """
         return self._x.__array_interface__["data"][0]
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     def __dlpack__(self):
         """
         DLPack not implemented in NumPy yet, so leave it out here.
@@ -331,7 +377,6 @@ class Buffer:
         """
         raise NotImplementedError("__dlpack__")
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     def __dlpack_device__(self) -> Tuple[enum.IntEnum, int]:
         """
         Device type and device ID for where the data in the buffer resides.
@@ -352,7 +397,6 @@ class Buffer:
 
         return (Device.CPU, None)
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     def __repr__(self) -> str:
         """
         Return a string representation for a particular ``Buffer``.
@@ -419,7 +463,7 @@ class Column:
         specifies contiguous buffers. Currently, if the flag is set to ``False``
         and a copy is needed, a ``RuntimeError`` will be raised.
     offset : int, default: 0
-        The offset of the first element
+        The offset of the first element.
 
     Notes
     -----
@@ -444,7 +488,6 @@ class Column:
         self._allow_copy = allow_copy
         self._offset = offset
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     @property
     def size(self) -> int:
         """
@@ -460,7 +503,6 @@ class Column:
         """
         return len(self._df.index)
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     @property
     def offset(self) -> int:
         """
@@ -552,7 +594,7 @@ class Column:
         endianness = dtype.byteorder if not kind == _k.CATEGORICAL else "="
         return (kind, bitwidth, format_str, endianness)
 
-    # TODO: ``NOT IMPLEMENTED``, remove before the changes are merged
+    # TODO: ``NOT TOUCHED YET``, remove before the changes are merged
     @property
     def describe_categorical(self) -> Dict[str, Any]:
         """
@@ -587,13 +629,12 @@ class Column:
         is_dictionary = True
         # NOTE: this shows the children approach is better, transforming
         # `categories` to a "mapping" dict is inefficient
-        codes = self._col.values.codes  # ndarray, length `self.size`
+        # codes = self._col.values.codes  # ndarray, length `self.size`
         # categories.values is ndarray of length n_categories
         categories = self._col.values.categories.values
         mapping = {ix: val for ix, val in enumerate(categories)}
         return ordered, is_dictionary, mapping
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     @property
     def describe_null(self) -> Tuple[int, Any]:
         """
@@ -642,7 +683,6 @@ class Column:
 
         return null, value
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     @property
     def null_count(self) -> int:
         """
@@ -663,7 +703,6 @@ class Column:
         """
         return {}
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     def num_chunks(self) -> int:
         """
         Return the number of chunks the column consists of.
@@ -675,7 +714,6 @@ class Column:
         """
         return self._col._partitions.shape[0]
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     def get_chunks(self, n_chunks: Optional[int] = None) -> Iterable["Column"]:
         """
         Return an iterator yielding the chunks.
@@ -718,7 +756,7 @@ class Column:
                 self._df._partitions,
                 lambda df: df,
                 keep_partitioning=False,
-                lengths=None,
+                lengths=new_row_lengths,
             )
             new_df = self._df.__constructor__(
                 new_partitions,
@@ -739,7 +777,7 @@ class Column:
                 )
                 offset += length
 
-    # TODO: ``NOT IMPLEMENTED``, remove before the changes are merged
+    # TODO: ``NOT TOUCHED YET``, remove before the changes are merged
     def get_buffers(self) -> Dict[str, Any]:
         """
         Return a dictionary containing the underlying buffers.
@@ -763,17 +801,17 @@ class Column:
         buffers["data"] = self._get_data_buffer()
         try:
             buffers["validity"] = self._get_validity_buffer()
-        except:
+        except Exception:
             buffers["validity"] = None
 
         try:
             buffers["offsets"] = self._get_offsets_buffer()
-        except:
+        except Exception:
             buffers["offsets"] = None
 
         return buffers
 
-    # TODO: ``NOT IMPLEMENTED``, remove before the changes are merged
+    # TODO: ``NOT TOUCHED YET``, remove before the changes are merged
     def _get_data_buffer(self) -> Tuple[Buffer, Any]:  # Any is for self.dtype tuple
         """
         Return the buffer containing the data and the buffer's associated dtype.
@@ -781,6 +819,7 @@ class Column:
         Returns
         -------
         tuple
+            The data buffer.
         """
         _k = DTypeKind
         if self.dtype[0] in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL):
@@ -815,12 +854,22 @@ class Column:
 
         return buffer, dtype
 
-    # TODO: ``NOT IMPLEMENTED``, remove before the changes are merged
+    # TODO: ``NOT TOUCHED YET``, remove before the changes are merged
     def _get_validity_buffer(self) -> Tuple[Buffer, Any]:
         """
-        Return the buffer containing the mask values indicating missing data and
-        the buffer's associated dtype.
-        Raises RuntimeError if null representation is not a bit or byte mask.
+        Get the validity buffer.
+
+        The buffer contains the mask values indicating
+        missing data and the buffer's associated dtype.
+
+        Returns
+        -------
+        tuple
+            The validity buffer.
+
+        Raises
+        ------
+        ``RuntimeError`` if null representation is not a bit or byte mask.
         """
         null, invalid = self.describe_null
 
@@ -861,13 +910,22 @@ class Column:
 
         raise RuntimeError(msg)
 
-    # TODO: ``NOT IMPLEMENTED``, remove before the changes are merged
+    # TODO: ``NOT TOUCHED YET``, remove before the changes are merged
     def _get_offsets_buffer(self) -> Tuple[Buffer, Any]:
         """
-        Return the buffer containing the offset values for variable-size binary
-        data (e.g., variable-length strings) and the buffer's associated dtype.
-        Raises RuntimeError if the data buffer does not have an associated
-        offsets buffer.
+        Get the offsets buffer.
+
+        The buffer contains the offset values for variable-size binary data
+        (e.g., variable-length strings) and the buffer's associated dtype.
+
+        Returns
+        -------
+        tuple
+            The offsets buffer.
+
+        Raises
+        ------
+        ``RuntimeError`` if the data buffer does not have an associated offsets buffer.
         """
         _k = DTypeKind
         if self.dtype[0] == _k.STRING:
@@ -908,7 +966,8 @@ class DataFrame(object):
     """
     A data frame class, with only the methods required by the interchange protocol defined.
 
-    Instances of this (private) class are returned from ``modin.pandas.DataFrame.__dataframe__``
+    Instances of this (private) class are returned from
+    ``modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe.__dataframe__``
     as objects with the methods and attributes defined on this class.
 
     A "data frame" represents an ordered collection of named columns.
@@ -920,8 +979,8 @@ class DataFrame(object):
 
     Parameters
     ----------
-    df : ModinDataframe
-        A ``ModinDataframe`` object.
+    df : PandasDataframe
+        A ``PandasDataframe`` object.
     nan_as_null : bool, default:False
         A keyword intended for the consumer to tell the producer
         to overwrite null values in the data with ``NaN`` (or ``NaT``).
@@ -933,11 +992,13 @@ class DataFrame(object):
         if a library supports strided buffers, given that this protocol
         specifies contiguous buffers. Currently, if the flag is set to ``False``
         and a copy is needed, a ``RuntimeError`` will be raised.
+    offset : int, default: 0
+        The offset of the first element.
     """
 
     def __init__(
         self,
-        df: ModinDataframe,
+        df: PandasDataframe,
         nan_as_null: bool = False,
         allow_copy: bool = True,
         offset: int = 0,
@@ -964,7 +1025,6 @@ class DataFrame(object):
         # labels - so we export it as pandas-specific metadata here.
         return {"pandas.index": self._df.index}
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     def num_columns(self) -> int:
         """
         Return the number of columns in the DataFrame.
@@ -976,8 +1036,8 @@ class DataFrame(object):
         """
         return len(self._df.columns)
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     def num_rows(self) -> int:
+        # copied from the initial implementation
         # TODO: not happy with Optional, but need to flag it may be expensive
         #       why include it if it may be None - what do we expect consumers
         #       to do here?
@@ -991,7 +1051,6 @@ class DataFrame(object):
         """
         return len(self._df.index)
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     def num_chunks(self) -> int:
         """
         Return the number of chunks the DataFrame consists of.
@@ -1003,7 +1062,6 @@ class DataFrame(object):
         """
         return self._df._partitions.shape[0]
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     def column_names(self) -> Iterable[str]:
         """
         Return an iterator yielding the column names.
@@ -1016,7 +1074,6 @@ class DataFrame(object):
         for col in self._df.columns:
             yield col
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     def get_column(self, i: int) -> Column:
         """
         Return the column at the indicated position.
@@ -1032,7 +1089,6 @@ class DataFrame(object):
             offset=self._offset,
         )
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     def get_column_by_name(self, name: str) -> Column:
         """
         Return the column whose name is the indicated name.
@@ -1048,7 +1104,6 @@ class DataFrame(object):
             offset=self._offset,
         )
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     def get_columns(self) -> Iterable[Column]:
         """
         Return an iterator yielding the columns.
@@ -1065,10 +1120,12 @@ class DataFrame(object):
                 offset=self._offset,
             )
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     def select_columns(self, indices: Sequence[int]) -> "DataFrame":
         """
         Create a new DataFrame by selecting a subset of columns by index.
+
+        names : Sequence[int]
+            Column indices to be selected out of the DataFrame.
 
         Returns
         -------
@@ -1079,15 +1136,19 @@ class DataFrame(object):
             raise ValueError("`indices` is not a sequence")
 
         return DataFrame(
-            self._df.mask(
-                row_positions=None, col_positions=indices, offset=self._offset
-            )
+            self._df.mask(row_positions=None, col_positions=indices),
+            allow_copy=self._allow_copy,
+            offset=self._offset,
         )
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     def select_columns_by_name(self, names: Sequence[str]) -> "DataFrame":
         """
         Create a new DataFrame by selecting a subset of columns by name.
+
+        Parameters
+        ----------
+        names : Sequence[str]
+            Column names to be selected out of the DataFrame.
 
         Returns
         -------
@@ -1098,16 +1159,17 @@ class DataFrame(object):
             raise ValueError("`names` is not a sequence")
 
         return DataFrame(
-            self._df.mask(row_positions=None, col_labels=names, offset=self._offset)
+            self._df.mask(row_positions=None, col_labels=names),
+            allow_copy=self._allow_copy,
+            offset=self._offset,
         )
 
-    # TODO: ``IMPLEMENTED``, remove before the changes are merged
     def get_chunks(self, n_chunks: Optional[int] = None) -> Iterable["DataFrame"]:
         """
         Return an iterator yielding the chunks.
 
-        By default ``n_chunks=None``, yields the chunks that the data is stored as by the producer.
-        If given, ``n_chunks`` must be a multiple of ``self.num_chunks()``,
+        By default `n_chunks=None`, yields the chunks that the data is stored as by the producer.
+        If given, `n_chunks` must be a multiple of `self.num_chunks()`,
         meaning the producer must subdivide each chunk before yielding it.
 
         Parameters
@@ -1134,7 +1196,7 @@ class DataFrame(object):
         else:
             new_row_lengths = self.num_rows() // n_chunks
             if self.num_rows() % n_chunks:
-                # TODO: raise exception in this case
+                # TODO: raise exception in this case?
                 new_row_lengths += 1
 
             new_partitions = self._df._partition_mgr_cls.map_axis_partitions(
@@ -1142,7 +1204,7 @@ class DataFrame(object):
                 self._df._partitions,
                 lambda df: df,
                 keep_partitioning=False,
-                lengths=None,
+                lengths=new_row_lengths,
             )
             new_df = self._df.__constructor__(
                 new_partitions,
