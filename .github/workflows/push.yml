@@ -126,7 +126,7 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - sudo run: ./set_up_sql_server.sh      
+      - run: sudo ./set_up_sql_server.sh      
       - run: python -m pytest modin/pandas/test/test_io.py
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - uses: codecov/codecov-action@v2
