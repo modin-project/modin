@@ -13,7 +13,7 @@
 
 """Module houses class that implements ``PandasDataframePartitionManager``."""
 
-import numpy as np
+from distributed.client import default_client
 
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
@@ -24,9 +24,6 @@ from .virtual_partition import (
 )
 from .partition import PandasOnDaskDataframePartition
 from modin.error_message import ErrorMessage
-import pandas
-
-from distributed.client import default_client
 
 
 class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
@@ -80,51 +77,3 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
             )
         new_idx = client.gather(new_idx)
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
-
-    @classmethod
-    def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
-        """
-        Broadcast the `right` partitions to `left` and apply `apply_func` function.
-
-        Parameters
-        ----------
-        axis : {0, 1}
-            Axis to apply and broadcast over.
-        apply_func : callable
-            Function to apply.
-        left : np.ndarray
-            NumPy array of left partitions.
-        right : np.ndarray
-            NumPy array of right partitions.
-        other_name : str, default: "r"
-            Name of key-value argument for `apply_func` that
-            is used to pass `right` to `apply_func`.
-
-        Returns
-        -------
-        np.ndarray
-            NumPy array of result partition objects.
-        """
-
-        def map_func(df, *others):
-            other = pandas.concat(others, axis=axis ^ 1)
-            return apply_func(df, **{other_name: other})
-
-        map_func = cls.preprocess_func(map_func)
-        rt_axis_parts = cls.axis_partition(right, axis ^ 1)
-        return np.array(
-            [
-                [
-                    part.apply(
-                        map_func,
-                        *(
-                            rt_axis_parts[col_idx].list_of_blocks
-                            if axis
-                            else rt_axis_parts[row_idx].list_of_blocks
-                        ),
-                    )
-                    for col_idx, part in enumerate(left[row_idx])
-                ]
-                for row_idx in range(len(left))
-            ]
-        )
