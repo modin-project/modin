@@ -115,7 +115,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         result = [None] * len(self.list_of_partitions_to_combine)
         for idx, partition in enumerate(self.list_of_partitions_to_combine):
             partition.drain_call_queue()
-            result[idx] = partition.oid
+            result[idx] = partition.data_ref
         return result
 
     @property

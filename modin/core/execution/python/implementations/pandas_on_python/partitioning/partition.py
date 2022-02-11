@@ -42,12 +42,25 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
     """
 
     def __init__(self, data, length=None, width=None, call_queue=None):
-        self.data = data
+        self._data = data
         if call_queue is None:
             call_queue = []
         self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width
+
+    @property
+    def data_ref(self):
+        """
+        Get the reference wrapped by this partition.
+
+        Returns
+        -------
+        pandas.DataFrame
+            The reference wrapped by this partition.
+        """
+        self.drain_call_queue()
+        return self._data
 
     def get(self):
         """
@@ -63,7 +76,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         Since this object is a simple wrapper, just return the copy of data.
         """
         self.drain_call_queue()
-        return self.data.copy()
+        return self._data.copy()
 
     def apply(self, func, *args, **kwargs):
         """
@@ -108,9 +121,11 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
                     raise e
             return result
 
-        self.data = call_queue_closure(self.data, self.call_queue)
+        self._data = call_queue_closure(self._data, self.call_queue)
         self.call_queue = []
-        return PandasOnPythonDataframePartition(func(self.data.copy(), *args, **kwargs))
+        return PandasOnPythonDataframePartition(
+            func(self._data.copy(), *args, **kwargs)
+        )
 
     def add_to_apply_calls(self, func, *args, **kwargs):
         """
@@ -131,7 +146,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
             New ``PandasOnPythonDataframePartition`` object with extended call queue.
         """
         return PandasOnPythonDataframePartition(
-            self.data.copy(), call_queue=self.call_queue + [(func, args, kwargs)]
+            self._data.copy(), call_queue=self.call_queue + [(func, args, kwargs)]
         )
 
     def drain_call_queue(self):

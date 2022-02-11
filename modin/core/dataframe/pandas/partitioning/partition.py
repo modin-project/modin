@@ -33,6 +33,18 @@ class PandasDataframePartition(ABC):  # pragma: no cover
     _length_cache = None
     _width_cache = None
 
+    @property
+    def data_ref(self):
+        """
+        Get the reference wrapped by this partition.
+
+        Returns
+        -------
+        future-like object
+            The reference wrapped by this partition.
+        """
+        pass
+
     def get(self):
         """
         Get the object wrapped by this partition.

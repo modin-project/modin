@@ -49,13 +49,26 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
     def __init__(self, object_id, length=None, width=None, ip=None, call_queue=None):
         assert isinstance(object_id, ObjectIDType)
-        self.oid = object_id
+        self._oid = object_id
         if call_queue is None:
             call_queue = []
         self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width
         self._ip_cache = ip
+
+    @property
+    def data_ref(self):
+        """
+        Get the reference wrapped by this partition.
+
+        Returns
+        -------
+        ray.ObjectRef
+            The reference wrapped by this partition.
+        """
+        self.drain_call_queue()
+        return self._oid
 
     def get(self):
         """
@@ -68,7 +81,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         """
         if len(self.call_queue):
             self.drain_call_queue()
-        return ray.get(self.oid)
+        return ray.get(self._oid)
 
     def apply(self, func, *args, **kwargs):
         """
@@ -93,7 +106,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
-        oid = self.oid
+        oid = self._oid
         call_queue = self.call_queue + [(func, args, kwargs)]
         if len(call_queue) > 1:
             result, length, width, ip = apply_list_of_funcs.remote(call_queue, oid)
@@ -128,18 +141,18 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         return PandasOnRayDataframePartition(
-            self.oid, call_queue=self.call_queue + [(func, args, kwargs)]
+            self._oid, call_queue=self.call_queue + [(func, args, kwargs)]
         )
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
         if len(self.call_queue) == 0:
             return
-        oid = self.oid
+        oid = self._oid
         call_queue = self.call_queue
         if len(call_queue) > 1:
             (
-                self.oid,
+                self._oid,
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
@@ -149,7 +162,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
             (
-                self.oid,
+                self._oid,
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
@@ -159,7 +172,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        ray.wait([self.oid])
+        ray.wait([self._oid])
 
     def __copy__(self):
         """
@@ -171,7 +184,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             A copy of this partition.
         """
         return PandasOnRayDataframePartition(
-            self.oid,
+            self._oid,
             length=self._length_cache,
             width=self._width_cache,
             ip=self._ip_cache,
@@ -259,7 +272,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self.drain_call_queue()
             else:
                 self._length_cache, self._width_cache = get_index_and_columns.remote(
-                    self.oid
+                    self._oid
                 )
         if isinstance(self._length_cache, ObjectIDType):
             self._length_cache = ray.get(self._length_cache)
@@ -279,7 +292,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self.drain_call_queue()
             else:
                 self._length_cache, self._width_cache = get_index_and_columns.remote(
-                    self.oid
+                    self._oid
                 )
         if isinstance(self._width_cache, ObjectIDType):
             self._width_cache = ray.get(self._width_cache)
