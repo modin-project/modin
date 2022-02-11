@@ -13,6 +13,8 @@
 
 """Module houses class that implements ``PandasDataframePartitionManager``."""
 
+from distributed.client import default_client
+
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
