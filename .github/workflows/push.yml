@@ -167,6 +167,7 @@ jobs:
         if: matrix.test-task != 'modin/pandas/test/test_io.py'
       - timeout-minutes: 30
         run: |
+          chmod +x set_up_windows_for_sql_server.sh
           ./set_up_windows_for_sql_server.sh
           chmod +x set_up_sql_server.sh
           ./set_up_sql_server.sh
