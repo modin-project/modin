@@ -1851,6 +1851,7 @@ class TestSql:
         )
         pandas_df = pandas.read_sql(query, sqlalchemy_connection_string)
         df_equals(modin_df, pandas_df)
+        assert len(pandas_df) == 1000
 
     def test_invalid_modin_database_connections(self):
         with pytest.raises(UnsupportedDatabaseException):
