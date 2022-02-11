@@ -212,7 +212,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
             The length of the object.
         """
         if self._length_cache is None:
-            self._length_cache = self.apply(self._length_extraction_fn()).data
+            self._length_cache = self.apply(self._length_extraction_fn())._data
         return self._length_cache
 
     def width(self):
@@ -225,5 +225,5 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
             The width of the object.
         """
         if self._width_cache is None:
-            self._width_cache = self.apply(self._width_extraction_fn()).data
+            self._width_cache = self.apply(self._width_extraction_fn())._data
         return self._width_cache

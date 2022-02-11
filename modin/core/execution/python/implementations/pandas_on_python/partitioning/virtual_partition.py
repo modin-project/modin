@@ -43,7 +43,7 @@ class PandasOnPythonDataframeAxisPartition(PandasDataframeAxisPartition):
         for obj in list_of_blocks:
             obj.drain_call_queue()
         # Unwrap from PandasDataframePartition object for ease of use
-        self.list_of_blocks = [obj.data for obj in list_of_blocks]
+        self.list_of_blocks = [obj.data_ref for obj in list_of_blocks]
 
     partition_type = PandasOnPythonDataframePartition
     instance_type = pandas.DataFrame
