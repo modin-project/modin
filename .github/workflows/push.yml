@@ -182,7 +182,10 @@ jobs:
       - run: python -m pytest ${{matrix.test-task}}
         if: matrix.test-task != 'modin/pandas/test/test_io.py'
       - timeout-minutes: 30
-        run: python -m pytest modin/pandas/test/test_io.py
+        run: |
+          chmod +x set_up_sql_server.sh
+          ./set_up_sql_server.sh
+          python -m pytest modin/pandas/test/test_io.py
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
       - uses: codecov/codecov-action@v2
 
