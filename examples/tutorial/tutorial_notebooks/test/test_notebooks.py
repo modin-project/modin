@@ -14,13 +14,14 @@
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 
+test_dataset_path = "taxi.csv"
 ep = ExecutePreprocessor(timeout=600, kernel_name="python3")
 
-download_taxi_dataset = """import os
+download_taxi_dataset = f"""import os
 import urllib.request
-if not os.path.exists("taxi.csv"):
+if not os.path.exists("{test_dataset_path}"):
     url_path = "https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv"
-    urllib.request.urlretrieve(url_path, "taxi.csv")
+    urllib.request.urlretrieve(url_path, "{test_dataset_path}")
     """
 
 
@@ -123,7 +124,7 @@ def test_exercise_2():
         '# path = "s3://dask-data/nyc-taxi/2015/yellow_tripdata_2015-01.csv"',
     )
 
-    new_optional_cell = 'path = "taxi.csv"\n' + download_taxi_dataset
+    new_optional_cell = f'path = "{test_dataset_path}"\n' + download_taxi_dataset
 
     optional_cell_idx = _find_code_cell_idx(nb, "[Optional] Download data locally.")
     nb["cells"][optional_cell_idx]["source"] = new_optional_cell
@@ -177,7 +178,7 @@ def test_exercise_4():
         as_version=nbformat.NO_CONVERT,
     )
 
-    s3_path_cell = 's3_path = "taxi.csv"\n' + download_taxi_dataset
+    s3_path_cell = f's3_path = "{test_dataset_path}"\n' + download_taxi_dataset
     _replace_str(
         nb,
         's3_path = "s3://dask-data/nyc-taxi/2015/yellow_tripdata_2015-01.csv"',
