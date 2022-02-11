@@ -442,7 +442,7 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: ./set_up_sql_server.sh
+      - sudo run: ./set_up_sql_server.sh
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && pytest modin/experimental/sql/test/test_sql.py
@@ -474,7 +474,7 @@ jobs:
         run: |
           conda info
           conda list
-      - run: ./set_up_sql_server.sh
+      - sudo run: ./set_up_sql_server.sh
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - uses: codecov/codecov-action@v2
 
