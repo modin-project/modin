@@ -35,6 +35,7 @@ Key Features and Updates
   * DOCS-#4151: Add info in troubleshooting page related to Dask engine usage (#4152)
   * DOCS-#4172: Refresh Intel Distribution of Modin paragraph (#4175)
   * DOCS-#4173: Mention strict channel priority in conda install section (#4178)
+  * DOCS-#4176: Update OmniSci usage section (#4192)
 * Dependencies
   * FIX-#4113, FIX-#4116, FIX-#4115: Apply new `black` formatting, fix pydocstyle check and readthedocs build (#4114)
   * TEST-#3227: Use codecov github action instead of bash form in GA workflows (#3226)
