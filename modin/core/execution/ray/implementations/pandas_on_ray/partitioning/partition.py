@@ -50,12 +50,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
     def __init__(self, object_id, length=None, width=None, ip=None, call_queue=None):
         assert isinstance(object_id, ObjectIDType)
         self.oid = object_id
-        if call_queue is None:
-            call_queue = []
-        self.call_queue = call_queue
-        self._length_cache = length
-        self._width_cache = width
         self._ip_cache = ip
+        super().__init__(length, width, call_queue)
 
     def get(self):
         """

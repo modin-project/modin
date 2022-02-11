@@ -61,9 +61,8 @@ class OmnisciOnNativeDataframePartition(PandasDataframePartition):
         self.pandas_df = pandas_df
         self.frame_id = frame_id
         self.arrow_table = arrow_table
-        self._length_cache = length
-        self._width_cache = width
         self._server = OmnisciServer
+        super().__init__(length, width)
 
     def __del__(self):
         """Deallocate OmniSci resources related to the partition."""

@@ -46,12 +46,8 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
     def __init__(self, future, length=None, width=None, ip=None, call_queue=None):
         assert isinstance(future, Future)
         self.future = future
-        if call_queue is None:
-            call_queue = []
-        self.call_queue = call_queue
-        self._length_cache = length
-        self._width_cache = width
         self._ip_cache = ip
+        super().__init__(length, width, call_queue)
 
     def get(self):
         """

@@ -54,8 +54,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
     def __init__(self, gpu_manager, key, length=None, width=None):
         self.gpu_manager = gpu_manager
         self.key = key
-        self._length_cache = length
-        self._width_cache = width
+        super().__init__(length, width)
 
     def __copy__(self):
         """
