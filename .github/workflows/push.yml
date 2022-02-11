@@ -61,6 +61,7 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
+      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}        
       - uses: codecov/codecov-action@v2
 
   test-omnisci:
