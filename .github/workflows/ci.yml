@@ -433,7 +433,31 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - sudo run: ./set_up_sql_server.sh
+      - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
+      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
+      - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
+        if: matrix.engine == 'ray'
+      - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
+        if: matrix.engine == 'ray'
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_concat.py
+        if: matrix.engine == 'python'
+      - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+        if: matrix.engine != 'python'
+      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_general.py
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && pytest modin/experimental/sql/test/test_sql.py
@@ -465,7 +489,8 @@ jobs:
         run: |
           conda info
           conda list
-      - sudo run: ./set_up_sql_server.sh
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - uses: codecov/codecov-action@v2
 
@@ -514,6 +539,22 @@ jobs:
         python-version: ["3.8"]
         engine: ["ray", "dask"]
         test-task:
+          - modin/pandas/test/dataframe/test_binary.py
+          - modin/pandas/test/dataframe/test_default.py
+          - modin/pandas/test/dataframe/test_indexing.py
+          - modin/pandas/test/dataframe/test_iter.py
+          - modin/pandas/test/dataframe/test_join_sort.py
+          - modin/pandas/test/dataframe/test_map_metadata.py
+          - modin/pandas/test/dataframe/test_reduce.py
+          - modin/pandas/test/dataframe/test_udf.py
+          - modin/pandas/test/dataframe/test_window.py
+          - modin/pandas/test/dataframe/test_pickle.py
+          - modin/pandas/test/test_series.py
+          - modin/pandas/test/test_rolling.py
+          - modin/pandas/test/test_concat.py
+          - modin/pandas/test/test_groupby.py
+          - modin/pandas/test/test_reshape.py
+          - modin/pandas/test/test_general.py
           - modin/pandas/test/test_io.py
     env:
       MODIN_ENGINE: ${{matrix.engine}}
