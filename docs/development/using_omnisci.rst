@@ -19,7 +19,8 @@ or use it in your code:
    cfg.StorageFormat.put('omnisci')
 
 Since OmniSci is run through its native engine, Modin automatically sets ``MODIN_ENGINE=Native`` and you might not specify it explicitly.
-If for some reasons ``Native`` engine is explicitly set using modin.config or environment variable, make sure you also tell modin that
+If for some reasons ``Native`` engine is explicitly set using ``modin.config`` or
+``MODIN_ENGINE`` environment variable, make sure you also tell Modin that
 ``Experimental`` mode is turned on (``export MODIN_EXPERIMENTAL=true`` or ``cfg.IsExperimental.put(True)``) otherwise following error occurs:
 
 .. code-block:: bash
