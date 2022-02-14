@@ -740,7 +740,7 @@ class Column:
                 yield Column(
                     DataFrame(
                         self._df.mask(
-                            row_positions=list(range(length)), col_positions=None
+                            row_positions=range(length), col_positions=None
                         ),
                         allow_copy=self._df._allow_copy,
                         offset=offset,
@@ -771,7 +771,7 @@ class Column:
                 yield Column(
                     DataFrame(
                         self._df.mask(
-                            row_positions=list(range(length)), col_positions=None
+                            row_positions=range(length), col_positions=None
                         ),
                         allow_copy=self._allow_copy,
                         offset=offset,
@@ -1186,7 +1186,7 @@ class DataFrame(object):
             for length in self._row_lengths:
                 yield DataFrame(
                     self._df.mask(
-                        row_positions=list(range(length)), col_positions=None
+                        row_positions=range(length), col_positions=None
                     ),
                     allow_copy=self._allow_copy,
                     offset=offset,
@@ -1215,7 +1215,7 @@ class DataFrame(object):
             for length in new_df._row_lengths:
                 yield DataFrame(
                     self._df.mask(
-                        row_positions=list(range(length)), col_positions=None
+                        row_positions=range(length), col_positions=None
                     ),
                     allow_copy=self._allow_copy,
                     offset=offset,
