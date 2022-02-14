@@ -74,40 +74,45 @@ def from_dataframe(df: DataFrameObject, allow_copy: bool = True) -> "DataFrame":
     if not hasattr(df, "__dataframe__"):
         raise ValueError("`df` does not support __dataframe__")
 
-    # TODO: Check number of chunks, if there's more than one we need to iterate
-    if df.num_chunks() > 1:
-        raise NotImplementedError
+    def _get_pandas_df(df):
+        # We need a dict of columns here, with each column being a numpy array (at
+        # least for now, deal with non-numpy dtypes later).
+        columns = dict()
+        _k = DTypeKind
+        _buffers = []  # hold on to buffers, keeps memory alive
+        for name in df.column_names():
+            if not isinstance(name, str):
+                raise ValueError(f"Column {name} is not a string")
+            if name in columns:
+                raise ValueError(f"Column {name} is not unique")
+            col = df.get_column_by_name(name)
+            if col.dtype[0] in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL):
+                # Simple numerical or bool dtype, turn into numpy array
+                columns[name], _buf = convert_column_to_ndarray(col)
+            elif col.dtype[0] == _k.CATEGORICAL:
+                columns[name], _buf = convert_categorical_column(col)
+            elif col.dtype[0] == _k.STRING:
+                columns[name], _buf = convert_string_column(col)
+            else:
+                raise NotImplementedError(f"Data type {col.dtype[0]} not handled yet")
 
-    # We need a dict of columns here, with each column being a numpy array (at
-    # least for now, deal with non-numpy dtypes later).
-    columns = dict()
-    _k = DTypeKind
-    _buffers = []  # hold on to buffers, keeps memory alive
-    for name in df.column_names():
-        if not isinstance(name, str):
-            raise ValueError(f"Column {name} is not a string")
-        if name in columns:
-            raise ValueError(f"Column {name} is not unique")
-        col = df.get_column_by_name(name)
-        if col.dtype[0] in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL):
-            # Simple numerical or bool dtype, turn into numpy array
-            columns[name], _buf = convert_column_to_ndarray(col)
-        elif col.dtype[0] == _k.CATEGORICAL:
-            columns[name], _buf = convert_categorical_column(col)
-        elif col.dtype[0] == _k.STRING:
-            columns[name], _buf = convert_string_column(col)
-        else:
-            raise NotImplementedError(f"Data type {col.dtype[0]} not handled yet")
+            _buffers.append(_buf)
 
-        _buffers.append(_buf)
+        pandas_df = pandas.DataFrame(columns)
+        pandas_df._buffers = _buffers
 
-    pandas_df = pandas.DataFrame(columns)
-    pandas_df._buffers = _buffers
+    pandas_dfs = []
+    for chunk in df.get_chunks():
+        pandas_df = _get_pandas_df(chunk)
+        pandas_dfs.append(pandas_df)
+    pandas_df = pandas.concat(pandas_dfs, axis=0)
     modin_frame = from_pandas(pandas_df)._query_compiler._modin_frame
     return modin_frame
 
 
 class DTypeKind(enum.IntEnum):
+    """Enum for data types."""
+
     INT = 0
     UINT = 1
     FLOAT = 2
@@ -519,7 +524,6 @@ class Column:
         """
         return self._offset
 
-    # TODO: ``PARTIALLY IMPLEMENTED``, remove before the changes are merged
     @property
     def dtype(self) -> Tuple[DTypeKind, int, str, str]:
         """
@@ -552,12 +556,11 @@ class Column:
         dtype = self._col.dtypes
 
         # For now, assume that, if the column dtype is 'O' (i.e., `object`), then we have an array of strings
-        if not isinstance(dtype, pd.CategoricalDtype) and dtype.kind == "O":
+        if not isinstance(dtype[0], pd.CategoricalDtype) and dtype[0].kind == "O":
             return (DTypeKind.STRING, 8, "u", "=")
 
         return self._dtype_from_pandasdtype(dtype)
 
-    # TODO: ``PARTIALLY IMPLEMENTED``, , remove before the changes are merged
     def _dtype_from_pandasdtype(self, dtype) -> Tuple[DTypeKind, int, str, str]:
         """
         See `self.dtype` for details.
@@ -594,7 +597,6 @@ class Column:
         endianness = dtype.byteorder if not kind == _k.CATEGORICAL else "="
         return (kind, bitwidth, format_str, endianness)
 
-    # TODO: ``NOT TOUCHED YET``, remove before the changes are merged
     @property
     def describe_categorical(self) -> Dict[str, Any]:
         """
@@ -625,7 +627,7 @@ class Column:
                 "categorical dtype!"
             )
 
-        ordered = self._col.dtype.ordered
+        ordered = self._col.dtype[0].ordered
         is_dictionary = True
         # NOTE: this shows the children approach is better, transforming
         # `categories` to a "mapping" dict is inefficient
@@ -777,7 +779,6 @@ class Column:
                 )
                 offset += length
 
-    # TODO: ``NOT TOUCHED YET``, remove before the changes are merged
     def get_buffers(self) -> Dict[str, Any]:
         """
         Return a dictionary containing the underlying buffers.
@@ -811,7 +812,6 @@ class Column:
 
         return buffers
 
-    # TODO: ``NOT TOUCHED YET``, remove before the changes are merged
     def _get_data_buffer(self) -> Tuple[Buffer, Any]:  # Any is for self.dtype tuple
         """
         Return the buffer containing the data and the buffer's associated dtype.
@@ -823,15 +823,16 @@ class Column:
         """
         _k = DTypeKind
         if self.dtype[0] in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL):
-            buffer = Buffer(self._col.to_numpy(), allow_copy=self._allow_copy)
-            dtype = self.dtype
+            buffer = Buffer(self._col.to_numpy().flatten(), allow_copy=self._allow_copy)
+            dtype = self.dtype[0]
         elif self.dtype[0] == _k.CATEGORICAL:
-            codes = self._col.values.codes
+            pandas_series = self._df.to_pandas().squeeze(axis=1)
+            codes = pandas_series.values.codes
             buffer = Buffer(codes, allow_copy=self._allow_copy)
             dtype = self._dtype_from_pandasdtype(codes.dtype)
         elif self.dtype[0] == _k.STRING:
             # Marshal the strings from a NumPy object array into a byte array
-            buf = self._col.to_numpy()
+            buf = self._col.to_numpy().flatten()
             b = bytearray()
 
             # TODO: this for-loop is slow; can be implemented in Cython/C/C++ later
@@ -839,7 +840,7 @@ class Column:
                 if type(buf[i]) == str:
                     b.extend(buf[i].encode(encoding="utf-8"))
 
-            # Convert the byte array to a Pandas "buffer" using a NumPy array as the backing store
+            # Convert the byte array to a pandas "buffer" using a NumPy array as the backing store
             buffer = Buffer(np.frombuffer(b, dtype="uint8"))
 
             # Define the dtype for the returned buffer
@@ -850,11 +851,10 @@ class Column:
                 "=",
             )  # note: currently only support native endianness
         else:
-            raise NotImplementedError(f"Data type {self._col.dtype} not handled yet")
+            raise NotImplementedError(f"Data type {self._col.dtype[0]} not handled yet")
 
         return buffer, dtype
 
-    # TODO: ``NOT TOUCHED YET``, remove before the changes are merged
     def _get_validity_buffer(self) -> Tuple[Buffer, Any]:
         """
         Get the validity buffer.
@@ -876,7 +876,7 @@ class Column:
         _k = DTypeKind
         if self.dtype[0] == _k.STRING:
             # For now, have the mask array be comprised of bytes, rather than a bit array
-            buf = self._col.to_numpy()
+            buf = self._col.to_numpy().flatten()
             mask = []
 
             # Determine the encoding for valid values
@@ -910,7 +910,6 @@ class Column:
 
         raise RuntimeError(msg)
 
-    # TODO: ``NOT TOUCHED YET``, remove before the changes are merged
     def _get_offsets_buffer(self) -> Tuple[Buffer, Any]:
         """
         Get the offsets buffer.
@@ -930,7 +929,7 @@ class Column:
         _k = DTypeKind
         if self.dtype[0] == _k.STRING:
             # For each string, we need to manually determine the next offset
-            values = self._col.to_numpy()
+            values = self._col.to_numpy().flatten()
             ptr = 0
             offsets = [ptr]
             for v in values:
