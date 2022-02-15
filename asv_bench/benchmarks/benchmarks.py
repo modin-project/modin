@@ -329,16 +329,16 @@ class TimeArithmetic:
     def time_mod(self, shape, axis):
         execute(self.df.mod(2, axis=axis))
 
-    def time_abs(self, shape):
+    def time_abs(self, shape, axis):
         execute(self.df.abs())
 
     def time_aggregate(self, shape, axis):
         execute(self.df.aggregate(lambda df: df.sum(), axis=axis))
 
-    def time_is_in(self, shape):
+    def time_is_in(self, shape, axis):
         execute(self.df.isin([0, 2]))
 
-    def time_transpose(self, shape):
+    def time_transpose(self, shape, axis):
         execute(self.df.transpose())
 
 
