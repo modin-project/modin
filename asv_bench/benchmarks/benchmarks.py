@@ -335,13 +335,10 @@ class TimeArithmetic:
     def time_aggregate(self, shape, axis):
         execute(self.df.aggregate(lambda df: df.sum(), axis=axis))
 
-    def value_counts(self, shape):
-        execute(self.df.value_counts())
-
-    def is_in(self, shape):
+    def time_is_in(self, shape):
         execute(self.df.isin([0, 2]))
 
-    def transpose(self, shape):
+    def time_transpose(self, shape):
         execute(self.df.transpose())
 
 
