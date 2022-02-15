@@ -429,7 +429,9 @@ class TimeExplode:
     ]
 
     def setup(self, shape):
-        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH, gen_unique_key=True)
+        self.df = generate_dataframe(
+            ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH, gen_unique_key=True
+        )
 
     def time_explode(self, shape):
         execute(self.df.explode("col1"))
