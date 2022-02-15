@@ -94,8 +94,7 @@ _DEFAULT_CONFIG_T = [
             "TimeReadCsvSkiprows",
             "TimeReadCsvTrueFalseValues",
             "TimeReadCsvNamesDtype",
-            "TimeReadParquetSkiprows",
-            "TimeReadParquetTrueFalseValues",
+            "TimeReadParquet",
             # Scalability benchmarks
             "TimeFromPandas",
             "TimeToPandas",

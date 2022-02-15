@@ -12,11 +12,9 @@
 # governing permissions and limitations under the License.
 
 import modin.pandas as pd
-import numpy as np
 
 from ..utils import (
     ASV_USE_IMPL,
-    ASV_USE_STORAGE_FORMAT,
     IMPL,
     execute,
     get_shape_id,
@@ -40,45 +38,21 @@ class BaseReadParquet:
         self.shape_id = get_shape_id(shape)
 
 
-class TimeReadParquetSkiprows(BaseReadParquet):
-    shapes = get_benchmark_shapes("TimeReadParquetSkiprows")
-    skiprows_mapping = {
-        "lambda_even_rows": lambda x: x % 2,
-        "range_uniform": np.arange(1, shapes[0][0] // 10),
-        "range_step2": np.arange(1, shapes[0][0], 2),
-    }
+class TimeReadParquet(BaseReadParquet):
+    shapes = get_benchmark_shapes("TimeReadParquet")
     data_type = "str_int"
 
-    param_names = ["shape", "skiprows"]
+    param_names = ["shape"]
     params = [
         shapes,
-        [None, "lambda_even_rows", "range_uniform", "range_step2"],
     ]
 
-    def setup(self, test_filenames, shape, skiprows):
-        super().setup(test_filenames, shape, skiprows)
-        self.skiprows = self.skiprows_mapping[skiprows] if skiprows else None
+    def setup(self, test_filenames, shape):
+        super().setup(test_filenames, shape)
 
-    def time_skiprows(self, test_filenames, shape, skiprows):
+    def time_read_parquet(self, test_filenames, shape):
         execute(
             IMPL[ASV_USE_IMPL].read_parquet(
-                test_filenames[self.shape_id], skiprows=self.skiprows
-            )
-        )
-
-
-class TimeReadParquetTrueFalseValues(BaseReadParquet):
-    data_type = "true_false_int"
-
-    param_names = ["shape"]
-    params = [get_benchmark_shapes("TimeReadParquetTrueFalseValues")]
-
-    def time_true_false_values(self, test_filenames, shape):
-        execute(
-            IMPL[ASV_USE_IMPL].read_csv(
                 test_filenames[self.shape_id],
-                true_values=["Yes", "true"],
-                false_values=["No", "false"],
-            ),
-            trigger_omnisci_import=ASV_USE_STORAGE_FORMAT == "omnisci",
+            )
         )
