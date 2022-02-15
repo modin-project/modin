@@ -41,6 +41,7 @@ Key Features and Updates
   * TEST-#3628: Report coverage data for `test-internals` CI job (#4198)
   * TEST-#3938: Test tutorial notebooks in CI (#4145)
   * TEST-#4153: Fix condition of running lint-commit and set of CI triggers (#4156)
+  * TEST-#4201: Add read_parquet, explode, tail, and various arithmetic functions to asv_bench (#4203)
 * Documentation improvements
   * DOCS-#4077: Add release notes template to docs folder (#4078)
   * DOCS-#4082: Add pdf/epub/htmlzip formats for doc builds (#4083)
