@@ -570,7 +570,7 @@ class PandasExcelParser(PandasParser):
         pandas_df = parser.read()
         check_nan_loc = pandas_df.isnull()[::-1].all(axis=1)
         if check_nan_loc.all() and check_nan_loc.shape[0] > 1:
-            pandas_df.drop(pandas_df.index[:pandas_df.shape[0] + 1], axis=0, inplace=True)
+            pandas_df = pandas_df.drop(pandas_df.index[:pandas_df.shape[0] + 1])
 
         # Since we know the number of rows that occur before this partition, we can
         # correctly assign the index in cases of RangeIndex. If it is not a RangeIndex,
