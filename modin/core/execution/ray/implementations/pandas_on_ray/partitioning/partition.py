@@ -13,6 +13,7 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
+import pandas
 import ray
 from ray.util import get_node_ip_address
 from packaging import version
@@ -66,9 +67,10 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         pandas.DataFrame
             The object from the Plasma store.
         """
-        if len(self.call_queue):
-            self.drain_call_queue()
-        return ray.get(self.oid)
+        self.drain_call_queue()
+        res = ray.get(self.oid)
+        assert isinstance(res, pandas.DataFrame)
+        return res
 
     def apply(self, func, *args, **kwargs):
         """

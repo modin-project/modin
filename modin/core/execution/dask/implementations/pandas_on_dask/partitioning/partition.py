@@ -44,6 +44,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
     """
 
     def __init__(self, future, length=None, width=None, ip=None, call_queue=None):
+        assert isinstance(future, Future)
         self.future = future
         if call_queue is None:
             call_queue = []
@@ -62,10 +63,9 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             The object from the distributed memory.
         """
         self.drain_call_queue()
-        # blocking operation
-        if isinstance(self.future, pandas.DataFrame):
-            return self.future
-        return self.future.result()
+        res = self.future.result()
+        assert isinstance(res, pandas.DataFrame)
+        return res
 
     def apply(self, func, *args, **kwargs):
         """
