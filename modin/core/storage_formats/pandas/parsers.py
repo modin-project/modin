@@ -568,11 +568,9 @@ class PandasExcelParser(PandasParser):
             **kwargs,
         )
         pandas_df = parser.read()
-        for _ in range(pandas_df.shape[0]):
-            if pandas_df.tail(2).notna().all().all():
-                break
-            elif pandas_df.tail(2).isna().all().all() and pandas_df.shape[0] > 1:
-                pandas_df = pandas_df.drop(pandas_df.tail(2).index, inplace=False)
+        check_nan_loc = pandas_df.isnull()[::-1].all(axis=1)
+        if check_nan_loc.all() and check_nan_loc.shape[0] > 1:
+            pandas_df.drop(pandas_df.index[:pandas_df.shape[0] + 1], axis=0, inplace=True)
 
         # Since we know the number of rows that occur before this partition, we can
         # correctly assign the index in cases of RangeIndex. If it is not a RangeIndex,
