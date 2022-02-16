@@ -13,9 +13,6 @@
 
 """The module defines interface for a partition with pandas storage format and Python engine."""
 
-import pandas
-
-from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 
 
@@ -151,38 +148,6 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         """
         self.drain_call_queue()
 
-    def to_pandas(self):
-        """
-        Return copy of the ``pandas.Dataframe`` stored in this partition.
-
-        Returns
-        -------
-        pandas.DataFrame
-
-        Notes
-        -----
-        Equivalent to ``get`` method for this class.
-        """
-        dataframe = self.get()
-        assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
-
-        return dataframe
-
-    def to_numpy(self, **kwargs):
-        """
-        Return NumPy array representation of ``pandas.DataFrame`` stored in this partition.
-
-        Parameters
-        ----------
-        **kwargs : dict
-            Keyword arguments to pass into `pandas.DataFrame.to_numpy` function.
-
-        Returns
-        -------
-        np.ndarray
-        """
-        return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
-
     @classmethod
     def put(cls, obj):
         """
@@ -222,33 +187,6 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         """
         return func
 
-    @classmethod
-    def _length_extraction_fn(cls):
-        """
-        Return the function that computes the length of the object wrapped by this partition.
-
-        Returns
-        -------
-        callable
-            The function that computes the length of the object wrapped by this partition.
-        """
-        return length_fn_pandas
-
-    @classmethod
-    def _width_extraction_fn(cls):
-        """
-        Return the function that computes the width of the object wrapped by this partition.
-
-        Returns
-        -------
-        callable
-            The function that computes the width of the object wrapped by this partition.
-        """
-        return width_fn_pandas
-
-    _length_cache = None
-    _width_cache = None
-
     def length(self):
         """
         Get the length of the object wrapped by this partition.
@@ -274,15 +212,3 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         if self._width_cache is None:
             self._width_cache = self.apply(self._width_extraction_fn()).data
         return self._width_cache
-
-    @classmethod
-    def empty(cls):
-        """
-        Create a new partition that wraps an empty pandas DataFrame.
-
-        Returns
-        -------
-        PandasOnPythonDataframePartition
-            New ``PandasOnPythonDataframePartition`` object wrapping empty pandas DataFrame.
-        """
-        return cls(pandas.DataFrame())
