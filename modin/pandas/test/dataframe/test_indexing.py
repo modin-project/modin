@@ -1292,6 +1292,15 @@ def test_reset_index_with_named_index(index_levels_names_max_levels):
     df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
 
 
+def test_reset_index_metadata_update():
+    modin_df, pandas_df = create_test_dfs(
+        {"col0": [0, 1, 2, 3]}, index=pandas.Index([11, 22, 33, 44], name="col0")
+    )
+    modin_df.columns = pandas_df.columns = ["col1"]
+
+    eval_general(modin_df, pandas_df, lambda df: df.reset_index())
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 def test_sample(data, axis):

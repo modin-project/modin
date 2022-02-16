@@ -769,7 +769,7 @@ class PandasDataframe(object):
             row_positions=new_row_order, col_positions=new_col_order
         )
 
-    @lazy_metadata_decorator(apply_axis="rows")
+    @lazy_metadata_decorator(apply_axis="both")
     def from_labels(self) -> "PandasDataframe":
         """
         Convert the row labels to a column of data, inserted at the first position.
