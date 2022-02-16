@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Implement DataFrame/Series public API as pandas does."""
+"""Implement Window public API."""
 
 import pandas
 import pandas.core.window.rolling
