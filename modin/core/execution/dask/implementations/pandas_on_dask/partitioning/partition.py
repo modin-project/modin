@@ -60,9 +60,6 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             The object from the distributed memory.
         """
         self.drain_call_queue()
-        # blocking operation
-        if not isinstance(self.future, Future):
-            return self.future
         return DaskWrapper.materialize(self.future)
 
     def apply(self, func, *args, **kwargs):
