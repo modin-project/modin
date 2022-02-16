@@ -41,11 +41,11 @@ class DaskWrapper:
             The result of ``func`` splitted into parts in accordance with ``num_returns``.
         """
         client = default_client()
-        remote_task_future = client.submit(func, *args, **kwargs)
-        pure = kwargs.get("pure", None)
+        pure = kwargs.pop("pure", None)
+        remote_task_future = client.submit(func, *args, pure=pure, **kwargs)
         if num_returns != 1:
             return [
-                client.submit(lambda l, i: l[i], remote_task_future, i, pure=pure)
+                client.submit(lambda l, i: l[i], remote_task_future, i)
                 for i in range(num_returns)
             ]
         return remote_task_future
