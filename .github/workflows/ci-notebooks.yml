@@ -26,9 +26,9 @@ jobs:
           # update cache only if notebooks require it to be changed
           key: hashFiles("examples/tutorial/tutorial_notebooks/introduction/**")
       # replace modin[all] with .[all] in the tutorial requirements file since we need
-      # modin built from sources
+      # Modin built from sources
       - run: sed -i 's/modin/./g' examples/tutorial/requirements.txt
-      # install dependencies needed for notebooks execution
+      # install dependencies required for notebooks execution
       - run: pip install -r examples/tutorial/requirements.txt
       # install test dependencies
       - run: pip install pytest pytest-cov black flake8 flake8-print
