@@ -63,9 +63,10 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             The object from the distributed memory.
         """
         self.drain_call_queue()
-        res = self.future.result()
-        assert isinstance(res, pandas.DataFrame)
-        return res
+        # blocking operation
+        if isinstance(self.future, pandas.DataFrame):
+            return self.future
+        return self.future.result()
 
     def apply(self, func, *args, **kwargs):
         """
