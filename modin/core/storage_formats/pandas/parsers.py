@@ -569,8 +569,10 @@ class PandasExcelParser(PandasParser):
         )
         pandas_df = parser.read()
         for _ in range(pandas_df.shape[0]):
-            if pandas_df.tail(2).isna().all().all() and pandas_df.shape[0] > 1:
-                pandas_df.drop(pandas_df.tail(2).index, inplace=True)
+            if pandas_df.tail(2).notna().all().all():
+                break
+            elif pandas_df.tail(2).isna().all().all() and pandas_df.shape[0] > 1:
+                pandas_df = pandas_df.drop(pandas_df.tail(2).index, inplace=False)
 
         # Since we know the number of rows that occur before this partition, we can
         # correctly assign the index in cases of RangeIndex. If it is not a RangeIndex,
