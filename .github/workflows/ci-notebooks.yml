@@ -4,6 +4,9 @@ on:
     paths:
       - modin/**
       - examples/tutorial/**
+      - .github/workflows/ci-notebooks.yml
+      - setup.cfg
+      - setup.py
 jobs:
   test-notebooks:
     name: test notebooks
