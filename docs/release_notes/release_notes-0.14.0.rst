@@ -27,6 +27,7 @@ Key Features and Updates
 * Developer API enhancements
   *
 * Update testing suite
+  * TEST-#3938: Test tutorial notebooks in CI (#4145)
   * TEST-#4153: Fix condition of running lint-commit and set of CI triggers (#4156)
 * Documentation improvements
   * DOCS-#4077: Add release notes template to docs folder (#4078)

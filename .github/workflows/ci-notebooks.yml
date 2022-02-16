@@ -1,0 +1,38 @@
+name: ci-notebooks
+on:
+  pull_request:
+    paths:
+      - modin/**
+      - examples/tutorial/**
+      - .github/workflows/ci-notebooks.yml
+      - setup.cfg
+      - setup.py
+jobs:
+  test-notebooks:
+    name: test notebooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8.x"
+          architecture: "x64"
+      - name: Cache datasets
+        uses: actions/cache@v2
+        with:
+          path: taxi.csv
+          # update cache only if notebooks require it to be changed
+          key: hashFiles("examples/tutorial/tutorial_notebooks/introduction/**")
+      # replace modin[all] with .[all] in the tutorial requirements file since we need
+      # Modin built from sources
+      - run: sed -i 's/modin/./g' examples/tutorial/requirements.txt
+      # install dependencies required for notebooks execution
+      - run: pip install -r examples/tutorial/requirements.txt
+      # install test dependencies
+      - run: pip install pytest pytest-cov black flake8 flake8-print
+      - run: pip list
+      - run: black --check --diff examples/tutorial/tutorial_notebooks/test/test_notebooks.py
+      - run: flake8 --enable=T examples/tutorial/tutorial_notebooks/test/test_notebooks.py
+      - run: pytest examples/tutorial/tutorial_notebooks/test/test_notebooks.py
