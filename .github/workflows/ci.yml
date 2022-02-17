@@ -256,6 +256,7 @@ jobs:
       - run: python -m pytest -n 2 modin/test/test_partition_api.py
       - run: python -m pytest modin/test/test_utils.py
       - run: python -m pytest asv_bench/test/test_utils.py
+      - uses: codecov/codecov-action@v2
 
   test-defaults:
     needs: [lint-flake8, lint-black, test-api, test-headers]

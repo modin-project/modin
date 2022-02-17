@@ -27,6 +27,7 @@ Key Features and Updates
 * Developer API enhancements
   *
 * Update testing suite
+  * TEST-#3628: Report coverage data for `test-internals` CI job (#4198)
   * TEST-#3938: Test tutorial notebooks in CI (#4145)
   * TEST-#4153: Fix condition of running lint-commit and set of CI triggers (#4156)
 * Documentation improvements
