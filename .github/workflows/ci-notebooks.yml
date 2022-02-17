@@ -27,7 +27,7 @@ jobs:
           key: hashFiles("examples/tutorial/jupyter/execution/pandas_on_ray/local/**")
       # replace modin[all] with .[all] in the tutorial requirements file since we need
       # Modin built from sources
-      - run: sed -i 's/modin/./g' examples/tutorial/requirements.txt
+      - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/pandas_on_ray/requirements.txt
       # install dependencies required for notebooks execution
       - run: pip install -r examples/tutorial/requirements.txt
       # install test dependencies
