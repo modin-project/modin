@@ -10,5 +10,7 @@ set -e
 printf "running flake8. This script will preempt the commit if flake8 fails.\n"
 flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py
 printf "flake8 passed!\n"
-
+printf "running pyright. This script will preempt the commit if pyright fails.\n"
+pyright
+printf "pyright passed!\n"
 printf "pre-commit hook finished!\n"

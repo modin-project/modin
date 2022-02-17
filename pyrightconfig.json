@@ -1,17 +1,13 @@
 {
-    "include": [
-      "modin",
-    ],
-    
-    "exclude": [
-      "**/node_modules",
-      "**/__pycache__",
-    ],
-  
-    "ignore": [
-    ],
-
-    "reportUnknownParameterType": true,
-  
-    "pythonVersion": "3.8",
-  }
+  "include": [
+    "modin",
+    "asv_bench/benchmarks",
+    "scripts/doc_checker.py",
+  ],
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+  ],
+  "ignore": [],
+  "typeCheckingMode": "off",
+}

@@ -27,7 +27,7 @@ import pathlib
 import re
 from collections import OrderedDict
 from pandas._typing import CompressionOptions, StorageOptions
-from typing import Union, IO, AnyStr, Sequence, Dict, List, Optional, Any
+from typing import Type, Union, IO, AnyStr, Sequence, Dict, List, Optional, Any
 
 from modin.error_message import ErrorMessage
 from .dataframe import DataFrame
@@ -545,7 +545,7 @@ def read_sql_query(
 @_inherit_docstrings(pandas.read_spss)
 def read_spss(
     path: Union[str, pathlib.Path],
-    usecols: Union[Sequence[str], type(None)] = None,
+    usecols: Union[Sequence[str], Type[None]] = None,
     convert_categoricals: bool = True,
 ):
     Engine.subscribe(_update_engine)

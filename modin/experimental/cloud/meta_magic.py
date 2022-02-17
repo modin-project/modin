@@ -153,7 +153,7 @@ def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
         def __new__(cls, *a, **kw):
             if cls is result and cls.__real_cls__ is not result:
                 return cls.__real_cls__(*a, **kw)
-            return super().__new__(cls)
+            return super(__class__).__new__(cls)
 
         __class__.__new__ = __new__
 

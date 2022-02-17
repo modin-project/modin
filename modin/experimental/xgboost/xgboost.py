@@ -284,7 +284,7 @@ class DMatrix:
             self.feature_weights = feature_weights
 
 
-class Booster(xgb.Booster):
+class ModinBooster(xgb.Booster):
     """
     A Modin Booster of XGBoost.
 
@@ -302,7 +302,9 @@ class Booster(xgb.Booster):
     """
 
     def __init__(self, params=None, cache=(), model_file=None):  # noqa: MD01
-        super(Booster, self).__init__(params=params, cache=cache, model_file=model_file)
+        super(ModinBooster, self).__init__(
+            params=params, cache=cache, model_file=model_file
+        )
 
     def predict(
         self,
@@ -426,4 +428,4 @@ def train(
         evals_result.update(result["history"])
 
     LOGGER.info("Training finished")
-    return Booster(model_file=result["booster"])
+    return ModinBooster(model_file=result["booster"])

@@ -80,12 +80,13 @@ you should reopen your terminal to find "(base)" next to your prompt: ![](conda_
 
 1. (Optional) We recommend a few workflow settings:
 
-    1. If you use Visual Studio Code, auto-format with [black](https://black.readthedocs.io/en/stable/) every time you save changes:
-        1. Install [Microsoft's Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python)
-        1. Open your VSCode settings, in `Code -> Preferences -> Settings`.
-        1. Search for "python formatting provider" and select "black" from the dropdown menu.
-        1. Again in settings, search for "format on save" and enable the "Editor: Format on Save" option.
+    1. If you use Visual Studio Code, auto-format with [black](https://black.readthedocs.io/en/stable/) every time you save changes and type check with [pyright](https://github.com/microsoft/pyright):
+        1. Install [Microsoft's Python extension](https://marketplace.visualstudio.com/items?itemName=ms-python.python) which also installs Pylance (which runs Pyright under the hood).
+        2. Open your VSCode settings, in `Code -> Preferences -> Settings`.
+        3. Search for "type checking" and select "off" which enables the smallest set of type rules.
+        4. Search for "python formatting provider" and select "black" from the dropdown menu.
+        5. Again in settings, search for "format on save" and enable the "Editor: Format on Save" option.
     2. Add a pre-commit hook:
         1. In your modin repository, copy [this pre-commit file](pre-commit) to `.git/hooks/pre-commit`
-        1. Every time you try to commit, git will run flake8 and abort the commit if it fails. This lets you make sure your commits passes flake8 before you push to GitHub.
-        1. To bypass the pre-commit hook (e.g. if you don't want to create a pull request, or you already know your code will pass the tests), commit with the flag `--no-verify`.
+        2. Every time you try to commit, git will run flake8 and abort the commit if it fails. This lets you make sure your commits passes flake8 before you push to GitHub.
+        3. To bypass the pre-commit hook (e.g. if you don't want to create a pull request, or you already know your code will pass the tests), commit with the flag `--no-verify`.
