@@ -161,6 +161,8 @@ class TestCSV:
                 df_equals(rm["timestamp"].dt.year, rp["timestamp"].dt.year)
                 df_equals(rm["timestamp"].dt.month, rp["timestamp"].dt.month)
                 df_equals(rm["timestamp"].dt.day, rp["timestamp"].dt.day)
+                df_equals(rm["timestamp"].dt.hour, rp["timestamp"].dt.hour)
+
 
     def test_csv_fillna(self):
         csv_file = os.path.join(self.root, "examples/data/boston_housing.csv")
@@ -1723,6 +1725,7 @@ class TestDateTime:
         "c": pandas.to_datetime(
             ["20190902", "20180913", "20190921", "20180903"], format="%Y%m%d"
         ),
+        "d": pandas.to_datetime(['2018-10-26 12:00', '2018-10-26 13:00:15']),
     }
 
     def test_dt_year(self):
@@ -1742,6 +1745,12 @@ class TestDateTime:
             return df["c"].dt.day
 
         run_and_compare(dt_day, data=self.datetime_data)
+
+    def test_dt_hour(self):
+        def dt_hour(df, **kwargs):
+            return df["d"].dt.hour
+
+        run_and_compare(dt_hour, data=self.datetime_data)
 
 
 class TestCategory:
