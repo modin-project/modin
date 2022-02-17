@@ -825,25 +825,10 @@ class PandasDataframe(object):
             # Setting the names here ensures that external and internal metadata always match.
             df.index.names = new_column_names
 
-            # Implementation of handling case when columns have the same
-            # name as one of index levels names via `insert` (other option is use
-            # lazy_metadata_decorator(apply_axis="both"))
-            if any(level_name in df.columns for level_name in df.index.names):
-                if df.index.nlevels > 1:
-                    columns_to_insert = df.index.to_frame().reset_index(drop=True)
-                    df = df.reset_index(drop=True)
-                    for col in columns_to_insert.columns[::-1]:
-                        df.insert(0, col, columns_to_insert[col], allow_duplicates=True)
-                else:
-                    columns_to_insert = df.index
-                    df = df.reset_index(drop=True)
-                    df.insert(
-                        0,
-                        columns_to_insert.name,
-                        columns_to_insert,
-                        allow_duplicates=True,
-                    )
-                return df
+            if any(name_level in df.columns for name_level in df.index.names):
+                columns_to_add = df.index.to_frame().reset_index(drop=True)
+                df = df.reset_index(drop=True)
+                return pandas.concat([columns_to_add, df], axis=1)
             else:
                 return df.reset_index()
 
