@@ -769,7 +769,7 @@ class PandasDataframe(object):
             row_positions=new_row_order, col_positions=new_col_order
         )
 
-    @lazy_metadata_decorator(apply_axis="both")
+    @lazy_metadata_decorator(apply_axis="rows")
     def from_labels(self) -> "PandasDataframe":
         """
         Convert the row labels to a column of data, inserted at the first position.
@@ -824,7 +824,28 @@ class PandasDataframe(object):
         def from_labels_executor(df, **kwargs):
             # Setting the names here ensures that external and internal metadata always match.
             df.index.names = new_column_names
-            return df.reset_index()
+
+            # Implementation of handling case when columns have the same
+            # name as one of index levels names via `insert` (other option is use
+            # lazy_metadata_decorator(apply_axis="both"))
+            if any(level_name in df.columns for level_name in df.index.names):
+                if df.index.nlevels > 1:
+                    columns_to_insert = df.index.to_frame().reset_index(drop=True)
+                    df = df.reset_index(drop=True)
+                    for col in columns_to_insert.columns[::-1]:
+                        df.insert(0, col, columns_to_insert[col], allow_duplicates=True)
+                else:
+                    columns_to_insert = df.index
+                    df = df.reset_index(drop=True)
+                    df.insert(
+                        0,
+                        columns_to_insert.name,
+                        columns_to_insert,
+                        allow_duplicates=True,
+                    )
+                return df
+            else:
+                return df.reset_index()
 
         new_parts = self._partition_mgr_cls.apply_func_to_select_indices(
             0,
