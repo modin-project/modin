@@ -5,8 +5,8 @@ dependencies:
   - pandas==1.4.0
   - numpy>=1.18.5
   - pyarrow>=4.0.1
-  - dask[complete]>=2.22.0
-  - distributed>=2.22.0
+  - dask[complete]>=2.22.0,<2022.2.0
+  - distributed>=2.22.0,<2022.2.0
   - fsspec
   - xarray
   - Jinja2
