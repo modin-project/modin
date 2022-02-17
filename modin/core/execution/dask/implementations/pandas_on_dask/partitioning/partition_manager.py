@@ -49,5 +49,4 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
             The objects wrapped by `partitions`.
         """
         client = default_client()
-        futures = [partition.future for partition in partitions]
-        return client.gather(futures)
+        return client.gather([partition.future for partition in partitions])

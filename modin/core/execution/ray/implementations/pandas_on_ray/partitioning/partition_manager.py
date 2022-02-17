@@ -108,8 +108,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         list
             The objects wrapped by `partitions`.
         """
-        futures = [partition.oid for partition in partitions]
-        return ray.get(futures)
+        return ray.get([partition.oid for partition in partitions])
 
     @classmethod
     def concat(cls, axis, left_parts, right_parts):
