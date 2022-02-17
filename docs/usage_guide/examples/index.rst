@@ -16,10 +16,10 @@ The following tutorials cover the basic usage of Modin. `Here <https://www.youtu
 - Exercise 2: Speed Improvements with Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_2.ipynb>`_]
 - Exercise 3: Defaulting to pandas with Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_3.ipynb>`_]
 
-The following tutorials covers more advanced features in Modin:
-
 PandasOnRay
 """""""""""
+
+The following tutorials covers more advanced features in Modin:
 
 - Exercise 4: Experimental Features in Modin (Spreadsheet, Progress Bar) [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_4.ipynb>`_]
 - Exercise 5: Setting up Modin in a Cluster Environment [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.ipynb>`_]
