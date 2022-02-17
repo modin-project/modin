@@ -19,6 +19,7 @@ Key Features and Updates
   * REFACTOR-#3990: remove code duplication in `PandasDataframePartition` hierarchy (#3991)
   * REFACTOR-#3997: remove code duplication for `broadcast_apply` method (#3996)
   * REFACTOR-#3994: remove code duplication for `get_indices` function (#3995)
+  * REFACTOR-#4213: Refactor `modin/examples/tutorial/` directory (#4214)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
@@ -28,6 +29,7 @@ Key Features and Updates
 * Developer API enhancements
   *
 * Update testing suite
+  * TEST-#3628: Report coverage data for `test-internals` CI job (#4198)
   * TEST-#3938: Test tutorial notebooks in CI (#4145)
   * TEST-#4153: Fix condition of running lint-commit and set of CI triggers (#4156)
 * Documentation improvements
