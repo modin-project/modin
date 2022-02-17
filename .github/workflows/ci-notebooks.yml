@@ -24,15 +24,15 @@ jobs:
         with:
           path: taxi.csv
           # update cache only if notebooks require it to be changed
-          key: hashFiles("examples/tutorial/tutorial_notebooks/introduction/**")
+          key: hashFiles("examples/tutorial/jupyter/execution/pandas_on_ray/local/**")
       # replace modin[all] with .[all] in the tutorial requirements file since we need
       # Modin built from sources
-      - run: sed -i 's/modin/./g' examples/tutorial/requirements.txt
+      - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/pandas_on_ray/requirements.txt
       # install dependencies required for notebooks execution
-      - run: pip install -r examples/tutorial/requirements.txt
+      - run: pip install -r examples/tutorial/jupyter/execution/pandas_on_ray/requirements.txt
       # install test dependencies
       - run: pip install pytest pytest-cov black flake8 flake8-print
       - run: pip list
-      - run: black --check --diff examples/tutorial/tutorial_notebooks/test/test_notebooks.py
-      - run: flake8 --enable=T examples/tutorial/tutorial_notebooks/test/test_notebooks.py
-      - run: pytest examples/tutorial/tutorial_notebooks/test/test_notebooks.py
+      - run: black --check --diff examples/tutorial/jupyter/execution/pandas_on_ray/test/test_notebooks.py
+      - run: flake8 --enable=T examples/tutorial/jupyter/execution/pandas_on_ray/test/test_notebooks.py
+      - run: pytest examples/tutorial/jupyter/execution/pandas_on_ray/test/test_notebooks.py

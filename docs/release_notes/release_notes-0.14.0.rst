@@ -18,6 +18,7 @@ Key Features and Updates
 * Refactor Codebase
   * REFACTOR-#3990: remove code duplication in `PandasDataframePartition` hierarchy (#3991)
   * REFACTOR-#3997: remove code duplication for `broadcast_apply` method (#3996)
+  * REFACTOR-#4213: Refactor `modin/examples/tutorial/` directory (#4214)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
