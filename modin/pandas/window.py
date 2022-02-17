@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Implement Window public API."""
+"""Implement Window and Rolling public API."""
 
 from typing import Optional
 import pandas.core.resample
