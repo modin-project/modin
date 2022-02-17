@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import os
+
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 
@@ -23,6 +25,9 @@ if not os.path.exists("{test_dataset_path}"):
     url_path = "https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv"
     urllib.request.urlretrieve(url_path, "{test_dataset_path}")
     """
+notebooks_dir = (
+    "examples/tutorial/tutorial_notebooks/introduction/pandas_storage_format"
+)
 
 
 def _execute_notebook(notebook):
@@ -95,11 +100,9 @@ def _replace_str(nb, original_str, str_to_replace):
 # in this notebook user should replace 'import pandas as pd' with
 # 'import modin.pandas as pd' to make notebook work
 def test_exercise_1():
-    modified_notebook_path = (
-        "examples/tutorial/tutorial_notebooks/introduction/exercise_1_test.ipynb"
-    )
+    modified_notebook_path = os.path.join(notebooks_dir, "exercise_1_test.ipynb")
     nb = nbformat.read(
-        "examples/tutorial/tutorial_notebooks/introduction/exercise_1.ipynb",
+        os.path.join(notebooks_dir, "exercise_1.ipynb"),
         as_version=nbformat.NO_CONVERT,
     )
     _replace_str(nb, "import pandas as pd", "import modin.pandas as pd")
@@ -110,11 +113,9 @@ def test_exercise_1():
 
 # this notebook works "as is" but for testing purposes we can use smaller dataset
 def test_exercise_2():
-    modified_notebook_path = (
-        "examples/tutorial/tutorial_notebooks/introduction/exercise_2_test.ipynb"
-    )
+    modified_notebook_path = os.path.join(notebooks_dir, "exercise_2_test.ipynb")
     nb = nbformat.read(
-        "examples/tutorial/tutorial_notebooks/introduction/exercise_2.ipynb",
+        os.path.join(notebooks_dir, "exercise_2.ipynb"),
         as_version=nbformat.NO_CONVERT,
     )
 
@@ -136,11 +137,9 @@ def test_exercise_2():
 # in this notebook user should add custom mad implementation
 # to make notebook work
 def test_exercise_3():
-    modified_notebook_path = (
-        "examples/tutorial/tutorial_notebooks/introduction/exercise_3_test.ipynb"
-    )
+    modified_notebook_path = os.path.join(notebooks_dir, "exercise_3_test.ipynb")
     nb = nbformat.read(
-        "examples/tutorial/tutorial_notebooks/introduction/exercise_3.ipynb",
+        os.path.join(notebooks_dir, "exercise_3.ipynb"),
         as_version=nbformat.NO_CONVERT,
     )
 
@@ -170,11 +169,9 @@ modin_mad_custom = df.sq_mad_custom()
 
 # this notebook works "as is" but for testing purposes we can use smaller dataset
 def test_exercise_4():
-    modified_notebook_path = (
-        "examples/tutorial/tutorial_notebooks/introduction/exercise_4_test.ipynb"
-    )
+    modified_notebook_path = os.path.join(notebooks_dir, "exercise_4_test.ipynb")
     nb = nbformat.read(
-        "examples/tutorial/tutorial_notebooks/introduction/exercise_4.ipynb",
+        os.path.join(notebooks_dir, "exercise_4.ipynb"),
         as_version=nbformat.NO_CONVERT,
     )
 
