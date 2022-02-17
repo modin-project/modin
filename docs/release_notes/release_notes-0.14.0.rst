@@ -41,6 +41,7 @@ Key Features and Updates
   * FIX-#4113, FIX-#4116, FIX-#4115: Apply new `black` formatting, fix pydocstyle check and readthedocs build (#4114)
   * TEST-#3227: Use codecov github action instead of bash form in GA workflows (#3226)
   * FIX-#4115: Unpin `pip` in readthedocs deps list (#4170)
+  * TEST-#4217: Pin `Dask<2022.2.0` as a temporary fix of CI (#4218)
 
 Contributors
 ------------
