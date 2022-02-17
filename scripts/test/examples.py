@@ -15,7 +15,6 @@
 # noqa: MD02
 """Function examples for docstring testing."""
 
-
 class weakdict(dict):  # noqa: GL08
     __slots__ = ("__weakref__",)
 
@@ -35,7 +34,7 @@ def optional_square(number: int = 5) -> int:  # noqa
     -----
     The `optional_square` Modin function from modin/scripts/examples.py.
     """
-    return number ** 2
+    return number**2
 
 
 def optional_square_empty_parameters(number: int = 5) -> int:
@@ -43,7 +42,7 @@ def optional_square_empty_parameters(number: int = 5) -> int:
     Parameters
     ----------
     """
-    return number ** 2
+    return number**2
 
 
 def square_summary(number: int) -> int:  # noqa: PR01, GL08
@@ -57,4 +56,4 @@ def square_summary(number: int) -> int:  # noqa: PR01, GL08
     The function that will never be used in modin.pandas.DataFrame same as in
     pandas or NumPy.
     """
-    return number ** 2
+    return number**2
