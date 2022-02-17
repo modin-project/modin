@@ -1614,6 +1614,13 @@ class TestExcel:
             io="modin/pandas/test/data/test_border_rows.xlsx",
         )
 
+    @check_file_leaks
+    def test_read_excel_every_other_nan(self):
+        eval_io(
+            fn_name="read_excel",
+            io="modin/pandas/test/data/test_every_other.xlsx",
+        )
+
     @pytest.mark.parametrize(
         "sheet_name",
         [
