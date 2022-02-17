@@ -29,7 +29,7 @@ jobs:
       # Modin built from sources
       - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/pandas_on_ray/requirements.txt
       # install dependencies required for notebooks execution
-      - run: pip install -r examples/tutorial/requirements.txt
+      - run: pip install -r examples/tutorial/jupyter/execution/pandas_on_ray/requirements.txt
       # install test dependencies
       - run: pip install pytest pytest-cov black flake8 flake8-print
       - run: pip list
