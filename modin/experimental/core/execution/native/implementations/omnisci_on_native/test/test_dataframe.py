@@ -163,7 +163,6 @@ class TestCSV:
                 df_equals(rm["timestamp"].dt.day, rp["timestamp"].dt.day)
                 df_equals(rm["timestamp"].dt.hour, rp["timestamp"].dt.hour)
 
-
     def test_csv_fillna(self):
         csv_file = os.path.join(self.root, "examples/data/boston_housing.csv")
         for kwargs in (
@@ -1725,7 +1724,7 @@ class TestDateTime:
         "c": pandas.to_datetime(
             ["20190902", "20180913", "20190921", "20180903"], format="%Y%m%d"
         ),
-        "d": pandas.to_datetime(['2018-10-26 12:00', '2018-10-26 13:00:15']),
+        "d": pandas.to_datetime(["2018-10-26 12:00", "2018-10-26 13:00:15"]),
     }
 
     def test_dt_year(self):
