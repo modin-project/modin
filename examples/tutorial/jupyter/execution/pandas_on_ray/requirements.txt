@@ -4,3 +4,4 @@ jupyterlab
 ipywidgets
 tqdm
 modin[ray]
+modin[spreadsheet]
