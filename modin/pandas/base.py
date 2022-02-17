@@ -2149,7 +2149,7 @@ class BasePandasDataset(object):
                 closed=closed,
                 method=method,
             )
-        from .rolling import Rolling
+        from .window import Rolling
 
         return Rolling(
             self,
