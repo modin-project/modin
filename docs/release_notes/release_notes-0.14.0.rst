@@ -28,6 +28,8 @@ Key Features and Updates
   *
 * Update testing suite
   * TEST-#3628: Report coverage data for `test-internals` CI job (#4198)
+  * TEST-#3938: Test tutorial notebooks in CI (#4145)
+  * TEST-#4153: Fix condition of running lint-commit and set of CI triggers (#4156)
 * Documentation improvements
   * DOCS-#4077: Add release notes template to docs folder (#4078)
   * DOCS-#4082: Add pdf/epub/htmlzip formats for doc builds (#4083)
@@ -40,6 +42,7 @@ Key Features and Updates
   * FIX-#4113, FIX-#4116, FIX-#4115: Apply new `black` formatting, fix pydocstyle check and readthedocs build (#4114)
   * TEST-#3227: Use codecov github action instead of bash form in GA workflows (#3226)
   * FIX-#4115: Unpin `pip` in readthedocs deps list (#4170)
+  * TEST-#4217: Pin `Dask<2022.2.0` as a temporary fix of CI (#4218)
 
 Contributors
 ------------
