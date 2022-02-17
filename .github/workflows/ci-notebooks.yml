@@ -31,7 +31,7 @@ jobs:
       # install dependencies required for notebooks execution
       - run: pip install -r examples/tutorial/jupyter/execution/pandas_on_ray/requirements.txt
       # install test dependencies
-      - run: pip install pytest pytest-cov black flake8 flake8-print
+      - run: pip install pytest pytest-cov black flake8 flake8-print flake8-no-implicit-concat
       - run: pip list
       - run: black --check --diff examples/tutorial/jupyter/execution/pandas_on_ray/test/test_notebooks.py
       - run: flake8 --enable=T examples/tutorial/jupyter/execution/pandas_on_ray/test/test_notebooks.py
