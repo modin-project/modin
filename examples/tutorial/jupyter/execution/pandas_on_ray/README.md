@@ -10,6 +10,9 @@ using `requirements.txt` file located in the current directory:
 pip install -r requirements.txt
 ```
 
+*Note:* Sometimes pip is installing every version of a package. If you encounter that issue,
+please install every package listed in `requirements.txt` file individually with `pip install <package>`.
+
 ## Run Jupyter Notebooks
 
 A Jupyter Notebook example can be run from the current directory as follows:
