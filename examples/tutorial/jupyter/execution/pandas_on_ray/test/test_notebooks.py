@@ -96,10 +96,10 @@ def _replace_str(nb, original_str, str_to_replace):
 # 'import modin.pandas as pd' to make notebook work
 def test_exercise_1():
     modified_notebook_path = (
-        "examples/tutorial/tutorial_notebooks/introduction/exercise_1_test.ipynb"
+        "examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_1_test.ipynb"
     )
     nb = nbformat.read(
-        "examples/tutorial/tutorial_notebooks/introduction/exercise_1.ipynb",
+        "examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_1.ipynb",
         as_version=nbformat.NO_CONVERT,
     )
     _replace_str(nb, "import pandas as pd", "import modin.pandas as pd")
@@ -111,10 +111,10 @@ def test_exercise_1():
 # this notebook works "as is" but for testing purposes we can use smaller dataset
 def test_exercise_2():
     modified_notebook_path = (
-        "examples/tutorial/tutorial_notebooks/introduction/exercise_2_test.ipynb"
+        "examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_2_test.ipynb"
     )
     nb = nbformat.read(
-        "examples/tutorial/tutorial_notebooks/introduction/exercise_2.ipynb",
+        "examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_2.ipynb",
         as_version=nbformat.NO_CONVERT,
     )
 
@@ -137,10 +137,10 @@ def test_exercise_2():
 # to make notebook work
 def test_exercise_3():
     modified_notebook_path = (
-        "examples/tutorial/tutorial_notebooks/introduction/exercise_3_test.ipynb"
+        "examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_3_test.ipynb"
     )
     nb = nbformat.read(
-        "examples/tutorial/tutorial_notebooks/introduction/exercise_3.ipynb",
+        "examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_3.ipynb",
         as_version=nbformat.NO_CONVERT,
     )
 
@@ -171,10 +171,10 @@ modin_mad_custom = df.sq_mad_custom()
 # this notebook works "as is" but for testing purposes we can use smaller dataset
 def test_exercise_4():
     modified_notebook_path = (
-        "examples/tutorial/tutorial_notebooks/introduction/exercise_4_test.ipynb"
+        "examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_4_test.ipynb"
     )
     nb = nbformat.read(
-        "examples/tutorial/tutorial_notebooks/introduction/exercise_4.ipynb",
+        "examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_4.ipynb",
         as_version=nbformat.NO_CONVERT,
     )
 

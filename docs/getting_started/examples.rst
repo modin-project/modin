@@ -5,7 +5,7 @@ Here you can find additional resources to learn about Modin. To learn more about
 advanced usage for Modin, please refer to :doc:`this section </usage_guide/index>`.
 
 Usage Examples
---------------
+''''''''''''''
 
 The following notebooks demonstrate how Modin can be used for scalable data science:
 
@@ -15,23 +15,29 @@ The following notebooks demonstrate how Modin can be used for scalable data scie
 - Modin for Machine Learning with scikit-learn [`Source <https://github.com/modin-project/modin/blob/master/examples/modin-scikit-learn-example.ipynb>`_]
 
 Tutorials
----------
+'''''''''
 
 The following tutorials cover the basic usage of Modin. `Here <https://www.youtube.com/watch?v=NglkafEmbhE>`_ is a one hour video tutorial that walks through these basic exercises.
 
-- Exercise 1: Introduction to Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/tutorial_notebooks/introduction/exercise_1.ipynb>`_]
-- Exercise 2: Speed Improvements with Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/tutorial_notebooks/introduction/exercise_2.ipynb>`_]
-- Exercise 3: Defaulting to pandas with Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/tutorial_notebooks/introduction/exercise_3.ipynb>`_]
+PandasOnRay
+"""""""""""
+
+- Exercise 1: Introduction to Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_1.ipynb>`_]
+- Exercise 2: Speed Improvements with Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_2.ipynb>`_]
+- Exercise 3: Defaulting to pandas with Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_3.ipynb>`_]
 
 
 The following tutorials covers more advanced features in Modin:
 
-- Exercise 4: Experimental Features in Modin (Spreadsheet, Progress Bar) [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/tutorial_notebooks/introduction/exercise_4.ipynb>`_]
-- Exercise 5: Setting up Modin in a Cluster Environment [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/tutorial_notebooks/cluster/exercise_5.ipynb>`_]
-- Exercise 6: Running Modin in a Cluster Environment [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/tutorial_notebooks/cluster/exercise_6.ipynb>`_]
+PandasOnRay
+"""""""""""
+
+- Exercise 4: Experimental Features in Modin (Spreadsheet, Progress Bar) [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_4.ipynb>`_]
+- Exercise 5: Setting up Modin in a Cluster Environment [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.ipynb>`_]
+- Exercise 6: Running Modin in a Cluster Environment [`Source <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_6.ipynb>`_]
 
 Talks & Podcasts
-----------------
+''''''''''''''''
 
 - `Scaling Interactive Data Science with Modin and Ray <https://www.youtube.com/watch?v=ycSf1IbBGWk>`_ (20 minute, Ray Summit 2021)
 - `Unleash The Power Of Dataframes At Any Scale With Modin <https://www.pythonpodcast.com/modin-parallel-dataframe-episode-324/>`_  (40 minute, Python Podcast 2021)
@@ -43,7 +49,7 @@ Talks & Podcasts
 - `Scaling Interactive Pandas Workflows with Modin <hhttps://www.youtube.com/watch?v=-HjLd_3ahCw>`_ (40 minute, PyData NYC 2018)
 
 Community contributions
------------------------
+'''''''''''''''''''''''
 
 Here are some blogposts and articles about Modin:
 
