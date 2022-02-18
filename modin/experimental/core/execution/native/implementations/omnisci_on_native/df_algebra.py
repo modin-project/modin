@@ -13,9 +13,10 @@
 
 """Module provides classes for lazy DataFrame algebra operations."""
 
-import abc
-from .expr import InputRefExpr
+from abc import ABC, abstractmethod
 from collections import OrderedDict
+
+from .expr import InputRefExpr
 
 
 class TransformMapper:
@@ -149,7 +150,7 @@ class InputMapper:
         return ref
 
 
-class DFAlgNode(abc.ABC):
+class DFAlgNode(ABC):
     """
     A base class for dataframe algebra tree node.
 
@@ -161,7 +162,7 @@ class DFAlgNode(abc.ABC):
         Holds child nodes.
     """
 
-    @abc.abstractmethod
+    @abstractmethod
     def copy(self):
         """
         Make a shallow copy of the node.
@@ -219,6 +220,7 @@ class DFAlgNode(abc.ABC):
         self.walk_dfs(lambda a, b: a._append_frames(b), frames)
         return frames
 
+    @abstractmethod
     def _append_partitions(self, partitions):
         """
         Append all used by the node partitions to `partitions` list.
@@ -233,6 +235,7 @@ class DFAlgNode(abc.ABC):
         """
         pass
 
+    @abstractmethod
     def _append_frames(self, frames):
         """
         Append all used by the node frames to `frames` list.
@@ -283,7 +286,7 @@ class DFAlgNode(abc.ABC):
         """
         return self._prints(prefix)
 
-    @abc.abstractmethod
+    @abstractmethod
     def _prints(self, prefix):
         """
         Return a string representation of the tree.

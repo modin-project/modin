@@ -17,7 +17,7 @@ Module contains class ``BaseQueryCompiler``.
 ``BaseQueryCompiler`` is a parent abstract class for any other query compiler class.
 """
 
-import abc
+from abc import ABC, abstractmethod
 
 from modin.core.dataframe.algebra.default2pandas import (
     DataFrameDefault,
@@ -89,7 +89,7 @@ def _set_axis(axis):
 # Currently actual arguments are placed in the methods docstrings, but since they're
 # not presented in the function's signature it makes linter to raise `PR02: unknown parameters`
 # warning. For now, they're silenced by using `noqa` (Modin issue #3108).
-class BaseQueryCompiler(abc.ABC):
+class BaseQueryCompiler(ABC):
     """
     Abstract class that handles the queries to Modin dataframes.
 
@@ -109,7 +109,7 @@ class BaseQueryCompiler(abc.ABC):
     for a list of requirements for subclassing this object.
     """
 
-    @abc.abstractmethod
+    @abstractmethod
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         """
         Do fallback to pandas for the passed function.
@@ -265,12 +265,12 @@ class BaseQueryCompiler(abc.ABC):
     # END Abstract join and append helper functions
 
     # Data Management Methods
-    @abc.abstractmethod
+    @abstractmethod
     def free(self):
         """Trigger a cleanup of this object."""
         pass
 
-    @abc.abstractmethod
+    @abstractmethod
     def finalize(self):
         """Finalize constructing the dataframe calling all deferred functions which were used to build it."""
         pass
@@ -278,7 +278,7 @@ class BaseQueryCompiler(abc.ABC):
     # END Data Management Methods
 
     # To/From Pandas
-    @abc.abstractmethod
+    @abstractmethod
     def to_pandas(self):
         """
         Convert underlying query compilers data to ``pandas.DataFrame``.
@@ -291,7 +291,7 @@ class BaseQueryCompiler(abc.ABC):
         pass
 
     @classmethod
-    @abc.abstractmethod
+    @abstractmethod
     def from_pandas(cls, df, data_cls):
         """
         Build QueryCompiler from pandas DataFrame.
@@ -315,7 +315,7 @@ class BaseQueryCompiler(abc.ABC):
 
     # From Arrow
     @classmethod
-    @abc.abstractmethod
+    @abstractmethod
     def from_arrow(cls, at, data_cls):
         """
         Build QueryCompiler from Arrow Table.

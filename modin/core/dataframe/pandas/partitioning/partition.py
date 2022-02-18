@@ -13,7 +13,7 @@
 
 """The module defines base interface for a partition of a Modin DataFrame."""
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from copy import copy
 
 import pandas
@@ -33,6 +33,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
     _length_cache = None
     _width_cache = None
 
+    @abstractmethod
     def get(self):
         """
         Get the object wrapped by this partition.
@@ -50,6 +51,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
+    @abstractmethod
     def apply(self, func, *args, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
@@ -76,6 +78,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
+    @abstractmethod
     def add_to_apply_calls(self, func, *args, **kwargs):
         """
         Add a function to the call queue.
@@ -101,10 +104,12 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
+    @abstractmethod
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
         pass
 
+    @abstractmethod
     def wait(self):
         """Wait for completion of computations on the object wrapped by the partition."""
         pass
@@ -199,6 +204,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         return new_obj
 
     @classmethod
+    @abstractmethod
     def put(cls, obj):
         """
         Put an object into a store and wrap it with partition object.
@@ -216,6 +222,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         pass
 
     @classmethod
+    @abstractmethod
     def preprocess_func(cls, func):
         """
         Preprocess a function before an `apply` call.

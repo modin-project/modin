@@ -13,7 +13,7 @@
 
 """Module provides classes for scalar expression trees."""
 
-import abc
+from abc import ABC, abstractmethod
 from pandas.core.dtypes.common import (
     is_list_like,
     get_dtype,
@@ -130,7 +130,7 @@ def is_logical_op(op):
     return op in _logical_ops
 
 
-class BaseExpr(abc.ABC):
+class BaseExpr(ABC):
     """
     An abstract base class for expression tree node.
 
@@ -501,7 +501,7 @@ class BaseExpr(abc.ABC):
         else:
             raise NotImplementedError(f"unsupported binary operation {op_name}")
 
-    @abc.abstractmethod
+    @abstractmethod
     def copy(self):
         """
         Make a shallow copy of the expression.

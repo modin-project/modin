@@ -112,8 +112,6 @@ class PandasDataframePartitionManager(ABC):
         """
         return cls._partition_class.preprocess_func(map_func)
 
-    # END Abstract Methods
-
     @classmethod
     def column_partitions(cls, partitions, full_axis=True):
         """

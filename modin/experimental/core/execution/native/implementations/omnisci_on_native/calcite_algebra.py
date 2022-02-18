@@ -18,7 +18,7 @@ Provided classes reflect relational algebra format used by
 OmniSci storage format.
 """
 
-import abc
+from abc import ABC
 from .expr import BaseExpr
 
 
@@ -106,7 +106,7 @@ class CalciteInputIdxExpr(BaseExpr):
         return f"(input_idx {self.input})"
 
 
-class CalciteBaseNode(abc.ABC):
+class CalciteBaseNode(ABC):
     """
     A base class for a Calcite computation sequence node.
 

@@ -13,7 +13,7 @@
 
 """Base class of an axis partition for a Modin Dataframe."""
 
-from abc import ABC
+from abc import ABC, abstractmethod
 
 
 class BaseDataframeAxisPartition(ABC):  # pragma: no cover
@@ -23,6 +23,11 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
     This class is intended to simplify the way that operations are performed.
     """
 
+    # Child classes must have these in order to correctly subclass.
+    instance_type = None
+    partition_type = None
+
+    @abstractmethod
     def apply(
         self,
         func,
@@ -68,6 +73,7 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         """
         pass
 
+    @abstractmethod
     def shuffle(self, func, lengths, **kwargs):
         """
         Shuffle the order of the data in this axis partition based on the `lengths`.
@@ -87,10 +93,6 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
             A list of `BaseDataframePartition` objects split by `lengths`.
         """
         pass
-
-    # Child classes must have these in order to correctly subclass.
-    instance_type = None
-    partition_type = None
 
     def _wrap_partitions(self, partitions):
         """
