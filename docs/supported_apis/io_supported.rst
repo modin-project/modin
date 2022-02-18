@@ -12,11 +12,14 @@ The second column is a flag for whether or not there is an implementation in Mod
 the method in the left column. ``Y`` stands for yes, ``N`` stands for no, ``P`` stands
 for partial (meaning some parameters may not be supported yet), and ``D`` stands for
 default to pandas.
+**Currently second column reflects implementation status for ``Ray`` and ``Dask`` engines. By default support of a method
+in the ``Omnisci`` engine could be treated as ``D`` unless ``Notes`` column contains additional information.**
 
 +--------------------+---------------------------------+----------------------------------------------------+
 | IO method          | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
 +--------------------+---------------------------------+----------------------------------------------------+
-| `read_csv`_        | Y                               |                                                    |
+| `read_csv`_        | Y                               | **Omnisci**:``P``, only basic cases supported,     |
+|                    |                                 | otherwise ``D``                                    |
 +--------------------+---------------------------------+----------------------------------------------------+
 | `read_table`_      | Y                               |                                                    |
 +--------------------+---------------------------------+----------------------------------------------------+

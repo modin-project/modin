@@ -7,10 +7,13 @@ of an operation that is listed as not implemented, feel free to open an issue on
 also welcome!
 
 The following table is structured as follows: The first column contains the method name.
-The second column is a flag for whether or not there is an implementation in Modin for
+The second column contains link to a description of corresponding pandas method.
+The third column is a flag for whether or not there is an implementation in Modin for
 the method in the left column. ``Y`` stands for yes, ``N`` stands for no, ``P`` stands
 for partial (meaning some parameters may not be supported yet), and ``D`` stands for
 default to pandas.
+**Currently third column reflects implementation status for Ray and Dask engines. By default support of a method
+in the Omnisci engine could be treated as ``D`` unless ``Notes`` column contains additional information.**
 
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | DataFrame method           | pandas Doc link           | Implemented? (Y/N/P/D) | Notes for Current implementation                   |
