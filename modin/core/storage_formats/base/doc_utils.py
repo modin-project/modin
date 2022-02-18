@@ -393,7 +393,7 @@ def doc_resample_agg(action, output, refer_to, params=None):
     output : str
         What is the content of column names in the result.
     refer_to : str
-        Method name in ``modin.pandas.Resampler`` module to refer to for
+        Method name in ``modin.pandas.resample.Resampler`` module to refer to for
         more information about parameters and output format.
     params : str, optional
         Method parameters in the NumPy docstyle format to substitute
@@ -442,7 +442,7 @@ def doc_resample_fillna(method, refer_to, params=None, overwrite_template_params
     method : str
         Fillna method name.
     refer_to : str
-        Method name in ``modin.pandas.Resampler`` module to refer to for
+        Method name in ``modin.pandas.resample.Resampler`` module to refer to for
         more information about parameters and output format.
     params : str, optional
         Method parameters in the NumPy docstyle format to substitute
