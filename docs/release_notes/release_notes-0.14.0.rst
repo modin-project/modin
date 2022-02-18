@@ -15,7 +15,7 @@ Key Features and Updates
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
 * Benchmarking enhancements
-  *
+  * FIX-#4221: add `wait` method for `PandasOnRayDataframeColumnPartition` class (#4231)
 * Refactor Codebase
   * REFACTOR-#3990: remove code duplication in `PandasDataframePartition` hierarchy (#3991)
   * REFACTOR-#3997: remove code duplication for `broadcast_apply` method (#3996)
