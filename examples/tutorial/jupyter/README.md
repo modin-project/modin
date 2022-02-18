@@ -15,8 +15,10 @@ please install every package listed in `requirements.txt` file individually with
 
 ## Run Jupyter Notebooks
 
-A Jupyter Notebook example can be run from the current directory as follows:
+A Jupyter Notebook server example can be run from the current directory as follows:
 
 ```bash
-jupyter notebook local/exercise_1.ipynb
+jupyter notebook
 ```
+
+And then navigate to the needed notebook (for example to the `execution/pandas_on_ray/local/exercise_1.ipynb`).

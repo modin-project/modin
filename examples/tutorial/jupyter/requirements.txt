@@ -3,5 +3,4 @@ s3fs
 jupyterlab
 ipywidgets
 tqdm
-modin[ray]
-modin[spreadsheet]
+modin[all]
