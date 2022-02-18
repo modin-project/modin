@@ -129,9 +129,6 @@ def test_exercise_1(execution):
         os.path.join(notebooks_dir, "exercise_1.ipynb"),
         as_version=nbformat.NO_CONVERT,
     )
-    import pdb
-
-    pdb.set_trace()
 
     _replace_str(nb, "import pandas as pd", "import modin.pandas as pd")
 
