@@ -1870,7 +1870,7 @@ class PandasDataframe(ClassLogger):
         reduce_fn : callable(rowgroup|colgroup) -> row|col
             The reduce function to apply over the data.
         window_size : int
-            The number of rows/columns to pass to the function.
+            The number of rows/columns to pass to the reduce function.
             (The size of the sliding window).
         result_schema : dict, optional
             Mapping from column labels to data types that represents the types of the output dataframe.
@@ -1886,6 +1886,10 @@ class PandasDataframe(ClassLogger):
         The user-defined reduce function must reduce each window’s column
         (row if axis=1) down to a single value.
         """
+
+        # axis could also be passed in as an integer, so convert to Axis enum so that axis var
+        # is always an enum in our code
+        axis = Axis(axis)
         
         def window_function(df):
             # modifying the dataframe that's passed in or create a new df
@@ -1895,18 +1899,24 @@ class PandasDataframe(ClassLogger):
             # pass by value, not pass by reference
             # when call df_equals, need to convert from modin frame to pandas
 
-            n = (axis == 0) ? len(df.columns) : df.index
+            n = len(df.columns) if axis == Axis.COL_WISE else len(df.index)
 
             for i in range(0, n):
-                window = (axis == 0) ? df.columns[i : i + window_size] : df.index[i : i + window_size]
+                window = df.iloc[:, i : i + window_size] if axis == Axis.COL_WISE else df.iloc[i : i + window_size, :]
 
-                result = reduce_fn(window)
-                result_data = np.append(result_data, result)
+                reduction_result = reduce_fn(window)
+            
+                if axis == Axis.COL_WISE:
+                    df.iloc[:, i] = reduction_result
+                else:
+                    df.iloc[i, :] = reduction_result  
 
-            return result_data
+            # fn that's passed in to map_axis_partitions needs to have a dataframe returned
+            return df        
 
+        # need to pass in axis.value instead of just axis because map_axis_partitions takes in an integer
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis, self._partitions, window_function
+            axis.value, self._partitions, window_function
         )
 
         return self.__constructor__(
@@ -1915,6 +1925,7 @@ class PandasDataframe(ClassLogger):
             self.columns,
             self._row_lengths,
             self._column_widths,
+            result_schema
         )
 
     @lazy_metadata_decorator(apply_axis="both")
