@@ -268,7 +268,7 @@ jobs:
       matrix:
         execution: [BaseOnPython]
     env:
-      MODIN_MEMORY: 1000000000
+      MODIN_MEMORY: 4000000000
       MODIN_TEST_DATASET_SIZE: "small"
     name: Test ${{ matrix.execution }} execution, Python 3.8
     steps:
@@ -348,7 +348,7 @@ jobs:
         shell: bash -l {0}
     env:
       MODIN_ENGINE: ray
-      MODIN_MEMORY: 1000000000
+      MODIN_MEMORY: 4000000000
       MODIN_TEST_DATASET_SIZE: small
     name: test-asv-benchmarks
     steps:
@@ -413,7 +413,7 @@ jobs:
         engine: ["python", "ray", "dask"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
-      MODIN_MEMORY: 1000000000
+      MODIN_MEMORY: 4000000000
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
@@ -471,7 +471,7 @@ jobs:
     env:
       MODIN_ENGINE: "python"
       MODIN_EXPERIMENTAL: "True"
-      MODIN_MEMORY: 1000000000
+      MODIN_MEMORY: 4000000000
     name: test experimental
     steps:
       - uses: actions/checkout@v2
@@ -502,7 +502,7 @@ jobs:
     env:
       MODIN_ENGINE: "python"
       MODIN_EXPERIMENTAL: "True"
-      MODIN_MEMORY: 1000000000
+      MODIN_MEMORY: 4000000000
     name: test cloud
     steps:
       - uses: actions/checkout@v2
@@ -557,7 +557,7 @@ jobs:
           - modin/pandas/test/test_io.py
     env:
       MODIN_ENGINE: ${{matrix.engine}}
-      MODIN_MEMORY: 1000000000
+      MODIN_MEMORY: 4000000000
     name: test-windows
     steps:
       - uses: actions/checkout@v2

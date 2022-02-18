@@ -102,7 +102,7 @@ jobs:
           - modin/pandas/test/test_io.py
     env:
       MODIN_ENGINE: ray
-      MODIN_MEMORY: 1000000000
+      MODIN_MEMORY: 4000000000
       MODIN_TEST_RAY_CLIENT: "True"
     name: "test-ray-client"
     steps:
