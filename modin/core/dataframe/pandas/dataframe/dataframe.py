@@ -832,7 +832,7 @@ class PandasDataframe(object):
             if any(name_level in df.columns for name_level in df.index.names):
                 columns_to_add = df.index.to_frame()
                 columns_to_add.reset_index(drop=True, inplace=True)
-                df.reset_index(drop=True, inplace=True)
+                df = df.reset_index(drop=True)
                 return pandas.concat([columns_to_add, df], axis=1, copy=False)
             else:
                 return df.reset_index()
