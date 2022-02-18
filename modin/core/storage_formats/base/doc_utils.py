@@ -321,7 +321,7 @@ doc_resample = partial(
 
         {build_rules}
     """,
-    refer_to_module_name="Resampler",
+    refer_to_module_name="resample.Resampler",
 )
 
 
@@ -334,7 +334,7 @@ def doc_resample_reduce(result, refer_to, params=None, compatibility_params=True
     result : str
         The result of the method.
     refer_to : str
-        Method name in ``modin.pandas.Resampler`` module to refer to for
+        Method name in ``modin.pandas.resample.Resampler`` module to refer to for
         more information about parameters and output format.
     params : str, optional
         Method parameters in the NumPy docstyle format to substitute
@@ -550,7 +550,7 @@ def doc_window_method(
     result : str
         The result of the method.
     refer_to : str
-        Method name in ``modin.pandas.Window`` module to refer to
+        Method name in ``modin.pandas.window.Window`` module to refer to
         for more information about parameters and output format.
     action : str, optional
         What method does with the created window.
