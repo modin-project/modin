@@ -18,6 +18,9 @@ import types
 from modin.config import Engine
 from modin.core.execution.dispatching.factories import REMOTE_ENGINES
 
+from pandas.core.indexes.base import Index
+
+
 # the attributes that must be alwasy taken from a local part of dual-nature class,
 # never going to remote end
 _LOCAL_ATTRS = frozenset(
@@ -101,7 +104,9 @@ class RemoteMeta(type):
 _KNOWN_DUALS = {}
 
 
-def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
+def make_wrapped_class(
+    local_cls: type, rpyc_wrapper_name: str, replace_class: bool = True
+):
     """
     Replaces given local class in its module with a replacement class
     which has __new__ defined (a dual-nature class).
@@ -122,6 +127,12 @@ def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
         "rpyc_proxy" module in top-level, as it requires RPyC to be
         installed, and not all users of Modin (even in experimental mode)
         need remote context.
+    replace_class: bool, optional
+        This flag shows that it is necessary to make `setattr` for `modin`
+        objects. If the flag is set to `True`, it means that `local_class`
+        is a `modin` object. If the flag has the value `False`, it means
+        that `local_class` is not a `modin` object, but someone else's
+        (for example, `pandas`).
     """
     # get a copy of local_cls attributes' dict but skip _very_ special attributes,
     # because copying them to a different type leads to them not working.
@@ -158,7 +169,8 @@ def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
         __class__.__new__ = __new__
 
     make_new(result)
-    setattr(sys.modules[local_cls.__module__], local_cls.__name__, result)
+    if replace_class:
+        setattr(sys.modules[local_cls.__module__], local_cls.__name__, result)
     _KNOWN_DUALS[local_cls] = result
 
     def update_class(_):
@@ -170,3 +182,7 @@ def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
             result.__real_cls__ = result
 
     Engine.subscribe(update_class)
+
+
+# Third-party classes that need to be wrapped to get their local data correctly
+make_wrapped_class(Index, "make_index_wrapper", replace_class=False)

@@ -709,3 +709,23 @@ def make_series_wrapper(Series):
     inherited from normal Series but wrapping all access to remote end transparently.
     """
     return _deliveringWrapper(Series, ["apply"], target_name="Series")
+
+
+def make_index_wrapper(Index):
+
+    conn = get_connection()
+
+    class IndexOverrides:
+        @property
+        def dtype(self):
+            return conn.obtain(self.__remote_end__.dtype)
+
+    DeliveringIndex = _deliveringWrapper(
+        Index,
+        [
+            "equals",
+        ],
+        IndexOverrides,
+        "Index",
+    )
+    return DeliveringIndex
