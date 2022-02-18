@@ -14,7 +14,10 @@
 """Implement utils for pandas component."""
 
 from pandas import MultiIndex
+
 from modin.utils import hashable
+from modin.config import Engine
+from . import _update_engine
 
 
 def from_non_pandas(df, index, columns, dtype):
@@ -64,6 +67,7 @@ def from_pandas(df):
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
     from .dataframe import DataFrame
 
+    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
 
 
@@ -84,6 +88,7 @@ def from_arrow(at):
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
     from .dataframe import DataFrame
 
+    Engine.subscribe(_update_engine)
     return DataFrame(query_compiler=FactoryDispatcher.from_arrow(at))
 
 
