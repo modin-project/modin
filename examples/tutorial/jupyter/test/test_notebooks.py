@@ -26,9 +26,8 @@ if not os.path.exists("{test_dataset_path}"):
     url_path = "https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv"
     urllib.request.urlretrieve(url_path, "{test_dataset_path}")
     """
-notebooks_dir = (
-    "examples/tutorial/tutorial_notebooks/introduction/pandas_storage_format"
-)
+nb_dir_pandas_on_ray = "examples/tutorial/jupyter/execution/pandas_on_ray/local"
+nb_dir_pandas_on_dask = "examples/tutorial/jupyter/execution/pandas_on_dask/local"
 
 
 def _execute_notebook(notebook):
@@ -98,22 +97,41 @@ def _replace_str(nb, original_str, str_to_replace):
     ].replace(original_str, str_to_replace)
 
 
-def _set_dask_engine(nb):
-    _replace_str(nb, "# import modin.config as cfg", "import modin.config as cfg")
-    _replace_str(nb, '# cfg.Engine.put("dask")', 'cfg.Engine.put("dask")')
+def _get_nb_dir(execution):
+    """
+    Get local notebooks directory by execution name.
+
+    Parameters
+    ----------
+    execution : str
+        Execution name.
+
+    Returns
+    -------
+    str
+        Notebooks directory for passed ``execution``.
+    """
+    if execution == "pandas_on_ray":
+        return nb_dir_pandas_on_ray
+    elif execution == "pandas_on_dask":
+        return nb_dir_pandas_on_dask
+    else:
+        raise NotImplementedError(f"Execution {execution} is not supported!")
 
 
 # in this notebook user should replace 'import pandas as pd' with
 # 'import modin.pandas as pd' to make notebook work
-@pytest.mark.parametrize("use_dask_engine", [True, False])
-def test_exercise_1(use_dask_engine):
+@pytest.mark.parametrize("execution", ["pandas_on_ray", "pandas_on_dask"])
+def test_exercise_1(execution):
+    notebooks_dir = _get_nb_dir(execution)
     modified_notebook_path = os.path.join(notebooks_dir, "exercise_1_test.ipynb")
     nb = nbformat.read(
         os.path.join(notebooks_dir, "exercise_1.ipynb"),
         as_version=nbformat.NO_CONVERT,
     )
-    if use_dask_engine:
-        _set_dask_engine(nb)
+    import pdb
+
+    pdb.set_trace()
 
     _replace_str(nb, "import pandas as pd", "import modin.pandas as pd")
 
@@ -122,15 +140,14 @@ def test_exercise_1(use_dask_engine):
 
 
 # this notebook works "as is" but for testing purposes we can use smaller dataset
-@pytest.mark.parametrize("use_dask_engine", [True, False])
-def test_exercise_2(use_dask_engine):
+@pytest.mark.parametrize("execution", ["pandas_on_ray", "pandas_on_dask"])
+def test_exercise_2(execution):
+    notebooks_dir = _get_nb_dir(execution)
     modified_notebook_path = os.path.join(notebooks_dir, "exercise_2_test.ipynb")
     nb = nbformat.read(
         os.path.join(notebooks_dir, "exercise_2.ipynb"),
         as_version=nbformat.NO_CONVERT,
     )
-    if use_dask_engine:
-        _set_dask_engine(nb)
 
     _replace_str(
         nb,
@@ -149,15 +166,14 @@ def test_exercise_2(use_dask_engine):
 
 # in this notebook user should add custom mad implementation
 # to make notebook work
-@pytest.mark.parametrize("use_dask_engine", [True, False])
-def test_exercise_3(use_dask_engine):
+@pytest.mark.parametrize("execution", ["pandas_on_ray", "pandas_on_dask"])
+def test_exercise_3(execution):
+    notebooks_dir = _get_nb_dir(execution)
     modified_notebook_path = os.path.join(notebooks_dir, "exercise_3_test.ipynb")
     nb = nbformat.read(
         os.path.join(notebooks_dir, "exercise_3.ipynb"),
         as_version=nbformat.NO_CONVERT,
     )
-    if use_dask_engine:
-        _set_dask_engine(nb)
 
     user_mad_implementation = """PandasQueryCompiler.sq_mad_custom = TreeReduce.register(lambda cell_value, **kwargs: cell_value ** 2,
                                                              pandas.DataFrame.mad)
@@ -184,15 +200,14 @@ modin_mad_custom = df.sq_mad_custom()
 
 
 # this notebook works "as is" but for testing purposes we can use smaller dataset
-@pytest.mark.parametrize("use_dask_engine", [True, False])
-def test_exercise_4(use_dask_engine):
+@pytest.mark.parametrize("execution", ["pandas_on_ray", "pandas_on_dask"])
+def test_exercise_4(execution):
+    notebooks_dir = _get_nb_dir(execution)
     modified_notebook_path = os.path.join(notebooks_dir, "exercise_4_test.ipynb")
     nb = nbformat.read(
         os.path.join(notebooks_dir, "exercise_4.ipynb"),
         as_version=nbformat.NO_CONVERT,
     )
-    if use_dask_engine:
-        _replace_str(nb, '# Engine.put("dask")', 'Engine.put("dask")')
 
     s3_path_cell = f's3_path = "{test_dataset_path}"\n' + download_taxi_dataset
     _replace_str(
