@@ -15,9 +15,7 @@
 
 import numpy as np
 import pandas
-import pandas.core.window.rolling
 import pandas.core.resample
-import pandas.core.generic
 from pandas._typing import (
     TimedeltaConvertibleTypes,
     TimestampConvertibleTypes,

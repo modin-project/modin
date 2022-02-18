@@ -2072,7 +2072,7 @@ class BasePandasDataset(object):
         origin: Union[str, TimestampConvertibleTypes] = "start_day",
         offset: Optional[TimedeltaConvertibleTypes] = None,
     ):
-        from .resampler import Resampler
+        from .resample import Resampler
 
         return Resampler(
             self,
