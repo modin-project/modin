@@ -554,7 +554,6 @@ jobs:
           - modin/pandas/test/test_groupby.py
           - modin/pandas/test/test_reshape.py
           - modin/pandas/test/test_general.py
-          - modin/pandas/test/test_io.py
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
@@ -575,11 +574,12 @@ jobs:
         run: |
           conda info
           conda list
+      - run: python -m pytest -n 2 ${{matrix.test-task}}
+        if: matrix.engine == 'dask'
       - run: python -m pytest ${{matrix.test-task}}
-        if: matrix.test-task != 'modin/pandas/test/test_io.py'
+        if: matrix.engine != 'dask'
       - timeout-minutes: 30
         run: python -m pytest modin/pandas/test/test_io.py --verbose
-        if: matrix.test-task == 'modin/pandas/test/test_io.py'
       - uses: codecov/codecov-action@v2
 
   test-pyarrow:
