@@ -31,6 +31,13 @@ The following tutorials covers more advanced features in Modin:
 
 How to get required dependencies for the tutorial notebooks and to run them please refer to the respective `README.md <https://github.com/modin-project/modin/tree/master/examples/tutorial/README.md>`_ file.
 
+OmnisciOnNative
+"""""""""""
+
+- Exercise 1: Introduction to Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_1.ipynb>`_]
+- Exercise 2: Speed Improvements with Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_2.ipynb>`_]
+- Exercise 3: Defaulting to pandas with Modin [`Source <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_3.ipynb>`_]
+
 Talks & Podcasts
 ''''''''''''''''
 
