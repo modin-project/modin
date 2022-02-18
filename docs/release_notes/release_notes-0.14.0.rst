@@ -11,6 +11,7 @@ Key Features and Updates
   * FIX-#4142: Fix OmniSci enabling (#4146)
   * FIX-#4162: Use `skipif` instead of `skip` for compatibility with pytest 7.0 (#4163)
   * FIX-#4158: Do not print OmniSci logs to stdout by default (#4159)
+  * FIX-#4177: Support read_feather from pathlike objects (#4177)
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
 * Benchmarking enhancements
@@ -19,6 +20,7 @@ Key Features and Updates
   * REFACTOR-#3990: remove code duplication in `PandasDataframePartition` hierarchy (#3991)
   * REFACTOR-#3997: remove code duplication for `broadcast_apply` method (#3996)
   * REFACTOR-#4213: Refactor `modin/examples/tutorial/` directory (#4214)
+  * REFACTOR-#4206: add assert check into `__init__` method of `PandasOnDaskDataframePartition` class (#4207)
   * REFACTOR-#4047: Rename `cluster` directory to `cloud` in examples (#4212)
 * Pandas API implementations and improvements
   *
@@ -57,3 +59,4 @@ Contributors
 @devin-petersohn
 @dchigarev
 @Garra1980
+@mvashishtha
