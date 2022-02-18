@@ -11,6 +11,7 @@ Key Features and Updates
   * FIX-#4142: Fix OmniSci enabling (#4146)
   * FIX-#4162: Use `skipif` instead of `skip` for compatibility with pytest 7.0 (#4163)
   * FIX-#4158: Do not print OmniSci logs to stdout by default (#4159)
+  * FIX-#4177: Support read_feather from pathlike objects (#4177)
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
 * Benchmarking enhancements
@@ -18,6 +19,8 @@ Key Features and Updates
 * Refactor Codebase
   * REFACTOR-#3990: remove code duplication in `PandasDataframePartition` hierarchy (#3991)
   * REFACTOR-#3997: remove code duplication for `broadcast_apply` method (#3996)
+  * REFACTOR-#4213: Refactor `modin/examples/tutorial/` directory (#4214)
+  * REFACTOR-#4206: add assert check into `__init__` method of `PandasOnDaskDataframePartition` class (#4207)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
@@ -27,6 +30,7 @@ Key Features and Updates
 * Developer API enhancements
   *
 * Update testing suite
+  * TEST-#3628: Report coverage data for `test-internals` CI job (#4198)
   * TEST-#3938: Test tutorial notebooks in CI (#4145)
   * TEST-#4153: Fix condition of running lint-commit and set of CI triggers (#4156)
 * Documentation improvements
@@ -41,6 +45,7 @@ Key Features and Updates
   * FIX-#4113, FIX-#4116, FIX-#4115: Apply new `black` formatting, fix pydocstyle check and readthedocs build (#4114)
   * TEST-#3227: Use codecov github action instead of bash form in GA workflows (#3226)
   * FIX-#4115: Unpin `pip` in readthedocs deps list (#4170)
+  * TEST-#4217: Pin `Dask<2022.2.0` as a temporary fix of CI (#4218)
 
 Contributors
 ------------
@@ -53,3 +58,4 @@ Contributors
 @devin-petersohn
 @dchigarev
 @Garra1980
+@mvashishtha

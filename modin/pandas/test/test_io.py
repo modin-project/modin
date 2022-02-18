@@ -17,6 +17,7 @@ import pandas
 from pandas.errors import ParserWarning
 import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
+from pathlib import Path
 from collections import OrderedDict
 from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
 from modin.config import TestDatasetSize, Engine, StorageFormat, IsExperimental
@@ -2127,6 +2128,12 @@ class TestFeather:
             fn_name="read_feather",
             path="s3://modin-datasets/testing/test_data.feather",
             storage_options=storage_options,
+        )
+
+    def test_read_feather_path_object(self, make_feather_file):
+        eval_io(
+            fn_name="read_feather",
+            path=Path(make_feather_file()),
         )
 
     @pytest.mark.xfail(
