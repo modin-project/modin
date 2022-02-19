@@ -576,13 +576,13 @@ jobs:
           conda info
           conda list
       - run: python -m pytest -n 2 ${{matrix.test-task}}
-        if: (matrix.engine == 'dask') && (matrix.test-task != 'modin/pandas/test/test_io.py') && (matrix.test-task != 'modin/pandas/test/test_concat.py')
+        if: ${{ (matrix.engine == 'dask') && (matrix.test-task != 'modin/pandas/test/test_io.py') && (matrix.test-task != 'modin/pandas/test/test_concat.py') }}
       - run: python -m pytest ${{matrix.test-task}}
-        if: (matrix.engine != 'dask') && (matrix.test-task != 'modin/pandas/test/test_io.py') && (matrix.test-task != 'modin/pandas/test/test_concat.py')
+        if: ${{ (matrix.engine != 'dask') && (matrix.test-task != 'modin/pandas/test/test_io.py') && (matrix.test-task != 'modin/pandas/test/test_concat.py') }}
       - timeout-minutes: 30
         run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
-      - run python -m pytest modin/pandas/test/test_concat.py
+      - run: python -m pytest modin/pandas/test/test_concat.py
         if: matrix.test-task == 'modin/pandas/test/test_concat.py'
       - uses: codecov/codecov-action@v2
 
