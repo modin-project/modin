@@ -54,6 +54,7 @@ from modin.core.dataframe.algebra import (
     is_reduce_function,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
+from modin.logging import LoggerMetaClass
 
 
 def _get_axis(axis):

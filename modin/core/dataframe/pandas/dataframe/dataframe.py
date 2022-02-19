@@ -38,6 +38,7 @@ from modin.core.dataframe.base.dataframe.utils import (
 )
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
+from modin.logging import LoggerMetaClass
 
 
 def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
@@ -132,7 +133,7 @@ def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
     return decorator
 
 
-class PandasDataframe(object):
+class PandasDataframe(object, metaclass=LoggerMetaClass):
     """
     An abstract class that represents the parent class for any pandas storage format dataframe class.
 
