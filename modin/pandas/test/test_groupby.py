@@ -18,7 +18,7 @@ import numpy as np
 import modin.pandas as pd
 from modin.utils import try_cast_to_pandas, get_current_execution, hashable
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
-from modin.pandas.utils import from_pandas, is_scalar
+from modin.pandas.utils import is_scalar
 from .utils import (
     df_equals,
     check_df_columns_have_nans,
@@ -92,7 +92,7 @@ def test_mixed_dtypes_groupby(as_index):
         :, [i for i in range(len(pandas_df.columns)) if i % 2 == 0]
     ]:
         pandas_df[col] = [str(chr(i)) for i in pandas_df[col]]
-    modin_df = from_pandas(pandas_df)
+    modin_df = pd.DataFrame(pandas_df)
 
     n = 1
 
@@ -320,7 +320,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
         # categorical columns. We need to specify the categorical column as ordered to bypass this.
         pandas_df["col1"] = pandas_df["col1"].cat.as_ordered()
 
-    modin_df = from_pandas(pandas_df)
+    modin_df = pd.DataFrame(pandas_df)
     n = 1
 
     def maybe_get_columns(df, by):
@@ -536,7 +536,7 @@ def test_single_group_row_groupby():
         }
     )
 
-    modin_df = from_pandas(pandas_df)
+    modin_df = pd.DataFrame(pandas_df)
 
     by = ["1", "1", "1", "1"]
     n = 6
@@ -656,7 +656,7 @@ def test_large_row_groupby(is_by_category):
         np.random.randint(0, 8, size=(100, 4)), columns=list("ABCD")
     )
 
-    modin_df = from_pandas(pandas_df)
+    modin_df = pd.DataFrame(pandas_df)
 
     by = [str(i) for i in pandas_df["A"].tolist()]
 
@@ -785,7 +785,7 @@ def test_simple_col_groupby():
         }
     )
 
-    modin_df = from_pandas(pandas_df)
+    modin_df = pd.DataFrame(pandas_df)
 
     by = [1, 2, 3, 2, 1]
 
@@ -905,7 +905,7 @@ def test_series_groupby(by, as_index_series_or_dataframe):
                 "col5": [-4, -5, -6, -7],
             }
         )
-        modin_series = from_pandas(pandas_series)
+        modin_series = pd.DataFrame(pandas_series)
         if isinstance(by, np.ndarray) or by is None:
             by = np.random.randint(0, 100, size=len(pandas_series.index))
 
@@ -1036,7 +1036,7 @@ def test_multi_column_groupby():
         index=["row{}".format(i) for i in range(1000)],
     )
 
-    modin_df = from_pandas(pandas_df)
+    modin_df = pd.DataFrame(pandas_df)
     by = ["col1", "col2"]
 
     df_equals(modin_df.groupby(by).count(), pandas_df.groupby(by).count())
@@ -1442,7 +1442,7 @@ def test_shift_freq(groupby_axis, shift_axis):
             "col4": [17, 13, 16, 15],
         }
     )
-    modin_df = from_pandas(pandas_df)
+    modin_df = pd.DataFrame(pandas_df)
 
     new_index = pandas.date_range("1/12/2020", periods=4, freq="S")
     if groupby_axis == 0 and shift_axis == 0:

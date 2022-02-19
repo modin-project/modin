@@ -16,7 +16,6 @@ import pytest
 import pandas
 
 import modin.pandas as pd
-from modin.pandas.utils import from_pandas
 from .utils import (
     df_equals,
     generate_dfs,
@@ -37,14 +36,14 @@ def test_df_concat():
 
 def test_concat():
     df, df2 = generate_dfs()
-    modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
+    modin_df, modin_df2 = pd.DataFrame(df), pd.DataFrame(df2)
 
     df_equals(pd.concat([modin_df, modin_df2]), pandas.concat([df, df2]))
 
 
 def test_concat_with_series():
     df, df2 = generate_dfs()
-    modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
+    modin_df, modin_df2 = pd.DataFrame(df), pd.DataFrame(df2)
     pandas_series = pandas.Series([1, 2, 3, 4], name="new_col")
 
     df_equals(
@@ -60,7 +59,7 @@ def test_concat_with_series():
 
 def test_concat_on_index():
     df, df2 = generate_dfs()
-    modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
+    modin_df, modin_df2 = pd.DataFrame(df), pd.DataFrame(df2)
 
     df_equals(
         pd.concat([modin_df, modin_df2], axis="index"),
@@ -79,7 +78,7 @@ def test_concat_on_index():
 
 def test_concat_on_column():
     df, df2 = generate_dfs()
-    modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
+    modin_df, modin_df2 = pd.DataFrame(df), pd.DataFrame(df2)
 
     df_equals(
         pd.concat([modin_df, modin_df2], axis=1), pandas.concat([df, df2], axis=1)
@@ -104,7 +103,7 @@ def test_concat_on_column():
 
 def test_invalid_axis_errors():
     df, df2 = generate_dfs()
-    modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
+    modin_df, modin_df2 = pd.DataFrame(df), pd.DataFrame(df2)
 
     with pytest.raises(ValueError):
         pd.concat([modin_df, modin_df2], axis=2)
@@ -114,7 +113,7 @@ def test_mixed_concat():
     df, df2 = generate_dfs()
     df3 = df.copy()
 
-    mixed_dfs = [from_pandas(df), from_pandas(df2), df3]
+    mixed_dfs = [pd.DataFrame(df), pd.DataFrame(df2), df3]
 
     df_equals(pd.concat(mixed_dfs), pandas.concat([df, df2, df3]))
 
@@ -123,7 +122,7 @@ def test_mixed_inner_concat():
     df, df2 = generate_dfs()
     df3 = df.copy()
 
-    mixed_dfs = [from_pandas(df), from_pandas(df2), df3]
+    mixed_dfs = [pd.DataFrame(df), pd.DataFrame(df2), df3]
 
     df_equals(
         pd.concat(mixed_dfs, join="inner"), pandas.concat([df, df2, df3], join="inner")
@@ -134,7 +133,7 @@ def test_mixed_none_concat():
     df, df2 = generate_none_dfs()
     df3 = df.copy()
 
-    mixed_dfs = [from_pandas(df), from_pandas(df2), df3]
+    mixed_dfs = [pd.DataFrame(df), pd.DataFrame(df2), df3]
 
     df_equals(pd.concat(mixed_dfs), pandas.concat([df, df2, df3]))
 
@@ -197,7 +196,7 @@ def test_concat_with_empty_frame():
 @pytest.mark.parametrize("names", [False, True])
 def test_concat_multiindex(axis, names):
     pd_df1, pd_df2 = generate_multiindex_dfs(axis=axis)
-    md_df1, md_df2 = map(from_pandas, [pd_df1, pd_df2])
+    md_df1, md_df2 = map(pd.DataFrame, [pd_df1, pd_df2])
 
     keys = ["first", "second"]
     if names:
@@ -214,7 +213,7 @@ def test_concat_multiindex(axis, names):
 @pytest.mark.parametrize("axis", [0, 1])
 def test_concat_dictionary(axis):
     pandas_df, pandas_df2 = generate_dfs()
-    modin_df, modin_df2 = from_pandas(pandas_df), from_pandas(pandas_df2)
+    modin_df, modin_df2 = pd.DataFrame(pandas_df), pd.DataFrame(pandas_df2)
 
     df_equals(
         pd.concat({"A": modin_df, "B": modin_df2}, axis=axis),
@@ -228,7 +227,7 @@ def test_concat_dictionary(axis):
 def test_sort_order(sort, join, axis):
     pandas_df = pandas.DataFrame({"c": [3], "d": [4]}, columns=["d", "c"])
     pandas_df2 = pandas.DataFrame({"a": [1], "b": [2]}, columns=["b", "a"])
-    modin_df, modin_df2 = from_pandas(pandas_df), from_pandas(pandas_df2)
+    modin_df, modin_df2 = pd.DataFrame(pandas_df), pd.DataFrame(pandas_df2)
     pandas_concat = pandas.concat([pandas_df, pandas_df2], join=join, sort=sort)
     modin_concat = pd.concat([modin_df, modin_df2], join=join, sort=sort)
     df_equals(

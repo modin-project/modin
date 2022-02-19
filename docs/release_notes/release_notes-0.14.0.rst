@@ -12,7 +12,6 @@ Key Features and Updates
   * FIX-#4162: Use `skipif` instead of `skip` for compatibility with pytest 7.0 (#4163)
   * FIX-#4158: Do not print OmniSci logs to stdout by default (#4159)
   * FIX-#4177: Support read_feather from pathlike objects (#4177)
-  * FIX-#4227: Update engine when calling `from_pandas`, `from_arrow` functions (#4228)
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
 * Benchmarking enhancements
@@ -34,6 +33,7 @@ Key Features and Updates
   * TEST-#3628: Report coverage data for `test-internals` CI job (#4198)
   * TEST-#3938: Test tutorial notebooks in CI (#4145)
   * TEST-#4153: Fix condition of running lint-commit and set of CI triggers (#4156)
+  * FIX-#4227: Use `DataFrame` constructor instead of `from_pandas` function in tests (#4228)
 * Documentation improvements
   * DOCS-#4077: Add release notes template to docs folder (#4078)
   * DOCS-#4082: Add pdf/epub/htmlzip formats for doc builds (#4083)

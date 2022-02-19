@@ -2025,6 +2025,9 @@ class TestConstructor:
 
     def test_shape_hint_detection_from_arrow(self):
         at = pyarrow.Table.from_pydict({"a": [1, 2, 3]})
+        # trigger engine initialization for proper `from_arrow` function work
+        _ = pd.DataFrame([])
+
         df = pd.utils.from_arrow(at)
         assert df._query_compiler._shape_hint == "column"
 
