@@ -212,9 +212,14 @@ class PandasDataframe(object):
         """
         if self._row_lengths_cache is None:
             if len(self._partitions.T) > 0:
-                self._row_lengths_cache = [
-                    obj.length() for obj in self._partitions.T[0]
-                ]
+                partitions = self._partitions.T[0]
+                if all(map(lambda t: t._length_cache is not None, partitions)):
+                    self._row_lengths_cache = [obj.length() for obj in partitions]
+                else:
+                    lengths = [obj.apply(lambda df: len(df)) for obj in partitions]
+                    self._row_lengths_cache = (
+                        self._partition_mgr_cls.get_objects_from_partitions(lengths)
+                    )
             else:
                 self._row_lengths_cache = []
         return self._row_lengths_cache
@@ -231,7 +236,16 @@ class PandasDataframe(object):
         """
         if self._column_widths_cache is None:
             if len(self._partitions) > 0:
-                self._column_widths_cache = [obj.width() for obj in self._partitions[0]]
+                partitions = self._partitions[0]
+                if all(map(lambda t: t._width_cache is not None, partitions)):
+                    self._column_widths_cache = [obj.width() for obj in partitions]
+                else:
+                    widths = [
+                        obj.apply(lambda df: len(df.columns)) for obj in partitions
+                    ]
+                    self._column_widths_cache = (
+                        self._partition_mgr_cls.get_objects_from_partitions(widths)
+                    )
             else:
                 self._column_widths_cache = []
         return self._column_widths_cache
