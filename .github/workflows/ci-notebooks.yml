@@ -64,8 +64,8 @@ jobs:
           path: taxi.csv
           key: hashFiles("examples/tutorial/jupyter/execution/omnisci_on_native/local/**")
       - run: conda env create -f requirements/env_omnisci.yml
-      - run: conda --version
-      - run: . activate modin_on_omnisci
+      - run: conda deactivate
+      - run: conda activate modin_on_omnisci
       - run: pip install .
       - run: conda install black flake8 flake8-print
       - run: conda list
