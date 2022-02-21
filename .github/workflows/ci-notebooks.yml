@@ -43,3 +43,30 @@ jobs:
           flake8 --enable=T examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
           flake8 --enable=T examples/tutorial/jupyter/execution/test/utils.py
       - run: pytest examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
+
+  test-notebooks-modin_on_omnisci:
+    name: test notebooks modin_on_omnisci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8.x"
+          architecture: "x64"
+      - name: Cache datasets
+        uses: actions/cache@v2
+        with:
+          path: taxi.csv
+          key: hashFiles("examples/tutorial/jupyter/execution/omnisci_on_native/local/**")
+      - run: conda env create -f requirements/env_omnisci.yml
+      - run: conda init bash
+      - run: source ~/.bashrc
+      - run: source activate modin_on_omnisci
+      - run: pip install .
+      - run: conda install black flake8 flake8-print
+      - run: conda list
+      - run: black --check --diff examples/tutorial/jupyter/execution/omnisci_on_native/test/test_notebooks.py
+      - run: flake8 --enable=T examples/tutorial/jupyter/execution/omnisci_on_native/test/test_notebooks.py
+      - run: pytest examples/tutorial/jupyter/execution/omnisci_on_native/test/test_notebooks.py
