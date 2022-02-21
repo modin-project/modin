@@ -36,6 +36,6 @@ jobs:
       # install test dependencies
       - run: pip install pytest pytest-cov black flake8 flake8-print
       - run: pip list
-      - run: black --check --diff examples/tutorial/jupyter/test/test_notebooks.py
-      - run: flake8 --enable=T examples/tutorial/jupyter/test/test_notebooks.py
-      - run: MODIN_NOTEBOOKS_EXECUTION_MODE=${{ matrix.execution }} pytest examples/tutorial/jupyter/test/test_notebooks.py
+      - run: black --check --diff examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
+      - run: flake8 --enable=T examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
+      - run: pytest examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py

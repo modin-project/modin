@@ -25,15 +25,8 @@ if not os.path.exists("{test_dataset_path}"):
     url_path = "https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv"
     urllib.request.urlretrieve(url_path, "{test_dataset_path}")
     """
-supported_executions = ["pandas_on_ray", "pandas_on_dask"]
-execution = os.environ.get("MODIN_NOTEBOOKS_EXECUTION_MODE", None)
-if execution not in supported_executions:
-    raise NotImplementedError(
-        f"Only {supported_executions} executions are supported, actually passed: {execution}. "
-        "Please specify correct execution by setting `MODIN_NOTEBOOKS_EXECUTION_MODE` environment variable!"
-    )
 
-notebooks_dir = f"examples/tutorial/jupyter/execution/{execution}/local"
+notebooks_dir = "examples/tutorial/jupyter/execution/pandas_on_dask/local"
 
 
 def _execute_notebook(notebook):
