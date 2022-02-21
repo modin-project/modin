@@ -45,6 +45,9 @@ jobs:
       - run: pytest examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
 
   test-notebooks-modin_on_omnisci:
+    defaults:
+      run:
+        shell: bash -l {0}
     name: test notebooks modin_on_omnisci
     runs-on: ubuntu-latest
     steps:
@@ -61,7 +64,6 @@ jobs:
           path: taxi.csv
           key: hashFiles("examples/tutorial/jupyter/execution/omnisci_on_native/local/**")
       - run: conda env create -f requirements/env_omnisci.yml
-      - run: conda init powershell
       - run: conda activate modin_on_omnisci
       - run: pip install .
       - run: conda install black flake8 flake8-print
