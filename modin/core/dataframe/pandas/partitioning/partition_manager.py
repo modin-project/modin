@@ -775,6 +775,28 @@ class PandasDataframePartitionManager(ABC):
         return cls.from_pandas(at.to_pandas(), return_dims=return_dims)
 
     @classmethod
+    def get_objects_from_partitions(cls, partitions):
+        """
+        Get the objects wrapped by `partitions`.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            NumPy array with ``PandasDataframePartition``-s.
+
+        Returns
+        -------
+        list
+            The objects wrapped by `partitions`.
+
+        Notes
+        -----
+        This method should be implemented in a more efficient way for engines that support
+        getting objects in parallel.
+        """
+        return [partition.get() for partition in partitions]
+
+    @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
         """
         Get the internal indices stored in the partitions.
@@ -803,16 +825,15 @@ class PandasDataframePartitionManager(ABC):
         func = cls.preprocess_func(index_func)
         if axis == 0:
             new_idx = (
-                [idx.apply(func).get() for idx in partitions.T[0]]
+                [idx.apply(func) for idx in partitions.T[0]]
                 if len(partitions.T)
                 else []
             )
         else:
             new_idx = (
-                [idx.apply(func).get() for idx in partitions[0]]
-                if len(partitions)
-                else []
+                [idx.apply(func) for idx in partitions[0]] if len(partitions) else []
             )
+        new_idx = cls.get_objects_from_partitions(new_idx)
         # TODO FIX INFORMATION LEAK!!!!1!!1!!
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
