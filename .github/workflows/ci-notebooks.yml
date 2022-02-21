@@ -11,6 +11,9 @@ jobs:
   test-notebooks:
     name: test notebooks
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        execution: [pandas_on_ray, pandas_on_dask]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -25,14 +28,14 @@ jobs:
           path: taxi.csv
           # update cache only if notebooks require it to be changed
           key: hashFiles("examples/tutorial/jupyter/**")
-      # replace modin[all] with .[all] in the tutorial requirements file since we need
+      # replace modin with . in the tutorial requirements file since we need
       # Modin built from sources
-      - run: sed -i 's/modin/./g' examples/tutorial/jupyter/requirements.txt
+      - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
       # install dependencies required for notebooks execution
-      - run: pip install -r examples/tutorial/jupyter/requirements.txt
+      - run: pip install -r examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
       # install test dependencies
       - run: pip install pytest pytest-cov black flake8 flake8-print
       - run: pip list
       - run: black --check --diff examples/tutorial/jupyter/test/test_notebooks.py
       - run: flake8 --enable=T examples/tutorial/jupyter/test/test_notebooks.py
-      - run: pytest examples/tutorial/jupyter/test/test_notebooks.py
+      - run: MODIN_NOTEBOOKS_EXECUTION_MODE=${{ matrix.execution }} pytest examples/tutorial/jupyter/test/test_notebooks.py

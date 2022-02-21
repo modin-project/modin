@@ -15,7 +15,6 @@ import os
 
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
-import pytest
 
 test_dataset_path = "taxi.csv"
 ep = ExecutePreprocessor(timeout=600, kernel_name="python3")
@@ -26,8 +25,15 @@ if not os.path.exists("{test_dataset_path}"):
     url_path = "https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv"
     urllib.request.urlretrieve(url_path, "{test_dataset_path}")
     """
-nb_dir_pandas_on_ray = "examples/tutorial/jupyter/execution/pandas_on_ray/local"
-nb_dir_pandas_on_dask = "examples/tutorial/jupyter/execution/pandas_on_dask/local"
+supported_executions = ["pandas_on_ray", "pandas_on_dask"]
+execution = os.environ.get("MODIN_NOTEBOOKS_EXECUTION_MODE", None)
+if execution not in supported_executions:
+    raise NotImplementedError(
+        f"Only {supported_executions} executions are supported, actually passed: {execution}. "
+        "Please specify correct execution by setting `MODIN_NOTEBOOKS_EXECUTION_MODE` environment variable!"
+    )
+
+notebooks_dir = f"examples/tutorial/jupyter/execution/{execution}/local"
 
 
 def _execute_notebook(notebook):
@@ -97,33 +103,9 @@ def _replace_str(nb, original_str, str_to_replace):
     ].replace(original_str, str_to_replace)
 
 
-def _get_nb_dir(execution):
-    """
-    Get local notebooks directory by execution name.
-
-    Parameters
-    ----------
-    execution : str
-        Execution name.
-
-    Returns
-    -------
-    str
-        Notebooks directory for passed ``execution``.
-    """
-    if execution == "pandas_on_ray":
-        return nb_dir_pandas_on_ray
-    elif execution == "pandas_on_dask":
-        return nb_dir_pandas_on_dask
-    else:
-        raise NotImplementedError(f"Execution {execution} is not supported!")
-
-
 # in this notebook user should replace 'import pandas as pd' with
 # 'import modin.pandas as pd' to make notebook work
-@pytest.mark.parametrize("execution", ["pandas_on_ray", "pandas_on_dask"])
-def test_exercise_1(execution):
-    notebooks_dir = _get_nb_dir(execution)
+def test_exercise_1():
     modified_notebook_path = os.path.join(notebooks_dir, "exercise_1_test.ipynb")
     nb = nbformat.read(
         os.path.join(notebooks_dir, "exercise_1.ipynb"),
@@ -137,9 +119,7 @@ def test_exercise_1(execution):
 
 
 # this notebook works "as is" but for testing purposes we can use smaller dataset
-@pytest.mark.parametrize("execution", ["pandas_on_ray", "pandas_on_dask"])
-def test_exercise_2(execution):
-    notebooks_dir = _get_nb_dir(execution)
+def test_exercise_2():
     modified_notebook_path = os.path.join(notebooks_dir, "exercise_2_test.ipynb")
     nb = nbformat.read(
         os.path.join(notebooks_dir, "exercise_2.ipynb"),
@@ -163,9 +143,7 @@ def test_exercise_2(execution):
 
 # in this notebook user should add custom mad implementation
 # to make notebook work
-@pytest.mark.parametrize("execution", ["pandas_on_ray", "pandas_on_dask"])
-def test_exercise_3(execution):
-    notebooks_dir = _get_nb_dir(execution)
+def test_exercise_3():
     modified_notebook_path = os.path.join(notebooks_dir, "exercise_3_test.ipynb")
     nb = nbformat.read(
         os.path.join(notebooks_dir, "exercise_3.ipynb"),
@@ -197,9 +175,7 @@ modin_mad_custom = df.sq_mad_custom()
 
 
 # this notebook works "as is" but for testing purposes we can use smaller dataset
-@pytest.mark.parametrize("execution", ["pandas_on_ray", "pandas_on_dask"])
-def test_exercise_4(execution):
-    notebooks_dir = _get_nb_dir(execution)
+def test_exercise_4():
     modified_notebook_path = os.path.join(notebooks_dir, "exercise_4_test.ipynb")
     nb = nbformat.read(
         os.path.join(notebooks_dir, "exercise_4.ipynb"),
