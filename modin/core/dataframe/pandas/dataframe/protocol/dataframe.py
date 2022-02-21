@@ -67,12 +67,15 @@ def from_dataframe(df: DataFrameObject, allow_copy: bool = True) -> "DataFrame":
     only pandas. Later, we need to implement/test support for categoricals,
     bit/byte masks, chunk handling, etc.
     """
-    # NOTE: commented out for roundtrip testing
-    # if isinstance(df, pandas.DataFrame):
-    #     return df
+    # Since a pandas DataFrame doesn't support __dataframe__ for now,
+    # we just create a Modin Dataframe to get __dataframe__ from it.
+    if isinstance(df, pandas.DataFrame):
+        df = pd.DataFrame(df)._query_compiler._modin_frame
 
     if not hasattr(df, "__dataframe__"):
         raise ValueError("`df` does not support __dataframe__")
+
+    df = df.__dataframe__()["dataframe"]
 
     def _get_pandas_df(df):
         # We need a dict of columns here, with each column being a numpy array (at
@@ -86,20 +89,22 @@ def from_dataframe(df: DataFrameObject, allow_copy: bool = True) -> "DataFrame":
             if name in columns:
                 raise ValueError(f"Column {name} is not unique")
             col = df.get_column_by_name(name)
-            if col.dtype[0] in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL):
+            dtype = col.dtype[0]
+            if dtype in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL):
                 # Simple numerical or bool dtype, turn into numpy array
                 columns[name], _buf = convert_column_to_ndarray(col)
-            elif col.dtype[0] == _k.CATEGORICAL:
+            elif dtype == _k.CATEGORICAL:
                 columns[name], _buf = convert_categorical_column(col)
-            elif col.dtype[0] == _k.STRING:
+            elif dtype == _k.STRING:
                 columns[name], _buf = convert_string_column(col)
             else:
-                raise NotImplementedError(f"Data type {col.dtype[0]} not handled yet")
+                raise NotImplementedError(f"Data type {dtype} not handled yet")
 
             _buffers.append(_buf)
 
         pandas_df = pandas.DataFrame(columns)
         pandas_df._buffers = _buffers
+        return pandas_df
 
     pandas_dfs = []
     for chunk in df.get_chunks():
@@ -168,7 +173,7 @@ def buffer_to_ndarray(_buffer, _dtype) -> np.ndarray:
     kind = _dtype[0]
     bitwidth = _dtype[1]
     _k = DTypeKind
-    if _dtype[0] not in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL):
+    if kind not in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL):
         raise RuntimeError("Not a boolean, integer or floating-point dtype")
 
     _ints = {8: np.int8, 16: np.int16, 32: np.int32, 64: np.int64}
@@ -477,13 +482,13 @@ class Column:
     """
 
     def __init__(
-        self, column: "DataFrame", allow_copy: bool = True, offset: int = 0
+        self, column: PandasDataframe, allow_copy: bool = True, offset: int = 0
     ) -> None:
         """
         Note: doesn't deal with extension arrays yet, just assume a regular
         Series/ndarray for now.
         """
-        if not isinstance(column, DataFrame):
+        if not isinstance(column, PandasDataframe):
             raise NotImplementedError(
                 "Columns of type {} not handled " "yet".format(type(column))
             )
@@ -506,7 +511,7 @@ class Column:
         int
             Size of the column, in elements.
         """
-        return len(self._df.index)
+        return len(self._col.index)
 
     @property
     def offset(self) -> int:
@@ -553,10 +558,10 @@ class Column:
         - Data types not included: complex, Arrow-style null, binary, decimal,
           and nested (list, struct, map, union) dtypes.
         """
-        dtype = self._col.dtypes
+        dtype = self._col.dtypes[0]
 
         # For now, assume that, if the column dtype is 'O' (i.e., `object`), then we have an array of strings
-        if not isinstance(dtype[0], pd.CategoricalDtype) and dtype[0].kind == "O":
+        if not isinstance(dtype, pd.CategoricalDtype) and dtype.kind == "O":
             return (DTypeKind.STRING, 8, "u", "=")
 
         return self._dtype_from_pandasdtype(dtype)
@@ -627,13 +632,13 @@ class Column:
                 "categorical dtype!"
             )
 
-        ordered = self._col.dtype[0].ordered
+        ordered = self._col.to_pandas().squeeze(axis=1).dtype.ordered
         is_dictionary = True
         # NOTE: this shows the children approach is better, transforming
         # `categories` to a "mapping" dict is inefficient
         # codes = self._col.values.codes  # ndarray, length `self.size`
         # categories.values is ndarray of length n_categories
-        categories = self._col.values.categories.values
+        categories = self._col.to_pandas().squeeze(axis=1).values.categories.values
         mapping = {ix: val for ix, val in enumerate(categories)}
         return ordered, is_dictionary, mapping
 
@@ -693,9 +698,15 @@ class Column:
         """
 
         def map_func(df):
-            df.isna().sum()
+            return df.isna()
 
-        return self._col.map(func=map_func).to_pandas().squeeze()
+        def reduce_func(df):
+            return pandas.DataFrame(df.sum())
+
+        intermediate_df = self._col.tree_reduce(0, map_func, reduce_func)
+        intermediate_df.index = pandas.RangeIndex(1)
+        intermediate_df.columns = pandas.RangeIndex(1)
+        return intermediate_df.to_pandas().squeeze()
 
     # TODO: ``What should we return???``, remove before the changes are merged
     @property
@@ -736,12 +747,10 @@ class Column:
         """
         offset = 0
         if n_chunks is None:
-            for length in self._row_lengths:
+            for length in self._col._row_lengths:
                 yield Column(
                     DataFrame(
-                        self._df.mask(
-                            row_positions=range(length), col_positions=None
-                        ),
+                        self._df.mask(row_positions=range(length), col_positions=None),
                         allow_copy=self._df._allow_copy,
                         offset=offset,
                     )
@@ -770,9 +779,7 @@ class Column:
             for length in new_df._row_lengths:
                 yield Column(
                     DataFrame(
-                        self._df.mask(
-                            row_positions=range(length), col_positions=None
-                        ),
+                        self._df.mask(row_positions=range(length), col_positions=None),
                         allow_copy=self._allow_copy,
                         offset=offset,
                     )
@@ -822,15 +829,16 @@ class Column:
             The data buffer.
         """
         _k = DTypeKind
-        if self.dtype[0] in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL):
+        dtype = self.dtype
+        if dtype[0] in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL):
             buffer = Buffer(self._col.to_numpy().flatten(), allow_copy=self._allow_copy)
-            dtype = self.dtype[0]
-        elif self.dtype[0] == _k.CATEGORICAL:
-            pandas_series = self._df.to_pandas().squeeze(axis=1)
+            dtype = dtype
+        elif dtype[0] == _k.CATEGORICAL:
+            pandas_series = self._col.to_pandas().squeeze(axis=1)
             codes = pandas_series.values.codes
             buffer = Buffer(codes, allow_copy=self._allow_copy)
             dtype = self._dtype_from_pandasdtype(codes.dtype)
-        elif self.dtype[0] == _k.STRING:
+        elif dtype[0] == _k.STRING:
             # Marshal the strings from a NumPy object array into a byte array
             buf = self._col.to_numpy().flatten()
             b = bytearray()
@@ -1183,11 +1191,9 @@ class DataFrame(object):
         """
         offset = 0
         if n_chunks is None:
-            for length in self._row_lengths:
+            for length in self._df._row_lengths:
                 yield DataFrame(
-                    self._df.mask(
-                        row_positions=range(length), col_positions=None
-                    ),
+                    self._df.mask(row_positions=range(length), col_positions=None),
                     allow_copy=self._allow_copy,
                     offset=offset,
                 )
@@ -1214,9 +1220,7 @@ class DataFrame(object):
             )
             for length in new_df._row_lengths:
                 yield DataFrame(
-                    self._df.mask(
-                        row_positions=range(length), col_positions=None
-                    ),
+                    self._df.mask(row_positions=range(length), col_positions=None),
                     allow_copy=self._allow_copy,
                     offset=offset,
                 )
