@@ -66,7 +66,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin_on_omnisci
-          environment-file: requirements/env_omnisci.yml
+          environment-file: examples\tutorial\jupyter\execution\omnisci_on_native\ci_jupyter_omnisci_env.yml
           channel-priority: strict
       - run: pip install .
       - run: conda install black flake8 flake8-print nbformat nbconvert
