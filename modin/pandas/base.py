@@ -847,7 +847,6 @@ class BasePandasDataset(object):
 
         self._validate_function(func, on_invalid=error_raiser)
         axis = self._get_axis_number(axis)
-        ErrorMessage.non_verified_udf()
         if isinstance(func, str):
             # if axis != 1 function can be bounded to the Series, which doesn't
             # support axis parameter

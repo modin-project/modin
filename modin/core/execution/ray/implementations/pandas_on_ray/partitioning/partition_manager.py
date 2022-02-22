@@ -14,8 +14,10 @@
 """Module houses class that implements ``GenericRayDataframePartitionManager`` using Ray."""
 
 import inspect
-import numpy as np
 import threading
+
+import numpy as np
+import ray
 
 from modin.config import ProgressBar, NPartitions
 from modin.core.execution.ray.generic.partitioning.partition_manager import (
@@ -28,10 +30,6 @@ from .virtual_partition import (
 from .partition import PandasOnRayDataframePartition
 from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
 from modin.core.storage_formats.pandas.utils import compute_chunksize
-from modin.error_message import ErrorMessage
-import pandas
-
-import ray
 
 
 def progress_bar_wrapper(f):
@@ -96,47 +94,21 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
     _row_partition_class = PandasOnRayDataframeRowPartition
 
     @classmethod
-    def get_indices(cls, axis, partitions, index_func=None):
+    def get_objects_from_partitions(cls, partitions):
         """
-        Get the internal indices stored in the partitions.
+        Get the objects wrapped by `partitions` in parallel.
 
         Parameters
         ----------
-        axis : {0, 1}
-            Axis to extract the labels over.
         partitions : np.ndarray
             NumPy array with ``PandasDataframePartition``-s.
-        index_func : callable, default: None
-            The function to be used to extract the indices.
 
         Returns
         -------
-        pandas.Index
-            A ``pandas.Index`` object.
-
-        Notes
-        -----
-        These are the global indices of the object. This is mostly useful
-        when you have deleted rows/columns internally, but do not know
-        which ones were deleted.
+        list
+            The objects wrapped by `partitions`.
         """
-        ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
-        func = cls.preprocess_func(index_func)
-        if axis == 0:
-            # We grab the first column of blocks and extract the indices
-            new_idx = (
-                [idx.apply(func).oid for idx in partitions.T[0]]
-                if len(partitions.T)
-                else []
-            )
-        else:
-            new_idx = (
-                [idx.apply(func).oid for idx in partitions[0]]
-                if len(partitions)
-                else []
-            )
-        new_idx = ray.get(new_idx)
-        return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
+        return ray.get([partition.oid for partition in partitions])
 
     @classmethod
     def concat(cls, axis, left_parts, right_parts):
@@ -285,54 +257,6 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             )
             start = stop + 1
         return np.array(new_partitions)
-
-    @classmethod
-    def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
-        """
-        Broadcast the `right` partitions to `left` and apply `apply_func` to selected indices.
-
-        Parameters
-        ----------
-        axis : {0, 1}
-            Axis to apply and broadcast over.
-        apply_func : callable
-            Function to apply.
-        left : np.ndarray
-            NumPy 2D array of left partitions.
-        right : np.ndarray
-            NumPy 2D array of right partitions.
-        other_name : str, default: "r"
-            Name of key-value argument for `apply_func` that
-            is used to pass `right` to `apply_func`.
-
-        Returns
-        -------
-        np.ndarray
-            An array of partition objects.
-        """
-
-        def map_func(df, *others):
-            other = pandas.concat(others, axis=axis ^ 1)
-            return apply_func(df, **{other_name: other})
-
-        map_func = cls.preprocess_func(map_func)
-        rt_axis_parts = cls.axis_partition(right, axis ^ 1)
-        return np.array(
-            [
-                [
-                    part.apply(
-                        map_func,
-                        *(
-                            rt_axis_parts[col_idx].list_of_blocks
-                            if axis
-                            else rt_axis_parts[row_idx].list_of_blocks
-                        ),
-                    )
-                    for col_idx, part in enumerate(left[row_idx])
-                ]
-                for row_idx in range(len(left))
-            ]
-        )
 
     @classmethod
     @progress_bar_wrapper

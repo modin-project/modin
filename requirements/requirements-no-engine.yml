@@ -1,7 +1,7 @@
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.4.0
+  - pandas==1.4.1
   - numpy>=1.18.5
   - pyarrow>=4.0.1
   - fsspec

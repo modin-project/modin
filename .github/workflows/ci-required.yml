@@ -1,0 +1,21 @@
+name: ci-required
+on: pull_request
+jobs:
+  lint-commit:
+    name: lint (commit)
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "12.x"
+      - run: npm install --save-dev @commitlint/{config-conventional,cli} commitlint-plugin-jira-rules commitlint-config-jira
+      - name: Add dependencies for commitlint action
+        run: echo "NODE_PATH=$GITHUB_WORKSPACE/node_modules" >> $GITHUB_ENV
+      - run: git remote add upstream https://github.com/modin-project/modin.git
+      - run: git fetch upstream
+      - run: npx commitlint --from upstream/master --to $(git log upstream/master..HEAD --pretty=format:"%h" | tail -1) --verbose

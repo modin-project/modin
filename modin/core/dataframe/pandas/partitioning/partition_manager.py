@@ -335,50 +335,47 @@ class PandasDataframePartitionManager(ABC):
             Axis to apply and broadcast over.
         apply_func : callable
             Function to apply.
-        left : NumPy 2D array
-            Left partitions.
-        right : NumPy 2D array
-            Right partitions.
+        left : np.ndarray
+            NumPy array of left partitions.
+        right : np.ndarray
+            NumPy array of right partitions.
         other_name : str, default: "r"
             Name of key-value argument for `apply_func` that
             is used to pass `right` to `apply_func`.
 
         Returns
         -------
-        NumPy array
-            An of partition objects.
+        np.ndarray
+            NumPy array of result partition objects.
 
         Notes
         -----
         This will often be overridden by implementations. It materializes the
         entire partitions of the right and applies them to the left through `apply`.
         """
-        [obj.drain_call_queue() for row in right for obj in row]
-        new_right = np.empty(shape=right.shape[axis], dtype=object)
 
-        if axis:
-            right = right.T
+        def map_func(df, *others):
+            other = pandas.concat(others, axis=axis ^ 1)
+            return apply_func(df, **{other_name: other})
 
-        for i in range(len(right)):
-            new_right[i] = pandas.concat(
-                [right[i][j].get() for j in range(len(right[i]))], axis=axis ^ 1
-            )
-        right = new_right.T if axis else new_right
-
-        new_partitions = np.array(
+        map_func = cls.preprocess_func(map_func)
+        rt_axis_parts = cls.axis_partition(right, axis ^ 1)
+        return np.array(
             [
                 [
                     part.apply(
-                        apply_func,
-                        **{other_name: right[col_idx] if axis else right[row_idx]},
+                        map_func,
+                        *(
+                            rt_axis_parts[col_idx].list_of_blocks
+                            if axis
+                            else rt_axis_parts[row_idx].list_of_blocks
+                        ),
                     )
                     for col_idx, part in enumerate(left[row_idx])
                 ]
                 for row_idx in range(len(left))
             ]
         )
-
-        return new_partitions
 
     @classmethod
     @wait_computations_if_benchmark_mode
@@ -778,6 +775,28 @@ class PandasDataframePartitionManager(ABC):
         return cls.from_pandas(at.to_pandas(), return_dims=return_dims)
 
     @classmethod
+    def get_objects_from_partitions(cls, partitions):
+        """
+        Get the objects wrapped by `partitions`.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            NumPy array with ``PandasDataframePartition``-s.
+
+        Returns
+        -------
+        list
+            The objects wrapped by `partitions`.
+
+        Notes
+        -----
+        This method should be implemented in a more efficient way for engines that support
+        getting objects in parallel.
+        """
+        return [partition.get() for partition in partitions]
+
+    @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
         """
         Get the internal indices stored in the partitions.
@@ -806,16 +825,15 @@ class PandasDataframePartitionManager(ABC):
         func = cls.preprocess_func(index_func)
         if axis == 0:
             new_idx = (
-                [idx.apply(func).get() for idx in partitions.T[0]]
+                [idx.apply(func) for idx in partitions.T[0]]
                 if len(partitions.T)
                 else []
             )
         else:
             new_idx = (
-                [idx.apply(func).get() for idx in partitions[0]]
-                if len(partitions)
-                else []
+                [idx.apply(func) for idx in partitions[0]] if len(partitions) else []
             )
+        new_idx = cls.get_objects_from_partitions(new_idx)
         # TODO FIX INFORMATION LEAK!!!!1!!1!!
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
