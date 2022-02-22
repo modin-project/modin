@@ -2854,9 +2854,4 @@ class PandasDataframe(object):
         """
         from .protocol import DataFrame
 
-        return {
-            "dataframe": DataFrame(
-                self, nan_as_null=nan_as_null, allow_copy=allow_copy
-            ),
-            "version": 0,
-        }
+        return DataFrame(self, nan_as_null=nan_as_null, allow_copy=allow_copy)

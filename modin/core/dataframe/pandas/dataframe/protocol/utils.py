@@ -79,7 +79,7 @@ def from_dataframe(df: DataFrameObject, allow_copy: bool = True) -> "DataFrame":
     if not hasattr(df, "__dataframe__"):
         raise ValueError("`df` does not support __dataframe__")
 
-    df = df.__dataframe__()["dataframe"]
+    df = df.__dataframe__()
 
     def _get_pandas_df(df):
         # We need a dict of columns here, with each column being a numpy array (at

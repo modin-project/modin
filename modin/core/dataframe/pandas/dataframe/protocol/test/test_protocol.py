@@ -72,7 +72,7 @@ def assert_dataframe_equal(dfo: DataFrameObject, df: pandas.DataFrame):
 def test_float_only():
     df = pandas.DataFrame(data=dict(a=[1.5, 2.5, 3.5], b=[9.2, 10.5, 11.8]))
     df2 = from_dataframe(df)
-    assert_dataframe_equal(df2.__dataframe__()["dataframe"], df)
+    assert_dataframe_equal(df2.__dataframe__(), df)
     # tm.assert_frame_equal(df, df2)
 
 
@@ -81,7 +81,7 @@ def test_mixed_intfloat():
         data=dict(a=[1, 2, 3], b=[3, 4, 5], c=[1.5, 2.5, 3.5], d=[9, 10, 11])
     )
     df2 = from_dataframe(df)
-    assert_dataframe_equal(df2.__dataframe__()["dataframe"], df)
+    assert_dataframe_equal(df2.__dataframe__(), df)
     # tm.assert_frame_equal(df, df2)
 
 
@@ -90,7 +90,7 @@ def test_noncontiguous_columns():
     df = pandas.DataFrame(arr, columns=["a", "b", "c"])
     assert df["a"].to_numpy().strides == (12,)
     df2 = from_dataframe(df)  # uses default of allow_copy=True
-    assert_dataframe_equal(df2.__dataframe__()["dataframe"], df)
+    assert_dataframe_equal(df2.__dataframe__(), df)
     # tm.assert_frame_equal(df, df2)
 
     # with pytest.raises(RuntimeError):
@@ -104,9 +104,7 @@ def test_categorical_dtype():
     modin_df.at[1, "B"] = np.nan  # Set one item to null
 
     # Some detailed testing for correctness of dtype and null handling:
-    df_impl_protocol = modin_df._query_compiler._modin_frame.__dataframe__()[
-        "dataframe"
-    ]
+    df_impl_protocol = modin_df._query_compiler._modin_frame.__dataframe__()
     col = df_impl_protocol.get_column_by_name("B")
     assert col.dtype[0] == DTypeKind.CATEGORICAL
     assert col.null_count == 1
@@ -124,7 +122,7 @@ def test_categorical_dtype():
 #     modin_df.at[1, "B"] = np.nan  # Set one item to null
 
 #     # Test for correctness and null handling:
-#     df_impl_protocol = modin_df._query_compiler._modin_frame.__dataframe__()["dataframe"]
+#     df_impl_protocol = modin_df._query_compiler._modin_frame.__dataframe__()
 #     col = df_impl_protocol.get_column_by_name("B")
 #     assert col.dtype[0] == DTypeKind.STRING
 #     assert col.null_count == 1
