@@ -93,9 +93,7 @@ def _replace_str(nb, original_str, str_to_replace):
 
 
 def test_omnisci_exercise_1():
-    modified_notebook_path = (
-        "examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_1_test.ipynb"
-    )
+    modified_notebook_path = "examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_1_test.ipynb"
     nb = nbformat.read(
         "examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_1.ipynb",
         as_version=nbformat.NO_CONVERT,
@@ -107,9 +105,7 @@ def test_omnisci_exercise_1():
 
 
 def test_omnisci_exercise_2():
-    modified_notebook_path = (
-        "examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_2_test.ipynb"
-    )
+    modified_notebook_path = "examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_2_test.ipynb"
     nb = nbformat.read(
         "examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_2.ipynb",
         as_version=nbformat.NO_CONVERT,
@@ -131,9 +127,7 @@ def test_omnisci_exercise_2():
 
 
 def test_omnisci_exercise_3():
-    modified_notebook_path = (
-        "examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_3_test.ipynb"
-    )
+    modified_notebook_path = "examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_3_test.ipynb"
     nb = nbformat.read(
         "examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_3.ipynb",
         as_version=nbformat.NO_CONVERT,
