@@ -492,7 +492,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             List of row partitions.
         col_partitions_list : list
             List of column partitions.
-        item_to_distribute : np.ndarray, Sentinel, or scalar, default: no_default
+        item_to_distribute : np.ndarray or scalar, default: no_default
             The item to split up so it can be applied over both axes.
         row_lengths : list of ints, optional
             Lengths of partitions for every row. If not specified this information

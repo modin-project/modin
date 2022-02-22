@@ -1154,7 +1154,7 @@ class PandasDataframePartitionManager(ABC):
             Iterable of tuples, containing 2 values:
                 1. Integer column partition index.
                 2. Internal column indexer of this partition.
-        item_to_distribute : np.ndarray, Sentinel, or scalar, default: no_default
+        item_to_distribute : np.ndarray or scalar, default: no_default
             The item to split up so it can be applied over both axes.
         row_lengths : list of ints, optional
             Lengths of partitions for every row. If not specified this information

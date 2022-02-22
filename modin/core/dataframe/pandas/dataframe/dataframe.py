@@ -1981,7 +1981,7 @@ class PandasDataframe(object):
             advance, and if not provided it must be computed.
         keep_remaining : boolean, default: False
             Whether or not to drop the data that is not computed over.
-        item_to_distribute : np.ndarray, Sentinel, or scalar, default: no_default
+        item_to_distribute : np.ndarray or scalar, default: no_default
             The item to split up so it can be applied over both axes.
 
         Returns
