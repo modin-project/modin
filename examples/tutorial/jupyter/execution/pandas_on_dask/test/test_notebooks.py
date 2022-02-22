@@ -99,9 +99,9 @@ def _replace_str(nb, original_str, str_to_replace):
 # in this notebook user should replace 'import pandas as pd' with
 # 'import modin.pandas as pd' to make notebook work
 def test_exercise_1():
-    modified_notebook_path = os.path.join(notebooks_dir, "exercise_1_test.ipynb")
+    modified_notebook_path = os.path.join(local_notebooks_dir, "exercise_1_test.ipynb")
     nb = nbformat.read(
-        os.path.join(notebooks_dir, "exercise_1.ipynb"),
+        os.path.join(local_notebooks_dir, "exercise_1.ipynb"),
         as_version=nbformat.NO_CONVERT,
     )
 
@@ -113,9 +113,9 @@ def test_exercise_1():
 
 # this notebook works "as is" but for testing purposes we can use smaller dataset
 def test_exercise_2():
-    modified_notebook_path = os.path.join(notebooks_dir, "exercise_2_test.ipynb")
+    modified_notebook_path = os.path.join(local_notebooks_dir, "exercise_2_test.ipynb")
     nb = nbformat.read(
-        os.path.join(notebooks_dir, "exercise_2.ipynb"),
+        os.path.join(local_notebooks_dir, "exercise_2.ipynb"),
         as_version=nbformat.NO_CONVERT,
     )
 
@@ -137,9 +137,9 @@ def test_exercise_2():
 # in this notebook user should add custom mad implementation
 # to make notebook work
 def test_exercise_3():
-    modified_notebook_path = os.path.join(notebooks_dir, "exercise_3_test.ipynb")
+    modified_notebook_path = os.path.join(local_notebooks_dir, "exercise_3_test.ipynb")
     nb = nbformat.read(
-        os.path.join(notebooks_dir, "exercise_3.ipynb"),
+        os.path.join(local_notebooks_dir, "exercise_3.ipynb"),
         as_version=nbformat.NO_CONVERT,
     )
 
@@ -169,9 +169,9 @@ modin_mad_custom = df.sq_mad_custom()
 
 # this notebook works "as is" but for testing purposes we can use smaller dataset
 def test_exercise_4():
-    modified_notebook_path = os.path.join(notebooks_dir, "exercise_4_test.ipynb")
+    modified_notebook_path = os.path.join(local_notebooks_dir, "exercise_4_test.ipynb")
     nb = nbformat.read(
-        os.path.join(notebooks_dir, "exercise_4.ipynb"),
+        os.path.join(local_notebooks_dir, "exercise_4.ipynb"),
         as_version=nbformat.NO_CONVERT,
     )
 
