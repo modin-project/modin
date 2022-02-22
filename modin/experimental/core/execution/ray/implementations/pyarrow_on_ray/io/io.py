@@ -21,7 +21,8 @@ from modin.experimental.core.execution.ray.implementations.pyarrow_on_ray.partit
     PyarrowOnRayDataframePartition,
 )
 from modin.core.storage_formats.pyarrow.parsers import PyarrowCSVParser
-from modin.core.execution.ray import RayIO, RayTask
+from modin.core.execution.ray.common import RayTask
+from modin.core.execution.ray.generic.io import RayIO
 from modin.core.io import CSVDispatcher
 
 

@@ -20,7 +20,9 @@ import ray
 
 from modin.error_message import ErrorMessage
 from modin.pandas.utils import check_both_not_none
-from modin.core.execution.ray.implementations.pandas_on_ray import PandasOnRayDataframe
+from modin.core.execution.ray.implementations.pandas_on_ray.dataframe import (
+    PandasOnRayDataframe,
+)
 from ..partitioning import (
     cuDFOnRayDataframePartition,
     cuDFOnRayDataframePartitionManager,

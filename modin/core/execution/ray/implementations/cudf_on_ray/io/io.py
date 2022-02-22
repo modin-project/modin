@@ -16,7 +16,7 @@
 from modin.core.io import BaseIO
 from modin.core.storage_formats.cudf.query_compiler import cuDFQueryCompiler
 from modin.core.storage_formats.cudf.parser import cuDFCSVParser
-from modin.core.execution.ray import RayTask
+from modin.core.execution.ray.common import RayTask
 from ..dataframe import cuDFOnRayDataframe
 from ..partitioning import (
     cuDFOnRayDataframePartition,

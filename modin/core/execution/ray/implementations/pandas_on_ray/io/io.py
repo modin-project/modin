@@ -38,8 +38,8 @@ from modin.core.storage_formats.pandas.parsers import (
     PandasSQLParser,
     PandasExcelParser,
 )
-from modin.core.execution.ray.generic.io import RayIO
 from modin.core.execution.ray.common import RayTask, SignalActor
+from modin.core.execution.ray.generic.io import RayIO
 from ..dataframe import PandasOnRayDataframe
 from ..partitioning import PandasOnRayDataframePartition
 

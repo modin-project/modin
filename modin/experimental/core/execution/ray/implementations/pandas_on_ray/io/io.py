@@ -29,12 +29,14 @@ from modin.core.storage_formats.pandas.parsers import (
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.io import CSVGlobDispatcher, PickleExperimentalDispatcher
-from modin.core.execution.ray.implementations.pandas_on_ray import (
-    PandasOnRayIO,
+from modin.core.execution.ray.implementations.pandas_on_ray.io import PandasOnRayIO
+from modin.core.execution.ray.implementations.pandas_on_ray.dataframe import (
     PandasOnRayDataframe,
+)
+from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
     PandasOnRayDataframePartition,
 )
-from modin.core.execution.ray import RayTask
+from modin.core.execution.ray.common import RayTask
 from modin.config import NPartitions
 
 import ray

@@ -18,7 +18,9 @@ import ray
 
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.config import GpuCount
-from modin.core.execution.ray import GenericRayDataframePartitionManager
+from modin.core.execution.ray.generic.partitioning import (
+    GenericRayDataframePartitionManager,
+)
 from .axis_partition import (
     cuDFOnRayDataframeColumnPartition,
     cuDFOnRayDataframeRowPartition,
