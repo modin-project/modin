@@ -26,8 +26,8 @@ Notes
 """
 
 from abc import ABC, abstractmethod
-import enum
 from typing import Tuple
+from utils import DlpackDeviceType
 
 
 class ProtocolBuffer(ABC):
@@ -89,7 +89,7 @@ class ProtocolBuffer(ABC):
         pass
 
     @abstractmethod
-    def __dlpack_device__(self) -> Tuple[enum.IntEnum, int]:
+    def __dlpack_device__(self) -> Tuple[DlpackDeviceType, int]:
         """
         Device type and device ID for where the data in the buffer resides.
 

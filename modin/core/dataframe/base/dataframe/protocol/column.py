@@ -20,7 +20,7 @@ See more in https://data-apis.org/dataframe-protocol/latest/index.html.
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Tuple, Dict, Iterable
 
-from .utils import DTypeKind
+from .utils import DTypeKind, ColumnNullType
 
 
 class ProtocolColumn(ABC):
@@ -163,7 +163,7 @@ class ProtocolColumn(ABC):
 
     @property
     @abstractmethod
-    def describe_null(self) -> Tuple[int, Any]:
+    def describe_null(self) -> Tuple[ColumnNullType, Any]:
         """
         Return the missing value (or "null") representation the column dtype uses.
 

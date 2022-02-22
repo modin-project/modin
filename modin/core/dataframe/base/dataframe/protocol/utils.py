@@ -49,3 +49,41 @@ class DTypeKind(enum.IntEnum):  # noqa PR01
     STRING = 21  # UTF-8
     DATETIME = 22
     CATEGORICAL = 23
+
+
+class ColumnNullType(enum.IntEnum):  # noqa PR01
+    """
+    Integer enum for null type representation.
+
+    Attributes
+    ----------
+    NON_NULLABLE : int
+        Non-nullable column.
+    USE_NAN : int
+        NaN/NaT value.
+    USE_SENTINEL : int
+        Sentinel value besides NaN/NaT.
+    USE_BITMASK : int
+        The bit is set/unset representing a null on a certain position.
+    USE_BYTEMASK : int
+        The byte is set/unset representing a null on a certain position.
+    """
+
+    NON_NULLABLE = 0
+    USE_NAN = 1
+    USE_SENTINEL = 2
+    USE_BITMASK = 3
+    USE_BYTEMASK = 4
+
+
+class DlpackDeviceType(enum.IntEnum):  # noqa PR01
+    """Integer enum for device type codes matching DLPack."""
+
+    CPU = 1
+    CUDA = 2
+    CPU_PINNED = 3
+    OPENCL = 4
+    VULKAN = 7
+    METAL = 8
+    VPI = 9
+    ROCM = 10
