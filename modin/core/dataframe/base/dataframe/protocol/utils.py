@@ -127,7 +127,19 @@ class ArrowCTypes:
 
 
 def pandas_dtype_to_arrow_c(dtype) -> str:
-    """Represent pandas `dtype` as a format string in Apache Arrow C notation."""
+    """
+    Represent pandas `dtype` as a format string in Apache Arrow C notation.
+
+    Parameters
+    ----------
+    dtype : np.dtype
+        Datatype of pandas DataFrame to represent.
+
+    Returns
+    -------
+    str
+        Format string in Apache Arrow C notation of the given `dtype`.
+    """
     if isinstance(dtype, pandas.CategoricalDtype):
         return ArrowCTypes.INT64
     elif dtype == np.dtype("O"):

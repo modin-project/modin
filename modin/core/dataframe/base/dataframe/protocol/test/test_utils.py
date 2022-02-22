@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Test common utility functions for the DataFrame exchange protocol."""
+
 import pytest
 import pandas
 import numpy as np
@@ -38,8 +40,12 @@ from modin.core.dataframe.base.dataframe.protocol.utils import pandas_dtype_to_a
         (np.dtype("float32"), "f"),
         (np.dtype("float64"), "g"),
         (pandas.Series(["a"]).dtype, "u"),
-        (pandas.Series([0]).astype("datetime64[ns]").dtype, "tsn:"),
+        (
+            pandas.Series([0]).astype("datetime64[ns]").dtype,
+            "tsn:",
+        ),
     ],
 )
-def test_dtype_to_arrow_c(pandas_dtype, c_string):
+def test_dtype_to_arrow_c(pandas_dtype, c_string):  # noqa PR01
+    """Test ``pandas_dtype_to_arrow_c`` utility function."""
     assert pandas_dtype_to_arrow_c(pandas_dtype) == c_string
