@@ -69,6 +69,10 @@ jobs:
             environment-file: requirements/env_omnisci.yml
             python-version: 3.8
             channel-priority: strict
+      - name: Conda environment
+          run: |
+            conda info
+            conda list
       - run: pip install .
       - run: conda install black flake8 flake8-print
       - run: conda list
