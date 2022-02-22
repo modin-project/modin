@@ -14,10 +14,13 @@
 """The module defines base interface for a partition of a Modin DataFrame."""
 
 from abc import ABC
-from modin.pandas.indexing import compute_sliced_len
 from copy import copy
 
+import pandas
 from pandas.api.types import is_scalar
+
+from modin.pandas.indexing import compute_sliced_len
+from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
 
 
 class PandasDataframePartition(ABC):  # pragma: no cover
@@ -26,6 +29,9 @@ class PandasDataframePartition(ABC):  # pragma: no cover
 
     The class providing an API that has to be overridden by child classes.
     """
+
+    _length_cache = None
+    _width_cache = None
 
     def get(self):
         """
@@ -105,7 +111,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
 
     def to_pandas(self):
         """
-        Convert the object wrapped by this partition to a pandas DataFrame.
+        Convert the object wrapped by this partition to a ``pandas.DataFrame``.
 
         Returns
         -------
@@ -116,7 +122,9 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         If the underlying object is a pandas DataFrame, this will likely
         only need to call `get`.
         """
-        pass
+        dataframe = self.get()
+        assert isinstance(dataframe, (pandas.DataFrame, pandas.Series))
+        return dataframe
 
     def to_numpy(self, **kwargs):
         """
@@ -125,7 +133,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         Parameters
         ----------
         **kwargs : dict
-            Additional keyword arguments to be passed in `to_numpy`.
+            Additional keyword arguments to be passed in ``to_numpy``.
 
         Returns
         -------
@@ -136,7 +144,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         If the underlying object is a pandas DataFrame, this will return
         a 2D NumPy array.
         """
-        pass
+        return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
 
     def mask(self, row_labels, col_labels):
         """
@@ -241,7 +249,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         callable
             The function that computes the length of the object wrapped by this partition.
         """
-        pass
+        return length_fn_pandas
 
     @classmethod
     def _width_extraction_fn(cls):
@@ -253,10 +261,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         callable
             The function that computes the width of the object wrapped by this partition.
         """
-        pass
-
-    _length_cache = None
-    _width_cache = None
+        return width_fn_pandas
 
     def length(self):
         """
@@ -300,4 +305,4 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         PandasDataframePartition
             New `PandasDataframePartition` object.
         """
-        pass
+        return cls.put(pandas.DataFrame(), 0, 0)

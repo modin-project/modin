@@ -39,9 +39,6 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         Width or reference to it of wrapped ``pandas.DataFrame``.
     """
 
-    _length_cache = None
-    _width_cache = None
-
     @property
     def __constructor__(self):
         """
