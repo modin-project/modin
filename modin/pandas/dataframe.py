@@ -350,7 +350,6 @@ class DataFrame(BasePandasDataset):
         """
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
-        ErrorMessage.non_verified_udf()
         return DataFrame(query_compiler=self._query_compiler.applymap(func))
 
     def apply(
@@ -1681,7 +1680,6 @@ class DataFrame(BasePandasDataset):
         """
         Query the columns of a ``DataFrame`` with a boolean expression.
         """
-        ErrorMessage.non_verified_udf()
         self._update_var_dicts_in_kwargs(expr, kwargs)
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
