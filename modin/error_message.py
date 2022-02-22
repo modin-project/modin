@@ -48,8 +48,8 @@ class ErrorMessage(object):
         if not cls.printed_request_implementation:
             message = (
                 "{}\n".format(message)
-                + "To request implementation, send an email to "
-                + "feature_requests@modin.org."
+                + "Please refer to "
+                + "https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html for explanation."
             )
             cls.printed_request_implementation = True
         warnings.warn(message)
