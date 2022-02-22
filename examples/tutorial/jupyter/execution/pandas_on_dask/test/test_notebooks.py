@@ -26,7 +26,7 @@ if not os.path.exists("{test_dataset_path}"):
     urllib.request.urlretrieve(url_path, "{test_dataset_path}")
     """
 
-notebooks_dir = "examples/tutorial/jupyter/execution/pandas_on_dask/local"
+local_notebooks_dir = "examples/tutorial/jupyter/execution/pandas_on_dask/local"
 
 
 def _execute_notebook(notebook):
