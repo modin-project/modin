@@ -31,7 +31,7 @@ Key Features and Updates
 * XGBoost enhancements
   *
 * Developer API enhancements
-  *
+  * FEAT-#4245: Define base interface for dataframe exchange protocol
 * Update testing suite
   * TEST-#3628: Report coverage data for `test-internals` CI job (#4198)
   * TEST-#3938: Test tutorial notebooks in CI (#4145)
