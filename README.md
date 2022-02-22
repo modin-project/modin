@@ -25,11 +25,6 @@ Using modin is as simple as replacing the pandas import:
 import modin.pandas as pd
 ```
 
-<img align="left" style="display:inline;" src="https://github.com/modin-project/modin/blob/master/docs/img/Modin.gif"></a> 
-<img align="left" style="display:inline;" src="https://github.com/modin-project/modin/blob/master/docs/img/pandas.gif"></a>
-<img align="right" style="display:inline;" height="300" width="272" src="https://github.com/modin-project/modin/blob/master/docs/img/Modin_Speedup.png?raw=true"></a>
-
-
 ### Installation
 
 #### From PyPI
