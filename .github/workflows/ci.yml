@@ -256,7 +256,7 @@ jobs:
       - run: python -m pytest -n 2 modin/test/test_partition_api.py
       - run: python -m pytest modin/test/test_utils.py
       - run: python -m pytest asv_bench/test/test_utils.py
-      - run: python -m pytest modin/core/dataframe/base/dataframe/protocol/test/test_utils.py
+      - run: python -m pytest modin/core/dataframe/base/dataframe/protocol/test/
       - uses: codecov/codecov-action@v2
 
   test-defaults:
