@@ -54,10 +54,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v2
-        with:
-          python-version: "3.8.x"
-          architecture: "x64"
       - name: Cache datasets
         uses: actions/cache@v2
         with:
@@ -67,9 +63,10 @@ jobs:
         with:
           activate-environment: modin_on_omnisci
           environment-file: requirements/env_omnisci.yml
+          python-version: 3.8
           channel-priority: strict
       - run: pip install .
-      - run: conda install black flake8 flake8-print nbformat nbconvert
+      - run: conda install black flake8 flake8-print jupyter nbformat nbconvert -c conda-forge
       - run: conda list
       - run: black --check --diff examples/tutorial/jupyter/execution/omnisci_on_native/test/test_notebooks.py
       - run: flake8 --enable=T examples/tutorial/jupyter/execution/omnisci_on_native/test/test_notebooks.py
