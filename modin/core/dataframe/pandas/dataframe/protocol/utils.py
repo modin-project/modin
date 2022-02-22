@@ -30,6 +30,7 @@ import enum
 import numpy as np
 import pandas
 from typing import Any
+from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas
@@ -38,8 +39,27 @@ DataFrameObject = Any
 ColumnObject = Any
 
 
-class DTypeKind(enum.IntEnum):
-    """Enum for data types."""
+class DTypeKind(enum.IntEnum):  # noqa PR01
+    """
+    Integer enum for data types.
+
+    Attributes
+    ----------
+    INT : int
+        Matches to integer data type.
+    UINT : int
+        Matches to unsigned integer data type.
+    FLOAT : int
+        Matches to floating point data type.
+    BOOL : int
+        Matches to boolean data type.
+    STRING : int
+        Matches to string data type.
+    DATETIME : int
+        Matches to datetime data type.
+    CATEGORICAL : int
+        Matches to categorical data type.
+    """
 
     INT = 0
     UINT = 1
@@ -50,7 +70,7 @@ class DTypeKind(enum.IntEnum):
     CATEGORICAL = 23
 
 
-def from_dataframe(df: DataFrameObject, allow_copy: bool = True) -> "DataFrame":
+def from_dataframe(df: DataFrameObject, allow_copy: bool = True) -> PandasDataframe:
     """
     Construct a ``DataFrame`` from ``df`` if it supports ``__dataframe__``.
 
@@ -64,6 +84,11 @@ def from_dataframe(df: DataFrameObject, allow_copy: bool = True) -> "DataFrame":
         if a library supports strided buffers, given that this protocol
         specifies contiguous buffers. Currently, if the flag is set to ``False``
         and a copy is needed, a ``RuntimeError`` will be raised.
+
+    Returns
+    -------
+    PandasDataframe
+        A ``PandasDataframe`` object.
 
     Notes
     -----
@@ -151,7 +176,7 @@ def _buffer_to_ndarray(_buffer, _dtype) -> np.ndarray:
 
     Parameters
     ----------
-    col : Buffer
+    _buffer : Buffer
         A buffer to convert to a NumPy array from.
     _dtype : any
         A dtype object.

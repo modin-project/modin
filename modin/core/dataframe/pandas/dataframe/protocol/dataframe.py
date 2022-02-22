@@ -82,7 +82,7 @@ class DataFrame(object):
     @property
     def metadata(self):
         """
-        The metadata for the data frame, as a dictionary with string keys.
+        Get the metadata for the data frame, as a dictionary with string keys.
 
         The contents of `metadata` may be anything, they are meant for a library
         to store information that it needs to, e.g., roundtrip losslessly or
@@ -90,6 +90,10 @@ class DataFrame(object):
         interchange protocol specification. For avoiding collisions with other
         entries, please add name the keys with the name of the library
         followed by a period and the desired name, e.g, ``pandas.indexcol``.
+
+        Returns
+        -------
+        dict
         """
         # `index` isn't a regular column, and the protocol doesn't support row
         # labels - so we export it as pandas-specific metadata here.
@@ -144,6 +148,11 @@ class DataFrame(object):
         """
         Return the column at the indicated position.
 
+        Parameters
+        ----------
+        i : int
+            Positional index of the column to be returned.
+
         Returns
         -------
         Column
@@ -158,6 +167,11 @@ class DataFrame(object):
     def get_column_by_name(self, name: str) -> Column:
         """
         Return the column whose name is the indicated name.
+
+        Parameters
+        ----------
+        name : str
+            String label of the column to be returned.
 
         Returns
         -------
@@ -192,7 +206,7 @@ class DataFrame(object):
 
         Parameters
         ----------
-        names : Sequence[int]
+        indices : Sequence[int]
             Column indices to be selected out of the DataFrame.
 
         Returns

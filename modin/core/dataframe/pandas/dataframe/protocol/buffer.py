@@ -57,9 +57,6 @@ class Buffer(object):
     """
 
     def __init__(self, x: np.ndarray, allow_copy: bool = True) -> None:
-        """
-        Handle only regular columns (= numpy arrays) for now.
-        """
         if not x.strides == (x.dtype.itemsize,):
             # The protocol does not support strided buffers, so a copy is
             # necessary. If that's not allowed, we need to raise an exception.
@@ -79,6 +76,10 @@ class Buffer(object):
     def bufsize(self) -> int:
         """
         Buffer size in bytes.
+
+        Returns
+        -------
+        int
         """
         return self._x.size * self._x.dtype.itemsize
 
@@ -86,6 +87,10 @@ class Buffer(object):
     def ptr(self) -> int:
         """
         Pointer to start of the buffer as an integer.
+
+        Returns
+        -------
+        int
         """
         return self._x.__array_interface__["data"][0]
 
@@ -94,9 +99,14 @@ class Buffer(object):
         DLPack not implemented in NumPy yet, so leave it out here.
 
         Produce DLPack capsule (see array API standard).
-        Raises:
-            - TypeError : if the buffer contains unsupported dtypes.
-            - NotImplementedError : if DLPack support is not implemented
+
+        Raises
+        ------
+        ``TypeError`` if the buffer contains unsupported dtypes.
+        ``NotImplementedError`` if DLPack support is not implemented.
+
+        Notes
+        -----
         Useful to have to connect to array libraries. Support optional because
         it's not completely trivial to implement for a Python-only library.
         """
@@ -105,7 +115,8 @@ class Buffer(object):
     def __dlpack_device__(self) -> Tuple[enum.IntEnum, int]:
         """
         Device type and device ID for where the data in the buffer resides.
-        Uses device type codes matching DLPack. Enum members are::
+
+        Uses device type codes matching DLPack. Enum members are:
             - CPU = 1
             - CUDA = 2
             - CPU_PINNED = 3
@@ -114,7 +125,15 @@ class Buffer(object):
             - METAL = 8
             - VPI = 9
             - ROCM = 10
-        Note: must be implemented even if ``__dlpack__`` is not.
+
+        Returns
+        -------
+        tuple
+            Device type and device ID.
+
+        Notes
+        -----
+        Must be implemented even if ``__dlpack__`` is not.
         """
 
         class Device(enum.IntEnum):

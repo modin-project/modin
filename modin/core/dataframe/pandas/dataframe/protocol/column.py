@@ -91,10 +91,6 @@ class Column(object):
     def __init__(
         self, column: PandasDataframe, allow_copy: bool = True, offset: int = 0
     ) -> None:
-        """
-        Note: doesn't deal with extension arrays yet, just assume a regular
-        Series/ndarray for now.
-        """
         if not isinstance(column, PandasDataframe):
             raise NotImplementedError(
                 "Columns of type {} not handled " "yet".format(type(column))
@@ -139,13 +135,18 @@ class Column(object):
     @property
     def dtype(self) -> Tuple[DTypeKind, int, str, str]:
         """
-        Dtype description as a tuple ``(kind, bit-width, format string, endianness)``, where
+        Dtype description as a tuple ``(kind, bit-width, format string, endianness)``.
 
         * Kind : DTypeKind
         * Bit-width : the number of bits as an integer
         * Format string : data type description format string in Apache Arrow C
                         Data Interface format.
         * Endianness : current only native endianness (``=``) is supported
+
+        Returns
+        -------
+        tuple
+            ``(kind, bit-width, format string, endianness)``.
 
         Notes
         -----
@@ -223,7 +224,8 @@ class Column(object):
     @property
     def describe_categorical(self) -> Dict[str, Any]:
         """
-        If the dtype is categorical, there are two options:
+        If the dtype is categorical, there are two options.
+
         - There are only values in the data buffer.
         - There is a separate dictionary-style encoding for categorical values.
 
@@ -314,8 +316,15 @@ class Column(object):
     @property
     def null_count(self) -> int:
         """
-        Number of null elements, if known.
-        Note: Arrow uses -1 to indicate "unknown", but None seems cleaner.
+        Get number of null elements, if known.
+
+        Returns
+        -------
+        int
+
+        Notes
+        -----
+        Arrow uses -1 to indicate "unknown", but None seems cleaner.
         """
 
         def map_func(df):
@@ -333,7 +342,13 @@ class Column(object):
     @property
     def metadata(self) -> Dict[str, Any]:
         """
-        The metadata for the column. See `DataFrame.metadata` for more details.
+        Get the metadata for the column.
+
+        See `DataFrame.metadata` for more details.
+
+        Returns
+        -------
+        dict
         """
         return {}
 
