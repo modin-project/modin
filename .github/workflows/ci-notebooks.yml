@@ -63,7 +63,6 @@ jobs:
         with:
           path: taxi.csv
           key: hashFiles("examples/tutorial/jupyter/execution/omnisci_on_native/local/**")
-      - uses: conda-incubator/setup-miniconda@v2
       - run: conda env create -f requirements/env_omnisci.yml
       - run: conda deactivate
       - run: conda activate modin_on_omnisci
