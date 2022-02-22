@@ -18,6 +18,11 @@ See more in https://data-apis.org/dataframe-protocol/latest/index.html.
 """
 
 import enum
+import re
+import pandas
+import numpy as np
+
+from pandas.api.types import is_datetime64_dtype
 
 
 class DTypeKind(enum.IntEnum):  # noqa PR01
@@ -87,3 +92,57 @@ class DlpackDeviceType(enum.IntEnum):  # noqa PR01
     METAL = 8
     VPI = 9
     ROCM = 10
+
+
+class ArrowCTypes:
+    """
+    Enum for Apache Arrow C type format strings.
+
+    The Arrow C data interface:
+    https://arrow.apache.org/docs/format/CDataInterface.html#data-type-description-format-strings
+    """
+
+    NULL = "n"
+    BOOL = "b"
+    INT8 = "c"
+    UINT8 = "C"
+    INT16 = "s"
+    UINT16 = "S"
+    INT32 = "i"
+    UINT32 = "I"
+    INT64 = "l"
+    UINT64 = "L"
+    FLOAT16 = "e"
+    FLOAT32 = "f"
+    FLOAT64 = "g"
+    STRING = "u"  # utf-8
+    DATE32 = "tdD"
+    DATE64 = "tdm"
+    # Resoulution:
+    #   - seconds -> 's'
+    #   - miliseconds -> 'm'
+    #   - microseconds -> 'u'
+    #   - nanoseconds -> 'n'
+    TIMESTAMP = "ts{resolution}:{tz}"
+
+
+def pandas_dtype_to_arrow_c(dtype) -> str:
+    """Represent pandas `dtype` as a format string in Apache Arrow C notation."""
+    if isinstance(dtype, pandas.CategoricalDtype):
+        return ArrowCTypes.INT64
+    elif dtype == np.dtype("O"):
+        return ArrowCTypes.STRING
+
+    format_str = getattr(ArrowCTypes, dtype.name.upper(), None)
+    if format_str is not None:
+        return format_str
+
+    if is_datetime64_dtype(dtype):
+        # Selecting the first char of resolution string:
+        # dtype.str -> '<M8[ns]'
+        resolution = re.findall(r"\[(.*)\]", dtype.str)[0][:1]
+        return ArrowCTypes.TIMESTAMP.format(resolution=resolution, tz="")
+
+    raise NotImplementedError(
+        f"Convertion of {dtype} to Arrow C format string is not implemented."
+    )
