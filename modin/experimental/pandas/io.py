@@ -25,7 +25,7 @@ from pandas._typing import CompressionOptions, StorageOptions
 from . import DataFrame
 from modin.config import IsExperimental, Engine
 from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-from modin.pandas import _update_engine
+from ...pandas import _update_engine
 
 
 def read_sql(

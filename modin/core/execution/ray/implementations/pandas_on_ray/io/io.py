@@ -20,6 +20,7 @@ import pandas
 import ray
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.core.execution.ray.generic.io import RayIO
 from modin.core.io import (
     CSVDispatcher,
     FWFDispatcher,
@@ -39,7 +40,6 @@ from modin.core.storage_formats.pandas.parsers import (
     PandasExcelParser,
 )
 from modin.core.execution.ray.common import RayTask, SignalActor
-from modin.core.execution.ray.generic.io import RayIO
 from ..dataframe import PandasOnRayDataframe
 from ..partitioning import PandasOnRayDataframePartition
 
