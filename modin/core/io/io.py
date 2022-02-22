@@ -103,6 +103,23 @@ class BaseIO(object):
         return cls.query_compiler_cls.from_arrow(at, cls.frame_cls)
 
     @classmethod
+    def from_dataframe(cls, df):
+        """
+        Create a Modin `query_compiler` from a DataFrame object supporting exchange protocol (__dataframe__()).
+
+        Parameters
+        ----------
+        df : DataFrame
+            The DataFrame object supporting dataframe exchange protocol.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data from the DataFrame.
+        """
+        return cls.query_compiler_cls.from_dataframe(df, cls.frame_cls)
+
+    @classmethod
     @_inherit_docstrings(pandas.read_parquet, apilink="pandas.read_parquet")
     @doc(
         _doc_default_io_method,
