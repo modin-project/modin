@@ -124,6 +124,7 @@ class ArrowCTypes:
     #   - microseconds -> 'u'
     #   - nanoseconds -> 'n'
     TIMESTAMP = "ts{resolution}:{tz}"
+    TIME = "tt{resolution}"
 
 
 def pandas_dtype_to_arrow_c(dtype) -> str:

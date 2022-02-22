@@ -339,6 +339,8 @@ jobs:
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv --verbose
+      - run: pytest modin/test/exchange/dataframe_protocol/test_general.py
+      - run: pytest modin/test/exchange/dataframe_protocol/omnisci
       - uses: codecov/codecov-action@v2
 
   test-asv-benchmarks:

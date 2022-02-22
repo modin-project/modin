@@ -2037,6 +2037,47 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         """
         return super(OmnisciOnNativeDataframe, self)._get_columns()
 
+    def __dataframe__(self, nan_as_null: bool = False, allow_copy: bool = True) -> dict:
+        """
+        Get a DataFrame exchange protocol object representing data of the Modin DataFrame.
+
+        Parameters
+        ----------
+        nan_as_null : bool, default: False
+            A keyword intended for the consumer to tell the producer
+            to overwrite null values in the data with ``NaN`` (or ``NaT``).
+            This currently has no effect; once support for nullable extension
+            dtypes is added, this value should be propagated to columns.
+        allow_copy : bool, default: True
+            A keyword that defines whether or not the library is allowed
+            to make a copy of the data. For example, copying data would be necessary
+            if a library supports strided buffers, given that this protocol
+            specifies contiguous buffers. Currently, if the flag is set to ``False``
+            and a copy is needed, a ``RuntimeError`` will be raised.
+
+        Returns
+        -------
+        dict
+            A dictionary object following the dataframe protocol specification.
+        """
+        if self._has_unsupported_data:
+            pd_df = self.to_pandas()
+            if hasattr(pd_df, "__dataframe__"):
+                return pd_df.__dataframe__()
+            raise NotImplementedError(
+                "OmniSci execution does not support exchange protocol if the frame contains data types "
+                + "that are unsupported by OmniSci."
+            )
+
+        from ..exchange.dataframe_protocol import OmnisciProtocolDataframe
+
+        return {
+            "dataframe": OmnisciProtocolDataframe(
+                self, nan_as_null=nan_as_null, allow_copy=allow_copy
+            ),
+            "version": 0,
+        }
+
     columns = property(_get_columns)
     index = property(_get_index)
 
