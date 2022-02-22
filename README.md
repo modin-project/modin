@@ -25,9 +25,9 @@ Using modin is as simple as replacing the pandas import:
 import modin.pandas as pd
 ```
 
-<img src="https://github.com/modin-project/modin/blob/master/docs/img/modin.gif" width="80" height="30" /> 
-<img src="https://github.com/modin-project/modin/blob/master/docs/img/pandas.gif" width="80" height="30"/>
-<img align="right" style="display:inline;" height="350" width="320" src="https://github.com/modin-project/modin/blob/master/docs/img/Modin_Speedup.png?raw=true"></a>
+<img align="left" style="display:inline;" src="https://github.com/modin-project/modin/blob/master/docs/img/Modin.gif"></a> 
+<img align="left" style="display:inline;" src="https://github.com/modin-project/modin/blob/master/docs/img/pandas.gif"></a>
+<img align="right" style="display:inline;" height="300" width="272" src="https://github.com/modin-project/modin/blob/master/docs/img/Modin_Speedup.png?raw=true"></a>
 
 
 ### Installation
