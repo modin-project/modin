@@ -189,7 +189,7 @@ class BaseFactory(object):
     @classmethod
     @doc(
         _doc_io_method_template,
-        source="a DataFrame object supporting exchange protocol (__dataframe__())",
+        source="a DataFrame object supporting exchange protocol `__dataframe__()`",
         params=_doc_io_method_all_params,
         method="utils.from_dataframe",
     )

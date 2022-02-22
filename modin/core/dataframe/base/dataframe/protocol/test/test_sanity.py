@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Perform basic sanity checks for the DataFrame exchange protocol."""
+"""Basic sanity checks for the DataFrame exchange protocol."""
 
 import pytest
 import modin.pandas as pd
@@ -19,7 +19,7 @@ import modin.pandas as pd
 
 def test_sanity():
     """Test that the DataFrame protocol module is valid and could be imported correctly."""
-    from modin.core.dataframe.base.dataframe.protocol.dataframe import (  # noqa
+    from modin.core.dataframe.base.dataframe.protocol import (  # noqa
         ProtocolDataframe,
     )
 
@@ -31,7 +31,7 @@ def test_basic_io():
         pass
 
     def dummy_io_method(*args, **kwargs):
-        """Dummy method emulating that the code path reached exchange protocol implementation."""
+        """Dummy method emulating that the code path reached the exchange protocol implementation."""
         raise TestPassed
 
     from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler

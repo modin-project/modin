@@ -556,35 +556,6 @@ class BasePandasDataset(object):
         """
         return type(self)(*args, **kwargs)
 
-    def __dataframe__(self, nan_as_null: bool = False, allow_copy: bool = True) -> dict:
-        """
-        Get a DataFrame exchange protocol object representing data of the Modin DataFrame.
-
-        See more about the protocol in https://data-apis.org/dataframe-protocol/latest/index.html.
-
-        Parameters
-        ----------
-        nan_as_null : bool, default: False
-            A keyword intended for the consumer to tell the producer
-            to overwrite null values in the data with ``NaN`` (or ``NaT``).
-            This currently has no effect; once support for nullable extension
-            dtypes is added, this value should be propagated to columns.
-        allow_copy : bool, default: True
-            A keyword that defines whether or not the library is allowed
-            to make a copy of the data. For example, copying data would be necessary
-            if a library supports strided buffers, given that this protocol
-            specifies contiguous buffers. Currently, if the flag is set to ``False``
-            and a copy is needed, a ``RuntimeError`` will be raised.
-
-        Returns
-        -------
-        dict
-            A dictionary object following the dataframe protocol specification.
-        """
-        return self._query_compiler.to_dataframe(
-            nan_as_null=nan_as_null, allow_copy=allow_copy
-        )
-
     def abs(self):
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(query_compiler=self._query_compiler.abs())

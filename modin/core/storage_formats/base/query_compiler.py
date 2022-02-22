@@ -363,7 +363,7 @@ class BaseQueryCompiler(abc.ABC):
 
     # END To NumPy
 
-    # Exchange protocol
+    # Dataframe exchange protocol
 
     def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True) -> dict:
         """
@@ -388,21 +388,21 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         dict
-            A dictionary object following the dataframe protocol specification.
+            A dictionary object following the DataFrame protocol specification.
         """
         raise NotImplementedError(
-            "The selected execution does not implement DataFrame exchange protocol."
+            "The selected execution does not implement the DataFrame exchange protocol."
         )
 
     @classmethod
     def from_dataframe(cls, df, data_cls):
         """
-        Build QueryCompiler from a DataFrame object supporting dataframe exchange protocol (__dataframe__()).
+        Build QueryCompiler from a DataFrame object supporting the dataframe exchange protocol `__dataframe__()`.
 
         Parameters
         ----------
         df : DataFrame
-            The DataFrame object supporting dataframe exchange protocol.
+            The DataFrame object supporting the dataframe exchange protocol.
         data_cls : type
             :py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe` class
             (or its descendant) to convert to.
@@ -413,10 +413,10 @@ class BaseQueryCompiler(abc.ABC):
             QueryCompiler containing data from the DataFrame.
         """
         raise NotImplementedError(
-            "The selected execution does not implement import via dataframe exchange protocol."
+            "The selected execution does not implement import via the DataFrame exchange protocol."
         )
 
-    # END Exchange protocol
+    # END Dataframe exchange protocol
 
     # Abstract inter-data operations (e.g. add, sub)
     # These operations require two DataFrames and will change the shape of the

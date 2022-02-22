@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Test common utility functions for the DataFrame exchange protocol."""
+"""Tests for common utility functions of the DataFrame exchange protocol."""
 
 import pytest
 import pandas

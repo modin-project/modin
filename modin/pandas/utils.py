@@ -89,14 +89,14 @@ def from_arrow(at):
 
 def from_dataframe(df):
     """
-    Convert a DataFrame implementing dataframe exchange protocol to a Modin DataFrame.
+    Convert a DataFrame implementing the dataframe exchange protocol to a Modin DataFrame.
 
     See more about the protocol in https://data-apis.org/dataframe-protocol/latest/index.html.
 
     Parameters
     ----------
     df : DataFrame
-        The DataFrame object supporting dataframe exchange protocol.
+        The DataFrame object supporting the dataframe exchange protocol.
 
     Returns
     -------

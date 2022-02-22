@@ -105,12 +105,12 @@ class BaseIO(object):
     @classmethod
     def from_dataframe(cls, df):
         """
-        Create a Modin `query_compiler` from a DataFrame object supporting exchange protocol (__dataframe__()).
+        Create a Modin QueryCompiler from a DataFrame supporting the DataFrame exchange protocol `__dataframe__()`.
 
         Parameters
         ----------
         df : DataFrame
-            The DataFrame object supporting dataframe exchange protocol.
+            The DataFrame object supporting the DataFrame exchange protocol.
 
         Returns
         -------
