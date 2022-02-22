@@ -27,7 +27,8 @@ Notes
 
 from abc import ABC, abstractmethod
 from typing import Tuple
-from utils import DlpackDeviceType
+
+from .utils import DlpackDeviceType
 
 
 class ProtocolBuffer(ABC):
