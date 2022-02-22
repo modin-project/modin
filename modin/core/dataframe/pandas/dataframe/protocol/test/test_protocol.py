@@ -17,20 +17,17 @@ Tests related to the dataframe exchange protocol implementation correctness.
 See more in https://data-apis.org/dataframe-protocol/latest/index.html.
 """
 
-
-import pandas
+import numpy as np
 
 # import pandas.testing as tm
-import numpy as np
+import pandas
 import pytest
 from typing import Any, Tuple
 
-from ..dataframe import Column, Buffer, DTypeKind, from_dataframe, DataFrameObject
 import modin.pandas as pd
-
-
-# Roundtrip testing
-# -----------------
+from ..utils import DTypeKind, DataFrameObject, from_dataframe
+from ..buffer import Buffer
+from ..column import Column
 
 
 def assert_buffer_equal(buffer_dtype: Tuple[Buffer, Any], pdcol: pandas.DataFrame):

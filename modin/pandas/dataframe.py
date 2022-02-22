@@ -33,6 +33,7 @@ import numpy as np
 import sys
 from typing import IO, Optional, Union, Iterator
 import warnings
+from modin.config.envvars import StorageFormat
 
 from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
@@ -111,6 +112,20 @@ class DataFrame(BasePandasDataset):
         # use this list to update inplace when there is a shallow copy.
         self._siblings = []
         Engine.subscribe(_update_engine)
+
+        if data is not None and hasattr(data, "__dataframe__"):
+            if StorageFormat.get() == "Pandas":
+                from modin.core.dataframe.pandas.dataframe.protocol.utils import (
+                    from_dataframe,
+                )
+                from modin.core.storage_formats.pandas.query_compiler import (
+                    PandasQueryCompiler,
+                )
+
+                modin_df = from_dataframe(data)
+                self._query_compiler = PandasQueryCompiler(modin_df)
+                return
+
         if isinstance(data, (DataFrame, Series)):
             self._query_compiler = data._query_compiler.copy()
             if index is not None and any(i not in data.index for i in index):
