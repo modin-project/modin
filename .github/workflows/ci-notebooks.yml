@@ -69,7 +69,7 @@ jobs:
           environment-file: requirements/env_omnisci.yml
           channel-priority: strict
       - run: pip install .
-      - run: conda install black flake8 flake8-print nbformat
+      - run: conda install black flake8 flake8-print nbformat nbconvert
       - run: conda list
       - run: black --check --diff examples/tutorial/jupyter/execution/omnisci_on_native/test/test_notebooks.py
       - run: flake8 --enable=T examples/tutorial/jupyter/execution/omnisci_on_native/test/test_notebooks.py
