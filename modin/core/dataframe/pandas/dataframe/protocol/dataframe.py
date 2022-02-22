@@ -464,8 +464,8 @@ class Column:
 
     Parameters
     ----------
-    column : DataFrame
-        A ``DataFrame`` object.
+    column : PandasDataframe
+        A ``PandasDataframe`` object.
     allow_copy : bool, default: True
         A keyword that defines whether or not the library is allowed
         to make a copy of the data. For example, copying data would be necessary
@@ -503,7 +503,7 @@ class Column:
         """
         Size of the column, in elements.
 
-        Corresponds to DataFrame.num_rows() if column is a single chunk;
+        Corresponds to `DataFrame.num_rows()` if column is a single chunk;
         equal to size of this current chunk otherwise.
 
         Returns
@@ -564,11 +564,22 @@ class Column:
         if not isinstance(dtype, pd.CategoricalDtype) and dtype.kind == "O":
             return (DTypeKind.STRING, 8, "u", "=")
 
-        return self._dtype_from_pandasdtype(dtype)
+        return self._dtype_from_pandas_dtype(dtype)
 
-    def _dtype_from_pandasdtype(self, dtype) -> Tuple[DTypeKind, int, str, str]:
+    def _dtype_from_pandas_dtype(self, dtype) -> Tuple[DTypeKind, int, str, str]:
         """
+        Deduce dtype from pandas dtype.
+
         See `self.dtype` for details.
+
+        Parameters
+        ----------
+        dtype : any
+            A pandas dtype.
+
+        Returns
+        -------
+        tuple
         """
         # Note: 'c' (complex) not handled yet (not in array spec v1).
         #       'b', 'B' (bytes), 'S', 'a', (old-style string) 'V' (void) not handled
@@ -632,13 +643,16 @@ class Column:
                 "categorical dtype!"
             )
 
-        ordered = self._col.to_pandas().squeeze(axis=1).dtype.ordered
+        # TODO: Raise an exception if ``self._allow_copy==False``?
+        pandas_series = self._col.to_pandas().squeeze(axis=1)
+        ordered = pandas_series.dtype.ordered
         is_dictionary = True
         # NOTE: this shows the children approach is better, transforming
         # `categories` to a "mapping" dict is inefficient
         # codes = self._col.values.codes  # ndarray, length `self.size`
         # categories.values is ndarray of length n_categories
-        categories = self._col.to_pandas().squeeze(axis=1).values.categories.values
+        # TODO: Raise an exception if ``self._allow_copy==False``?
+        categories = pandas_series.values.categories.values
         mapping = {ix: val for ix, val in enumerate(categories)}
         return ordered, is_dictionary, mapping
 
@@ -750,8 +764,8 @@ class Column:
             for length in self._col._row_lengths:
                 yield Column(
                     DataFrame(
-                        self._df.mask(row_positions=range(length), col_positions=None),
-                        allow_copy=self._df._allow_copy,
+                        self._col.mask(row_positions=range(length), col_positions=None),
+                        allow_copy=self._col._allow_copy,
                         offset=offset,
                     )
                 )
@@ -762,24 +776,24 @@ class Column:
                 # TODO: raise exception in this case
                 new_row_lengths += 1
 
-            new_partitions = self._df._partition_mgr_cls.map_axis_partitions(
+            new_partitions = self._col._partition_mgr_cls.map_axis_partitions(
                 0,
-                self._df._partitions,
+                self._col._partitions,
                 lambda df: df,
                 keep_partitioning=False,
                 lengths=new_row_lengths,
             )
-            new_df = self._df.__constructor__(
+            new_df = self._col.__constructor__(
                 new_partitions,
-                self._df.index,
-                self._df.columns,
+                self._col.index,
+                self._col.columns,
                 new_row_lengths,
-                self._df._column_widths,
+                self._col._column_widths,
             )
             for length in new_df._row_lengths:
                 yield Column(
                     DataFrame(
-                        self._df.mask(row_positions=range(length), col_positions=None),
+                        self._col.mask(row_positions=range(length), col_positions=None),
                         allow_copy=self._allow_copy,
                         offset=offset,
                     )
@@ -837,7 +851,7 @@ class Column:
             pandas_series = self._col.to_pandas().squeeze(axis=1)
             codes = pandas_series.values.codes
             buffer = Buffer(codes, allow_copy=self._allow_copy)
-            dtype = self._dtype_from_pandasdtype(codes.dtype)
+            dtype = self._dtype_from_pandas_dtype(codes.dtype)
         elif dtype[0] == _k.STRING:
             # Marshal the strings from a NumPy object array into a byte array
             buf = self._col.to_numpy().flatten()
@@ -1044,10 +1058,6 @@ class DataFrame(object):
         return len(self._df.columns)
 
     def num_rows(self) -> int:
-        # copied from the initial implementation
-        # TODO: not happy with Optional, but need to flag it may be expensive
-        #       why include it if it may be None - what do we expect consumers
-        #       to do here?
         """
         Return the number of rows in the DataFrame, if available.
 
@@ -1131,6 +1141,8 @@ class DataFrame(object):
         """
         Create a new DataFrame by selecting a subset of columns by index.
 
+        Parameters
+        ----------
         names : Sequence[int]
             Column indices to be selected out of the DataFrame.
 
