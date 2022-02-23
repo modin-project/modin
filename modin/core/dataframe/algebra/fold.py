@@ -20,7 +20,7 @@ class Fold(Operator):
     """Builder class for Fold functions."""
 
     @classmethod
-    def call(cls, fold_function, axis=None):
+    def call(cls, fold_function):
         """
         Build Fold operator that will be performed across rows/columns.
 
@@ -28,8 +28,6 @@ class Fold(Operator):
         ----------
         fold_function : callable(pandas.DataFrame) -> pandas.DataFrame
             Function to apply across rows/columns.
-        axis : int, optional
-            Specifies axis to apply function along.
 
         Returns
         -------
@@ -37,12 +35,11 @@ class Fold(Operator):
             Function that takes query compiler and executes Fold function.
         """
 
-        def caller(query_compiler, *args, **kwargs):
+        def caller(query_compiler, axis=None, *args, **kwargs):
             """Execute Fold function against passed query compiler."""
-            _axis = kwargs.get("axis") if axis is None else axis
             return query_compiler.__constructor__(
                 query_compiler._modin_frame.fold(
-                    cls.validate_axis(_axis),
+                    cls.validate_axis(axis),
                     lambda x: fold_function(x, *args, **kwargs),
                 )
             )

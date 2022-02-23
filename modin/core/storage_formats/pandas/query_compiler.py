@@ -1160,9 +1160,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             )(self)
 
-    def rolling_aggregate(self, rolling_args, func, *args, **kwargs):
+    def rolling_aggregate(self, axis, rolling_args, func, *args, **kwargs):
         new_modin_frame = self._modin_frame.apply_full_axis(
-            0,
+            axis,
             lambda df: pandas.DataFrame(
                 df.rolling(*rolling_args).aggregate(func=func, *args, **kwargs)
             ),
