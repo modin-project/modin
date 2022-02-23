@@ -1621,7 +1621,7 @@ class TestExcel:
         # Test for reading excel dataframe with every other row as a NaN value
         eval_io(
             fn_name="read_excel",
-            io="modin/pandas/test/data/test_every_other.xlsx",
+            io="modin/pandas/test/data/every_other_row_nan.xlsx",
         )
 
     @pytest.mark.parametrize(
