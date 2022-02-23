@@ -123,8 +123,14 @@ def find_common_type_cat(types):
     """
     if all(isinstance(t, pandas.CategoricalDtype) for t in types):
         if all(t.ordered for t in types):
+            categories = np.unique([c for t in types for c in t.categories])[0]
+            if categories.ndim != 0:
+                categories = np.sort(categories)
+            else:
+                # Cannot use np.sort() on array with ndim == 0
+                categories = [categories.tolist()]
             return pandas.CategoricalDtype(
-                np.sort(np.unique([c for t in types for c in t.categories])[0]),
+                categories,
                 ordered=True,
             )
         return union_categoricals(
