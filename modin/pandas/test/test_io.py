@@ -1600,6 +1600,30 @@ class TestExcel:
         modin_df = pd.read_excel(path)
         assert str(modin_df)
 
+    @check_file_leaks
+    def test_read_excel_empty_rows(self):
+        # Test parsing empty rows in middle of excel dataframe as NaN values
+        eval_io(
+            fn_name="read_excel",
+            io="modin/pandas/test/data/test_empty_rows.xlsx",
+        )
+
+    @check_file_leaks
+    def test_read_excel_border_rows(self):
+        # Test parsing border rows as NaN values in excel dataframe
+        eval_io(
+            fn_name="read_excel",
+            io="modin/pandas/test/data/test_border_rows.xlsx",
+        )
+
+    @check_file_leaks
+    def test_read_excel_every_other_nan(self):
+        # Test for reading excel dataframe with every other row as a NaN value
+        eval_io(
+            fn_name="read_excel",
+            io="modin/pandas/test/data/every_other_row_nan.xlsx",
+        )
+
     @pytest.mark.parametrize(
         "sheet_name",
         [
