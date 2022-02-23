@@ -1387,6 +1387,14 @@ class TestParquet:
         finally:
             teardown_test_files([parquet_fname, csv_fname])
 
+    def test_read_empty_parquet_file(self):
+        test_df = pandas.DataFrame()
+        with tempfile.TemporaryDirectory() as directory:
+            path = f"{directory}/data"
+            os.makedirs(path)
+            test_df.to_parquet(path + "/part-00000.parquet")
+            eval_io(fn_name="read_parquet", path=path)
+
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
