@@ -17,7 +17,9 @@ import pytest
 import pandas
 import numpy as np
 
-from modin.core.dataframe.base.dataframe.protocol.utils import pandas_dtype_to_arrow_c
+from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
+    pandas_dtype_to_arrow_c,
+)
 
 
 # TODO: use ArrowSchema to get reference C-string.

@@ -24,7 +24,7 @@ from modin.conftest import (  # noqa F401 (unused import, actually used in `test
 
 def test_sanity():
     """Test that the DataFrame protocol module is valid and could be imported correctly."""
-    from modin.core.dataframe.base.dataframe.protocol import (  # noqa
+    from modin.core.dataframe.base.exchange.dataframe_protocol import (  # noqa
         ProtocolDataframe,
     )
 
