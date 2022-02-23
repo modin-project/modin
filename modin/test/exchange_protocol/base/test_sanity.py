@@ -16,10 +16,10 @@
 import pytest
 import modin.pandas as pd
 
+from modin.pandas.test.utils import default_to_pandas_ignore_string
 from modin.conftest import (  # noqa F401 (unused import, actually used in `test_basic_io`)
     get_unique_base_execution,
 )
-from modin.pandas.test.utils import default_to_pandas_ignore_string
 
 
 def test_sanity():
