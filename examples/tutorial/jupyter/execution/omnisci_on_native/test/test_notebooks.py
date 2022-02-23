@@ -113,8 +113,8 @@ def test_omnisci_exercise_2():
 
     _replace_str(
         nb,
-        'path = "s3://dask-data/nyc-taxi/2015/yellow_tripdata_2015-01.csv"',
         '# path = "s3://dask-data/nyc-taxi/2015/yellow_tripdata_2015-01.csv"',
+        'path = "s3://dask-data/nyc-taxi/2015/yellow_tripdata_2015-01.csv"',
     )
 
     new_optional_cell = f'path = "{test_dataset_path}"\n' + download_taxi_dataset
