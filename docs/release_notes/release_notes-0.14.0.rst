@@ -26,7 +26,6 @@ Key Features and Updates
   * REFACTOR-#3994: remove code duplication for `get_indices` function (#3995)
   * REFACTOR-#4213: Refactor `modin/examples/tutorial/` directory (#4214)
   * REFACTOR-#4206: add assert check into `__init__` method of `PandasOnDaskDataframePartition` class (#4207)
-  * REFACTOR-#4213: Refactor `modin/examples/tutorial/` directory (#4214)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
