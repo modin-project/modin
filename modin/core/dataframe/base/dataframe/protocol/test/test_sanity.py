@@ -16,6 +16,11 @@
 import pytest
 import modin.pandas as pd
 
+from modin.conftest import (  # noqa F401 (unused import, actually used in `test_basic_io`)
+    get_unique_base_execution,
+)
+from modin.pandas.test.utils import default_to_pandas_ignore_string
+
 
 def test_sanity():
     """Test that the DataFrame protocol module is valid and could be imported correctly."""
@@ -24,7 +29,10 @@ def test_sanity():
     )
 
 
-def test_basic_io():
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+def test_basic_io(
+    get_unique_base_execution,  # noqa F811 (redefinition of unused `get_unique_base_execution`)
+):
     """Test that the protocol IO functions actually reach their implementation with no errors."""
 
     class TestPassed(BaseException):
@@ -34,10 +42,9 @@ def test_basic_io():
         """Dummy method emulating that the code path reached the exchange protocol implementation."""
         raise TestPassed
 
-    from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-
-    BaseQueryCompiler.from_dataframe = dummy_io_method
-    BaseQueryCompiler.to_dataframe = dummy_io_method
+    query_compiler_cls = get_unique_base_execution
+    query_compiler_cls.from_dataframe = dummy_io_method
+    query_compiler_cls.to_dataframe = dummy_io_method
 
     from modin.pandas.utils import from_dataframe
 

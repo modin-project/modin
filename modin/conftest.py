@@ -44,6 +44,7 @@ modin.utils._make_api_url = _saving_make_api_url
 import modin  # noqa: E402
 import modin.config  # noqa: E402
 from modin.config import IsExperimental, TestRayClient  # noqa: E402
+import uuid  # noqa: E402
 
 from modin.core.storage_formats import (  # noqa: E402
     PandasQueryCompiler,
@@ -250,6 +251,41 @@ class BaseOnPythonFactory(factories.BaseFactory):
 def set_base_execution(name=BASE_EXECUTION_NAME):
     setattr(factories, f"{name}Factory", BaseOnPythonFactory)
     modin.set_execution(engine="python", storage_format=name.split("On")[0])
+
+
+@pytest.fixture(scope="function")
+def get_unique_base_execution():
+    """Setup unique execution for a single function and yield its QueryCompiler that's suitable for inplace modifications."""
+    # It's better to use decimal IDs rather than hex ones due to factory names formatting
+    execution_id = int(uuid.uuid4().hex, 16)
+    format_name = f"Base{execution_id}"
+    engine_name = "Python"
+    execution_name = f"{format_name}On{engine_name}"
+
+    # Dynamically building all the required classes to form a new execution
+    base_qc = type(format_name, (TestQC,), {})
+    base_io = type(
+        f"{execution_name}IO", (BaseOnPythonIO,), {"query_compiler_cls": base_qc}
+    )
+    base_factory = type(
+        f"{execution_name}Factory",
+        (BaseOnPythonFactory,),
+        {"prepare": classmethod(lambda cls: setattr(cls, "io_cls", base_io))},
+    )
+
+    # Setting up the new execution
+    setattr(factories, f"{execution_name}Factory", base_factory)
+    old_engine, old_format = modin.set_execution(
+        engine=engine_name, storage_format=format_name
+    )
+    yield base_qc
+
+    # Teardown the new execution
+    modin.set_execution(engine=old_engine, storage_format=old_format)
+    try:
+        delattr(factories, f"{execution_name}Factory")
+    except AttributeError:
+        pass
 
 
 def pytest_configure(config):
