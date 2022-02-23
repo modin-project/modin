@@ -252,7 +252,7 @@ class CSVGlobDispatcher(CSVDispatcher):
                     # column "a_b".
                     if isinstance(date, list):
                         for i, part in enumerate(date):
-                            if not isinstance(part, str):
+                            if isinstance(part, int):
                                 date[i] = column_names[part]
                         new_col_name = "_".join(date)
                         column_names = column_names.drop(date).insert(0, new_col_name)
