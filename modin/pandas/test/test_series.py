@@ -2132,11 +2132,11 @@ def test_iloc_assigning_scalar_none_to_string_series():
 
 
 def test_categorical_dataframe_ordering():
-    data = {'a': [1, 2, 3], 'b': [4, 5, 6]}
+    data = {"a": [1, 2, 3], "b": [4, 5, 6]}
     mdf = pd.DataFrame(data)
     pdf = pandas.DataFrame(data)
-    mdf['a'] = pd.Categorical(mdf['a'], ordered=True)
-    pdf['a'] = pandas.Categorical(pdf['a'], ordered=True)
+    mdf["a"] = pd.Categorical(mdf["a"], ordered=True)
+    pdf["a"] = pandas.Categorical(pdf["a"], ordered=True)
     df_equals(mdf, pdf)
 
 
