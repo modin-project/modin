@@ -1,6 +1,9 @@
 PandasDataframeAxisPartition
 """"""""""""""""""""""""""""
 
+The class implements abstract interface methods from :py:class:`~modin.core.dataframe.base.partitioning.axis_partition.BaseDataframeAxisPartition`
+giving the means for a sibling :doc:`partition manager<partition_manager>` to actually work with the axis-wide partitions.
+
 The class is base for any axis partition class of ``pandas`` storage format.
 
 Subclasses must implement ``list_of_blocks`` which represents data wrapped by the :py:class:`~modin.core.dataframe.pandas.partitioning.partition.PandasDataframePartition`

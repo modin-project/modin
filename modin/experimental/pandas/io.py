@@ -20,7 +20,7 @@ from typing import Union, IO, AnyStr, Callable, Optional
 
 import pandas
 import pandas._libs.lib as lib
-from pandas._typing import CompressionOptions, FilePathOrBuffer, StorageOptions
+from pandas._typing import CompressionOptions, StorageOptions
 
 from . import DataFrame
 from modin.config import IsExperimental, Engine
@@ -191,7 +191,7 @@ def _read(**kwargs) -> DataFrame:
     General documentation is available in `modin.pandas.read_csv`.
 
     This experimental feature provides parallel reading from multiple csv files which are
-    defined by glob pattern. Works for local files only!
+    defined by glob pattern.
 
     Parameters
     ----------
@@ -201,6 +201,27 @@ def _read(**kwargs) -> DataFrame:
     Returns
     -------
     modin.DataFrame
+
+    Examples
+    --------
+    >>> import modin.experimental.pandas as pd
+    >>> df = pd.read_csv_glob("s3://nyc-tlc/trip data/yellow_tripdata_2020-1*")
+    UserWarning: `read_*` implementation has mismatches with pandas:
+    Data types of partitions are different! Please refer to the troubleshooting section of the Modin documentation to fix this issue.
+            VendorID tpep_pickup_datetime  ... total_amount  congestion_surcharge
+    0             1.0  2020-10-01 00:09:08  ...         4.30                   0.0
+    1             1.0  2020-10-01 00:09:19  ...        13.30                   2.5
+    2             1.0  2020-10-01 00:30:00  ...        15.36                   2.5
+    3             2.0  2020-10-01 00:56:46  ...        -3.80                   0.0
+    4             2.0  2020-10-01 00:56:46  ...         3.80                   0.0
+    ...           ...                  ...  ...          ...                   ...
+    4652008       NaN  2020-12-31 23:44:35  ...        43.95                   2.5
+    4652009       NaN  2020-12-31 23:41:36  ...        20.17                   2.5
+    4652010       NaN  2020-12-31 23:01:17  ...        78.98                   0.0
+    4652011       NaN  2020-12-31 23:31:29  ...        39.50                   0.0
+    4652012       NaN  2020-12-31 23:12:48  ...        20.64                   0.0
+
+    [4652013 rows x 18 columns]
     """
     Engine.subscribe(_update_engine)
 
@@ -224,17 +245,16 @@ read_csv_glob = _make_parser_func(sep=",")
 
 
 def read_pickle_distributed(
-    filepath_or_buffer: FilePathOrBuffer,
+    filepath_or_buffer,
     compression: Optional[str] = "infer",
     storage_options: StorageOptions = None,
 ):
     """
     Load pickled pandas object from files.
 
-    In experimental mode, we can use `*` in the filename. The files must contain
-    parts of one dataframe, which can be obtained, for example, by
-    `to_pickle_distributed` function.
-    Note: the number of partitions is equal to the number of input files.
+    This experimental feature provides parallel reading from multiple pickle files which are
+    defined by glob pattern. The files must contain parts of one dataframe, which can be
+    obtained, for example, by `to_pickle_distributed` function.
 
     Parameters
     ----------
@@ -256,6 +276,10 @@ def read_pickle_distributed(
     Returns
     -------
     unpickled : same type as object stored in file
+
+    Notes
+    -----
+    The number of partitions is equal to the number of input files.
     """
     Engine.subscribe(_update_engine)
     assert IsExperimental.get(), "This only works in experimental mode"
@@ -265,7 +289,7 @@ def read_pickle_distributed(
 
 def to_pickle_distributed(
     self,
-    filepath_or_buffer: FilePathOrBuffer,
+    filepath_or_buffer,
     compression: CompressionOptions = "infer",
     protocol: int = pickle.HIGHEST_PROTOCOL,
     storage_options: StorageOptions = None,
@@ -273,8 +297,8 @@ def to_pickle_distributed(
     """
     Pickle (serialize) object to file.
 
-    If `*` in the filename all partitions are written to their own separate file,
-    otherwise default pandas implementation is used.
+    This experimental feature provides parallel writing into multiple pickle files which are
+    defined by glob pattern, otherwise (without glob pattern) default pandas implementation is used.
 
     Parameters
     ----------
@@ -303,8 +327,6 @@ def to_pickle_distributed(
         this argument with a non-fsspec URL. See the fsspec and backend storage
         implementation docs for the set of allowed keys and values.
     """
-    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-
     obj = self
     Engine.subscribe(_update_engine)
     if isinstance(self, DataFrame):

@@ -17,13 +17,16 @@ import pandas
 from pandas.errors import ParserWarning
 import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
+from pathlib import Path
 from collections import OrderedDict
 from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
 from modin.config import TestDatasetSize, Engine, StorageFormat, IsExperimental
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 import pyarrow as pa
 import os
+from scipy import sparse
 import sys
 import shutil
 import sqlalchemy as sa
@@ -46,6 +49,7 @@ from .utils import (
     teardown_test_file,
     teardown_test_files,
     generate_dataframe,
+    default_to_pandas_ignore_string,
 )
 
 if StorageFormat.get() == "Omnisci":
@@ -70,6 +74,13 @@ except ImportError:
 
 
 from modin.config import NPartitions
+
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+# TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
+# of defaulting to pandas.
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 NPartitions.put(4)
 
@@ -609,7 +620,7 @@ class TestCsv:
             "utf8",
             pytest.param(
                 "unicode_escape",
-                marks=pytest.mark.skip(
+                marks=pytest.mark.skipif(
                     condition=sys.version_info < (3, 9),
                     reason="https://bugs.python.org/issue45461",
                 ),
@@ -923,7 +934,7 @@ class TestCsv:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
     def test_read_csv_default_to_pandas(self):
-        with pytest.warns(UserWarning):
+        with warns_that_defaulting_to_pandas():
             # This tests that we default to pandas on a buffer
             from io import StringIO
 
@@ -1132,6 +1143,59 @@ class TestCsv:
             index_col="col1",
         )
 
+    @pytest.mark.parametrize(
+        "skiprows",
+        [
+            [x for x in range(10)],
+            [x + 5 for x in range(15)],
+            [x for x in range(10) if x % 2 == 0],
+            [x + 5 for x in range(15) if x % 2 == 0],
+            lambda x: x % 2,
+            lambda x: x > 20,
+            lambda x: x < 20,
+            lambda x: True,
+            lambda x: x in [10, 20],
+            pytest.param(
+                lambda x: x << 10,
+                marks=pytest.mark.skipif(
+                    condition="config.getoption('--simulate-cloud').lower() != 'off'",
+                    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
+                ),
+            ),
+        ],
+    )
+    @pytest.mark.parametrize("header", ["infer", None, 0, 1, 150])
+    def test_read_csv_skiprows_corner_cases(self, skiprows, header):
+        eval_io(
+            fn_name="read_csv",
+            check_kwargs_callable=not callable(skiprows),
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            skiprows=skiprows,
+            header=header,
+            dtype="str",  # to avoid issues with heterogeneous data
+        )
+
+    def test_to_csv_with_index(self):
+        cols = 100
+        arows = 20000
+        keyrange = 100
+        values = np.vstack(
+            [
+                np.random.choice(keyrange, size=(arows)),
+                np.random.normal(size=(cols, arows)),
+            ]
+        ).transpose()
+        modin_df = pd.DataFrame(
+            values,
+            columns=["key"] + ["avalue" + str(i) for i in range(1, 1 + cols)],
+        ).set_index("key")
+        pandas_df = pandas.DataFrame(
+            values,
+            columns=["key"] + ["avalue" + str(i) for i in range(1, 1 + cols)],
+        ).set_index("key")
+        eval_to_file(modin_df, pandas_df, "to_csv", "csv")
+
 
 class TestTable:
     def test_read_table(self, make_csv_file):
@@ -1333,6 +1397,14 @@ class TestParquet:
         finally:
             teardown_test_files([parquet_fname, csv_fname])
 
+    def test_read_empty_parquet_file(self):
+        test_df = pandas.DataFrame()
+        with tempfile.TemporaryDirectory() as directory:
+            path = f"{directory}/data"
+            os.makedirs(path)
+            test_df.to_parquet(path + "/part-00000.parquet")
+            eval_io(fn_name="read_parquet", path=path)
+
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
@@ -1402,7 +1474,7 @@ class TestJson:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_json_string_bytes(self, data):
-        with pytest.warns(UserWarning):
+        with warns_that_defaulting_to_pandas():
             modin_df = pd.read_json(data)
         # For I/O objects we need to rewind to reuse the same object.
         if hasattr(data, "seek"):
@@ -1528,6 +1600,30 @@ class TestExcel:
         modin_df = pd.read_excel(path)
         assert str(modin_df)
 
+    @check_file_leaks
+    def test_read_excel_empty_rows(self):
+        # Test parsing empty rows in middle of excel dataframe as NaN values
+        eval_io(
+            fn_name="read_excel",
+            io="modin/pandas/test/data/test_empty_rows.xlsx",
+        )
+
+    @check_file_leaks
+    def test_read_excel_border_rows(self):
+        # Test parsing border rows as NaN values in excel dataframe
+        eval_io(
+            fn_name="read_excel",
+            io="modin/pandas/test/data/test_border_rows.xlsx",
+        )
+
+    @check_file_leaks
+    def test_read_excel_every_other_nan(self):
+        # Test for reading excel dataframe with every other row as a NaN value
+        eval_io(
+            fn_name="read_excel",
+            io="modin/pandas/test/data/every_other_row_nan.xlsx",
+        )
+
     @pytest.mark.parametrize(
         "sheet_name",
         [
@@ -1644,7 +1740,9 @@ class TestHdf:
 
             modin_store.close()
             pandas_store.close()
-            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
+            modin_df = pandas.read_hdf(unique_filename_modin, key="foo", mode="r")
+            pandas_df = pandas.read_hdf(unique_filename_pandas, key="foo", mode="r")
+            df_equals(modin_df, pandas_df)
             assert isinstance(modin_store, pd.HDFStore)
 
             handle, hdf_file = tempfile.mkstemp(suffix=".hdf5", prefix="test_read")
@@ -1706,10 +1804,10 @@ class TestSql:
             index_col="index",
         )
 
-        with pytest.warns(UserWarning):
+        with warns_that_defaulting_to_pandas():
             pd.read_sql_query(query, conn)
 
-        with pytest.warns(UserWarning):
+        with warns_that_defaulting_to_pandas():
             pd.read_sql_table(table, conn)
 
         # Test SQLAlchemy engine
@@ -1888,19 +1986,7 @@ class TestFwf:
 
         df_equals(modin_df, pd_df)
 
-    @pytest.mark.parametrize(
-        "nrows",
-        [
-            pytest.param(
-                13,
-                marks=pytest.mark.xfail(
-                    Engine.get() == "Ray",
-                    reason="read_fwf bug on pandas side: pandas-dev/pandas#44021",
-                ),
-            ),
-            None,
-        ],
-    )
+    @pytest.mark.parametrize("nrows", [13, None])
     def test_fwf_file_skiprows(self, make_fwf_file, nrows):
         unique_filename = make_fwf_file()
 
@@ -2076,6 +2162,12 @@ class TestFeather:
             storage_options=storage_options,
         )
 
+    def test_read_feather_path_object(self, make_feather_file):
+        eval_io(
+            fn_name="read_feather",
+            path=Path(make_feather_file()),
+        )
+
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
@@ -2146,6 +2238,18 @@ class TestPickle:
 def test_from_arrow():
     _, pandas_df = create_test_dfs(TEST_DATA)
     modin_df = from_arrow(pa.Table.from_pandas(pandas_df))
+    df_equals(modin_df, pandas_df)
+
+
+@pytest.mark.xfail(
+    condition="config.getoption('--simulate-cloud').lower() != 'off'",
+    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+)
+def test_from_spmatrix():
+    data = sparse.eye(3)
+    with pytest.warns(UserWarning, match="defaulting to pandas.*"):
+        modin_df = pd.DataFrame.sparse.from_spmatrix(data)
+    pandas_df = pandas.DataFrame.sparse.from_spmatrix(data)
     df_equals(modin_df, pandas_df)
 
 

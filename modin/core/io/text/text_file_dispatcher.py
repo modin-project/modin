@@ -27,7 +27,6 @@ from csv import QUOTE_NONE
 import numpy as np
 import pandas
 import pandas._libs.lib as lib
-from pandas._typing import FilePathOrBuffer
 from pandas.core.dtypes.common import is_list_like
 
 from modin.core.io.file_dispatcher import FileDispatcher, OpenFile
@@ -35,8 +34,9 @@ from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.utils import _inherit_docstrings
 from modin.core.io.text.utils import CustomNewlineIterator
 from modin.config import NPartitions
+from modin.error_message import ErrorMessage
 
-ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex, pandas.Int64Index]]
+ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
 IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
 
 
@@ -554,7 +554,7 @@ class TextFileDispatcher(FileDispatcher):
         """
         # This is the number of splits for the columns
         num_splits = min(len(column_names) or 1, NPartitions.get())
-        column_chunksize = compute_chunksize(df, num_splits, axis=1)
+        column_chunksize = compute_chunksize(df.shape[1], num_splits)
         if column_chunksize > len(column_names):
             column_widths = [len(column_names)]
             # This prevents us from unnecessarily serializing a bunch of empty
@@ -614,8 +614,10 @@ class TextFileDispatcher(FileDispatcher):
     @classmethod
     def check_parameters_support(
         cls,
-        filepath_or_buffer: FilePathOrBuffer,
+        filepath_or_buffer,
         read_kwargs: dict,
+        skiprows_md: Union[Sequence, callable, int],
+        header_size: int,
     ) -> bool:
         """
         Check support of only general parameters of `read_*` function.
@@ -626,12 +628,17 @@ class TextFileDispatcher(FileDispatcher):
             `filepath_or_buffer` parameter of `read_*` function.
         read_kwargs : dict
             Parameters of `read_*` function.
+        skiprows_md : int, array or callable
+            `skiprows` parameter modified for easier handling by Modin.
+        header_size : int
+            Number of rows that are used by header.
 
         Returns
         -------
         bool
             Whether passed parameters are supported or not.
         """
+        skiprows = read_kwargs.get("skiprows")
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(filepath_or_buffer):
                 return False
@@ -639,6 +646,24 @@ class TextFileDispatcher(FileDispatcher):
             return False
 
         if read_kwargs["chunksize"] is not None:
+            return False
+
+        skiprows_supported = True
+        if is_list_like(skiprows_md) and skiprows_md[0] < header_size:
+            skiprows_supported = False
+        elif callable(skiprows):
+            # check if `skiprows` callable gives True for any of header indices
+            is_intersection = any(
+                cls._get_skip_mask(pandas.RangeIndex(header_size), skiprows)
+            )
+            if is_intersection:
+                skiprows_supported = False
+
+        if not skiprows_supported:
+            ErrorMessage.single_warning(
+                "Values of `header` and `skiprows` parameters have intersections. "
+                "This case is unsupported by Modin, so pandas implementation will be used"
+            )
             return False
 
         return True
@@ -759,7 +784,7 @@ class TextFileDispatcher(FileDispatcher):
                 )
                 skiprows_partitioning = len(skiprows_md)
                 skiprows_md = 0
-            else:
+            elif skiprows_md[0] > header_size:
                 skiprows_md = skiprows_md - header_size
         elif callable(skiprows):
 
@@ -889,10 +914,10 @@ class TextFileDispatcher(FileDispatcher):
                     index=index_range.delete(skiprows_md)
                 )
             elif callable(skiprows_md):
-                mod_index = skiprows_md(index_range)
-                if not isinstance(mod_index, np.ndarray):
-                    mod_index = mod_index.to_numpy("bool")
-                view_idx = index_range[~mod_index]
+                skip_mask = cls._get_skip_mask(index_range, skiprows_md)
+                if not isinstance(skip_mask, np.ndarray):
+                    skip_mask = skip_mask.to_numpy("bool")
+                view_idx = index_range[~skip_mask]
                 new_query_compiler = new_query_compiler.view(index=view_idx)
             else:
                 raise TypeError(
@@ -912,7 +937,7 @@ class TextFileDispatcher(FileDispatcher):
         return new_query_compiler
 
     @classmethod
-    def _read(cls, filepath_or_buffer: FilePathOrBuffer, **kwargs):
+    def _read(cls, filepath_or_buffer, **kwargs):
         """
         Read data from `filepath_or_buffer` according to `kwargs` parameters.
 
@@ -964,6 +989,8 @@ class TextFileDispatcher(FileDispatcher):
         use_modin_impl = cls.check_parameters_support(
             filepath_or_buffer,
             kwargs,
+            skiprows_md,
+            header_size,
         )
         if not use_modin_impl:
             return cls.single_worker_read(
@@ -1037,3 +1064,33 @@ class TextFileDispatcher(FileDispatcher):
             nrows=kwargs["nrows"] if should_handle_skiprows else None,
         )
         return new_query_compiler
+
+    @classmethod
+    def _get_skip_mask(cls, rows_index: pandas.Index, skiprows: Callable):
+        """
+        Get mask of skipped by callable `skiprows` rows.
+
+        Parameters
+        ----------
+        rows_index : pandas.Index
+            Rows index to get mask for.
+        skiprows : Callable
+            Callable to check whether row index should be skipped.
+
+        Returns
+        -------
+        pandas.Index
+        """
+        try:
+            # direct `skiprows` call is more efficient than using of
+            # map method, but in some cases it can work incorrectly, e.g.
+            # when `skiprows` contains `in` operator
+            mask = skiprows(rows_index)
+            assert is_list_like(mask)
+        except (ValueError, TypeError, AssertionError):
+            # ValueError can be raised if `skiprows` callable contains membership operator
+            # TypeError is raised if `skiprows` callable contains bitwise operator
+            # AssertionError is raised if unexpected behavior was detected
+            mask = rows_index.map(skiprows)
+
+        return mask

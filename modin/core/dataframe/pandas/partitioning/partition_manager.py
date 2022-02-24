@@ -25,9 +25,9 @@ import warnings
 
 from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.utils import compute_chunksize
+from modin.core.dataframe.pandas.utils import concatenate
 from modin.config import NPartitions, ProgressBar, BenchmarkMode
 
-from pandas.api.types import union_categoricals
 import os
 
 
@@ -115,7 +115,7 @@ class PandasDataframePartitionManager(ABC):
     # END Abstract Methods
 
     @classmethod
-    def column_partitions(cls, partitions):
+    def column_partitions(cls, partitions, full_axis=True):
         """
         Get the list of `BaseDataframeAxisPartition` objects representing column-wise paritions.
 
@@ -123,6 +123,8 @@ class PandasDataframePartitionManager(ABC):
         ----------
         partitions : list-like
             List of (smaller) partitions to be combined to column-wise partitions.
+        full_axis : bool, default: True
+            Whether or not this partition contains the entire column axis.
 
         Returns
         -------
@@ -137,7 +139,9 @@ class PandasDataframePartitionManager(ABC):
         if not isinstance(partitions, list):
             partitions = [partitions]
         return [
-            cls._column_partitions_class(col) for frame in partitions for col in frame.T
+            cls._column_partitions_class(col, full_axis=full_axis)
+            for frame in partitions
+            for col in frame.T
         ]
 
     @classmethod
@@ -165,7 +169,7 @@ class PandasDataframePartitionManager(ABC):
         return [cls._row_partition_class(row) for frame in partitions for row in frame]
 
     @classmethod
-    def axis_partition(cls, partitions, axis):
+    def axis_partition(cls, partitions, axis, full_axis: bool = True):
         """
         Logically partition along given axis (columns or rows).
 
@@ -175,15 +179,25 @@ class PandasDataframePartitionManager(ABC):
             List of partitions to be combined.
         axis : {0, 1}
             0 for column partitions, 1 for row partitions.
+        full_axis : bool, default: True
+            Whether or not this partition contains the entire column axis.
 
         Returns
         -------
         list
             A list of `BaseDataframeAxisPartition` objects.
         """
+        make_column_partitions = axis == 0
+        if not full_axis and not make_column_partitions:
+            raise NotImplementedError(
+                (
+                    "Row partitions must contain the entire axis. We don't "
+                    + "support virtual partitioning for row partitions yet."
+                )
+            )
         return (
             cls.column_partitions(partitions)
-            if not axis
+            if make_column_partitions
             else cls.row_partitions(partitions)
         )
 
@@ -321,50 +335,47 @@ class PandasDataframePartitionManager(ABC):
             Axis to apply and broadcast over.
         apply_func : callable
             Function to apply.
-        left : NumPy 2D array
-            Left partitions.
-        right : NumPy 2D array
-            Right partitions.
+        left : np.ndarray
+            NumPy array of left partitions.
+        right : np.ndarray
+            NumPy array of right partitions.
         other_name : str, default: "r"
             Name of key-value argument for `apply_func` that
             is used to pass `right` to `apply_func`.
 
         Returns
         -------
-        NumPy array
-            An of partition objects.
+        np.ndarray
+            NumPy array of result partition objects.
 
         Notes
         -----
         This will often be overridden by implementations. It materializes the
         entire partitions of the right and applies them to the left through `apply`.
         """
-        [obj.drain_call_queue() for row in right for obj in row]
-        new_right = np.empty(shape=right.shape[axis], dtype=object)
 
-        if axis:
-            right = right.T
+        def map_func(df, *others):
+            other = pandas.concat(others, axis=axis ^ 1)
+            return apply_func(df, **{other_name: other})
 
-        for i in range(len(right)):
-            new_right[i] = pandas.concat(
-                [right[i][j].get() for j in range(len(right[i]))], axis=axis ^ 1
-            )
-        right = new_right.T if axis else new_right
-
-        new_partitions = np.array(
+        map_func = cls.preprocess_func(map_func)
+        rt_axis_parts = cls.axis_partition(right, axis ^ 1)
+        return np.array(
             [
                 [
                     part.apply(
-                        apply_func,
-                        **{other_name: right[col_idx] if axis else right[row_idx]},
+                        map_func,
+                        *(
+                            rt_axis_parts[col_idx].list_of_blocks
+                            if axis
+                            else rt_axis_parts[row_idx].list_of_blocks
+                        ),
                     )
                     for col_idx, part in enumerate(left[row_idx])
                 ]
                 for row_idx in range(len(left))
             ]
         )
-
-        return new_partitions
 
     @classmethod
     @wait_computations_if_benchmark_mode
@@ -601,32 +612,6 @@ class PandasDataframePartitionManager(ABC):
             return np.append(left_parts, right_parts, axis=axis)
 
     @classmethod
-    def concatenate(cls, dfs):
-        """
-        Concatenate pandas DataFrames with saving 'category' dtype.
-
-        Parameters
-        ----------
-        dfs : list
-            List of pandas DataFrames to concatenate.
-
-        Returns
-        -------
-        pandas.DataFrame
-            A pandas DataFrame
-        """
-        categoricals_columns = set.intersection(
-            *[set(df.select_dtypes("category").columns.tolist()) for df in dfs]
-        )
-
-        for col in categoricals_columns:
-            uc = union_categoricals([df[col] for df in dfs])
-            for df in dfs:
-                df[col] = pandas.Categorical(df[col], categories=uc.categories)
-
-        return pandas.concat(dfs)
-
-    @classmethod
     def to_pandas(cls, partitions):
         """
         Convert NumPy array of PandasDataframePartition to pandas DataFrame.
@@ -662,7 +647,7 @@ class PandasDataframePartitionManager(ABC):
         if len(df_rows) == 0:
             return pandas.DataFrame()
         else:
-            return cls.concatenate(df_rows)
+            return concatenate(df_rows)
 
     @classmethod
     def to_numpy(cls, partitions, **kwargs):
@@ -712,7 +697,8 @@ class PandasDataframePartitionManager(ABC):
 
         num_splits = NPartitions.get()
         put_func = cls._partition_class.put
-        row_chunksize, col_chunksize = compute_chunksize(df, num_splits)
+        row_chunksize = compute_chunksize(df.shape[0], num_splits)
+        col_chunksize = compute_chunksize(df.shape[1], num_splits)
 
         bar_format = (
             "{l_bar}{bar}{r_bar}"
@@ -789,6 +775,28 @@ class PandasDataframePartitionManager(ABC):
         return cls.from_pandas(at.to_pandas(), return_dims=return_dims)
 
     @classmethod
+    def get_objects_from_partitions(cls, partitions):
+        """
+        Get the objects wrapped by `partitions`.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            NumPy array with ``PandasDataframePartition``-s.
+
+        Returns
+        -------
+        list
+            The objects wrapped by `partitions`.
+
+        Notes
+        -----
+        This method should be implemented in a more efficient way for engines that support
+        getting objects in parallel.
+        """
+        return [partition.get() for partition in partitions]
+
+    @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
         """
         Get the internal indices stored in the partitions.
@@ -817,16 +825,15 @@ class PandasDataframePartitionManager(ABC):
         func = cls.preprocess_func(index_func)
         if axis == 0:
             new_idx = (
-                [idx.apply(func).get() for idx in partitions.T[0]]
+                [idx.apply(func) for idx in partitions.T[0]]
                 if len(partitions.T)
                 else []
             )
         else:
             new_idx = (
-                [idx.apply(func).get() for idx in partitions[0]]
-                if len(partitions)
-                else []
+                [idx.apply(func) for idx in partitions[0]] if len(partitions) else []
             )
+        new_idx = cls.get_objects_from_partitions(new_idx)
         # TODO FIX INFORMATION LEAK!!!!1!!1!!
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
@@ -1201,11 +1208,23 @@ class PandasDataframePartitionManager(ABC):
                     col_internal_idx, remote_part, col_idx, axis=1
                 )
 
+                # We want to eventually make item_to_distribute an np.ndarray,
+                # but that doesn't work for setting a subset of a categorical
+                # column, as per https://github.com/modin-project/modin/issues/3736.
+                # In that case, `item` is not an ndarray but instead some
+                # categorical variable, which we we don't need to distribute
+                # at all. Note that np.ndarray is not hashable, so it can't
+                # be a categorical variable.
+                # TODO(https://github.com/pandas-dev/pandas/issues/44703): Delete
+                # this special case once the pandas bug is fixed.
                 if item_to_distribute is not None:
-                    item = item_to_distribute[
-                        row_position_counter : row_position_counter + row_offset,
-                        col_position_counter : col_position_counter + col_offset,
-                    ]
+                    if isinstance(item_to_distribute, np.ndarray):
+                        item = item_to_distribute[
+                            row_position_counter : row_position_counter + row_offset,
+                            col_position_counter : col_position_counter + col_offset,
+                        ]
+                    else:
+                        item = item_to_distribute
                     item = {"item": item}
                 else:
                     item = {}
@@ -1273,3 +1292,20 @@ class PandasDataframePartitionManager(ABC):
             Partitions of Modin Dataframe on which all deferred calls should be performed.
         """
         [part.drain_call_queue() for row in partitions for part in row]
+
+    @classmethod
+    def rebalance_partitions(cls, partitions):
+        """
+        Return the provided array of partitions without rebalancing it.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            The 2-d array of partitions to rebalance.
+
+        Returns
+        -------
+        np.ndarray
+            The same 2-d array.
+        """
+        return partitions

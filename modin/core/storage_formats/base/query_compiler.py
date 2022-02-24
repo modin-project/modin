@@ -2077,7 +2077,7 @@ class BaseQueryCompiler(abc.ABC):
     # UDF (apply and agg) methods
     # There is a wide range of behaviors that are supported, so a lot of the
     # logic can get a bit convoluted.
-    def apply(self, func, axis, *args, **kwargs):
+    def apply(self, func, axis, raw=False, result_type=None, *args, **kwargs):
         """
         Apply passed function across given axis.
 
@@ -2088,6 +2088,17 @@ class BaseQueryCompiler(abc.ABC):
         axis : {0, 1}
             Target axis to apply the function along.
             0 is for index, 1 is for columns.
+        raw : bool, default: False
+            Whether to pass a high-level Series object (False) or a raw representation
+            of the data (True).
+        result_type : {"expand", "reduce", "broadcast", None}, default: None
+            Determines how to treat list-like return type of the `func` (works only if
+            a single function was passed):
+                - "expand": expand list-like result into columns.
+                - "reduce": keep result into a single cell (opposite of "expand").
+                - "broadcast": broadcast result to original data shape (overwrite the
+                  existing column/row with the function result).
+                - None: use "expand" strategy if Series is returned, "reduce" otherwise.
         *args : iterable
             Positional arguments to pass to `func`.
         **kwargs : dict
@@ -2099,13 +2110,22 @@ class BaseQueryCompiler(abc.ABC):
             QueryCompiler that contains the results of execution and is built by
             the following rules:
 
-            - Labels of specified axis are the passed functions names.
+            - Index of the specified axis contains: the names of the passed functions if multiple
+              functions are passed, otherwise: indices of the `func` result if "expand" strategy
+              is used, indices of the original frame if "broadcast" strategy is used, a single
+              label "__reduced__" if "reduce" strategy is used.
             - Labels of the opposite axis are preserved.
             - Each element is the result of execution of `func` against
               corresponding row/column.
         """
         return DataFrameDefault.register(pandas.DataFrame.apply)(
-            self, func=func, axis=axis, *args, **kwargs
+            self,
+            func=func,
+            axis=axis,
+            raw=raw,
+            result_type=result_type,
+            *args,
+            **kwargs,
         )
 
     def explode(self, column):
@@ -2134,7 +2154,7 @@ class BaseQueryCompiler(abc.ABC):
     # after the shuffle, there should be only a local map required.
 
     # FIXME: `map_args` and `reduce_args` leaked there from `PandasQueryCompiler.groupby_*`,
-    # pandas storage format implements groupby via MapReduce approach, but for other storage formats these
+    # pandas storage format implements groupby via TreeReduce approach, but for other storage formats these
     # parameters make no sense, they shouldn't be present in a base class.
 
     @doc_utils.doc_groupby_method(
@@ -2146,20 +2166,18 @@ class BaseQueryCompiler(abc.ABC):
         self,
         by,
         axis,
-        groupby_args,
-        map_args,
-        reduce_args=None,
-        numeric_only=True,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
         drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.count)(
             self,
             by=by,
             axis=axis,
-            groupby_args=groupby_args,
-            map_args=map_args,
-            reduce_args=reduce_args,
-            numeric_only=numeric_only,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
             drop=drop,
         )
 
@@ -2172,20 +2190,18 @@ class BaseQueryCompiler(abc.ABC):
         self,
         by,
         axis,
-        groupby_args,
-        map_args,
-        reduce_args=None,
-        numeric_only=True,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
         drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.any)(
             self,
             by=by,
             axis=axis,
-            groupby_args=groupby_args,
-            map_args=map_args,
-            reduce_args=reduce_args,
-            numeric_only=numeric_only,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
             drop=drop,
         )
 
@@ -2196,20 +2212,18 @@ class BaseQueryCompiler(abc.ABC):
         self,
         by,
         axis,
-        groupby_args,
-        map_args,
-        reduce_args=None,
-        numeric_only=True,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
         drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.min)(
             self,
             by=by,
             axis=axis,
-            groupby_args=groupby_args,
-            map_args=map_args,
-            reduce_args=reduce_args,
-            numeric_only=numeric_only,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
             drop=drop,
         )
 
@@ -2218,20 +2232,18 @@ class BaseQueryCompiler(abc.ABC):
         self,
         by,
         axis,
-        groupby_args,
-        map_args,
-        reduce_args=None,
-        numeric_only=True,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
         drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.prod)(
             self,
             by=by,
             axis=axis,
-            groupby_args=groupby_args,
-            map_args=map_args,
-            reduce_args=reduce_args,
-            numeric_only=numeric_only,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
             drop=drop,
         )
 
@@ -2242,20 +2254,18 @@ class BaseQueryCompiler(abc.ABC):
         self,
         by,
         axis,
-        groupby_args,
-        map_args,
-        reduce_args=None,
-        numeric_only=True,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
         drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.max)(
             self,
             by=by,
             axis=axis,
-            groupby_args=groupby_args,
-            map_args=map_args,
-            reduce_args=reduce_args,
-            numeric_only=numeric_only,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
             drop=drop,
         )
 
@@ -2268,20 +2278,18 @@ class BaseQueryCompiler(abc.ABC):
         self,
         by,
         axis,
-        groupby_args,
-        map_args,
-        reduce_args=None,
-        numeric_only=True,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
         drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.all)(
             self,
             by=by,
             axis=axis,
-            groupby_args=groupby_args,
-            map_args=map_args,
-            reduce_args=reduce_args,
-            numeric_only=numeric_only,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
             drop=drop,
         )
 
@@ -2290,20 +2298,18 @@ class BaseQueryCompiler(abc.ABC):
         self,
         by,
         axis,
-        groupby_args,
-        map_args,
-        reduce_args=None,
-        numeric_only=True,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
         drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.sum)(
             self,
             by=by,
             axis=axis,
-            groupby_args=groupby_args,
-            map_args=map_args,
-            reduce_args=reduce_args,
-            numeric_only=numeric_only,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
             drop=drop,
         )
 
@@ -2316,20 +2322,18 @@ class BaseQueryCompiler(abc.ABC):
         self,
         by,
         axis,
-        groupby_args,
-        map_args,
-        reduce_args=None,
-        numeric_only=True,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
         drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.size)(
             self,
             by=by,
             axis=axis,
-            groupby_args=groupby_args,
-            map_args=map_args,
-            reduce_args=reduce_args,
-            numeric_only=numeric_only,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
             drop=drop,
             method="size",
         )
@@ -2338,12 +2342,12 @@ class BaseQueryCompiler(abc.ABC):
     def groupby_agg(
         self,
         by,
-        is_multi_by,
-        axis,
         agg_func,
+        axis,
+        groupby_kwargs,
         agg_args,
         agg_kwargs,
-        groupby_kwargs,
+        how="axis_wise",
         drop=False,
     ):
         """
@@ -2353,20 +2357,23 @@ class BaseQueryCompiler(abc.ABC):
         ----------
         by : BaseQueryCompiler, column or index label, Grouper or list of such
             Object that determine groups.
-        is_multi_by : bool
-            If `by` is a QueryCompiler or list of such indicates whether it's
-            grouping on multiple columns/rows.
+        agg_func : str, dict or callable(Series | DataFrame) -> scalar | Series | DataFrame
+            Function to apply to the GroupBy object.
         axis : {0, 1}
             Axis to group and apply aggregation function along.
             0 is for index, when 1 is for columns.
-        agg_func : dict or callable(DataFrameGroupBy) -> DataFrame
-            Function to apply to the GroupBy object.
-        agg_args : dict
+        groupby_kwargs : dict
+            GroupBy parameters as expected by ``modin.pandas.DataFrame.groupby`` signature.
+        agg_args : list-like
             Positional arguments to pass to the `agg_func`.
         agg_kwargs : dict
             Key arguments to pass to the `agg_func`.
-        groupby_kwargs : dict
-            GroupBy parameters as expected by ``modin.pandas.DataFrame.groupby`` signature.
+        how : {'axis_wise', 'group_wise', 'transform'}, default: 'axis_wise'
+            How to apply passed `agg_func`:
+                - 'axis_wise': apply the function against each row/column.
+                - 'group_wise': apply the function against every group.
+                - 'transform': apply the function against every group and broadcast
+                  the result to the original Query Compiler shape.
         drop : bool, default: False
             If `by` is a QueryCompiler indicates whether or not by-data came
             from the `self`.
@@ -2382,14 +2389,360 @@ class BaseQueryCompiler(abc.ABC):
         elif drop and isinstance(by, type(self)):
             by = list(by.columns)
 
-        return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.aggregate)(
+        return GroupByDefault.register(GroupByDefault.get_aggregation_method(how))(
             self,
             by=by,
-            is_multi_by=is_multi_by,
-            axis=axis,
             agg_func=agg_func,
-            groupby_args=groupby_kwargs,
-            agg_args=agg_kwargs,
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="compute the mean value", result="mean value", refer_to="mean"
+    )
+    def groupby_mean(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="mean",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="compute unbiased skew", result="unbiased skew", refer_to="skew"
+    )
+    def groupby_skew(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="skew",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="compute cumulative sum",
+        result="sum of all the previous values",
+        refer_to="cumsum",
+    )
+    def groupby_cumsum(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="cumsum",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get cumulative maximum",
+        result="maximum of all the previous values",
+        refer_to="cummax",
+    )
+    def groupby_cummax(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="cummax",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get cumulative minimum",
+        result="minimum of all the previous values",
+        refer_to="cummin",
+    )
+    def groupby_cummin(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="cummin",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get cumulative production",
+        result="production of all the previous values",
+        refer_to="cumprod",
+    )
+    def groupby_cumprod(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="cumprod",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="compute standart deviation", result="standart deviation", refer_to="std"
+    )
+    def groupby_std(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="std",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="compute numerical rank", result="numerical rank", refer_to="rank"
+    )
+    def groupby_rank(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="rank",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="compute variance", result="variance", refer_to="var"
+    )
+    def groupby_var(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="var",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get the number of unique values",
+        result="number of unique values",
+        refer_to="nunique",
+    )
+    def groupby_nunique(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="nunique",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get the median value", result="median value", refer_to="median"
+    )
+    def groupby_median(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="median",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="compute specified quantile",
+        result="quantile value",
+        refer_to="quantile",
+    )
+    def groupby_quantile(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="quantile",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="fill NaN values",
+        result="`fill_value` if it was NaN, original value otherwise",
+        refer_to="fillna",
+    )
+    def groupby_fillna(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="fillna",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get data types", result="data type", refer_to="dtypes"
+    )
+    def groupby_dtypes(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="dtypes",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="shift data with the specified settings",
+        result="shifted value",
+        refer_to="shift",
+    )
+    def groupby_shift(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="shift",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
             drop=drop,
         )
 
@@ -3241,7 +3594,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, limit
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="number of non-NA values", refer_to="count", compatibility_params=False
     )
     def resample_count(self, resample_kwargs):
@@ -3267,7 +3620,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, method, limit
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="first element", refer_to="first", params="_method : str"
     )
     def resample_first(self, resample_kwargs, _method, *args, **kwargs):
@@ -3342,7 +3695,7 @@ class BaseQueryCompiler(abc.ABC):
             **kwargs,
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="last element", params="_method : str", refer_to="last"
     )
     def resample_last(self, resample_kwargs, _method, *args, **kwargs):
@@ -3350,7 +3703,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, _method, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="maximum value", params="_method : str", refer_to="max"
     )
     def resample_max(self, resample_kwargs, _method, *args, **kwargs):
@@ -3358,7 +3711,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, _method, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="mean value", params="_method : str", refer_to="mean"
     )
     def resample_mean(self, resample_kwargs, _method, *args, **kwargs):
@@ -3366,7 +3719,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, _method, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="median value", params="_method : str", refer_to="median"
     )
     def resample_median(self, resample_kwargs, _method, *args, **kwargs):
@@ -3374,7 +3727,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, _method, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="minimum value", params="_method : str", refer_to="min"
     )
     def resample_min(self, resample_kwargs, _method, *args, **kwargs):
@@ -3388,7 +3741,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, limit
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="number of unique values", params="_method : str", refer_to="nunique"
     )
     def resample_nunique(self, resample_kwargs, _method, *args, **kwargs):
@@ -3457,7 +3810,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, func, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="product",
         params="""
         _method : str
@@ -3469,7 +3822,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, _method, min_count, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="quantile", params="q : float", refer_to="quantile"
     )
     def resample_quantile(self, resample_kwargs, q, *args, **kwargs):
@@ -3477,7 +3830,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, q, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="standart error of the mean",
         params="ddof : int, default: 1",
         refer_to="sem",
@@ -3487,7 +3840,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, ddof, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="number of elements in a group", refer_to="size"
     )
     def resample_size(self, resample_kwargs, *args, **kwargs):
@@ -3495,7 +3848,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="standart deviation", params="ddof : int", refer_to="std"
     )
     def resample_std(self, resample_kwargs, ddof, *args, **kwargs):
@@ -3503,7 +3856,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, ddof, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="sum",
         params="""
         _method : str
@@ -3543,7 +3896,7 @@ class BaseQueryCompiler(abc.ABC):
             self, resample_kwargs, arg, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduction(
+    @doc_utils.doc_resample_reduce(
         result="variance", params="ddof : int", refer_to="var"
     )
     def resample_var(self, resample_kwargs, ddof, *args, **kwargs):

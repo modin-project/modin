@@ -12,12 +12,11 @@
 # governing permissions and limitations under the License.
 
 import pandas
+import warnings
 
-__pandas_version__ = "1.3.4"
+__pandas_version__ = "1.4.1"
 
 if pandas.__version__ != __pandas_version__:
-    import warnings
-
     warnings.warn(
         "The pandas version installed {} does not match the supported pandas version in"
         " Modin {}. This may cause undesired side effects!".format(
@@ -25,68 +24,69 @@ if pandas.__version__ != __pandas_version__:
         )
     )
 
-from pandas import (
-    eval,
-    cut,
-    factorize,
-    test,
-    qcut,
-    date_range,
-    period_range,
-    Index,
-    MultiIndex,
-    CategoricalIndex,
-    bdate_range,
-    DatetimeIndex,
-    Timedelta,
-    Timestamp,
-    to_timedelta,
-    set_eng_float_format,
-    options,
-    Flags,
-    set_option,
-    NaT,
-    PeriodIndex,
-    Categorical,
-    Interval,
-    UInt8Dtype,
-    UInt16Dtype,
-    UInt32Dtype,
-    UInt64Dtype,
-    SparseDtype,
-    Int8Dtype,
-    Int16Dtype,
-    Int32Dtype,
-    Int64Dtype,
-    Float32Dtype,
-    Float64Dtype,
-    StringDtype,
-    BooleanDtype,
-    CategoricalDtype,
-    DatetimeTZDtype,
-    IntervalDtype,
-    PeriodDtype,
-    RangeIndex,
-    Int64Index,
-    UInt64Index,
-    Float64Index,
-    TimedeltaIndex,
-    IntervalIndex,
-    IndexSlice,
-    Grouper,
-    array,
-    Period,
-    show_versions,
-    DateOffset,
-    timedelta_range,
-    infer_freq,
-    interval_range,
-    ExcelWriter,
-    datetime,
-    NamedAgg,
-    NA,
-    api,
-)
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    from pandas import (
+        eval,
+        cut,
+        factorize,
+        test,
+        qcut,
+        date_range,
+        period_range,
+        Index,
+        MultiIndex,
+        CategoricalIndex,
+        bdate_range,
+        DatetimeIndex,
+        Timedelta,
+        Timestamp,
+        to_timedelta,
+        set_eng_float_format,
+        options,
+        Flags,
+        set_option,
+        NaT,
+        PeriodIndex,
+        Categorical,
+        Interval,
+        UInt8Dtype,
+        UInt16Dtype,
+        UInt32Dtype,
+        UInt64Dtype,
+        SparseDtype,
+        Int8Dtype,
+        Int16Dtype,
+        Int32Dtype,
+        Int64Dtype,
+        Float32Dtype,
+        Float64Dtype,
+        StringDtype,
+        BooleanDtype,
+        CategoricalDtype,
+        DatetimeTZDtype,
+        IntervalDtype,
+        PeriodDtype,
+        RangeIndex,
+        Int64Index,
+        UInt64Index,
+        Float64Index,
+        TimedeltaIndex,
+        IntervalIndex,
+        IndexSlice,
+        Grouper,
+        array,
+        Period,
+        DateOffset,
+        timedelta_range,
+        infer_freq,
+        interval_range,
+        ExcelWriter,
+        datetime,
+        NamedAgg,
+        NA,
+        api,
+    )
 import os
 import multiprocessing
 
@@ -96,14 +96,12 @@ from modin.config import Engine, Parameter
 os.environ["OMP_NUM_THREADS"] = "1"
 
 _is_first_update = {}
-dask_client = None
 _NOINIT_ENGINES = {
     "Python",
 }  # engines that don't require initialization, useful for unit tests
 
 
 def _update_engine(publisher: Parameter):
-    global dask_client
     from modin.config import StorageFormat, CpuCount
     from modin.config.envvars import IsExperimental
     from modin.config.pubsub import ValueSource
@@ -114,13 +112,14 @@ def _update_engine(publisher: Parameter):
     ):
         publisher.put("Native")
         IsExperimental.put(True)
-    elif (
+    if (
         publisher.get() == "Native"
         and StorageFormat.get_value_source() == ValueSource.DEFAULT
     ):
         StorageFormat.put("Omnisci")
         IsExperimental.put(True)
-    elif publisher.get() == "Ray":
+
+    if publisher.get() == "Ray":
         if _is_first_update.get("Ray", True):
             from modin.core.execution.ray.common.utils import initialize_ray
 
@@ -233,6 +232,7 @@ from .general import (
     wide_to_long,
 )
 from .plotting import Plotting as plotting
+from modin.utils import show_versions
 
 __all__ = [
     "DataFrame",

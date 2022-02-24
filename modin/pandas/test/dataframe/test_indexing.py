@@ -37,13 +37,23 @@ from modin.pandas.test.utils import (
     eval_general,
     generate_multiindex,
     extra_test_parameters,
+    default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
+from modin.utils import get_current_execution
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+# TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
+# of defaulting to pandas.
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 def eval_setitem(md_df, pd_df, value, col=None, loc=None):
@@ -351,21 +361,33 @@ def test_loc(data):
     pandas_df_copy3.loc[lambda df: df[key1].isin(list(range(1000))), key1] = 42
     df_equals(modin_df_copy3, pandas_df_copy3)
 
-    # From issue #1775
-    df_equals(
-        modin_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
-        pandas_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
-    )
+    # Disabled for `BaseOnPython` because of the issue with `getitem_array`:
+    # https://github.com/modin-project/modin/issues/3701
+    if get_current_execution() != "BaseOnPython":
+        # From issue #1775
+        df_equals(
+            modin_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
+            pandas_df.loc[lambda df: df.iloc[:, 0].isin(list(range(1000)))],
+        )
 
-    # Read values, selecting rows with a callable and a column with a scalar.
-    df_equals(
-        pandas_df.loc[lambda df: df[key1].isin(list(range(1000))), key1],
-        modin_df.loc[lambda df: df[key1].isin(list(range(1000))), key1],
-    )
+        # Read values, selecting rows with a callable and a column with a scalar.
+        df_equals(
+            pandas_df.loc[lambda df: df[key1].isin(list(range(1000))), key1],
+            modin_df.loc[lambda df: df[key1].isin(list(range(1000))), key1],
+        )
 
     # From issue #1374
     with pytest.raises(KeyError):
         modin_df.loc["NO_EXIST"]
+
+
+# This tests the bug from https://github.com/modin-project/modin/issues/3736
+def test_loc_setting_single_categorical_column():
+    modin_df = pd.DataFrame({"status": ["a", "b", "c"]}, dtype="category")
+    pandas_df = pandas.DataFrame({"status": ["a", "b", "c"]}, dtype="category")
+    modin_df.loc[1:3, "status"] = "a"
+    pandas_df.loc[1:3, "status"] = "a"
+    df_equals(modin_df, pandas_df)
 
 
 def test_loc_multi_index():
@@ -577,6 +599,29 @@ def test_loc_series():
     df_equals(pd_df, md_df)
 
 
+@pytest.mark.parametrize("locator_name", ["loc", "iloc"])
+@pytest.mark.parametrize(
+    "slice_indexer",
+    [
+        slice(None, None, -2),
+        slice(1, 10, None),
+        slice(None, 10, None),
+        slice(10, None, None),
+        slice(10, None, -2),
+        slice(-10, None, -2),
+        slice(None, 1_000_000_000, None),
+    ],
+)
+def test_loc_iloc_slice_indexer(locator_name, slice_indexer):
+    md_df, pd_df = create_test_dfs(test_data_values[0])
+    # Shifting the index, so labels won't match its position
+    shifted_index = pandas.RangeIndex(1, len(md_df) + 1)
+    md_df.index = shifted_index
+    pd_df.index = shifted_index
+
+    eval_general(md_df, pd_df, lambda df: getattr(df, locator_name)[slice_indexer])
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_pop(request, data):
     modin_df = pd.DataFrame(data)
@@ -639,7 +684,7 @@ def test_reindex_like():
         columns=["temp_celsius", "windspeed"],
         index=pd.DatetimeIndex(["2014-02-12", "2014-02-13", "2014-02-15"]),
     )
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df2.reindex_like(df1)
 
 
@@ -1384,7 +1429,7 @@ def test_xs():
     }
     df = pd.DataFrame(data=d)
     df = df.set_index(["class", "animal", "locomotion"])
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df.xs("mammal")
 
 
@@ -1410,6 +1455,7 @@ def test___getitem__(data):
         (-3, -1),
         (1, -1, 2),
         (-1, 1, -1),
+        (None, None, 2),
     ]
 
     # slice test
@@ -1679,6 +1725,26 @@ def test___setitem__unhashable_list():
     modin_df[cols] = modin_df[cols]
     pandas_df = pandas.DataFrame([[0, 0]], columns=cols)
     pandas_df[cols] = pandas_df[cols]
+    df_equals(modin_df, pandas_df)
+
+
+def test___setitem__single_item_in_series():
+    # Test assigning a single item in a Series for issue
+    # https://github.com/modin-project/modin/issues/3860
+    modin_series = pd.Series(99)
+    pandas_series = pandas.Series(99)
+    modin_series[:1] = pd.Series(100)
+    pandas_series[:1] = pandas.Series(100)
+    df_equals(modin_series, pandas_series)
+
+
+def test___setitem__assigning_single_categorical_sets_correct_dtypes():
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/3895
+    modin_df = pd.DataFrame({"categories": ["A"]})
+    modin_df["categories"] = pd.Categorical(["A"])
+    pandas_df = pandas.DataFrame({"categories": ["A"]})
+    pandas_df["categories"] = pandas.Categorical(["A"])
     df_equals(modin_df, pandas_df)
 
 

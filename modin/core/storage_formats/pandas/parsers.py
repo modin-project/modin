@@ -189,6 +189,9 @@ class PandasParser(object):
 
             bio.seek(start)
             to_read = header + bio.read(end - start)
+        if "memory_map" in kwargs:
+            kwargs = kwargs.copy()
+            del kwargs["memory_map"]
         pandas_df = callback(BytesIO(to_read), **kwargs)
         index = (
             pandas_df.index
@@ -308,11 +311,17 @@ class PandasCSVGlobParser(PandasCSVParser):
         num_splits = kwargs.pop("num_splits", None)
         index_col = kwargs.get("index_col", None)
 
+        # `single_worker_read` just pass filename via chunks; need check
+        if isinstance(chunks, str):
+            return pandas.read_csv(chunks, **kwargs)
+
+        # pop `compression` from kwargs because `bio` below is uncompressed
+        compression = kwargs.pop("compression", "infer")
+        storage_options = kwargs.pop("storage_options", None) or {}
         pandas_dfs = []
         for fname, start, end in chunks:
             if start is not None and end is not None:
-                # pop "compression" from kwargs because bio is uncompressed
-                with OpenFile(fname, "rb", kwargs.pop("compression", "infer")) as bio:
+                with OpenFile(fname, "rb", compression, **storage_options) as bio:
                     if kwargs.get("encoding", None) is not None:
                         header = b"" + bio.readline()
                     else:
@@ -322,7 +331,12 @@ class PandasCSVGlobParser(PandasCSVParser):
                 pandas_dfs.append(pandas.read_csv(BytesIO(to_read), **kwargs))
             else:
                 # This only happens when we are reading with only one worker (Default)
-                return pandas.read_csv(fname, **kwargs)
+                return pandas.read_csv(
+                    fname,
+                    compression=compression,
+                    storage_options=storage_options,
+                    **kwargs,
+                )
 
         # Combine read in data.
         if len(pandas_dfs) > 1:
@@ -498,14 +512,14 @@ class PandasExcelParser(PandasParser):
             """
             b = match.group(0)
             return re.sub(
-                br"\d+",
+                rb"\d+",
                 lambda c: str(int(c.group(0).decode("utf-8")) - _skiprows).encode(
                     "utf-8"
                 ),
                 b,
             )
 
-        bytes_data = re.sub(br'r="[A-Z]*\d+"', update_row_nums, bytes_data)
+        bytes_data = re.sub(rb'r="[A-Z]*\d+"', update_row_nums, bytes_data)
         bytesio = BytesIO(excel_header + bytes_data + footer)
         # Use openpyxl to read/parse sheet data
         reader = WorksheetReader(ws, bytesio, ex.shared_strings, False)
@@ -550,12 +564,14 @@ class PandasExcelParser(PandasParser):
             has_index_names=is_list_like(header) and len(header) > 1,
             skiprows=skiprows,
             usecols=usecols,
+            skip_blank_lines=False,
             **kwargs,
         )
-        # In excel if you create a row with only a border (no values), this parser will
-        # interpret that as a row of NaN values. pandas discards these values, so we
-        # also must discard these values.
-        pandas_df = parser.read().dropna(how="all")
+        pandas_df = parser.read()
+        if len(pandas_df) > 1 and pandas_df.isnull().all().all():
+            # Drop NaN rows at the end of the DataFrame
+            pandas_df = pandas.DataFrame(columns=pandas_df.columns)
+
         # Since we know the number of rows that occur before this partition, we can
         # correctly assign the index in cases of RangeIndex. If it is not a RangeIndex,
         # the index is already correct because it came from the data.

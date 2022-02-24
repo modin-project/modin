@@ -15,7 +15,7 @@ jobs:
         with:
           activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.7
+          python-version: 3.8
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
@@ -29,6 +29,7 @@ jobs:
       - run: python -m pytest modin/test/storage_formats/pandas/test_internals.py
       - run: python -m pytest modin/test/test_envvar_npartitions.py
       - run: python -m pytest modin/test/test_partition_api.py
+      - uses: codecov/codecov-action@v2
 
   test-defaults:
     runs-on: ubuntu-latest
@@ -41,7 +42,7 @@ jobs:
     env:
       MODIN_MEMORY: 1000000000
       MODIN_TEST_DATASET_SIZE: "small"
-    name: Test ${{ matrix.execution }} execution, Python 3.7
+    name: Test ${{ matrix.execution }} execution, Python 3.8
     steps:
       - uses: actions/checkout@v2
         with:
@@ -50,7 +51,7 @@ jobs:
         with:
           activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.7
+          python-version: 3.8
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
@@ -66,7 +67,7 @@ jobs:
       - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
@@ -76,16 +77,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
-      - run: |
-          curl -o codecov https://codecov.io/bash
-          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
-          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
-          if sha512sum -c --ignore-missing --status SHA512SUM; then
-              bash ./codecov
-          else
-              echo 'CORRUPTED CODECOV SCRIPT!!!'
-              exit 10
-          fi
+      - uses: codecov/codecov-action@v2
 
   test-omnisci:
     runs-on: ubuntu-latest
@@ -96,7 +88,7 @@ jobs:
       MODIN_EXPERIMENTAL: "True"
       MODIN_ENGINE: "native"
       MODIN_STORAGE_FORMAT: "omnisci"
-    name: Test OmniSci storage format, Python 3.7
+    name: Test OmniSci storage format, Python 3.8
     steps:
       - uses: actions/checkout@v2
         with:
@@ -106,7 +98,7 @@ jobs:
         with:
           activate-environment: modin_on_omnisci
           environment-file: requirements/env_omnisci.yml
-          python-version: 3.7
+          python-version: 3.8
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
         run: |
@@ -114,18 +106,10 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
+      - run: pytest modin/test/storage_formats/omnisci/test_internals.py
       - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv
-      - run: |
-          curl -o codecov https://codecov.io/bash
-          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
-          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
-          if sha512sum -c --ignore-missing --status SHA512SUM; then
-              bash ./codecov
-          else
-              echo 'CORRUPTED CODECOV SCRIPT!!!'
-              exit 10
-          fi
+      - uses: codecov/codecov-action@v2
 
   test-all:
     runs-on: ubuntu-latest
@@ -134,7 +118,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.8"]
         engine: ["python", "ray", "dask"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
@@ -168,7 +152,7 @@ jobs:
       - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
@@ -183,16 +167,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
       - run: python -m pytest modin/pandas/test/test_io.py
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - run: |
-          curl -o codecov https://codecov.io/bash
-          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
-          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
-          if sha512sum -c --ignore-missing --status SHA512SUM; then
-              bash ./codecov
-          else
-              echo 'CORRUPTED CODECOV SCRIPT!!!'
-              exit 10
-          fi
+      - uses: codecov/codecov-action@v2
 
   test-windows:
     runs-on: windows-latest
@@ -201,7 +176,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.8"]
         engine: ["ray", "dask"]
         test-task:
           - modin/pandas/test/dataframe/test_binary.py
@@ -210,7 +185,7 @@ jobs:
           - modin/pandas/test/dataframe/test_iter.py
           - modin/pandas/test/dataframe/test_join_sort.py
           - modin/pandas/test/dataframe/test_map_metadata.py
-          - modin/pandas/test/dataframe/test_reduction.py
+          - modin/pandas/test/dataframe/test_reduce.py
           - modin/pandas/test/dataframe/test_udf.py
           - modin/pandas/test/dataframe/test_window.py
           - modin/pandas/test/dataframe/test_pickle.py
@@ -246,8 +221,7 @@ jobs:
       - timeout-minutes: 30
         run: python -m pytest modin/pandas/test/test_io.py
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
-      - run: choco install codecov
-      - run: codecov -f ./coverage.xml
+      - uses: codecov/codecov-action@v2
 
   test-pyarrow:
     runs-on: ubuntu-latest
@@ -256,7 +230,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
+        python-version: ["3.8"]
     env:
       MODIN_STORAGE_FORMAT: pyarrow
       MODIN_EXPERIMENTAL: "True"
@@ -286,7 +260,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: [ "3.7", "3.8" ]
+        python-version: ["3.8"]
         engine: ["ray", "dask"]
     env:
       MODIN_EXPERIMENTAL: "True"

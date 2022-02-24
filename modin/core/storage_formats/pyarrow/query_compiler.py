@@ -26,7 +26,6 @@ from pandas.core.computation.scope import Scope
 from pandas.core.computation.ops import UnaryOp, BinOp, Term, MathCall, Constant
 
 import pyarrow as pa
-import pyarrow.gandiva as gandiva
 
 
 class FakeSeries:
@@ -221,6 +220,11 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
             expr = gen_table_expr(table, query)
             if not can_be_condition(expr):
                 raise ValueError("Root operation should be a filter.")
+
+            # We use this import here because of https://github.com/modin-project/modin/issues/3849,
+            # after the issue is fixed we should put the import at the top of this file
+            import pyarrow.gandiva as gandiva
+
             builder = gandiva.TreeExprBuilder()
             root = build_node(table, expr.terms, builder)
             cond = builder.make_condition(root)

@@ -1,10 +1,12 @@
 :orphan:
 
-Config Module Overview
-""""""""""""""""""""""
+Modin Configuration Settings
+""""""""""""""""""""""""""""
 
-Using this module, the user can tune Modin's behavior. To see
-all avaliable configs just run `python -m modin.config`, this command will print all
+To adjust Modin's default behavior, you can set the value of Modin
+configs by setting an environment variable or by using the
+``modin.config`` API. To list all avaliable configs in Modin, please
+run ``python -m modin.config`` to print all
 Modin configs with descriptions.
 
 Public API
@@ -28,7 +30,7 @@ Modin Configs List
 Usage Guide
 '''''''''''
 
-See example of interation with Modin configs below, as it can be seen config
+See example of interaction with Modin configs below, as it can be seen config
 value can be set either by setting the environment variable or by using config
 API.
 

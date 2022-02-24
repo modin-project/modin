@@ -428,6 +428,13 @@ def make_proxy_cls(
 
         def __init__(self, *a, __remote_end__=None, **kw):
             if __remote_end__ is None:
+                try:
+                    preprocess = object.__getattribute__(self, "_preprocess_init_args")
+                except AttributeError:
+                    pass
+                else:
+                    a, kw = preprocess(*a, **kw)
+
                 __remote_end__ = remote_cls(*a, **kw)
             while True:
                 # unwrap the object if it's a wrapper
@@ -622,6 +629,27 @@ def make_dataframe_wrapper(DataFrame):
     ObtainingItems = _deliveringWrapper(Series, mixin=ObtainingItems)
 
     class DataFrameOverrides(_prepare_loc_mixin()):
+        @classmethod
+        def _preprocess_init_args(
+            cls,
+            data=None,
+            index=None,
+            columns=None,
+            dtype=None,
+            copy=None,
+            query_compiler=None,
+        ):
+
+            (data,) = conn.deliver((data,), {})[0]
+            return (), dict(
+                data=data,
+                index=index,
+                columns=columns,
+                dtype=dtype,
+                copy=copy,
+                query_compiler=query_compiler,
+            )
+
         @property
         def dtypes(self):
             remote_dtypes = self.__remote_end__.dtypes

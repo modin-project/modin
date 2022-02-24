@@ -18,13 +18,11 @@ import pyarrow
 import pytest
 import re
 
-from modin.config import IsExperimental, Engine, StorageFormat
-from modin.pandas.test.utils import io_ops_bad_exc
+from modin.config import StorageFormat
+from modin.pandas.test.utils import io_ops_bad_exc, default_to_pandas_ignore_string
 from .utils import eval_io, ForceOmnisciImport, set_execution_mode, run_and_compare
 from pandas.core.dtypes.common import is_list_like
 
-IsExperimental.put(True)
-Engine.put("native")
 StorageFormat.put("omnisci")
 
 import modin.pandas as pd
@@ -46,6 +44,14 @@ from modin.experimental.core.execution.native.implementations.omnisci_on_native.
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra import (
     FrameNode,
 )
+
+
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+# TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
+# of defaulting to pandas.
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
@@ -155,6 +161,7 @@ class TestCSV:
                 df_equals(rm["timestamp"].dt.year, rp["timestamp"].dt.year)
                 df_equals(rm["timestamp"].dt.month, rp["timestamp"].dt.month)
                 df_equals(rm["timestamp"].dt.day, rp["timestamp"].dt.day)
+                df_equals(rm["timestamp"].dt.hour, rp["timestamp"].dt.hour)
 
     def test_csv_fillna(self):
         csv_file = os.path.join(self.root, "examples/data/boston_housing.csv")
@@ -722,9 +729,6 @@ class TestGroupby:
 
         run_and_compare(groupby_count, data=self.data, cols=cols, as_index=as_index)
 
-    @pytest.mark.xfail(
-        reason="Currently mean() passes a lambda into query compiler which cannot be executed on OmniSci engine"
-    )
     @pytest.mark.parametrize("cols", cols_value)
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_groupby_mean(self, cols, as_index):
@@ -761,9 +765,6 @@ class TestGroupby:
 
         run_and_compare(lambda_func, data=self.data, force_lazy=False)
 
-    @pytest.mark.xfail(
-        reason="Function specified as a string should be passed into query compiler API, but currently it is transformed into a lambda"
-    )
     @pytest.mark.parametrize("cols", cols_value)
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_groupby_agg_mean(self, cols, as_index):
@@ -807,7 +808,7 @@ class TestGroupby:
         run_and_compare(groupby, data=self.data)
 
     @pytest.mark.parametrize("by", [["a"], ["a", "b", "c"]])
-    @pytest.mark.parametrize("agg", ["sum", "size"])
+    @pytest.mark.parametrize("agg", ["sum", "size", "mean"])
     @pytest.mark.parametrize("as_index", [True, False])
     def test_groupby_agg_by_col(self, by, agg, as_index):
         def simple_agg(df, **kwargs):
@@ -1184,14 +1185,15 @@ class TestAgg:
     def test_simple_agg_no_default(self, method):
         def applier(df, **kwargs):
             if isinstance(df, pd.DataFrame):
-                # At the end of reduction function it does inevitable `transpose`, which
+                # At the end of reduce function it does inevitable `transpose`, which
                 # is defaulting to pandas. The following logic check that `transpose` is the only
-                # function that falling back to pandas in the reduction operation flow.
+                # function that falling back to pandas in the reduce operation flow.
+                # Another warning comes from deprecated pandas.Int64Index usage.
                 with pytest.warns(UserWarning) as warns:
                     res = getattr(df, method)()
                 assert (
-                    len(warns) == 1
-                ), f"More than one warning were arisen: len(warns) != 1 ({len(warns)} != 1)"
+                    len(warns) == 2
+                ), f"More than two warnings were arisen: len(warns) != 2 ({len(warns)} != 2)"
                 message = warns[0].message.args[0]
                 assert (
                     re.match(r".*transpose.*defaulting to pandas", message) is not None
@@ -1722,6 +1724,14 @@ class TestDateTime:
         "c": pandas.to_datetime(
             ["20190902", "20180913", "20190921", "20180903"], format="%Y%m%d"
         ),
+        "d": pandas.to_datetime(
+            [
+                "2018-10-26 12:00",
+                "2018-10-26 13:00:15",
+                "2020-10-26 04:00:15",
+                "2020-10-26",
+            ]
+        ),
     }
 
     def test_dt_year(self):
@@ -1741,6 +1751,12 @@ class TestDateTime:
             return df["c"].dt.day
 
         run_and_compare(dt_day, data=self.datetime_data)
+
+    def test_dt_hour(self):
+        def dt_hour(df, **kwargs):
+            return df["d"].dt.hour
+
+        run_and_compare(dt_hour, data=self.datetime_data)
 
 
 class TestCategory:
@@ -2026,16 +2042,9 @@ class TestConstructor:
 
 
 class TestArrowExecution:
-    data1 = {
-        "a": [1, 2, 3],
-        "b": [3, 4, 5],
-        "c": [6, 7, 8],
-    }
-    data2 = {
-        "a": [1, 2, 3],
-        "d": [3, 4, 5],
-        "e": [6, 7, 8],
-    }
+    data1 = {"a": [1, 2, 3], "b": [3, 4, 5], "c": [6, 7, 8]}
+    data2 = {"a": [1, 2, 3], "d": [3, 4, 5], "e": [6, 7, 8]}
+    data3 = {"a": [4, 5, 6], "b": [6, 7, 8], "c": [9, 10, 11]}
 
     def test_drop_rename_concat(self):
         def drop_rename_concat(df1, df2, lib, **kwargs):
@@ -2057,6 +2066,15 @@ class TestArrowExecution:
             return df + 1
 
         run_and_compare(apply, data={}, force_arrow_execute=True)
+
+    def test_append(self):
+        def apply(df1, df2, **kwargs):
+            tmp = df1.append(df2)
+            return tmp
+
+        run_and_compare(
+            apply, data=self.data1, data2=self.data3, force_arrow_execute=True
+        )
 
 
 if __name__ == "__main__":

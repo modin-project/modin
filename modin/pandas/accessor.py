@@ -24,6 +24,8 @@ CachedAccessor implements API of pandas.core.accessor.CachedAccessor
 import pandas
 from pandas.core.arrays.sparse.dtype import SparseDtype
 
+import modin.pandas as pd
+from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings
 
 
@@ -108,8 +110,9 @@ class SparseFrameAccessor(BaseSparseAccessor):
 
     @classmethod
     def from_spmatrix(cls, data, index=None, columns=None):
-        return cls._default_to_pandas(
-            pandas.DataFrame.sparse.from_spmatrix, data, index=index, columns=columns
+        ErrorMessage.default_to_pandas("`from_spmatrix`")
+        return pd.DataFrame(
+            pandas.DataFrame.sparse.from_spmatrix(data, index=index, columns=columns)
         )
 
     def to_dense(self):

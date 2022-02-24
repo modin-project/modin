@@ -123,15 +123,15 @@ class ColumnStoreDispatcher(FileDispatcher):
             List with lengths of index chunks.
         """
         num_partitions = NPartitions.get()
-        index_len = cls.materialize(partition_ids[-2][0])
+        index_len = (
+            0 if len(partition_ids) == 0 else cls.materialize(partition_ids[-2][0])
+        )
         if isinstance(index_len, int):
             index = pandas.RangeIndex(index_len)
         else:
             index = index_len
             index_len = len(index)
-        index_chunksize = compute_chunksize(
-            pandas.DataFrame(index=index), num_partitions, axis=0
-        )
+        index_chunksize = compute_chunksize(index_len, num_partitions)
         if index_chunksize > index_len:
             row_lengths = [index_len] + [0 for _ in range(num_partitions - 1)]
         else:
@@ -175,15 +175,18 @@ class ColumnStoreDispatcher(FileDispatcher):
             List with lengths of `col_partitions` subarrays
             (number of columns that should be read by workers).
         """
+        columns_length = len(columns)
+        if columns_length == 0:
+            return [], []
         num_partitions = NPartitions.get()
         column_splits = (
-            len(columns) // num_partitions
-            if len(columns) % num_partitions == 0
-            else len(columns) // num_partitions + 1
+            columns_length // num_partitions
+            if columns_length % num_partitions == 0
+            else columns_length // num_partitions + 1
         )
         col_partitions = [
             columns[i : i + column_splits]
-            for i in range(0, len(columns), column_splits)
+            for i in range(0, columns_length, column_splits)
         ]
         column_widths = [len(c) for c in col_partitions]
         return col_partitions, column_widths
@@ -232,7 +235,11 @@ class ColumnStoreDispatcher(FileDispatcher):
         partition_ids = cls.call_deploy(path, col_partitions, **kwargs)
         index, row_lens = cls.build_index(partition_ids)
         remote_parts = cls.build_partition(partition_ids[:-2], row_lens, column_widths)
-        dtypes = cls.build_dtypes(partition_ids[-1], columns)
+        dtypes = (
+            cls.build_dtypes(partition_ids[-1], columns)
+            if len(partition_ids) > 0
+            else None
+        )
         new_query_compiler = cls.query_compiler_cls(
             cls.frame_cls(
                 remote_parts,

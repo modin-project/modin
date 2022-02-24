@@ -15,7 +15,6 @@
 
 import pandas
 
-from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 
 from distributed.client import default_client
@@ -45,6 +44,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
     """
 
     def __init__(self, future, length=None, width=None, ip=None, call_queue=None):
+        assert isinstance(future, Future)
         self.future = future
         if call_queue is None:
             call_queue = []
@@ -159,31 +159,31 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         self.drain_call_queue()
         wait(self.future)
 
-    def mask(self, row_indices, col_indices):
+    def mask(self, row_labels, col_labels):
         """
         Lazily create a mask that extracts the indices provided.
 
         Parameters
         ----------
-        row_indices : list-like, slice or label
-            The indices for the rows to extract.
-        col_indices : list-like, slice or label
-            The indices for the columns to extract.
+        row_labels : list-like, slice or label
+            The row labels for the rows to extract.
+        col_labels : list-like, slice or label
+            The column labels for the columns to extract.
 
         Returns
         -------
         PandasOnDaskDataframePartition
             A new ``PandasOnDaskDataframePartition`` object.
         """
-        new_obj = super().mask(row_indices, col_indices)
+        new_obj = super().mask(row_labels, col_labels)
         client = default_client()
-        if isinstance(row_indices, slice) and isinstance(self._length_cache, Future):
+        if isinstance(row_labels, slice) and isinstance(self._length_cache, Future):
             new_obj._length_cache = client.submit(
-                compute_sliced_len, row_indices, self._length_cache
+                compute_sliced_len, row_labels, self._length_cache
             )
-        if isinstance(col_indices, slice) and isinstance(self._width_cache, Future):
+        if isinstance(col_labels, slice) and isinstance(self._width_cache, Future):
             new_obj._width_cache = client.submit(
-                compute_sliced_len, col_indices, self._width_cache
+                compute_sliced_len, col_labels, self._width_cache
             )
         return new_obj
 
@@ -203,34 +203,6 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             ip=self._ip_cache,
             call_queue=self.call_queue,
         )
-
-    def to_pandas(self):
-        """
-        Convert the object wrapped by this partition to a pandas DataFrame.
-
-        Returns
-        -------
-        pandas.DataFrame
-        """
-        dataframe = self.get()
-        assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
-
-        return dataframe
-
-    def to_numpy(self, **kwargs):
-        """
-        Convert the object wrapped by this partition to a NumPy array.
-
-        Parameters
-        ----------
-        **kwargs : dict
-            Additional keyword arguments to be passed in ``to_numpy``.
-
-        Returns
-        -------
-        np.ndarray.
-        """
-        return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
 
     @classmethod
     def put(cls, obj):
@@ -266,33 +238,6 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             An object that can be accepted by ``apply``.
         """
         return default_client().scatter(func, hash=False, broadcast=True)
-
-    @classmethod
-    def _length_extraction_fn(cls):
-        """
-        Return the function that computes the length of the object wrapped by this partition.
-
-        Returns
-        -------
-        callable
-            The function that computes the length of the object wrapped by this partition.
-        """
-        return length_fn_pandas
-
-    @classmethod
-    def _width_extraction_fn(cls):
-        """
-        Return the function that computes the width of the object wrapped by this partition.
-
-        Returns
-        -------
-        callable
-            The function that computes the width of the object wrapped by this partition.
-        """
-        return width_fn_pandas
-
-    _length_cache = None
-    _width_cache = None
 
     def length(self):
         """
@@ -338,18 +283,6 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         if isinstance(self._ip_cache, Future):
             self._ip_cache = self._ip_cache.result()
         return self._ip_cache
-
-    @classmethod
-    def empty(cls):
-        """
-        Create a new partition that wraps an empty pandas DataFrame.
-
-        Returns
-        -------
-        PandasOnDaskDataframePartition
-            A new ``PandasOnDaskDataframePartition`` object.
-        """
-        return cls(pandas.DataFrame(), 0, 0)
 
 
 def apply_func(partition, func, *args, **kwargs):

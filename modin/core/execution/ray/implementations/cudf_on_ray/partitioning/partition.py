@@ -39,9 +39,6 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         Width or reference to it of wrapped ``pandas.DataFrame``.
     """
 
-    _length_cache = None
-    _width_cache = None
-
     @property
     def __constructor__(self):
         """
@@ -201,15 +198,15 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             return self._width_cache
         return self.gpu_manager.width.remote(self.get_key())
 
-    def mask(self, row_indices, col_indices):
+    def mask(self, row_labels, col_labels):
         """
         Select columns or rows from given indices.
 
         Parameters
         ----------
-        row_indices : list of hashable
+        row_labels : list of hashable
             The row labels to extract.
-        col_indices : list of hashable
+        col_labels : list of hashable
             The column labels to extract.
 
         Returns
@@ -219,18 +216,18 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             in internal dict-storage of `self.gpu_manager`.
         """
         if (
-            (isinstance(row_indices, slice) and row_indices == slice(None))
+            (isinstance(row_labels, slice) and row_labels == slice(None))
             or (
-                not isinstance(row_indices, slice)
+                not isinstance(row_labels, slice)
                 and self._length_cache is not None
-                and len(row_indices) == self._length_cache
+                and len(row_labels) == self._length_cache
             )
         ) and (
-            (isinstance(col_indices, slice) and col_indices == slice(None))
+            (isinstance(col_labels, slice) and col_labels == slice(None))
             or (
-                not isinstance(col_indices, slice)
+                not isinstance(col_labels, slice)
                 and self._width_cache is not None
-                and len(col_indices) == self._width_cache
+                and len(col_labels) == self._width_cache
             )
         ):
             return self.__copy__()
@@ -238,24 +235,24 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         # CuDF currently does not support indexing multiindices with arrays,
         # so we have to create a boolean array where the desire indices are true.
         # TODO(kvu35): Check if this functionality is fixed in the latest version of cudf
-        def iloc(df, row_indices, col_indices):
+        def iloc(df, row_labels, col_labels):
             if isinstance(df.index, cudf.core.multiindex.MultiIndex) and is_list_like(
-                row_indices
+                row_labels
             ):
-                new_row_indices = cp.full(
+                new_row_labels = cp.full(
                     (1, df.index.size), False, dtype=bool
                 ).squeeze()
-                new_row_indices[row_indices] = True
-                row_indices = new_row_indices
-            return df.iloc[row_indices, col_indices]
+                new_row_labels[row_labels] = True
+                row_labels = new_row_labels
+            return df.iloc[row_labels, col_labels]
 
         iloc = cuDFOnRayDataframePartition.preprocess_func(iloc)
         return self.gpu_manager.apply.remote(
             self.key,
             None,
             iloc,
-            col_indices=col_indices,
-            row_indices=row_indices,
+            col_labels=col_labels,
+            row_labels=row_labels,
         )
 
     def get_gpu_manager(self):

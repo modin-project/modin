@@ -12,10 +12,12 @@
 # governing permissions and limitations under the License.
 
 import pytest
+import itertools
 import pandas
 import numpy as np
 import modin.pandas as pd
 from modin.utils import try_cast_to_pandas, get_current_execution, hashable
+from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.pandas.utils import from_pandas, is_scalar
 from .utils import (
     df_equals,
@@ -26,15 +28,33 @@ from .utils import (
     test_data_values,
     modin_df_almost_equals_pandas,
     generate_multiindex,
+    test_groupby_data,
+    dict_equals,
+    value_equals,
+    default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
 
 NPartitions.put(4)
 
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+# TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
+# of defaulting to pandas.
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+
 
 def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):
-    for g1, g2 in zip(modin_groupby, pandas_groupby):
-        assert g1[0] == g2[0]
+    eval_general(
+        modin_groupby, pandas_groupby, lambda grp: grp.indices, comparator=dict_equals
+    )
+    eval_general(
+        modin_groupby, pandas_groupby, lambda grp: grp.groups, comparator=dict_equals
+    )
+
+    for g1, g2 in itertools.zip_longest(modin_groupby, pandas_groupby):
+        value_equals(g1[0], g2[0])
         df_equals(g1[1], g2[1])
 
 
@@ -65,7 +85,7 @@ def build_types_asserter(comparator):
 
 @pytest.mark.parametrize("as_index", [True, False])
 def test_mixed_dtypes_groupby(as_index):
-    frame_data = np.random.randint(97, 198, size=(2 ** 6, 2 ** 4))
+    frame_data = np.random.randint(97, 198, size=(2**6, 2**4))
     pandas_df = pandas.DataFrame(frame_data).add_prefix("col")
     # Convert every other column to string
     for col in pandas_df.iloc[
@@ -161,6 +181,10 @@ def test_mixed_dtypes_groupby(as_index):
             {"col2": sum},
             {"col2": "max", "col4": "sum", "col5": "min"},
             {"col2": max, "col4": sum, "col5": "min"},
+            # Intersection of 'by' and agg cols for TreeReduce impl
+            {"col0": "count", "col1": "count", "col2": "count"},
+            # Intersection of 'by' and agg cols for FullAxis impl
+            {"col0": "nunique", "col1": "nunique", "col2": "nunique"},
         ]
         for func in agg_functions:
             eval_agg(modin_groupby, pandas_groupby, func)
@@ -292,6 +316,9 @@ def test_simple_row_groupby(by, as_index, col1_category):
 
     if col1_category:
         pandas_df = pandas_df.astype({"col1": "category"})
+        # As of pandas 1.4.0 operators like min cause TypeErrors to be raised on unordered
+        # categorical columns. We need to specify the categorical column as ordered to bypass this.
+        pandas_df["col1"] = pandas_df["col1"].cat.as_ordered()
 
     modin_df = from_pandas(pandas_df)
     n = 1
@@ -361,10 +388,34 @@ def test_simple_row_groupby(by, as_index, col1_category):
         eval_var(modin_groupby, pandas_groupby)
         eval_skew(modin_groupby, pandas_groupby)
 
-    agg_functions = [lambda df: df.sum(), "min", "max", min, sum]
+    agg_functions = [
+        lambda df: df.sum(),
+        "min",
+        "max",
+        min,
+        sum,
+        # Intersection of 'by' and agg cols for TreeReduce impl
+        {"col1": "count", "col2": "count"},
+        # Intersection of 'by' and agg cols for FullAxis impl
+        {"col1": "nunique", "col2": "nunique"},
+    ]
     for func in agg_functions:
-        eval_agg(modin_groupby, pandas_groupby, func)
-        eval_aggregate(modin_groupby, pandas_groupby, func)
+        # Pandas raises an exception when 'by' contains categorical key and `as_index=False`
+        # because of this bug: https://github.com/pandas-dev/pandas/issues/36698
+        # Modin correctly processes the result, that's why `check_exception_type=None` in some cases
+        is_pandas_bug_case = not as_index and col1_category and isinstance(func, dict)
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda grp: grp.agg(func),
+            check_exception_type=None if is_pandas_bug_case else True,
+        )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda grp: grp.aggregate(func),
+            check_exception_type=None if is_pandas_bug_case else True,
+        )
 
     eval_general(modin_groupby, pandas_groupby, lambda df: df.last(), is_default=True)
     eval_general(
@@ -834,13 +885,13 @@ def test_simple_col_groupby():
 
 
 @pytest.mark.parametrize(
-    "by", [np.random.randint(0, 100, size=2 ** 8), lambda x: x % 3, None]
+    "by", [np.random.randint(0, 100, size=2**8), lambda x: x % 3, None]
 )
 @pytest.mark.parametrize("as_index_series_or_dataframe", [0, 1, 2])
 def test_series_groupby(by, as_index_series_or_dataframe):
     if as_index_series_or_dataframe <= 1:
         as_index = as_index_series_or_dataframe == 1
-        series_data = np.random.randint(97, 198, size=2 ** 8)
+        series_data = np.random.randint(97, 198, size=2**8)
         modin_series = pd.Series(series_data)
         pandas_series = pandas.Series(series_data)
     else:
@@ -1215,28 +1266,33 @@ def eval_shift(modin_groupby, pandas_groupby):
         lambda groupby: groupby.shift(periods=-3),
     )
 
-    if isinstance(pandas_groupby, pandas.core.groupby.DataFrameGroupBy):
-        pandas_res = pandas_groupby.shift(axis=1, fill_value=777)
-        modin_res = modin_groupby.shift(axis=1, fill_value=777)
-        # Pandas produces unexpected index order (pandas GH 44269).
-        # Here we align index of Modin result with pandas to make test passed.
-        import pandas.core.algorithms as algorithms
+    # Disabled for `BaseOnPython` because of the issue with `getitem_array`.
+    # groupby.shift internally masks the source frame with a Series boolean mask,
+    # doing so ends up in the `getitem_array` method, that is broken for `BaseOnPython`:
+    # https://github.com/modin-project/modin/issues/3701
+    if get_current_execution() != "BaseOnPython":
+        if isinstance(pandas_groupby, pandas.core.groupby.DataFrameGroupBy):
+            pandas_res = pandas_groupby.shift(axis=1, fill_value=777)
+            modin_res = modin_groupby.shift(axis=1, fill_value=777)
+            # Pandas produces unexpected index order (pandas GH 44269).
+            # Here we align index of Modin result with pandas to make test passed.
+            import pandas.core.algorithms as algorithms
 
-        indexer, _ = modin_res.index.get_indexer_non_unique(modin_res.index._values)
-        indexer = algorithms.unique1d(indexer)
-        modin_res = modin_res.take(indexer)
+            indexer, _ = modin_res.index.get_indexer_non_unique(modin_res.index._values)
+            indexer = algorithms.unique1d(indexer)
+            modin_res = modin_res.take(indexer)
 
-        df_equals(modin_res, pandas_res)
-    else:
-        eval_general(
-            modin_groupby,
-            pandas_groupby,
-            lambda groupby: groupby.shift(axis=1, fill_value=777),
-        )
+            df_equals(modin_res, pandas_res)
+        else:
+            eval_general(
+                modin_groupby,
+                pandas_groupby,
+                lambda groupby: groupby.shift(axis=1, fill_value=777),
+            )
 
 
 def test_groupby_on_index_values_with_loop():
-    length = 2 ** 6
+    length = 2**6
     data = {
         "a": np.random.randint(0, 100, size=length),
         "b": np.random.randint(0, 100, size=length),
@@ -1276,7 +1332,7 @@ def test_groupby_on_index_values_with_loop():
     ],
 )
 def test_groupby_multiindex(groupby_kwargs):
-    frame_data = np.random.randint(0, 100, size=(2 ** 6, 2 ** 4))
+    frame_data = np.random.randint(0, 100, size=(2**6, 2**4))
     modin_df = pd.DataFrame(frame_data)
     pandas_df = pandas.DataFrame(frame_data)
 
@@ -1304,6 +1360,75 @@ def test_groupby_multiindex(groupby_kwargs):
     # https://github.com/modin-project/modin/issues/2912
     # df_equals(md_grp.quantile(), pd_grp.quantile())
     df_equals(md_grp.first(), pd_grp.first())
+
+
+@pytest.mark.parametrize("dropna", [True, False])
+@pytest.mark.parametrize(
+    "groupby_kwargs",
+    [
+        pytest.param({"level": 1, "axis": 1}, id="level_idx_axis=1"),
+        pytest.param({"level": 1}, id="level_idx"),
+        pytest.param({"level": [1, "four"]}, id="level_idx+name"),
+        pytest.param({"by": "four"}, id="level_name"),
+        pytest.param({"by": ["one", "two"]}, id="level_name_multi_by"),
+        pytest.param(
+            {"by": ["item0", "one", "two"]},
+            id="col_name+level_name",
+        ),
+        pytest.param({"by": ["item0"]}, id="col_name"),
+        pytest.param(
+            {"by": ["item0", "item1"]},
+            id="col_name_multi_by",
+        ),
+    ],
+)
+def test_groupby_with_kwarg_dropna(groupby_kwargs, dropna):
+    modin_df = pd.DataFrame(test_data["float_nan_data"])
+    pandas_df = pandas.DataFrame(test_data["float_nan_data"])
+
+    new_index = pandas.Index([f"item{i}" for i in range(len(pandas_df))])
+    new_columns = pandas.MultiIndex.from_tuples(
+        [(i // 4, i // 2, i) for i in range(len(modin_df.columns))],
+        names=["four", "two", "one"],
+    )
+    modin_df.columns = new_columns
+    modin_df.index = new_index
+    pandas_df.columns = new_columns
+    pandas_df.index = new_index
+
+    if groupby_kwargs.get("axis", 0) == 0:
+        modin_df = modin_df.T
+        pandas_df = pandas_df.T
+
+    md_grp, pd_grp = (
+        modin_df.groupby(**groupby_kwargs, dropna=dropna),
+        pandas_df.groupby(**groupby_kwargs, dropna=dropna),
+    )
+    modin_groupby_equals_pandas(md_grp, pd_grp)
+
+    by_kwarg = groupby_kwargs.get("by", [])
+    # Disabled because of broken `dropna=False` for TreeReduce implemented aggs:
+    # https://github.com/modin-project/modin/issues/3817
+    if not (
+        not dropna
+        and len(by_kwarg) > 1
+        and any(col in modin_df.columns for col in by_kwarg)
+    ):
+        df_equals(md_grp.sum(), pd_grp.sum())
+        df_equals(md_grp.size(), pd_grp.size())
+    # Grouping on level works incorrect in case of aggregation:
+    # https://github.com/modin-project/modin/issues/2912
+    # "BaseOnPython" tests are disabled because of the bug:
+    # https://github.com/modin-project/modin/issues/3827
+    if get_current_execution() != "BaseOnPython" and any(
+        col in modin_df.columns for col in by_kwarg
+    ):
+        df_equals(md_grp.quantile(), pd_grp.quantile())
+    # Default-to-pandas tests are disabled for multi-column 'by' because of the bug:
+    # https://github.com/modin-project/modin/issues/3827
+    if not (not dropna and len(by_kwarg) > 1):
+        df_equals(md_grp.first(), pd_grp.first())
+        df_equals(md_grp._default_to_pandas(lambda df: df.sum()), pd_grp.sum())
 
 
 @pytest.mark.parametrize("groupby_axis", [0, 1])
@@ -1379,7 +1504,7 @@ def test_shift_freq(groupby_axis, shift_axis):
                     "min": (list(test_data["int_data"].keys())[-1], min),
                 },
             },
-            marks=pytest.mark.skip("See Modin issue #2542"),
+            marks=pytest.mark.skip("See Modin issue #3602"),
         ),
     ],
 )
@@ -1412,16 +1537,26 @@ def test_agg_func_None_rename(by_and_agg_dict, as_index):
 @pytest.mark.parametrize(
     "agg_fns",
     [["sum", "min", "max"], ["mean", "quantile"]],
-    ids=["reduction", "aggregation"],
+    ids=["reduce", "aggregation"],
 )
-def test_dict_agg_rename_mi_columns(as_index, by_length, agg_fns):
+@pytest.mark.parametrize(
+    "intersection_with_by_cols",
+    [pytest.param(True, marks=pytest.mark.skip("See Modin issue #3602")), False],
+)
+def test_dict_agg_rename_mi_columns(
+    as_index, by_length, agg_fns, intersection_with_by_cols
+):
     md_df, pd_df = create_test_dfs(test_data["int_data"])
     mi_columns = generate_multiindex(len(md_df.columns), nlevels=4)
 
     md_df.columns, pd_df.columns = mi_columns, mi_columns
 
     by = list(md_df.columns[:by_length])
-    agg_cols = list(md_df.columns[by_length : by_length + 3])
+    agg_cols = (
+        list(md_df.columns[by_length - 1 : by_length + 2])
+        if intersection_with_by_cols
+        else list(md_df.columns[by_length : by_length + 3])
+    )
 
     agg_dict = {
         f"custom-{i}" + str(agg_fns[i % len(agg_fns)]): (col, agg_fns[i % len(agg_fns)])
@@ -1668,7 +1803,20 @@ def test_unknown_groupby(columns):
                     list(test_data_values[0].keys())[-1]: (sum, min, max),
                 }
             ),
-            marks=pytest.mark.skip("See modin issue #2542"),
+            id="Agg_and_by_intersection_TreeReduce_implementation",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: (max, "mean", "nunique"),
+                    list(test_data_values[0].keys())[-1]: (sum, min, max),
+                }
+            ),
+            id="Agg_and_by_intersection_FullAxis_implementation",
+        ),
+        pytest.param(
+            lambda grp: grp.agg({list(test_data_values[0].keys())[0]: "count"}),
+            id="Agg_and_by_intersection_issue_3376",
         ),
     ],
 )
@@ -1722,6 +1870,194 @@ def test_not_str_by(by, as_index):
         md_df.groupby(by, as_index=as_index),
         pd_df.groupby(by, as_index=as_index),
     )
+
+    modin_groupby_equals_pandas(md_grp, pd_grp)
+    eval_general(md_grp, pd_grp, lambda grp: grp.sum())
+    eval_general(md_grp, pd_grp, lambda grp: grp.size())
+    eval_general(md_grp, pd_grp, lambda grp: grp.agg(lambda df: df.mean()))
+    eval_general(md_grp, pd_grp, lambda grp: grp.dtypes)
+    eval_general(md_grp, pd_grp, lambda grp: grp.first())
+
+
+@pytest.mark.parametrize("internal_by_length", [0, 1, 2])
+@pytest.mark.parametrize("external_by_length", [0, 1, 2])
+@pytest.mark.parametrize("has_categorical_by", [True, False])
+@pytest.mark.parametrize(
+    "agg_func",
+    [
+        pytest.param(
+            lambda grp: grp.apply(lambda df: df.dtypes), id="modin_dtypes_impl"
+        ),
+        pytest.param(lambda grp: grp.apply(lambda df: df.sum()), id="apply_sum"),
+        pytest.param(lambda grp: grp.count(), id="count"),
+        pytest.param(lambda grp: grp.nunique(), id="nunique"),
+        # Integer key means the index of the column to replace it with.
+        # 0 and -1 are considered to be the indices of the columns to group on.
+        pytest.param({1: "sum", 2: "nunique"}, id="dict_agg_no_intersection_with_by"),
+        pytest.param(
+            {0: "mean", 1: "sum", 2: "nunique"},
+            id="dict_agg_has_intersection_with_by",
+        ),
+        pytest.param(
+            {1: "sum", 2: "nunique", -1: "nunique"},
+            id="dict_agg_has_intersection_with_categorical_by",
+        ),
+    ],
+)
+# There are two versions of the `handle_as_index` method: the one accepting pandas.DataFrame from
+# the execution kernel and backend agnostic. This parameter indicates which one implementation to use.
+@pytest.mark.parametrize("use_backend_agnostic_method", [True, False])
+def test_handle_as_index(
+    internal_by_length,
+    external_by_length,
+    has_categorical_by,
+    agg_func,
+    use_backend_agnostic_method,
+    request,
+):
+    """
+    Test ``modin.core.dataframe.algebra.default2pandas.groupby.GroupBy.handle_as_index``.
+
+    The role of the ``handle_as_index`` method is to build a groupby result considering
+    ``as_index=False`` from the result that was computed with ``as_index=True``.
+
+    So the testing flow is the following:
+        1. Compute GroupBy result with the ``as_index=True`` parameter via Modin.
+        2. Build ``as_index=False`` result from the ``as_index=True`` using ``handle_as_index`` method.
+        3. Compute GroupBy result with the ``as_index=False`` parameter via pandas as the reference result.
+        4. Compare the result from the second step with the reference.
+    """
+    by_length = internal_by_length + external_by_length
+    if by_length == 0:
+        pytest.skip("No keys to group on were passed, skipping the test.")
+
+    if (
+        has_categorical_by
+        and by_length > 1
+        and (
+            isinstance(agg_func, dict)
+            or ("nunique" in request.node.callspec.id.split("-"))
+        )
+    ):
+        pytest.skip(
+            "The linked bug makes pandas raise an exception when 'by' is categorical: "
+            "https://github.com/pandas-dev/pandas/issues/36698"
+        )
+
+    df = pandas.DataFrame(test_groupby_data)
+    external_by_cols = GroupBy.validate_by(df.add_prefix("external_"))
+
+    if has_categorical_by:
+        df = df.astype({df.columns[-1]: "category"})
+
+    if isinstance(agg_func, dict):
+        agg_func = {df.columns[key]: value for key, value in agg_func.items()}
+        selection = list(agg_func.keys())
+        agg_dict = agg_func
+        agg_func = lambda grp: grp.agg(agg_dict)  # noqa: E731 (lambda assignment)
+    else:
+        selection = None
+
+    # Selecting 'by' columns from both sides of the frame so they located in different partitions
+    internal_by = df.columns[
+        range(-internal_by_length // 2, internal_by_length // 2)
+    ].tolist()
+    external_by = external_by_cols[:external_by_length]
+
+    pd_by = internal_by + external_by
+    md_by = internal_by + [pd.Series(ser) for ser in external_by]
+
+    grp_result = pd.DataFrame(df).groupby(md_by, as_index=True)
+    grp_reference = df.groupby(pd_by, as_index=False)
+
+    agg_result = agg_func(grp_result)
+    agg_reference = agg_func(grp_reference)
+
+    if use_backend_agnostic_method:
+        reset_index, drop, lvls_to_drop, cols_to_drop = GroupBy.handle_as_index(
+            result_cols=agg_result.columns,
+            result_index_names=agg_result.index.names,
+            internal_by_cols=internal_by,
+            by_cols_dtypes=df[internal_by].dtypes.values,
+            by_length=len(md_by),
+            selection=selection,
+            drop=len(internal_by) != 0,
+        )
+
+        if len(lvls_to_drop) > 0:
+            agg_result.index = agg_result.index.droplevel(lvls_to_drop)
+        if len(cols_to_drop) > 0:
+            agg_result = agg_result.drop(columns=cols_to_drop)
+        if reset_index:
+            agg_result = agg_result.reset_index(drop=drop)
+    else:
+        GroupBy.handle_as_index_for_dataframe(
+            result=agg_result,
+            internal_by_cols=internal_by,
+            by_cols_dtypes=df[internal_by].dtypes.values,
+            by_length=len(md_by),
+            selection=selection,
+            drop=len(internal_by) != 0,
+            inplace=True,
+        )
+
+    df_equals(agg_result, agg_reference)
+
+
+def test_validate_by():
+    """Test ``modin.core.dataframe.algebra.default2pandas.groupby.GroupBy.validate_by``."""
+
+    def compare(obj1, obj2):
+        assert type(obj1) == type(
+            obj2
+        ), f"Both objects must be instances of the same type: {type(obj1)} != {type(obj2)}."
+        if isinstance(obj1, list):
+            for val1, val2 in itertools.zip_longest(obj1, obj2):
+                df_equals(val1, val2)
+        else:
+            df_equals(obj1, obj2)
+
+    # This emulates situation when the Series's query compiler being passed as a 'by':
+    #   1. The Series at the QC level is represented as a single-column frame with the "__reduced__" columns.
+    #   2. The valid representation of such QC is an unnamed Series.
+    reduced_frame = pandas.DataFrame({"__reduced__": [1, 2, 3]})
+    series_result = GroupBy.validate_by(reduced_frame)
+    series_reference = [pandas.Series([1, 2, 3], name=None)]
+    compare(series_reference, series_result)
+
+    # This emulates situation when several 'by' columns of the group frame are passed as a single QueryCompiler:
+    #   1. If grouping on several columns the 'by' at the QC level is the following: ``df[by]._query_compiler``.
+    #   2. The valid representation of such QC is a list of Series.
+    splited_df = [pandas.Series([1, 2, 3], name=f"col{i}") for i in range(3)]
+    splited_df_result = GroupBy.validate_by(
+        pandas.concat(splited_df, axis=1, copy=True)
+    )
+    compare(splited_df, splited_df_result)
+
+    # This emulates situation of mixed by (two column names and an external Series):
+    by = ["col1", "col2", pandas.DataFrame({"__reduced__": [1, 2, 3]})]
+    result_by = GroupBy.validate_by(by)
+    reference_by = ["col1", "col2", pandas.Series([1, 2, 3], name=None)]
+    compare(reference_by, result_by)
+
+
+@pytest.mark.parametrize("sort", [True, False])
+@pytest.mark.parametrize("is_categorical_by", [True, False])
+def test_groupby_sort(sort, is_categorical_by):
+    # from issue #3571
+    by = np.array(["a"] * 50000 + ["b"] * 10000 + ["c"] * 1000)
+    random_state = np.random.RandomState(seed=42)
+    random_state.shuffle(by)
+
+    data = {"key_col": by, "data_col": np.arange(len(by))}
+    md_df, pd_df = create_test_dfs(data)
+
+    if is_categorical_by:
+        md_df = md_df.astype({"key_col": "category"})
+        pd_df = pd_df.astype({"key_col": "category"})
+
+    md_grp = md_df.groupby("key_col", sort=sort)
+    pd_grp = pd_df.groupby("key_col", sort=sort)
 
     modin_groupby_equals_pandas(md_grp, pd_grp)
     eval_general(md_grp, pd_grp, lambda grp: grp.sum())

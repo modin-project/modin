@@ -67,7 +67,6 @@ def test_top_level_api_equality():
         "os",
         "multiprocessing",
         "Client",
-        "dask_client",
         "get_client",
     ]
 

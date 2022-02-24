@@ -55,7 +55,7 @@ pd.DataFrame([])
 
 @pytest.mark.parametrize("axis", [None, 0, 1])
 def test_unwrap_partitions(axis):
-    data = np.random.randint(0, 100, size=(2 ** 16, 2 ** 8))
+    data = np.random.randint(0, 100, size=(2**16, 2**8))
     df = pd.DataFrame(data)
 
     if axis is None:
@@ -108,8 +108,8 @@ def test_unwrap_partitions(axis):
 @pytest.mark.parametrize("index", [None, "index"])
 @pytest.mark.parametrize("axis", [None, 0, 1])
 def test_from_partitions(axis, index, columns, row_lengths, column_widths):
-    num_rows = 2 ** 16
-    num_cols = 2 ** 8
+    num_rows = 2**16
+    num_cols = 2**8
     data = np.random.randint(0, 100, size=(num_rows, num_cols))
     df1, df2 = pandas.DataFrame(data), pandas.DataFrame(data)
     expected_df = pandas.concat([df1, df2], axis=1 if axis is None else axis)
@@ -157,8 +157,8 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
 @pytest.mark.parametrize("index", ["original_idx", "new_idx"])
 @pytest.mark.parametrize("axis", [None, 0, 1])
 def test_from_partitions_mismatched_labels(axis, index, columns):
-    num_rows = 2 ** 16
-    num_cols = 2 ** 8
+    num_rows = 2**16
+    num_cols = 2**8
     expected_df = pd.DataFrame(np.random.randint(0, 100, size=(num_rows, num_cols)))
     partitions = unwrap_partitions(expected_df, axis=axis)
 
@@ -179,13 +179,11 @@ def test_from_partitions_mismatched_labels(axis, index, columns):
     df_equals(expected_df, actual_df)
 
 
-@pytest.mark.parametrize("row_indices", [[0, 2], slice(None)])
-@pytest.mark.parametrize("col_indices", [[0, 2], slice(None)])
+@pytest.mark.parametrize("row_labels", [[0, 2], slice(None)])
+@pytest.mark.parametrize("col_labels", [[0, 2], slice(None)])
 @pytest.mark.parametrize("is_length_future", [False, True])
 @pytest.mark.parametrize("is_width_future", [False, True])
-def test_mask_preserve_cache(
-    row_indices, col_indices, is_length_future, is_width_future
-):
+def test_mask_preserve_cache(row_labels, col_labels, is_length_future, is_width_future):
     def deserialize(obj):
         if isinstance(obj, FutureType):
             return get_func(obj)
@@ -206,11 +204,11 @@ def test_mask_preserve_cache(
 
     source_partition = PartitionClass(obj_id, *partition_shape)
     masked_partition = source_partition.mask(
-        row_indices=row_indices, col_indices=col_indices
+        row_labels=row_labels, col_labels=col_labels
     )
 
-    expected_length = compute_length(row_indices, len(df))
-    expected_width = compute_length(col_indices, len(df.columns))
+    expected_length = compute_length(row_labels, len(df))
+    expected_width = compute_length(col_labels, len(df.columns))
 
     # Check that the cache is preserved
     assert expected_length == deserialize(masked_partition._length_cache)

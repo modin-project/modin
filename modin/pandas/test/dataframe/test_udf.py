@@ -15,6 +15,7 @@ import pytest
 import numpy as np
 import pandas
 import matplotlib
+from modin.config import MinPartitionSize
 import modin.pandas as pd
 
 from pandas.core.dtypes.common import is_list_like
@@ -37,13 +38,22 @@ from modin.pandas.test.utils import (
     bool_arg_keys,
     bool_arg_values,
     arg_keys,
+    default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions, StorageFormat
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+# TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
+# of defaulting to pandas.
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 def test_agg_dict():
@@ -93,10 +103,10 @@ def test_aggregate_alias():
 def test_aggregate_error_checking():
     modin_df = pd.DataFrame(test_data["float_nan_data"])
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_df.aggregate({modin_df.columns[0]: "sum", modin_df.columns[1]: "mean"})
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_df.aggregate("cumproduct")
 
     with pytest.raises(ValueError):
@@ -181,7 +191,7 @@ def test_explode_all_partitions(column, ignore_index):
     # expand every row in the input data into two rows. It's especially
     # important that the input data has list-like elements that must be
     # expanded at the boundaries of the partitions, e.g. at row 31.
-    num_rows = NPartitions.get() * 32
+    num_rows = NPartitions.get() * MinPartitionSize.get()
     data = {"A": [[3, 4]] * num_rows, "C": [["a", "b"]] * num_rows}
     eval_general(
         *create_test_dfs(data),
@@ -227,8 +237,7 @@ def test_apply_metadata():
 def test_apply_udf(data, func):
     eval_general(
         *create_test_dfs(data),
-        lambda df, *args, **kwargs: df.apply(*args, **kwargs),
-        func=func,
+        lambda df, *args, **kwargs: df.apply(func, *args, **kwargs),
         other=lambda df: df,
     )
 

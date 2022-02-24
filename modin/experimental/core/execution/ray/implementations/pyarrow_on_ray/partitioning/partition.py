@@ -13,13 +13,12 @@
 
 """The module defines interface for a partition with PyArrow storage format and Ray engine."""
 
-import pandas
+import ray
+import pyarrow
+
 from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
     PandasOnRayDataframePartition,
 )
-
-import ray
-import pyarrow
 
 
 class PyarrowOnRayDataframePartition(PandasOnRayDataframePartition):
@@ -41,20 +40,6 @@ class PyarrowOnRayDataframePartition(PandasOnRayDataframePartition):
     call_queue : list, optional
         Call queue that needs to be executed on wrapped ``pyarrow.Table``.
     """
-
-    def to_pandas(self):
-        """
-        Convert the object stored in this partition to a ``pandas.DataFrame``.
-
-        Returns
-        -------
-        dataframe : pandas.DataFrame or pandas.Series
-            Resulting DataFrame or Series.
-        """
-        dataframe = self.get().to_pandas()
-        assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
-
-        return dataframe
 
     @classmethod
     def put(cls, obj):
@@ -94,15 +79,3 @@ class PyarrowOnRayDataframePartition(PandasOnRayDataframePartition):
         callable
         """
         return lambda table: table.num_columns - (1 if "index" in table.columns else 0)
-
-    @classmethod
-    def empty(cls):
-        """
-        Put empty ``pandas.DataFrame`` in the Plasma store and wrap it in this object.
-
-        Returns
-        -------
-        PyarrowOnRayDataframePartition
-            A ``PyarrowOnRayDataframePartition`` object.
-        """
-        return cls.put(pandas.DataFrame())

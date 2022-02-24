@@ -33,13 +33,20 @@ from modin.pandas.test.utils import (
     eval_general,
     rotate_decimal_digits_or_symbols,
     extra_test_parameters,
+    default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -57,20 +64,20 @@ def test_combine(data):
     "test_data, test_data2",
     [
         (
-            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
-            np.random.uniform(0, 100, size=(2 ** 7, 2 ** 6)),
+            np.random.uniform(0, 100, size=(2**6, 2**6)),
+            np.random.uniform(0, 100, size=(2**7, 2**6)),
         ),
         (
-            np.random.uniform(0, 100, size=(2 ** 7, 2 ** 6)),
-            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
+            np.random.uniform(0, 100, size=(2**7, 2**6)),
+            np.random.uniform(0, 100, size=(2**6, 2**6)),
         ),
         (
-            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
-            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 7)),
+            np.random.uniform(0, 100, size=(2**6, 2**6)),
+            np.random.uniform(0, 100, size=(2**6, 2**7)),
         ),
         (
-            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 7)),
-            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
+            np.random.uniform(0, 100, size=(2**6, 2**7)),
+            np.random.uniform(0, 100, size=(2**6, 2**6)),
         ),
     ],
 )
@@ -155,20 +162,20 @@ def test_join(test_data, test_data2):
     "test_data, test_data2",
     [
         (
-            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
-            np.random.uniform(0, 100, size=(2 ** 7, 2 ** 6)),
+            np.random.uniform(0, 100, size=(2**6, 2**6)),
+            np.random.uniform(0, 100, size=(2**7, 2**6)),
         ),
         (
-            np.random.uniform(0, 100, size=(2 ** 7, 2 ** 6)),
-            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
+            np.random.uniform(0, 100, size=(2**7, 2**6)),
+            np.random.uniform(0, 100, size=(2**6, 2**6)),
         ),
         (
-            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
-            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 7)),
+            np.random.uniform(0, 100, size=(2**6, 2**6)),
+            np.random.uniform(0, 100, size=(2**6, 2**7)),
         ),
         (
-            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 7)),
-            np.random.uniform(0, 100, size=(2 ** 6, 2 ** 6)),
+            np.random.uniform(0, 100, size=(2**6, 2**7)),
+            np.random.uniform(0, 100, size=(2**6, 2**6)),
         ),
     ],
 )
@@ -298,13 +305,23 @@ def test_merge(test_data, test_data2):
         )
         df_equals(modin_result, pandas_result)
 
-    # Named Series promoted to DF
-    s = pd.Series(frame_data2.get("col1"))
-    with pytest.raises(ValueError):
-        modin_df.merge(s)
+    # Cannot merge a Series without a name
+    ps = pandas.Series(frame_data2.get("col1"))
+    ms = pd.Series(frame_data2.get("col1"))
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
+    )
 
-    s = pd.Series(frame_data2.get("col1"), name="col1")
-    df_equals(modin_df.merge(s), modin_df.merge(modin_df2[["col1"]]))
+    # merge a Series with a name
+    ps = pandas.Series(frame_data2.get("col1"), name="col1")
+    ms = pd.Series(frame_data2.get("col1"), name="col1")
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
+    )
 
     with pytest.raises(TypeError):
         modin_df.merge("Non-valid type")
@@ -366,7 +383,7 @@ def test_sort_multiindex(sort_remaining):
             setattr(df, index, new_index)
 
     for kwargs in [{"level": 0}, {"axis": 0}, {"axis": 1}]:
-        with pytest.warns(UserWarning):
+        with warns_that_defaulting_to_pandas():
             df_equals(
                 modin_df.sort_index(sort_remaining=sort_remaining, **kwargs),
                 pandas_df.sort_index(sort_remaining=sort_remaining, **kwargs),
@@ -442,6 +459,8 @@ def test_sort_multiindex(sort_remaining):
 def test_sort_values(
     data, by, axis, ascending, inplace, kind, na_position, ignore_index, key
 ):
+    if ascending is None:
+        pytest.skip("None is not a valid value for ascending.")
     if (axis == 1 or axis == "columns") and ignore_index:
         pytest.skip("Pandas bug #39426 which is fixed in Pandas 1.3")
 

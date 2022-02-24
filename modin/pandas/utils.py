@@ -113,6 +113,35 @@ def is_scalar(obj):
     return not isinstance(obj, BasePandasDataset) and pandas_is_scalar(obj)
 
 
+def is_full_grab_slice(slc, sequence_len=None):
+    """
+    Check that the passed slice grabs the whole sequence.
+
+    Parameters
+    ----------
+    slc : slice
+        Slice object to check.
+    sequence_len : int, optional
+        Length of the sequence to index with the passed `slc`.
+        If not specified the function won't be able to check whether
+        ``slc.stop`` is equal or greater than the sequence length to
+        consider `slc` to be a full-grab, and so, only slices with
+        ``.stop is None`` are considered to be a full-grab.
+
+    Returns
+    -------
+    bool
+    """
+    assert isinstance(slc, slice), "slice object required"
+    return (
+        slc.start in (None, 0)
+        and slc.step in (None, 1)
+        and (
+            slc.stop is None or (sequence_len is not None and slc.stop >= sequence_len)
+        )
+    )
+
+
 def from_modin_frame_to_mi(df, sortorder=None, names=None):
     """
     Make a pandas.MultiIndex from a DataFrame.
@@ -166,6 +195,25 @@ def is_label(obj, label, axis=0):
     return hashable(label) and (
         label in qc.get_axis(axis ^ 1) or label in qc.get_index_names(axis)
     )
+
+
+def check_both_not_none(option1, option2):
+    """
+    Check that both `option1` and `option2` are not None.
+
+    Parameters
+    ----------
+    option1 : Any
+        First object to check if not None.
+    option2 : Any
+        Second object to check if not None.
+
+    Returns
+    -------
+    bool
+        True if both option1 and option2 are not None, False otherwise.
+    """
+    return not (option1 is None or option2 is None)
 
 
 _original_pandas_MultiIndex_from_frame = MultiIndex.from_frame

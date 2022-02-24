@@ -11,12 +11,15 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from contextlib import nullcontext
 import glob
 import pandas
 import pytest
 import modin.experimental.pandas as pd
 from modin.config import Engine
+from modin.utils import get_current_execution
 from modin.pandas.test.utils import df_equals, teardown_test_files, test_data
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 
 @pytest.mark.skipif(
@@ -111,6 +114,11 @@ class TestCsvGlob:
 
         df_equals(modin_df, pandas_df)
 
+    def test_read_csv_without_glob(self):
+        with pytest.warns(UserWarning, match=r"Shell-style wildcard"):
+            with pytest.raises(FileNotFoundError):
+                pd.read_csv_glob("s3://nyc-tlc/trip data/yellow_tripdata_2020-")
+
 
 @pytest.mark.skipif(
     Engine.get() != "Ray", reason="Currently only support Ray engine for glob paths."
@@ -136,24 +144,57 @@ def test_read_multiple_csv_s3():
     df_equals(modin_df, pandas_df)
 
 
+test_default_to_pickle_filename = "test_default_to_pickle.pkl"
+
+
+@pytest.mark.skipif(
+    get_current_execution() != "ExperimentalPandasOnRay",
+    reason=f"Execution {get_current_execution()} isn't supported.",
+)
+@pytest.mark.parametrize(
+    "storage_options",
+    [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
+)
+def test_read_multiple_csv_s3_storage_opts(storage_options):
+    path = "s3://modin-datasets/testing/multiple_csv/"
+    # Test the fact of handling of `storage_options`
+    modin_df = pd.read_csv_glob(path, storage_options=storage_options)
+    pandas_df = pd.concat(
+        [
+            pandas.read_csv(
+                f"{path}test_data{i}.csv",
+                storage_options=storage_options,
+            )
+            for i in range(2)
+        ],
+    ).reset_index(drop=True)
+
+    df_equals(modin_df, pandas_df)
+
+
 @pytest.mark.skipif(
     not Engine.get() == "Ray",
     reason=f"{Engine.get()} does not have experimental API",
 )
 @pytest.mark.parametrize("compression", [None, "gzip"])
 @pytest.mark.parametrize(
-    "filename", ["test_default_to_pickle.pkl", "test_to_pickle*.pkl"]
+    "filename", [test_default_to_pickle_filename, "test_to_pickle*.pkl"]
 )
 def test_distributed_pickling(filename, compression):
     data = test_data["int_data"]
     df = pd.DataFrame(data)
 
+    filename_param = filename
     if compression:
         filename = f"{filename}.gz"
 
-    df.to_pickle_distributed(filename, compression=compression)
-
-    pickled_df = pd.read_pickle_distributed(filename, compression=compression)
+    with (
+        warns_that_defaulting_to_pandas()
+        if filename_param == test_default_to_pickle_filename
+        else nullcontext()
+    ):
+        df.to_pickle_distributed(filename, compression=compression)
+        pickled_df = pd.read_pickle_distributed(filename, compression=compression)
     df_equals(pickled_df, df)
 
     pickle_files = glob.glob(filename)

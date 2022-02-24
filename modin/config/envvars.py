@@ -81,6 +81,8 @@ class Engine(EnvironmentVariable, type=str):
         -------
         str
         """
+        from modin.utils import MIN_RAY_VERSION, MIN_DASK_VERSION
+
         if IsDebug.get():
             return "Python"
         try:
@@ -89,9 +91,9 @@ class Engine(EnvironmentVariable, type=str):
         except ImportError:
             pass
         else:
-            if version.parse(ray.__version__) < version.parse("1.4.0"):
+            if version.parse(ray.__version__) < MIN_RAY_VERSION:
                 raise ImportError(
-                    "Please `pip install modin[ray]` to install compatible Ray version."
+                    "Please `pip install modin[ray]` to install compatible Ray version (>={MIN_RAY_VERSION})."
                 )
             return "Ray"
         try:
@@ -101,22 +103,22 @@ class Engine(EnvironmentVariable, type=str):
         except ImportError:
             pass
         else:
-            if version.parse(dask.__version__) < version.parse(
-                "2.22.0"
-            ) or version.parse(distributed.__version__) < version.parse("2.22.0"):
+            if (
+                version.parse(dask.__version__) < MIN_DASK_VERSION
+                or version.parse(distributed.__version__) < MIN_DASK_VERSION
+            ):
                 raise ImportError(
-                    "Please `pip install modin[dask]` to install compatible Dask version."
+                    "Please `pip install modin[dask]` to install compatible Dask version (>={MIN_DASK_VERSION})."
                 )
             return "Dask"
         try:
-            from omniscidbe import PyDbEngine  # noqa
-        except ModuleNotFoundError:
-            try:
-                from dbe import PyDbEngine  # noqa
-            except ImportError:
-                pass
-            else:
-                return "Native"
+            # We import ``PyDbEngine`` from this module since correct import of ``PyDbEngine`` itself
+            # from Omnisci is located in it with all the necessary options for dlopen.
+            from modin.experimental.core.execution.native.implementations.omnisci_on_native.utils import (  # noqa
+                PyDbEngine,
+            )
+        except ImportError:
+            pass
         else:
             return "Native"
         raise ImportError(
@@ -422,6 +424,7 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
         "enable_lazy_fetch": 0,
         "null_div_by_zero": 1,
         "enable_watchdog": 0,
+        "enable_thrift_logs": 0,
     }
 
     @classmethod
@@ -442,6 +445,45 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
             {key.replace("-", "_"): value for key, value in custom_parameters.items()}
         )
         return result
+
+
+class MinPartitionSize(EnvironmentVariable, type=int):
+    """
+    Minimum number of rows/columns in a single pandas partition split.
+
+    Once a partition for a pandas dataframe has more than this many elements,
+    Modin adds another partition.
+    """
+
+    varname = "MODIN_MIN_PARTITION_SIZE"
+    default = 32
+
+    @classmethod
+    def put(cls, value):
+        """
+        Set ``MinPartitionSize`` with extra checks.
+
+        Parameters
+        ----------
+        value : int
+            Config value to set.
+        """
+        if value <= 0:
+            raise ValueError(f"Min partition size should be > 0, passed value {value}")
+        super().put(value)
+
+    @classmethod
+    def get(cls):
+        """
+        Get ``MinPartitionSize`` with extra checks.
+
+        Returns
+        -------
+        int
+        """
+        min_partition_size = super().get()
+        assert min_partition_size > 0, "`min_partition_size` should be > 0"
+        return min_partition_size
 
 
 def _check_vars():
