@@ -36,6 +36,13 @@ jobs:
       # install test dependencies
       - run: pip install pytest pytest-cov black flake8 flake8-print
       - run: pip list
-      - run: black --check --diff examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
-      - run: flake8 --enable=T examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
+        run: |
+          conda info
+          conda list
+      - run: |
+          black --check --diff examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
+          black --check --diff examples/tutorial/jupyter/execution/test/utils.py
+      - run: |
+          flake8 --enable=T examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
+          flake8 --enable=T examples/tutorial/jupyter/execution/test/utils.py
       - run: pytest examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
