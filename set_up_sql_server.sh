@@ -13,9 +13,9 @@ curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list | sudo tee /et
 echo "mvashishtha second curl"
 sudo apt-get update
 echo "mvashishtha updated"
-sudo apt-cache install mssql-tools unixodbc-dev -y
+sudo apt-get install mssql-tools unixodbc-dev -y
 echo "mvashishtha got tools"
-sudo apt-cache install net-tools
+sudo apt-get install net-tools
 echo "got net-tools"
 sudo netstat -tulpn | grep :1433
 echo "ran netstat"
