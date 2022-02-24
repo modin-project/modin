@@ -286,7 +286,7 @@ doc_cum_agg = partial(
 
     Parameters
     ----------
-    axis : {{0, 1}}
+    fold_axis : {{0, 1}}
     skipna : bool
     **kwargs : dict
         Serves the compatibility purpose. Does not affect the result.
@@ -571,7 +571,7 @@ def doc_window_method(
 
         Parameters
         ----------
-        axis : {{0, 1}}
+        fold_axis : {{0, 1}}
         {window_args_name} : list
             Rolling windows arguments with the same signature as ``modin.pandas.DataFrame.rolling``.
         {extra_params}

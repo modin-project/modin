@@ -35,11 +35,11 @@ class Fold(Operator):
             Function that takes query compiler and executes Fold function.
         """
 
-        def caller(query_compiler, axis=None, *args, **kwargs):
+        def caller(query_compiler, fold_axis=None, *args, **kwargs):
             """Execute Fold function against passed query compiler."""
             return query_compiler.__constructor__(
                 query_compiler._modin_frame.fold(
-                    cls.validate_axis(axis),
+                    cls.validate_axis(fold_axis),
                     lambda x: fold_function(x, *args, **kwargs),
                 )
             )

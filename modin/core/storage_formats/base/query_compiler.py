@@ -1642,30 +1642,30 @@ class BaseQueryCompiler(abc.ABC):
     # data in the same place.
 
     @doc_utils.doc_cum_agg(method="sum", refer_to="cumsum")
-    def cumsum(self, **kwargs):  # noqa: PR02
+    def cumsum(self, fold_axis, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.cumsum)(self, **kwargs)
 
     @doc_utils.doc_cum_agg(method="maximum", refer_to="cummax")
-    def cummax(self, **kwargs):  # noqa: PR02
+    def cummax(self, fold_axis, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.cummax)(self, **kwargs)
 
     @doc_utils.doc_cum_agg(method="minimum", refer_to="cummin")
-    def cummin(self, **kwargs):  # noqa: PR02
+    def cummin(self, fold_axis, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.cummin)(self, **kwargs)
 
     @doc_utils.doc_cum_agg(method="product", refer_to="cumprod")
-    def cumprod(self, **kwargs):  # noqa: PR02
+    def cumprod(self, fold_axis, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.cumprod)(self, **kwargs)
 
     @doc_utils.add_refer_to("DataFrame.diff")
-    def diff(self, **kwargs):  # noqa: PR02
+    def diff(self, fold_axis, **kwargs):  # noqa: PR02
         """
         First discrete difference of element.
 
         Parameters
         ----------
         periods : int
-        axis : {0, 1}
+        fold_axis : {0, 1}
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
 
@@ -4307,7 +4307,7 @@ class BaseQueryCompiler(abc.ABC):
         **kwargs : dict""",
         build_rules="udf_aggregation",
     )
-    def rolling_aggregate(self, axis, rolling_args, func, *args, **kwargs):
+    def rolling_aggregate(self, fold_axis, rolling_args, func, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.aggregate)(
             self, rolling_args, func, *args, **kwargs
         )
@@ -4332,7 +4332,7 @@ class BaseQueryCompiler(abc.ABC):
     )
     def rolling_apply(
         self,
-        axis,
+        fold_axis,
         rolling_args,
         func,
         raw=False,
@@ -4355,14 +4355,14 @@ class BaseQueryCompiler(abc.ABC):
         **kwargs : dict""",
     )
     def rolling_corr(
-        self, axis, rolling_args, other=None, pairwise=None, *args, **kwargs
+        self, fold_axis, rolling_args, other=None, pairwise=None, *args, **kwargs
     ):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.corr)(
             self, rolling_args, other, pairwise, *args, **kwargs
         )
 
     @doc_utils.doc_window_method(result="number of non-NA values", refer_to="count")
-    def rolling_count(self, axis, rolling_args):
+    def rolling_count(self, fold_axis, rolling_args):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.count)(
             self, rolling_args
         )
@@ -4377,7 +4377,7 @@ class BaseQueryCompiler(abc.ABC):
         **kwargs : dict""",
     )
     def rolling_cov(
-        self, axis, rolling_args, other=None, pairwise=None, ddof=1, **kwargs
+        self, fold_axis, rolling_args, other=None, pairwise=None, ddof=1, **kwargs
     ):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.cov)(
             self, rolling_args, other, pairwise, ddof, **kwargs
@@ -4386,7 +4386,7 @@ class BaseQueryCompiler(abc.ABC):
     @doc_utils.doc_window_method(
         result="unbiased kurtosis", refer_to="kurt", params="**kwargs : dict"
     )
-    def rolling_kurt(self, axis, rolling_args, **kwargs):
+    def rolling_kurt(self, fold_axis, rolling_args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.kurt)(
             self, rolling_args, **kwargs
         )
@@ -4398,7 +4398,7 @@ class BaseQueryCompiler(abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def rolling_max(self, axis, rolling_args, *args, **kwargs):
+    def rolling_max(self, fold_axis, rolling_args, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.max)(
             self, rolling_args, *args, **kwargs
         )
@@ -4410,7 +4410,7 @@ class BaseQueryCompiler(abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def rolling_mean(self, axis, rolling_args, *args, **kwargs):
+    def rolling_mean(self, fold_axis, rolling_args, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.mean)(
             self, rolling_args, *args, **kwargs
         )
@@ -4418,7 +4418,7 @@ class BaseQueryCompiler(abc.ABC):
     @doc_utils.doc_window_method(
         result="median value", refer_to="median", params="**kwargs : dict"
     )
-    def rolling_median(self, axis, rolling_args, **kwargs):
+    def rolling_median(self, fold_axis, rolling_args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.median)(
             self, rolling_args, **kwargs
         )
@@ -4430,7 +4430,7 @@ class BaseQueryCompiler(abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def rolling_min(self, axis, rolling_args, *args, **kwargs):
+    def rolling_min(self, fold_axis, rolling_args, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.min)(
             self, rolling_args, *args, **kwargs
         )
@@ -4444,7 +4444,7 @@ class BaseQueryCompiler(abc.ABC):
         **kwargs : dict""",
     )
     def rolling_quantile(
-        self, axis, rolling_args, quantile, interpolation="linear", **kwargs
+        self, fold_axis, rolling_args, quantile, interpolation="linear", **kwargs
     ):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.quantile)(
             self, rolling_args, quantile, interpolation, **kwargs
@@ -4453,7 +4453,7 @@ class BaseQueryCompiler(abc.ABC):
     @doc_utils.doc_window_method(
         result="unbiased skewness", refer_to="skew", params="**kwargs : dict"
     )
-    def rolling_skew(self, axis, rolling_args, **kwargs):
+    def rolling_skew(self, fold_axis, rolling_args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.skew)(
             self, rolling_args, **kwargs
         )
@@ -4466,7 +4466,7 @@ class BaseQueryCompiler(abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def rolling_std(self, axis, rolling_args, ddof=1, *args, **kwargs):
+    def rolling_std(self, fold_axis, rolling_args, ddof=1, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.std)(
             self, rolling_args, ddof, *args, **kwargs
         )
@@ -4478,7 +4478,7 @@ class BaseQueryCompiler(abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def rolling_sum(self, axis, rolling_args, *args, **kwargs):
+    def rolling_sum(self, fold_axis, rolling_args, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.sum)(
             self, rolling_args, *args, **kwargs
         )
@@ -4491,7 +4491,7 @@ class BaseQueryCompiler(abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def rolling_var(self, axis, rolling_args, ddof=1, *args, **kwargs):
+    def rolling_var(self, fold_axis, rolling_args, ddof=1, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.var)(
             self, rolling_args, ddof, *args, **kwargs
         )
@@ -4508,7 +4508,7 @@ class BaseQueryCompiler(abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def window_mean(self, axis, window_args, *args, **kwargs):
+    def window_mean(self, fold_axis, window_args, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.Window.mean)(
             self, window_args, *args, **kwargs
         )
@@ -4522,7 +4522,7 @@ class BaseQueryCompiler(abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def window_std(self, axis, window_args, ddof=1, *args, **kwargs):
+    def window_std(self, fold_axis, window_args, ddof=1, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.Window.std)(
             self, window_args, ddof, *args, **kwargs
         )
@@ -4535,7 +4535,7 @@ class BaseQueryCompiler(abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def window_sum(self, axis, window_args, *args, **kwargs):
+    def window_sum(self, fold_axis, window_args, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.Window.sum)(
             self, window_args, *args, **kwargs
         )
@@ -4549,7 +4549,7 @@ class BaseQueryCompiler(abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def window_var(self, axis, window_args, ddof=1, *args, **kwargs):
+    def window_var(self, fold_axis, window_args, ddof=1, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.Window.var)(
             self, window_args, ddof, *args, **kwargs
         )

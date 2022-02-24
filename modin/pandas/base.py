@@ -1042,7 +1042,7 @@ class BasePandasDataset(object):
             # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
             # purpose and does not affect the result, we shouldn't pass them to the query compiler.
             query_compiler=self._query_compiler.cummax(
-                axis=axis, skipna=skipna, **kwargs
+                fold_axis=axis, axis=axis, skipna=skipna, **kwargs
             )
         )
 
@@ -1054,7 +1054,7 @@ class BasePandasDataset(object):
             # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
             # purpose and does not affect the result, we shouldn't pass them to the query compiler.
             query_compiler=self._query_compiler.cummin(
-                axis=axis, skipna=skipna, **kwargs
+                fold_axis=axis, axis=axis, skipna=skipna, **kwargs
             )
         )
 
@@ -1065,18 +1065,19 @@ class BasePandasDataset(object):
             # FIXME: Judging by pandas docs `**kwargs` serves only compatibility
             # purpose and does not affect the result, we shouldn't pass them to the query compiler.
             query_compiler=self._query_compiler.cumprod(
-                axis=axis, skipna=skipna, **kwargs
+                fold_axis=axis, axis=axis, skipna=skipna, **kwargs
             )
         )
 
     def cumsum(self, axis=None, skipna=True, *args, **kwargs):
         axis = self._get_axis_number(axis)
         self._validate_dtypes(numeric_only=True)
+        print(f"axis in base: {axis}")
         return self.__constructor__(
             # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
             # purpose and does not affect the result, we shouldn't pass them to the query compiler.
             query_compiler=self._query_compiler.cumsum(
-                axis=axis, skipna=skipna, **kwargs
+                fold_axis=axis, axis=axis, skipna=skipna, **kwargs
             )
         )
 
@@ -1143,7 +1144,9 @@ class BasePandasDataset(object):
     def diff(self, periods=1, axis=0):
         axis = self._get_axis_number(axis)
         return self.__constructor__(
-            query_compiler=self._query_compiler.diff(periods=periods, axis=axis)
+            query_compiler=self._query_compiler.diff(
+                fold_axis=axis, axis=axis, periods=periods
+            )
         )
 
     def drop(
