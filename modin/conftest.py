@@ -234,6 +234,17 @@ class TestQC(BaseQueryCompiler):
     def free(self):
         pass
 
+    def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True) -> dict:
+        raise NotImplementedError(
+            "The selected execution does not implement the DataFrame exchange protocol."
+        )
+
+    @classmethod
+    def from_dataframe(cls, df, data_cls):
+        raise NotImplementedError(
+            "The selected execution does not implement the DataFrame exchange protocol."
+        )
+
     to_pandas = PandasQueryCompiler.to_pandas
     default_to_pandas = PandasQueryCompiler.default_to_pandas
 

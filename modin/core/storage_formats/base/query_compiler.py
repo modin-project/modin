@@ -365,6 +365,7 @@ class BaseQueryCompiler(abc.ABC):
 
     # Dataframe exchange protocol
 
+    @abc.abstractmethod
     def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True) -> dict:
         """
         Get a DataFrame exchange protocol object representing data of the Modin DataFrame.
@@ -390,11 +391,10 @@ class BaseQueryCompiler(abc.ABC):
         dict
             A dictionary object following the DataFrame protocol specification.
         """
-        raise NotImplementedError(
-            "The selected execution does not implement the DataFrame exchange protocol."
-        )
+        pass
 
     @classmethod
+    @abc.abstractmethod
     def from_dataframe(cls, df, data_cls):
         """
         Build QueryCompiler from a DataFrame object supporting the dataframe exchange protocol `__dataframe__()`.
@@ -412,9 +412,7 @@ class BaseQueryCompiler(abc.ABC):
         BaseQueryCompiler
             QueryCompiler containing data from the DataFrame.
         """
-        raise NotImplementedError(
-            "The selected execution does not implement import via the DataFrame exchange protocol."
-        )
+        pass
 
     # END Dataframe exchange protocol
 
