@@ -411,7 +411,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.8"]
-        engine: ["ray"]
+        engine: ["python", "ray", "dask"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
