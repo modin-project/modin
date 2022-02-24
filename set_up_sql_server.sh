@@ -2,7 +2,7 @@ set -e
 
 sudo docker pull mcr.microsoft.com/mssql/server:2019-latest
 echo "mvashishtha pulled docker image"
-sudo docker run -d --name example_sql_server -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=Strong.Pwd-123' -p 1433:1433 mcr.microsoft.com/mssql/server:2019-latest
+sudo docker run -m 2g -d --name example_sql_server -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=Strong.Pwd-123' -p 1433:1433 mcr.microsoft.com/mssql/server:2019-latest
 echo "mvashishtha started server"
 sudo docker cp test_1000x256.csv $(sudo docker container ls -f name=example_sql_server -q):/test_1000x256.csv
 echo "mvashishtha copied file"
@@ -11,7 +11,7 @@ curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
 echo "mvashishtha first curl"
 curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list | sudo tee /etc/apt/sources.list.d/msprod.list
 echo "mvashishtha second curl"
-sudo apt-cache update
+sudo apt-get update
 echo "mvashishtha updated"
 sudo apt-cache install mssql-tools unixodbc-dev -y
 echo "mvashishtha got tools"
