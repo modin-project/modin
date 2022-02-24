@@ -2854,4 +2854,24 @@ class PandasDataframe(object):
         """
         from .protocol import DataFrame
 
-        return DataFrame(self, nan_as_null=nan_as_null, allow_copy=allow_copy)
+        df = DataFrame(self, nan_as_null=nan_as_null, allow_copy=allow_copy)
+        return {"dataframe": df, "version": df.version}
+
+    @classmethod
+    def from_dataframe(cls, df):
+        """
+        Construct a Modin DataFrame from `df` supporting the dataframe exchange protocol `__dataframe__()`.
+
+        Parameters
+        ----------
+        df : DataFrame
+            The DataFrame object supporting the dataframe exchange protocol.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data from the DataFrame.
+        """
+        from .protocol.utils import from_dataframe
+
+        return from_dataframe(df)

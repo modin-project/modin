@@ -114,17 +114,10 @@ class DataFrame(BasePandasDataset):
         Engine.subscribe(_update_engine)
 
         if data is not None and hasattr(data, "__dataframe__"):
-            if StorageFormat.get() == "Pandas":
-                from modin.core.dataframe.pandas.dataframe.protocol.utils import (
-                    from_dataframe,
-                )
-                from modin.core.storage_formats.pandas.query_compiler import (
-                    PandasQueryCompiler,
-                )
+            from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-                modin_df = from_dataframe(data)
-                self._query_compiler = PandasQueryCompiler(modin_df)
-                return
+            self._query_compiler = FactoryDispatcher.from_dataframe(data)
+            return
 
         if isinstance(data, (DataFrame, Series)):
             self._query_compiler = data._query_compiler.copy()

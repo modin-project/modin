@@ -72,7 +72,7 @@ class DTypeKind(enum.IntEnum):  # noqa PR01
 
 def from_dataframe(df: DataFrameObject, allow_copy: bool = True) -> PandasDataframe:
     """
-    Construct a ``DataFrame`` from ``df`` if it supports ``__dataframe__``.
+    Construct a ``PandasDataframe`` from ``df`` if it supports ``__dataframe__``.
 
     Parameters
     ----------

@@ -252,18 +252,16 @@ class Column(object):
                 "categorical dtype!"
             )
 
-        # TODO: Raise an exception if ``self._allow_copy==False``?
-        pandas_series = self._col.to_pandas().squeeze(axis=1)
-        ordered = pandas_series.dtype.ordered
+        cat_dtype = self._col.dtypes[0]
+        ordered = cat_dtype.ordered
         is_dictionary = True
         # NOTE: this shows the children approach is better, transforming
         # `categories` to a "mapping" dict is inefficient
         # codes = self._col.values.codes  # ndarray, length `self.size`
         # categories.values is ndarray of length n_categories
-        # TODO: Raise an exception if ``self._allow_copy==False``?
-        categories = pandas_series.values.categories.values
+        categories = cat_dtype.categories
         mapping = {ix: val for ix, val in enumerate(categories)}
-        return ordered, is_dictionary, mapping
+        return {"is_ordered": ordered, "is_dictionary": is_dictionary, "mapping": mapping}
 
     @property
     def describe_null(self) -> Tuple[int, Any]:
@@ -313,6 +311,10 @@ class Column(object):
 
         return null, value
 
+    _null_count_cache = None
+
+    # TODO: since python 3.9:
+    # @cached_property
     @property
     def null_count(self) -> int:
         """
@@ -326,6 +328,8 @@ class Column(object):
         -----
         Arrow uses -1 to indicate "unknown", but None seems cleaner.
         """
+        if self._null_count_cache is not None:
+            return self._null_count_cache
 
         def map_func(df):
             return df.isna()
@@ -336,7 +340,8 @@ class Column(object):
         intermediate_df = self._col.tree_reduce(0, map_func, reduce_func)
         intermediate_df.index = pandas.RangeIndex(1)
         intermediate_df.columns = pandas.RangeIndex(1)
-        return intermediate_df.to_pandas().squeeze()
+        self._null_count_cache = intermediate_df.to_pandas().squeeze()
+        return self._null_count_cache
 
     # TODO: ``What should we return???``, remove before the changes are merged
     @property
