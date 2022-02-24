@@ -128,7 +128,8 @@ def find_common_type_cat(types):
                 categories = np.sort(categories)
             else:
                 # Cannot use np.sort() on array with ndim == 0
-                categories = [categories.item()]
+                # tolist() is called on scalar value and returns an int
+                categories = [categories.tolist()]
             return pandas.CategoricalDtype(
                 categories,
                 ordered=True,
