@@ -17,9 +17,6 @@ import pytest
 import modin.pandas as pd
 
 from modin.pandas.test.utils import default_to_pandas_ignore_string
-from modin.conftest import (  # noqa F401 (unused import, actually used in `test_basic_io`)
-    get_unique_base_execution,
-)
 
 
 def test_sanity():
@@ -30,9 +27,7 @@ def test_sanity():
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
-def test_basic_io(
-    get_unique_base_execution,  # noqa F811 (redefinition of unused `get_unique_base_execution`)
-):
+def test_basic_io(get_unique_base_execution):
     """Test that the protocol IO functions actually reach their implementation with no errors."""
 
     class TestPassed(BaseException):
