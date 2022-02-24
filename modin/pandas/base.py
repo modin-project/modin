@@ -1072,7 +1072,6 @@ class BasePandasDataset(object):
     def cumsum(self, axis=None, skipna=True, *args, **kwargs):
         axis = self._get_axis_number(axis)
         self._validate_dtypes(numeric_only=True)
-        print(f"axis in base: {axis}")
         return self.__constructor__(
             # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
             # purpose and does not affect the result, we shouldn't pass them to the query compiler.
