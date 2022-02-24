@@ -47,7 +47,7 @@ def test_exercise_1():
 
 
 # this notebook works "as is" but for testing purposes we can use smaller dataset
-def black():
+def test_exercise_2():
     modified_notebook_path = os.path.join(local_notebooks_dir, "exercise_2_test.ipynb")
     nb = nbformat.read(
         os.path.join(local_notebooks_dir, "exercise_2.ipynb"),
