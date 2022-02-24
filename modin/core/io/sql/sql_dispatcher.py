@@ -64,7 +64,7 @@ class SQLDispatcher(FileDispatcher):
             )
             return cls.single_worker_read(sql, con=con, index_col=index_col, **kwargs)
         if isinstance(con, str):
-            con = ModinDatabaseConnection("sqlalchemy", "postgres", con)
+            con = ModinDatabaseConnection("sqlalchemy", con)
         row_count_query = con.row_count_query(sql)
         connection_for_pandas = con.get_connection()
         colum_names_query = con.column_names_query(sql)

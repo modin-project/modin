@@ -33,10 +33,6 @@ class UnsupportedDatabaseException(Exception):
     pass
 
 
-class UnsupportedSqlDialectException(Exception):
-    pass
-
-
 class ModinDatabaseConnection:
     """
     Creates a SQL database connection.
@@ -51,19 +47,26 @@ class ModinDatabaseConnection:
         Keyword arguments to pass when creating the connection.
     """
 
-    def __init__(self, lib, modin_sql_dialect=_POSTGRES_DIALECT, *args, **kwargs):
+    def __init__(self, lib, *args, **kwargs):
         lib = lib.lower()
         if lib not in (_PSYCOPG_LIB_NAME, _SQLALCHEMY_LIB_NAME):
             raise UnsupportedDatabaseException(f"Unsupported database library {lib}")
         self.lib = lib
-        modin_sql_dialect = modin_sql_dialect.lower()
-        if modin_sql_dialect not in (_POSTGRES_DIALECT, _MICROSOFT_SQL_DIALECT):
-            raise UnsupportedSqlDialectException(
-                f"Unsupported sql dialect {modin_sql_dialect}"
-            )
-        self.modin_sql_dialect = modin_sql_dialect
         self.args = args
         self.kwargs = kwargs
+        self._dialect_is_microsoft_sql_cache = None
+
+    def _dialect_is_microsoft_sql(self):
+        if self._dialect_is_microsoft_sql_cache is None:
+            self._dialect_is_microsoft_sql_cache = False
+            if self.lib == _SQLALCHEMY_LIB_NAME:
+                from sqlalchemy import create_engine
+
+                self._dialect_is_microsoft_sql_cache = create_engine(
+                    *self.args, **self.kwargs
+                ).driver in ("pymssql", "pyodbc")
+
+        return self._dialect_is_microsoft_sql_cache
 
     def get_connection(self):
         """
@@ -100,10 +103,10 @@ class ModinDatabaseConnection:
 
     def partition_query(self, query, limit, offset):
         return (
-            f"SELECT * FROM ({query}) LIMIT {limit} OFFSET {offset}"
-            if self.modin_sql_dialect == _POSTGRES_DIALECT
-            else (
+            (
                 f"SELECT * FROM ({query}) AS _ ORDER BY(SELECT NULL)"
                 f" OFFSET {offset} ROWS FETCH NEXT {limit} ROWS ONLY"
             )
+            if self._dialect_is_microsoft_sql()
+            else f"SELECT * FROM ({query}) LIMIT {limit} OFFSET {offset}"
         )

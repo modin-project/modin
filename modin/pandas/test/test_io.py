@@ -22,7 +22,6 @@ from collections import OrderedDict
 from modin.db_conn import (
     ModinDatabaseConnection,
     UnsupportedDatabaseException,
-    UnsupportedSqlDialectException,
 )
 from modin.config import TestDatasetSize, Engine, StorageFormat, IsExperimental
 from modin.utils import to_pandas
@@ -1833,7 +1832,7 @@ class TestSql:
         )
 
         modin_df = pd.read_sql(
-            sql=query, con=ModinDatabaseConnection("sqlalchemy", "postgres", conn)
+            sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
         )
         pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
         df_equals(modin_df, pandas_df)
@@ -1845,20 +1844,15 @@ class TestSql:
         )
         modin_df = pd.read_sql(
             query,
-            ModinDatabaseConnection(
-                "sqlalchemy", "microsoft_sql", sqlalchemy_connection_string
-            ),
+            ModinDatabaseConnection("sqlalchemy", sqlalchemy_connection_string),
         )
         pandas_df = pandas.read_sql(query, sqlalchemy_connection_string)
+        assert len(pandas_df) == 3000
         df_equals(modin_df, pandas_df)
-        assert len(pandas_df) == 1000
 
     def test_invalid_modin_database_connections(self):
         with pytest.raises(UnsupportedDatabaseException):
             ModinDatabaseConnection("unsupported_database")
-
-        with pytest.raises(UnsupportedSqlDialectException):
-            ModinDatabaseConnection("sqlalchemy", "unknown_dialect")
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
