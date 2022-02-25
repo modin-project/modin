@@ -16,11 +16,11 @@ import sys
 
 import nbformat
 
-UTILS_PARENT_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), *[".." for _ in range(2)])
+MODIN_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), *[".." for _ in range(6)])
 )
-sys.path.insert(0, UTILS_PARENT_DIR)
-from test.utils import (  # noqa
+sys.path.insert(0, MODIN_DIR)
+from examples.tutorial.jupyter.execution.test.utils import (  # noqa
     _replace_str,
     _execute_notebook,
     _find_code_cell_idx,
