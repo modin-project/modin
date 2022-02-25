@@ -17,23 +17,7 @@ from abc import ABC
 
 
 class BaseDataframePartition(ABC):  # pragma: no cover
-    """
-    An abstract class that represents the parent class for any partition class.
-
-    Parameters
-    ----------
-    length : future-like or int, optional
-        Length or reference to it of wrapped DataFrame-like object.
-    width : future-like or int, optional
-        Width or reference to it of wrapped DataFrame-like object.
-    call_queue : list, optional
-        Call queue that needs to be executed on wrapped DataFrame-like object.
-    """
-
-    def __init__(self, length=None, width=None, call_queue=None):
-        self._length_cache = length
-        self._width_cache = width
-        self.call_queue = call_queue or []
+    """An abstract class that represents the parent class for any partition class."""
 
     def get(self):
         """

@@ -23,14 +23,26 @@ from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_p
 from modin.core.dataframe.base.partitioning.partition import BaseDataframePartition
 
 
-class PandasDataframePartition(
-    BaseDataframePartition
-):  # pragma: no cover; # noqa: PR01
+class PandasDataframePartition(BaseDataframePartition):  # pragma: no cover
     """
     An abstract class that is base for any partition class of ``pandas`` storage format.
 
     The class providing an API that has to be overridden by child classes.
+
+    Parameters
+    ----------
+    length : future-like or int, optional
+        Length or reference to it of wrapped DataFrame-like object.
+    width : future-like or int, optional
+        Width or reference to it of wrapped DataFrame-like object.
+    call_queue : list, optional
+        Call queue that needs to be executed on wrapped DataFrame-like object.
     """
+
+    def __init__(self, length=None, width=None, call_queue=None):
+        self._length_cache = length
+        self._width_cache = width
+        self.call_queue = call_queue or []
 
     def to_pandas(self):
         """
