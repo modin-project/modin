@@ -2,6 +2,5 @@ fsspec
 s3fs
 jupyterlab
 ipywidgets
-tqdm
 modin[dask]
 modin[spreadsheet]

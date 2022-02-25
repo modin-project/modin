@@ -21,4 +21,4 @@ A Jupyter Notebook server can be run from the current directory as follows:
 jupyter notebook
 ```
 
-Navigate to a concrete notebook (for example to the `examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_1.ipynb`).
+Navigate to a concrete notebook (for example, to the `execution/pandas_on_ray/local/exercise_1.ipynb`).
