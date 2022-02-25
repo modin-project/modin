@@ -50,6 +50,9 @@ jobs:
         if: matrix.execution == 'modin_on_omnisci'
       # install test dependencies
       - run: pip install pytest pytest-cov black flake8 flake8-print flake8-no-implicit-concat
+        if: matrix.execution != 'modin_on_omnisci'
+      - run: conda install black flake8 flake8-print jupyter nbformat nbconvert -c conda-forge
+        if: matrix.execution == 'modin_on_omnisci'
       - run: pip list
       - run: |
           black --check --diff examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
