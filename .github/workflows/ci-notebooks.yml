@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        execution: [pandas_on_ray, pandas_on_dask, modin_on_omnisci]
+        execution: [pandas_on_ray, pandas_on_dask, omnisci_on_native]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -25,14 +25,14 @@ jobs:
         with:
           python-version: "3.8.x"
           architecture: "x64"
-        if: matrix.execution != 'modin_on_omnisci'
+        if: matrix.execution != 'omnisci_on_native'
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin_on_omnisci
           environment-file: requirements/env_omnisci.yml
           python-version: 3.8
           channel-priority: strict
-        if: matrix.execution == 'modin_on_omnisci'
+        if: matrix.execution == 'omnisci_on_native'
       - name: Cache datasets
         uses: actions/cache@v2
         with:
@@ -42,17 +42,17 @@ jobs:
       # replace modin with . in the tutorial requirements file since we need
       # Modin built from sources
       - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
-        if: matrix.execution != 'modin_on_omnisci'
+        if: matrix.execution != 'omnisci_on_native'
       # install dependencies required for notebooks execution
       - run: pip install -r examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
-        if: matrix.execution != 'modin_on_omnisci'
+        if: matrix.execution != 'omnisci_on_native'
       - run: pip install .
-        if: matrix.execution == 'modin_on_omnisci'
+        if: matrix.execution == 'omnisci_on_native'
       # install test dependencies
       - run: pip install pytest pytest-cov black flake8 flake8-print flake8-no-implicit-concat
-        if: matrix.execution != 'modin_on_omnisci'
+        if: matrix.execution != 'omnisci_on_native'
       - run: conda install black flake8 flake8-print jupyter nbformat nbconvert -c conda-forge
-        if: matrix.execution == 'modin_on_omnisci'
+        if: matrix.execution == 'omnisci_on_native'
       - run: pip list
       - run: |
           black --check --diff examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
