@@ -23,7 +23,6 @@ sys.path.insert(0, UTILS_PARENT_DIR)
 from test.utils import (  # noqa
     _replace_str,
     _execute_notebook,
-    _find_code_cell_idx,
     test_dataset_path,
     download_taxi_dataset,
 )
