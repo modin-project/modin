@@ -25,11 +25,11 @@ The following tutorials cover the basic usage of Modin. `Here <https://www.youtu
 
 The following tutorials covers more advanced features in Modin:
 
-- Exercise 4: Experimental Features in Modin (Spreadsheet, Progress Bar) [`Source PandasOnRay <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_4.ipynb>`_, `Source PandasOnDask <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/jupyter/execution/pandas_on_dask/local/exercise_4.ipynb>`_]
-- Exercise 5: Setting up Modin in a Cluster Environment [`Source PandasOnRay <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.ipynb>`_]
-- Exercise 6: Running Modin in a Cluster Environment [`Source PandasOnRay <https://github.com/modin-project/modin/blob/721d2d2fe2a46d3b7442e1ab2c7b70ad3bff0712/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_6.ipynb>`_]
+- Exercise 4: Experimental Features in Modin (Spreadsheet, Progress Bar) [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_4.ipynb>`_, `Source PandasOnDask <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_dask/local/exercise_4.ipynb>`_]
+- Exercise 5: Setting up Modin in a Cluster Environment [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.ipynb>`_]
+- Exercise 6: Running Modin in a Cluster Environment [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_6.ipynb>`_]
 
-How to get required dependencies for the tutorial notebooks and to run them please refer to the respective [README.md](examples/tutorial/jupyter/README.md) file.
+How to get required dependencies for the tutorial notebooks and to run them please refer to the respective `README.md <https://github.com/modin-project/modin/tree/master/examples/tutorial/README.md>`_ file.
 
 Talks & Podcasts
 ''''''''''''''''
