@@ -3,6 +3,7 @@ set -e
 sudo docker pull mcr.microsoft.com/mssql/server:2019-latest
 echo "mvashishtha pulled docker image"
 sudo docker run -m 4g -d --name example_sql_server -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=Strong.Pwd-123' -p 1433:1433 mcr.microsoft.com/mssql/server:2019-latest
+sleep 10
 echo "mvashishtha started server"
 sudo docker cp test_1000x256.csv $(sudo docker container ls -f name=example_sql_server -q):/test_1000x256.csv
 echo "mvashishtha copied file"
