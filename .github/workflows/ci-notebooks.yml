@@ -22,7 +22,7 @@ jobs:
         with:
           fetch-depth: 1
         if: matrix.execution != 'modin_on_omnisci'
-    - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v2
         with:
           python-version: "3.8.x"
           architecture: "x64"
