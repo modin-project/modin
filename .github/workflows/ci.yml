@@ -385,12 +385,8 @@ jobs:
               MODIN_ASV_USE_IMPL=pandas asv run --quick --strict --show-stderr --launch-method=spawn \
                 -b ^benchmarks -b ^io -b ^scalability | tee benchmarks.log
 
-              # OmniSci: ERR_OUT_OF_CPU_MEM: Not enough host memory to execute the query
-              # try to reduce dataset
-              # sed -i 's/get_benchmark_shapes("omnisci.TimeGroupByMultiColumn")/[[1000, 10]]/g' benchmarks/omnisci/benchmarks.py
-              # try to reduce groupby columns count
-              # sed -i 's/execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/execute(self.df.groupby(by=self.groupby_columns[:2]).agg("nunique"))/g' benchmarks/omnisci/benchmarks.py
-              # try just disable test
+              # OmniSci: ERR_OUT_OF_CPU_MEM: Not enough host memory to execute the query (MODIN#4270)
+              # just disable test for testing - it works well in a machine with more memory
               sed -i 's/def time_groupby_agg_nunique(self, \*args, \*\*kwargs):/# def time_groupby_agg_nunique(self, *args, **kwargs):/g' benchmarks/omnisci/benchmarks.py
               sed -i 's/execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/# execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/g' benchmarks/omnisci/benchmarks.py
 
