@@ -92,7 +92,9 @@ def _replace_str(nb, original_str, str_to_replace):
     ].replace(original_str, str_to_replace)
 
 
-def test_omnisci_exercise_1():
+# in this notebook user should replace 'import pandas as pd' with
+# 'import modin.pandas as pd' to make notebook work
+def test_exercise_1():
     modified_notebook_path = "examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_1_test.ipynb"
     nb = nbformat.read(
         "examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_1.ipynb",
@@ -104,7 +106,8 @@ def test_omnisci_exercise_1():
     _execute_notebook(modified_notebook_path)
 
 
-def test_omnisci_exercise_2():
+# this notebook works "as is" but for testing purposes we can use smaller dataset
+def test_exercise_2():
     modified_notebook_path = "examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_2_test.ipynb"
     nb = nbformat.read(
         "examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_2.ipynb",
@@ -120,7 +123,8 @@ def test_omnisci_exercise_2():
     _execute_notebook(modified_notebook_path)
 
 
-def test_omnisci_exercise_3():
+# this notebook works "as is"
+def test_exercise_3():
     modified_notebook_path = "examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_3_test.ipynb"
     nb = nbformat.read(
         "examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_3.ipynb",

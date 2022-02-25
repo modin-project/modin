@@ -2,5 +2,5 @@ name: jupyter_modin_on_omnisci
 channels:
   - conda-forge
 dependencies:
-    - modin-omnisci
-    - jupyter
+  - modin-omnisci
+  - jupyter
