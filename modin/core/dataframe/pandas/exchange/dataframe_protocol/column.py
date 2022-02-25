@@ -261,7 +261,11 @@ class Column(object):
         # categories.values is ndarray of length n_categories
         categories = cat_dtype.categories
         mapping = {ix: val for ix, val in enumerate(categories)}
-        return {"is_ordered": ordered, "is_dictionary": is_dictionary, "mapping": mapping}
+        return {
+            "is_ordered": ordered,
+            "is_dictionary": is_dictionary,
+            "mapping": mapping,
+        }
 
     @property
     def describe_null(self) -> Tuple[int, Any]:

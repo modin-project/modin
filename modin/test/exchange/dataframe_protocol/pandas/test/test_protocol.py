@@ -25,9 +25,13 @@ import pytest
 from typing import Any, Tuple
 
 import modin.pandas as pd
-from ..utils import DTypeKind, DataFrameObject, from_dataframe
-from ..buffer import Buffer
-from ..column import Column
+from modin.core.dataframe.pandas.exchange.dataframe_protocol.utils import (
+    DTypeKind,
+    DataFrameObject,
+    from_dataframe,
+)
+from modin.core.dataframe.pandas.exchange.dataframe_protocol.buffer import Buffer
+from modin.core.dataframe.pandas.exchange.dataframe_protocol.column import Column
 
 
 def assert_buffer_equal(buffer_dtype: Tuple[Buffer, Any], pdcol: pandas.DataFrame):

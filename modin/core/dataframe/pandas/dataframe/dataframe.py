@@ -2852,7 +2852,7 @@ class PandasDataframe(object):
         dict
             A dictionary object following the dataframe protocol specification.
         """
-        from .protocol import DataFrame
+        from modin.core.dataframe.pandas.exchange.dataframe_protocol import DataFrame
 
         df = DataFrame(self, nan_as_null=nan_as_null, allow_copy=allow_copy)
         return {"dataframe": df, "version": df.version}
@@ -2869,9 +2869,11 @@ class PandasDataframe(object):
 
         Returns
         -------
-        BaseQueryCompiler
-            QueryCompiler containing data from the DataFrame.
+        PandasDataframe
+            New Modin Dataframe containing data from the DataFrame passed.
         """
-        from .protocol.utils import from_dataframe
+        from modin.core.dataframe.pandas.exchange.dataframe_protocol.utils import (
+            from_dataframe,
+        )
 
         return from_dataframe(df)

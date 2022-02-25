@@ -33,7 +33,6 @@ import numpy as np
 import sys
 from typing import IO, Optional, Union, Iterator
 import warnings
-from modin.config.envvars import StorageFormat
 
 from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
@@ -114,7 +113,9 @@ class DataFrame(BasePandasDataset):
         Engine.subscribe(_update_engine)
 
         if data is not None and hasattr(data, "__dataframe__"):
-            from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+            from modin.core.execution.dispatching.factories.dispatcher import (
+                FactoryDispatcher,
+            )
 
             self._query_compiler = FactoryDispatcher.from_dataframe(data)
             return

@@ -11,12 +11,4 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""
-Base Modin Dataframe functionality related to the dataframe exchange protocol.
-
-See more in https://data-apis.org/dataframe-protocol/latest/index.html.
-"""
-
-from .dataframe import DataFrame
-
-__all__ = ["DataFrame"]
+"""Base Modin Dataframe functionality related to data exchange protocols and optimized for pandas storage format."""
