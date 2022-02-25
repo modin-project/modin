@@ -21,18 +21,18 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-        if: matrix.execution != 'modin_on_omnisci'
       - uses: actions/setup-python@v2
         with:
           python-version: "3.8.x"
           architecture: "x64"
-        if: matrix.execution == 'modin_on_omnisci'
+        if: matrix.execution != 'modin_on_omnisci'
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin_on_omnisci
           environment-file: requirements/env_omnisci.yml
           python-version: 3.8
           channel-priority: strict
+        if: matrix.execution == 'modin_on_omnisci'
       - name: Cache datasets
         uses: actions/cache@v2
         with:
@@ -41,13 +41,13 @@ jobs:
           key: hashFiles("examples/tutorial/jupyter/**")
       # replace modin with . in the tutorial requirements file since we need
       # Modin built from sources
-        if: matrix.execution != 'modin_on_omnisci'
       - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
-      # install dependencies required for notebooks execution
         if: matrix.execution != 'modin_on_omnisci'
+      # install dependencies required for notebooks execution
       - run: pip install -r examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
-        if: matrix.execution == 'modin_on_omnisci'
+        if: matrix.execution != 'modin_on_omnisci'
       - run: pip install .
+        if: matrix.execution == 'modin_on_omnisci'
       # install test dependencies
       - run: pip install pytest pytest-cov black flake8 flake8-print flake8-no-implicit-concat
       - run: pip list
