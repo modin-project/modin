@@ -170,6 +170,11 @@ class FactoryDispatcher(object):
         return cls.__factory._from_non_pandas(*args, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._from_dataframe)
+    def from_dataframe(cls, *args, **kwargs):
+        return cls.__factory._from_dataframe(*args, **kwargs)
+
+    @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_parquet)
     def read_parquet(cls, **kwargs):
         return cls.__factory._read_parquet(**kwargs)

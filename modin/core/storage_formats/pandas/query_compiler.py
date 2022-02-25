@@ -264,6 +264,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def from_arrow(cls, at, data_cls):
         return cls(data_cls.from_arrow(at))
 
+    # Dataframe exchange protocol
+
+    def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True) -> dict:
+        raise NotImplementedError(
+            "The selected execution does not implement the DataFrame exchange protocol yet."
+        )
+
+    @classmethod
+    def from_dataframe(cls, df, data_cls):
+        raise NotImplementedError(
+            "The selected execution does not implement the DataFrame exchange protocol yet."
+        )
+
+    # END Dataframe exchange protocol
+
     index = property(_get_axis(0), _set_axis(0))
     columns = property(_get_axis(1), _set_axis(1))
 

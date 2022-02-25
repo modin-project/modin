@@ -32,6 +32,8 @@ def test_base_abstract_methods():
         "from_pandas",
         "from_arrow",
         "default_to_pandas",
+        "from_dataframe",
+        "to_dataframe",
     ]
 
     not_implemented_methods = BASE_EXECUTION.__abstractmethods__.difference(
