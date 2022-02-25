@@ -8,8 +8,8 @@ on:
       - setup.cfg
       - setup.py
 jobs:
-  test-notebooks:
-    name: test notebooks
+  test-tutorial-notebooks:
+    name: test tutorial notebooks
     runs-on: ubuntu-latest
     strategy:
       matrix:
