@@ -156,9 +156,9 @@ def initialize_ray(
                         if system_memory / (virtual_memory / 2) < 0.99:
                             warnings.warn(
                                 f"The size of /dev/shm is too small ({system_memory} bytes). The required size "
-                                f"at least half of RAM ({virtual_memory // 2} bytes). Please, delete files in /dev/shm or "
-                                "increase size of /dev/shm with --shm-size in Docker. Also, you can set "
-                                "the required memory size for each Ray worker in bytes to MODIN_MEMORY environment variable."
+                                + f"at least half of RAM ({virtual_memory // 2} bytes). Please, delete files in /dev/shm or "
+                                + "increase size of /dev/shm with --shm-size in Docker. Also, you can set "
+                                + "the required memory size for each Ray worker in bytes to MODIN_MEMORY environment variable."
                             )
                     finally:
                         os.close(shm_fd)

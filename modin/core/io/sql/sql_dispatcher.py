@@ -57,11 +57,10 @@ class SQLDispatcher(FileDispatcher):
         if not (is_modin_db_connection or isinstance(con, str)):
             warnings.warn(
                 "To use parallel implementation of `read_sql`, pass either "
-                "the SQL connection string or a ModinDatabaseConnection "
-                "with the arguments required to make a connection, instead "
-                "of {}. For documentation of ModinDatabaseConnection, see https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html#connecting-to-a-database-for-read-sql".format(
-                    type(con)
-                )
+                + "the SQL connection string or a ModinDatabaseConnection "
+                + "with the arguments required to make a connection, instead "
+                + f"of {type(con)}. For documentation of ModinDatabaseConnection, see "
+                + "https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html#connecting-to-a-database-for-read-sql"
             )
             return cls.single_worker_read(sql, con=con, index_col=index_col, **kwargs)
         row_cnt_query = "SELECT COUNT(*) FROM ({}) as foo".format(sql)

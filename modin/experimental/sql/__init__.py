@@ -19,7 +19,7 @@ try:
 except ImportError:
     warnings.warn(
         "Modin experimental sql interface requires dfsql to be installed."
-        " Run `pip install modin[sql]` to install it."
+        + " Run `pip install modin[sql]` to install it."
     )
     raise
 

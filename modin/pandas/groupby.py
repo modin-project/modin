@@ -422,10 +422,10 @@ class DataFrameGroupBy(object):
                     operation="GroupBy.__getitem__",
                     message=(
                         "intersection of the selection and 'by' columns is not yet supported, "
-                        "to achieve the desired result rewrite the original code from:\n"
-                        "df.groupby('by_column')['by_column']\n"
-                        "to the:\n"
-                        "df.groupby(df['by_column'].copy())['by_column']"
+                        + "to achieve the desired result rewrite the original code from:\n"
+                        + "df.groupby('by_column')['by_column']\n"
+                        + "to the:\n"
+                        + "df.groupby(df['by_column'].copy())['by_column']"
                     ),
                 )
             cols_to_grab = internal_by.union(key)
@@ -442,7 +442,7 @@ class DataFrameGroupBy(object):
         ):
             raise NotImplementedError(
                 "Column lookups on GroupBy with arbitrary Series in by"
-                " is not yet supported."
+                + " is not yet supported."
             )
         return SeriesGroupBy(
             self._df[key],
@@ -513,11 +513,11 @@ class DataFrameGroupBy(object):
                     operation="GroupBy.aggregate(**dictionary_renaming_aggregation)",
                     message=(
                         "intersection of the columns to aggregate and 'by' is not yet supported when 'as_index=False', "
-                        "columns with group names of the intersection will not be presented in the result. "
-                        "To achieve the desired result rewrite the original code from:\n"
-                        "df.groupby('by_column', as_index=False).agg(agg_func=('by_column', agg_func))\n"
-                        "to the:\n"
-                        "df.groupby('by_column').agg(agg_func=('by_column', agg_func)).reset_index()"
+                        + "columns with group names of the intersection will not be presented in the result. "
+                        + "To achieve the desired result rewrite the original code from:\n"
+                        + "df.groupby('by_column', as_index=False).agg(agg_func=('by_column', agg_func))\n"
+                        + "to the:\n"
+                        + "df.groupby('by_column').agg(agg_func=('by_column', agg_func)).reset_index()"
                     ),
                 )
 

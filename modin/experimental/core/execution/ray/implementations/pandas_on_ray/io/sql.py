@@ -49,7 +49,7 @@ def is_distributed(partition_column, lower_bound, upper_bound):
     else:
         raise InvalidArguments(
             "Invalid combination of partition_column, lower_bound, upper_bound."
-            "All these arguments should be passed (distributed) or none of them (standard pandas)."
+            + "All these arguments should be passed (distributed) or none of them (standard pandas)."
         )
 
 
