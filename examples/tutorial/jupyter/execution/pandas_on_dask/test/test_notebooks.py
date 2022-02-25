@@ -23,12 +23,11 @@ sys.path.insert(0, MODIN_DIR)
 from examples.tutorial.jupyter.execution.test.utils import (  # noqa: E402
     _replace_str,
     _execute_notebook,
-    _find_code_cell_idx,
     test_dataset_path,
     download_taxi_dataset,
 )
 
-local_notebooks_dir = "examples/tutorial/jupyter/execution/pandas_on_ray/local"
+local_notebooks_dir = "examples/tutorial/jupyter/execution/pandas_on_dask/local"
 
 
 # in this notebook user should replace 'import pandas as pd' with
@@ -54,16 +53,13 @@ def test_exercise_2():
         as_version=nbformat.NO_CONVERT,
     )
 
+    new_cell = f'path = "{test_dataset_path}"\n' + download_taxi_dataset
+
     _replace_str(
         nb,
         'path = "s3://dask-data/nyc-taxi/2015/yellow_tripdata_2015-01.csv"',
-        '# path = "s3://dask-data/nyc-taxi/2015/yellow_tripdata_2015-01.csv"',
+        new_cell,
     )
-
-    new_optional_cell = f'path = "{test_dataset_path}"\n' + download_taxi_dataset
-
-    optional_cell_idx = _find_code_cell_idx(nb, "[Optional] Download data locally.")
-    nb["cells"][optional_cell_idx]["source"] = new_optional_cell
 
     nbformat.write(nb, modified_notebook_path)
     _execute_notebook(modified_notebook_path)
