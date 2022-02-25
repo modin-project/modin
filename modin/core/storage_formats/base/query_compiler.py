@@ -501,7 +501,7 @@ class BaseQueryCompiler(abc.ABC):
         Parameters
         ----------
         other : BaseQueryCompiler
-            The other compiler to be compared with the first.
+            The other compiler to be compared with this one.
         new_index : pandas.Index, optional
             New index of the frame resulting from the binary operation.
         new_columns : pandas.Index, optional
@@ -510,7 +510,9 @@ class BaseQueryCompiler(abc.ABC):
         Returns
         -------
         BaseQueryCompiler
-            Result where each.
+            Result where each partition has a single element telling whether
+            the two objects are pandas.DataFrame.equals() in their
+            corresponding partitions.
         """
         return BinaryDefault.register(
             lambda x, y: pandas.DataFrame(
