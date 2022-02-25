@@ -23,6 +23,7 @@ import pandas
 import datetime
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
+from pandas._libs.lib import no_default
 from typing import List, Hashable, Optional, Callable, Union, Dict
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
@@ -31,7 +32,10 @@ from modin.core.storage_formats.pandas.parsers import (
     find_common_type_cat as find_common_type,
 )
 from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
-from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
+from modin.core.dataframe.base.dataframe.utils import (
+    Axis,
+    JoinType,
+)
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
 
@@ -1915,7 +1919,7 @@ class PandasDataframe(object):
         new_index=None,
         new_columns=None,
         keep_remaining=False,
-        item_to_distribute=None,
+        item_to_distribute=no_default,
     ):
         """
         Apply a function for a subset of the data.
@@ -1942,7 +1946,7 @@ class PandasDataframe(object):
             advance, and if not provided it must be computed.
         keep_remaining : boolean, default: False
             Whether or not to drop the data that is not computed over.
-        item_to_distribute : (optional)
+        item_to_distribute : np.ndarray or scalar, default: no_default
             The item to split up so it can be applied over both axes.
 
         Returns
@@ -1989,7 +1993,7 @@ class PandasDataframe(object):
             # variables set.
             assert row_labels is not None and col_labels is not None
             assert keep_remaining
-            assert item_to_distribute is not None
+            assert item_to_distribute is not no_default
             row_partitions_list = self._get_dict_of_block_index(0, row_labels).items()
             col_partitions_list = self._get_dict_of_block_index(1, col_labels).items()
             new_partitions = self._partition_mgr_cls.apply_func_to_indices_both_axis(

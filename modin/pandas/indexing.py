@@ -385,30 +385,7 @@ class _LocationIndexerBase(object):
             else:
                 new_col_len = len(col_lookup)
             to_shape = new_row_len, new_col_len
-            # If we are asssigning to a single categorical column, we won't be
-            # able to set the column to a 2-d array due to a bug in Pandas.
-            # Until that bug is fixed, don't convert `item` to a 2-d array
-            # in that case.
-            # TODO(https://github.com/pandas-dev/pandas/issues/44703): Delete
-            # this special case once the pandas bug is fixed.
-            assigning_to_single_category_column = new_col_len == 1 and (
-                # Case 1: df = pd.DataFrame({"status": ["a", "b", "c"]},
-                #                           dtype="category")
-                # Then type(df.dtypes) is pandas.core.series.Series
-                (
-                    isinstance(self.df.dtypes, pandas.core.series.Series)
-                    and self.df.dtypes[col_lookup][0].name == "category"
-                )
-                # Case 2: df = pd.Series( ["a", "b", "c"],  dtype="category")
-                # Then df.dtypes ==  CategoricalDtype(categories=['a', 'b', 'c'],
-                #                                     ordered=False)
-                # and type(df.dtypes) is pandas.core.dtypes.dtypes.CategoricalDtype.
-                # Case 3:  df = pd.Series([0, 1, 2], index=['a', 'b', 'c'])
-                # Then df.dtypes == dtype('int64') and type(df.dtypes) is
-                # numpy.dtype
-                or (getattr(self.df.dtypes, "name", "") == "category")
-            )
-            if not assigning_to_single_category_column:
+            if not is_scalar(item):
                 item = self._broadcast_item(row_lookup, col_lookup, item, to_shape)
             self._write_items(row_lookup, col_lookup, item)
 
@@ -422,7 +399,7 @@ class _LocationIndexerBase(object):
             The global row index to locate inside of `item`.
         col_lookup : slice or scalar
             The global col index to locate inside of `item`.
-        item : DataFrame, Series, query_compiler or scalar
+        item : DataFrame, Series, or query_compiler
             Value that should be broadcast to a new shape of `to_shape`.
         to_shape : tuple of two int
             Shape of dataset that `item` should be broadcasted to.
