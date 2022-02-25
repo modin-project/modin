@@ -22,7 +22,7 @@ from ..partitioning import (
     cuDFOnRayDataframePartition,
     cuDFOnRayDataframePartitionManager,
 )
-from .text.csv_dispatcher import cuDFCSVDispatcher
+from .text import cuDFCSVDispatcher
 
 
 class cuDFOnRayIO(BaseIO):
