@@ -2122,6 +2122,15 @@ def test_loc_setting_categorical_series():
     df_equals(modin_series, pandas_series)
 
 
+# This tests the bug from https://github.com/modin-project/modin/issues/3736
+def test_iloc_assigning_scalar_none_to_string_series():
+    data = ["A"]
+    modin_series, pandas_series = create_test_series(data, dtype="string")
+    modin_series.iloc[0] = None
+    pandas_series.iloc[0] = None
+    df_equals(modin_series, pandas_series)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_lt(data):
     modin_series, pandas_series = create_test_series(data)
