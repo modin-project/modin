@@ -47,6 +47,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         Call queue that needs to be executed on wrapped ``pandas.DataFrame``.
     """
 
+    _get_width_fn = None
+    _get_length_fn = None
+
     def __init__(self, object_id, length=None, width=None, ip=None, call_queue=None):
         assert isinstance(object_id, ObjectIDType)
         self.oid = object_id
@@ -56,6 +59,14 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         self._length_cache = length
         self._width_cache = width
         self._ip_cache = ip
+        cls = type(self)
+        if cls._get_width_fn is None and cls._get_length_fn is None:
+            cls._get_width_fn = cls.preprocess_func(
+                PandasDataframePartition._get_width_fn
+            )
+            cls._get_length_fn = cls.preprocess_func(
+                PandasDataframePartition._get_length_fn
+            )
 
     def get(self):
         """
@@ -245,46 +256,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         """
         return ray.put(func)
 
-    def length(self):
-        """
-        Get the length of the object wrapped by this partition.
-
-        Returns
-        -------
-        int
-            The length of the object.
-        """
-        if self._length_cache is None:
-            if len(self.call_queue):
-                self.drain_call_queue()
-            else:
-                self._length_cache, self._width_cache = get_index_and_columns.remote(
-                    self.oid
-                )
-        if isinstance(self._length_cache, ObjectIDType):
-            self._length_cache = ray.get(self._length_cache)
-        return self._length_cache
-
-    def width(self):
-        """
-        Get the width of the object wrapped by the partition.
-
-        Returns
-        -------
-        int
-            The width of the object.
-        """
-        if self._width_cache is None:
-            if len(self.call_queue):
-                self.drain_call_queue()
-            else:
-                self._length_cache, self._width_cache = get_index_and_columns.remote(
-                    self.oid
-                )
-        if isinstance(self._width_cache, ObjectIDType):
-            self._width_cache = ray.get(self._width_cache)
-        return self._width_cache
-
     def ip(self):
         """
         Get the node IP address of the object wrapped by this partition.
@@ -302,26 +273,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         if isinstance(self._ip_cache, ObjectIDType):
             self._ip_cache = ray.get(self._ip_cache)
         return self._ip_cache
-
-
-@ray.remote(num_returns=2)
-def get_index_and_columns(df):
-    """
-    Get the number of rows and columns of a pandas DataFrame.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        A pandas DataFrame which dimensions are needed.
-
-    Returns
-    -------
-    int
-        The number of rows.
-    int
-        The number of columns.
-    """
-    return len(df.index), len(df.columns)
 
 
 @ray.remote(num_returns=4)

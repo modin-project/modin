@@ -43,6 +43,9 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         Call queue that needs to be executed on wrapped pandas DataFrame.
     """
 
+    _get_width_fn = None
+    _get_length_fn = None
+
     def __init__(self, future, length=None, width=None, ip=None, call_queue=None):
         assert isinstance(future, Future)
         self.future = future
@@ -52,6 +55,14 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         self._length_cache = length
         self._width_cache = width
         self._ip_cache = ip
+        cls = type(self)
+        if cls._get_width_fn is None and cls._get_length_fn is None:
+            cls._get_width_fn = cls.preprocess_func(
+                PandasDataframePartition._get_width_fn
+            )
+            cls._get_length_fn = cls.preprocess_func(
+                PandasDataframePartition._get_length_fn
+            )
 
     def get(self):
         """
@@ -238,36 +249,6 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             An object that can be accepted by ``apply``.
         """
         return default_client().scatter(func, hash=False, broadcast=True)
-
-    def length(self):
-        """
-        Get the length of the object wrapped by this partition.
-
-        Returns
-        -------
-        int
-            The length of the object.
-        """
-        if self._length_cache is None:
-            self._length_cache = self.apply(lambda df: len(df)).future
-        if isinstance(self._length_cache, Future):
-            self._length_cache = self._length_cache.result()
-        return self._length_cache
-
-    def width(self):
-        """
-        Get the width of the object wrapped by the partition.
-
-        Returns
-        -------
-        int
-            The width of the object.
-        """
-        if self._width_cache is None:
-            self._width_cache = self.apply(lambda df: len(df.columns)).future
-        if isinstance(self._width_cache, Future):
-            self._width_cache = self._width_cache.result()
-        return self._width_cache
 
     def ip(self):
         """

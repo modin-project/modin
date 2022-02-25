@@ -110,7 +110,7 @@ def length_fn_pandas(df):
     int
     """
     assert isinstance(df, pandas.DataFrame)
-    return len(df) if len(df) > 0 else 0
+    return len(df)
 
 
 def width_fn_pandas(df):
@@ -126,4 +126,4 @@ def width_fn_pandas(df):
     int
     """
     assert isinstance(df, pandas.DataFrame)
-    return len(df.columns) if len(df.columns) > 0 else 0
+    return len(df.columns)

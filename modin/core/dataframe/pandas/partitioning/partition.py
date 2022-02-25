@@ -30,8 +30,9 @@ class PandasDataframePartition(ABC):  # pragma: no cover
     The class providing an API that has to be overridden by child classes.
     """
 
-    _length_cache = None
-    _width_cache = None
+    # can be updated in child classes if needed
+    _get_width_fn = staticmethod(width_fn_pandas)
+    _get_length_fn = staticmethod(length_fn_pandas)
 
     def get(self):
         """
@@ -239,60 +240,28 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
-    @classmethod
-    def _length_extraction_fn(cls):
-        """
-        Return the function that computes the length of the object wrapped by this partition.
-
-        Returns
-        -------
-        callable
-            The function that computes the length of the object wrapped by this partition.
-        """
-        return length_fn_pandas
-
-    @classmethod
-    def _width_extraction_fn(cls):
-        """
-        Return the function that computes the width of the object wrapped by this partition.
-
-        Returns
-        -------
-        callable
-            The function that computes the width of the object wrapped by this partition.
-        """
-        return width_fn_pandas
-
     def length(self):
         """
         Get the length of the object wrapped by this partition.
-
         Returns
         -------
         int
             The length of the object.
         """
         if self._length_cache is None:
-            cls = type(self)
-            func = cls._length_extraction_fn()
-            preprocessed_func = cls.preprocess_func(func)
-            self._length_cache = self.apply(preprocessed_func)
+            self._length_cache = self.apply(self._get_length_fn).get()
         return self._length_cache
 
     def width(self):
         """
         Get the width of the object wrapped by the partition.
-
         Returns
         -------
         int
             The width of the object.
         """
         if self._width_cache is None:
-            cls = type(self)
-            func = cls._width_extraction_fn()
-            preprocessed_func = cls.preprocess_func(func)
-            self._width_cache = self.apply(preprocessed_func)
+            self._width_cache = self.apply(self._get_width_fn).get()
         return self._width_cache
 
     @classmethod
