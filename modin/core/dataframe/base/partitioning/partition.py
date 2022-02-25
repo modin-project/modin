@@ -13,12 +13,13 @@
 
 """The module defines base interface for a partition of a Modin DataFrame."""
 
-from abc import ABC
+from abc import ABC, abstractmethod
 
 
 class BaseDataframePartition(ABC):  # pragma: no cover
     """An abstract class that represents the parent class for any partition class."""
 
+    @abstractmethod
     def get(self):
         """
         Get the object wrapped by this partition.
@@ -36,6 +37,7 @@ class BaseDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
+    @abstractmethod
     def apply(self, func, *args, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
@@ -62,6 +64,7 @@ class BaseDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
+    @abstractmethod
     def add_to_apply_calls(self, func, *args, **kwargs):
         """
         Add a function to the call queue.
@@ -87,15 +90,18 @@ class BaseDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
+    @abstractmethod
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
         pass
 
+    @abstractmethod
     def wait(self):
         """Wait for completion of computations on the object wrapped by the partition."""
         pass
 
     @classmethod
+    @abstractmethod
     def put(cls, obj):
         """
         Put an object into a store and wrap it with partition object.
@@ -113,6 +119,7 @@ class BaseDataframePartition(ABC):  # pragma: no cover
         pass
 
     @classmethod
+    @abstractmethod
     def preprocess_func(cls, func):
         """
         Preprocess a function before an `apply` call.
@@ -136,6 +143,7 @@ class BaseDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
+    @abstractmethod
     def to_pandas(self):
         """
         Convert the object wrapped by this partition to a ``pandas.DataFrame``.
@@ -151,6 +159,7 @@ class BaseDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
+    @abstractmethod
     def to_numpy(self, **kwargs):
         """
         Convert the object wrapped by this partition to a NumPy array.
@@ -171,6 +180,7 @@ class BaseDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
+    @abstractmethod
     def mask(self, row_labels, col_labels):
         """
         Lazily create a mask that extracts the indices provided.
@@ -186,30 +196,6 @@ class BaseDataframePartition(ABC):  # pragma: no cover
         -------
         BaseDataframePartition
             New `BaseDataframePartition` object.
-        """
-        pass
-
-    @classmethod
-    def _length_extraction_fn(cls):
-        """
-        Return the function that computes the length of the object wrapped by this partition.
-
-        Returns
-        -------
-        callable
-            The function that computes the length of the object wrapped by this partition.
-        """
-        pass
-
-    @classmethod
-    def _width_extraction_fn(cls):
-        """
-        Return the function that computes the width of the object wrapped by this partition.
-
-        Returns
-        -------
-        callable
-            The function that computes the width of the object wrapped by this partition.
         """
         pass
 
@@ -244,6 +230,7 @@ class BaseDataframePartition(ABC):  # pragma: no cover
         return self._width_cache
 
     @classmethod
+    @abstractmethod
     def empty(cls):
         """
         Create a new partition that wraps an empty DataFrame-like object.
