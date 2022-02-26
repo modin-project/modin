@@ -465,7 +465,7 @@ def _check_vars():
     if unknown:
         warnings.warn(
             f"Found unknown environment variable{'s' if len(unknown) > 1 else ''},"
-            f" please check {'their' if len(unknown) > 1 else 'its'} spelling: "
+            + f" please check {'their' if len(unknown) > 1 else 'its'} spelling: "
             + ", ".join(sorted(unknown))
         )
 

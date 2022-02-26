@@ -29,6 +29,7 @@ jobs:
       - run: python -m pytest modin/test/storage_formats/pandas/test_internals.py
       - run: python -m pytest modin/test/test_envvar_npartitions.py
       - run: python -m pytest modin/test/test_partition_api.py
+      - run: python -m pytest modin/test/exchange/dataframe_protocol/base
       - uses: codecov/codecov-action@v2
 
   test-defaults:

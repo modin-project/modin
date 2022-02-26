@@ -431,7 +431,7 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
             return (
                 False,
                 "read_csv with 'arrow' engine doesn't support explicit compression parameter, compression"
-                " must be inferred automatically (supported compression types are gzip and bz2)",
+                + " must be inferred automatically (supported compression types are gzip and bz2)",
             )
 
         if isinstance(filepath_or_buffer, str):
@@ -472,14 +472,14 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
             return (
                 False,
                 "read_csv with 'arrow' engine supports only bool and "
-                "flattened lists 'parse_dates' parameter",
+                + "flattened lists 'parse_dates' parameter",
             )
         if names and names != lib.no_default:
             if header not in [None, 0, "infer"]:
                 return (
                     False,
                     "read_csv with 'arrow' engine and provided 'names' parameter supports only 0, None and "
-                    "'infer' header values",
+                    + "'infer' header values",
                 )
             if isinstance(parse_dates, list) and not set(parse_dates).issubset(names):
                 raise ValueError("Missing column provided to 'parse_dates'")
@@ -502,14 +502,14 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
                 return (
                     False,
                     "read_csv with 'arrow' engine doesn't support names parameter, which length doesn't match "
-                    "with actual number of columns",
+                    + "with actual number of columns",
                 )
         else:
             if header not in [0, "infer"]:
                 return (
                     False,
                     "read_csv with 'arrow' engine without 'names' parameter provided supports only 0 and 'infer' "
-                    "header values",
+                    + "header values",
                 )
             if isinstance(parse_dates, list):
                 empty_pandas_df = pandas.read_csv(
@@ -576,13 +576,13 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
         if delim_whitespace and (delimiter is not lib.no_default):
             raise ValueError(
                 "Specified a delimiter with both sep and "
-                "delim_whitespace=True; you can only specify one."
+                + "delim_whitespace=True; you can only specify one."
             )
         if on_bad_lines is not None:
             if error_bad_lines is not None or warn_bad_lines is not None:
                 raise ValueError(
                     "Both on_bad_lines and error_bad_lines/warn_bad_lines are set. "
-                    "Please only set on_bad_lines."
+                    + "Please only set on_bad_lines."
                 )
 
         if on_bad_lines not in ["error", "warn", "skip", None]:

@@ -24,9 +24,9 @@ class ErrorMessage(object):
         if message == "":
             message = "This functionality is not yet available in Modin."
         raise NotImplementedError(
-            "{}\n"
-            "To request implementation, send an email to "
-            "feature_requests@modin.org".format(message)
+            f"{message}\n"
+            + "To request implementation, send an email to "
+            + "feature_requests@modin.org"
         )
 
     @classmethod
@@ -41,13 +41,13 @@ class ErrorMessage(object):
     @classmethod
     def default_to_pandas(cls, message=""):
         if message != "":
-            message = "{} defaulting to pandas implementation.".format(message)
+            message = f"{message} defaulting to pandas implementation."
         else:
             message = "Defaulting to pandas implementation."
 
         if not cls.printed_default_to_pandas:
             message = (
-                "{}\n".format(message)
+                f"{message}\n"
                 + "Please refer to "
                 + "https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html for explanation."
             )
@@ -59,15 +59,15 @@ class ErrorMessage(object):
         if failure_condition:
             raise Exception(
                 "Internal Error. "
-                "Please email bug_reports@modin.org with the traceback and command that"
-                " caused this error.\n{}".format(extra_log)
+                + "Please email bug_reports@modin.org with the traceback and command that"
+                + f" caused this error.\n{extra_log}"
             )
 
     @classmethod
     def non_verified_udf(cls):
         warnings.warn(
             "User-defined function verification is still under development in Modin. "
-            "The function provided is not verified."
+            + "The function provided is not verified."
         )
 
     @classmethod
@@ -79,7 +79,7 @@ class ErrorMessage(object):
     @classmethod
     def not_initialized(cls, engine, code):
         warnings.warn(
-            "{} execution environment not yet initialized. Initializing...\n"
-            "To remove this warning, run the following python code before doing dataframe operations:\n"
-            "{}".format(engine, code)
+            f"{engine} execution environment not yet initialized. Initializing...\n"
+            + "To remove this warning, run the following python code before doing dataframe operations:\n"
+            + f"{code}"
         )

@@ -87,6 +87,28 @@ def from_arrow(at):
     return DataFrame(query_compiler=FactoryDispatcher.from_arrow(at))
 
 
+def from_dataframe(df):
+    """
+    Convert a DataFrame implementing the dataframe exchange protocol to a Modin DataFrame.
+
+    See more about the protocol in https://data-apis.org/dataframe-protocol/latest/index.html.
+
+    Parameters
+    ----------
+    df : DataFrame
+        The DataFrame object supporting the dataframe exchange protocol.
+
+    Returns
+    -------
+    DataFrame
+        A new Modin DataFrame object.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+    from .dataframe import DataFrame
+
+    return DataFrame(query_compiler=FactoryDispatcher.from_dataframe(df))
+
+
 def is_scalar(obj):
     """
     Return True if given object is scalar.
