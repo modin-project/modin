@@ -15,7 +15,7 @@ Key Features and Updates
   * FIX-#4234: Upgrade pandas to 1.4.1 (#4235)
   * FIX-#4057: Allow reading an empty parquet file (#4075)  
   * FIX-#3884: Fix read_excel() dropping empty rows (#4161)
-  * FIX-#4257: Fix Categorical() with for scalar categories (#4258) 
+  * FIX-#4257: Fix Categorical() for scalar categories (#4258) 
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
 * Benchmarking enhancements
