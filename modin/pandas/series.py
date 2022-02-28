@@ -125,6 +125,9 @@ class Series(BasePandasDataset):
         fastpath=False,
         query_compiler=None,
     ):
+        # Siblings are other dataframes that share the same query compiler. We
+        # use this list to update inplace when there is a shallow copy.
+        self._siblings = []
         Engine.subscribe(_update_engine)
         if isinstance(data, type(self)):
             query_compiler = data._query_compiler.copy()
@@ -161,9 +164,6 @@ class Series(BasePandasDataset):
         if name is not None:
             self._query_compiler = self._query_compiler
             self.name = name
-        # Siblings are other dataframes that share the same query compiler. We
-        # use this list to update inplace when there is a shallow copy.
-        self._siblings = []
 
     def _get_name(self):
         """
