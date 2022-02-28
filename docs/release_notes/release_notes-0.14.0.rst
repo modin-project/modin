@@ -19,7 +19,7 @@ Key Features and Updates
   * FIX-#4208: Fix lazy metadata update for `PandasDataFrame.from_labels` (#4209)
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
-  * FIX-#4183: Make frame _siblings an instance variable (#4184)
+  * FIX-#4183: Stop shallow copies from creating global shared state. (#4184)
 * Benchmarking enhancements
   *
 * Refactor Codebase
