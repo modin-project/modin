@@ -204,7 +204,7 @@ class OmnisciServer:
             except pa.lib.ArrowInvalid as e:
                 raise (OverflowError if uint_to_int_cast else RuntimeError)(
                     "An error occurred when trying to convert unsupported by OmniSci 'dtypes' "
-                    f"to the supported ones, the schema to cast was: \n{new_schema}."
+                    + f"to the supported ones, the schema to cast was: \n{new_schema}."
                 ) from e
 
         return table
