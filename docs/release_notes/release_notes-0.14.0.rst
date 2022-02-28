@@ -15,6 +15,9 @@ Key Features and Updates
   * FIX-#4234: Upgrade pandas to 1.4.1 (#4235)
   * FIX-#4057: Allow reading an empty parquet file (#4075)
   * FIX-#3368: support unsigned integers in OmniSci backend (#4256)
+  * FIX-#4057: Allow reading an empty parquet file (#4075)  
+  * FIX-#3884: Fix read_excel() dropping empty rows (#4161)
+  * FIX-#4257: Fix Categorical() for scalar categories (#4258) 
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
 * Benchmarking enhancements
@@ -26,6 +29,7 @@ Key Features and Updates
   * REFACTOR-#3994: remove code duplication for `get_indices` function (#3995)
   * REFACTOR-#4213: Refactor `modin/examples/tutorial/` directory (#4214)
   * REFACTOR-#4206: add assert check into `__init__` method of `PandasOnDaskDataframePartition` class (#4207)
+  * REFACTOR-#3900: add flake8-no-implicit-concat plugin and refactor flake8 error codes (#3901)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
@@ -33,7 +37,7 @@ Key Features and Updates
 * XGBoost enhancements
   *
 * Developer API enhancements
-  *
+  * FEAT-#4245: Define base interface for dataframe exchange protocol (#4246)
 * Update testing suite
   * TEST-#3628: Report coverage data for `test-internals` CI job (#4198)
   * TEST-#3938: Test tutorial notebooks in CI (#4145)
@@ -46,6 +50,7 @@ Key Features and Updates
   * DOCS-#4172: Refresh Intel Distribution of Modin paragraph (#4175)
   * DOCS-#4173: Mention strict channel priority in conda install section (#4178)
   * DOCS-#4176: Update OmniSci usage section (#4192)
+  * DOCS-#3954: Add Dask example notebooks (#4139)
 * Dependencies
   * FIX-#4113, FIX-#4116, FIX-#4115: Apply new `black` formatting, fix pydocstyle check and readthedocs build (#4114)
   * TEST-#3227: Use codecov github action instead of bash form in GA workflows (#3226)
@@ -64,3 +69,5 @@ Contributors
 @dchigarev
 @Garra1980
 @mvashishtha
+@naren-ponder
+@jeffreykennethli

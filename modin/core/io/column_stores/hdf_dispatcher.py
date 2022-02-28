@@ -71,7 +71,7 @@ class HDFDispatcher(ColumnStoreDispatcher):  # pragma: no cover
         if cls._validate_hdf_format(path_or_buf=path_or_buf) is None:
             ErrorMessage.default_to_pandas(
                 "File format seems to be `fixed`. For better distribution consider "
-                "saving the file in `table` format. df.to_hdf(format=`table`)."
+                + "saving the file in `table` format. df.to_hdf(format=`table`)."
             )
             return cls.single_worker_read(path_or_buf, **kwargs)
 

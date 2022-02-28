@@ -290,7 +290,7 @@ class TestCSV:
         if parse_dates_unsupported and engine == "arrow" and not names:
             pytest.skip(
                 "In these cases Modin raises `ArrowEngineException` while pandas "
-                "doesn't raise any exceptions that causes tests fails"
+                + "doesn't raise any exceptions that causes tests fails"
             )
         # In these cases Modin raises `ArrowEngineException` while pandas
         # raises `ValueError`, so skipping exception type checking
@@ -1163,8 +1163,8 @@ class TestAgg:
         ).isna().any(axis=None):
             pytest.xfail(
                 reason="'dropna' parameter is forcibly disabled in OmniSci's GroupBy"
-                "due to performance issues, you can track this problem at:"
-                "https://github.com/modin-project/modin/issues/2896"
+                + "due to performance issues, you can track this problem at:"
+                + "https://github.com/modin-project/modin/issues/2896"
             )
 
         # Custom comparator is required because pandas is inconsistent about

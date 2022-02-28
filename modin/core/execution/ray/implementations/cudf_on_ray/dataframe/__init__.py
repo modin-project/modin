@@ -12,3 +12,9 @@
 # governing permissions and limitations under the License.
 
 """Base Modin Dataframe class optimized for cuDF on Ray execution."""
+
+from .dataframe import cuDFOnRayDataframe
+
+__all__ = [
+    "cuDFOnRayDataframe",
+]

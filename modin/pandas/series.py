@@ -132,7 +132,7 @@ class Series(BasePandasDataset):
                 if any(i not in data.index for i in index):
                     raise NotImplementedError(
                         "Passing non-existent columns or index values to constructor "
-                        "not yet implemented."
+                        + "not yet implemented."
                     )
                 query_compiler = data.loc[index]._query_compiler
         if query_compiler is None:
@@ -576,7 +576,7 @@ class Series(BasePandasDataset):
 
         bad_type_msg = (
             'cannot concatenate object of type "{}"; only pd.Series, '
-            "pd.DataFrame, and pd.Panel (deprecated) objs are valid"
+            + "pd.DataFrame, and pd.Panel (deprecated) objs are valid"
         )
         if isinstance(to_append, list):
             if not all(isinstance(o, BasePandasDataset) for o in to_append):
@@ -1024,7 +1024,7 @@ class Series(BasePandasDataset):
         if isinstance(value, BasePandasDataset) and not isinstance(value, Series):
             raise TypeError(
                 '"value" parameter must be a scalar, dict or Series, but '
-                'you passed a "{0}"'.format(type(value).__name__)
+                + f'you passed a "{type(value).__name__}"'
             )
         return super(Series, self)._fillna(
             squeeze_self=True,
@@ -1074,7 +1074,7 @@ class Series(BasePandasDataset):
             warnings.warn(
                 (
                     "The `squeeze` parameter is deprecated and "
-                    "will be removed in a future version."
+                    + "will be removed in a future version."
                 ),
                 FutureWarning,
                 stacklevel=2,
@@ -1540,7 +1540,7 @@ class Series(BasePandasDataset):
         if kwargs:
             raise TypeError(
                 "reindex() got an unexpected keyword "
-                'argument "{0}"'.format(list(kwargs.keys())[0])
+                + f'argument "{list(kwargs.keys())[0]}"'
             )
         return super(Series, self).reindex(
             index=index,

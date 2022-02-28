@@ -113,7 +113,7 @@ class DataFrame(BasePandasDataset):
             if index is not None and any(i not in data.index for i in index):
                 raise NotImplementedError(
                     "Passing non-existant columns or index values to constructor not"
-                    " yet implemented."
+                    + " yet implemented."
                 )
             if isinstance(data, Series):
                 # We set the column name if it is not in the provided Series
@@ -133,7 +133,7 @@ class DataFrame(BasePandasDataset):
                 if columns is not None and any(i not in data.columns for i in columns):
                     raise NotImplementedError(
                         "Passing non-existant columns or index values to constructor not"
-                        " yet implemented."
+                        + " yet implemented."
                     )
                 if index is None:
                     index = slice(None)
@@ -402,7 +402,7 @@ class DataFrame(BasePandasDataset):
             warnings.warn(
                 (
                     "The `squeeze` parameter is deprecated and "
-                    "will be removed in a future version."
+                    + "will be removed in a future version."
                 ),
                 FutureWarning,
                 stacklevel=2,
@@ -544,7 +544,7 @@ class DataFrame(BasePandasDataset):
         if sort is False:
             warnings.warn(
                 "Due to https://github.com/pandas-dev/pandas/issues/35092, "
-                "Pandas ignores sort=False; Modin correctly does not sort."
+                + "Pandas ignores sort=False; Modin correctly does not sort."
             )
         if isinstance(other, (Series, dict)):
             if isinstance(other, dict):
@@ -552,7 +552,7 @@ class DataFrame(BasePandasDataset):
             if other.name is None and not ignore_index:
                 raise TypeError(
                     "Can only append a Series if ignore_index=True"
-                    " or if the Series has a name"
+                    + " or if the Series has a name"
                 )
             if other.name is not None:
                 # other must have the same index name as self, otherwise
@@ -1134,8 +1134,8 @@ class DataFrame(BasePandasDataset):
                 except (TypeError, ValueError, IndexError):
                     raise ValueError(
                         "Cannot insert into a DataFrame with no defined index "
-                        "and a value that cannot be converted to a "
-                        "Series"
+                        + "and a value that cannot be converted to a "
+                        + "Series"
                     )
             new_index = value.index.copy()
             new_columns = self.columns.insert(loc, column)
@@ -2457,7 +2457,7 @@ class DataFrame(BasePandasDataset):
         elif isinstance(value, pandas.Series):
             warnings.warn(
                 "Modin doesn't allow columns to be created via a new attribute name - see "
-                "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
+                + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
                 UserWarning,
             )
         object.__setattr__(self, key, value)
@@ -2622,6 +2622,35 @@ class DataFrame(BasePandasDataset):
     __imod__ = mod  # pragma: no cover
     __rmod__ = rmod
     __rdiv__ = rdiv
+
+    def __dataframe__(self, nan_as_null: bool = False, allow_copy: bool = True) -> dict:
+        """
+        Get a Modin DataFrame that implements the dataframe exchange protocol.
+
+        See more about the protocol in https://data-apis.org/dataframe-protocol/latest/index.html.
+
+        Parameters
+        ----------
+        nan_as_null : bool, default: False
+            A keyword intended for the consumer to tell the producer
+            to overwrite null values in the data with ``NaN`` (or ``NaT``).
+            This currently has no effect; once support for nullable extension
+            dtypes is added, this value should be propagated to columns.
+        allow_copy : bool, default: True
+            A keyword that defines whether or not the library is allowed
+            to make a copy of the data. For example, copying data would be necessary
+            if a library supports strided buffers, given that this protocol
+            specifies contiguous buffers. Currently, if the flag is set to ``False``
+            and a copy is needed, a ``RuntimeError`` will be raised.
+
+        Returns
+        -------
+        dict
+            A dictionary object following the dataframe protocol specification.
+        """
+        return self._query_compiler.to_dataframe(
+            nan_as_null=nan_as_null, allow_copy=allow_copy
+        )
 
     @property
     def attrs(self):  # noqa: D200

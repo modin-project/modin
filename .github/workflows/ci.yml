@@ -127,8 +127,8 @@ jobs:
         with:
           python-version: "3.8.x"
           architecture: "x64"
-      - run: pip install flake8 flake8-print
-      - run: flake8 --enable=T modin/ asv_bench/benchmarks scripts/doc_checker.py
+      - run: pip install flake8 flake8-print flake8-no-implicit-concat
+      - run: flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py
 
   test-api:
     runs-on: ubuntu-latest
@@ -256,6 +256,7 @@ jobs:
       - run: python -m pytest -n 2 modin/test/test_partition_api.py
       - run: python -m pytest modin/test/test_utils.py
       - run: python -m pytest asv_bench/test/test_utils.py
+      - run: python -m pytest modin/test/exchange/dataframe_protocol/base
       - uses: codecov/codecov-action@v2
 
   test-defaults:
