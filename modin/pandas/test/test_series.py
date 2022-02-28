@@ -2131,6 +2131,15 @@ def test_iloc_assigning_scalar_none_to_string_series():
     df_equals(modin_series, pandas_series)
 
 
+def test_set_ordered_categorical_column():
+    data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+    mdf = pd.DataFrame(data)
+    pdf = pandas.DataFrame(data)
+    mdf["a"] = pd.Categorical(mdf["a"], ordered=True)
+    pdf["a"] = pandas.Categorical(pdf["a"], ordered=True)
+    df_equals(mdf, pdf)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_lt(data):
     modin_series, pandas_series = create_test_series(data)
