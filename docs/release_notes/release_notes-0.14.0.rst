@@ -18,7 +18,7 @@ Key Features and Updates
   * FIX-#4257: Fix Categorical() for scalar categories (#4258) 
   * FIX-#4208: Fix lazy metadata update for `PandasDataFrame.from_labels` (#4209)
   * FIX-#3981, FIX-#3801, FIX-#4149: Stop broadcasting scalars to set items (#4160)
-  * FIX-#4185: Fix rolling across column partitions.
+  * FIX-#4185: Fix rolling across column partitions (#4262)
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
 * Benchmarking enhancements
