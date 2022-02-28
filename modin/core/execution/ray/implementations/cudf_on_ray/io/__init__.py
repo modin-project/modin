@@ -13,11 +13,9 @@
 
 """Base IO classes optimized for cuDF on Ray execution."""
 
-from .text.csv_dispatcher import cuDFCSVDispatcher
 from .io import cuDFOnRayIO
 
 
 __all__ = [
     "cuDFOnRayIO",
-    "cuDFCSVDispatcher",
 ]
