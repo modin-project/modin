@@ -1765,6 +1765,17 @@ def test___setitem__assigning_single_categorical_sets_correct_dtypes():
     df_equals(modin_df, pandas_df)
 
 
+def test_iloc_assigning_scalar_none_to_string_frame():
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/3981
+    data = [["A"]]
+    modin_df = pd.DataFrame(data, dtype="string")
+    modin_df.iloc[0, 0] = None
+    pandas_df = pandas.DataFrame(data, dtype="string")
+    pandas_df.iloc[0, 0] = None
+    df_equals(modin_df, pandas_df)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___len__(data):
     modin_df = pd.DataFrame(data)

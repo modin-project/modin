@@ -480,8 +480,8 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         if not isinstance(by_frame._op, allowed_nodes):
             raise NotImplementedError(
                 "OmniSci doesn't allow complex expression to be a group key. "
-                f"The only allowed frame nodes are: {tuple(o.__name__ for o in allowed_nodes)}, "
-                f"met '{type(by_frame._op).__name__}'."
+                + f"The only allowed frame nodes are: {tuple(o.__name__ for o in allowed_nodes)}, "
+                + f"met '{type(by_frame._op).__name__}'."
             )
 
         col_to_delete_template = "__delete_me_{name}"
@@ -2322,7 +2322,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         if len(unsupported_cols) > 0:
             ErrorMessage.single_warning(
                 f"Frame contain columns with unsupported data-types: {unsupported_cols}. "
-                "All operations with this frame will be default to pandas!"
+                + "All operations with this frame will be default to pandas!"
             )
 
         return cls(
@@ -2407,7 +2407,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         if len(unsupported_cols) > 0:
             ErrorMessage.single_warning(
                 f"Frame contain columns with unsupported data-types: {unsupported_cols}. "
-                "All operations with this frame will be default to pandas!"
+                + "All operations with this frame will be default to pandas!"
             )
 
         return cls(

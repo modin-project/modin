@@ -580,9 +580,9 @@ def check_args(args: argparse.Namespace):
         abs_path = os.path.abspath(path)
         if not abs_path.startswith(MODIN_PATH):
             raise ValueError(
-                f"it is unsupported to use this script on files from another "
-                f"repository; script' repo '{MODIN_PATH}', "
-                f"input path '{abs_path}'"
+                "it is unsupported to use this script on files from another "
+                + f"repository; script' repo '{MODIN_PATH}', "
+                + f"input path '{abs_path}'"
             )
 
 

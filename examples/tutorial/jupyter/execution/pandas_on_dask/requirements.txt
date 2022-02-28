@@ -1,0 +1,6 @@
+fsspec
+s3fs
+jupyterlab
+ipywidgets
+modin[dask]
+modin[spreadsheet]

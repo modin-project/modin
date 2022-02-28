@@ -443,8 +443,8 @@ class MaskNode(DFAlgNode):
         """
         return (
             f"{prefix}MaskNode:\n"
-            f"{prefix}  row_labels: {self.row_labels}\n"
-            f"{prefix}  row_positions: {self.row_positions}\n"
+            + f"{prefix}  row_labels: {self.row_labels}\n"
+            + f"{prefix}  row_positions: {self.row_positions}\n"
             + self._prints_input(prefix + "  ")
         )
 
@@ -507,9 +507,9 @@ class GroupbyAggNode(DFAlgNode):
         """
         return (
             f"{prefix}AggNode:\n"
-            f"{prefix}  by: {self.by}\n"
-            f"{prefix}  aggs: {self.agg_exprs}\n"
-            f"{prefix}  groupby_opts: {self.groupby_opts}\n"
+            + f"{prefix}  by: {self.by}\n"
+            + f"{prefix}  aggs: {self.agg_exprs}\n"
+            + f"{prefix}  groupby_opts: {self.groupby_opts}\n"
             + self._prints_input(prefix + "  ")
         )
 
@@ -703,7 +703,7 @@ class JoinNode(DFAlgNode):
             exprs_str += f"{prefix}    {k}: {v}\n"
         return (
             f"{prefix}JoinNode:\n"
-            f"{prefix}  Fields:\n"
+            + f"{prefix}  Fields:\n"
             + exprs_str
             + f"{prefix}  How: {self.how}\n"
             + f"{prefix}  Condition: {self.condition}\n"
@@ -815,9 +815,9 @@ class SortNode(DFAlgNode):
         """
         return (
             f"{prefix}SortNode:\n"
-            f"{prefix}  Columns: {self.columns}\n"
-            f"{prefix}  Ascending: {self.ascending}\n"
-            f"{prefix}  NULLs position: {self.na_position}\n"
+            + f"{prefix}  Columns: {self.columns}\n"
+            + f"{prefix}  Ascending: {self.ascending}\n"
+            + f"{prefix}  NULLs position: {self.na_position}\n"
             + self._prints_input(prefix + "  ")
         )
 
@@ -872,7 +872,7 @@ class FilterNode(DFAlgNode):
         """
         return (
             f"{prefix}FilterNode:\n"
-            f"{prefix}  Condition: {self.condition}\n"
+            + f"{prefix}  Condition: {self.condition}\n"
             + self._prints_input(prefix + "  ")
         )
 

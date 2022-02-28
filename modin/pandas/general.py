@@ -372,8 +372,8 @@ def concat(
     if isinstance(objs, (pandas.Series, Series, DataFrame, str, pandas.DataFrame)):
         raise TypeError(
             "first argument must be an iterable of pandas "
-            "objects, you passed an object of type "
-            '"{name}"'.format(name=type(objs).__name__)
+            + "objects, you passed an object of type "
+            + f'"{type(objs).__name__}"'
         )
     axis = pandas.DataFrame()._get_axis_number(axis)
     if isinstance(objs, dict):
@@ -398,9 +398,9 @@ def concat(
     if type_check is not None:
         raise ValueError(
             'cannot concatenate object of type "{0}"; only '
-            "modin.pandas.Series "
-            "and modin.pandas.DataFrame objs are "
-            "valid",
+            + "modin.pandas.Series "
+            + "and modin.pandas.DataFrame objs are "
+            + "valid",
             type(type_check),
         )
     all_series = all(isinstance(obj, Series) for obj in list_of_objs)
@@ -548,8 +548,8 @@ def get_dummies(
     if sparse:
         raise NotImplementedError(
             "SparseDataFrame is not implemented. "
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
+            + "To contribute to Modin, please visit "
+            + "github.com/modin-project/modin."
         )
     if not isinstance(data, DataFrame):
         ErrorMessage.default_to_pandas("`get_dummies` on non-DataFrame")

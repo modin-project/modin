@@ -272,16 +272,14 @@ class BasePandasDataset(object):
             if axis == 0:
                 if len(other) != len(self._query_compiler.index):
                     raise ValueError(
-                        "Unable to coerce to Series, length must be {0}: "
-                        "given {1}".format(len(self._query_compiler.index), len(other))
+                        f"Unable to coerce to Series, length must be {len(self._query_compiler.index)}: "
+                        + f"given {len(other)}"
                     )
             else:
                 if len(other) != len(self._query_compiler.columns):
                     raise ValueError(
-                        "Unable to coerce to Series, length must be {0}: "
-                        "given {1}".format(
-                            len(self._query_compiler.columns), len(other)
-                        )
+                        f"Unable to coerce to Series, length must be {len(self._query_compiler.columns)}: "
+                        + f"given {len(other)}"
                     )
             if hasattr(other, "dtype"):
                 other_dtypes = [other.dtype] * len(other)
@@ -380,7 +378,7 @@ class BasePandasDataset(object):
             elif not callable(fn):
                 on_invalid(
                     f"One of the passed functions has an invalid type: {type(fn)}: {fn}, "
-                    "only callable or string is acceptable.",
+                    + "only callable or string is acceptable.",
                     TypeError,
                 )
 
@@ -847,7 +845,6 @@ class BasePandasDataset(object):
 
         self._validate_function(func, on_invalid=error_raiser)
         axis = self._get_axis_number(axis)
-        ErrorMessage.non_verified_udf()
         if isinstance(func, str):
             # if axis != 1 function can be bounded to the Series, which doesn't
             # support axis parameter
@@ -918,7 +915,7 @@ class BasePandasDataset(object):
             ):
                 raise KeyError(
                     "Only a column name can be used for the key in"
-                    "a dtype mappings argument."
+                    + "a dtype mappings argument."
                 )
             col_dtypes = dtype
         else:
@@ -1397,7 +1394,7 @@ class BasePandasDataset(object):
         if isinstance(value, (list, tuple)):
             raise TypeError(
                 '"value" parameter must be a scalar or dict, but '
-                'you passed a "{0}"'.format(type(value).__name__)
+                + f'you passed a "{type(value).__name__}"'
             )
         if value is None and method is None:
             raise ValueError("must specify a fill method or value")
@@ -2017,7 +2014,7 @@ class BasePandasDataset(object):
             if non_mapper:
                 return self._set_axis_name(mapper, axis=axis, inplace=inplace)
             else:
-                raise ValueError("Use `.rename` to alter labels " "with a mapper.")
+                raise ValueError("Use `.rename` to alter labels with a mapper.")
         else:
             # Use new behavior.  Means that index and/or columns is specified
             result = self if inplace else self.copy(deep=copy)
@@ -2217,8 +2214,8 @@ class BasePandasDataset(object):
                 else:
                     raise ValueError(
                         "Strings can only be passed to "
-                        "weights when sampling from rows on "
-                        "a DataFrame"
+                        + "weights when sampling from rows on "
+                        + "a DataFrame"
                     )
             weights = pandas.Series(weights, dtype="float64")
 
@@ -2285,7 +2282,7 @@ class BasePandasDataset(object):
                 # random_state must be an int or a numpy RandomState object
                 raise ValueError(
                     "Please enter an `int` OR a "
-                    "np.random.RandomState for random_state"
+                    + "np.random.RandomState for random_state"
                 )
             # choose random numbers and then get corresponding labels from
             # chosen axis
@@ -2322,9 +2319,9 @@ class BasePandasDataset(object):
         if is_scalar(labels):
             warnings.warn(
                 'set_axis now takes "labels" as first argument, and '
-                '"axis" as named parameter. The old form, with "axis" as '
-                'first parameter and "labels" as second, is still supported '
-                "but will be deprecated in a future version of pandas.",
+                + '"axis" as named parameter. The old form, with "axis" as '
+                + 'first parameter and "labels" as second, is still supported '
+                + "but will be deprecated in a future version of pandas.",
                 FutureWarning,
                 stacklevel=2,
             )
@@ -3106,10 +3103,8 @@ class BasePandasDataset(object):
 
     def __nonzero__(self):
         raise ValueError(
-            "The truth value of a {0} is ambiguous. "
-            "Use a.empty, a.bool(), a.item(), a.any() or a.all().".format(
-                self.__class__.__name__
-            )
+            f"The truth value of a {self.__class__.__name__} is ambiguous. "
+            + "Use a.empty, a.bool(), a.item(), a.any() or a.all()."
         )
 
     __bool__ = __nonzero__

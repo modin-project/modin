@@ -123,8 +123,15 @@ def find_common_type_cat(types):
     """
     if all(isinstance(t, pandas.CategoricalDtype) for t in types):
         if all(t.ordered for t in types):
+            categories = np.unique([c for t in types for c in t.categories])[0]
+            if categories.ndim != 0:
+                categories = np.sort(categories)
+            else:
+                # Cannot use np.sort() on array with ndim == 0
+                # tolist() is called on scalar value and returns an int
+                categories = [categories.tolist()]
             return pandas.CategoricalDtype(
-                np.sort(np.unique([c for t in types for c in t.categories])[0]),
+                categories,
                 ordered=True,
             )
         return union_categoricals(
@@ -233,8 +240,8 @@ class PandasParser(object):
             ErrorMessage.missmatch_with_pandas(
                 operation="read_*",
                 message="Data types of partitions are different! "
-                "Please refer to the troubleshooting section of the Modin documentation "
-                "to fix this issue",
+                + "Please refer to the troubleshooting section of the Modin documentation "
+                + "to fix this issue",
             )
 
             # concat all elements of `partitions_dtypes` and find common dtype
@@ -564,12 +571,14 @@ class PandasExcelParser(PandasParser):
             has_index_names=is_list_like(header) and len(header) > 1,
             skiprows=skiprows,
             usecols=usecols,
+            skip_blank_lines=False,
             **kwargs,
         )
-        # In excel if you create a row with only a border (no values), this parser will
-        # interpret that as a row of NaN values. pandas discards these values, so we
-        # also must discard these values.
-        pandas_df = parser.read().dropna(how="all")
+        pandas_df = parser.read()
+        if len(pandas_df) > 1 and pandas_df.isnull().all().all():
+            # Drop NaN rows at the end of the DataFrame
+            pandas_df = pandas.DataFrame(columns=pandas_df.columns)
+
         # Since we know the number of rows that occur before this partition, we can
         # correctly assign the index in cases of RangeIndex. If it is not a RangeIndex,
         # the index is already correct because it came from the data.

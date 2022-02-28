@@ -8,9 +8,12 @@ on:
       - setup.cfg
       - setup.py
 jobs:
-  test-notebooks:
-    name: test notebooks
+  test-tutorial-notebooks:
+    name: test tutorial notebooks
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        execution: [pandas_on_ray, pandas_on_dask]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -24,15 +27,19 @@ jobs:
         with:
           path: taxi.csv
           # update cache only if notebooks require it to be changed
-          key: hashFiles("examples/tutorial/jupyter/execution/pandas_on_ray/local/**")
-      # replace modin[all] with .[all] in the tutorial requirements file since we need
+          key: hashFiles("examples/tutorial/jupyter/**")
+      # replace modin with . in the tutorial requirements file since we need
       # Modin built from sources
-      - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/pandas_on_ray/requirements.txt
+      - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
       # install dependencies required for notebooks execution
-      - run: pip install -r examples/tutorial/jupyter/execution/pandas_on_ray/requirements.txt
+      - run: pip install -r examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
       # install test dependencies
-      - run: pip install pytest pytest-cov black flake8 flake8-print
+      - run: pip install pytest pytest-cov black flake8 flake8-print flake8-no-implicit-concat
       - run: pip list
-      - run: black --check --diff examples/tutorial/jupyter/execution/pandas_on_ray/test/test_notebooks.py
-      - run: flake8 --enable=T examples/tutorial/jupyter/execution/pandas_on_ray/test/test_notebooks.py
-      - run: pytest examples/tutorial/jupyter/execution/pandas_on_ray/test/test_notebooks.py
+      - run: |
+          black --check --diff examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
+          black --check --diff examples/tutorial/jupyter/execution/test/utils.py
+      - run: |
+          flake8 --enable=T examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
+          flake8 --enable=T examples/tutorial/jupyter/execution/test/utils.py
+      - run: pytest examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
