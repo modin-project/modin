@@ -828,7 +828,18 @@ class PandasDataframe(object):
         def from_labels_executor(df, **kwargs):
             # Setting the names here ensures that external and internal metadata always match.
             df.index.names = new_column_names
-            return df.reset_index()
+
+            # Handling of a case when columns have the same name as one of index levels names.
+            # In this case `df.reset_index` provides errors related to columns duplication.
+            # This case is possible because columns metadata updating is deffered. To workaround
+            # `df.reset_index` error we allow columns duplucation in "if" branch via `concat`.
+            if any(name_level in df.columns for name_level in df.index.names):
+                columns_to_add = df.index.to_frame()
+                columns_to_add.reset_index(drop=True, inplace=True)
+                df = df.reset_index(drop=True)
+                return pandas.concat([columns_to_add, df], axis=1, copy=False)
+            else:
+                return df.reset_index()
 
         new_parts = self._partition_mgr_cls.apply_func_to_select_indices(
             0,
