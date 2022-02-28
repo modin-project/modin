@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import pyarrow as pa
+import numpy as np
 
 from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
     ArrowCTypes,
@@ -21,11 +22,16 @@ from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
 
 def arrow_dtype_to_arrow_c(dtype):
     if pa.types.is_timestamp(dtype):
-        return ArrowCTypes.TIMESTAMP.format(resolution=dtype.unit, tz=dtype.tz or "")
+        return ArrowCTypes.TIMESTAMP.format(
+            resolution=dtype.unit[:1], tz=dtype.tz or ""
+        )
     elif pa.types.is_date(dtype):
         return getattr(ArrowCTypes, f"DATE{dtype.bit_width}", "DATE64")
     elif pa.types.is_time(dtype):
-        return ArrowCTypes.TIME.format(resolution=dtype.unit)
+        # TODO: for some reason `time32` type doesn't have a `unit` attribute,
+        # always return "s" for now.
+        # return ArrowCTypes.TIME.format(resolution=dtype.unit[:1])
+        return ArrowCTypes.TIME.format(resolution="s")
     elif pa.types.is_dictionary(dtype):
         return arrow_dtype_to_arrow_c(dtype.index_type)
     else:

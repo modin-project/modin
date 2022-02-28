@@ -13,7 +13,7 @@
 
 import pyarrow as pa
 
-from typing import Tuple
+from typing import Tuple, Optional
 from modin.core.dataframe.base.exchange.dataframe_protocol.utils import DlpackDeviceType
 from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
     ProtocolBuffer,
@@ -46,18 +46,19 @@ class OmnisciProtocolBuffer(ProtocolBuffer):
         and a copy is needed, a ``RuntimeError`` will be raised.
     """
 
-    def __init__(self, buff: pa.Buffer, allow_copy: bool = True) -> None:
+    def __init__(self, buff: pa.Buffer, size: Optional[int] = None) -> None:
         """
         Handle only regular columns (= numpy arrays) for now.
         """
         self._buff = buff
+        self._size = self._buff.size if size is None else size
 
     @property
     def bufsize(self) -> int:
         """
         Buffer size in bytes.
         """
-        return self._buff.size
+        return self._size
 
     @property
     def ptr(self) -> int:

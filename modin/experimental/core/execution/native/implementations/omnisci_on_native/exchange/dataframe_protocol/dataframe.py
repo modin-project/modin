@@ -81,7 +81,6 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         df: ModinDataframe,
         nan_as_null: bool = False,
         allow_copy: bool = True,
-        offset: int = 0,
     ) -> None:
         if nan_as_null:
             raise NotImplementedError(
@@ -91,7 +90,6 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         self._df = df
         self._nan_as_null = nan_as_null
         self._allow_copy = allow_copy
-        self._offset = offset
 
     @property
     def metadata(self):
@@ -247,6 +245,9 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         assert at is not None
         return at
 
+    def _replace_at(self, at):
+        self._df = self._df.from_arrow(at)
+
     def column_names(self) -> Iterable[str]:
         """
         Return an iterator yielding the column names.
@@ -272,7 +273,6 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
             OmnisciProtocolDataframe(
                 self._df.mask(col_positions=[i]),
                 allow_copy=self._allow_copy,
-                offset=self._offset,
             ),
         )
 
@@ -289,7 +289,6 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
             OmnisciProtocolDataframe(
                 self._df.mask(col_labels=[name]),
                 allow_copy=self._allow_copy,
-                offset=self._offset,
             ),
         )
 
@@ -307,7 +306,6 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
                 OmnisciProtocolDataframe(
                     self._df.mask(col_labels=[name]),
                     allow_copy=self._allow_copy,
-                    offset=self._offset,
                 ),
             )
 
@@ -326,7 +324,6 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         return OmnisciProtocolDataframe(
             self._df.mask(col_positions=list(indices)),
             allow_copy=self._allow_copy,
-            offset=self._offset,
         )
 
     def select_columns_by_name(self, names: Sequence[str]) -> "DataFrame":
@@ -344,7 +341,6 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         return OmnisciProtocolDataframe(
             self._df.mask(col_labels=list(names)),
             allow_copy=self._allow_copy,
-            offset=self._offset,
         )
 
     def get_chunks(self, n_chunks: Optional[int] = None) -> Iterable["DataFrame"]:
@@ -415,5 +411,4 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
                 ),
                 allow_copy=self._allow_copy,
                 nan_as_null=self._nan_as_null,
-                offset=chunk_slices[i],
             )

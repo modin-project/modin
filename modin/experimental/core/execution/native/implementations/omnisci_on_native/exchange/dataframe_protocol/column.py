@@ -16,6 +16,7 @@ import pandas
 import numpy as np
 
 from typing import Any, Optional, Tuple, Dict, Iterable
+from math import ceil
 from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
     DTypeKind,
     ColumnNullType,
@@ -117,7 +118,11 @@ class OmnisciProtocolColumn(ProtocolColumn):
         int
             The offset of first element.
         """
-        return self._col._offset
+        # The offset may change if it would require to cast buffers as the casted ones
+        # no longer depend on their parent tables. So materializing casted buffers
+        # before accessing the offset
+        self._materialize_actual_buffers()
+        return self._pyarrow_table.column(0).chunks[0].offset
 
     @property
     def dtype(self) -> Tuple[DTypeKind, int, str, str]:
@@ -182,13 +187,16 @@ class OmnisciProtocolColumn(ProtocolColumn):
             or pa.types.is_time(dtype)
         ):
             kind = DTypeKind.DATETIME
+            bit_width = dtype.bit_width
         elif pa.types.is_dictionary(dtype):
             kind = DTypeKind.CATEGORICAL
+            bit_width = dtype.bit_width
         elif pa.types.is_string(dtype):
             kind = DTypeKind.STRING
+            bit_width = 8
 
         if kind is not None:
-            return (kind, dtype.bit_width, arrow_dtype_to_arrow_c(dtype), "=")
+            return (kind, bit_width, arrow_dtype_to_arrow_c(dtype), "=")
         else:
             return self._dtype_from_primitive_pandas(np.dtype(dtype.to_pandas_dtype()))
 
@@ -364,13 +372,8 @@ class OmnisciProtocolColumn(ProtocolColumn):
         if self.num_chunks() != 1:
             raise NotImplementedError()
 
-        external_dtype = self.dtype
-        internal_dtype = self._dtype_from_pyarrow(self._arrow_dtype)
-
-        if external_dtype != internal_dtype:
-            at = self._propagate_dtype(external_dtype)
-        else:
-            at = self._pyarrow_table
+        self._materialize_actual_buffers()
+        at = self._pyarrow_table
         pyarrow_array = at.column(0).chunks[0]
 
         result = dict()
@@ -380,25 +383,46 @@ class OmnisciProtocolColumn(ProtocolColumn):
 
         return result
 
-    def _get_data_buffer(self, arr):
-        arrow_type = self._dtype_from_pyarrow(arr.type)
+    def _materialize_actual_buffers(self):
+        external_dtype = self.dtype
+        internal_dtype = self._dtype_from_pyarrow(self._arrow_dtype)
 
-        if arrow_type[0] == DTypeKind.CATEGORICAL:
+        if external_dtype[0] != internal_dtype[0]:
+            self._propagate_dtype(external_dtype)
+
+    def _get_buffer_size(self, bit_width, is_offset_buffer=False):
+        elements_in_buffer = self.size + 1 if is_offset_buffer else self.size
+        return ceil((bit_width * elements_in_buffer) / 8)
+
+    def _get_data_buffer(self, arr):
+        if self.dtype[0] == DTypeKind.CATEGORICAL:
             arr = arr.indices
 
-        data_buffer = OmnisciProtocolBuffer(arr.buffers()[-1])
-        return data_buffer, arrow_type
+        arrow_type = self._dtype_from_pyarrow(arr.type)
+
+        buff_size = (
+            self._get_buffer_size(bit_width=arrow_type[1])
+            if self.dtype[0] != DTypeKind.STRING
+            else None
+        )
+
+        return (
+            OmnisciProtocolBuffer(arr.buffers()[-1], buff_size),
+            arrow_type,
+        )
 
     def _get_validity_buffer(self, arr):
         validity_buffer = arr.buffers()[0]
         if validity_buffer is None:
             return validity_buffer
 
-        return OmnisciProtocolBuffer(validity_buffer), (
-            DTypeKind.BOOL,
-            1,
-            pandas_dtype_to_arrow_c(np.dtype("bool")),
-            "=",
+        data_size = self._get_buffer_size(bit_width=1)
+        if self.offset % 8 + self.size > data_size * 8:
+            data_size += 1
+
+        return (
+            OmnisciProtocolBuffer(validity_buffer, data_size),
+            self._dtype_from_primitive_pandas(np.dtype("uint8")),
         )
 
     def _get_offsets_buffer(self, arr):
@@ -406,6 +430,64 @@ class OmnisciProtocolColumn(ProtocolColumn):
         if len(buffs) < 3:
             return None
 
-        return OmnisciProtocolBuffer(buffs[1]), self._dtype_from_primitive_pandas(
-            np.dtype("int32")
+        offset_buff = buffs[1]
+
+        dtype = self._dtype_from_primitive_pandas(np.dtype("int32"))
+        return (
+            OmnisciProtocolBuffer(
+                offset_buff,
+                self._get_buffer_size(bit_width=dtype[1], is_offset_buffer=True),
+            ),
+            dtype,
         )
+
+    def _propagate_dtype(self, dtype):
+        if not self._col._allow_copy:
+            raise RuntimeError("Copy required with 'allow_copy=False' flag")
+
+        arrow_types_map = {
+            DTypeKind.BOOL: {8: pa.bool_()},
+            DTypeKind.INT: {
+                8: pa.int8(),
+                16: pa.int16(),
+                32: pa.int32(),
+                64: pa.int64(),
+            },
+            DTypeKind.UINT: {
+                8: pa.uint8(),
+                16: pa.uint16(),
+                32: pa.uint32(),
+                64: pa.uint64(),
+            },
+            DTypeKind.FLOAT: {16: pa.float16(), 32: pa.float32(), 64: pa.float64()},
+            DTypeKind.STRING: {8: pa.string()},
+        }
+        kind, bit_width, format_str, _ = dtype
+        arrow_type = None
+
+        if kind in arrow_types_map:
+            arrow_type = arrow_types_map[kind].get(bit_width, None)
+        elif kind == DTypeKind.DATETIME:
+            arrow_type = pa.timestamp("ns")
+        elif kind == DTypeKind.CATEGORICAL:
+            arrow_type = pa.dictionary(
+                index_type=arrow_types_map[DTypeKind.INT][bit_width],
+                value_type=pa.string(),
+            )
+
+        if arrow_type is None:
+            raise NotImplementedError(f"Propagation for type {dtype} is not supported.")
+
+        at = self._pyarrow_table
+        schema_to_cast = at.schema
+        field = at.schema[0]
+
+        schema_to_cast = schema_to_cast.set(
+            0, pa.field(field.name, arrow_type, field.nullable)
+        )
+
+        # TODO: currently, each column chunk casts its buffers independently which results
+        # in an `NCHUNKS - 1` amount of redundant casts. We can make the pyarrow table
+        # being shared across all the chunks, so the cast being triggered in a single chunk
+        # propagate to all of them.
+        self._col._replace_at(at.cast(schema_to_cast))
