@@ -1616,9 +1616,9 @@ def test_agg_exceptions(operation):
 
 @pytest.mark.skip(
     "Pandas raises a ValueError on empty dictionary aggregation since 1.2.0"
-    "It's unclear is that was made on purpose or it is a bug. That question"
-    "was asked in https://github.com/pandas-dev/pandas/issues/39609."
-    "So until the answer this test is disabled."
+    + "It's unclear is that was made on purpose or it is a bug. That question"
+    + "was asked in https://github.com/pandas-dev/pandas/issues/39609."
+    + "So until the answer this test is disabled."
 )
 @pytest.mark.parametrize(
     "kwargs",
@@ -1941,7 +1941,7 @@ def test_handle_as_index(
     ):
         pytest.skip(
             "The linked bug makes pandas raise an exception when 'by' is categorical: "
-            "https://github.com/pandas-dev/pandas/issues/36698"
+            + "https://github.com/pandas-dev/pandas/issues/36698"
         )
 
     df = pandas.DataFrame(test_groupby_data)

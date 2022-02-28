@@ -319,8 +319,8 @@ class GroupByReduce(TreeReduce):
                 operation="df.groupby(categorical_by, sort=False)",
                 message=(
                     "the groupby keys will be sorted anyway, although the 'sort=False' was passed. "
-                    "See the following issue for more details: "
-                    "https://github.com/modin-project/modin/issues/3571"
+                    + "See the following issue for more details: "
+                    + "https://github.com/modin-project/modin/issues/3571"
                 ),
             )
             groupby_kwargs = groupby_kwargs.copy()

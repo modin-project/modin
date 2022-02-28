@@ -161,6 +161,7 @@ class TestCSV:
                 df_equals(rm["timestamp"].dt.year, rp["timestamp"].dt.year)
                 df_equals(rm["timestamp"].dt.month, rp["timestamp"].dt.month)
                 df_equals(rm["timestamp"].dt.day, rp["timestamp"].dt.day)
+                df_equals(rm["timestamp"].dt.hour, rp["timestamp"].dt.hour)
 
     def test_csv_fillna(self):
         csv_file = os.path.join(self.root, "examples/data/boston_housing.csv")
@@ -288,7 +289,7 @@ class TestCSV:
         if parse_dates_unsupported and engine == "arrow" and not names:
             pytest.skip(
                 "In these cases Modin raises `ArrowEngineException` while pandas "
-                "doesn't raise any exceptions that causes tests fails"
+                + "doesn't raise any exceptions that causes tests fails"
             )
         # In these cases Modin raises `ArrowEngineException` while pandas
         # raises `ValueError`, so skipping exception type checking
@@ -1161,8 +1162,8 @@ class TestAgg:
         ).isna().any(axis=None):
             pytest.xfail(
                 reason="'dropna' parameter is forcibly disabled in OmniSci's GroupBy"
-                "due to performance issues, you can track this problem at:"
-                "https://github.com/modin-project/modin/issues/2896"
+                + "due to performance issues, you can track this problem at:"
+                + "https://github.com/modin-project/modin/issues/2896"
             )
 
         # Custom comparator is required because pandas is inconsistent about
@@ -1723,6 +1724,14 @@ class TestDateTime:
         "c": pandas.to_datetime(
             ["20190902", "20180913", "20190921", "20180903"], format="%Y%m%d"
         ),
+        "d": pandas.to_datetime(
+            [
+                "2018-10-26 12:00",
+                "2018-10-26 13:00:15",
+                "2020-10-26 04:00:15",
+                "2020-10-26",
+            ]
+        ),
     }
 
     def test_dt_year(self):
@@ -1742,6 +1751,12 @@ class TestDateTime:
             return df["c"].dt.day
 
         run_and_compare(dt_day, data=self.datetime_data)
+
+    def test_dt_hour(self):
+        def dt_hour(df, **kwargs):
+            return df["d"].dt.hour
+
+        run_and_compare(dt_hour, data=self.datetime_data)
 
 
 class TestCategory:

@@ -61,7 +61,7 @@ class CSVGlobDispatcher(CSVDispatcher):
             if "*" not in filepath_or_buffer and not is_folder:
                 warnings.warn(
                     "Shell-style wildcard '*' must be in the filename pattern in order to read multiple "
-                    f"files at once. Did you forget it? Passed filename: '{filepath_or_buffer}'"
+                    + f"files at once. Did you forget it? Passed filename: '{filepath_or_buffer}'"
                 )
             if not cls.file_exists(filepath_or_buffer):
                 return cls.single_worker_read(filepath_or_buffer, **kwargs)
