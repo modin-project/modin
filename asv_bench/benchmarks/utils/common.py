@@ -498,21 +498,26 @@ def execute(
         if ASV_USE_STORAGE_FORMAT == "omnisci":
             df._query_compiler._modin_frame._execute()
             return
-        partitions = df._query_compiler._modin_frame._partitions
+        partitions = df._query_compiler._modin_frame._partitions.flatten()
+        if hasattr(partitions[0], "wait"):
+            all(map(lambda partition: partition.wait(), partitions))
+            return
+
+        # compatibility with old Modin versions
         all(
             map(
                 lambda partition: partition.drain_call_queue() or True,
-                partitions.flatten(),
+                partitions,
             )
         )
         if ASV_USE_ENGINE == "ray":
             from ray import wait
 
-            all(map(lambda partition: wait([partition.oid]), partitions.flatten()))
+            all(map(lambda partition: wait([partition.oid]), partitions))
         elif ASV_USE_ENGINE == "dask":
             from dask.distributed import wait
 
-            all(map(lambda partition: wait(partition.future), partitions.flatten()))
+            all(map(lambda partition: wait(partition.future), partitions))
         elif ASV_USE_ENGINE == "python":
             pass
 

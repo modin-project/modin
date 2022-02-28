@@ -20,7 +20,7 @@ Key Features and Updates
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
 * Benchmarking enhancements
-  *
+  * FIX-#4221: add `wait` method for `PandasOnRayDataframeColumnPartition` class (#4231)
 * Refactor Codebase
   * REFACTOR-#3990: remove code duplication in `PandasDataframePartition` hierarchy (#3991)
   * REFACTOR-#4229: remove unused `dask_client` global variable in `modin\pandas\__init__.py` (#4230)

@@ -393,6 +393,12 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         self.list_of_partitions_to_combine = drained
         self.call_queue = []
 
+    def wait(self):
+        """Wait completing computations on the object wrapped by the partition."""
+        self.drain_call_queue()
+        futures = self.list_of_blocks
+        ray.wait(futures, num_returns=len(futures))
+
     def add_to_apply_calls(self, func, *args, **kwargs):
         """
         Add a function to the call queue.
