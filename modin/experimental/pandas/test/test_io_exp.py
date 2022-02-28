@@ -20,13 +20,13 @@ import pytest
 import modin.experimental.pandas as pd
 from modin.config import Engine
 from modin.utils import get_current_execution
-from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.pandas.test.utils import (
     df_equals,
     get_unique_filename,
     teardown_test_files,
     test_data,
 )
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 
 @pytest.mark.skipif(
