@@ -61,7 +61,23 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}        
+      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py --execution=${{ matrix.execution }}
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_series.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_concat.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
       - uses: codecov/codecov-action@v2
 
   test-omnisci:
@@ -104,10 +120,14 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.8"]
-        engine: ["python"]
+        engine: ["python", "ray", "dask"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
+      # Only test readin from SQL server on ubuntu for now. Eventually, we
+      # should test on Windows, too, but we will have to set up the SQL
+      # server differently.
+      MODIN_TEST_READ_FROM_SQL_SERVER: true
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
@@ -126,8 +146,33 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: chmod +x set_up_sql_server.sh
-      - run: ./set_up_sql_server.sh
+      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
+      - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
+        if: matrix.engine == 'ray'
+      - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
+        if: matrix.engine == 'ray'
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_concat.py
+        if: matrix.engine == 'python'
+      - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+        if: matrix.engine != 'python'
+      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_general.py
+      - run: python -m pytest modin/pandas/test/test_io.py
+      - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
+      - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: python -m pytest modin/pandas/test/test_io.py
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - uses: codecov/codecov-action@v2
@@ -142,6 +187,22 @@ jobs:
         python-version: ["3.8"]
         engine: ["ray", "dask"]
         test-task:
+          - modin/pandas/test/dataframe/test_binary.py
+          - modin/pandas/test/dataframe/test_default.py
+          - modin/pandas/test/dataframe/test_indexing.py
+          - modin/pandas/test/dataframe/test_iter.py
+          - modin/pandas/test/dataframe/test_join_sort.py
+          - modin/pandas/test/dataframe/test_map_metadata.py
+          - modin/pandas/test/dataframe/test_reduce.py
+          - modin/pandas/test/dataframe/test_udf.py
+          - modin/pandas/test/dataframe/test_window.py
+          - modin/pandas/test/dataframe/test_pickle.py
+          - modin/pandas/test/test_series.py
+          - modin/pandas/test/test_rolling.py
+          - modin/pandas/test/test_concat.py
+          - modin/pandas/test/test_groupby.py
+          - modin/pandas/test/test_reshape.py
+          - modin/pandas/test/test_general.py
           - modin/pandas/test/test_io.py
     env:
       MODIN_ENGINE: ${{matrix.engine}}
@@ -166,12 +227,7 @@ jobs:
       - run: python -m pytest ${{matrix.test-task}}
         if: matrix.test-task != 'modin/pandas/test/test_io.py'
       - timeout-minutes: 30
-        run: |
-          chmod +x set_up_windows_for_sql_server.sh
-          ./set_up_windows_for_sql_server.sh
-          chmod +x set_up_sql_server.sh
-          ./set_up_sql_server.sh
-          python -m pytest modin/pandas/test/test_io.py
+        run: python -m pytest modin/pandas/test/test_io.py
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
       - uses: codecov/codecov-action@v2
 

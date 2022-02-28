@@ -25,11 +25,11 @@ driver or a worker wants one.
 
 _PSYCOPG_LIB_NAME = "psycopg2"
 _SQLALCHEMY_LIB_NAME = "sqlalchemy"
-_POSTGRES_DIALECT = "postgres"
-_MICROSOFT_SQL_DIALECT = "microsoft_sql"
 
 
 class UnsupportedDatabaseException(Exception):
+    """Modin can't create a particular kind of database connection."""
+
     pass
 
 
@@ -57,6 +57,17 @@ class ModinDatabaseConnection:
         self._dialect_is_microsoft_sql_cache = None
 
     def _dialect_is_microsoft_sql(self):
+        """
+        Tell whether this connection requires Microsoft SQL dialect.
+
+        If this is a sqlalchemy connection, create an engine from args and
+        kwargs. If that engine's driver is pymssql or pyodbc, this
+        connection requires Microsoft SQL. Otherwise, it doesn't.
+
+        Returns
+        -------
+        Boolean
+        """
         if self._dialect_is_microsoft_sql_cache is None:
             self._dialect_is_microsoft_sql_cache = False
             if self.lib == _SQLALCHEMY_LIB_NAME:
@@ -94,14 +105,54 @@ class ModinDatabaseConnection:
         raise UnsupportedDatabaseException("Unsupported database library")
 
     def column_names_query(self, query):
+        """
+        Get a query that gives the names of columns that `query` would produce.
+
+        Parameters
+        ----------
+        query : str
+            The SQL query to check.
+
+        Returns
+        -------
+        str
+        """
         # This query looks odd, but it works in both PostgreSQL and Microsoft
         # SQL, which doesn't let you use a "limit" clause to select 0 rows.
         return f"SELECT * FROM ({query}) AS _ WHERE 1 = 0"
 
     def row_count_query(self, query):
+        """
+        Get a query that gives the names of rows that `query` would produce.
+
+        Parameters
+        ----------
+        query : str
+            The SQL query to check.
+
+        Returns
+        -------
+        str
+        """
         return f"SELECT COUNT(*) FROM ({query}) AS _"
 
     def partition_query(self, query, limit, offset):
+        """
+        Get a query that partitions the original `query`.
+
+        Parameters
+        ----------
+        query : str
+            The SQL query to get a partition.
+        limit : int
+            The size of the partition.
+        offset : int
+            Where the partition begins.
+
+        Returns
+        -------
+        str
+        """
         return (
             (
                 f"SELECT * FROM ({query}) AS _ ORDER BY(SELECT NULL)"

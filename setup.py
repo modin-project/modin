@@ -27,7 +27,6 @@ setup(
         "packaging",
         "numpy>=1.18.5",
         "fsspec",
-        "pymssql",
     ],
     extras_require={
         # can be installed by pip install modin[dask]

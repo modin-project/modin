@@ -53,8 +53,9 @@ class SQLDispatcher(FileDispatcher):
         BaseQueryCompiler
             Query compiler with imported data for further processing.
         """
-        is_modin_db_connection = isinstance(con, ModinDatabaseConnection)
-        if not (is_modin_db_connection or isinstance(con, str)):
+        if isinstance(con, str):
+            con = ModinDatabaseConnection("sqlalchemy", con)
+        if not isinstance(con, ModinDatabaseConnection):
             warnings.warn(
                 "To use parallel implementation of `read_sql`, pass either "
                 + "the SQL connection string or a ModinDatabaseConnection "
@@ -63,8 +64,6 @@ class SQLDispatcher(FileDispatcher):
                 + "https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html#connecting-to-a-database-for-read-sql"
             )
             return cls.single_worker_read(sql, con=con, index_col=index_col, **kwargs)
-        if isinstance(con, str):
-            con = ModinDatabaseConnection("sqlalchemy", con)
         row_count_query = con.row_count_query(sql)
         connection_for_pandas = con.get_connection()
         colum_names_query = con.column_names_query(sql)
