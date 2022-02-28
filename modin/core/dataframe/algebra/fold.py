@@ -36,7 +36,27 @@ class Fold(Operator):
         """
 
         def caller(query_compiler, fold_axis=None, *args, **kwargs):
-            """Execute Fold function against passed query compiler."""
+            """
+            Execute Fold function against passed query compiler.
+
+            Parameters
+            ----------
+            query_compiler : BaseQueryCompiler
+                The query compiler to execute the function on.
+            axis : int, optional
+                0 or None means apply across full column partitions. 1 means
+                apply across full row partitions.
+            *args : iterable
+                Additional arguments passed to fold_function.
+            **kwargs: dict
+                Additional keyword arguments passed to fold_function.
+
+            Returns
+            -------
+            BaseQueryCompiler
+                A new query compiler representing the result of executing the
+                function.
+            """
             return query_compiler.__constructor__(
                 query_compiler._modin_frame.fold(
                     cls.validate_axis(fold_axis),
