@@ -43,7 +43,7 @@ class Fold(Operator):
             ----------
             query_compiler : BaseQueryCompiler
                 The query compiler to execute the function on.
-            axis : int, optional
+            fold_axis : int, optional
                 0 or None means apply across full column partitions. 1 means
                 apply across full row partitions.
             *args : iterable
