@@ -1,5 +1,4 @@
-# This script sets up a SQL server listening at 0.0.0.0:1234. The server starts
-# with a single table, test_1000x256.
+# This script sets up a SQL server listening at 0.0.0.0:1234.
 
 # If any step fails, we can't set up a valid SQL server for unit tests.
 set -e
