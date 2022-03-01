@@ -1848,9 +1848,18 @@ class TestSql:
         reason="Skip the test when the test SQL server is not set up.",
     )
     def test_read_sql_from_sql_server(self):
-        query = "SELECT * FROM test_1000x256"
+        table_name = "test_1000x256"
+        query = f"SELECT * FROM {table_name}"
         sqlalchemy_connection_string = (
             "mssql+pymssql://sa:Strong.Pwd-123@0.0.0.0:1433/master"
+        )
+        pandas_df_to_read = pandas.DataFrame(
+            np.arange(
+                1000 * 256,
+            ).reshape(1000, 256)
+        ).add_prefix("col")
+        pandas_df_to_read.to_sql(
+            table_name, sqlalchemy_connection_string, if_exists="replace"
         )
         modin_df = pd.read_sql(
             query,
@@ -1858,10 +1867,6 @@ class TestSql:
         )
         pandas_df = pandas.read_sql(query, sqlalchemy_connection_string)
         df_equals(modin_df, pandas_df)
-        # Check that the dataframe has the expected dimensions. Something might
-        # have silently failed while loading the data into the database. It's
-        # easiest to check in Python that the data has the right dimensions.
-        assert pandas_df.shape == (1000, 256)
 
     def test_invalid_modin_database_connections(self):
         with pytest.raises(UnsupportedDatabaseException):
