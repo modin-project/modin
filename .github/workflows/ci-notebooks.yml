@@ -56,6 +56,10 @@ jobs:
         if: matrix.execution == 'omnisci_on_native'
       - run: pip list
       - run: |
+          conda info
+          conda list
+        if: matrix.execution == 'omnisci_on_native'
+      - run: |
           black --check --diff examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
           black --check --diff examples/tutorial/jupyter/execution/test/utils.py
       - run: |
