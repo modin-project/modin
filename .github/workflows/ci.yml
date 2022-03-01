@@ -415,6 +415,10 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
+      # Only test readin from SQL server on ubuntu for now. Eventually, we
+      # should test on Windows, too, but we will have to set up the SQL
+      # server differently.
+      MODIN_TEST_READ_FROM_SQL_SERVER: true
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
@@ -458,6 +462,8 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
+      - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
+      - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && pytest modin/experimental/sql/test/test_sql.py
