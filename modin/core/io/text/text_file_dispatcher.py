@@ -966,6 +966,7 @@ class TextFileDispatcher(FileDispatcher):
         # Getting frequently used kwargs;
         # They should be defined in higher level
         names = kwargs["names"]
+        index_col = kwargs["index_col"]
         encoding = kwargs["encoding"]
         skiprows = kwargs["skiprows"]
         header = kwargs["header"]
@@ -985,8 +986,6 @@ class TextFileDispatcher(FileDispatcher):
             skiprows_md, int
         )
 
-        read_callback = kwargs.get("read_callback") or cls.read_callback
-
         use_modin_impl = cls.check_parameters_support(
             filepath_or_buffer,
             kwargs,
@@ -995,10 +994,10 @@ class TextFileDispatcher(FileDispatcher):
         )
         if not use_modin_impl:
             return cls.single_worker_read(
-                filepath_or_buffer, callback=read_callback, **kwargs
+                filepath_or_buffer, callback=cls.read_callback, **kwargs
             )
 
-        is_quoting = kwargs["quoting"] != QUOTE_NONE  # QUOTE_MINIMAL
+        is_quoting = kwargs["quoting"] != QUOTE_NONE
         with OpenFile(filepath_or_buffer_md, "rb", compression_infered) as f:
             old_pos = f.tell()
             fio = io.TextIOWrapper(f, encoding=encoding, newline="")
@@ -1022,16 +1021,16 @@ class TextFileDispatcher(FileDispatcher):
         # In these cases we should pass additional metadata
         # to the workers to match pandas output
         pass_names = names in [None, lib.no_default] and (
-            skiprows is not None or kwargs["skipfooter"] != 0  # 0
+            skiprows is not None or kwargs["skipfooter"] != 0
         )
 
         pd_df_metadata = cls.read_callback(
             filepath_or_buffer,
-            **dict(kwargs, nrows=1, skipfooter=0, index_col=kwargs["index_col"]),
+            **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
         )
         column_names = pd_df_metadata.columns
         index_name = pd_df_metadata.index.name
-        column_widths, num_splits = cls._define_metadata(filepath_or_buffer, **kwargs)
+        column_widths, num_splits = cls._define_metadata(pd_df_metadata, column_names)
 
         # kwargs that will be passed to the workers
         partition_kwargs = dict(
@@ -1048,14 +1047,14 @@ class TextFileDispatcher(FileDispatcher):
         )
 
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
-            splits, callback=read_callback, **partition_kwargs
+            splits, callback=cls.read_callback, **partition_kwargs
         )
 
         new_query_compiler = cls._get_new_qc(
             partition_ids=partition_ids,
             index_ids=index_ids,
             dtypes_ids=dtypes_ids,
-            index_col=kwargs["index_col"],
+            index_col=index_col,
             index_name=index_name,
             column_widths=column_widths,
             column_names=column_names,

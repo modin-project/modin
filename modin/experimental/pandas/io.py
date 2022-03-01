@@ -123,7 +123,7 @@ def read_custom_text(
     custom_parser : callable(file-like object, **kwargs) -> pandas.DataFrame
         Function that takes as input a part of the `filepath_or_buffer` file loaded into
         memory in file-like object form.
-    compression : {{'infer', 'gzip', 'bz2', 'zip', 'xz', None}}, default: 'infer'
+    compression : {'infer', 'gzip', 'bz2', 'zip', 'xz', None}, default: 'infer'
         If 'infer' and 'path_or_url' is path-like, then detect compression from
         the following extensions: '.gz', '.bz2', '.zip', or '.xz' (otherwise no
         compression) If 'infer' and 'path_or_url' is not path-like, then use
