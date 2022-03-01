@@ -26,6 +26,23 @@ to install dependencies needed to run notebooks with Modin on `PandasOnDask` exe
 **Note:** Sometimes pip is installing every version of a package. If you encounter that issue,
 please install every package listed in `requirements.txt` file individually with `pip install <package>`.
 
+To get required dependencies for `OmnisciOnNative` Jupyter Notebooks
+you should create a development environment with `conda`
+using `jupyter_omnisci_env.yml` file located in the current directory:
+
+```bash
+conda config --set channel_priority strict
+conda env create -f jupyter_omnisci_env.yml
+```
+
+After the environment is created it needs to be activated:
+
+```bash
+conda activate jupyter_modin_on_omnisci
+```
+
+**Note:** Notebook for `OmnisciOnNative` working only on Linux.
+
 ## Run Jupyter Notebooks
 
 A Jupyter Notebook server can be run from the current directory as follows:

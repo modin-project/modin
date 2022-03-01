@@ -39,13 +39,14 @@ jobs:
           path: taxi.csv
           # update cache only if notebooks require it to be changed
           key: hashFiles("examples/tutorial/jupyter/**")
-      # replace modin with . in the tutorial requirements file since we need
-      # Modin built from sources
+      # replace modin with . in the tutorial requirements file for `pandas_on_ray` and
+      # `pandas_on_dask` since we need Modin built from sources
       - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
         if: matrix.execution != 'omnisci_on_native'
-      # install dependencies required for notebooks execution
+      # install dependencies required for notebooks execution for `pandas_on_ray` and `pandas_on_dask`
       - run: pip install -r examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
         if: matrix.execution != 'omnisci_on_native'
+      # Build Modin from sources for `omnisci_on_native`
       - run: pip install .
         if: matrix.execution == 'omnisci_on_native'
       # install test dependencies
