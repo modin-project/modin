@@ -210,7 +210,7 @@ def test_distributed_pickling(filename, compression):
 
 @pytest.mark.skipif(
     not Engine.get() == "Ray",
-    reason=f"{Engine.get()} does not have experimental API",
+    reason=f"{Engine.get()} does not have experimental read_custom_text API",
 )
 def test_read_custom_json_text():
     filename = get_unique_filename(extension="json")

@@ -126,10 +126,10 @@ def read_custom_text(
     compression : {'infer', 'gzip', 'bz2', 'zip', 'xz', None}, default: 'infer'
         If 'infer' and 'path_or_url' is path-like, then detect compression from
         the following extensions: '.gz', '.bz2', '.zip', or '.xz' (otherwise no
-        compression) If 'infer' and 'path_or_url' is not path-like, then use
+        compression). If 'infer' and 'path_or_url' is not path-like, then use
         None (= no decompression).
     nrows : int, optional
-        Count rows to read.
+        Amount of rows to read.
     is_quoting : bool, default: True
         Whether or not to consider quotes.
 
