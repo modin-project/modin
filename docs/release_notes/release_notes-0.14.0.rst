@@ -41,6 +41,7 @@ Key Features and Updates
   * DOCS-#4172: Refresh Intel Distribution of Modin paragraph (#4175)
   * DOCS-#4173: Mention strict channel priority in conda install section (#4178)
   * DOCS-#4176: Update OmniSci usage section (#4192)
+  * DOCS-#4027: Add GIF images and chart to Modin README demonstrating speedups (#4232)
 * Dependencies
   * FIX-#4113, FIX-#4116, FIX-#4115: Apply new `black` formatting, fix pydocstyle check and readthedocs build (#4114)
   * TEST-#3227: Use codecov github action instead of bash form in GA workflows (#3226)
@@ -59,3 +60,4 @@ Contributors
 @dchigarev
 @Garra1980
 @mvashishtha
+@naren-ponder
