@@ -103,7 +103,7 @@ def read_sql(
 
 
 def read_custom_text(
-    path_or_buf,
+    filepath_or_buffer,
     columns,
     custom_parser,
     compression="infer",
@@ -115,13 +115,13 @@ def read_custom_text(
 
     Parameters
     ----------
-    path_or_buf : str
+    filepath_or_buffer : str
         File path where the custom text data will be loaded from.
     columns : list or callable(file-like object, **kwargs) -> list
         Column names of list type or callable that create column names from opened file
         and passed `kwargs`.
     custom_parser : callable(file-like object, **kwargs) -> pandas.DataFrame
-        Function that takes as input a part of the `path_or_buf` file loaded into
+        Function that takes as input a part of the `filepath_or_buffer` file loaded into
         memory in file-like object form.
     compression : {{'infer', 'gzip', 'bz2', 'zip', 'xz', None}}, default: 'infer'
         If 'infer' and 'path_or_url' is path-like, then detect compression from

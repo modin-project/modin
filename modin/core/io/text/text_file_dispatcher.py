@@ -531,9 +531,9 @@ class TextFileDispatcher(FileDispatcher):
     @classmethod
     def _define_metadata(
         cls,
-        filepath_or_buffer,
-        **kwargs,
-    ) -> Tuple[list, int, list, str]:
+        df: pandas.DataFrame,
+        column_names: ColumnNamesTypes,
+    ) -> Tuple[list, int]:
         """
         Define partitioning metadata.
 
@@ -552,13 +552,6 @@ class TextFileDispatcher(FileDispatcher):
         num_splits : int
             The maximum number of splits to separate the DataFrame into.
         """
-        df = cls.read_callback(
-            filepath_or_buffer,
-            **dict(kwargs, nrows=1, skipfooter=0),
-        )
-        column_names = df.columns
-        index_name = df.index.name
-
         # This is the number of splits for the columns
         num_splits = min(len(column_names) or 1, NPartitions.get())
         column_chunksize = compute_chunksize(df.shape[1], num_splits)
@@ -580,7 +573,7 @@ class TextFileDispatcher(FileDispatcher):
                 for i in range(num_splits)
             ]
 
-        return column_widths, num_splits, column_names, index_name
+        return column_widths, num_splits
 
     @classmethod
     def _launch_tasks(cls, splits: list, **partition_kwargs) -> Tuple[list, list, list]:
@@ -1032,9 +1025,13 @@ class TextFileDispatcher(FileDispatcher):
             skiprows is not None or kwargs["skipfooter"] != 0  # 0
         )
 
-        column_widths, num_splits, column_names, index_name = cls._define_metadata(
-            filepath_or_buffer, **kwargs
+        pd_df_metadata = cls.read_callback(
+            filepath_or_buffer,
+            **dict(kwargs, nrows=1, skipfooter=0, index_col=kwargs["index_col"]),
         )
+        column_names = pd_df_metadata.columns
+        index_name = pd_df_metadata.index.name
+        column_widths, num_splits = cls._define_metadata(filepath_or_buffer, **kwargs)
 
         # kwargs that will be passed to the workers
         partition_kwargs = dict(

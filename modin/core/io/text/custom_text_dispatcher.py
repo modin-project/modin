@@ -13,26 +13,27 @@
 
 """Module houses `CustomTextExperimentalDispatcher` class, that is used for reading custom text files."""
 
+import pandas
+
 from modin.core.io.file_dispatcher import OpenFile
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
-import pandas
-import numpy as np
-
 from modin.config import NPartitions
 
 
 class CustomTextExperimentalDispatcher(TextFileDispatcher):
     """Class handles utils for reading custom text files."""
 
+    read_callback = None
+
     @classmethod
-    def _read(cls, path_or_buf, **kwargs):
+    def _read(cls, filepath_or_buffer, **kwargs):
         """
-        Read data from `path_or_buf` according to the passed `read_custom_text` `kwargs` parameters.
+        Read data from `filepath_or_buffer` according to the passed `read_custom_text` `kwargs` parameters.
 
         Parameters
         ----------
-        path_or_buf : str, path object or file-like object
-            `path_or_buf` parameter of `read_custom_text` function.
+        filepath_or_buffer : str, path object or file-like object
+            `filepath_or_buffer` parameter of `read_custom_text` function.
         **kwargs : dict
             Parameters of `read_custom_text` function.
 
@@ -41,60 +42,56 @@ class CustomTextExperimentalDispatcher(TextFileDispatcher):
         BaseQueryCompiler
             Query compiler with imported data for further processing.
         """
-        if not isinstance(path_or_buf, str):
-            raise ValueError("Support only str type of path")
+        filepath_or_buffer_md = (
+            cls.get_path(filepath_or_buffer)
+            if isinstance(filepath_or_buffer, str)
+            else cls.get_path_or_buffer(filepath_or_buffer)
+        )
+        compression_infered = cls.infer_compression(
+            filepath_or_buffer, kwargs["compression"]
+        )
 
-        columns = kwargs.pop("columns", None)
-        assert columns is not None and not isinstance(columns, pandas.Index)
-
-        if callable(columns):
-            with OpenFile(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
-                columns = columns(f, **kwargs)
-
-        columns = pandas.Index(columns)
-        kwargs["columns"] = columns
-        empty_pd_df = pandas.DataFrame(columns=columns)
-
-        with OpenFile(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
-            partition_ids = []
-            index_ids = []
-            dtypes_ids = []
-
-            column_widths, num_splits = cls._define_metadata(empty_pd_df, columns)
-
-            args = {"fname": path_or_buf, "num_splits": num_splits, **kwargs}
-
+        with OpenFile(filepath_or_buffer_md, "rb", compression_infered) as f:
             splits = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
                 is_quoting=kwargs.pop("is_quoting"),
                 nrows=kwargs["nrows"],
             )
-            for start, end in splits:
-                args.update({"start": start, "end": end})
-                partition_id = cls.deploy(cls.parse, num_splits + 3, args)
-                partition_ids.append(partition_id[:-3])
-                index_ids.append(partition_id[-3])
-                dtypes_ids.append(partition_id[-2])
 
-        row_lengths = cls.materialize(index_ids)
-        new_index = pandas.RangeIndex(sum(row_lengths))
+        columns = kwargs.pop("columns", None)
+        assert columns is not None and not isinstance(columns, pandas.Index)
+        if callable(columns):
+            with OpenFile(filepath_or_buffer_md, "rb", compression_infered) as f:
+                columns = columns(f, **kwargs)
+        columns = pandas.Index(columns)
+        kwargs["columns"] = columns
 
-        dtypes = cls.get_dtypes(dtypes_ids)
-        partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
+        empty_pd_df = pandas.DataFrame(columns=columns)
+        index_name = empty_pd_df.index.name
+        column_widths, num_splits = cls._define_metadata(empty_pd_df, columns)
 
-        if isinstance(dtypes, pandas.Series):
-            dtypes.index = columns
-        else:
-            dtypes = pandas.Series(dtypes, index=columns)
-
-        new_frame = cls.frame_cls(
-            np.array(partition_ids),
-            new_index,
-            columns,
-            row_lengths,
-            column_widths,
-            dtypes=dtypes,
+        # kwargs that will be passed to the workers
+        partition_kwargs = dict(
+            kwargs,
+            fname=filepath_or_buffer_md,
+            num_splits=num_splits,
+            nrows=None,
+            compression=compression_infered,
         )
-        new_frame.synchronize_labels(axis=0)
-        return cls.query_compiler_cls(new_frame)
+
+        partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
+            splits, callback=kwargs["custom_parser"], **partition_kwargs
+        )
+
+        new_query_compiler = cls._get_new_qc(
+            partition_ids=partition_ids,
+            index_ids=index_ids,
+            dtypes_ids=dtypes_ids,
+            index_col=None,
+            index_name=index_name,
+            column_widths=column_widths,
+            column_names=columns,
+            nrows=kwargs["nrows"],
+        )
+        return new_query_compiler
