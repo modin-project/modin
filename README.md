@@ -33,15 +33,15 @@ In the GIFs below, Modin (left) and pandas (right) perform *the same pandas oper
 </thead>
 <tbody>
   <tr>
-    <td class="tg-0lax"><img src="docs/img/Modin.gif"></img></td>
-    <td class="tg-0lax"><img src="docs/img/Pandas.gif"></img></td>
+    <td class="tg-0lax"><img src="https://github.com/modin-project/modin/blob/master/docs/img/Modin.gif"></img></td>
+    <td class="tg-0lax"><img src="https://github.com/modin-project/modin/blob/master/docs/img/Pandas.gif"></img></td>
   </tr>
 </tbody>
 </table>
 
 The charts below show the speedup you get by replacing pandas with Modin based on the examples above. The example notebooks can be found [here](examples/jupyter). To learn more about the speedups you could get with Modin and try out some examples on your own, check out our [10-minute quickstart guide](https://modin.readthedocs.io/en/latest/getting_started/quickstart.html) to try out some examples on your own!
 
-<img src="docs/img/Modin_Speedup.svg" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
+<img src="https://github.com/modin-project/modin/blob/master/docs/img/Modin_Speedup.svg" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
 
 ### Installation
 
