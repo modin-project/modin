@@ -1858,7 +1858,10 @@ class TestSql:
         )
         pandas_df = pandas.read_sql(query, sqlalchemy_connection_string)
         df_equals(modin_df, pandas_df)
-        assert len(pandas_df) == 1001
+        # Check that the dataframe has the expected dimensions. Something might
+        # have silently failed while loading the data into the database. It's
+        # easiest to check in Python that the data has the right dimensions.
+        assert pandas_df.shape == (1000, 257)
 
     def test_invalid_modin_database_connections(self):
         with pytest.raises(UnsupportedDatabaseException):

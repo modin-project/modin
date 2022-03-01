@@ -15,7 +15,7 @@ sudo docker run -d --name example_sql_server -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=
 sleep 10
 
 CONTAINER_ID=$(sudo docker container ls -f name=example_sql_server -q)
-sudo docker cp .github/workflows/sql_server/test_1000x256.csv $CONTAINER_ID:/test_1000x256.csv
+sudo docker cp .github/workflows/sql_server/test_1000x256.csv ${CONTAINER_ID}:/test_1000x256.csv
 
 # Install a SQL command-line tool following:
 # https://citizix.com/how-to-install-ms-sql-server-2019-on-ubuntu-20-04/
