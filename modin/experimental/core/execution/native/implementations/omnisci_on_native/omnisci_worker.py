@@ -22,6 +22,7 @@ import numpy as np
 from .utils import PyDbEngine
 
 from modin.config import OmnisciFragmentSize, OmnisciLaunchParameters
+from modin.error_message import ErrorMessage
 
 
 class OmnisciServer:
@@ -139,7 +140,14 @@ class OmnisciServer:
         schema = table.schema
         new_schema = schema
         need_cast = False
+        uint_to_int_cast = False
         new_cols = {}
+        uint_to_int_map = {
+            pa.uint8(): pa.int16(),
+            pa.uint16(): pa.int32(),
+            pa.uint32(): pa.int64(),
+            pa.uint64(): pa.int64(),  # May cause overflow
+        }
         for i, field in enumerate(schema):
             # Currently OmniSci doesn't support Arrow table import with
             # dictionary columns. Here we cast dictionaries until support
@@ -169,12 +177,35 @@ class OmnisciServer:
                 )
                 new_schema = new_schema.set(i, new_field)
                 need_cast = True
+            # OmniSci doesn't support unsigned types
+            elif pa.types.is_unsigned_integer(field.type):
+                new_field = pa.field(
+                    field.name,
+                    uint_to_int_map[field.type],
+                    field.nullable,
+                    field.metadata,
+                )
+                new_schema = new_schema.set(i, new_field)
+                need_cast = True
+                uint_to_int_cast = True
+
+        # Such cast may affect the data, so we have to raise a warning about it
+        if uint_to_int_cast:
+            ErrorMessage.single_warning(
+                "OmniSci does not support unsigned integer types, such types will be rounded up to the signed equivalent."
+            )
 
         for i, col in new_cols.items():
             table = table.set_column(i, new_schema[i], col)
 
         if need_cast:
-            table = table.cast(new_schema)
+            try:
+                table = table.cast(new_schema)
+            except pa.lib.ArrowInvalid as e:
+                raise (OverflowError if uint_to_int_cast else RuntimeError)(
+                    "An error occurred when trying to convert unsupported by OmniSci 'dtypes' "
+                    + f"to the supported ones, the schema to cast was: \n{new_schema}."
+                ) from e
 
         return table
 

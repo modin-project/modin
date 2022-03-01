@@ -13,6 +13,7 @@ Key Features and Updates
   * FIX-#4158: Do not print OmniSci logs to stdout by default (#4159)
   * FIX-#4177: Support read_feather from pathlike objects (#4177)
   * FIX-#4234: Upgrade pandas to 1.4.1 (#4235)
+  * FIX-#3368: support unsigned integers in OmniSci backend (#4256)
   * FIX-#4057: Allow reading an empty parquet file (#4075)  
   * FIX-#3884: Fix read_excel() dropping empty rows (#4161)
   * FIX-#4257: Fix Categorical() for scalar categories (#4258) 
