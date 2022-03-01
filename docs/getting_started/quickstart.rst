@@ -165,6 +165,11 @@ across a single column via the ``apply`` operation.
 Modin is more than 30X faster at applying a single column of data, operating on 130+ 
 million rows in a second.
 
+In short, Modin provides orders of magnitude speed up over pandas for a variety of operations out of the box. 
+
+.. figure:: ../img/quickstart_speedup.svg
+   :align: center
+
 Summary
 -------
 
