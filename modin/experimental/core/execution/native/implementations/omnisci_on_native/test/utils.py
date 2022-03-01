@@ -193,7 +193,8 @@ class ForceOmnisciImport:
             # Append `TransformNode`` selecting all the columns (SELECT * FROM frame_id)
             df = df[df.columns.tolist()]
             modin_frame = df._query_compiler._modin_frame
-            # Forcibly executing plan via OmniSci
+            # Forcibly executing plan via OmniSci. We can't use `modin_frame._execute()` here
+            # as it has a chance of running via pyarrow bypassing OmniSci
             new_partitions = modin_frame._partition_mgr_cls.run_exec_plan(
                 modin_frame._op,
                 modin_frame._index_cols,
