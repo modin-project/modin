@@ -156,7 +156,7 @@ class ModinDatabaseConnection:
         return (
             (
                 f"SELECT * FROM ({query}) AS _ ORDER BY(SELECT NULL)"
-                f" OFFSET {offset} ROWS FETCH NEXT {limit} ROWS ONLY"
+                + f" OFFSET {offset} ROWS FETCH NEXT {limit} ROWS ONLY"
             )
             if self._dialect_is_microsoft_sql()
             else f"SELECT * FROM ({query}) LIMIT {limit} OFFSET {offset}"
