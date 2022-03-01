@@ -16,7 +16,3 @@ Base Modin Dataframe functionality related to the dataframe exchange protocol an
 
 See more in https://data-apis.org/dataframe-protocol/latest/index.html.
 """
-
-from .dataframe import DataFrame
-
-__all__ = ["DataFrame"]

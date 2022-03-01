@@ -2827,7 +2827,7 @@ class PandasDataframe(object):
         """
         self._partition_mgr_cls.finalize(self._partitions)
 
-    def __dataframe__(self, nan_as_null: bool = False, allow_copy: bool = True) -> dict:
+    def __dataframe__(self, nan_as_null: bool = False, allow_copy: bool = True):
         """
         Get a Modin DataFrame that implements the dataframe exchange protocol.
 
@@ -2835,7 +2835,7 @@ class PandasDataframe(object):
 
         Parameters
         ----------
-        nan_as_null : bool, default:False
+        nan_as_null : bool, default: False
             A keyword intended for the consumer to tell the producer
             to overwrite null values in the data with ``NaN`` (or ``NaT``).
             This currently has no effect; once support for nullable extension
@@ -2849,13 +2849,16 @@ class PandasDataframe(object):
 
         Returns
         -------
-        dict
-            A dictionary object following the dataframe protocol specification.
+        ProtocolDataframe
+            A dataframe object following the dataframe protocol specification.
         """
-        from modin.core.dataframe.pandas.exchange.dataframe_protocol import DataFrame
+        from modin.core.dataframe.pandas.exchange.dataframe_protocol.dataframe import (
+            PandasProtocolDataframe,
+        )
 
-        df = DataFrame(self, nan_as_null=nan_as_null, allow_copy=allow_copy)
-        return {"dataframe": df, "version": df.version}
+        return PandasProtocolDataframe(
+            self, nan_as_null=nan_as_null, allow_copy=allow_copy
+        )
 
     @classmethod
     def from_dataframe(cls, df):

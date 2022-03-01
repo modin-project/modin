@@ -26,10 +26,10 @@ Notes
 """
 
 import ctypes
-import enum
 import numpy as np
 import pandas
 from typing import Any
+from modin.core.dataframe.base.exchange.dataframe_protocol.utils import DTypeKind
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
 import modin.pandas as pd
@@ -37,37 +37,6 @@ from modin.pandas.utils import from_pandas
 
 DataFrameObject = Any
 ColumnObject = Any
-
-
-class DTypeKind(enum.IntEnum):  # noqa PR01
-    """
-    Integer enum for data types.
-
-    Attributes
-    ----------
-    INT : int
-        Matches to integer data type.
-    UINT : int
-        Matches to unsigned integer data type.
-    FLOAT : int
-        Matches to floating point data type.
-    BOOL : int
-        Matches to boolean data type.
-    STRING : int
-        Matches to string data type.
-    DATETIME : int
-        Matches to datetime data type.
-    CATEGORICAL : int
-        Matches to categorical data type.
-    """
-
-    INT = 0
-    UINT = 1
-    FLOAT = 2
-    BOOL = 20
-    STRING = 21  # UTF-8
-    DATETIME = 22
-    CATEGORICAL = 23
 
 
 def from_dataframe(df: DataFrameObject, allow_copy: bool = True) -> PandasDataframe:
@@ -163,7 +132,7 @@ def _convert_column_to_ndarray(col: ColumnObject) -> np.ndarray:
 
     if col.describe_null[0] not in (0, 1):
         raise NotImplementedError(
-            "Null values represented as masks or " "sentinel values not handled yet"
+            "Null values represented as masks or sentinel values not handled yet"
         )
 
     _buffer, _dtype = col.get_buffers()["data"]
@@ -248,7 +217,7 @@ def _convert_categorical_column(col: ColumnObject) -> pandas.Series:
         series[codes == sentinel] = np.nan
     else:
         raise NotImplementedError(
-            "Only categorical columns with sentinel " "value supported at the moment"
+            "Only categorical columns with sentinel value supported at the moment"
         )
 
     return series, codes_buffer

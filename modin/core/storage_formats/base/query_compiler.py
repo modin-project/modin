@@ -366,7 +366,7 @@ class BaseQueryCompiler(abc.ABC):
     # Dataframe exchange protocol
 
     @abc.abstractmethod
-    def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True) -> dict:
+    def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True):
         """
         Get a DataFrame exchange protocol object representing data of the Modin DataFrame.
 
@@ -388,8 +388,8 @@ class BaseQueryCompiler(abc.ABC):
 
         Returns
         -------
-        dict
-            A dictionary object following the DataFrame protocol specification.
+        ProtocolDataframe
+            A dataframe object following the DataFrame protocol specification.
         """
         pass
 

@@ -29,8 +29,14 @@ import enum
 import numpy as np
 from typing import Tuple
 
+from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+    ProtocolBuffer,
+)
+from modin.utils import _inherit_docstrings
 
-class Buffer(object):
+
+@_inherit_docstrings(ProtocolBuffer)
+class PandasProtocolBuffer(ProtocolBuffer):
     """
     Data in the buffer is guaranteed to be contiguous in memory.
 
@@ -65,7 +71,7 @@ class Buffer(object):
             else:
                 raise RuntimeError(
                     "Exports cannot be zero-copy in the case "
-                    "of a non-contiguous buffer"
+                    + "of a non-contiguous buffer"
                 )
 
         # Store the numpy array in which the data resides as a private
@@ -74,68 +80,16 @@ class Buffer(object):
 
     @property
     def bufsize(self) -> int:
-        """
-        Buffer size in bytes.
-
-        Returns
-        -------
-        int
-        """
         return self._x.size * self._x.dtype.itemsize
 
     @property
     def ptr(self) -> int:
-        """
-        Pointer to start of the buffer as an integer.
-
-        Returns
-        -------
-        int
-        """
         return self._x.__array_interface__["data"][0]
 
     def __dlpack__(self):
-        """
-        DLPack not implemented in NumPy yet, so leave it out here.
-
-        Produce DLPack capsule (see array API standard).
-
-        Raises
-        ------
-        ``TypeError`` if the buffer contains unsupported dtypes.
-        ``NotImplementedError`` if DLPack support is not implemented.
-
-        Notes
-        -----
-        Useful to have to connect to array libraries. Support optional because
-        it's not completely trivial to implement for a Python-only library.
-        """
         raise NotImplementedError("__dlpack__")
 
     def __dlpack_device__(self) -> Tuple[enum.IntEnum, int]:
-        """
-        Device type and device ID for where the data in the buffer resides.
-
-        Uses device type codes matching DLPack. Enum members are:
-            - CPU = 1
-            - CUDA = 2
-            - CPU_PINNED = 3
-            - OPENCL = 4
-            - VULKAN = 7
-            - METAL = 8
-            - VPI = 9
-            - ROCM = 10
-
-        Returns
-        -------
-        tuple
-            Device type and device ID.
-
-        Notes
-        -----
-        Must be implemented even if ``__dlpack__`` is not.
-        """
-
         class Device(enum.IntEnum):
             CPU = 1
 
@@ -143,7 +97,7 @@ class Buffer(object):
 
     def __repr__(self) -> str:
         """
-        Return a string representation for a particular ``Buffer``.
+        Return a string representation for a particular ``PandasProtocolBuffer``.
 
         Returns
         -------

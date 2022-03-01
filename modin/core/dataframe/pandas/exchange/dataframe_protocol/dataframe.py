@@ -28,16 +28,20 @@ Notes
 import collections
 from typing import Optional, Iterable, Sequence
 
+from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+    ProtocolDataframe,
+)
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
-from .column import Column
+from modin.utils import _inherit_docstrings
+from .column import PandasProtocolColumn
 
 
-class DataFrame(object):
+@_inherit_docstrings(ProtocolDataframe)
+class PandasProtocolDataframe(ProtocolDataframe):
     """
     A data frame class, with only the methods required by the interchange protocol defined.
 
-    Instances of this (private) class are returned from
-    ``modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe.__dataframe__``
+    Instances of this (private) class are returned from ``modin.pandas.DataFrame.__dataframe__``
     as objects with the methods and attributes defined on this class.
 
     A "data frame" represents an ordered collection of named columns.
@@ -81,193 +85,72 @@ class DataFrame(object):
     # TODO: ``What should we return???``, remove before the changes are merged
     @property
     def metadata(self):
-        """
-        Get the metadata for the data frame, as a dictionary with string keys.
-
-        The contents of `metadata` may be anything, they are meant for a library
-        to store information that it needs to, e.g., roundtrip losslessly or
-        for two implementations to share data that is not (yet) part of the
-        interchange protocol specification. For avoiding collisions with other
-        entries, please add name the keys with the name of the library
-        followed by a period and the desired name, e.g, ``pandas.indexcol``.
-
-        Returns
-        -------
-        dict
-        """
         # `index` isn't a regular column, and the protocol doesn't support row
         # labels - so we export it as pandas-specific metadata here.
         return {"pandas.index": self._df.index}
 
     def num_columns(self) -> int:
-        """
-        Return the number of columns in the DataFrame.
-
-        Returns
-        -------
-        int
-            The number of columns in the DataFrame.
-        """
         return len(self._df.columns)
 
     def num_rows(self) -> int:
-        """
-        Return the number of rows in the DataFrame, if available.
-
-        Returns
-        -------
-        int
-            The number of rows in the DataFrame.
-        """
         return len(self._df.index)
 
     def num_chunks(self) -> int:
-        """
-        Return the number of chunks the DataFrame consists of.
-
-        Returns
-        -------
-        int
-            The number of chunks the DataFrame consists of.
-        """
         return self._df._partitions.shape[0]
 
     def column_names(self) -> Iterable[str]:
-        """
-        Return an iterator yielding the column names.
-
-        Yields
-        ------
-        str
-            The name of the column(s).
-        """
         for col in self._df.columns:
             yield col
 
-    def get_column(self, i: int) -> Column:
-        """
-        Return the column at the indicated position.
-
-        Parameters
-        ----------
-        i : int
-            Positional index of the column to be returned.
-
-        Returns
-        -------
-        Column
-            The column at the indicated position.
-        """
-        return Column(
+    def get_column(self, i: int) -> PandasProtocolColumn:
+        return PandasProtocolColumn(
             self._df.mask(row_positions=None, col_positions=[i]),
             allow_copy=self._allow_copy,
             offset=self._offset,
         )
 
-    def get_column_by_name(self, name: str) -> Column:
-        """
-        Return the column whose name is the indicated name.
-
-        Parameters
-        ----------
-        name : str
-            String label of the column to be returned.
-
-        Returns
-        -------
-        Column
-            The column whose name is the indicated name.
-        """
-        return Column(
+    def get_column_by_name(self, name: str) -> PandasProtocolColumn:
+        return PandasProtocolColumn(
             self._df.mask(row_positions=None, col_labels=[name]),
             allow_copy=self._allow_copy,
             offset=self._offset,
         )
 
-    def get_columns(self) -> Iterable[Column]:
-        """
-        Return an iterator yielding the columns.
-
-        Yields
-        ------
-        Column
-            The ``Column`` object(s).
-        """
+    def get_columns(self) -> Iterable[PandasProtocolColumn]:
         for name in self._df.columns:
-            yield Column(
+            yield PandasProtocolColumn(
                 self._df.mask(row_positions=None, col_labels=[name]),
                 allow_copy=self._allow_copy,
                 offset=self._offset,
             )
 
-    def select_columns(self, indices: Sequence[int]) -> "DataFrame":
-        """
-        Create a new DataFrame by selecting a subset of columns by index.
-
-        Parameters
-        ----------
-        indices : Sequence[int]
-            Column indices to be selected out of the DataFrame.
-
-        Returns
-        -------
-        DataFrame
-            A new DataFrame with selected a subset of columns by index.
-        """
+    def select_columns(self, indices: Sequence[int]) -> "PandasProtocolDataframe":
         if not isinstance(indices, collections.Sequence):
             raise ValueError("`indices` is not a sequence")
 
-        return DataFrame(
+        return PandasProtocolDataframe(
             self._df.mask(row_positions=None, col_positions=indices),
             allow_copy=self._allow_copy,
             offset=self._offset,
         )
 
-    def select_columns_by_name(self, names: Sequence[str]) -> "DataFrame":
-        """
-        Create a new DataFrame by selecting a subset of columns by name.
-
-        Parameters
-        ----------
-        names : Sequence[str]
-            Column names to be selected out of the DataFrame.
-
-        Returns
-        -------
-        DataFrame
-            A new DataFrame with selected a subset of columns by name.
-        """
+    def select_columns_by_name(self, names: Sequence[str]) -> "PandasProtocolDataframe":
         if not isinstance(names, collections.Sequence):
             raise ValueError("`names` is not a sequence")
 
-        return DataFrame(
+        return PandasProtocolDataframe(
             self._df.mask(row_positions=None, col_labels=names),
             allow_copy=self._allow_copy,
             offset=self._offset,
         )
 
-    def get_chunks(self, n_chunks: Optional[int] = None) -> Iterable["DataFrame"]:
-        """
-        Return an iterator yielding the chunks.
-
-        By default `n_chunks=None`, yields the chunks that the data is stored as by the producer.
-        If given, `n_chunks` must be a multiple of `self.num_chunks()`,
-        meaning the producer must subdivide each chunk before yielding it.
-
-        Parameters
-        ----------
-        n_chunks : int, optional
-            Number of chunks to yield.
-
-        Yields
-        ------
-        DataFrame
-            A ``DataFrame`` object(s).
-        """
+    def get_chunks(
+        self, n_chunks: Optional[int] = None
+    ) -> Iterable["PandasProtocolDataframe"]:
         offset = 0
         if n_chunks is None:
             for length in self._df._row_lengths:
-                yield DataFrame(
+                yield PandasProtocolDataframe(
                     self._df.mask(row_positions=range(length), col_positions=None),
                     allow_copy=self._allow_copy,
                     offset=offset,
@@ -294,7 +177,7 @@ class DataFrame(object):
                 self._df._column_widths,
             )
             for length in new_df._row_lengths:
-                yield DataFrame(
+                yield PandasProtocolDataframe(
                     self._df.mask(row_positions=range(length), col_positions=None),
                     allow_copy=self._allow_copy,
                     offset=offset,

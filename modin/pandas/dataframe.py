@@ -112,7 +112,11 @@ class DataFrame(BasePandasDataset):
         self._siblings = []
         Engine.subscribe(_update_engine)
 
-        if data is not None and hasattr(data, "__dataframe__"):
+        if (
+            data is not None
+            and not isinstance(data, (DataFrame, Series))
+            and hasattr(data, "__dataframe__")
+        ):
             from modin.core.execution.dispatching.factories.dispatcher import (
                 FactoryDispatcher,
             )
@@ -2644,7 +2648,7 @@ class DataFrame(BasePandasDataset):
     __rmod__ = rmod
     __rdiv__ = rdiv
 
-    def __dataframe__(self, nan_as_null: bool = False, allow_copy: bool = True) -> dict:
+    def __dataframe__(self, nan_as_null: bool = False, allow_copy: bool = True):
         """
         Get a Modin DataFrame that implements the dataframe exchange protocol.
 
@@ -2666,8 +2670,8 @@ class DataFrame(BasePandasDataset):
 
         Returns
         -------
-        dict
-            A dictionary object following the dataframe protocol specification.
+        ProtocolDataframe
+            A dataframe object following the dataframe protocol specification.
         """
         return self._query_compiler.to_dataframe(
             nan_as_null=nan_as_null, allow_copy=allow_copy

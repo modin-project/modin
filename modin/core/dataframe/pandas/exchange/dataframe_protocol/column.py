@@ -30,12 +30,17 @@ import numpy as np
 import pandas
 
 import modin.pandas as pd
+from modin.utils import _inherit_docstrings
+from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+    ProtocolColumn,
+)
+from modin.core.dataframe.base.exchange.dataframe_protocol.utils import DTypeKind
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
-from .utils import DTypeKind
-from .buffer import Buffer
+from .buffer import PandasProtocolBuffer
 
 
-class Column(object):
+@_inherit_docstrings(ProtocolColumn)
+class PandasProtocolColumn(ProtocolColumn):
     """
     A column object, with only the methods and properties required by the interchange protocol defined.
 
@@ -92,9 +97,7 @@ class Column(object):
         self, column: PandasDataframe, allow_copy: bool = True, offset: int = 0
     ) -> None:
         if not isinstance(column, PandasDataframe):
-            raise NotImplementedError(
-                "Columns of type {} not handled " "yet".format(type(column))
-            )
+            raise NotImplementedError(f"Columns of type {type(column)} not handled yet")
 
         # Store the column as a private attribute
         self._col = column
@@ -103,69 +106,14 @@ class Column(object):
 
     @property
     def size(self) -> int:
-        """
-        Size of the column, in elements.
-
-        Corresponds to `DataFrame.num_rows()` if column is a single chunk;
-        equal to size of this current chunk otherwise.
-
-        Returns
-        -------
-        int
-            Size of the column, in elements.
-        """
         return len(self._col.index)
 
     @property
     def offset(self) -> int:
-        """
-        Get the offset of first element.
-
-        May be > 0 if using chunks; for example for a column
-        with N chunks of equal size M (only the last chunk may be shorter),
-        ``offset = n * M``, ``n = 0 .. N-1``.
-
-        Returns
-        -------
-        int
-            The offset of first element.
-        """
         return self._offset
 
     @property
     def dtype(self) -> Tuple[DTypeKind, int, str, str]:
-        """
-        Dtype description as a tuple ``(kind, bit-width, format string, endianness)``.
-
-        * Kind : DTypeKind
-        * Bit-width : the number of bits as an integer
-        * Format string : data type description format string in Apache Arrow C
-                        Data Interface format.
-        * Endianness : current only native endianness (``=``) is supported
-
-        Returns
-        -------
-        tuple
-            ``(kind, bit-width, format string, endianness)``.
-
-        Notes
-        -----
-        - Kind specifiers are aligned with DLPack where possible
-          (hence the jump to 20, leave enough room for future extension).
-        - Masks must be specified as boolean with either bit width 1 (for bit masks)
-          or 8 (for byte masks).
-        - Dtype width in bits was preferred over bytes
-        - Endianness isn't too useful, but included now in case in the future
-          we need to support non-native endianness
-        - Went with Apache Arrow format strings over NumPy format strings
-          because they're more complete from a dataframe perspective
-        - Format strings are mostly useful for datetime specification, and for categoricals.
-        - For categoricals, the format string describes the type of the categorical
-          in the data buffer. In case of a separate encoding of the categorical
-          (e.g. an integer to string mapping), this can be derived from ``self.describe_categorical``.
-        - Data types not included: complex, Arrow-style null, binary, decimal,
-          and nested (list, struct, map, union) dtypes.
-        """
         dtype = self._col.dtypes[0]
 
         # For now, assume that, if the column dtype is 'O' (i.e., `object`), then we have an array of strings
@@ -223,33 +171,10 @@ class Column(object):
 
     @property
     def describe_categorical(self) -> Dict[str, Any]:
-        """
-        If the dtype is categorical, there are two options.
-
-        - There are only values in the data buffer.
-        - There is a separate dictionary-style encoding for categorical values.
-
-        TBD: are there any other in-memory representations that are needed?
-
-        Returns
-        -------
-        dict
-            Content of returned dict:
-            - "is_ordered" : bool, whether the ordering of dictionary indices is
-                             semantically meaningful.
-            - "is_dictionary" : bool, whether a dictionary-style mapping of
-                                categorical values to other objects exists
-            - "mapping" : dict, Python-level only (e.g. ``{int: str}``).
-                          None if not a dictionary-style categorical.
-
-        Raises
-        ------
-        ``RuntimeError`` if the dtype is not categorical.
-        """
         if not self.dtype[0] == DTypeKind.CATEGORICAL:
             raise TypeError(
                 "`describe_categorical only works on a column with "
-                "categorical dtype!"
+                + "categorical dtype!"
             )
 
         cat_dtype = self._col.dtypes[0]
@@ -269,26 +194,6 @@ class Column(object):
 
     @property
     def describe_null(self) -> Tuple[int, Any]:
-        """
-        Return the missing value (or "null") representation the column dtype uses.
-
-        Return as a tuple ``(kind, value)``.
-
-        * Kind:
-            - 0 : non-nullable
-            - 1 : NaN/NaT
-            - 2 : sentinel value
-            - 3 : bit mask
-            - 4 : byte mask
-        * Value : if kind is "sentinel value", the actual value. If kind is a bit
-          mask or a byte mask, the value (0 or 1) indicating a missing value. None
-          otherwise.
-
-        Returns
-        -------
-        tuple
-            ``(kind, value)``.
-        """
         _k = DTypeKind
         kind = self.dtype[0]
         value = None
@@ -321,17 +226,6 @@ class Column(object):
     # @cached_property
     @property
     def null_count(self) -> int:
-        """
-        Get number of null elements, if known.
-
-        Returns
-        -------
-        int
-
-        Notes
-        -----
-        Arrow uses -1 to indicate "unknown", but None seems cleaner.
-        """
         if self._null_count_cache is not None:
             return self._null_count_cache
 
@@ -350,50 +244,18 @@ class Column(object):
     # TODO: ``What should we return???``, remove before the changes are merged
     @property
     def metadata(self) -> Dict[str, Any]:
-        """
-        Get the metadata for the column.
-
-        See `DataFrame.metadata` for more details.
-
-        Returns
-        -------
-        dict
-        """
         return {}
 
     def num_chunks(self) -> int:
-        """
-        Return the number of chunks the column consists of.
-
-        Returns
-        -------
-        int
-           The number of chunks the column consists of.
-        """
         return self._col._partitions.shape[0]
 
-    def get_chunks(self, n_chunks: Optional[int] = None) -> Iterable["Column"]:
-        """
-        Return an iterator yielding the chunks.
-
-        By default ``n_chunks=None``, yields the chunks that the data is stored as by the producer.
-        If given, ``n_chunks`` must be a multiple of ``self.num_chunks()``,
-        meaning the producer must subdivide each chunk before yielding it.
-
-        Parameters
-        ----------
-        n_chunks : int, optional
-            Number of chunks to yield.
-
-        Yields
-        ------
-        DataFrame
-            A ``DataFrame`` object(s).
-        """
+    def get_chunks(
+        self, n_chunks: Optional[int] = None
+    ) -> Iterable["PandasProtocolColumn"]:
         offset = 0
         if n_chunks is None:
             for length in self._col._row_lengths:
-                yield Column(
+                yield PandasProtocolColumn(
                     PandasDataframe(
                         self._col.mask(row_positions=range(length), col_positions=None),
                         allow_copy=self._col._allow_copy,
@@ -422,7 +284,7 @@ class Column(object):
                 self._col._column_widths,
             )
             for length in new_df._row_lengths:
-                yield Column(
+                yield PandasProtocolColumn(
                     PandasDataframe(
                         self._col.mask(row_positions=range(length), col_positions=None),
                         allow_copy=self._allow_copy,
@@ -432,24 +294,6 @@ class Column(object):
                 offset += length
 
     def get_buffers(self) -> Dict[str, Any]:
-        """
-        Return a dictionary containing the underlying buffers.
-
-        Returns
-        -------
-        dict
-            - "data": a two-element tuple whose first element is a buffer
-              containing the data and whose second element is the data buffer's associated dtype.
-            - "validity": a two-element tuple whose first element is a buffer
-              containing mask values indicating missing data and
-              whose second element is the mask value buffer's
-              associated dtype. None if the null representation is not a bit or byte mask.
-            - "offsets": a two-element tuple whose first element is a buffer
-              containing the offset values for variable-size binary data
-              (e.g., variable-length strings) and whose second element is the offsets
-              buffer's associated dtype. None if the data buffer does not have
-              an associated offsets buffer.
-        """
         buffers = {}
         buffers["data"] = self._get_data_buffer()
         try:
@@ -464,7 +308,9 @@ class Column(object):
 
         return buffers
 
-    def _get_data_buffer(self) -> Tuple[Buffer, Any]:  # Any is for self.dtype tuple
+    def _get_data_buffer(
+        self,
+    ) -> Tuple[PandasProtocolBuffer, Any]:  # Any is for self.dtype tuple
         """
         Return the buffer containing the data and the buffer's associated dtype.
 
@@ -476,12 +322,14 @@ class Column(object):
         _k = DTypeKind
         dtype = self.dtype
         if dtype[0] in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL):
-            buffer = Buffer(self._col.to_numpy().flatten(), allow_copy=self._allow_copy)
+            buffer = PandasProtocolBuffer(
+                self._col.to_numpy().flatten(), allow_copy=self._allow_copy
+            )
             dtype = dtype
         elif dtype[0] == _k.CATEGORICAL:
             pandas_series = self._col.to_pandas().squeeze(axis=1)
             codes = pandas_series.values.codes
-            buffer = Buffer(codes, allow_copy=self._allow_copy)
+            buffer = PandasProtocolBuffer(codes, allow_copy=self._allow_copy)
             dtype = self._dtype_from_pandas_dtype(codes.dtype)
         elif dtype[0] == _k.STRING:
             # Marshal the strings from a NumPy object array into a byte array
@@ -494,7 +342,7 @@ class Column(object):
                     b.extend(buf[i].encode(encoding="utf-8"))
 
             # Convert the byte array to a pandas "buffer" using a NumPy array as the backing store
-            buffer = Buffer(np.frombuffer(b, dtype="uint8"))
+            buffer = PandasProtocolBuffer(np.frombuffer(b, dtype="uint8"))
 
             # Define the dtype for the returned buffer
             dtype = (
@@ -508,7 +356,7 @@ class Column(object):
 
         return buffer, dtype
 
-    def _get_validity_buffer(self) -> Tuple[Buffer, Any]:
+    def _get_validity_buffer(self) -> Tuple[PandasProtocolBuffer, Any]:
         """
         Get the validity buffer.
 
@@ -547,7 +395,7 @@ class Column(object):
                 mask.append(v)
 
             # Convert the mask array to a Pandas "buffer" using a NumPy array as the backing store
-            buffer = Buffer(np.asarray(mask, dtype="uint8"))
+            buffer = PandasProtocolBuffer(np.asarray(mask, dtype="uint8"))
 
             # Define the dtype of the returned buffer
             dtype = (_k.UINT, 8, "C", "=")
@@ -563,7 +411,7 @@ class Column(object):
 
         raise RuntimeError(msg)
 
-    def _get_offsets_buffer(self) -> Tuple[Buffer, Any]:
+    def _get_offsets_buffer(self) -> Tuple[PandasProtocolBuffer, Any]:
         """
         Get the offsets buffer.
 
@@ -597,7 +445,7 @@ class Column(object):
             buf = np.asarray(offsets, dtype="int64")
 
             # Convert the offsets to a Pandas "buffer" using the NumPy array as the backing store
-            buffer = Buffer(buf)
+            buffer = PandasProtocolBuffer(buf)
 
             # Assemble the buffer dtype info
             dtype = (
