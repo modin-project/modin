@@ -18,12 +18,14 @@ single-threaded, Modin lets you instantly speed up your workflows by scaling pan
 cores. Modin works especially well on larger datasets, where pandas becomes painfully slow or runs
 [out of memory](https://modin.readthedocs.io/en/latest/getting_started/why_modin/out_of_core.html).
 
-Using modin is as simple as replacing the pandas import:
+By simply replacing the import statement, Modin offers users effortless speed and scale for their pandas workflows:
 
 ```python
 # import pandas as pd
 import modin.pandas as pd
 ```
+
+In the GIFs below, Modin (left) and pandas (right) *perform the same pandas* operations on a 2GB dataset. The only difference between the two notebook examples is that Modin uses `import modin.pandas as pd` and pandas uses `import pandas as pd`. 
 
 <table class="tg">
 <thead>
@@ -40,11 +42,9 @@ import modin.pandas as pd
 </tbody>
 </table>
 
-The chart below summarizes the runtime speedup of replacing Modin with Pandas based on the examples above. The example notebooks can be located [here](examples/jupyter). 
+The chart below summarizes the runtime speedup of replacing Modin with Pandas based on the examples above. The example notebooks can be located [here](examples/jupyter). To learn more about the speedups you could get with Modin, check out our [10 minute quickstart guide](https://modin.readthedocs.io/en/latest/getting_started/quickstart.html) to try out some examples on your own!
 
 <img src="docs/img/Modin_Speedup.svg" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
-
-In the GIFs above, Modin (left) and pandas (right) *perform the same pandas* operations on a 2GB dataset. The only difference between the two notebook examples is that the left one uses `import modin.pandas as pd` and the right one uses `import pandas as pd`. To learn more about the speedups you could get with Modin, check out our [10 minute quickstart guide](https://modin.readthedocs.io/en/latest/getting_started/quickstart.html) to try out some examples on your own!
 
 ### Installation
 
