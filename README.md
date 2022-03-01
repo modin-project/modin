@@ -25,6 +25,31 @@ Using modin is as simple as replacing the pandas import:
 import modin.pandas as pd
 ```
 
+### Example
+
+Modin automatically scales up your pandas code without requiring you to change your pandas code. The only difference between two notebook examples below is that the left one `imports modin.pandas as pd` and the right one `imports padas as pd` as usual. We see that the workflow Modin (left) finishes running much more quickly than pandas (right).
+
+<table class="tg">
+<thead>
+  <tr>
+    <th class="tg-0lax" style="text-align: center;"><img src="https://github.com/modin-project/modin/blob/master/docs/img/MODIN_ver2_hrz.png?raw=True" height="35px"></th>
+    <th class="tg-0lax" style="text-align: center;"><img src="https://pandas.pydata.org/static/img/pandas.svg" height="50px"></img></th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td class="tg-0lax"><img src="docs/img/Modin.gif"></img></td>
+    <td class="tg-0lax"><img src="docs/img/Pandas.gif"></img></td>
+  </tr>
+</tbody>
+</table>
+
+The charts summarizes the runtime speedup based on the 2GB example above.
+
+<img src="docs/img/Modin_Speedup.svg" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
+
+To learn more about the speedup you could get with Modin, check out our [10 minute quickstart guide](https://modin.readthedocs.io/en/latest/getting_started/quickstart.html) to try out some examples on your own.
+
 ### Installation
 
 #### From PyPI
