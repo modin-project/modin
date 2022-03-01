@@ -109,10 +109,6 @@ class BasePandasDataset(object):
     # but lives in "pandas" namespace.
     _pandas_class = pandas.core.generic.NDFrame
 
-    # Siblings are other objects that share the same query compiler. We use this list
-    # to update inplace when there is a shallow copy.
-    _siblings = []
-
     def _add_sibling(self, sibling):
         """
         Add a DataFrame or Series object to the list of siblings.

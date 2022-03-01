@@ -22,6 +22,7 @@ Key Features and Updates
   * FIX-#4185: Fix rolling across column partitions (#4262)
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
+  * FIX-#4183: Stop shallow copies from creating global shared state. (#4184)
 * Benchmarking enhancements
   * FIX-#4221: add `wait` method for `PandasOnRayDataframeColumnPartition` class (#4231)
 * Refactor Codebase
