@@ -1861,7 +1861,7 @@ class TestSql:
         # Check that the dataframe has the expected dimensions. Something might
         # have silently failed while loading the data into the database. It's
         # easiest to check in Python that the data has the right dimensions.
-        assert pandas_df.shape == (1000, 257)
+        assert pandas_df.shape == (1000, 256)
 
     def test_invalid_modin_database_connections(self):
         with pytest.raises(UnsupportedDatabaseException):
