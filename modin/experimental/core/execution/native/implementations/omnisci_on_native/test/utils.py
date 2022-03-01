@@ -185,8 +185,9 @@ class ForceOmnisciImport:
 
         Returns
         -------
-        list of modin DataFrames
-            A list of DataFrames whose payload is ``pyarrow.Table`` that was just exported from OmniSci.
+        list
+            A list of Modin DataFrames whose payload is ``pyarrow.Table``
+            that was just exported from OmniSci.
         """
         result = []
         for df, frame_id in self._imported_frames:
