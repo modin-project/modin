@@ -22,7 +22,7 @@ By simply replacing the import statement, Modin offers users effortless speed an
 
 <img src="docs/img/Import.gif" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
 
-In the GIFs below, Modin (left) and pandas (right) *perform the same pandas* operations on a 2GB dataset. The only difference between the two notebook examples is that Modin uses `import modin.pandas as pd` and pandas uses `import pandas as pd`. 
+In the GIFs below, Modin (left) and pandas (right) perform *the same pandas operations* on a 2GB dataset. The only difference between the two notebook examples is the import statement. 
 
 <table class="tg">
 <thead>
@@ -39,7 +39,7 @@ In the GIFs below, Modin (left) and pandas (right) *perform the same pandas* ope
 </tbody>
 </table>
 
-The chart below summarizes the runtime speedup of replacing Modin with Pandas based on the examples above. The example notebooks can be located [here](examples/jupyter). To learn more about the speedups you could get with Modin, check out our [10 minute quickstart guide](https://modin.readthedocs.io/en/latest/getting_started/quickstart.html) to try out some examples on your own!
+The chart below summarizes the runtime speedup of replacing Modin with Pandas based on the examples above. The example notebooks can be found [here](examples/jupyter). To learn more about the speedups you could get with Modin and try out some examples on your own, check out our [10 minute quickstart guide](https://modin.readthedocs.io/en/latest/getting_started/quickstart.html) to try out some examples on your own!
 
 <img src="docs/img/Modin_Speedup.svg" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
 
