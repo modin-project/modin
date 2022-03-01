@@ -631,7 +631,7 @@ class PandasJSONParser(PandasParser):
             # This only happens when we are reading with only one worker (Default)
             return pandas.read_json(fname, **kwargs)
         if not pandas_df.columns.equals(columns):
-            raise NotImplementedError("Columns must be the same across all rows.")
+            raise ValueError("Columns must be the same across all rows.")
         partition_columns = pandas_df.columns
         return _split_result_for_readers(1, num_splits, pandas_df) + [
             len(pandas_df),

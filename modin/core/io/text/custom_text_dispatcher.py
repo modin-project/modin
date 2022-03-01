@@ -26,7 +26,7 @@ class CustomTextExperimentalDispatcher(TextFileDispatcher):
     read_callback = None
 
     @classmethod
-    def _read(cls, filepath_or_buffer, **kwargs):
+    def _read(cls, filepath_or_buffer, columns, custom_parser, **kwargs):
         """
         Read data from `filepath_or_buffer` according to the passed `read_custom_text` `kwargs` parameters.
 
@@ -34,6 +34,12 @@ class CustomTextExperimentalDispatcher(TextFileDispatcher):
         ----------
         filepath_or_buffer : str, path object or file-like object
             `filepath_or_buffer` parameter of `read_custom_text` function.
+        columns : list or callable(file-like object, **kwargs) -> list
+            Column names of list type or callable that create column names from opened file
+            and passed `kwargs`.
+        custom_parser : callable(file-like object, **kwargs) -> pandas.DataFrame
+            Function that takes as input a part of the `filepath_or_buffer` file loaded into
+            memory in file-like object form.
         **kwargs : dict
             Parameters of `read_custom_text` function.
 
@@ -59,13 +65,11 @@ class CustomTextExperimentalDispatcher(TextFileDispatcher):
                 nrows=kwargs["nrows"],
             )
 
-        columns = kwargs.pop("columns", None)
-        assert columns is not None and not isinstance(columns, pandas.Index)
         if callable(columns):
             with OpenFile(filepath_or_buffer_md, "rb", compression_infered) as f:
                 columns = columns(f, **kwargs)
-        columns = pandas.Index(columns)
-        kwargs["columns"] = columns
+        if not isinstance(columns, pandas.Index):
+            columns = pandas.Index(columns)
 
         empty_pd_df = pandas.DataFrame(columns=columns)
         index_name = empty_pd_df.index.name
@@ -81,7 +85,7 @@ class CustomTextExperimentalDispatcher(TextFileDispatcher):
         )
 
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
-            splits, callback=kwargs["custom_parser"], **partition_kwargs
+            splits, callback=custom_parser, **partition_kwargs
         )
 
         new_query_compiler = cls._get_new_qc(
