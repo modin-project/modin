@@ -40,7 +40,7 @@ import modin.pandas as pd
 </tbody>
 </table>
 
-The chart below summarizes the runtime speedup of replacing Modin with Pandas based on the example above.
+The chart below summarizes the runtime speedup of replacing Modin with Pandas based on the examples above. The example notebooks can be located [here](examples/jupyter). 
 
 <img src="docs/img/Modin_Speedup.svg" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
 
