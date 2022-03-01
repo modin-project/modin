@@ -363,6 +363,59 @@ class BaseQueryCompiler(abc.ABC):
 
     # END To NumPy
 
+    # Dataframe exchange protocol
+
+    @abc.abstractmethod
+    def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True) -> dict:
+        """
+        Get a DataFrame exchange protocol object representing data of the Modin DataFrame.
+
+        See more about the protocol in https://data-apis.org/dataframe-protocol/latest/index.html.
+
+        Parameters
+        ----------
+        nan_as_null : bool, default: False
+            A keyword intended for the consumer to tell the producer
+            to overwrite null values in the data with ``NaN`` (or ``NaT``).
+            This currently has no effect; once support for nullable extension
+            dtypes is added, this value should be propagated to columns.
+        allow_copy : bool, default: True
+            A keyword that defines whether or not the library is allowed
+            to make a copy of the data. For example, copying data would be necessary
+            if a library supports strided buffers, given that this protocol
+            specifies contiguous buffers. Currently, if the flag is set to ``False``
+            and a copy is needed, a ``RuntimeError`` will be raised.
+
+        Returns
+        -------
+        dict
+            A dictionary object following the DataFrame protocol specification.
+        """
+        pass
+
+    @classmethod
+    @abc.abstractmethod
+    def from_dataframe(cls, df, data_cls):
+        """
+        Build QueryCompiler from a DataFrame object supporting the dataframe exchange protocol `__dataframe__()`.
+
+        Parameters
+        ----------
+        df : DataFrame
+            The DataFrame object supporting the dataframe exchange protocol.
+        data_cls : type
+            :py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe` class
+            (or its descendant) to convert to.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data from the DataFrame.
+        """
+        pass
+
+    # END Dataframe exchange protocol
+
     # Abstract inter-data operations (e.g. add, sub)
     # These operations require two DataFrames and will change the shape of the
     # data if the index objects don't match. An outer join + op is performed,

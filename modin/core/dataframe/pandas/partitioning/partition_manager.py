@@ -21,6 +21,7 @@ from abc import ABC
 from functools import wraps
 import numpy as np
 import pandas
+from pandas._libs.lib import no_default
 import warnings
 
 from modin.error_message import ErrorMessage
@@ -775,6 +776,28 @@ class PandasDataframePartitionManager(ABC):
         return cls.from_pandas(at.to_pandas(), return_dims=return_dims)
 
     @classmethod
+    def get_objects_from_partitions(cls, partitions):
+        """
+        Get the objects wrapped by `partitions`.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            NumPy array with ``PandasDataframePartition``-s.
+
+        Returns
+        -------
+        list
+            The objects wrapped by `partitions`.
+
+        Notes
+        -----
+        This method should be implemented in a more efficient way for engines that support
+        getting objects in parallel.
+        """
+        return [partition.get() for partition in partitions]
+
+    @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
         """
         Get the internal indices stored in the partitions.
@@ -803,16 +826,15 @@ class PandasDataframePartitionManager(ABC):
         func = cls.preprocess_func(index_func)
         if axis == 0:
             new_idx = (
-                [idx.apply(func).get() for idx in partitions.T[0]]
+                [idx.apply(func) for idx in partitions.T[0]]
                 if len(partitions.T)
                 else []
             )
         else:
             new_idx = (
-                [idx.apply(func).get() for idx in partitions[0]]
-                if len(partitions)
-                else []
+                [idx.apply(func) for idx in partitions[0]] if len(partitions) else []
             )
+        new_idx = cls.get_objects_from_partitions(new_idx)
         # TODO FIX INFORMATION LEAK!!!!1!!1!!
         return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
 
@@ -1111,7 +1133,7 @@ class PandasDataframePartitionManager(ABC):
         func,
         row_partitions_list,
         col_partitions_list,
-        item_to_distribute=None,
+        item_to_distribute=no_default,
         row_lengths=None,
         col_widths=None,
     ):
@@ -1132,7 +1154,7 @@ class PandasDataframePartitionManager(ABC):
             Iterable of tuples, containing 2 values:
                 1. Integer column partition index.
                 2. Internal column indexer of this partition.
-        item_to_distribute : item, default: None
+        item_to_distribute : np.ndarray or scalar, default: no_default
             The item to split up so it can be applied over both axes.
         row_lengths : list of ints, optional
             Lengths of partitions for every row. If not specified this information
@@ -1187,16 +1209,7 @@ class PandasDataframePartitionManager(ABC):
                     col_internal_idx, remote_part, col_idx, axis=1
                 )
 
-                # We want to eventually make item_to_distribute an np.ndarray,
-                # but that doesn't work for setting a subset of a categorical
-                # column, as per https://github.com/modin-project/modin/issues/3736.
-                # In that case, `item` is not an ndarray but instead some
-                # categorical variable, which we we don't need to distribute
-                # at all. Note that np.ndarray is not hashable, so it can't
-                # be a categorical variable.
-                # TODO(https://github.com/pandas-dev/pandas/issues/44703): Delete
-                # this special case once the pandas bug is fixed.
-                if item_to_distribute is not None:
+                if item_to_distribute is not no_default:
                     if isinstance(item_to_distribute, np.ndarray):
                         item = item_to_distribute[
                             row_position_counter : row_position_counter + row_offset,

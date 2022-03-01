@@ -73,8 +73,8 @@ class TextFileDispatcher(FileDispatcher):
             if cls.file_exists(buffer_filepath):
                 warnings.warn(
                     "For performance reasons, the filepath will be "
-                    "used in place of the file handle passed in "
-                    "to load the data"
+                    + "used in place of the file handle passed in "
+                    + "to load the data"
                 )
                 return cls.get_path(buffer_filepath)
         return filepath_or_buffer
@@ -662,7 +662,7 @@ class TextFileDispatcher(FileDispatcher):
         if not skiprows_supported:
             ErrorMessage.single_warning(
                 "Values of `header` and `skiprows` parameters have intersections. "
-                "This case is unsupported by Modin, so pandas implementation will be used"
+                + "This case is unsupported by Modin, so pandas implementation will be used"
             )
             return False
 
@@ -673,7 +673,7 @@ class TextFileDispatcher(FileDispatcher):
     def _validate_usecols_arg(cls, usecols):
         msg = (
             "'usecols' must either be list-like of all strings, all unicode, "
-            "all integers or a callable."
+            + "all integers or a callable."
         )
         if usecols is not None:
             if callable(usecols):

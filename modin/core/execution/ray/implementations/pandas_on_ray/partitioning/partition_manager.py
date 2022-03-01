@@ -20,7 +20,7 @@ import numpy as np
 import ray
 
 from modin.config import ProgressBar, NPartitions
-from modin.core.execution.ray.generic.partitioning.partition_manager import (
+from modin.core.execution.ray.generic.partitioning import (
     GenericRayDataframePartitionManager,
 )
 from .virtual_partition import (
@@ -30,7 +30,7 @@ from .virtual_partition import (
 from .partition import PandasOnRayDataframePartition
 from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
 from modin.core.storage_formats.pandas.utils import compute_chunksize
-from modin.error_message import ErrorMessage
+from pandas._libs.lib import no_default
 
 
 def progress_bar_wrapper(f):
@@ -95,47 +95,21 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
     _row_partition_class = PandasOnRayDataframeRowPartition
 
     @classmethod
-    def get_indices(cls, axis, partitions, index_func=None):
+    def get_objects_from_partitions(cls, partitions):
         """
-        Get the internal indices stored in the partitions.
+        Get the objects wrapped by `partitions` in parallel.
 
         Parameters
         ----------
-        axis : {0, 1}
-            Axis to extract the labels over.
         partitions : np.ndarray
             NumPy array with ``PandasDataframePartition``-s.
-        index_func : callable, default: None
-            The function to be used to extract the indices.
 
         Returns
         -------
-        pandas.Index
-            A ``pandas.Index`` object.
-
-        Notes
-        -----
-        These are the global indices of the object. This is mostly useful
-        when you have deleted rows/columns internally, but do not know
-        which ones were deleted.
+        list
+            The objects wrapped by `partitions`.
         """
-        ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
-        func = cls.preprocess_func(index_func)
-        if axis == 0:
-            # We grab the first column of blocks and extract the indices
-            new_idx = (
-                [idx.apply(func).oid for idx in partitions.T[0]]
-                if len(partitions.T)
-                else []
-            )
-        else:
-            new_idx = (
-                [idx.apply(func).oid for idx in partitions[0]]
-                if len(partitions)
-                else []
-            )
-        new_idx = ray.get(new_idx)
-        return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
+        return ray.get([partition.oid for partition in partitions])
 
     @classmethod
     def concat(cls, axis, left_parts, right_parts):
@@ -501,7 +475,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         func,
         row_partitions_list,
         col_partitions_list,
-        item_to_distribute=None,
+        item_to_distribute=no_default,
         row_lengths=None,
         col_widths=None,
     ):
@@ -518,7 +492,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             List of row partitions.
         col_partitions_list : list
             List of column partitions.
-        item_to_distribute : item, optional
+        item_to_distribute : np.ndarray or scalar, default: no_default
             The item to split up so it can be applied over both axes.
         row_lengths : list of ints, optional
             Lengths of partitions for every row. If not specified this information

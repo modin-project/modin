@@ -14,14 +14,12 @@
 import pandas
 import warnings
 
-__pandas_version__ = "1.4.0"
+__pandas_version__ = "1.4.1"
 
 if pandas.__version__ != __pandas_version__:
     warnings.warn(
-        "The pandas version installed {} does not match the supported pandas version in"
-        " Modin {}. This may cause undesired side effects!".format(
-            pandas.__version__, __pandas_version__
-        )
+        f"The pandas version installed {pandas.__version__} does not match the supported pandas version in"
+        + f" Modin {__pandas_version__}. This may cause undesired side effects!"
     )
 
 with warnings.catch_warnings():
@@ -96,14 +94,12 @@ from modin.config import Engine, Parameter
 os.environ["OMP_NUM_THREADS"] = "1"
 
 _is_first_update = {}
-dask_client = None
 _NOINIT_ENGINES = {
     "Python",
 }  # engines that don't require initialization, useful for unit tests
 
 
 def _update_engine(publisher: Parameter):
-    global dask_client
     from modin.config import StorageFormat, CpuCount
     from modin.config.envvars import IsExperimental
     from modin.config.pubsub import ValueSource
@@ -123,7 +119,7 @@ def _update_engine(publisher: Parameter):
 
     if publisher.get() == "Ray":
         if _is_first_update.get("Ray", True):
-            from modin.core.execution.ray.common.utils import initialize_ray
+            from modin.core.execution.ray.common import initialize_ray
 
             initialize_ray()
     elif publisher.get() == "Native":
@@ -150,7 +146,7 @@ def _update_engine(publisher: Parameter):
             def init_remote_ray(partition):
                 from ray import ray_constants
                 import modin
-                from modin.core.execution.ray.common.utils import initialize_ray
+                from modin.core.execution.ray.common import initialize_ray
 
                 modin.set_execution("Ray", partition)
                 initialize_ray(

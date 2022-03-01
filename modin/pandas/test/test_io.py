@@ -421,9 +421,9 @@ class TestCsv:
         unique_filename = get_unique_filename()
         str_initial_spaces = (
             "col1,col2,col3,col4\n"
-            "five,  six,  seven,  eight\n"
-            "    five,    six,    seven,    eight\n"
-            "five, six,  seven,   eight\n"
+            + "five,  six,  seven,  eight\n"
+            + "    five,    six,    seven,    eight\n"
+            + "five, six,  seven,   eight\n"
         )
 
         eval_io_from_str(str_initial_spaces, unique_filename, skipinitialspace=True)
@@ -1397,6 +1397,14 @@ class TestParquet:
         finally:
             teardown_test_files([parquet_fname, csv_fname])
 
+    def test_read_empty_parquet_file(self):
+        test_df = pandas.DataFrame()
+        with tempfile.TemporaryDirectory() as directory:
+            path = f"{directory}/data"
+            os.makedirs(path)
+            test_df.to_parquet(path + "/part-00000.parquet")
+            eval_io(fn_name="read_parquet", path=path)
+
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
@@ -1591,6 +1599,30 @@ class TestExcel:
         path = "modin/pandas/test/data/test_emptyline.xlsx"
         modin_df = pd.read_excel(path)
         assert str(modin_df)
+
+    @check_file_leaks
+    def test_read_excel_empty_rows(self):
+        # Test parsing empty rows in middle of excel dataframe as NaN values
+        eval_io(
+            fn_name="read_excel",
+            io="modin/pandas/test/data/test_empty_rows.xlsx",
+        )
+
+    @check_file_leaks
+    def test_read_excel_border_rows(self):
+        # Test parsing border rows as NaN values in excel dataframe
+        eval_io(
+            fn_name="read_excel",
+            io="modin/pandas/test/data/test_border_rows.xlsx",
+        )
+
+    @check_file_leaks
+    def test_read_excel_every_other_nan(self):
+        # Test for reading excel dataframe with every other row as a NaN value
+        eval_io(
+            fn_name="read_excel",
+            io="modin/pandas/test/data/every_other_row_nan.xlsx",
+        )
 
     @pytest.mark.parametrize(
         "sheet_name",
@@ -1859,10 +1891,10 @@ class TestFwf:
     def test_fwf_file(self, make_fwf_file):
         fwf_data = (
             "id8141  360.242940  149.910199 11950.7\n"
-            "id1594  444.953632  166.985655 11788.4\n"
-            "id1849  364.136849  183.628767 11806.2\n"
-            "id1230  413.836124  184.375703 11916.8\n"
-            "id1948  502.953953  173.237159 12468.3\n"
+            + "id1594  444.953632  166.985655 11788.4\n"
+            + "id1849  364.136849  183.628767 11806.2\n"
+            + "id1230  413.836124  184.375703 11916.8\n"
+            + "id1948  502.953953  173.237159 12468.3\n"
         )
         unique_filename = make_fwf_file(fwf_data=fwf_data)
 
@@ -1913,11 +1945,11 @@ class TestFwf:
     def test_fwf_file_usecols(self, make_fwf_file, usecols):
         fwf_data = (
             "a       b           c          d\n"
-            "id8141  360.242940  149.910199 11950.7\n"
-            "id1594  444.953632  166.985655 11788.4\n"
-            "id1849  364.136849  183.628767 11806.2\n"
-            "id1230  413.836124  184.375703 11916.8\n"
-            "id1948  502.953953  173.237159 12468.3\n"
+            + "id8141  360.242940  149.910199 11950.7\n"
+            + "id1594  444.953632  166.985655 11788.4\n"
+            + "id1849  364.136849  183.628767 11806.2\n"
+            + "id1230  413.836124  184.375703 11916.8\n"
+            + "id1948  502.953953  173.237159 12468.3\n"
         )
         eval_io(
             fn_name="read_fwf",
@@ -1978,11 +2010,11 @@ class TestFwf:
     def test_fwf_file_index_col(self, make_fwf_file):
         fwf_data = (
             "a       b           c          d\n"
-            "id8141  360.242940  149.910199 11950.7\n"
-            "id1594  444.953632  166.985655 11788.4\n"
-            "id1849  364.136849  183.628767 11806.2\n"
-            "id1230  413.836124  184.375703 11916.8\n"
-            "id1948  502.953953  173.237159 12468.3\n"
+            + "id8141  360.242940  149.910199 11950.7\n"
+            + "id1594  444.953632  166.985655 11788.4\n"
+            + "id1849  364.136849  183.628767 11806.2\n"
+            + "id1230  413.836124  184.375703 11916.8\n"
+            + "id1948  502.953953  173.237159 12468.3\n"
         )
         eval_io(
             fn_name="read_fwf",

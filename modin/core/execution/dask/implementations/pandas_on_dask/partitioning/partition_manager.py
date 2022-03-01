@@ -23,7 +23,6 @@ from .virtual_partition import (
     PandasOnDaskDataframeRowPartition,
 )
 from .partition import PandasOnDaskDataframePartition
-from modin.error_message import ErrorMessage
 
 
 class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
@@ -35,45 +34,19 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
     _row_partition_class = PandasOnDaskDataframeRowPartition
 
     @classmethod
-    def get_indices(cls, axis, partitions, index_func):
+    def get_objects_from_partitions(cls, partitions):
         """
-        Get the internal indices stored in the partitions.
+        Get the objects wrapped by `partitions` in parallel.
 
         Parameters
         ----------
-        axis : {0, 1}
-            Axis to extract the labels over.
         partitions : np.ndarray
-            The array of partitions from which need to extract the labels.
-        index_func : callable
-            The function to be used to extract the indices.
+            NumPy array with ``PandasDataframePartition``-s.
 
         Returns
         -------
-        pandas.Index
-            A pandas Index object.
-
-        Notes
-        -----
-        These are the global indices of the object. This is mostly useful
-        when you have deleted rows/columns internally, but do not know
-        which ones were deleted.
+        list
+            The objects wrapped by `partitions`.
         """
         client = default_client()
-        ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
-        func = cls.preprocess_func(index_func)
-        if axis == 0:
-            # We grab the first column of blocks and extract the indices
-            new_idx = (
-                [idx.apply(func).future for idx in partitions.T[0]]
-                if len(partitions.T)
-                else []
-            )
-        else:
-            new_idx = (
-                [idx.apply(func).future for idx in partitions[0]]
-                if len(partitions)
-                else []
-            )
-        new_idx = client.gather(new_idx)
-        return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
+        return client.gather([partition.future for partition in partitions])

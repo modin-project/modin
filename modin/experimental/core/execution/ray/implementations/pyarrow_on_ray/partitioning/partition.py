@@ -16,7 +16,7 @@
 import ray
 import pyarrow
 
-from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
+from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
     PandasOnRayDataframePartition,
 )
 

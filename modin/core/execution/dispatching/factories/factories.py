@@ -189,6 +189,16 @@ class BaseFactory(object):
     @classmethod
     @doc(
         _doc_io_method_template,
+        source="a DataFrame object supporting exchange protocol `__dataframe__()`",
+        params=_doc_io_method_all_params,
+        method="utils.from_dataframe",
+    )
+    def _from_dataframe(cls, *args, **kwargs):
+        return cls.io_cls.from_dataframe(*args, **kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_template,
         source="a Parquet file",
         params=_doc_io_method_kwargs_params,
         method="read_parquet",
