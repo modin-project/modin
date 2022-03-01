@@ -13,12 +13,16 @@ Key Features and Updates
   * FIX-#4158: Do not print OmniSci logs to stdout by default (#4159)
   * FIX-#4177: Support read_feather from pathlike objects (#4177)
   * FIX-#4234: Upgrade pandas to 1.4.1 (#4235)
+  * FIX-#3368: support unsigned integers in OmniSci backend (#4256)
   * FIX-#4057: Allow reading an empty parquet file (#4075)  
   * FIX-#3884: Fix read_excel() dropping empty rows (#4161)
   * FIX-#4257: Fix Categorical() for scalar categories (#4258) 
   * FIX-#4208: Fix lazy metadata update for `PandasDataFrame.from_labels` (#4209)
+  * FIX-#3981, FIX-#3801, FIX-#4149: Stop broadcasting scalars to set items (#4160)
+  * FIX-#4185: Fix rolling across column partitions (#4262)
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
+  * FIX-#4183: Stop shallow copies from creating global shared state. (#4184)
 * Benchmarking enhancements
   * FIX-#4221: add `wait` method for `PandasOnRayDataframeColumnPartition` class (#4231)
 * Refactor Codebase
@@ -51,6 +55,7 @@ Key Features and Updates
   * DOCS-#4176: Update OmniSci usage section (#4192)
   * DOCS-#3954: Add Dask example notebooks (#4139)
   * DOCS-#4272: Add bar chart comparisons to quick start guide (#4277)
+  * DOCS-#4241: Update warnings and docs regarding defaulting to pandas (#4242)
 * Dependencies
   * FIX-#4113, FIX-#4116, FIX-#4115: Apply new `black` formatting, fix pydocstyle check and readthedocs build (#4114)
   * TEST-#3227: Use codecov github action instead of bash form in GA workflows (#3226)

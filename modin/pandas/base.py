@@ -109,10 +109,6 @@ class BasePandasDataset(object):
     # but lives in "pandas" namespace.
     _pandas_class = pandas.core.generic.NDFrame
 
-    # Siblings are other objects that share the same query compiler. We use this list
-    # to update inplace when there is a shallow copy.
-    _siblings = []
-
     def _add_sibling(self, sibling):
         """
         Add a DataFrame or Series object to the list of siblings.
@@ -1042,7 +1038,7 @@ class BasePandasDataset(object):
             # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
             # purpose and does not affect the result, we shouldn't pass them to the query compiler.
             query_compiler=self._query_compiler.cummax(
-                axis=axis, skipna=skipna, **kwargs
+                fold_axis=axis, axis=axis, skipna=skipna, **kwargs
             )
         )
 
@@ -1054,7 +1050,7 @@ class BasePandasDataset(object):
             # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
             # purpose and does not affect the result, we shouldn't pass them to the query compiler.
             query_compiler=self._query_compiler.cummin(
-                axis=axis, skipna=skipna, **kwargs
+                fold_axis=axis, axis=axis, skipna=skipna, **kwargs
             )
         )
 
@@ -1065,7 +1061,7 @@ class BasePandasDataset(object):
             # FIXME: Judging by pandas docs `**kwargs` serves only compatibility
             # purpose and does not affect the result, we shouldn't pass them to the query compiler.
             query_compiler=self._query_compiler.cumprod(
-                axis=axis, skipna=skipna, **kwargs
+                fold_axis=axis, axis=axis, skipna=skipna, **kwargs
             )
         )
 
@@ -1076,7 +1072,7 @@ class BasePandasDataset(object):
             # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
             # purpose and does not affect the result, we shouldn't pass them to the query compiler.
             query_compiler=self._query_compiler.cumsum(
-                axis=axis, skipna=skipna, **kwargs
+                fold_axis=axis, axis=axis, skipna=skipna, **kwargs
             )
         )
 
@@ -1143,7 +1139,9 @@ class BasePandasDataset(object):
     def diff(self, periods=1, axis=0):
         axis = self._get_axis_number(axis)
         return self.__constructor__(
-            query_compiler=self._query_compiler.diff(periods=periods, axis=axis)
+            query_compiler=self._query_compiler.diff(
+                fold_axis=axis, axis=axis, periods=periods
+            )
         )
 
     def drop(
@@ -3592,32 +3590,33 @@ class Window(object):
             closed,
             method,
         ]
+        self.axis = axis
 
     def mean(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.window_mean(
-                self.window_args, *args, **kwargs
+                self.axis, self.window_args, *args, **kwargs
             )
         )
 
     def sum(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.window_sum(
-                self.window_args, *args, **kwargs
+                self.axis, self.window_args, *args, **kwargs
             )
         )
 
     def var(self, ddof=1, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.window_var(
-                self.window_args, ddof, *args, **kwargs
+                self.axis, self.window_args, ddof, *args, **kwargs
             )
         )
 
     def std(self, ddof=1, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.window_std(
-                self.window_args, ddof, *args, **kwargs
+                self.axis, self.window_args, ddof, *args, **kwargs
             )
         )
 
@@ -3651,58 +3650,61 @@ class Rolling(object):
             closed,
             method,
         ]
+        self.axis = axis
 
     def count(self):
         return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_count(self.rolling_args)
+            query_compiler=self._query_compiler.rolling_count(
+                self.axis, self.rolling_args
+            )
         )
 
     def sum(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_sum(
-                self.rolling_args, *args, **kwargs
+                self.axis, self.rolling_args, *args, **kwargs
             )
         )
 
     def mean(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_mean(
-                self.rolling_args, *args, **kwargs
+                self.axis, self.rolling_args, *args, **kwargs
             )
         )
 
     def median(self, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_median(
-                self.rolling_args, **kwargs
+                self.axis, self.rolling_args, **kwargs
             )
         )
 
     def var(self, ddof=1, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_var(
-                self.rolling_args, ddof, *args, **kwargs
+                self.axis, self.rolling_args, ddof, *args, **kwargs
             )
         )
 
     def std(self, ddof=1, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_std(
-                self.rolling_args, ddof, *args, **kwargs
+                self.axis, self.rolling_args, ddof, *args, **kwargs
             )
         )
 
     def min(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_min(
-                self.rolling_args, *args, **kwargs
+                self.axis, self.rolling_args, *args, **kwargs
             )
         )
 
     def max(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_max(
-                self.rolling_args, *args, **kwargs
+                self.axis, self.rolling_args, *args, **kwargs
             )
         )
 
@@ -3717,7 +3719,7 @@ class Rolling(object):
 
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_corr(
-                self.rolling_args, other, pairwise, *args, **kwargs
+                self.axis, self.rolling_args, other, pairwise, *args, **kwargs
             )
         )
 
@@ -3732,21 +3734,21 @@ class Rolling(object):
 
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_cov(
-                self.rolling_args, other, pairwise, ddof, **kwargs
+                self.axis, self.rolling_args, other, pairwise, ddof, **kwargs
             )
         )
 
     def skew(self, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_skew(
-                self.rolling_args, **kwargs
+                self.axis, self.rolling_args, **kwargs
             )
         )
 
     def kurt(self, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_kurt(
-                self.rolling_args, **kwargs
+                self.axis, self.rolling_args, **kwargs
             )
         )
 
@@ -3761,6 +3763,7 @@ class Rolling(object):
     ):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_apply(
+                self.axis,
                 self.rolling_args,
                 func,
                 raw,
@@ -3781,6 +3784,7 @@ class Rolling(object):
 
         dataframe = DataFrame(
             query_compiler=self._query_compiler.rolling_aggregate(
+                self.axis,
                 self.rolling_args,
                 func,
                 *args,
@@ -3800,6 +3804,6 @@ class Rolling(object):
     def quantile(self, quantile, interpolation="linear", **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_quantile(
-                self.rolling_args, quantile, interpolation, **kwargs
+                self.axis, self.rolling_args, quantile, interpolation, **kwargs
             )
         )
