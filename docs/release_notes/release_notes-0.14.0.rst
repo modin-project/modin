@@ -53,6 +53,7 @@ Key Features and Updates
   * DOCS-#4172: Refresh Intel Distribution of Modin paragraph (#4175)
   * DOCS-#4173: Mention strict channel priority in conda install section (#4178)
   * DOCS-#4176: Update OmniSci usage section (#4192)
+  * DOCS-#4027: Add GIF images and chart to Modin README demonstrating speedups (#4232)
   * DOCS-#3954: Add Dask example notebooks (#4139)
   * DOCS-#4241: Update warnings and docs regarding defaulting to pandas (#4242)
 * Dependencies
