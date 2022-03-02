@@ -30,7 +30,7 @@ Key Features and Updates
   * REFACTOR-#4206: add assert check into `__init__` method of `PandasOnDaskDataframePartition` class (#4207)
   * REFACTOR-#3900: add flake8-no-implicit-concat plugin and refactor flake8 error codes (#3901)
 * Pandas API implementations and improvements
-  *
+  * FEAT-#3603: add experimental `read_custom_text` function that can read custom line-by-line text files (#3441)
 * OmniSci enhancements
   *
 * XGBoost enhancements
