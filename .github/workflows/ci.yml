@@ -25,7 +25,7 @@ jobs:
           python-version: "3.8.x"
           architecture: "x64"
       - run: pip install black
-      - run: black --check --diff modin/ asv_bench/benchmarks scripts/doc_checker.py
+      - run: black --check --diff modin/ asv_bench/benchmarks scripts/doc_checker.py scripts/supported_apis.py
 
   build-docs:
     name: build docs
@@ -54,8 +54,8 @@ jobs:
           architecture: "x64"
       # The `numpydoc` version here MUST match the versions in the dev requirements files.
       - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0 xgboost
-      - run: pytest scripts/test
       - run: pip install -e .[all]
+      - run: pytest scripts/test
       - run: |
           python scripts/doc_checker.py --add-ignore=D101,D102,D103,D105 --disable-numpydoc \
             modin/pandas/dataframe.py modin/pandas/series.py \
@@ -98,6 +98,7 @@ jobs:
           python scripts/doc_checker.py modin/core/execution/dispatching/factories/factories.py \
             modin/core/execution/dispatching/factories/dispatcher.py                            \
       - run: python scripts/doc_checker.py scripts/doc_checker.py
+      - run: python scripts/doc_checker.py scripts/supported_apis.py
       - run: |
           python scripts/doc_checker.py modin/experimental/pandas/io.py \
             modin/experimental/pandas/numpy_wrap.py modin/experimental/pandas/__init__.py
@@ -132,7 +133,7 @@ jobs:
           python-version: "3.8.x"
           architecture: "x64"
       - run: pip install flake8 flake8-print flake8-no-implicit-concat
-      - run: flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py
+      - run: flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py scripts/supported_apis.py
 
   test-api:
     runs-on: ubuntu-latest

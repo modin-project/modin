@@ -42,12 +42,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 import modin
 
 from modin.config.__main__ import export_config_help
+from scripts.supported_apis import generate_supported_apis_csvs
 
 configs_file_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "flow/modin/configs_help.csv")
 )
 # Export configs help to create configs table in the docs/flow/modin/config.rst
 export_config_help(configs_file_path)
+generate_supported_apis_csvs()
 
 project = "Modin"
 copyright = "2018-2022, Modin Developers."
@@ -76,6 +78,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.githubpages",
     "sphinx.ext.graphviz",
+    "sphinx.ext.autosummary",
     "sphinxcontrib.plantuml",
     "sphinx_issues",
 ]
@@ -83,6 +86,9 @@ extensions = [
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
+
+# Turn on sphinx.ext.autosummary
+autosummary_generate = True
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:

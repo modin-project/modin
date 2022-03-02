@@ -57,3 +57,24 @@ def square_summary(number: int) -> int:  # noqa: PR01, GL08
     pandas or NumPy.
     """
     return number ** 2
+
+def supported_apis_method(parameter_name1, parameter_name2):
+    """
+    Method summary.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes          |
+    +=================+=================+================+================+================+
+    | All parameters  | Partial         | Harmful        | -              | test multiline |
+    |                 |                 |                |                | note           |
+    +-----------------+-----------------+----------------+----------------+----------------+
+    | parameter_name1 | Supported       | Harmful        | Harmful        |                |
+    |                 |                 |                | Non-lazy       |                |
+    +-----------------+-----------------+----------------+----------------+----------------+
+    | parameter_name2 | Partial         | Harmful        | -              | test note      |
+    |                 | Non-lazy        | Non-lazy       |                |                |
+    +-----------------+-----------------+----------------+----------------+----------------+
+    """
+    pass

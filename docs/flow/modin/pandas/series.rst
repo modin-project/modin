@@ -3,6 +3,8 @@
 Series Module Overview
 """"""""""""""""""""""
 
+.. currentmodule:: modin.pandas
+
 Modin's ``pandas.Series`` API
 '''''''''''''''''''''''''''''
 
@@ -19,7 +21,10 @@ pandas ``Series`` method output.
 Public API
 ----------
 
-.. autoclass:: modin.pandas.series.Series
+.. autosummary::
+    :toctree: api/
+
+    Series
 
 Usage Guide
 '''''''''''

@@ -3,6 +3,8 @@
 DataFrame Module Overview
 """""""""""""""""""""""""
 
+.. currentmodule:: modin.pandas
+
 Modin's ``pandas.DataFrame`` API
 ''''''''''''''''''''''''''''''''
 
@@ -19,7 +21,10 @@ pandas ``DataFrame`` method output.
 Public API
 ----------
 
-.. autoclass:: modin.pandas.dataframe.DataFrame
+.. autosummary::
+    :toctree: api/
+
+    DataFrame
 
 Usage Guide
 '''''''''''
