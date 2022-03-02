@@ -57,25 +57,20 @@ class JSONDispatcher(TextFileDispatcher):
         empty_pd_df = pandas.DataFrame(columns=columns)
 
         with OpenFile(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
-            partition_ids = []
-            index_ids = []
-            dtypes_ids = []
-
             column_widths, num_splits = cls._define_metadata(empty_pd_df, columns)
-
             args = {"fname": path_or_buf, "num_splits": num_splits, **kwargs}
-
             splits = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
             )
-            for start, end in splits:
+            partition_ids = [None] * len(splits)
+            index_ids = [None] * len(splits)
+            dtypes_ids = [None] * len(splits)
+            for idx, (start, end) in enumerate(splits):
                 args.update({"start": start, "end": end})
-                partition_id = cls.deploy(cls.parse, num_returns=num_splits + 3, **args)
-                partition_ids.append(partition_id[:-3])
-                index_ids.append(partition_id[-3])
-                dtypes_ids.append(partition_id[-2])
-
+                *partition_ids[idx], index_ids[idx], dtypes_ids[idx], _ = cls.deploy(
+                    cls.parse, num_splits + 3, **args
+                )
         # partition_id[-1] contains the columns for each partition, which will be useful
         # for implementing when `lines=False`.
         row_lengths = cls.materialize(index_ids)

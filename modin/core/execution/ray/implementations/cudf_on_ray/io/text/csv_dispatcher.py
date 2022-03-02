@@ -87,20 +87,14 @@ class cuDFCSVDispatcher(CSVDispatcher):
         dtypes_ids : list
             List with references to the partitions dtypes objects.
         """
-        partition_ids = []
-        index_ids = []
-        dtypes_ids = []
+        partition_ids = [None] * len(splits)
+        index_ids = [None] * len(splits)
+        dtypes_ids = [None] * len(splits)
         gpu_manager = 0
-        for start, end in splits:
+        for idx, (start, end) in enumerate(splits):
             partition_kwargs.update({"start": start, "end": end, "gpu": gpu_manager})
-            partition_id = cls.deploy(
-                cls.parse,
-                num_returns=partition_kwargs.get("num_splits") + 2,
-                **partition_kwargs
+            *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
+                cls.parse, partition_kwargs.get("num_splits") + 2, **partition_kwargs
             )
-            partition_ids.append(partition_id[:-2])
-            index_ids.append(partition_id[-2])
-            dtypes_ids.append(partition_id[-1])
             gpu_manager += 1
-
         return partition_ids, index_ids, dtypes_ids
