@@ -1,19 +1,8 @@
-import enum
-
 import modin.pandas as pd
 import numpy as np
 import pytest
 from modin.pandas.test.utils import df_equals
-
-
-class _DtypeKind(enum.IntEnum):
-    INT = 0
-    UINT = 1
-    FLOAT = 2
-    BOOL = 20
-    STRING = 21
-    DATETIME = 22
-    CATEGORICAL = 23
+from modin.core.dataframe.pandas.exchange.dataframe_protocol.utils import from_dataframe
 
 
 @pytest.mark.parametrize(
@@ -25,14 +14,14 @@ class _DtypeKind(enum.IntEnum):
 )
 def test_float_only(data):
     df = pd.DataFrame(data)
-    df_equals(df, df.__dataframe__())
+    df_equals(df, from_dataframe(df.__dataframe__()))
 
 
 def test_noncontiguous_columns():
     arr = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
     df = pd.DataFrame(arr, columns=["a", "b", "c"])
     assert df["a"].to_numpy().strides == (24,)
-    df_equals(df, df.__dataframe__())
+    df_equals(df, from_dataframe(df.__dataframe__()))
 
 
 def test_categorical_dtype_two_columns():
@@ -40,13 +29,13 @@ def test_categorical_dtype_two_columns():
     df["B"] = df["A"].astype("category")
 
     col = df.__dataframe__().get_column_by_name("B")
-    assert col.dtype[0] == _DtypeKind.CATEGORICAL
+    assert col.dtype[0] == 23
     assert col.null_count == 1
     assert col.describe_null == (2, -1)
     assert col.num_chunks() == 1
     assert col.describe_categorical == (False, True, {0: 1, 1: 2, 2: 5})
 
-    df_equals(df, df.__dataframe__())
+    df_equals(df, from_dataframe(df.__dataframe__()))
 
 
 def test_string_dtype():
@@ -54,7 +43,7 @@ def test_string_dtype():
     df["B"] = df["A"].astype("object")
 
     col = df.__dataframe__().get_column_by_name("B")
-    assert col.dtype[0] == _DtypeKind.STRING
+    assert col.dtype[0] == 21
     assert col.null_count == 1
     assert col.describe_null == (4, 0)
     assert col.num_chunks() == 1
@@ -71,7 +60,7 @@ def test_metadata():
     expected = {}
     for key in col_metadata:
         assert col_metadata[key] == expected[key]
-    df_equals(df, df.__dataframe__())
+    df_equals(df, from_dataframe(df.__dataframe__()))
 
 
 @pytest.mark.parametrize(
@@ -141,27 +130,27 @@ def test_string():
     assert col._col.tolist() == df.A.tolist()
     assert col.size == 5
     assert col.null_count == 1
-    assert col.dtype[0] == _DtypeKind.STRING
+    assert col.dtype[0] == 21
     assert col.describe_null == (3, 0)
 
     df2 = df.__dataframe__()
     assert df2.A.tolist() == df.A.tolist()
     assert df2.get_column_by_name("A").null_count == 1
     assert df2.get_column_by_name("A").describe_null == (3, 0)
-    assert df2.get_column_by_name("A").dtype[0] == _DtypeKind.STRING
+    assert df2.get_column_by_name("A").dtype[0] == 21
 
     df_sliced = df[1:]
     col = df_sliced.__dataframe__().get_column_by_name("A")
     assert col.size == 4
     assert col.null_count == 1
-    assert col.dtype[0] == _DtypeKind.STRING
+    assert col.dtype[0] == 21
     assert col.describe_null == (3, 0)
 
     df2 = df_sliced.__dataframe__()
     assert df2.A.tolist() == df_sliced.A.tolist()
     assert df2.get_column_by_name("A").null_count == 1
     assert df2.get_column_by_name("A").describe_null == (3, 0)
-    assert df2.get_column_by_name("A").dtype[0] == _DtypeKind.STRING
+    assert df2.get_column_by_name("A").dtype[0] == 21
 
 
 def test_object():
@@ -228,7 +217,7 @@ def test_categorical_dtype():
     df = pd.DataFrame({"A": [1, 2, 5, 1]})
     df["A"].astype("category")
     col = df.__dataframe__().get_column_by_name("A")
-    assert col.dtype[0] == _DtypeKind.CATEGORICAL
+    assert col.dtype[0] == 23
     assert col.describe_categorical == (False, True, {0: 1, 1: 2, 2: 5})
 
 
@@ -237,7 +226,7 @@ def test_NA_categorical_dtype():
     df["B"] = df["A"]
 
     col = df.__dataframe__().get_column_by_name("B")
-    assert col.dtype[0] == _DtypeKind.CATEGORICAL
+    assert col.dtype[0] == 23
     assert col.null_count == 0
     assert col.describe_null == (3, 0)
     assert col.num_chunks() == 1
@@ -249,7 +238,7 @@ def test_NA_string_dtype():
     df["B"] = df["A"].astype("object")
 
     col = df.__dataframe__().get_column_by_name("B")
-    assert col.dtype[0] == _DtypeKind.STRING
+    assert col.dtype[0] == 21
     assert col.null_count == 0
     assert col.describe_null == (3, 0)
     assert col.num_chunks() == 1
