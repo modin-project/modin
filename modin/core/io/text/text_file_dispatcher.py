@@ -1017,13 +1017,17 @@ class TextFileDispatcher(FileDispatcher):
                 filepath_or_buffer, callback=cls.read_callback, **kwargs
             )
 
+        # We know for sure that the buffer is not used further in the code,
+        # renaming in order not to be misleading
+        filepath = filepath_or_buffer_md
+
         is_quoting = kwargs["quoting"] != QUOTE_NONE
         use_inferred_column_names = cls._uses_inferred_column_names(
             names, skiprows, kwargs.get("skipfooter", 0), kwargs.get("usecols", None)
         )
 
         pd_df_metadata = cls.read_callback(
-            filepath_or_buffer,
+            filepath,
             **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
         )
         column_names = pd_df_metadata.columns
@@ -1032,7 +1036,7 @@ class TextFileDispatcher(FileDispatcher):
         # kwargs that will be passed to the workers
         partition_kwargs = dict(
             kwargs,
-            fname=filepath_or_buffer_md,
+            fname=filepath,
             num_splits=num_splits,
             header_size=0 if use_inferred_column_names else header_size,
             names=column_names if use_inferred_column_names else names,
@@ -1043,7 +1047,7 @@ class TextFileDispatcher(FileDispatcher):
             compression=compression_infered,
         )
 
-        with OpenFile(filepath_or_buffer_md, "rb", compression_infered) as f:
+        with OpenFile(filepath, "rb", compression_infered) as f:
             old_pos = f.tell()
             fio = io.TextIOWrapper(f, encoding=encoding, newline="")
             newline, quotechar = cls.compute_newline(
