@@ -124,7 +124,7 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
-      # Only test readin from SQL server on ubuntu for now. Eventually, we
+      # Only test reading from SQL server on ubuntu for now. Eventually, we
       # should test on Windows, too, but we will have to set up the SQL
       # server differently.
       MODIN_TEST_READ_FROM_SQL_SERVER: true
