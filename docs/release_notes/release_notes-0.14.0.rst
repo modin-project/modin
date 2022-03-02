@@ -57,6 +57,7 @@ Key Features and Updates
   * DOCS-#4176: Update OmniSci usage section (#4192)
   * DOCS-#4027: Add GIF images and chart to Modin README demonstrating speedups (#4232)
   * DOCS-#3954: Add Dask example notebooks (#4139)
+  * DOCS-#4280: Change links in jupyter notebooks (#4281)
   * DOCS-#4241: Update warnings and docs regarding defaulting to pandas (#4242)
 * Dependencies
   * FIX-#4113, FIX-#4116, FIX-#4115: Apply new `black` formatting, fix pydocstyle check and readthedocs build (#4114)
@@ -78,3 +79,4 @@ Contributors
 @mvashishtha
 @naren-ponder
 @jeffreykennethli
+@Rubtsowa
