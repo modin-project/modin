@@ -34,6 +34,7 @@ Key Features and Updates
   * REFACTOR-#4206: add assert check into `__init__` method of `PandasOnDaskDataframePartition` class (#4207)
   * REFACTOR-#3900: add flake8-no-implicit-concat plugin and refactor flake8 error codes (#3901)
   * REFACTOR-#4093: Refactor base to be smaller (#4220)
+  * REFACTOR-#4047: Rename `cluster` directory to `cloud` in examples (#4212)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
