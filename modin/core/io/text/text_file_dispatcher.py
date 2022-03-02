@@ -597,14 +597,18 @@ class TextFileDispatcher(FileDispatcher):
         dtypes_ids : list
             array with references to the partitions dtypes objects.
         """
-        partition_ids = [None] * len(splits)
-        index_ids = [None] * len(splits)
-        dtypes_ids = [None] * len(splits)
-        for idx, (start, end) in enumerate(splits):
+        partition_ids = []
+        index_ids = []
+        dtypes_ids = []
+        for start, end in splits:
             partition_kwargs.update({"start": start, "end": end})
-            *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
+            partition_id = cls.deploy(
                 cls.parse, partition_kwargs.get("num_splits") + 2, partition_kwargs
             )
+            partition_ids.append(partition_id[:-2])
+            index_ids.append(partition_id[-2])
+            dtypes_ids.append(partition_id[-1])
+
         return partition_ids, index_ids, dtypes_ids
 
     @classmethod
@@ -951,7 +955,7 @@ class TextFileDispatcher(FileDispatcher):
         new_query_compiler : BaseQueryCompiler
             Query compiler with imported data for further processing.
         """
-        filepath = (
+        filepath_or_buffer_md = (
             cls.get_path(filepath_or_buffer)
             if isinstance(filepath_or_buffer, str)
             else cls.get_path_or_buffer(filepath_or_buffer)
@@ -1001,7 +1005,7 @@ class TextFileDispatcher(FileDispatcher):
         )
 
         pd_df_metadata = cls.read_callback(
-            filepath,
+            filepath_or_buffer,
             **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
         )
         column_names = pd_df_metadata.columns
@@ -1010,7 +1014,7 @@ class TextFileDispatcher(FileDispatcher):
         # kwargs that will be passed to the workers
         partition_kwargs = dict(
             kwargs,
-            fname=filepath,
+            fname=filepath_or_buffer_md,
             num_splits=num_splits,
             header_size=header_size if not pass_names else 0,
             names=names if not pass_names else column_names,
@@ -1021,7 +1025,7 @@ class TextFileDispatcher(FileDispatcher):
             compression=compression_infered,
         )
 
-        with OpenFile(filepath, "rb", compression_infered) as f:
+        with OpenFile(filepath_or_buffer_md, "rb", compression_infered) as f:
             old_pos = f.tell()
             fio = io.TextIOWrapper(f, encoding=encoding, newline="")
             newline, quotechar = cls.compute_newline(
