@@ -96,7 +96,7 @@ def from_dataframe(
 def convert_datetime_col(col):
     if col.describe_null[0] not in (0, 3):
         raise NotImplementedError(
-            "Null values represented as masks or " "sentinel values not handled yet"
+            "Null values represented as masks or sentinel values not handled yet"
         )
 
     _, _, fmt, _ = col.dtype
@@ -150,7 +150,7 @@ def convert_column_to_ndarray(col: ProtocolColumn) -> np.ndarray:
 
     if col.describe_null[0] not in (0, 1, 3):
         raise NotImplementedError(
-            "Null values represented as masks or " "sentinel values not handled yet"
+            "Null values represented as masks or sentinel values not handled yet"
         )
 
     _buffer, _dtype = col.get_buffers()["data"]
@@ -226,7 +226,7 @@ def convert_categorical_column(col: ProtocolColumn) -> pandas.Series:
         pass
     else:
         raise NotImplementedError(
-            "Only categorical columns with sentinel " "value supported at the moment"
+            "Only categorical columns with sentinel value supported at the moment"
         )
 
     return series, codes_buffer
