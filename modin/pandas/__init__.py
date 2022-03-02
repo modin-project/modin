@@ -119,7 +119,7 @@ def _update_engine(publisher: Parameter):
 
     if publisher.get() == "Ray":
         if _is_first_update.get("Ray", True):
-            from modin.core.execution.ray.common.utils import initialize_ray
+            from modin.core.execution.ray.common import initialize_ray
 
             initialize_ray()
     elif publisher.get() == "Native":
@@ -146,7 +146,7 @@ def _update_engine(publisher: Parameter):
             def init_remote_ray(partition):
                 from ray import ray_constants
                 import modin
-                from modin.core.execution.ray.common.utils import initialize_ray
+                from modin.core.execution.ray.common import initialize_ray
 
                 modin.set_execution("Ray", partition)
                 initialize_ray(

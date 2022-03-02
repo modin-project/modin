@@ -96,12 +96,12 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         oid = self.oid
         call_queue = self.call_queue + [(func, args, kwargs)]
         if len(call_queue) > 1:
-            result, length, width, ip = apply_list_of_funcs.remote(call_queue, oid)
+            result, length, width, ip = _apply_list_of_funcs.remote(call_queue, oid)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
-            result, length, width, ip = apply_func.remote(oid, func, *args, **kwargs)
+            result, length, width, ip = _apply_func.remote(oid, func, *args, **kwargs)
         return PandasOnRayDataframePartition(result, length, width, ip)
 
     def add_to_apply_calls(self, func, *args, **kwargs):
@@ -143,7 +143,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
-            ) = apply_list_of_funcs.remote(call_queue, oid)
+            ) = _apply_list_of_funcs.remote(call_queue, oid)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
@@ -153,7 +153,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
-            ) = apply_func.remote(oid, func, *args, **kwargs)
+            ) = _apply_func.remote(oid, func, *args, **kwargs)
         self.call_queue = []
 
     def wait(self):
@@ -258,7 +258,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._length_cache, self._width_cache = get_index_and_columns.remote(
+                self._length_cache, self._width_cache = _get_index_and_columns.remote(
                     self.oid
                 )
         if isinstance(self._length_cache, ObjectIDType):
@@ -278,7 +278,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._length_cache, self._width_cache = get_index_and_columns.remote(
+                self._length_cache, self._width_cache = _get_index_and_columns.remote(
                     self.oid
                 )
         if isinstance(self._width_cache, ObjectIDType):
@@ -305,7 +305,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
 
 @ray.remote(num_returns=2)
-def get_index_and_columns(df):
+def _get_index_and_columns(df):
     """
     Get the number of rows and columns of a pandas DataFrame.
 
@@ -325,7 +325,7 @@ def get_index_and_columns(df):
 
 
 @ray.remote(num_returns=4)
-def apply_func(partition, func, *args, **kwargs):  # pragma: no cover
+def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     """
     Execute a function on the partition in a worker process.
 
@@ -367,7 +367,7 @@ def apply_func(partition, func, *args, **kwargs):  # pragma: no cover
 
 
 @ray.remote(num_returns=4)
-def apply_list_of_funcs(funcs, partition):  # pragma: no cover
+def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
     """
     Execute all operations stored in the call queue on the partition in a worker process.
 
