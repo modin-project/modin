@@ -12,9 +12,10 @@
 # governing permissions and limitations under the License.
 
 import warnings
+from modin.logging import LoggerMetaClass
 
 
-class ErrorMessage(object):
+class ErrorMessage(object, metaclass=LoggerMetaClass):
     # Only print full ``default to pandas`` warning one time.
     printed_default_to_pandas = False
     printed_warnings = set()

@@ -20,6 +20,7 @@ Accessors: `Series.cat`, `Series.str`, `Series.dt`
 import sys
 import numpy as np
 import pandas
+from modin.logging import LoggerMetaClass
 from modin.utils import _inherit_docstrings
 from .series import Series
 
@@ -32,7 +33,7 @@ else:
 
 
 @_inherit_docstrings(pandas.core.arrays.categorical.CategoricalAccessor)
-class CategoryMethods(object):
+class CategoryMethods(object, metaclass=LoggerMetaClass):
     def __init__(self, series):
         self._series = series
         self._query_compiler = series._query_compiler
@@ -123,7 +124,7 @@ class CategoryMethods(object):
 
 
 @_inherit_docstrings(pandas.core.strings.StringMethods)
-class StringMethods(object):
+class StringMethods(object, metaclass=LoggerMetaClass):
     def __init__(self, series):
         # Check if dtypes is objects
 

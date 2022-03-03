@@ -1,6 +1,5 @@
 import logging
 import os
-import uuid
 
 __LOGGER_CONFIGURED__: bool = False
 

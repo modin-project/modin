@@ -36,6 +36,7 @@ from pandas.api.types import is_list_like, is_bool
 from pandas.core.dtypes.common import is_integer, is_bool_dtype, is_integer_dtype
 from pandas.core.indexing import IndexingError
 from modin.error_message import ErrorMessage
+from modin.logging import LoggerMetaClass
 
 from .dataframe import DataFrame
 from .series import Series
@@ -267,7 +268,7 @@ def _compute_ndim(row_loc, col_loc):
     return ndim
 
 
-class _LocationIndexerBase(object):
+class _LocationIndexerBase(object, metaclass=LoggerMetaClass):
     """
     Base class for location indexer like loc and iloc.
 
