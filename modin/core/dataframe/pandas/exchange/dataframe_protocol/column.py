@@ -29,12 +29,14 @@ from typing import Any, Optional, Tuple, Dict, Iterable
 import numpy as np
 import pandas
 
-import modin.pandas as pd
 from modin.utils import _inherit_docstrings
 from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
     ProtocolColumn,
 )
-from modin.core.dataframe.base.exchange.dataframe_protocol.utils import DTypeKind
+from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
+    DTypeKind,
+    pandas_dtype_to_arrow_c,
+)
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from .buffer import PandasProtocolBuffer
 
@@ -116,15 +118,23 @@ class PandasProtocolColumn(ProtocolColumn):
     def dtype(self) -> Tuple[DTypeKind, int, str, str]:
         dtype = self._col.dtypes[0]
 
-        # For now, assume that, if the column dtype is 'O' (i.e., `object`), then we have an array of strings
-        if not isinstance(dtype, pd.CategoricalDtype) and dtype.kind == "O":
-            return (DTypeKind.STRING, 8, "u", "=")
+        if pandas.api.types.is_categorical_dtype(dtype):
+            return (
+                DTypeKind.CATEGORICAL,
+                32,
+                pandas_dtype_to_arrow_c(np.dtype("int32")),
+                "=",
+            )
+        elif pandas.api.types.is_string_dtype(dtype):
+            return (DTypeKind.STRING, 8, pandas_dtype_to_arrow_c(dtype), "=")
+        else:
+            return self._dtype_from_primitive_pandas_dtype(dtype)
 
-        return self._dtype_from_pandas_dtype(dtype)
-
-    def _dtype_from_pandas_dtype(self, dtype) -> Tuple[DTypeKind, int, str, str]:
+    def _dtype_from_primitive_pandas_dtype(
+        self, dtype
+    ) -> Tuple[DTypeKind, int, str, str]:
         """
-        Deduce dtype from pandas dtype.
+        Deduce dtype specific for the protocol from pandas dtype.
 
         See `self.dtype` for details.
 
@@ -137,42 +147,28 @@ class PandasProtocolColumn(ProtocolColumn):
         -------
         tuple
         """
-        # Note: 'c' (complex) not handled yet (not in array spec v1).
-        #       'b', 'B' (bytes), 'S', 'a', (old-style string) 'V' (void) not handled
-        #       datetime and timedelta both map to datetime (is timedelta handled?)
-        _k = DTypeKind
         _np_kinds = {
-            "i": _k.INT,
-            "u": _k.UINT,
-            "f": _k.FLOAT,
-            "b": _k.BOOL,
-            "U": _k.STRING,
-            "M": _k.DATETIME,
-            "m": _k.DATETIME,
+            "i": DTypeKind.INT,
+            "u": DTypeKind.UINT,
+            "f": DTypeKind.FLOAT,
+            "b": DTypeKind.BOOL,
         }
         kind = _np_kinds.get(dtype.kind, None)
         if kind is None:
-            # Not a NumPy dtype. Check if it's a categorical maybe
-            if isinstance(dtype, pd.CategoricalDtype):
-                # 23 matches CATEGORICAL type in DTypeKind
-                kind = 23
-            else:
-                raise ValueError(
-                    f"Data type {dtype} not supported by exchange protocol"
-                )
-
-        if kind not in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL, _k.CATEGORICAL, _k.STRING):
-            raise NotImplementedError(f"Data type {dtype} not handled yet")
-
-        bitwidth = dtype.itemsize * 8
-        format_str = dtype.str
-        endianness = dtype.byteorder if not kind == _k.CATEGORICAL else "="
-        return (kind, bitwidth, format_str, endianness)
+            raise NotImplementedError(
+                f"Data type {dtype} not supported by the dataframe exchange protocol"
+            )
+        return (
+            kind,
+            dtype.itemsize * 8,
+            pandas_dtype_to_arrow_c(dtype),
+            dtype.byteorder,
+        )
 
     @property
     def describe_categorical(self) -> Dict[str, Any]:
         if not self.dtype[0] == DTypeKind.CATEGORICAL:
-            raise TypeError(
+            raise RuntimeError(
                 "`describe_categorical only works on a column with "
                 + "categorical dtype!"
             )
@@ -252,46 +248,56 @@ class PandasProtocolColumn(ProtocolColumn):
     def get_chunks(
         self, n_chunks: Optional[int] = None
     ) -> Iterable["PandasProtocolColumn"]:
+        cur_n_chunks = self.num_chunks()
+        n_rows = self.size
         offset = 0
-        if n_chunks is None:
+        if n_chunks is None or n_chunks == cur_n_chunks:
             for length in self._col._row_lengths:
                 yield PandasProtocolColumn(
-                    PandasDataframe(
-                        self._col.mask(row_positions=range(length), col_positions=None),
-                        allow_copy=self._col._allow_copy,
-                        offset=offset,
-                    )
+                    self._col.mask(row_positions=range(length), col_positions=None),
+                    allow_copy=self._col._allow_copy,
+                    offset=offset,
                 )
                 offset += length
-        else:
-            new_row_lengths = self.num_rows() // n_chunks
-            if self.num_rows() % n_chunks:
-                # TODO: raise exception in this case
-                new_row_lengths += 1
 
-            new_partitions = self._col._partition_mgr_cls.map_axis_partitions(
-                0,
-                self._col._partitions,
-                lambda df: df,
-                keep_partitioning=False,
-                lengths=new_row_lengths,
+        if n_chunks % cur_n_chunks != 0:
+            raise RuntimeError(
+                "The passed `n_chunks` must be a multiple of `self.num_chunks()`."
             )
-            new_df = self._col.__constructor__(
-                new_partitions,
-                self._col.index,
-                self._col.columns,
-                new_row_lengths,
-                self._col._column_widths,
+
+        if n_chunks > n_rows:
+            raise RuntimeError(
+                "The passed `n_chunks` value is bigger than `self.num_rows()`."
             )
-            for length in new_df._row_lengths:
-                yield PandasProtocolColumn(
-                    PandasDataframe(
-                        self._col.mask(row_positions=range(length), col_positions=None),
-                        allow_copy=self._allow_copy,
-                        offset=offset,
-                    )
-                )
-                offset += length
+
+        chunksize = n_rows // n_chunks
+        new_lengths = [chunksize] * n_chunks
+        sum_new_lengths = sum(new_lengths)
+        sum_old_lengths = sum(self._col._row_lengths)
+        if sum_new_lengths < sum_old_lengths:
+            new_lengths[-1] = sum_old_lengths - sum_new_lengths + new_lengths[-1]
+
+        new_partitions = self._col._partition_mgr_cls.map_axis_partitions(
+            0,
+            self._col._partitions,
+            lambda df: df,
+            keep_partitioning=False,
+            lengths=new_lengths,
+        )
+        new_df = self._col.__constructor__(
+            new_partitions,
+            self._col.index,
+            self._col.columns,
+            new_lengths,
+            self._col._column_widths,
+        )
+        for length in new_df._row_lengths:
+            yield PandasProtocolColumn(
+                self._col.mask(row_positions=range(length), col_positions=None),
+                allow_copy=self._allow_copy,
+                offset=offset,
+            )
+            offset += length
 
     def get_buffers(self) -> Dict[str, Any]:
         buffers = {}
@@ -330,7 +336,7 @@ class PandasProtocolColumn(ProtocolColumn):
             pandas_series = self._col.to_pandas().squeeze(axis=1)
             codes = pandas_series.values.codes
             buffer = PandasProtocolBuffer(codes, allow_copy=self._allow_copy)
-            dtype = self._dtype_from_pandas_dtype(codes.dtype)
+            dtype = self._dtype_from_primitive_pandas_dtype(codes.dtype)
         elif dtype[0] == _k.STRING:
             # Marshal the strings from a NumPy object array into a byte array
             buf = self._col.to_numpy().flatten()

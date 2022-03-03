@@ -147,8 +147,10 @@ class PandasProtocolDataframe(ProtocolDataframe):
     def get_chunks(
         self, n_chunks: Optional[int] = None
     ) -> Iterable["PandasProtocolDataframe"]:
+        cur_n_chunks = self.num_chunks()
+        n_rows = self.num_rows()
         offset = 0
-        if n_chunks is None:
+        if n_chunks is None or n_chunks == cur_n_chunks:
             for length in self._df._row_lengths:
                 yield PandasProtocolDataframe(
                     self._df.mask(row_positions=range(length), col_positions=None),
@@ -156,30 +158,41 @@ class PandasProtocolDataframe(ProtocolDataframe):
                     offset=offset,
                 )
                 offset += length
-        else:
-            new_row_lengths = self.num_rows() // n_chunks
-            if self.num_rows() % n_chunks:
-                # TODO: raise exception in this case?
-                new_row_lengths += 1
+        if n_chunks % cur_n_chunks != 0:
+            raise RuntimeError(
+                "The passed `n_chunks` must be a multiple of `self.num_chunks()`."
+            )
 
-            new_partitions = self._df._partition_mgr_cls.map_axis_partitions(
-                0,
-                self._df._partitions,
-                lambda df: df,
-                keep_partitioning=False,
-                lengths=new_row_lengths,
+        if n_chunks > n_rows:
+            raise RuntimeError(
+                "The passed `n_chunks` value is bigger than `self.num_rows()`."
             )
-            new_df = self._df.__constructor__(
-                new_partitions,
-                self._df.index,
-                self._df.columns,
-                new_row_lengths,
-                self._df._column_widths,
+
+        chunksize = n_rows // n_chunks
+        new_lengths = [chunksize] * n_chunks
+        sum_new_lengths = sum(new_lengths)
+        sum_old_lengths = sum(self._df._row_lengths)
+        if sum_new_lengths < sum_old_lengths:
+            new_lengths[-1] = sum_old_lengths - sum_new_lengths + new_lengths[-1]
+
+        new_partitions = self._df._partition_mgr_cls.map_axis_partitions(
+            0,
+            self._df._partitions,
+            lambda df: df,
+            keep_partitioning=False,
+            lengths=new_lengths,
+        )
+        new_df = self._df.__constructor__(
+            new_partitions,
+            self._df.index,
+            self._df.columns,
+            new_lengths,
+            self._df._column_widths,
+        )
+        for length in new_df._row_lengths:
+            yield PandasProtocolDataframe(
+                self._df.mask(row_positions=range(length), col_positions=None),
+                allow_copy=self._allow_copy,
+                offset=offset,
             )
-            for length in new_df._row_lengths:
-                yield PandasProtocolDataframe(
-                    self._df.mask(row_positions=range(length), col_positions=None),
-                    allow_copy=self._allow_copy,
-                    offset=offset,
-                )
-                offset += length
+            offset += length

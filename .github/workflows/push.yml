@@ -168,6 +168,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
       - run: python -m pytest modin/pandas/test/test_io.py
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
+      - run: pytest modin/test/exchange/dataframe_protocol/test_general.py
       - uses: codecov/codecov-action@v2
 
   test-windows:
