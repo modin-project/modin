@@ -1,8 +1,227 @@
 from ..abc import BaseCompatibilityBasePandasDataset
+from pandas.util._validators import validate_bool_kwarg
 import pickle as pkl
+from numpy import nan
+from typing import Sequence, Hashable
+
+from .utils import create_stat_method
 
 
 class Python36CompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
+    def _validate_ascending(self, ascending):
+        return ascending
+
+    def _validate_bool_kwarg(self, value, arg_name, **kwargs):
+        return validate_bool_kwarg(value, arg_name)
+
+    def between_time(
+        self, start_time, end_time, include_start=True, include_end=True, axis=None
+    ):
+        return self._between_time(
+            start_time=start_time,
+            end_time=end_time,
+            include_start=include_start,
+            include_end=include_end,
+            axis=axis,
+        )
+
+    def convert_dtypes(
+        self,
+        infer_objects: bool = True,
+        convert_string: bool = True,
+        convert_integer: bool = True,
+        convert_boolean: bool = True,
+    ):
+        return self._default_to_pandas(
+            "convert_dtypes",
+            infer_objects=infer_objects,
+            convert_string=convert_string,
+            convert_integer=convert_integer,
+            convert_boolean=convert_boolean,
+        )
+
+    def ewm(
+        self,
+        com=None,
+        span=None,
+        halflife=None,
+        alpha=None,
+        min_periods=0,
+        adjust=True,
+        ignore_na=False,
+        axis=0,
+        times=None,
+    ):
+        return self._ewm(
+            com=com,
+            span=span,
+            halflife=halflife,
+            alpha=alpha,
+            min_periods=min_periods,
+            adjust=adjust,
+            ignore_na=ignore_na,
+            axis=axis,
+            times=times,
+        )
+
+    def expanding(self, min_periods=1, center=None, axis=0):
+        return self._expanding(min_periods=min_periods, center=center, axis=axis)
+
+    def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        return self._kurt(
+            axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
+        )
+
+    def mad(self, axis=None, skipna=None, level=None):
+        return self._mad(axis=axis, skipna=skipna, level=level)
+
+    def mask(
+        self,
+        cond,
+        other=nan,
+        inplace=False,
+        axis=None,
+        level=None,
+        errors="raise",
+        try_cast=False,
+    ):
+        return self._mask(
+            cond,
+            other=other,
+            inplace=inplace,
+            axis=axis,
+            level=level,
+            errors=errors,
+            try_cast=try_cast,
+        )
+
+    def max(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        return self._max(
+            axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
+        )
+
+    def min(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        return self._min(
+            axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
+        )
+
+    mean = create_stat_method("mean")
+    median = create_stat_method("median")
+
+    def rank(
+        self,
+        axis=0,
+        method="average",
+        numeric_only=None,
+        na_option="keep",
+        ascending=True,
+        pct=False,
+    ):
+        return self._rank(
+            axis=axis,
+            method=method,
+            numeric_only=numeric_only,
+            na_option=na_option,
+            ascending=ascending,
+            pct=pct,
+        )
+
+    def reindex(
+        self,
+        labels=None,
+        index=None,
+        columns=None,
+        axis=None,
+        method=None,
+        copy=True,
+        level=None,
+        fill_value=nan,
+        limit=None,
+        tolerance=None,
+    ):
+        return self._reindex(
+            labels=labels,
+            index=index,
+            columns=columns,
+            axis=axis,
+            method=method,
+            copy=copy,
+            level=level,
+            fill_value=fill_value,
+            limit=limit,
+            tolerance=tolerance,
+        )
+
+    def rolling(
+        self,
+        window,
+        min_periods=None,
+        center=False,
+        win_type=None,
+        on=None,
+        axis=0,
+        closed=None,
+    ):
+        return self._rolling(
+            window=window,
+            min_periods=min_periods,
+            center=center,
+            win_type=win_type,
+            on=on,
+            axis=axis,
+            closed=closed,
+        )
+
+    def sample(
+        self,
+        n=None,
+        frac=None,
+        replace=False,
+        weights=None,
+        random_state=None,
+        axis=None,
+    ):
+        return self._sample(
+            n=n,
+            frac=frac,
+            replace=replace,
+            weights=weights,
+            random_state=random_state,
+            axis=axis,
+        )
+
+    def sem(
+        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
+    ):
+        return self._sem(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs
+        )
+
+    def shift(self, periods=1, freq=None, axis=0, fill_value=None):
+        return self._shift(periods=periods, freq=freq, axis=axis, fill_value=fill_value)
+
+    def skew(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
+        return self._skew(
+            axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
+        )
+
+    def std(
+        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
+    ):
+        return self._std(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs
+        )
+
     def to_csv(
         self,
         path_or_buf=None,
@@ -129,13 +348,6 @@ class Python36CompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
             "to_markdown", buf=buf, mode=mode, index=index, **kwargs
         )
 
-    def to_pickle(
-        self, path, compression="infer", protocol=pkl.HIGHEST_PROTOCOL
-    ):  # pragma: no cover
-        return self._default_to_pandas(
-            "to_pickle", path, compression=compression, protocol=protocol
-        )
-
     def to_latex(
         self,
         buf=None,
@@ -183,4 +395,34 @@ class Python36CompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
             multirow=multirow,
             caption=None,
             label=None,
+        )
+
+    def to_pickle(
+        self, path, compression="infer", protocol=pkl.HIGHEST_PROTOCOL
+    ):  # pragma: no cover
+        return self._default_to_pandas(
+            "to_pickle", path, compression=compression, protocol=protocol
+        )
+
+    def value_counts(
+        self,
+        subset: Sequence[Hashable] = None,
+        normalize: bool = False,
+        sort: bool = True,
+        ascending: bool = False,
+    ):
+        return self._value_counts(
+            subset=subset, normalize=normalize, sort=sort, ascending=ascending
+        )
+
+    def var(
+        self, axis=None, skipna=None, level=None, ddof=1, numeric_only=None, **kwargs
+    ):
+        return self._var(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs
         )

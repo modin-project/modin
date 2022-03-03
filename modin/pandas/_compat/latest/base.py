@@ -1,10 +1,306 @@
 from ..abc import BaseCompatibilityBasePandasDataset
+
+import pandas
+from pandas.core.dtypes.common import is_datetime_or_timedelta_dtype
+from pandas.util._validators import validate_bool_kwarg, validate_ascending
+from pandas._libs.lib import no_default
 from pandas._typing import StorageOptions, CompressionOptions
 import pickle as pkl
-from typing import Sequence, Hashable
+from numpy import nan
+from typing import Sequence, Hashable, Optional
+
+from .utils import create_stat_method
 
 
 class LatestCompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
+    def _validate_ascending(self, ascending):
+        return validate_ascending(ascending)
+
+    def _validate_bool_kwarg(self, value, arg_name, **kwargs):
+        return validate_bool_kwarg(value, arg_name, **kwargs)
+
+    def between_time(
+        self: "BasePandasDataset",
+        start_time,
+        end_time,
+        include_start: "bool_t | NoDefault" = no_default,
+        include_end: "bool_t | NoDefault" = no_default,
+        inclusive: "str | None" = None,
+        axis=None,
+    ):
+        return self._between_time(
+            start_time=start_time,
+            end_time=end_time,
+            include_start=include_start,
+            include_end=include_end,
+            inclusive=inclusive,
+            axis=axis,
+        )
+
+    def convert_dtypes(
+        self,
+        infer_objects: bool = True,
+        convert_string: bool = True,
+        convert_integer: bool = True,
+        convert_boolean: bool = True,
+        convert_floating: bool = True,
+    ):
+        return self._default_to_pandas(
+            "convert_dtypes",
+            infer_objects=infer_objects,
+            convert_string=convert_string,
+            convert_integer=convert_integer,
+            convert_boolean=convert_boolean,
+            convert_floating=convert_floating,
+        )
+
+    def explode(self, column, ignore_index: bool = False):
+        exploded = self.__constructor__(
+            query_compiler=self._query_compiler.explode(column)
+        )
+        if ignore_index:
+            exploded = exploded.reset_index(drop=True)
+        return exploded
+
+    def ewm(
+        self,
+        com: "float | None" = None,
+        span: "float | None" = None,
+        halflife: "float | TimedeltaConvertibleTypes | None" = None,
+        alpha: "float | None" = None,
+        min_periods: "int | None" = 0,
+        adjust: "bool_t" = True,
+        ignore_na: "bool_t" = False,
+        axis: "Axis" = 0,
+        times: "str | np.ndarray | BasePandasDataset | None" = None,
+        method: "str" = "single",
+    ) -> "ExponentialMovingWindow":
+        return self._ewm(
+            com=com,
+            span=span,
+            halflife=halflife,
+            alpha=alpha,
+            min_periods=min_periods,
+            adjust=adjust,
+            ignore_na=ignore_na,
+            axis=axis,
+            times=times,
+            method=method,
+        )
+
+    def expanding(self, min_periods=1, center=None, axis=0, method="single"):
+        return self._expanding(
+            min_periods=min_periods, center=center, axis=axis, method=method
+        )
+
+    def kurt(
+        self,
+        axis: "Axis | None | NoDefault" = no_default,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        **kwargs,
+    ):
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
+        return self._kurt(
+            axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
+        )
+
+    def mad(self, axis=None, skipna=True, level=None):
+        validate_bool_kwarg(skipna, "skipna", none_allowed=True)
+        return self._mad(axis=axis, skipna=skipna, level=level)
+
+    def mask(
+        self,
+        cond,
+        other=nan,
+        inplace=False,
+        axis=None,
+        level=None,
+        errors="raise",
+        try_cast=no_default,
+    ):
+        return self._mask(
+            cond,
+            other=other,
+            inplace=inplace,
+            axis=axis,
+            level=level,
+            errors=errors,
+            try_cast=try_cast,
+        )
+
+    def max(
+        self,
+        axis: "int | None | NoDefault" = no_default,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        **kwargs,
+    ):
+        return self._max(
+            axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
+        )
+
+    def min(
+        self,
+        axis: "int | None | NoDefault" = no_default,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        **kwargs,
+    ):
+        return self._min(
+            axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
+        )
+
+    mean = create_stat_method("mean")
+    median = create_stat_method("median")
+
+    def rank(
+        self: "BasePandasDataset",
+        axis=0,
+        method: "str" = "average",
+        numeric_only: "bool_t | None | NoDefault" = no_default,
+        na_option: "str" = "keep",
+        ascending: "bool_t" = True,
+        pct: "bool_t" = False,
+    ):
+        return self._rank(
+            axis=axis,
+            method=method,
+            numeric_only=numeric_only,
+            na_option=na_option,
+            ascending=ascending,
+            pct=pct,
+        )
+
+    def reindex(
+        self,
+        index=None,
+        columns=None,
+        copy=True,
+        **kwargs,
+    ):
+        return self._reindex(index=index, columns=columns, copy=copy, **kwargs)
+
+    def rolling(
+        self,
+        window,
+        min_periods=None,
+        center=False,
+        win_type=None,
+        on=None,
+        axis=0,
+        closed=None,
+        method="single",
+    ):
+        return self._rolling(
+            window=window,
+            min_periods=min_periods,
+            center=center,
+            win_type=win_type,
+            on=on,
+            axis=axis,
+            closed=closed,
+            method=method,
+        )
+
+    def sample(
+        self,
+        n=None,
+        frac=None,
+        replace=False,
+        weights=None,
+        random_state=None,
+        axis=None,
+        ignore_index=False,
+    ):
+        return self._sample(
+            n=n,
+            frac=frac,
+            replace=replace,
+            weights=weights,
+            random_state=random_state,
+            axis=axis,
+            ignore_index=ignore_index,
+        )
+
+    def sem(
+        self,
+        axis=None,
+        skipna=True,
+        level=None,
+        ddof=1,
+        numeric_only=None,
+        **kwargs,
+    ):
+        return self._sem(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs,
+        )
+
+    def set_flags(
+        self, *, copy: bool = False, allows_duplicate_labels: Optional[bool] = None
+    ):
+        return self._default_to_pandas(
+            pandas.DataFrame.set_flags,
+            copy=copy,
+            allows_duplicate_labels=allows_duplicate_labels,
+        )
+
+    @property
+    def flags(self):
+        def flags(df):
+            return df.flags
+
+        return self._default_to_pandas(flags)
+
+    def shift(self, periods=1, freq=None, axis=0, fill_value=no_default):
+        if fill_value is no_default:
+            nan_values = dict()
+            for name, dtype in dict(self.dtypes).items():
+                nan_values[name] = (
+                    pandas.NAT if is_datetime_or_timedelta_dtype(dtype) else pandas.NA
+                )
+
+            fill_value = nan_values
+        return self._shift(periods=periods, freq=freq, axis=axis, fill_value=fill_value)
+
+    def skew(
+        self,
+        axis: "int | None | NoDefault" = no_default,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        **kwargs,
+    ):
+        return self._skew(
+            axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
+        )
+
+    def std(
+        self,
+        axis=None,
+        skipna=True,
+        level=None,
+        ddof=1,
+        numeric_only=None,
+        **kwargs,
+    ):
+        return self._std(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs,
+        )
+
     def to_csv(
         self,
         path_or_buf=None,
@@ -133,40 +429,6 @@ class LatestCompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
             storage_options=storage_options,
         )
 
-    def to_markdown(
-        self,
-        buf=None,
-        mode: str = "wt",
-        index: bool = True,
-        storage_options: StorageOptions = None,
-        **kwargs,
-    ):
-        return self._default_to_pandas(
-            "to_markdown",
-            buf=buf,
-            mode=mode,
-            index=index,
-            storage_options=storage_options,
-            **kwargs,
-        )
-
-    def to_pickle(
-        self,
-        path,
-        compression: CompressionOptions = "infer",
-        protocol: int = pkl.HIGHEST_PROTOCOL,
-        storage_options: StorageOptions = None,
-    ):  # pragma: no cover
-        from modin.pandas.io import to_pickle
-
-        to_pickle(
-            self,
-            path,
-            compression=compression,
-            protocol=protocol,
-            storage_options=storage_options,
-        )
-
     def to_latex(
         self,
         buf=None,
@@ -217,15 +479,40 @@ class LatestCompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
             label=None,
         )
 
-    # TODO: uncomment the following lines when #3331 issue will be closed
-    # @prepend_to_notes(
-    #     """
-    #     In comparison with pandas, Modin's ``value_counts`` returns Series with ``MultiIndex``
-    #     only if multiple columns were passed via the `subset` parameter, otherwise, the resulted
-    #     Series's index will be a regular single dimensional ``Index``.
-    #     """
-    # )
-    # @_inherit_docstrings(pandas.DataFrame.value_counts, apilink="pandas.DataFrame.value_counts")
+    def to_markdown(
+        self,
+        buf=None,
+        mode: str = "wt",
+        index: bool = True,
+        storage_options: StorageOptions = None,
+        **kwargs,
+    ):
+        return self._default_to_pandas(
+            "to_markdown",
+            buf=buf,
+            mode=mode,
+            index=index,
+            storage_options=storage_options,
+            **kwargs,
+        )
+
+    def to_pickle(
+        self,
+        path,
+        compression: CompressionOptions = "infer",
+        protocol: int = pkl.HIGHEST_PROTOCOL,
+        storage_options: StorageOptions = None,
+    ):  # pragma: no cover
+        from modin.pandas.io import to_pickle
+
+        to_pickle(
+            self,
+            path,
+            compression=compression,
+            protocol=protocol,
+            storage_options=storage_options,
+        )
+
     def value_counts(
         self,
         subset: Sequence[Hashable] = None,
@@ -234,17 +521,22 @@ class LatestCompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
         ascending: bool = False,
         dropna: bool = True,
     ):
-        if subset is None:
-            subset = self._query_compiler.columns
-        counted_values = self.groupby(by=subset, dropna=dropna, observed=True).size()
-        if sort:
-            counted_values.sort_values(ascending=ascending, inplace=True)
-        if normalize:
-            counted_values = counted_values / counted_values.sum()
-        # TODO: uncomment when strict compability mode will be implemented:
-        # https://github.com/modin-project/modin/issues/3411
-        # if STRICT_COMPABILITY and not isinstance(counted_values.index, MultiIndex):
-        #     counted_values.index = pandas.MultiIndex.from_arrays(
-        #         [counted_values.index], names=counted_values.index.names
-        #     )
-        return counted_values
+        return self._value_counts(
+            subset=subset,
+            normalize=normalize,
+            sort=sort,
+            ascending=ascending,
+            dropna=dropna,
+        )
+
+    def var(
+        self, axis=None, skipna=True, level=None, ddof=1, numeric_only=None, **kwargs
+    ):
+        return self._var(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs,
+        )

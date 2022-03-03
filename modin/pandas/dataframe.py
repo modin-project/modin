@@ -24,7 +24,6 @@ from pandas.core.dtypes.common import (
 from pandas.util._validators import validate_bool_kwarg
 from pandas.io.formats.printing import pprint_thing
 from pandas._libs.lib import no_default
-from pandas._typing import StorageOptions
 
 import re
 import itertools
@@ -48,12 +47,16 @@ from .series import Series
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .groupby import DataFrameGroupBy
 from .accessor import CachedAccessor, SparseFrameAccessor
+from ._compat.factory import CompatibilityFactory
+
+
+CompatClass = CompatibilityFactory.generate_compatibility_class("DataFrame")
 
 
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame.__init__], apilink="pandas.DataFrame"
 )
-class DataFrame(BasePandasDataset):
+class DataFrame(BasePandasDataset, CompatClass):
     """
     Modin distributed representation of ``pandas.DataFrame``.
 
@@ -98,7 +101,7 @@ class DataFrame(BasePandasDataset):
 
     _pandas_class = pandas.DataFrame
 
-    def __init__(
+    def _init(
         self,
         data=None,
         index=None,
@@ -345,9 +348,7 @@ class DataFrame(BasePandasDataset):
         """
         return DataFrame(query_compiler=self._query_compiler.add_suffix(suffix))
 
-    def applymap(
-        self, func, na_action: Optional[str] = None, **kwargs
-    ):  # noqa: PR01, RT01, D200
+    def _applymap(self, func):  # noqa: PR01, RT01, D200
         """
         Apply a function to a ``DataFrame`` elementwise.
         """
@@ -357,14 +358,14 @@ class DataFrame(BasePandasDataset):
             query_compiler=self._query_compiler.applymap(func, na_action, **kwargs)
         )
 
-    def apply(
+    def _apply(
         self, func, axis=0, raw=False, result_type=None, args=(), **kwargs
     ):  # noqa: PR01, RT01, D200
         """
         Apply a function along an axis of the ``DataFrame``.
         """
         axis = self._get_axis_number(axis)
-        query_compiler = super(DataFrame, self).apply(
+        query_compiler = super(DataFrame, self)._apply(
             func, axis=axis, raw=raw, result_type=result_type, args=args, **kwargs
         )
         if not isinstance(query_compiler, type(self._query_compiler)):
@@ -984,7 +985,7 @@ class DataFrame(BasePandasDataset):
             **kwds,
         )
 
-    def info(
+    def _info(
         self,
         verbose: Optional[bool] = None,
         buf: Optional[IO[str]] = None,
@@ -1533,7 +1534,7 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-    def pivot_table(
+    def _pivot_table(
         self,
         values=None,
         index=None,
@@ -1544,7 +1545,7 @@ class DataFrame(BasePandasDataset):
         dropna=True,
         margins_name="All",
         observed=False,
-        sort=True,
+        **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Create a spreadsheet-style pivot table as a ``DataFrame``.
@@ -1560,10 +1561,9 @@ class DataFrame(BasePandasDataset):
                 dropna=dropna,
                 margins_name=margins_name,
                 observed=observed,
-                sort=sort,
+                **kwargs,
             )
         )
-
         return result
 
     @property
@@ -1624,7 +1624,7 @@ class DataFrame(BasePandasDataset):
             broadcast=isinstance(other, Series),
         )
 
-    def prod(
+    def _prod(
         self,
         axis=None,
         skipna=True,
@@ -1637,7 +1637,6 @@ class DataFrame(BasePandasDataset):
         Return the product of the values over the requested axis.
         """
         axis = self._get_axis_number(axis)
-        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)
@@ -1684,7 +1683,7 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-    product = prod
+    product = CompatClass.prod
     radd = add
 
     def query(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
@@ -1696,38 +1695,6 @@ class DataFrame(BasePandasDataset):
         inplace = validate_bool_kwarg(inplace, "inplace")
         new_query_compiler = self._query_compiler.query(expr, **kwargs)
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
-
-    def reindex(
-        self,
-        labels=None,
-        index=None,
-        columns=None,
-        axis=None,
-        method=None,
-        copy=True,
-        level=None,
-        fill_value=np.nan,
-        limit=None,
-        tolerance=None,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Conform ``DataFrame`` to new index with optional filling logic.
-        """
-        axis = self._get_axis_number(axis)
-        if axis == 0 and labels is not None:
-            index = labels
-        elif labels is not None:
-            columns = labels
-        return super(DataFrame, self).reindex(
-            index=index,
-            columns=columns,
-            method=method,
-            copy=copy,
-            level=level,
-            fill_value=fill_value,
-            limit=limit,
-            tolerance=tolerance,
-        )
 
     def rename(
         self,
@@ -1778,14 +1745,14 @@ class DataFrame(BasePandasDataset):
         if not inplace:
             return obj
 
-    def replace(
+    def _replace(
         self,
         to_replace=None,
-        value=no_default,
-        inplace: "bool" = False,
+        value=None,
+        inplace=False,
         limit=None,
-        regex: "bool" = False,
-        method: "str | NoDefault" = no_default,
+        regex=False,
+        method=None,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -2036,7 +2003,7 @@ class DataFrame(BasePandasDataset):
 
     subtract = sub
 
-    def sum(
+    def _sum(
         self,
         axis=None,
         skipna=True,
@@ -2049,7 +2016,6 @@ class DataFrame(BasePandasDataset):
         Return the sum of the values over the requested axis.
         """
         axis = self._get_axis_number(axis)
-        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis_to_apply = self.columns if axis else self.index
         if (
             skipna is not False
@@ -2189,35 +2155,6 @@ class DataFrame(BasePandasDataset):
             encoding=None,
         )
 
-    def to_parquet(
-        self,
-        path=None,
-        engine="auto",
-        compression="snappy",
-        index=None,
-        partition_cols=None,
-        storage_options: StorageOptions = None,
-        **kwargs,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Write a DataFrame to the binary parquet format.
-        """
-        config = {
-            "path": path,
-            "engine": engine,
-            "compression": compression,
-            "index": index,
-            "partition_cols": partition_cols,
-            "storage_options": storage_options,
-        }
-        new_query_compiler = self._query_compiler
-
-        from modin.core.execution.dispatching.factories.dispatcher import (
-            FactoryDispatcher,
-        )
-
-        return FactoryDispatcher.to_parquet(new_query_compiler, **config, **kwargs)
-
     def to_period(
         self, freq=None, axis=0, copy=True
     ):  # pragma: no cover # noqa: PR01, RT01, D200
@@ -2239,41 +2176,6 @@ class DataFrame(BasePandasDataset):
             index_dtypes=index_dtypes,
         )
 
-    def to_stata(
-        self,
-        path: "FilePath | WriteBuffer[bytes]",
-        convert_dates: "dict[Hashable, str] | None" = None,
-        write_index: "bool" = True,
-        byteorder: "str | None" = None,
-        time_stamp: "datetime.datetime | None" = None,
-        data_label: "str | None" = None,
-        variable_labels: "dict[Hashable, str] | None" = None,
-        version: "int | None" = 114,
-        convert_strl: "Sequence[Hashable] | None" = None,
-        compression: "CompressionOptions" = "infer",
-        storage_options: "StorageOptions" = None,
-        *,
-        value_labels: "dict[Hashable, dict[float | int, str]] | None" = None,
-    ):  # pragma: no cover # noqa: PR01, RT01, D200
-        """
-        Export ``DataFrame`` object to Stata data format.
-        """
-        return self._default_to_pandas(
-            pandas.DataFrame.to_stata,
-            path,
-            convert_dates=convert_dates,
-            write_index=write_index,
-            byteorder=byteorder,
-            time_stamp=time_stamp,
-            data_label=data_label,
-            variable_labels=variable_labels,
-            version=version,
-            convert_strl=convert_strl,
-            compression=compression,
-            storage_options=storage_options,
-            value_labels=value_labels,
-        )
-
     def to_timestamp(
         self, freq=None, how="start", axis=0, copy=True
     ):  # noqa: PR01, RT01, D200
@@ -2282,50 +2184,6 @@ class DataFrame(BasePandasDataset):
         """
         return super(DataFrame, self).to_timestamp(
             freq=freq, how=how, axis=axis, copy=copy
-        )
-
-    def to_xml(
-        self,
-        path_or_buffer=None,
-        index=True,
-        root_name="data",
-        row_name="row",
-        na_rep=None,
-        attr_cols=None,
-        elem_cols=None,
-        namespaces=None,
-        prefix=None,
-        encoding="utf-8",
-        xml_declaration=True,
-        pretty_print=True,
-        parser="lxml",
-        stylesheet=None,
-        compression="infer",
-        storage_options=None,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Render a DataFrame to an XML document.
-        """
-        return self.__constructor__(
-            query_compiler=self._query_compiler.default_to_pandas(
-                pandas.DataFrame.to_xml,
-                path_or_buffer=path_or_buffer,
-                index=index,
-                root_name=root_name,
-                row_name=row_name,
-                na_rep=na_rep,
-                attr_cols=attr_cols,
-                elem_cols=elem_cols,
-                namespaces=namespaces,
-                prefix=prefix,
-                encoding=encoding,
-                xml_declaration=xml_declaration,
-                pretty_print=pretty_print,
-                parser=parser,
-                stylesheet=stylesheet,
-                compression=compression,
-                storage_options=storage_options,
-            )
         )
 
     def truediv(
@@ -2362,7 +2220,7 @@ class DataFrame(BasePandasDataset):
         )
         self._update_inplace(new_query_compiler=query_compiler)
 
-    def where(
+    def _where(
         self,
         cond,
         other=no_default,

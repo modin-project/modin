@@ -42,7 +42,6 @@ with warnings.catch_warnings():
         to_timedelta,
         set_eng_float_format,
         options,
-        Flags,
         set_option,
         NaT,
         PeriodIndex,
@@ -57,8 +56,6 @@ with warnings.catch_warnings():
         Int16Dtype,
         Int32Dtype,
         Int64Dtype,
-        Float32Dtype,
-        Float64Dtype,
         StringDtype,
         BooleanDtype,
         CategoricalDtype,
@@ -182,30 +179,19 @@ def _update_engine(publisher: Parameter):
 from .. import __version__
 from .dataframe import DataFrame
 from .io import (
-    read_csv,
-    read_parquet,
-    read_json,
     read_html,
     read_clipboard,
-    read_excel,
     read_hdf,
-    read_feather,
-    read_stata,
     read_sas,
-    read_pickle,
     read_sql,
-    read_gbq,
-    read_table,
     read_fwf,
     read_sql_table,
     read_sql_query,
     read_spss,
     ExcelFile,
-    to_pickle,
     HDFStore,
     json_normalize,
     read_orc,
-    read_xml,
 )
 from .series import Series
 from .general import (
@@ -231,6 +217,7 @@ from .general import (
 )
 from .plotting import Plotting as plotting
 from modin.utils import show_versions
+from ._compat.namespace import *
 
 __all__ = [
     "DataFrame",

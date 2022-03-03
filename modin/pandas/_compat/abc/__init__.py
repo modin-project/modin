@@ -1,1 +1,2 @@
 from .base import BaseCompatibilityBasePandasDataset
+from .dataframe import BaseCompatibilityDataFrame

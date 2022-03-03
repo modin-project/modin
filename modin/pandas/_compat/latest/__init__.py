@@ -1,1 +1,2 @@
 from .base import LatestCompatibleBasePandasDataset
+from .dataframe import LatestCompatibleDataFrame

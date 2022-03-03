@@ -1,7 +1,5 @@
 from packaging import version
-import importlib
 import pandas
-import sys
 
 
 class CompatibilityFactory(object):
@@ -17,9 +15,13 @@ class CompatibilityFactory(object):
                 from .py36 import Python36CompatibleBasePandasDataset
 
                 return Python36CompatibleBasePandasDataset
+            elif classname == "DataFrame":
+                from .py36 import Python36CompatibleDataFrame
+
+                return Python36CompatibleDataFrame
             else:
                 raise ValueError
-        if (
+        elif (
             version.parse("1.4.0")
             <= version.parse(pandas_version)
             <= version.parse("1.4.99")
@@ -28,6 +30,10 @@ class CompatibilityFactory(object):
                 from .latest import LatestCompatibleBasePandasDataset
 
                 return LatestCompatibleBasePandasDataset
+            elif classname == "DataFrame":
+                from .latest import LatestCompatibleDataFrame
+
+                return LatestCompatibleDataFrame
             else:
                 raise ValueError
         else:
