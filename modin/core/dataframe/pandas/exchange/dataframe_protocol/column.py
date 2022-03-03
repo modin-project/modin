@@ -331,7 +331,6 @@ class PandasProtocolColumn(ProtocolColumn):
             buffer = PandasProtocolBuffer(
                 self._col.to_numpy().flatten(), allow_copy=self._allow_copy
             )
-            dtype = dtype
         elif dtype[0] == _k.CATEGORICAL:
             pandas_series = self._col.to_pandas().squeeze(axis=1)
             codes = pandas_series.values.codes
