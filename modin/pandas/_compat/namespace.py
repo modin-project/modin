@@ -14,8 +14,10 @@ if version.parse("1.1.0") <= version.parse(pandas_version) <= version.parse("1.1
         read_pickle,
         read_stata,
         read_feather,
+        read_sql_query,
         to_pickle,
     )
+    from .py36.general import pivot_table
 
     __all__ = [
         "read_csv",
@@ -27,7 +29,9 @@ if version.parse("1.1.0") <= version.parse(pandas_version) <= version.parse("1.1
         "read_pickle",
         "read_stata",
         "read_feather",
+        "read_sql_query",
         "to_pickle",
+        "pivot_table",
     ]
 elif version.parse("1.4.0") <= version.parse(pandas_version) <= version.parse("1.4.99"):
     from .latest.io import (
@@ -41,8 +45,10 @@ elif version.parse("1.4.0") <= version.parse(pandas_version) <= version.parse("1
         read_pickle,
         read_stata,
         read_feather,
+        read_sql_query,
         to_pickle,
     )
+    from .latest.general import pivot_table
     from pandas import Flags, Float32Dtype, Float64Dtype
 
     __all__ = [
@@ -56,7 +62,9 @@ elif version.parse("1.4.0") <= version.parse(pandas_version) <= version.parse("1
         "read_pickle",
         "read_stata",
         "read_feather",
+        "read_sql_query",
         "to_pickle",
+        "pivot_table",
         "Flags",
         "Float32Dtype",
         "Float64Dtype",

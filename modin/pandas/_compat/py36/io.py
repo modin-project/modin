@@ -294,6 +294,25 @@ def read_pickle(
     return DataFrame(query_compiler=FactoryDispatcher.read_pickle(**kwargs))
 
 
+@_inherit_docstrings(pandas.read_sql_query)
+@enable_logging
+def read_sql_query(
+    sql,
+    con,
+    index_col=None,
+    coerce_float=True,
+    params=None,
+    parse_dates=None,
+    chunksize=None,
+):
+    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
+    Engine.subscribe(_update_engine)
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return DataFrame(query_compiler=FactoryDispatcher.read_sql_query(**kwargs))
+
+
 @_inherit_docstrings(pandas.to_pickle)
 @enable_logging
 def to_pickle(
