@@ -23,9 +23,6 @@ sys.path.insert(0, MODIN_DIR)
 from examples.tutorial.jupyter.execution.test.utils import (  # noqa: E402
     _replace_str,
     _execute_notebook,
-    _find_code_cell_idx,
-    test_dataset_path,
-    download_taxi_dataset,
 )
 
 local_notebooks_dir = "examples/tutorial/jupyter/execution/omnisci_on_native/local"
@@ -46,18 +43,13 @@ def test_exercise_1():
     _execute_notebook(modified_notebook_path)
 
 
-# this notebook works "as is" but for testing purposes we can use smaller dataset
+# this notebook works "as is"
 def test_exercise_2():
     modified_notebook_path = os.path.join(local_notebooks_dir, "exercise_2_test.ipynb")
     nb = nbformat.read(
         os.path.join(local_notebooks_dir, "exercise_2.ipynb"),
         as_version=nbformat.NO_CONVERT,
     )
-
-    new_optional_cell = f'path = "{test_dataset_path}"\n' + download_taxi_dataset
-
-    optional_cell_idx = _find_code_cell_idx(nb, "[Optional] Download data locally.")
-    nb["cells"][optional_cell_idx]["source"] = new_optional_cell
 
     nbformat.write(nb, modified_notebook_path)
     _execute_notebook(modified_notebook_path)
