@@ -59,6 +59,7 @@ Key Features and Updates
   * DOCS-#3954: Add Dask example notebooks (#4139)
   * DOCS-#3953: Add docs and notebook examples on running Modin with OmniSci (#4001)
   * DOCS-#4280: Change links in jupyter notebooks (#4281)
+  * DOCS-#4290: Add changes for OmniSci notebooks (#4291)
   * DOCS-#4241: Update warnings and docs regarding defaulting to pandas (#4242)
 * Dependencies
   * FIX-#4113, FIX-#4116, FIX-#4115: Apply new `black` formatting, fix pydocstyle check and readthedocs build (#4114)
