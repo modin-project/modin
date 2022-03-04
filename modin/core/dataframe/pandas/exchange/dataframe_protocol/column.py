@@ -231,6 +231,11 @@ class PandasProtocolColumn(ProtocolColumn):
             return pandas.DataFrame(df.sum())
 
         intermediate_df = self._col.tree_reduce(0, map_func, reduce_func)
+        # Set ``pandas.RangeIndex(1)`` to index and column labels because
+        # 1) We internally use '__reduced__' for labels of a reduced axis
+        # 2) The return value of `reduce_func` is a pandas DataFrame with
+        # index and column labels set to ``pandas.RangeIndex(1)``
+        # 3) We further use `to_pandas().squeeze()` to get an integer value of the null count
         intermediate_df.index = pandas.RangeIndex(1)
         intermediate_df.columns = pandas.RangeIndex(1)
         self._null_count_cache = intermediate_df.to_pandas().squeeze()
