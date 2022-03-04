@@ -55,6 +55,7 @@ jobs:
       - run: conda install black flake8 flake8-print jupyter nbformat nbconvert -c conda-forge
         if: matrix.execution == 'omnisci_on_native'
       - run: pip list
+        if: matrix.execution != 'omnisci_on_native'
       - run: |
           conda info
           conda list
