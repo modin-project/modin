@@ -111,19 +111,6 @@ class DataFrame(BasePandasDataset):
         # use this list to update inplace when there is a shallow copy.
         self._siblings = []
         Engine.subscribe(_update_engine)
-
-        if (
-            data is not None
-            and not isinstance(data, (DataFrame, Series))
-            and hasattr(data, "__dataframe__")
-        ):
-            from modin.core.execution.dispatching.factories.dispatcher import (
-                FactoryDispatcher,
-            )
-
-            self._query_compiler = FactoryDispatcher.from_dataframe(data)
-            return
-
         if isinstance(data, (DataFrame, Series)):
             self._query_compiler = data._query_compiler.copy()
             if index is not None and any(i not in data.index for i in index):

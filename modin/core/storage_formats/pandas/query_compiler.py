@@ -273,7 +273,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     @classmethod
     def from_dataframe(cls, df, data_cls):
-        return cls(data_cls.from_dataframe(df))
+        raise NotImplementedError(
+            "The selected execution does not implement the DataFrame exchange protocol yet."
+        )
 
     # END Dataframe exchange protocol
 

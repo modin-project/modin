@@ -2859,24 +2859,3 @@ class PandasDataframe(object):
         return PandasProtocolDataframe(
             self, nan_as_null=nan_as_null, allow_copy=allow_copy
         )
-
-    @classmethod
-    def from_dataframe(cls, df):
-        """
-        Construct a Modin DataFrame from `df` supporting the dataframe exchange protocol `__dataframe__()`.
-
-        Parameters
-        ----------
-        df : DataFrame
-            The DataFrame object supporting the dataframe exchange protocol.
-
-        Returns
-        -------
-        PandasDataframe
-            New Modin Dataframe containing data from the DataFrame passed.
-        """
-        from modin.core.dataframe.pandas.exchange.dataframe_protocol.utils import (
-            from_dataframe,
-        )
-
-        return from_dataframe(df)
