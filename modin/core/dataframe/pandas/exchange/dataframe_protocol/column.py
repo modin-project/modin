@@ -237,10 +237,9 @@ class PandasProtocolColumn(ProtocolColumn):
         self._null_count_cache = intermediate_df.to_pandas().squeeze()
         return self._null_count_cache
 
-    # TODO: ``What should we return???``, remove before the changes are merged
     @property
     def metadata(self) -> Dict[str, Any]:
-        return {}
+        return {"modin.index": self._col.index}
 
     def num_chunks(self) -> int:
         return self._col._partitions.shape[0]

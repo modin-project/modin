@@ -26,7 +26,7 @@ Notes
 """
 
 import collections
-from typing import Optional, Iterable, Sequence
+from typing import Any, Dict, Optional, Iterable, Sequence
 
 from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
@@ -82,12 +82,9 @@ class PandasProtocolDataframe(ProtocolDataframe):
         self._allow_copy = allow_copy
         self._offset = offset
 
-    # TODO: ``What should we return???``, remove before the changes are merged
     @property
-    def metadata(self):
-        # `index` isn't a regular column, and the protocol doesn't support row
-        # labels - so we export it as pandas-specific metadata here.
-        return {"pandas.index": self._df.index}
+    def metadata(self) -> Dict[str, Any]:
+        return {"modin.index": self._df.index}
 
     def num_columns(self) -> int:
         return len(self._df.columns)
