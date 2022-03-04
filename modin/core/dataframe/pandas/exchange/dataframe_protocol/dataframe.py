@@ -167,10 +167,7 @@ class PandasProtocolDataframe(ProtocolDataframe):
 
         chunksize = n_rows // n_chunks
         new_lengths = [chunksize] * n_chunks
-        sum_new_lengths = sum(new_lengths)
-        sum_old_lengths = sum(self._df._row_lengths)
-        if sum_new_lengths < sum_old_lengths:
-            new_lengths[-1] = sum_old_lengths - sum_new_lengths + new_lengths[-1]
+        new_lengths[-1] = n_rows % n_chunks + new_lengths[-1]
 
         new_partitions = self._df._partition_mgr_cls.map_axis_partitions(
             0,
