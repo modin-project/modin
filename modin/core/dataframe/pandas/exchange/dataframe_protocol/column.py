@@ -190,23 +190,22 @@ class PandasProtocolColumn(ProtocolColumn):
 
     @property
     def describe_null(self) -> Tuple[int, Any]:
-        _k = DTypeKind
         kind = self.dtype[0]
         value = None
-        if kind == _k.FLOAT:
+        if kind == DTypeKind.FLOAT:
             null = 1  # np.nan
-        elif kind == _k.DATETIME:
+        elif kind == DTypeKind.DATETIME:
             null = 1  # np.datetime64('NaT')
-        elif kind in (_k.INT, _k.UINT, _k.BOOL):
+        elif kind in (DTypeKind.INT, DTypeKind.UINT, DTypeKind.BOOL):
             # TODO: check if extension dtypes are used once support for them is
             #       implemented in this protocol code
             null = 0  # integer and boolean dtypes are non-nullable
-        elif kind == _k.CATEGORICAL:
+        elif kind == DTypeKind.CATEGORICAL:
             # Null values for categoricals are stored as `-1` sentinel values
             # in the category date (e.g., `col.values.codes` is int8 np.ndarray)
             null = 2
             value = -1
-        elif kind == _k.STRING:
+        elif kind == DTypeKind.STRING:
             null = 4
             value = (
                 0  # follow Arrow in using 1 as valid value and 0 for missing/null value
@@ -321,18 +320,17 @@ class PandasProtocolColumn(ProtocolColumn):
         tuple
             The data buffer.
         """
-        _k = DTypeKind
         dtype = self.dtype
-        if dtype[0] in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL):
+        if dtype[0] in (DTypeKind.INT, DTypeKind.UINT, DTypeKind.FLOAT, DTypeKind.BOOL):
             buffer = PandasProtocolBuffer(
                 self._col.to_numpy().flatten(), allow_copy=self._allow_copy
             )
-        elif dtype[0] == _k.CATEGORICAL:
+        elif dtype[0] == DTypeKind.CATEGORICAL:
             pandas_series = self._col.to_pandas().squeeze(axis=1)
             codes = pandas_series.values.codes
             buffer = PandasProtocolBuffer(codes, allow_copy=self._allow_copy)
             dtype = self._dtype_from_primitive_pandas_dtype(codes.dtype)
-        elif dtype[0] == _k.STRING:
+        elif dtype[0] == DTypeKind.STRING:
             # Marshal the strings from a NumPy object array into a byte array
             buf = self._col.to_numpy().flatten()
             b = bytearray()
@@ -347,7 +345,7 @@ class PandasProtocolColumn(ProtocolColumn):
 
             # Define the dtype for the returned buffer
             dtype = (
-                _k.STRING,
+                DTypeKind.STRING,
                 8,
                 "u",
                 "=",
@@ -375,8 +373,7 @@ class PandasProtocolColumn(ProtocolColumn):
         """
         null, invalid = self.describe_null
 
-        _k = DTypeKind
-        if self.dtype[0] == _k.STRING:
+        if self.dtype[0] == DTypeKind.STRING:
             # For now, have the mask array be comprised of bytes, rather than a bit array
             buf = self._col.to_numpy().flatten()
             mask = []
@@ -399,7 +396,7 @@ class PandasProtocolColumn(ProtocolColumn):
             buffer = PandasProtocolBuffer(np.asarray(mask, dtype="uint8"))
 
             # Define the dtype of the returned buffer
-            dtype = (_k.UINT, 8, "C", "=")
+            dtype = (DTypeKind.UINT, 8, "C", "=")
 
             return buffer, dtype
 
@@ -428,8 +425,7 @@ class PandasProtocolColumn(ProtocolColumn):
         ------
         ``RuntimeError`` if the data buffer does not have an associated offsets buffer.
         """
-        _k = DTypeKind
-        if self.dtype[0] == _k.STRING:
+        if self.dtype[0] == DTypeKind.STRING:
             # For each string, we need to manually determine the next offset
             values = self._col.to_numpy().flatten()
             ptr = 0
@@ -450,7 +446,7 @@ class PandasProtocolColumn(ProtocolColumn):
 
             # Assemble the buffer dtype info
             dtype = (
-                _k.INT,
+                DTypeKind.INT,
                 64,
                 "l",
                 "=",
