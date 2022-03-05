@@ -172,19 +172,11 @@ class PandasProtocolColumn(ProtocolColumn):
                 + "categorical dtype!"
             )
 
-        cat_dtype = self._col.dtypes[0]
-        ordered = cat_dtype.ordered
-        is_dictionary = True
-        # NOTE: this shows the children approach is better, transforming
-        # `categories` to a "mapping" dict is inefficient
-        # codes = self._col.values.codes  # ndarray, length `self.size`
-        # categories.values is ndarray of length n_categories
-        categories = cat_dtype.categories
-        mapping = {ix: val for ix, val in enumerate(categories)}
+        pandas_series = self._col.to_pandas().squeeze(axis=1)
         return {
-            "is_ordered": ordered,
-            "is_dictionary": is_dictionary,
-            "mapping": mapping,
+            "is_ordered": pandas_series.cat.ordered,
+            "is_dictionary": True,
+            "mapping": dict(zip(pandas_series.cat.codes, pandas_series.cat.categories)),
         }
 
     @property
