@@ -116,9 +116,12 @@ class PandasProtocolColumn(ProtocolColumn):
         if pandas.api.types.is_categorical_dtype(dtype):
             pandas_series = self._col.to_pandas().squeeze(axis=1)
             codes = pandas_series.values.codes
-            bitwidth, c_arrow_dtype_f_str = (
-                *self._dtype_from_primitive_pandas_dtype(codes.dtype)[1:3],
-            )
+            (
+                _,
+                bitwidth,
+                c_arrow_dtype_f_str,
+                _,
+            ) = self._dtype_from_primitive_pandas_dtype(codes.dtype)
             return (
                 DTypeKind.CATEGORICAL,
                 bitwidth,
