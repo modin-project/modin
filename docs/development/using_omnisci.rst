@@ -32,6 +32,6 @@ If for some reasons ``Native`` engine is explicitly set using ``modin.config`` o
 
 .. note::
    If you encounter ``LLVM ERROR: inconsistency in registered CommandLine options`` error when using OmniSci,
-   please refer to the respective section in :doc:`Troubleshooting </development/troubleshooting>` page to avoid the issue.
+   please refer to the respective section in :doc:`Troubleshooting </getting_started/troubleshooting>` page to avoid the issue.
 
 .. _OmnisciDB: https://www.omnisci.com/platform/omniscidb
