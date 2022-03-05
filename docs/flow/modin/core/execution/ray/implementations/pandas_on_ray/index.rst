@@ -32,12 +32,12 @@ generic functionality from the ``GenericRayDataframe`` and the :py:class:`~modin
 PandasOnRay Dataframe implementation
 ------------------------------------
 
-Modin implements ``Dataframe``, ``PartitionManager``, ``AxisPartition`` and ``Partition`` classes
-specifically for the ``PandasOnRay`` execution:
+Modin implements ``Dataframe``, ``PartitionManager``, ``VirtualPartition`` (specific version of ``AxisPartition`` with capability
+to combine smaller partitions into the one "virtual") and ``Partition`` classes specifically for the ``PandasOnRay`` execution:
 
 * :doc:`PandasOnRayDataframe <dataframe>`
 * :doc:`PandasOnRayDataframePartition <partitioning/partition>`
-* :doc:`PandasOnRayDataframeAxisPartition <partitioning/axis_partition>`
+* :doc:`PandasOnRayDataframeVirtualPartition <partitioning/axis_partition>`
 * :doc:`PandasOnRayDataframePartitionManager <partitioning/partition_manager>`
 
 .. toctree::

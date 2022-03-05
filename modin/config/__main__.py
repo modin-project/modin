@@ -24,6 +24,8 @@ from .pubsub import Parameter
 import pandas
 import argparse
 
+from modin.utils import _get_indent
+
 
 def print_config_help():
     """Print configs help messages."""
@@ -42,18 +44,22 @@ def export_config_help(filename: str):
     filename : str
         Name of the file to export configs data.
     """
-    configs = pandas.DataFrame(
-        columns=[
-            "Config Name",
-            "Env. Variable Name",
-            "Default Value",
-            "Description",
-            "Options",
-        ]
-    )
+    configs_data = []
     for objname in sorted(globals()):
         obj = globals()[objname]
         if isinstance(obj, type) and issubclass(obj, Parameter) and not obj.is_abstract:
+            doc = obj.__doc__
+            description = []
+            indent = _get_indent(doc)
+            # remove indent
+            for line in doc.split("\n"):
+                if line:
+                    line = line[indent:]
+                description.append(line)
+
+            description = "\n".join(description)
+            # `Notes` `-` underlining can't be correctly parsed inside csv table by sphinx
+            description = description.replace("Notes\n-----", "Notes:\n")
             data = {
                 "Config Name": obj.__name__,
                 "Env. Variable Name": getattr(
@@ -62,12 +68,12 @@ def export_config_help(filename: str):
                 "Default Value": obj._get_default()
                 if obj.__name__ != "RayRedisPassword"
                 else "random string",
-                "Description": obj.__doc__,
+                "Description": description,
                 "Options": obj.choices,
             }
-            configs = configs.append(data, ignore_index=True)
+            configs_data.append(data)
 
-    configs.to_csv(filename, index=False)
+    pandas.DataFrame(configs_data).to_csv(filename, index=False)
 
 
 if __name__ == "__main__":
