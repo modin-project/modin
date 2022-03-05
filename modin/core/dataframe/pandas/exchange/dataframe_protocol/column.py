@@ -39,6 +39,7 @@ from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
 )
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from .buffer import PandasProtocolBuffer
+from .exception import UnsuitableValidityBuffer, UnsuitableOffsetsBuffer
 
 
 @_inherit_docstrings(ProtocolColumn)
@@ -290,12 +291,12 @@ class PandasProtocolColumn(ProtocolColumn):
         buffers["data"] = self._get_data_buffer()
         try:
             buffers["validity"] = self._get_validity_buffer()
-        except Exception:
+        except UnsuitableValidityBuffer:
             buffers["validity"] = None
 
         try:
             buffers["offsets"] = self._get_offsets_buffer()
-        except Exception:
+        except UnsuitableOffsetsBuffer:
             buffers["offsets"] = None
 
         return buffers
@@ -360,7 +361,7 @@ class PandasProtocolColumn(ProtocolColumn):
 
         Raises
         ------
-        ``RuntimeError`` if null representation is not a bit or byte mask.
+        ``UnsuitableValidityBuffer`` if null representation is not a bit or byte mask.
         """
         null, invalid = self.describe_null
 
@@ -370,17 +371,10 @@ class PandasProtocolColumn(ProtocolColumn):
             mask = []
 
             # Determine the encoding for valid values
-            if invalid == 0:
-                valid = 1
-            else:
-                valid = 0
+            valid = 1 if invalid == 0 else 0
 
             for i in range(buf.size):
-                if type(buf[i]) == str:
-                    v = valid
-                else:
-                    v = invalid
-
+                v = valid if type(buf[i]) == str else invalid
                 mask.append(v)
 
             # Convert the mask array to a Pandas "buffer" using a NumPy array as the backing store
@@ -398,7 +392,7 @@ class PandasProtocolColumn(ProtocolColumn):
         else:
             raise NotImplementedError("See self.describe_null")
 
-        raise RuntimeError(msg)
+        raise UnsuitableValidityBuffer(msg)
 
     def _get_offsets_buffer(self) -> Tuple[PandasProtocolBuffer, Any]:
         """
@@ -414,7 +408,7 @@ class PandasProtocolColumn(ProtocolColumn):
 
         Raises
         ------
-        ``RuntimeError`` if the data buffer does not have an associated offsets buffer.
+        ``UnsuitableOffsetsBuffer`` if the data buffer does not have an associated offsets buffer.
         """
         if self.dtype[0] == DTypeKind.STRING:
             # For each string, we need to manually determine the next offset
@@ -443,7 +437,7 @@ class PandasProtocolColumn(ProtocolColumn):
                 "=",
             )  # note: currently only support native endianness
         else:
-            raise RuntimeError(
+            raise UnsuitableOffsetsBuffer(
                 "This column has a fixed-length dtype so does not have an offsets buffer"
             )
 
