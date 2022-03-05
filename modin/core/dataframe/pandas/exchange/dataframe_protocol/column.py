@@ -86,8 +86,6 @@ class PandasProtocolColumn(ProtocolColumn):
         if a library supports strided buffers, given that this protocol
         specifies contiguous buffers. Currently, if the flag is set to ``False``
         and a copy is needed, a ``RuntimeError`` will be raised.
-    offset : int, default: 0
-        The offset of the first element.
 
     Notes
     -----
@@ -95,16 +93,12 @@ class PandasProtocolColumn(ProtocolColumn):
     so doesn't need its own version or ``__column__`` protocol.
     """
 
-    def __init__(
-        self, column: PandasDataframe, allow_copy: bool = True, offset: int = 0
-    ) -> None:
+    def __init__(self, column: PandasDataframe, allow_copy: bool = True) -> None:
         if not isinstance(column, PandasDataframe):
             raise NotImplementedError(f"Columns of type {type(column)} not handled yet")
 
-        # Store the column as a private attribute
         self._col = column
         self._allow_copy = allow_copy
-        self._offset = offset
 
     @property
     def size(self) -> int:
@@ -112,7 +106,7 @@ class PandasProtocolColumn(ProtocolColumn):
 
     @property
     def offset(self) -> int:
-        return self._offset
+        return 0
 
     @property
     def dtype(self) -> Tuple[DTypeKind, int, str, str]:
@@ -258,15 +252,12 @@ class PandasProtocolColumn(ProtocolColumn):
     ) -> Iterable["PandasProtocolColumn"]:
         cur_n_chunks = self.num_chunks()
         n_rows = self.size
-        offset = 0
         if n_chunks is None or n_chunks == cur_n_chunks:
             for length in self._col._row_lengths:
                 yield PandasProtocolColumn(
                     self._col.mask(row_positions=range(length), col_positions=None),
                     allow_copy=self._col._allow_copy,
-                    offset=offset,
                 )
-                offset += length
 
         if n_chunks % cur_n_chunks != 0:
             raise RuntimeError(
@@ -300,9 +291,7 @@ class PandasProtocolColumn(ProtocolColumn):
             yield PandasProtocolColumn(
                 self._col.mask(row_positions=range(length), col_positions=None),
                 allow_copy=self._allow_copy,
-                offset=offset,
             )
-            offset += length
 
     def get_buffers(self) -> Dict[str, Any]:
         buffers = {}

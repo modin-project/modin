@@ -66,8 +66,6 @@ class PandasProtocolDataframe(ProtocolDataframe):
         if a library supports strided buffers, given that this protocol
         specifies contiguous buffers. Currently, if the flag is set to ``False``
         and a copy is needed, a ``RuntimeError`` will be raised.
-    offset : int, default: 0
-        The offset of the first element.
     """
 
     def __init__(
@@ -75,12 +73,10 @@ class PandasProtocolDataframe(ProtocolDataframe):
         df: PandasDataframe,
         nan_as_null: bool = False,
         allow_copy: bool = True,
-        offset: int = 0,
     ) -> None:
         self._df = df
         self._nan_as_null = nan_as_null
         self._allow_copy = allow_copy
-        self._offset = offset
 
     @property
     def metadata(self) -> Dict[str, Any]:
@@ -103,14 +99,12 @@ class PandasProtocolDataframe(ProtocolDataframe):
         return PandasProtocolColumn(
             self._df.mask(row_positions=None, col_positions=[i]),
             allow_copy=self._allow_copy,
-            offset=self._offset,
         )
 
     def get_column_by_name(self, name: str) -> PandasProtocolColumn:
         return PandasProtocolColumn(
             self._df.mask(row_positions=None, col_labels=[name]),
             allow_copy=self._allow_copy,
-            offset=self._offset,
         )
 
     def get_columns(self) -> Iterable[PandasProtocolColumn]:
@@ -118,7 +112,6 @@ class PandasProtocolDataframe(ProtocolDataframe):
             yield PandasProtocolColumn(
                 self._df.mask(row_positions=None, col_labels=[name]),
                 allow_copy=self._allow_copy,
-                offset=self._offset,
             )
 
     def select_columns(self, indices: Sequence[int]) -> "PandasProtocolDataframe":
@@ -128,7 +121,6 @@ class PandasProtocolDataframe(ProtocolDataframe):
         return PandasProtocolDataframe(
             self._df.mask(row_positions=None, col_positions=indices),
             allow_copy=self._allow_copy,
-            offset=self._offset,
         )
 
     def select_columns_by_name(self, names: Sequence[str]) -> "PandasProtocolDataframe":
@@ -138,7 +130,6 @@ class PandasProtocolDataframe(ProtocolDataframe):
         return PandasProtocolDataframe(
             self._df.mask(row_positions=None, col_labels=names),
             allow_copy=self._allow_copy,
-            offset=self._offset,
         )
 
     def get_chunks(
@@ -146,15 +137,12 @@ class PandasProtocolDataframe(ProtocolDataframe):
     ) -> Iterable["PandasProtocolDataframe"]:
         cur_n_chunks = self.num_chunks()
         n_rows = self.num_rows()
-        offset = 0
         if n_chunks is None or n_chunks == cur_n_chunks:
             for length in self._df._row_lengths:
                 yield PandasProtocolDataframe(
                     self._df.mask(row_positions=range(length), col_positions=None),
                     allow_copy=self._allow_copy,
-                    offset=offset,
                 )
-                offset += length
         if n_chunks % cur_n_chunks != 0:
             raise RuntimeError(
                 "The passed `n_chunks` must be a multiple of `self.num_chunks()`."
@@ -187,6 +175,4 @@ class PandasProtocolDataframe(ProtocolDataframe):
             yield PandasProtocolDataframe(
                 self._df.mask(row_positions=range(length), col_positions=None),
                 allow_copy=self._allow_copy,
-                offset=offset,
             )
-            offset += length
