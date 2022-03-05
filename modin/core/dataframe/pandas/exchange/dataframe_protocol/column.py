@@ -39,7 +39,7 @@ from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
 )
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from .buffer import PandasProtocolBuffer
-from .exception import UnsuitableValidityBuffer, UnsuitableOffsetsBuffer
+from .exception import NoValidityBuffer, NoOffsetsBuffer
 
 
 @_inherit_docstrings(ProtocolColumn)
@@ -294,12 +294,12 @@ class PandasProtocolColumn(ProtocolColumn):
         buffers["data"] = self._get_data_buffer()
         try:
             buffers["validity"] = self._get_validity_buffer()
-        except UnsuitableValidityBuffer:
+        except NoValidityBuffer:
             buffers["validity"] = None
 
         try:
             buffers["offsets"] = self._get_offsets_buffer()
-        except UnsuitableOffsetsBuffer:
+        except NoOffsetsBuffer:
             buffers["offsets"] = None
 
         return buffers
@@ -364,7 +364,7 @@ class PandasProtocolColumn(ProtocolColumn):
 
         Raises
         ------
-        ``UnsuitableValidityBuffer`` if null representation is not a bit or byte mask.
+        ``NoValidityBuffer`` if null representation is not a bit or byte mask.
         """
         null, invalid = self.describe_null
 
@@ -395,7 +395,7 @@ class PandasProtocolColumn(ProtocolColumn):
         else:
             raise NotImplementedError("See self.describe_null")
 
-        raise UnsuitableValidityBuffer(msg)
+        raise NoValidityBuffer(msg)
 
     def _get_offsets_buffer(self) -> Tuple[PandasProtocolBuffer, Any]:
         """
@@ -411,7 +411,7 @@ class PandasProtocolColumn(ProtocolColumn):
 
         Raises
         ------
-        ``UnsuitableOffsetsBuffer`` if the data buffer does not have an associated offsets buffer.
+        ``NoOffsetsBuffer`` if the data buffer does not have an associated offsets buffer.
         """
         if self.dtype[0] == DTypeKind.STRING:
             # For each string, we need to manually determine the next offset
@@ -440,7 +440,7 @@ class PandasProtocolColumn(ProtocolColumn):
                 "=",
             )  # note: currently only support native endianness
         else:
-            raise UnsuitableOffsetsBuffer(
+            raise NoOffsetsBuffer(
                 "This column has a fixed-length dtype so does not have an offsets buffer"
             )
 

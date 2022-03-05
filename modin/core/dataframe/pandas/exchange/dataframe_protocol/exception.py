@@ -14,13 +14,13 @@
 """Exceptions that can be caught by dataframe exchange protocol implementation for pandas storage format."""
 
 
-class UnsuitableValidityBuffer(Exception):
+class NoValidityBuffer(Exception):
     """Exception to be raised if there is no validity buffer for ``PandasProtocolColumn``."""
 
     pass
 
 
-class UnsuitableOffsetsBuffer(Exception):
+class NoOffsetsBuffer(Exception):
     """Exception to be raised if there is no offsets buffer for ``PandasProtocolColumn``."""
 
     pass
