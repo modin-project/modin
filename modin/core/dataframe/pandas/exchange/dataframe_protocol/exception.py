@@ -15,8 +15,12 @@
 
 
 class UnsuitableValidityBuffer(Exception):
+    """Exception to be raised if there is no validity buffer for ``PandasProtocolColumn``."""
+
     pass
 
 
 class UnsuitableOffsetsBuffer(Exception):
+    """Exception to be raised if there is no offsets buffer for ``PandasProtocolColumn``."""
+
     pass
