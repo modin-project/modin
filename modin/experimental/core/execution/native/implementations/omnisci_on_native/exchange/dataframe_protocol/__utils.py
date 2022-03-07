@@ -129,7 +129,7 @@ def convert_datetime_col(col):
         raise NotImplementedError(f"Datetime is not supported: {fmt}")
 
     if col.describe_null[0] == 3:
-        null_mask = get_null_positions_from_bit_mask(
+        null_mask = ~bitmask_to_bool_array(
             col.get_buffers()["validity"][0], col.offset, col.size
         )
         data[null_mask] = None
@@ -152,12 +152,12 @@ def convert_column_to_ndarray(col: ProtocolColumn) -> np.ndarray:
         raise NotImplementedError(
             "Null values represented as masks or sentinel values not handled yet"
         )
-
+    # breakpoint()
     _buffer, _dtype = col.get_buffers()["data"]
-    data, _bfr = buffer_to_ndarray(_buffer, _dtype, col.offset), _buffer
+    data, _bfr = buffer_to_ndarray(_buffer, _dtype, col.offset, col.size), _buffer
 
     if col.describe_null[0] == 3:
-        null_pos = get_null_positions_from_bit_mask(
+        null_pos = ~bitmask_to_bool_array(
             col.get_buffers()["validity"][0], col.offset, col.size
         )
         if np.any(null_pos):
@@ -168,7 +168,9 @@ def convert_column_to_ndarray(col: ProtocolColumn) -> np.ndarray:
     return data, _bfr
 
 
-def buffer_to_ndarray(_buffer, _dtype, offset, allow_none_buffer=False) -> np.ndarray:
+def buffer_to_ndarray(
+    _buffer, _dtype, offset, length=None, allow_none_buffer=False
+) -> np.ndarray:
     # Handle the dtype
     if allow_none_buffer and _buffer is None:
         return None
@@ -177,6 +179,9 @@ def buffer_to_ndarray(_buffer, _dtype, offset, allow_none_buffer=False) -> np.nd
     _k = DTypeKind
     if _dtype[0] not in (_k.INT, _k.UINT, _k.FLOAT, _k.BOOL):
         raise RuntimeError("Not a boolean, integer or floating-point dtype")
+
+    if bitwidth == 1:
+        return bitmask_to_bool_array(_buffer, offset, length)
 
     _ints = {8: np.int8, 16: np.int16, 32: np.int32, 64: np.int64}
     _uints = {8: np.uint8, 16: np.uint16, 32: np.uint32, 64: np.uint64}
@@ -209,7 +214,8 @@ def convert_categorical_column(col: ProtocolColumn) -> pandas.Series:
     categories = np.asarray(list(mapping.values()))
     codes_buffer, codes_dtype = col.get_buffers()["data"]
     codes = buffer_to_ndarray(codes_buffer, codes_dtype, col.offset)
-    values = categories[codes]
+    # Doing module in order to not get IndexError for negative sentinel values in the `codes`
+    values = categories[codes % len(categories)]
 
     cat = pandas.Categorical(values, categories=categories, ordered=ordered)
     series = pandas.Series(cat)
@@ -218,7 +224,7 @@ def convert_categorical_column(col: ProtocolColumn) -> pandas.Series:
         sentinel = col.describe_null[1]
         series[codes == sentinel] = np.nan
     elif null_kind == 3:
-        null_values = get_null_positions_from_bit_mask(
+        null_values = ~bitmask_to_bool_array(
             col.get_buffers()["validity"][0], col.offset, col.size
         )
         series[null_values] = np.nan
@@ -232,10 +238,10 @@ def convert_categorical_column(col: ProtocolColumn) -> pandas.Series:
     return series, codes_buffer
 
 
-def get_null_positions_from_bit_mask(buffer, offset, mask_length):
+def bitmask_to_bool_array(buffer, offset, mask_length):
     ctypes_type = np.ctypeslib.as_ctypes_type(np.uint8)
     data_pointer = ctypes.cast((buffer.ptr + offset // 8), ctypes.POINTER(ctypes_type))
-
+    # breakpoint()
     first_byte_offset = offset % 8
     x = np.ctypeslib.as_array(data_pointer, shape=(buffer.bufsize,))
 
@@ -244,14 +250,14 @@ def get_null_positions_from_bit_mask(buffer, offset, mask_length):
     val = x[0]
     mask_idx = 0
     for j in range(min(8 - first_byte_offset, mask_length)):
-        if not val & (1 << (j + first_byte_offset)):
+        if val & (1 << (j + first_byte_offset)):
             null_mask[mask_idx] = True
         mask_idx += 1
 
     for i in range(1, mask_length // 8):
         val = x[i]
         for j in range(8):
-            if not val & (1 << j):
+            if val & (1 << j):
                 null_mask[mask_idx] = True
             mask_idx += 1
 
@@ -259,7 +265,7 @@ def get_null_positions_from_bit_mask(buffer, offset, mask_length):
         # Processing reminder of last byte
         val = x[-1]
         for j in range(len(null_mask) - mask_idx):
-            if not val & (1 << j):
+            if val & (1 << j):
                 null_mask[mask_idx] = True
             mask_idx += 1
 
@@ -299,7 +305,7 @@ def convert_string_column(col: ProtocolColumn) -> np.ndarray:
     if null_kind == 4:
         mbuf = buffer_to_ndarray(mbuffer, mdtype, col.offset, allow_none_buffer=True)
     elif null_kind == 3:
-        mbuf = get_null_positions_from_bit_mask(mbuffer, col.offset, col.size)
+        mbuf = ~bitmask_to_bool_array(mbuffer, col.offset, col.size)
 
     # Assemble the strings from the code units
     str_list = []

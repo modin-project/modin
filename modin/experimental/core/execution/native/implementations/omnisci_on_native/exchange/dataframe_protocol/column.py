@@ -165,15 +165,13 @@ class OmnisciProtocolColumn(ProtocolColumn):
         """
         dtype = self._pandas_dtype
 
-        if pandas.api.types.is_datetime64_dtype(dtype):
+        if pandas.api.types.is_bool_dtype(dtype):
+            return (DTypeKind.BOOL, 1, pandas_dtype_to_arrow_c(np.dtype("bool")), "=")
+        elif pandas.api.types.is_datetime64_dtype(
+            dtype
+        ) or pandas.api.types.is_categorical_dtype(dtype):
+            # For these types we have to use internal arrow dtype to get proper metadata
             return self._dtype_from_pyarrow(self._arrow_dtype)
-        elif pandas.api.types.is_categorical_dtype(dtype):
-            return (
-                DTypeKind.CATEGORICAL,
-                32,
-                pandas_dtype_to_arrow_c(np.dtype("int32")),
-                "=",
-            )
         elif pandas.api.types.is_string_dtype(dtype):
             return (DTypeKind.STRING, 8, pandas_dtype_to_arrow_c(dtype), "=")
         else:
@@ -194,6 +192,9 @@ class OmnisciProtocolColumn(ProtocolColumn):
         elif pa.types.is_string(dtype):
             kind = DTypeKind.STRING
             bit_width = 8
+        elif pa.types.is_boolean(dtype):
+            kind = DTypeKind.BOOL
+            bit_width = dtype.bit_width
 
         if kind is not None:
             return (kind, bit_width, arrow_dtype_to_arrow_c(dtype), "=")
@@ -254,7 +255,18 @@ class OmnisciProtocolColumn(ProtocolColumn):
             )
 
         ordered = dtype.ordered
-        mapping = {index: value for index, value in enumerate(dtype.categories)}
+
+        # Category codes may change during materialization flow, so trigger
+        # materialization before returning the codes
+        self._materialize_actual_buffers()
+        col = self._pyarrow_table.column(0)
+        if len(col.chunks) > 1:
+            if not self._col._allow_copy:
+                raise RuntimeError("Copy required but 'allow_copy=False'")
+            col = col.combine_chunks()
+        col = col.chunks[0]
+
+        mapping = {index: value for index, value in enumerate(col.dictionary.tolist())}
 
         return {
             "is_ordered": ordered,
@@ -391,8 +403,35 @@ class OmnisciProtocolColumn(ProtocolColumn):
             self._propagate_dtype(external_dtype)
 
     def _get_buffer_size(self, bit_width, is_offset_buffer=False):
+        """
+        Compute chunk size in bytes.
+
+        Parameters
+        ----------
+        bit_width : int
+            Bit width of the underlying data type.
+        is_offset_buffer : bool, default: False
+            Whether the buffer describes element offsets.
+
+        Returns
+        -------
+        int
+            Number of bytes to read from the start of the buffer to read the whole chunk.
+        """
+        # Offset buffer always has `size + 1` elements in it as it describes slice bounds
         elements_in_buffer = self.size + 1 if is_offset_buffer else self.size
-        return ceil((bit_width * elements_in_buffer) / 8)
+        result = ceil((bit_width * elements_in_buffer) / 8)
+        # For a bitmask, if the chunk started in the middle of the byte then we need to
+        # read one extra byte from the buffer to retrieve the tail in the last byte. Example:
+        # Bitmask of 3 bytes, the chunk offset is 3 elements and its size is 16
+        # |* * * * * * * *|* * * * * * * *|* * * * * * * *|
+        #      ^- the chunk starts here      ^- the chunk ends here
+        # Although ``ceil(bit_width * elements_in_buffer / 8)`` gives us '2 bytes',
+        # the chunk is located in 3 bytes, that's why we assume the chunk's buffer size
+        # to be 'result += 1' in this case:
+        if bit_width == 1 and self.offset % 8 + self.size > result * 8:
+            result += 1
+        return result
 
     def _get_data_buffer(self, arr):
         if self.dtype[0] == DTypeKind.CATEGORICAL:
@@ -417,12 +456,11 @@ class OmnisciProtocolColumn(ProtocolColumn):
             return validity_buffer
 
         data_size = self._get_buffer_size(bit_width=1)
-        if self.offset % 8 + self.size > data_size * 8:
-            data_size += 1
 
         return (
             OmnisciProtocolBuffer(validity_buffer, data_size),
-            self._dtype_from_primitive_pandas(np.dtype("uint8")),
+            # self._dtype_from_primitive_pandas(np.dtype("uint8")),
+            (DTypeKind.BOOL, 1, "b", "="),
         )
 
     def _get_offsets_buffer(self, arr):
