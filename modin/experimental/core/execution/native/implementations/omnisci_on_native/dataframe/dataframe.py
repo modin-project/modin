@@ -665,6 +665,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             index_cols=self._index_cols,
             force_execution_mode=self._force_execution_mode,
         )
+
         return new_frame
 
     def dropna(self, subset, how="any"):

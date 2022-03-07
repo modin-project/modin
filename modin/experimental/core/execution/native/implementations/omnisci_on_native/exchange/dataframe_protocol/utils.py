@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Utility functions of DataFrame exchange protocol implementation for OmnisciOnNative execution."""
+
 import pyarrow as pa
 import numpy as np
 
@@ -20,7 +22,20 @@ from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
 )
 
 
-def arrow_dtype_to_arrow_c(dtype):
+def arrow_dtype_to_arrow_c(dtype: pa.DataType) -> str:
+    """
+    Represent PyArrow `dtype` as a format string in Apache Arrow C notation.
+
+    Parameters
+    ----------
+    dtype : pa.DataType
+        Datatype of PyArrow table to represent.
+
+    Returns
+    -------
+    str
+        Format string in Apache Arrow C notation of the given `dtype`.
+    """
     if pa.types.is_timestamp(dtype):
         return ArrowCTypes.TIMESTAMP.format(
             resolution=dtype.unit[:1], tz=dtype.tz or ""

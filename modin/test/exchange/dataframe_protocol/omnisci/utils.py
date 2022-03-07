@@ -16,7 +16,7 @@
 import pandas
 import numpy as np
 
-from modin.experimental.core.execution.native.implementations.omnisci_on_native.exchange.dataframe_protocol.__utils import (
+from modin.core.dataframe.base.exchange.dataframe_protocol.__utils import (
     from_dataframe,
 )
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.test.utils import (

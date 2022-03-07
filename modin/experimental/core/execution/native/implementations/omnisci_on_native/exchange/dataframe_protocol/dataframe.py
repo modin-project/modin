@@ -11,30 +11,18 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""
-Dataframe exchange protocol implementation.
-
-See more in https://data-apis.org/dataframe-protocol/latest/index.html.
-
-Public API
-----------
-from_dataframe : construct a DataFrame from an input data frame which
-                 implements the exchange protocol.
-Notes
------
-- Interpreting a raw pointer (as in ``Buffer.ptr``) is annoying and unsafe to
-  do in pure Python. It's more general but definitely less friendly than having
-  ``to_arrow`` and ``to_numpy`` methods. So for the buffers which lack
-  ``__dlpack__`` (e.g., because the column dtype isn't supported by DLPack),
-  this is worth looking at again.
-"""
+"""The module houses OmnisciOnNative implementation of the Dataframe class of DataFrame exchange protocol."""
 
 import collections
 import numpy as np
+import pyarrow as pa
 
-from typing import Optional, Iterable, Sequence
-from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
+from typing import Optional, Iterable, Sequence, Dict, Any
+from modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe import (
+    OmnisciOnNativeDataframe,
+)
 from modin.core.dataframe.base.exchange.dataframe_protocol import ProtocolDataframe
+from modin.utils import _inherit_docstrings
 
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra import (
     MaskNode,
@@ -45,40 +33,25 @@ from modin.experimental.core.execution.native.implementations.omnisci_on_native.
 from .column import OmnisciProtocolColumn
 
 
+@_inherit_docstrings(ProtocolDataframe)
 class OmnisciProtocolDataframe(ProtocolDataframe):
     """
-    A data frame class, with only the methods required by the interchange protocol defined.
-
-    Instances of this (private) class are returned from ``modin.pandas.DataFrame.__dataframe__``
-    as objects with the methods and attributes defined on this class.
-
-    A "data frame" represents an ordered collection of named columns.
-    A column's "name" must be a unique string. Columns may be accessed by name or by position.
-    This could be a public data frame class, or an object with the methods and
-    attributes defined on this DataFrame class could be returned from the
-    ``__dataframe__`` method of a public data frame class in a library adhering
-    to the dataframe interchange protocol specification.
+    Implement DataFrame exchange protocol class for OmniSciOnNative execution.
 
     Parameters
     ----------
-    df : ModinDataframe
-        A ``ModinDataframe`` object.
-    nan_as_null : bool, default:False
-        A keyword intended for the consumer to tell the producer
-        to overwrite null values in the data with ``NaN`` (or ``NaT``).
-        This currently has no effect; once support for nullable extension
-        dtypes is added, this value should be propagated to columns.
+    df : OmnisciOnNativeDataframe
+        DataFrame object that holds the data.
+    nan_as_null : bool, default: False
+        Whether to overwrite null values in the data with ``NaN``.
     allow_copy : bool, default: True
-        A keyword that defines whether or not the library is allowed
-        to make a copy of the data. For example, copying data would be necessary
-        if a library supports strided buffers, given that this protocol
-        specifies contiguous buffers. Currently, if the flag is set to ``False``
-        and a copy is needed, a ``RuntimeError`` will be raised.
+        Whether allow to doing copy of the underlying data during export flow.
+        If a copy or any kind of data transfer/materialization would be required raise ``RuntimeError``.
     """
 
     def __init__(
         self,
-        df: ModinDataframe,
+        df: OmnisciOnNativeDataframe,
         nan_as_null: bool = False,
         allow_copy: bool = True,
     ) -> None:
@@ -92,7 +65,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         self._allow_copy = allow_copy
 
     @property
-    def metadata(self):
+    def metadata(self) -> Dict[str, Any]:
         # TODO: as the frame's index is stored as a separate column inside pyarrow table
         # we may want to return the column's name here instead of materialized index.
         # This will require the internal index column to be visible in the protocol's column
@@ -101,46 +74,22 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         return {"index": self._df.index}
 
     def num_columns(self) -> int:
-        """
-        Return the number of columns in the DataFrame.
-
-        Returns
-        -------
-        int
-            The number of columns in the DataFrame.
-        """
         return len(self._df.columns)
 
     def num_rows(self) -> int:
-        """
-        Return the number of rows in the DataFrame, if available.
-
-        Returns
-        -------
-        int
-            The number of rows in the DataFrame.
-        """
         if not self._allow_copy and not self._is_zero_copy_possible:
             raise RuntimeError("Copy required with 'allow_copy=False'")
         return len(self._df.index)
 
     def num_chunks(self) -> int:
-        """
-        Return the number of chunks the DataFrame consists of.
-
-        Returns
-        -------
-        int
-            The number of chunks the DataFrame consists of.
-        """
         return len(self._chunk_slices) - 1
 
     __chunk_slices = None
 
     @property
-    def _chunk_slices(self):
+    def _chunk_slices(self) -> np.ndarray:
         """
-        Compute chunk start-stop indices in the underlying pyarrow table.
+        Compute chunks start-stop indices in the underlying PyArrow table.
 
         Returns
         -------
@@ -189,7 +138,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
     __is_zero_copy_possible = None
 
     @property
-    def _is_zero_copy_possible(self):
+    def _is_zero_copy_possible(self) -> bool:
         """
         Check whether it's possible to retrieve data from the DataFrame zero-copy.
 
@@ -202,17 +151,22 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         """
         if self.__is_zero_copy_possible is None:
             if self._df._has_arrow_table():
+                # If PyArrow is already materialized table then we can
+                # retrieve the  data zero-copy
                 self.__is_zero_copy_possible = True
             elif not self._df._can_execute_arrow():
+                # When not able to execute the plan via Arrow means
+                # that we have to involve OmniSci, so no zero-copy.
                 self.__is_zero_copy_possible = False
             else:
+                # Check whether the plan for PyArrow can be executed zero-copy
                 self.__is_zero_copy_possible = self._is_zero_copy_op(self._df.op)
         return self.__is_zero_copy_possible
 
     @classmethod
-    def _is_zero_copy_op(cls, op):
+    def _is_zero_copy_op(cls, op) -> bool:
         """
-        Check whether the passed node of the delayed computation tree could be executed zero-copy via pyarrow execution.
+        Check whether the passed node of the delayed computation tree could be executed zero-copy via PyArrow execution.
 
         Parameters
         ----------
@@ -224,18 +178,30 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         """
         is_zero_copy_op = False
         if isinstance(op, (FrameNode, TransformNode, UnionNode)):
+            # - FrameNode: already materialized PyArrow table
+            # - TransformNode: select certain columns of the table, implemented zero-copy (``df._arrow_select``)
+            # - UnionNode: concatenate PyArrow tables, implemented zero-copy (``df._arrow_concat``)
             is_zero_copy_op = True
         elif isinstance(op, MaskNode) and (
             isinstance(op.row_positions, slice) or is_range_like(op.row_positions)
         ):
+            # Can select rows zero-copy if indexer is a slice-like (``df._arrow_row_slice``)
             is_zero_copy_op = True
         return is_zero_copy_op and all(
-            cls._is_zero_copy_op(_op) for _op in getattr(op, "inputs", [])
+            # Walk the computation tree
+            cls._is_zero_copy_op(_op)
+            for _op in getattr(op, "inputs", [])
         )
 
     @property
-    def _pyarrow_table(self):
-        """Get ``pyarrow.Table`` representing the dataframe."""
+    def _pyarrow_table(self) -> pa.Table:
+        """
+        Get PyArrow table representing the column.
+
+        Returns
+        -------
+        pyarrow.Table
+        """
         self._maybe_raise_if_materialize()
 
         if not self._df._has_arrow_table():
@@ -245,30 +211,11 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         assert at is not None
         return at
 
-    def _replace_at(self, at):
-        self._df = self._df.from_arrow(at)
-
     def column_names(self) -> Iterable[str]:
-        """
-        Return an iterator yielding the column names.
-
-        Yields
-        ------
-        str
-            The name of the column(s).
-        """
         for col in self._df.columns:
             yield col
 
     def get_column(self, i: int) -> OmnisciProtocolColumn:
-        """
-        Return the column at the indicated position.
-
-        Returns
-        -------
-        Column
-            The column at the indicated position.
-        """
         return OmnisciProtocolColumn(
             OmnisciProtocolDataframe(
                 self._df.mask(col_positions=[i]),
@@ -277,14 +224,6 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         )
 
     def get_column_by_name(self, name: str) -> OmnisciProtocolColumn:
-        """
-        Return the column whose name is the indicated name.
-
-        Returns
-        -------
-        Column
-            The column whose name is the indicated name.
-        """
         return OmnisciProtocolColumn(
             OmnisciProtocolDataframe(
                 self._df.mask(col_labels=[name]),
@@ -293,14 +232,6 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         )
 
     def get_columns(self) -> Iterable[OmnisciProtocolColumn]:
-        """
-        Return an iterator yielding the columns.
-
-        Yields
-        ------
-        Column
-            The ``Column`` object(s).
-        """
         for name in self._df.columns:
             yield OmnisciProtocolColumn(
                 OmnisciProtocolDataframe(
@@ -309,15 +240,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
                 ),
             )
 
-    def select_columns(self, indices: Sequence[int]) -> "DataFrame":
-        """
-        Create a new DataFrame by selecting a subset of columns by index.
-
-        Returns
-        -------
-        DataFrame
-            A new DataFrame with selected a subset of columns by index.
-        """
+    def select_columns(self, indices: Sequence[int]) -> "OmnisciProtocolDataframe":
         if not isinstance(indices, collections.Sequence):
             raise ValueError("`indices` is not a sequence")
 
@@ -326,15 +249,9 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
             allow_copy=self._allow_copy,
         )
 
-    def select_columns_by_name(self, names: Sequence[str]) -> "DataFrame":
-        """
-        Create a new DataFrame by selecting a subset of columns by name.
-
-        Returns
-        -------
-        DataFrame
-            A new DataFrame with selected a subset of columns by name.
-        """
+    def select_columns_by_name(
+        self, names: Sequence[str]
+    ) -> "OmnisciProtocolDataframe":
         if not isinstance(names, collections.Sequence):
             raise ValueError("`names` is not a sequence")
 
@@ -343,24 +260,9 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
             allow_copy=self._allow_copy,
         )
 
-    def get_chunks(self, n_chunks: Optional[int] = None) -> Iterable["DataFrame"]:
-        """
-        Return an iterator yielding the chunks.
-
-        By default ``n_chunks=None``, yields the chunks that the data is stored as by the producer.
-        If given, ``n_chunks`` must be a multiple of ``self.num_chunks()``,
-        meaning the producer must subdivide each chunk before yielding it.
-
-        Parameters
-        ----------
-        n_chunks : int, optional
-            Number of chunks to yield.
-
-        Yields
-        ------
-        DataFrame
-            A ``DataFrame`` object(s).
-        """
+    def get_chunks(
+        self, n_chunks: Optional[int] = None
+    ) -> Iterable["OmnisciProtocolDataframe"]:
         if n_chunks is None:
             return self._yield_chunks(self._chunk_slices)
 
@@ -369,9 +271,17 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
                 "The passed `n_chunks` has to be a multiple of `num_chunks`."
             )
 
+        if n_chunks > self.num_rows():
+            raise RuntimeError(
+                "The passed `n_chunks` value is bigger than the amout of rows in the frame."
+            )
+
         extra_chunks = n_chunks - self.num_chunks()
         subdivided_slices = self._chunk_slices.copy()
 
+        # The subdividing behavior is a bit different from "subdividing each chunk",
+        # instead it subdivides the biggest chunks first, so overall chunking be as
+        # equal as possible
         for _ in range(extra_chunks):
             # 1. Find the biggest chunk
             # 2. Split it in the middle
@@ -381,9 +291,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
                 - subdivided_slices[biggest_chunk_idx]
             ) // 2
             if new_chunk_offset == 0:
-                raise RuntimeError(
-                    "The passed `n_chunks` value is bigger than the amout of rows in the frame."
-                )
+                raise RuntimeError("No more chunks to subdivide.")
             subdivided_slices = np.insert(
                 subdivided_slices,
                 biggest_chunk_idx + 1,
@@ -392,17 +300,18 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
 
         return self._yield_chunks(subdivided_slices)
 
-    def _yield_chunks(self, chunk_slices):
+    def _yield_chunks(self, chunk_slices) -> "OmnisciProtocolDataframe":
         """
-        Yield dataframe chunks according to the passed chunking.
+        Yield DataFrame chunks according to the passed offsets.
 
         Parameters
         ----------
         chunk_slices : list
+            Chunking offsets.
 
-        Yield
-        -----
-        DataFrame
+        Yields
+        ------
+        OmnisciProtocolDataframe
         """
         for i in range(len(chunk_slices) - 1):
             yield OmnisciProtocolDataframe(
