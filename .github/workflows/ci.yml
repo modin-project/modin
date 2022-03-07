@@ -127,8 +127,8 @@ jobs:
         with:
           python-version: "3.8.x"
           architecture: "x64"
-      - run: pip install flake8 flake8-print
-      - run: flake8 --enable=T modin/ asv_bench/benchmarks scripts/doc_checker.py
+      - run: pip install flake8 flake8-print flake8-no-implicit-concat
+      - run: flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py
 
   test-api:
     runs-on: ubuntu-latest
@@ -387,6 +387,11 @@ jobs:
               # check pure pandas
               MODIN_ASV_USE_IMPL=pandas asv run --quick --strict --show-stderr --launch-method=spawn \
                 -b ^benchmarks -b ^io -b ^scalability | tee benchmarks.log
+
+              # OmniSci: ERR_OUT_OF_CPU_MEM: Not enough host memory to execute the query (MODIN#4270)
+              # just disable test for testing - it works well in a machine with more memory
+              sed -i 's/def time_groupby_agg_nunique(self, \*args, \*\*kwargs):/# def time_groupby_agg_nunique(self, *args, **kwargs):/g' benchmarks/omnisci/benchmarks.py
+              sed -i 's/execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/# execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/g' benchmarks/omnisci/benchmarks.py
 
               # check Modin on OmniSci
               MODIN_ENGINE=native MODIN_STORAGE_FORMAT=omnisci MODIN_EXPERIMENTAL=true asv run --quick --strict --show-stderr \

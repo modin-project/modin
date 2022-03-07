@@ -8,9 +8,15 @@ on:
       - setup.cfg
       - setup.py
 jobs:
-  test-notebooks:
-    name: test notebooks
+  test-tutorial-notebooks:
+    defaults:
+      run:
+        shell: bash -l {0}
+    name: test tutorial notebooks
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        execution: [pandas_on_ray, pandas_on_dask, omnisci_on_native]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -19,20 +25,45 @@ jobs:
         with:
           python-version: "3.8.x"
           architecture: "x64"
+        if: matrix.execution != 'omnisci_on_native'
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: modin_on_omnisci
+          environment-file: requirements/env_omnisci.yml
+          python-version: 3.8
+          channel-priority: strict
+        if: matrix.execution == 'omnisci_on_native'
       - name: Cache datasets
         uses: actions/cache@v2
         with:
           path: taxi.csv
           # update cache only if notebooks require it to be changed
-          key: hashFiles("examples/tutorial/jupyter/execution/pandas_on_ray/local/**")
-      # replace modin[all] with .[all] in the tutorial requirements file since we need
-      # Modin built from sources
-      - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/pandas_on_ray/requirements.txt
-      # install dependencies required for notebooks execution
-      - run: pip install -r examples/tutorial/jupyter/execution/pandas_on_ray/requirements.txt
+          key: hashFiles("examples/tutorial/jupyter/**")
+      # replace modin with . in the tutorial requirements file for `pandas_on_ray` and
+      # `pandas_on_dask` since we need Modin built from sources
+      - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
+        if: matrix.execution != 'omnisci_on_native'
+      # install dependencies required for notebooks execution for `pandas_on_ray` and `pandas_on_dask`
+      - run: pip install -r examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
+        if: matrix.execution != 'omnisci_on_native'
+      # Build Modin from sources for `omnisci_on_native`
+      - run: pip install .
+        if: matrix.execution == 'omnisci_on_native'
       # install test dependencies
-      - run: pip install pytest pytest-cov black flake8 flake8-print
+      - run: pip install pytest pytest-cov black flake8 flake8-print flake8-no-implicit-concat
+        if: matrix.execution != 'omnisci_on_native'
+      - run: conda install black flake8 flake8-print jupyter nbformat nbconvert -c conda-forge
+        if: matrix.execution == 'omnisci_on_native'
       - run: pip list
-      - run: black --check --diff examples/tutorial/jupyter/execution/pandas_on_ray/test/test_notebooks.py
-      - run: flake8 --enable=T examples/tutorial/jupyter/execution/pandas_on_ray/test/test_notebooks.py
-      - run: pytest examples/tutorial/jupyter/execution/pandas_on_ray/test/test_notebooks.py
+        if: matrix.execution != 'omnisci_on_native'
+      - run: |
+          conda info
+          conda list
+        if: matrix.execution == 'omnisci_on_native'
+      - run: |
+          black --check --diff examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
+          black --check --diff examples/tutorial/jupyter/execution/test/utils.py
+      - run: |
+          flake8 --enable=T examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
+          flake8 --enable=T examples/tutorial/jupyter/execution/test/utils.py
+      - run: pytest examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py

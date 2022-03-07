@@ -587,7 +587,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         if len(last_col_name) not in (1, self.columns.nlevels):
                             raise ValueError(
                                 "col_fill=None is incompatible "
-                                f"with incomplete column name {last_col_name}"
+                                + f"with incomplete column name {last_col_name}"
                             )
                         col_fill = last_col_name[0]
                     columns_list = new_modin_frame.columns.tolist()
@@ -1128,7 +1128,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
     )
 
-    def rolling_corr(self, rolling_args, other, pairwise, *args, **kwargs):
+    def rolling_corr(self, axis, rolling_args, other, pairwise, *args, **kwargs):
         if len(self.columns) > 1:
             return self.default_to_pandas(
                 lambda df: pandas.DataFrame.rolling(df, *rolling_args).corr(
@@ -1142,9 +1142,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         other=other, pairwise=pairwise, *args, **kwargs
                     )
                 )
-            )(self)
+            )(self, axis)
 
-    def rolling_cov(self, rolling_args, other, pairwise, ddof, **kwargs):
+    def rolling_cov(self, axis, rolling_args, other, pairwise, ddof, **kwargs):
         if len(self.columns) > 1:
             return self.default_to_pandas(
                 lambda df: pandas.DataFrame.rolling(df, *rolling_args).cov(
@@ -1158,11 +1158,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         other=other, pairwise=pairwise, ddof=ddof, **kwargs
                     )
                 )
-            )(self)
+            )(self, axis)
 
-    def rolling_aggregate(self, rolling_args, func, *args, **kwargs):
+    def rolling_aggregate(self, axis, rolling_args, func, *args, **kwargs):
         new_modin_frame = self._modin_frame.apply_full_axis(
-            0,
+            axis,
             lambda df: pandas.DataFrame(
                 df.rolling(*rolling_args).aggregate(func=func, *args, **kwargs)
             ),

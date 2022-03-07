@@ -25,6 +25,7 @@ from modin.pandas.test.utils import (
     io_ops_bad_exc,
     eval_io as general_eval_io,
 )
+from ..df_algebra import FrameNode
 
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.omnisci_worker import (
     OmnisciServer,
@@ -177,6 +178,34 @@ class ForceOmnisciImport:
 
     def __enter__(self):
         return self
+
+    def export_frames(self):
+        """
+        Export tables from OmniSci that was imported by this instance.
+
+        Returns
+        -------
+        list
+            A list of Modin DataFrames whose payload is ``pyarrow.Table``
+            that was just exported from OmniSci.
+        """
+        result = []
+        for df, frame_id in self._imported_frames:
+            # Append `TransformNode`` selecting all the columns (SELECT * FROM frame_id)
+            df = df[df.columns.tolist()]
+            modin_frame = df._query_compiler._modin_frame
+            # Forcibly executing plan via OmniSci. We can't use `modin_frame._execute()` here
+            # as it has a chance of running via pyarrow bypassing OmniSci
+            new_partitions = modin_frame._partition_mgr_cls.run_exec_plan(
+                modin_frame._op,
+                modin_frame._index_cols,
+                modin_frame._dtypes,
+                modin_frame._table_cols,
+            )
+            modin_frame._partitions = new_partitions
+            modin_frame._op = FrameNode(modin_frame)
+            result.append(df)
+        return result
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         for df, frame_id in self._imported_frames:

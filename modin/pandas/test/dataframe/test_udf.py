@@ -116,9 +116,9 @@ def test_aggregate_error_checking():
 @pytest.mark.xfail(
     StorageFormat.get() == "Pandas",
     reason="DataFrame.apply(dict) raises an exception because of a bug in its"
-    "implementation for pandas storage format, this prevents us from catching the desired"
-    "exception. You can track this bug at:"
-    "https://github.com/modin-project/modin/issues/3221",
+    + "implementation for pandas storage format, this prevents us from catching the desired"
+    + "exception. You can track this bug at:"
+    + "https://github.com/modin-project/modin/issues/3221",
 )
 @pytest.mark.parametrize(
     "func",
@@ -129,9 +129,9 @@ def test_apply_key_error(func):
     if not (is_list_like(func) or callable(func) or isinstance(func, str)):
         pytest.xfail(
             reason="Because index materialization is expensive Modin first"
-            "checks the validity of the function itself and only then the engine level"
-            "checks the validity of the indices. Pandas order of such checks is reversed,"
-            "so we get different errors when both (function and index) are invalid."
+            + "checks the validity of the function itself and only then the engine level"
+            + "checks the validity of the indices. Pandas order of such checks is reversed,"
+            + "so we get different errors when both (function and index) are invalid."
         )
     eval_general(
         *create_test_dfs(test_data["int_data"]),

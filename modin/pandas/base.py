@@ -109,10 +109,6 @@ class BasePandasDataset(object):
     # but lives in "pandas" namespace.
     _pandas_class = pandas.core.generic.NDFrame
 
-    # Siblings are other objects that share the same query compiler. We use this list
-    # to update inplace when there is a shallow copy.
-    _siblings = []
-
     def _add_sibling(self, sibling):
         """
         Add a DataFrame or Series object to the list of siblings.
@@ -272,16 +268,14 @@ class BasePandasDataset(object):
             if axis == 0:
                 if len(other) != len(self._query_compiler.index):
                     raise ValueError(
-                        "Unable to coerce to Series, length must be {0}: "
-                        "given {1}".format(len(self._query_compiler.index), len(other))
+                        f"Unable to coerce to Series, length must be {len(self._query_compiler.index)}: "
+                        + f"given {len(other)}"
                     )
             else:
                 if len(other) != len(self._query_compiler.columns):
                     raise ValueError(
-                        "Unable to coerce to Series, length must be {0}: "
-                        "given {1}".format(
-                            len(self._query_compiler.columns), len(other)
-                        )
+                        f"Unable to coerce to Series, length must be {len(self._query_compiler.columns)}: "
+                        + f"given {len(other)}"
                     )
             if hasattr(other, "dtype"):
                 other_dtypes = [other.dtype] * len(other)
@@ -380,7 +374,7 @@ class BasePandasDataset(object):
             elif not callable(fn):
                 on_invalid(
                     f"One of the passed functions has an invalid type: {type(fn)}: {fn}, "
-                    "only callable or string is acceptable.",
+                    + "only callable or string is acceptable.",
                     TypeError,
                 )
 
@@ -917,7 +911,7 @@ class BasePandasDataset(object):
             ):
                 raise KeyError(
                     "Only a column name can be used for the key in"
-                    "a dtype mappings argument."
+                    + "a dtype mappings argument."
                 )
             col_dtypes = dtype
         else:
@@ -1044,7 +1038,7 @@ class BasePandasDataset(object):
             # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
             # purpose and does not affect the result, we shouldn't pass them to the query compiler.
             query_compiler=self._query_compiler.cummax(
-                axis=axis, skipna=skipna, **kwargs
+                fold_axis=axis, axis=axis, skipna=skipna, **kwargs
             )
         )
 
@@ -1056,7 +1050,7 @@ class BasePandasDataset(object):
             # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
             # purpose and does not affect the result, we shouldn't pass them to the query compiler.
             query_compiler=self._query_compiler.cummin(
-                axis=axis, skipna=skipna, **kwargs
+                fold_axis=axis, axis=axis, skipna=skipna, **kwargs
             )
         )
 
@@ -1067,7 +1061,7 @@ class BasePandasDataset(object):
             # FIXME: Judging by pandas docs `**kwargs` serves only compatibility
             # purpose and does not affect the result, we shouldn't pass them to the query compiler.
             query_compiler=self._query_compiler.cumprod(
-                axis=axis, skipna=skipna, **kwargs
+                fold_axis=axis, axis=axis, skipna=skipna, **kwargs
             )
         )
 
@@ -1078,7 +1072,7 @@ class BasePandasDataset(object):
             # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
             # purpose and does not affect the result, we shouldn't pass them to the query compiler.
             query_compiler=self._query_compiler.cumsum(
-                axis=axis, skipna=skipna, **kwargs
+                fold_axis=axis, axis=axis, skipna=skipna, **kwargs
             )
         )
 
@@ -1145,7 +1139,9 @@ class BasePandasDataset(object):
     def diff(self, periods=1, axis=0):
         axis = self._get_axis_number(axis)
         return self.__constructor__(
-            query_compiler=self._query_compiler.diff(periods=periods, axis=axis)
+            query_compiler=self._query_compiler.diff(
+                fold_axis=axis, axis=axis, periods=periods
+            )
         )
 
     def drop(
@@ -1396,7 +1392,7 @@ class BasePandasDataset(object):
         if isinstance(value, (list, tuple)):
             raise TypeError(
                 '"value" parameter must be a scalar or dict, but '
-                'you passed a "{0}"'.format(type(value).__name__)
+                + f'you passed a "{type(value).__name__}"'
             )
         if value is None and method is None:
             raise ValueError("must specify a fill method or value")
@@ -2016,7 +2012,7 @@ class BasePandasDataset(object):
             if non_mapper:
                 return self._set_axis_name(mapper, axis=axis, inplace=inplace)
             else:
-                raise ValueError("Use `.rename` to alter labels " "with a mapper.")
+                raise ValueError("Use `.rename` to alter labels with a mapper.")
         else:
             # Use new behavior.  Means that index and/or columns is specified
             result = self if inplace else self.copy(deep=copy)
@@ -2072,6 +2068,8 @@ class BasePandasDataset(object):
         origin: Union[str, TimestampConvertibleTypes] = "start_day",
         offset: Optional[TimedeltaConvertibleTypes] = None,
     ):
+        from .resample import Resampler
+
         return Resampler(
             self,
             rule=rule,
@@ -2134,6 +2132,8 @@ class BasePandasDataset(object):
         method="single",
     ):
         if win_type is not None:
+            from .window import Window
+
             return Window(
                 self,
                 window=window,
@@ -2145,6 +2145,7 @@ class BasePandasDataset(object):
                 closed=closed,
                 method=method,
             )
+        from .window import Rolling
 
         return Rolling(
             self,
@@ -2216,8 +2217,8 @@ class BasePandasDataset(object):
                 else:
                     raise ValueError(
                         "Strings can only be passed to "
-                        "weights when sampling from rows on "
-                        "a DataFrame"
+                        + "weights when sampling from rows on "
+                        + "a DataFrame"
                     )
             weights = pandas.Series(weights, dtype="float64")
 
@@ -2284,7 +2285,7 @@ class BasePandasDataset(object):
                 # random_state must be an int or a numpy RandomState object
                 raise ValueError(
                     "Please enter an `int` OR a "
-                    "np.random.RandomState for random_state"
+                    + "np.random.RandomState for random_state"
                 )
             # choose random numbers and then get corresponding labels from
             # chosen axis
@@ -2321,9 +2322,9 @@ class BasePandasDataset(object):
         if is_scalar(labels):
             warnings.warn(
                 'set_axis now takes "labels" as first argument, and '
-                '"axis" as named parameter. The old form, with "axis" as '
-                'first parameter and "labels" as second, is still supported '
-                "but will be deprecated in a future version of pandas.",
+                + '"axis" as named parameter. The old form, with "axis" as '
+                + 'first parameter and "labels" as second, is still supported '
+                + "but will be deprecated in a future version of pandas.",
                 FutureWarning,
                 stacklevel=2,
             )
@@ -3105,10 +3106,8 @@ class BasePandasDataset(object):
 
     def __nonzero__(self):
         raise ValueError(
-            "The truth value of a {0} is ambiguous. "
-            "Use a.empty, a.bool(), a.item(), a.any() or a.all().".format(
-                self.__class__.__name__
-            )
+            f"The truth value of a {self.__class__.__name__} is ambiguous. "
+            + "Use a.empty, a.bool(), a.item(), a.any() or a.all()."
         )
 
     __bool__ = __nonzero__
@@ -3158,652 +3157,3 @@ if IsExperimental.get():
     from modin.experimental.cloud.meta_magic import make_wrapped_class
 
     make_wrapped_class(BasePandasDataset, "make_base_dataset_wrapper")
-
-
-@_inherit_docstrings(pandas.core.resample.Resampler)
-class Resampler(object):
-    def __init__(
-        self,
-        dataframe,
-        rule,
-        axis=0,
-        closed=None,
-        label=None,
-        convention="start",
-        kind=None,
-        loffset=None,
-        base=0,
-        on=None,
-        level=None,
-        origin: Union[str, TimestampConvertibleTypes] = "start_day",
-        offset: Optional[TimedeltaConvertibleTypes] = None,
-    ):
-        self._dataframe = dataframe
-        self._query_compiler = dataframe._query_compiler
-        axis = self._dataframe._get_axis_number(axis)
-        self.resample_kwargs = {
-            "rule": rule,
-            "axis": axis,
-            "closed": closed,
-            "label": label,
-            "convention": convention,
-            "kind": kind,
-            "loffset": loffset,
-            "base": base,
-            "on": on,
-            "level": level,
-            "origin": origin,
-            "offset": offset,
-        }
-        self.__groups = self.__get_groups(**self.resample_kwargs)
-
-    def __getitem__(self, key):
-        """
-        Get ``Resampler`` based on `key` columns of original dataframe.
-
-        Parameters
-        ----------
-        key : str or list
-            String or list of selections.
-
-        Returns
-        -------
-        modin.pandas.BasePandasDataset
-            New ``Resampler`` based on `key` columns subset
-            of the original dataframe.
-        """
-
-        def _get_new_resampler(key):
-            subset = self._dataframe[key]
-            resampler = type(self)(subset, **self.resample_kwargs)
-            return resampler
-
-        from .series import Series
-
-        if isinstance(
-            key, (list, tuple, Series, pandas.Series, pandas.Index, np.ndarray)
-        ):
-            if len(self._dataframe.columns.intersection(key)) != len(set(key)):
-                missed_keys = list(set(key).difference(self._dataframe.columns))
-                raise KeyError(f"Columns not found: {str(sorted(missed_keys))[1:-1]}")
-            return _get_new_resampler(list(key))
-
-        if key not in self._dataframe:
-            raise KeyError(f"Column not found: {key}")
-
-        return _get_new_resampler(key)
-
-    def __get_groups(
-        self,
-        rule,
-        axis,
-        closed,
-        label,
-        convention,
-        kind,
-        loffset,
-        base,
-        on,
-        level,
-        origin,
-        offset,
-    ):
-        if axis == 0:
-            df = self._dataframe
-        else:
-            df = self._dataframe.T
-        groups = df.groupby(
-            pandas.Grouper(
-                key=on,
-                freq=rule,
-                closed=closed,
-                label=label,
-                convention=convention,
-                loffset=loffset,
-                base=base,
-                level=level,
-                origin=origin,
-                offset=offset,
-            )
-        )
-        return groups
-
-    @property
-    def groups(self):
-        return self._query_compiler.default_to_pandas(
-            lambda df: pandas.DataFrame.resample(df, **self.resample_kwargs).groups
-        )
-
-    @property
-    def indices(self):
-        return self._query_compiler.default_to_pandas(
-            lambda df: pandas.DataFrame.resample(df, **self.resample_kwargs).indices
-        )
-
-    def get_group(self, name, obj=None):
-        if self.resample_kwargs["axis"] == 0:
-            result = self.__groups.get_group(name)
-        else:
-            result = self.__groups.get_group(name).T
-        return result
-
-    def apply(self, func, *args, **kwargs):
-        from .dataframe import DataFrame
-
-        if isinstance(self._dataframe, DataFrame):
-            query_comp_op = self._query_compiler.resample_app_df
-        else:
-            query_comp_op = self._query_compiler.resample_app_ser
-
-        dataframe = DataFrame(
-            query_compiler=query_comp_op(
-                self.resample_kwargs,
-                func,
-                *args,
-                **kwargs,
-            )
-        )
-        if is_list_like(func) or isinstance(self._dataframe, DataFrame):
-            return dataframe
-        else:
-            if len(dataframe.index) == 1:
-                return dataframe.iloc[0]
-            else:
-                return dataframe.squeeze()
-
-    def aggregate(self, func, *args, **kwargs):
-        from .dataframe import DataFrame
-
-        if isinstance(self._dataframe, DataFrame):
-            query_comp_op = self._query_compiler.resample_agg_df
-        else:
-            query_comp_op = self._query_compiler.resample_agg_ser
-
-        dataframe = DataFrame(
-            query_compiler=query_comp_op(
-                self.resample_kwargs,
-                func,
-                *args,
-                **kwargs,
-            )
-        )
-        if is_list_like(func) or isinstance(self._dataframe, DataFrame):
-            return dataframe
-        else:
-            if len(dataframe.index) == 1:
-                return dataframe.iloc[0]
-            else:
-                return dataframe.squeeze()
-
-    def transform(self, arg, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_transform(
-                self.resample_kwargs, arg, *args, **kwargs
-            )
-        )
-
-    def pipe(self, func, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_pipe(
-                self.resample_kwargs, func, *args, **kwargs
-            )
-        )
-
-    def ffill(self, limit=None):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_ffill(
-                self.resample_kwargs, limit
-            )
-        )
-
-    def backfill(self, limit=None):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_backfill(
-                self.resample_kwargs, limit
-            )
-        )
-
-    def bfill(self, limit=None):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_bfill(
-                self.resample_kwargs, limit
-            )
-        )
-
-    def pad(self, limit=None):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_pad(
-                self.resample_kwargs, limit
-            )
-        )
-
-    def nearest(self, limit=None):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_nearest(
-                self.resample_kwargs, limit
-            )
-        )
-
-    def fillna(self, method, limit=None):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_fillna(
-                self.resample_kwargs, method, limit
-            )
-        )
-
-    def asfreq(self, fill_value=None):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_asfreq(
-                self.resample_kwargs, fill_value
-            )
-        )
-
-    def interpolate(
-        self,
-        method="linear",
-        axis=0,
-        limit=None,
-        inplace=False,
-        limit_direction: Optional[str] = None,
-        limit_area=None,
-        downcast=None,
-        **kwargs,
-    ):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_interpolate(
-                self.resample_kwargs,
-                method,
-                axis,
-                limit,
-                inplace,
-                limit_direction,
-                limit_area,
-                downcast,
-                **kwargs,
-            )
-        )
-
-    def count(self):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_count(self.resample_kwargs)
-        )
-
-    def nunique(self, _method="nunique", *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_nunique(
-                self.resample_kwargs, _method, *args, **kwargs
-            )
-        )
-
-    def first(self, _method="first", *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_first(
-                self.resample_kwargs,
-                _method,
-                *args,
-                **kwargs,
-            )
-        )
-
-    def last(self, _method="last", *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_last(
-                self.resample_kwargs,
-                _method,
-                *args,
-                **kwargs,
-            )
-        )
-
-    def max(self, _method="max", *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_max(
-                self.resample_kwargs,
-                _method,
-                *args,
-                **kwargs,
-            )
-        )
-
-    def mean(self, _method="mean", *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_mean(
-                self.resample_kwargs,
-                _method,
-                *args,
-                **kwargs,
-            )
-        )
-
-    def median(self, _method="median", *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_median(
-                self.resample_kwargs,
-                _method,
-                *args,
-                **kwargs,
-            )
-        )
-
-    def min(self, _method="min", *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_min(
-                self.resample_kwargs,
-                _method,
-                *args,
-                **kwargs,
-            )
-        )
-
-    def ohlc(self, _method="ohlc", *args, **kwargs):
-        from .dataframe import DataFrame
-
-        if isinstance(self._dataframe, DataFrame):
-            return DataFrame(
-                query_compiler=self._query_compiler.resample_ohlc_df(
-                    self.resample_kwargs,
-                    _method,
-                    *args,
-                    **kwargs,
-                )
-            )
-        else:
-            return DataFrame(
-                query_compiler=self._query_compiler.resample_ohlc_ser(
-                    self.resample_kwargs,
-                    _method,
-                    *args,
-                    **kwargs,
-                )
-            )
-
-    def prod(self, _method="prod", min_count=0, *args, **kwargs):
-        if self.resample_kwargs["axis"] == 0:
-            result = self.__groups.prod(min_count=min_count, *args, **kwargs)
-        else:
-            result = self.__groups.prod(min_count=min_count, *args, **kwargs).T
-        return result
-
-    def size(self):
-        from .series import Series
-
-        return Series(
-            query_compiler=self._query_compiler.resample_size(self.resample_kwargs)
-        )
-
-    def sem(self, _method="sem", *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_sem(
-                self.resample_kwargs,
-                _method,
-                *args,
-                **kwargs,
-            )
-        )
-
-    def std(self, ddof=1, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_std(
-                self.resample_kwargs, *args, ddof=ddof, **kwargs
-            )
-        )
-
-    def sum(self, _method="sum", min_count=0, *args, **kwargs):
-        if self.resample_kwargs["axis"] == 0:
-            result = self.__groups.sum(min_count=min_count, *args, **kwargs)
-        else:
-            result = self.__groups.sum(min_count=min_count, *args, **kwargs).T
-        return result
-
-    def var(self, ddof=1, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_var(
-                self.resample_kwargs, *args, ddof=ddof, **kwargs
-            )
-        )
-
-    def quantile(self, q=0.5, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_quantile(
-                self.resample_kwargs, q, **kwargs
-            )
-        )
-
-
-@_inherit_docstrings(pandas.core.window.rolling.Window)
-class Window(object):
-    def __init__(
-        self,
-        dataframe,
-        window,
-        min_periods=None,
-        center=False,
-        win_type=None,
-        on=None,
-        axis=0,
-        closed=None,
-        method="single",
-    ):
-        self._dataframe = dataframe
-        self._query_compiler = dataframe._query_compiler
-        self.window_args = [
-            window,
-            min_periods,
-            center,
-            win_type,
-            on,
-            axis,
-            closed,
-            method,
-        ]
-
-    def mean(self, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.window_mean(
-                self.window_args, *args, **kwargs
-            )
-        )
-
-    def sum(self, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.window_sum(
-                self.window_args, *args, **kwargs
-            )
-        )
-
-    def var(self, ddof=1, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.window_var(
-                self.window_args, ddof, *args, **kwargs
-            )
-        )
-
-    def std(self, ddof=1, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.window_std(
-                self.window_args, ddof, *args, **kwargs
-            )
-        )
-
-
-@_inherit_docstrings(
-    pandas.core.window.rolling.Rolling,
-    excluded=[pandas.core.window.rolling.Rolling.__init__],
-)
-class Rolling(object):
-    def __init__(
-        self,
-        dataframe,
-        window,
-        min_periods=None,
-        center=False,
-        win_type=None,
-        on=None,
-        axis=0,
-        closed=None,
-        method="single",
-    ):
-        self._dataframe = dataframe
-        self._query_compiler = dataframe._query_compiler
-        self.rolling_args = [
-            window,
-            min_periods,
-            center,
-            win_type,
-            on,
-            axis,
-            closed,
-            method,
-        ]
-
-    def count(self):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_count(self.rolling_args)
-        )
-
-    def sum(self, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_sum(
-                self.rolling_args, *args, **kwargs
-            )
-        )
-
-    def mean(self, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_mean(
-                self.rolling_args, *args, **kwargs
-            )
-        )
-
-    def median(self, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_median(
-                self.rolling_args, **kwargs
-            )
-        )
-
-    def var(self, ddof=1, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_var(
-                self.rolling_args, ddof, *args, **kwargs
-            )
-        )
-
-    def std(self, ddof=1, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_std(
-                self.rolling_args, ddof, *args, **kwargs
-            )
-        )
-
-    def min(self, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_min(
-                self.rolling_args, *args, **kwargs
-            )
-        )
-
-    def max(self, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_max(
-                self.rolling_args, *args, **kwargs
-            )
-        )
-
-    def corr(self, other=None, pairwise=None, *args, **kwargs):
-        from .dataframe import DataFrame
-        from .series import Series
-
-        if isinstance(other, DataFrame):
-            other = other._query_compiler.to_pandas()
-        elif isinstance(other, Series):
-            other = other._query_compiler.to_pandas().squeeze()
-
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_corr(
-                self.rolling_args, other, pairwise, *args, **kwargs
-            )
-        )
-
-    def cov(self, other=None, pairwise=None, ddof: Optional[int] = 1, **kwargs):
-        from .dataframe import DataFrame
-        from .series import Series
-
-        if isinstance(other, DataFrame):
-            other = other._query_compiler.to_pandas()
-        elif isinstance(other, Series):
-            other = other._query_compiler.to_pandas().squeeze()
-
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_cov(
-                self.rolling_args, other, pairwise, ddof, **kwargs
-            )
-        )
-
-    def skew(self, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_skew(
-                self.rolling_args, **kwargs
-            )
-        )
-
-    def kurt(self, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_kurt(
-                self.rolling_args, **kwargs
-            )
-        )
-
-    def apply(
-        self,
-        func,
-        raw=False,
-        engine="cython",
-        engine_kwargs=None,
-        args=None,
-        kwargs=None,
-    ):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_apply(
-                self.rolling_args,
-                func,
-                raw,
-                engine,
-                engine_kwargs,
-                args,
-                kwargs,
-            )
-        )
-
-    def aggregate(
-        self,
-        func,
-        *args,
-        **kwargs,
-    ):
-        from .dataframe import DataFrame
-
-        dataframe = DataFrame(
-            query_compiler=self._query_compiler.rolling_aggregate(
-                self.rolling_args,
-                func,
-                *args,
-                **kwargs,
-            )
-        )
-        if isinstance(self._dataframe, DataFrame):
-            return dataframe
-        elif is_list_like(func):
-            dataframe.columns = dataframe.columns.droplevel()
-            return dataframe
-        else:
-            return dataframe.squeeze()
-
-    agg = aggregate
-
-    def quantile(self, quantile, interpolation="linear", **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_quantile(
-                self.rolling_args, quantile, interpolation, **kwargs
-            )
-        )

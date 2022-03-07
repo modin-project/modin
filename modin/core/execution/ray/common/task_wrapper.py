@@ -23,7 +23,7 @@ import ray
 
 
 @ray.remote
-def deploy_ray_func(func, args):  # pragma: no cover
+def _deploy_ray_func(func, args):  # pragma: no cover
     """
     Wrap `func` to ease calling it remotely.
 
@@ -64,7 +64,7 @@ class RayTask:
         ray.ObjectRef or list
             Ray identifier of the result being put to Plasma store.
         """
-        return deploy_ray_func.options(num_returns=num_returns).remote(func, kwargs)
+        return _deploy_ray_func.options(num_returns=num_returns).remote(func, kwargs)
 
     @classmethod
     def materialize(cls, obj_id):

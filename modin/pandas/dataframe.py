@@ -107,13 +107,16 @@ class DataFrame(BasePandasDataset):
         copy=None,
         query_compiler=None,
     ):
+        # Siblings are other dataframes that share the same query compiler. We
+        # use this list to update inplace when there is a shallow copy.
+        self._siblings = []
         Engine.subscribe(_update_engine)
         if isinstance(data, (DataFrame, Series)):
             self._query_compiler = data._query_compiler.copy()
             if index is not None and any(i not in data.index for i in index):
                 raise NotImplementedError(
                     "Passing non-existant columns or index values to constructor not"
-                    " yet implemented."
+                    + " yet implemented."
                 )
             if isinstance(data, Series):
                 # We set the column name if it is not in the provided Series
@@ -133,7 +136,7 @@ class DataFrame(BasePandasDataset):
                 if columns is not None and any(i not in data.columns for i in columns):
                     raise NotImplementedError(
                         "Passing non-existant columns or index values to constructor not"
-                        " yet implemented."
+                        + " yet implemented."
                     )
                 if index is None:
                     index = slice(None)
@@ -402,7 +405,7 @@ class DataFrame(BasePandasDataset):
             warnings.warn(
                 (
                     "The `squeeze` parameter is deprecated and "
-                    "will be removed in a future version."
+                    + "will be removed in a future version."
                 ),
                 FutureWarning,
                 stacklevel=2,
@@ -544,7 +547,7 @@ class DataFrame(BasePandasDataset):
         if sort is False:
             warnings.warn(
                 "Due to https://github.com/pandas-dev/pandas/issues/35092, "
-                "Pandas ignores sort=False; Modin correctly does not sort."
+                + "Pandas ignores sort=False; Modin correctly does not sort."
             )
         if isinstance(other, (Series, dict)):
             if isinstance(other, dict):
@@ -552,7 +555,7 @@ class DataFrame(BasePandasDataset):
             if other.name is None and not ignore_index:
                 raise TypeError(
                     "Can only append a Series if ignore_index=True"
-                    " or if the Series has a name"
+                    + " or if the Series has a name"
                 )
             if other.name is not None:
                 # other must have the same index name as self, otherwise
@@ -1134,8 +1137,8 @@ class DataFrame(BasePandasDataset):
                 except (TypeError, ValueError, IndexError):
                     raise ValueError(
                         "Cannot insert into a DataFrame with no defined index "
-                        "and a value that cannot be converted to a "
-                        "Series"
+                        + "and a value that cannot be converted to a "
+                        + "Series"
                     )
             new_index = value.index.copy()
             new_columns = self.columns.insert(loc, column)
@@ -2448,16 +2451,25 @@ class DataFrame(BasePandasDataset):
         value : Any
             Value to set.
         """
-        # We have to check for this first because we have to be able to set
-        # _query_compiler before we check if the key is in self
-        if key in ["_query_compiler"] or key in self.__dict__:
+        # While we let users assign to a column labeled "x" with "df.x" , there
+        # are some attributes that we should assume are NOT column names and
+        # therefore should follow the default Python object assignment
+        # behavior. These are:
+        # - anything in self.__dict__. This includes any attributes that the
+        #   user has added to the dataframe with,  e.g., `df.c = 3`, and
+        #   any attribute that Modin has added to the frame, e.g.
+        #   `_query_compiler` and `_siblings`
+        # - `_query_compiler`, which Modin initializes before it appears in
+        #   __dict__
+        # - `_siblings`, which Modin initializes before it appears in __dict__
+        if key in ["_query_compiler", "_siblings"] or key in self.__dict__:
             pass
         elif key in self and key not in dir(self):
             self.__setitem__(key, value)
         elif isinstance(value, pandas.Series):
             warnings.warn(
                 "Modin doesn't allow columns to be created via a new attribute name - see "
-                "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
+                + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
                 UserWarning,
             )
         object.__setattr__(self, key, value)

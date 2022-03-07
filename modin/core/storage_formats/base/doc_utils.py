@@ -286,7 +286,7 @@ doc_cum_agg = partial(
 
     Parameters
     ----------
-    axis : {{0, 1}}
+    fold_axis : {{0, 1}}
     skipna : bool
     **kwargs : dict
         Serves the compatibility purpose. Does not affect the result.
@@ -321,7 +321,7 @@ doc_resample = partial(
 
         {build_rules}
     """,
-    refer_to_module_name="DataFrame.Resampler",
+    refer_to_module_name="resample.Resampler",
 )
 
 
@@ -334,7 +334,7 @@ def doc_resample_reduce(result, refer_to, params=None, compatibility_params=True
     result : str
         The result of the method.
     refer_to : str
-        Method name in ``modin.pandas.base.Resampler`` module to refer to for
+        Method name in ``modin.pandas.resample.Resampler`` module to refer to for
         more information about parameters and output format.
     params : str, optional
         Method parameters in the NumPy docstyle format to substitute
@@ -393,7 +393,7 @@ def doc_resample_agg(action, output, refer_to, params=None):
     output : str
         What is the content of column names in the result.
     refer_to : str
-        Method name in ``modin.pandas.base.Resampler`` module to refer to for
+        Method name in ``modin.pandas.resample.Resampler`` module to refer to for
         more information about parameters and output format.
     params : str, optional
         Method parameters in the NumPy docstyle format to substitute
@@ -442,7 +442,7 @@ def doc_resample_fillna(method, refer_to, params=None, overwrite_template_params
     method : str
         Fillna method name.
     refer_to : str
-        Method name in ``modin.pandas.base.Resampler`` module to refer to for
+        Method name in ``modin.pandas.resample.Resampler`` module to refer to for
         more information about parameters and output format.
     params : str, optional
         Method parameters in the NumPy docstyle format to substitute
@@ -550,7 +550,7 @@ def doc_window_method(
     result : str
         The result of the method.
     refer_to : str
-        Method name in ``modin.pandas.base.Window`` module to refer to
+        Method name in ``modin.pandas.window.Window`` module to refer to
         for more information about parameters and output format.
     action : str, optional
         What method does with the created window.
@@ -567,10 +567,11 @@ def doc_window_method(
     callable
     """
     template = """
-        Create {win_type} and {action} for each window.
+        Create {win_type} and {action} for each window over the given axis.
 
         Parameters
         ----------
+        fold_axis : {{0, 1}}
         {window_args_name} : list
             Rolling windows arguments with the same signature as ``modin.pandas.DataFrame.rolling``.
         {extra_params}

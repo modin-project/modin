@@ -13,12 +13,18 @@ Key Features and Updates
   * FIX-#4158: Do not print OmniSci logs to stdout by default (#4159)
   * FIX-#4177: Support read_feather from pathlike objects (#4177)
   * FIX-#4234: Upgrade pandas to 1.4.1 (#4235)
+  * FIX-#3368: support unsigned integers in OmniSci backend (#4256)
   * FIX-#4057: Allow reading an empty parquet file (#4075)  
   * FIX-#3884: Fix read_excel() dropping empty rows (#4161)
+  * FIX-#4257: Fix Categorical() for scalar categories (#4258) 
+  * FIX-#4208: Fix lazy metadata update for `PandasDataFrame.from_labels` (#4209)
+  * FIX-#3981, FIX-#3801, FIX-#4149: Stop broadcasting scalars to set items (#4160)
+  * FIX-#4185: Fix rolling across column partitions (#4262)
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
+  * FIX-#4183: Stop shallow copies from creating global shared state. (#4184)
 * Benchmarking enhancements
-  *
+  * FIX-#4221: add `wait` method for `PandasOnRayDataframeColumnPartition` class (#4231)
 * Refactor Codebase
   * REFACTOR-#3990: remove code duplication in `PandasDataframePartition` hierarchy (#3991)
   * REFACTOR-#4229: remove unused `dask_client` global variable in `modin\pandas\__init__.py` (#4230)
@@ -26,6 +32,9 @@ Key Features and Updates
   * REFACTOR-#3994: remove code duplication for `get_indices` function (#3995)
   * REFACTOR-#4213: Refactor `modin/examples/tutorial/` directory (#4214)
   * REFACTOR-#4206: add assert check into `__init__` method of `PandasOnDaskDataframePartition` class (#4207)
+  * REFACTOR-#3900: add flake8-no-implicit-concat plugin and refactor flake8 error codes (#3901)
+  * REFACTOR-#4093: Refactor base to be smaller (#4220)
+  * REFACTOR-#4047: Rename `cluster` directory to `cloud` in examples (#4212)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
@@ -46,6 +55,12 @@ Key Features and Updates
   * DOCS-#4172: Refresh Intel Distribution of Modin paragraph (#4175)
   * DOCS-#4173: Mention strict channel priority in conda install section (#4178)
   * DOCS-#4176: Update OmniSci usage section (#4192)
+  * DOCS-#4027: Add GIF images and chart to Modin README demonstrating speedups (#4232)
+  * DOCS-#3954: Add Dask example notebooks (#4139)
+  * DOCS-#3953: Add docs and notebook examples on running Modin with OmniSci (#4001)
+  * DOCS-#4280: Change links in jupyter notebooks (#4281)
+  * DOCS-#4290: Add changes for OmniSci notebooks (#4291)
+  * DOCS-#4241: Update warnings and docs regarding defaulting to pandas (#4242)
 * Dependencies
   * FIX-#4113, FIX-#4116, FIX-#4115: Apply new `black` formatting, fix pydocstyle check and readthedocs build (#4114)
   * TEST-#3227: Use codecov github action instead of bash form in GA workflows (#3226)
@@ -65,3 +80,5 @@ Contributors
 @Garra1980
 @mvashishtha
 @naren-ponder
+@jeffreykennethli
+@Rubtsowa
