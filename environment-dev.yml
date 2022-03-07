@@ -36,6 +36,7 @@ dependencies:
   - cloudpickle
   - boto3
   - scikit-learn
+  - pymssql
   - pip:
       - xgboost>=1.3
       - modin-spreadsheet>=0.1.1

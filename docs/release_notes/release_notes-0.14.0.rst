@@ -36,7 +36,7 @@ Key Features and Updates
   * REFACTOR-#4093: Refactor base to be smaller (#4220)
   * REFACTOR-#4047: Rename `cluster` directory to `cloud` in examples (#4212)
 * Pandas API implementations and improvements
-  *
+  * FEAT-#979: Enable reading from SQL server (#4279)
 * OmniSci enhancements
   *
 * XGBoost enhancements
