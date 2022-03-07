@@ -19,8 +19,17 @@ import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
 from pathlib import Path
 from collections import OrderedDict
-from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
-from modin.config import TestDatasetSize, Engine, StorageFormat, IsExperimental
+from modin.db_conn import (
+    ModinDatabaseConnection,
+    UnsupportedDatabaseException,
+)
+from modin.config import (
+    TestDatasetSize,
+    Engine,
+    StorageFormat,
+    IsExperimental,
+    TestReadFromSqlServer,
+)
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 from modin.test.test_utils import warns_that_defaulting_to_pandas
@@ -1834,6 +1843,32 @@ class TestSql:
         pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
         df_equals(modin_df, pandas_df)
 
+    @pytest.mark.skipif(
+        not TestReadFromSqlServer.get(),
+        reason="Skip the test when the test SQL server is not set up.",
+    )
+    def test_read_sql_from_sql_server(self):
+        table_name = "test_1000x256"
+        query = f"SELECT * FROM {table_name}"
+        sqlalchemy_connection_string = (
+            "mssql+pymssql://sa:Strong.Pwd-123@0.0.0.0:1433/master"
+        )
+        pandas_df_to_read = pandas.DataFrame(
+            np.arange(
+                1000 * 256,
+            ).reshape(1000, 256)
+        ).add_prefix("col")
+        pandas_df_to_read.to_sql(
+            table_name, sqlalchemy_connection_string, if_exists="replace"
+        )
+        modin_df = pd.read_sql(
+            query,
+            ModinDatabaseConnection("sqlalchemy", sqlalchemy_connection_string),
+        )
+        pandas_df = pandas.read_sql(query, sqlalchemy_connection_string)
+        df_equals(modin_df, pandas_df)
+
+    def test_invalid_modin_database_connections(self):
         with pytest.raises(UnsupportedDatabaseException):
             ModinDatabaseConnection("unsupported_database")
 

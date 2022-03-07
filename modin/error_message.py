@@ -15,8 +15,8 @@ import warnings
 
 
 class ErrorMessage(object):
-    # Only print the request implementation one time. This only applies to Warnings.
-    printed_request_implementation = False
+    # Only print full ``default to pandas`` warning one time.
+    printed_default_to_pandas = False
     printed_warnings = set()
 
     @classmethod
@@ -45,13 +45,13 @@ class ErrorMessage(object):
         else:
             message = "Defaulting to pandas implementation."
 
-        if not cls.printed_request_implementation:
+        if not cls.printed_default_to_pandas:
             message = (
                 f"{message}\n"
-                + "To request implementation, send an email to "
-                + "feature_requests@modin.org."
+                + "Please refer to "
+                + "https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html for explanation."
             )
-            cls.printed_request_implementation = True
+            cls.printed_default_to_pandas = True
         warnings.warn(message)
 
     @classmethod
