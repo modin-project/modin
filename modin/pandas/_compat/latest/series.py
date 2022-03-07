@@ -1,0 +1,143 @@
+import numpy as np
+import pandas
+from pandas.core.dtypes.common import is_list_like
+from pandas.util._validators import validate_bool_kwarg
+from pandas._libs.lib import no_default
+import sys
+
+from ..abc.series import BaseCompatibilitySeries
+
+
+class LatestCompatibleSeries(BaseCompatibilitySeries):
+    def apply(self, func, convert_dtype=True, args=(), **kwargs):
+        return self._apply(func, convert_dtype=convert_dtype, args=args, **kwargs)
+
+    def between(self, left, right, inclusive="both"):  # noqa: PR01, RT01, D200
+        """
+        Return boolean Series equivalent to left <= series <= right.
+        """
+        return self._between(left, right, inclusive=inclusive)
+
+    def info(
+        self,
+        verbose: "bool | None" = None,
+        buf: "IO[str] | None" = None,
+        max_cols: "int | None" = None,
+        memory_usage: "bool | str | None" = None,
+        show_counts: "bool" = True,
+    ):
+        return self._default_to_pandas(
+            pandas.Series.info,
+            verbose=verbose,
+            buf=buf,
+            max_cols=max_cols,
+            memory_usage=memory_usage,
+            show_counts=show_counts,
+        )
+
+    def kurt(
+        self,
+        axis: "Axis | None | NoDefault" = no_default,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        **kwargs,
+    ):  # noqa: PR01, RT01, D200
+        return self._kurt(
+            axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
+        )
+
+    def mask(
+        self,
+        cond,
+        other=np.nan,
+        inplace=False,
+        axis=None,
+        level=None,
+        errors=no_default,
+        try_cast=no_default,
+    ):
+        return self._default_to_pandas(
+            pandas.Series.mask,
+            cond,
+            other=other,
+            inplace=inplace,
+            axis=axis,
+            level=level,
+            errors=errors,
+            try_cast=try_cast,
+        )
+
+    def prod(
+        self,
+        axis=None,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        min_count=0,
+        **kwargs,
+    ):  # noqa: PR01, RT01, D200
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
+        return self._prod(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            numeric_only=numeric_only,
+            min_count=min_count,
+            **kwargs,
+        )
+
+    def reindex(self, *args, **kwargs):  # noqa: PR01, RT01, D200
+        return self._reindex(*args, **kwargs)
+
+    def replace(
+        self,
+        to_replace=None,
+        value=no_default,
+        inplace=False,
+        limit=None,
+        regex=False,
+        method: "str | NoDefault" = no_default,
+    ):  # noqa: PR01, RT01, D200
+        return self._replace(
+            to_replace=to_replace,
+            value=value,
+            inplace=inplace,
+            limit=limit,
+            regex=regex,
+            method=method,
+        )
+
+    def reset_index(
+        self, level=None, drop=False, name=no_default, inplace=False
+    ):  # noqa: PR01, RT01, D200
+        return self._reset_index(level=level, drop=drop, name=name, inplace=inplace)
+
+    def sum(
+            self,
+            axis=None,
+            skipna=True,
+            level=None,
+            numeric_only=None,
+            min_count=0,
+            **kwargs,
+    ):  # noqa: PR01, RT01, D200
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
+        return self._sum(axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, min_count=min_count, **kwargs)
+
+    def to_frame(
+            self, name: "Hashable" = no_default
+    ) -> "DataFrame":  # noqa: PR01, RT01, D200
+        return self._to_frame(name=name)
+
+    def where(
+            self,
+            cond,
+            other=no_default,
+            inplace=False,
+            axis=None,
+            level=None,
+            errors=no_default,
+            try_cast=no_default,
+    ):  # noqa: PR01, RT01, D200
+        return self._where(cond, other=other, inplace=inplace, axis=axis, level=level, errors=errors, try_cast=try_cast)

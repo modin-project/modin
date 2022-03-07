@@ -56,7 +56,7 @@ CompatClass = CompatibilityFactory.generate_compatibility_class("DataFrame")
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame.__init__], apilink="pandas.DataFrame"
 )
-class DataFrame(BasePandasDataset, CompatClass):
+class DataFrame(CompatClass, BasePandasDataset):
     """
     Modin distributed representation of ``pandas.DataFrame``.
 

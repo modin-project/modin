@@ -503,7 +503,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
         protocol: int = pkl.HIGHEST_PROTOCOL,
         storage_options: StorageOptions = None,
     ):  # pragma: no cover
-        from modin.pandas.io import to_pickle
+        from modin.pandas import to_pickle
 
         to_pickle(
             self,

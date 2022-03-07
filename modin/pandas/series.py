@@ -23,8 +23,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas._libs.lib import no_default
 from pandas._typing import IndexKeyFunc
-
-import sys
+from pandas.util._decorators import doc
 from typing import Union, Optional
 import warnings
 
@@ -35,12 +34,15 @@ from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar, _doc_binary_op
 from .accessor import CachedAccessor, SparseAccessor
 from . import _update_engine
+from ._compat.factory import CompatibilityFactory
+
+CompatClass = CompatibilityFactory.generate_compatibility_class("Series")
 
 
 @_inherit_docstrings(
     pandas.Series, excluded=[pandas.Series.__init__], apilink="pandas.Series"
 )
-class Series(BasePandasDataset):
+class Series(CompatClass, BasePandasDataset):
     """
     Modin distributed representation of `pandas.Series`.
 
@@ -602,24 +604,7 @@ class Series(BasePandasDataset):
         else:
             return Series(query_compiler=query_compiler)
 
-    def aggregate(self, func=None, axis=0, *args, **kwargs):  # noqa: PR01, RT01, D200
-        """
-        Aggregate using one or more operations over the specified axis.
-        """
-
-        def error_raiser(msg, exception):
-            """Convert passed exception to the same type as pandas do and raise it."""
-            # HACK: to concord with pandas error types by replacing all of the
-            # TypeErrors to the AssertionErrors
-            exception = exception if exception is not TypeError else AssertionError
-            raise exception(msg)
-
-        self._validate_function(func, on_invalid=error_raiser)
-        return super(Series, self).aggregate(func, axis, *args, **kwargs)
-
-    agg = aggregate
-
-    def apply(
+    def _apply(
         self, func, convert_dtype=True, args=(), **kwargs
     ):  # noqa: PR01, RT01, D200
         """
@@ -656,7 +641,9 @@ class Series(BasePandasDataset):
             or is_list_like(func)
             or return_type not in ["DataFrame", "Series"]
         ):
-            result = super(Series, self).apply(func, *args, **kwargs)
+            from ...base import BasePandasDataset
+
+            result = BasePandasDataset.apply(self, func, *args, **kwargs)
         else:
             # handle ufuncs and lambdas
             if kwargs or args and not isinstance(func, np.ufunc):
@@ -684,6 +671,19 @@ class Series(BasePandasDataset):
             if result.name == self.index[0]:
                 result.name = None
             return result
+
+    def aggregate(self, func=None, axis=0, *args, **kwargs):
+        def error_raiser(msg, exception):
+            """Convert passed exception to the same type as pandas do and raise it."""
+            # HACK: to concord with pandas error types by replacing all of the
+            # TypeErrors to the AssertionErrors
+            exception = exception if exception is not TypeError else AssertionError
+            raise exception(msg)
+
+        self._validate_function(func, on_invalid=error_raiser)
+        return super(Series, self).aggregate(func, axis, *args, **kwargs)
+
+    agg = aggregate
 
     def argmax(self, axis=None, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
@@ -717,7 +717,7 @@ class Series(BasePandasDataset):
         """
         return self.corr(self.shift(lag))
 
-    def between(self, left, right, inclusive="both"):  # noqa: PR01, RT01, D200
+    def _between(self, left, right, inclusive=True):  # noqa: PR01, RT01, D200
         """
         Return boolean Series equivalent to left <= series <= right.
         """
@@ -1125,26 +1125,6 @@ class Series(BasePandasDataset):
             skipna = True
         return super(Series, self).idxmin(axis=axis, skipna=skipna, *args, **kwargs)
 
-    def info(
-        self,
-        verbose: "bool | None" = None,
-        buf: "IO[str] | None" = None,
-        max_cols: "int | None" = None,
-        memory_usage: "bool | str | None" = None,
-        show_counts: "bool" = True,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Print a concise summary of a Series.
-        """
-        return self._default_to_pandas(
-            pandas.Series.info,
-            verbose=verbose,
-            buf=buf,
-            max_cols=max_cols,
-            memory_usage=memory_usage,
-            show_counts=show_counts,
-        )
-
     def interpolate(
         self,
         method="linear",
@@ -1201,10 +1181,10 @@ class Series(BasePandasDataset):
         """
         return self.index
 
-    def kurt(
+    def _kurt(
         self,
-        axis: "Axis | None | NoDefault" = no_default,
-        skipna=True,
+        axis=None,
+        skipna=None,
         level=None,
         numeric_only=None,
         **kwargs,
@@ -1217,7 +1197,7 @@ class Series(BasePandasDataset):
             raise NotImplementedError("Series.kurt does not implement numeric_only.")
         return super(Series, self).kurt(axis, skipna, level, numeric_only, **kwargs)
 
-    kurtosis = kurt
+    kurtosis = CompatClass.kurt
 
     def le(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
         """
@@ -1251,15 +1231,15 @@ class Series(BasePandasDataset):
             )
         )
 
-    def mask(
+    def _mask(
         self,
         cond,
         other=np.nan,
         inplace=False,
         axis=None,
         level=None,
-        errors=no_default,
-        try_cast=no_default,
+        errors="raise",
+        try_cast=False,
     ):
         return self._default_to_pandas(
             pandas.Series.mask,
@@ -1416,7 +1396,7 @@ class Series(BasePandasDataset):
             new_other, level=level, fill_value=None, axis=axis
         )
 
-    def prod(
+    def _prod(
         self,
         axis=None,
         skipna=True,
@@ -1424,12 +1404,11 @@ class Series(BasePandasDataset):
         numeric_only=None,
         min_count=0,
         **kwargs,
-    ):  # noqa: PR01, RT01, D200
+    ):
         """
         Return the product of the values over the requested `axis`.
         """
         axis = self._get_axis_number(axis)
-        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)
@@ -1472,7 +1451,7 @@ class Series(BasePandasDataset):
             )
         )
 
-    product = prod
+    product = CompatClass.prod
     radd = add
 
     def ravel(self, order="C"):  # noqa: PR01, RT01, D200
@@ -1485,7 +1464,7 @@ class Series(BasePandasDataset):
 
         return data
 
-    def reindex(self, *args, **kwargs):  # noqa: PR01, RT01, D200
+    def _reindex(self, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
         Conform Series to new index with optional filling logic.
         """
@@ -1560,8 +1539,8 @@ class Series(BasePandasDataset):
 
         return self.__constructor__(query_compiler=self._query_compiler.repeat(repeats))
 
-    def reset_index(
-        self, level=None, drop=False, name=no_default, inplace=False
+    def _reset_index(
+        self, level=None, drop=False, name=None, inplace=False
     ):  # noqa: PR01, RT01, D200
         """
         Generate a new Series with the index reset.
@@ -1671,14 +1650,14 @@ class Series(BasePandasDataset):
         """
         return super(Series, self).reorder_levels(order)
 
-    def replace(
+    def _replace(
         self,
         to_replace=None,
-        value=no_default,
+        value=None,
         inplace=False,
         limit=None,
         regex=False,
-        method: "str | NoDefault" = no_default,
+        method="pad",
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -1788,7 +1767,7 @@ class Series(BasePandasDataset):
 
     subtract = sub
 
-    def sum(
+    def _sum(
         self,
         axis=None,
         skipna=True,
@@ -1801,7 +1780,6 @@ class Series(BasePandasDataset):
         Return the sum of the values.
         """
         axis = self._get_axis_number(axis)
-        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if numeric_only is True:
             raise NotImplementedError("Series.sum does not implement numeric_only")
         if level is not None:
@@ -1863,7 +1841,7 @@ class Series(BasePandasDataset):
         """
         return self._default_to_pandas("to_dict", into=into)
 
-    def to_frame(
+    def _to_frame(
         self, name: "Hashable" = no_default
     ) -> "DataFrame":  # noqa: PR01, RT01, D200
         """
@@ -2034,7 +2012,7 @@ class Series(BasePandasDataset):
             query_compiler=self._query_compiler.series_view(dtype=dtype)
         )
 
-    def where(
+    def _where(
         self,
         cond,
         other=no_default,

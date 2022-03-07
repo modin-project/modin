@@ -19,6 +19,10 @@ class CompatibilityFactory(object):
                 from .py36 import Python36CompatibleDataFrame
 
                 return Python36CompatibleDataFrame
+            elif classname == "Series":
+                from .py36 import Python36CompatibilitySeries
+
+                return Python36CompatibilitySeries
             else:
                 raise ValueError
         elif (
@@ -34,6 +38,10 @@ class CompatibilityFactory(object):
                 from .latest import LatestCompatibleDataFrame
 
                 return LatestCompatibleDataFrame
+            elif classname == "Series":
+                from .latest import LatestCompatibleSeries
+
+                return LatestCompatibleSeries
             else:
                 raise ValueError
         else:
