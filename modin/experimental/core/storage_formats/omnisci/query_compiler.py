@@ -204,7 +204,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     # Dataframe exchange protocol
 
     def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True) -> dict:
-        return self._modin_frame.__dataframe__()["dataframe"]
+        return self._modin_frame.__dataframe__(
+            nan_as_null=nan_as_null, allow_copy=allow_copy
+        )["dataframe"]
 
     @classmethod
     def from_dataframe(cls, df, data_cls):

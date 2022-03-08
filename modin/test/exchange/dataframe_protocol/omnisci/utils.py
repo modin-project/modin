@@ -79,7 +79,7 @@ def export_frame(md_df, from_omnisci=False, **kwargs):
     return exported_df
 
 
-def get_all_types(has_nulls=False, exclude_dtypes=None):
+def get_all_types(has_nulls=False, exclude_dtypes=None, include_dtypes=None):
     bool_data = {}
     int_data = {}
     uint_data = {}
@@ -161,6 +161,14 @@ def get_all_types(has_nulls=False, exclude_dtypes=None):
         **string_data,
         **category_data,
     }
+
+    if include_dtypes is not None:
+        filtered_keys = (
+            key
+            for key in data.keys()
+            if any(key.startswith(dtype) for dtype in include_dtypes)
+        )
+        data = {key: data[key] for key in filtered_keys}
 
     if exclude_dtypes is not None:
         filtered_keys = (

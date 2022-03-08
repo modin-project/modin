@@ -160,7 +160,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
                 self.__is_zero_copy_possible = False
             else:
                 # Check whether the plan for PyArrow can be executed zero-copy
-                self.__is_zero_copy_possible = self._is_zero_copy_op(self._df.op)
+                self.__is_zero_copy_possible = self._is_zero_copy_op(self._df._op)
         return self.__is_zero_copy_possible
 
     @classmethod

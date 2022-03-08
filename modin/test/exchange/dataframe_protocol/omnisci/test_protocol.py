@@ -21,6 +21,10 @@ import pandas
 from modin.pandas.test.utils import df_equals
 from modin.pandas.utils import from_arrow, from_dataframe as md_from_dataframe
 
+from modin.core.dataframe.base.exchange.dataframe_protocol.from_dataframe import (
+    convert_primitive_column_to_ndarray,
+)
+
 from .utils import get_all_types, split_df_into_chunks, export_frame
 
 
@@ -139,6 +143,13 @@ def test_export_unaligned_at_chunks(data_has_nulls):
 
 
 def test_export_when_delayed_computations():
+    """
+    Test that export works properly when OmnisciOnNative has delayed computations.
+
+    If there are delayed functions and export is required, it has to trigger the execution
+    first prior materializing protocol's buffers, so the buffers contain actual result
+    of the computations.
+    """
     # OmniSci can't import 'uint64' as well as booleans, so exclude them
     # issue for bool: https://github.com/modin-project/modin/issues/4299
     data = get_all_types(has_nulls=True, exclude_dtypes=["uint64", "bool"])
@@ -157,9 +168,39 @@ def test_export_when_delayed_computations():
 
 @pytest.mark.parametrize("data_has_nulls", [True, False])
 def test_simple_import(data_has_nulls):
+    """Test that ``modin.pandas.utils.from_dataframe`` works properly."""
     data = get_all_types(data_has_nulls)
 
     md_df_source = pd.DataFrame(data)
     md_df_consumer = md_from_dataframe(md_df_source._query_compiler._modin_frame)
 
     df_equals(md_df_source, md_df_consumer)
+
+
+@pytest.mark.parametrize("data_has_nulls", [True, False])
+def test_zero_copy_export_for_primitives(data_has_nulls):
+    """Test that basic data types can be zero-copy exported from OmnisciOnNative dataframe."""
+    data = get_all_types(
+        has_nulls=data_has_nulls, include_dtypes=["int", "uint", "float"]
+    )
+    at = pa.Table.from_pydict(data)
+
+    md_df = from_arrow(at)
+    protocol_df = md_df.__dataframe__(allow_copy=False)
+
+    for i, col in enumerate(protocol_df.get_columns()):
+        col_arr, memory_owner = convert_primitive_column_to_ndarray(col)
+
+        exported_ptr = col_arr.__array_interface__["data"][0]
+        source_ptr = at.column(i).chunks[0].buffers()[-1].address
+        # Verify that the pointers of source and exported objects point to the same data
+        assert source_ptr == exported_ptr
+
+    # Can't export `md_df` zero-copy no more as it has delayed 'fillna' operation
+    md_df = md_df.fillna({"float32": 32.0})
+    non_zero_copy_protocol_df = md_df.__dataframe__(allow_copy=False)
+
+    with pytest.raises(RuntimeError):
+        col_arr, memory_owner = convert_primitive_column_to_ndarray(
+            non_zero_copy_protocol_df.get_column_by_name("float32")
+        )
