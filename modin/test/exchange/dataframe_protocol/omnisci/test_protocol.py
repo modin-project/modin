@@ -204,3 +204,15 @@ def test_zero_copy_export_for_primitives(data_has_nulls):
         col_arr, memory_owner = convert_primitive_column_to_ndarray(
             non_zero_copy_protocol_df.get_column_by_name("float32")
         )
+
+
+def test_bitmask_chunking():
+    """Test that making a virtual chunk in a middle of a byte of a bitmask doesn't cause problems."""
+    at = pa.Table.from_pydict({"col": [True, False, True, True, False] * 5})
+    assert at["col"].type.bit_width == 1
+
+    md_df = from_arrow(at)
+    # Column length is 25, nchunks is 2, meaning that the split will occur in the middle
+    # of the second byte
+    exported_df = export_frame(md_df, nchunks=2)
+    df_equals(md_df, exported_df)

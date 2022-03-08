@@ -113,7 +113,6 @@ def convert_primitive_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray
     tuple
         Tuple of numpy.ndarray holding the data and the memory owner object that keeps the memory alive.
     """
-    # breakpoint()
     buffers = col.get_buffers()
 
     data_buff, data_dtype = buffers["data"]
@@ -337,7 +336,7 @@ def buffer_to_ndarray(
     # and size in the buffer plus the dtype on the column
     ctypes_type = np.ctypeslib.as_ctypes_type(column_dtype)
     data_pointer = ctypes.cast(
-        buffer.ptr + (offset) * (bit_width // 8), ctypes.POINTER(ctypes_type)
+        buffer.ptr + (offset * bit_width // 8), ctypes.POINTER(ctypes_type)
     )
 
     if bit_width == 1:
@@ -379,13 +378,16 @@ def bitmask_to_bool_array(
     # Proccessing the first byte separately as it has its own offset
     val = bitmask[0]
     mask_idx = 0
-    for j in range(min(8 - first_byte_offset, mask_length)):
+    bits_in_first_byte = min(8 - first_byte_offset, mask_length)
+    for j in range(bits_in_first_byte):
         if val & (1 << (j + first_byte_offset)):
             bool_mask[mask_idx] = True
         mask_idx += 1
 
-    for i in range(1, mask_length // 8):
-        val = bitmask[i]
+    # `mask_length // 8` describes how many full bytes to process
+    for i in range((mask_length - bits_in_first_byte) // 8):
+        # doing `+ 1` as we already processed the first byte
+        val = bitmask[i + 1]
         for j in range(8):
             if val & (1 << j):
                 bool_mask[mask_idx] = True
