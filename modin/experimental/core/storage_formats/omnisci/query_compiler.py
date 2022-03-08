@@ -208,9 +208,12 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     @classmethod
     def from_dataframe(cls, df, data_cls):
-        raise NotImplementedError(
-            "The selected execution does not implement the DataFrame exchange protocol yet."
+        from modin.core.dataframe.base.exchange.dataframe_protocol.from_dataframe import (
+            from_dataframe,
         )
+
+        pd_df = from_dataframe(df)
+        return data_cls.from_pandas(pd_df)
 
     # END Dataframe exchange protocol
 

@@ -19,7 +19,7 @@ import pyarrow as pa
 import pandas
 
 from modin.pandas.test.utils import df_equals
-from modin.pandas.utils import from_arrow
+from modin.pandas.utils import from_arrow, from_dataframe as md_from_dataframe
 
 from .utils import get_all_types, split_df_into_chunks, export_frame
 
@@ -153,3 +153,13 @@ def test_export_when_delayed_computations():
 
     exported_df = export_frame(md_res)
     df_equals(exported_df, pd_res)
+
+
+@pytest.mark.parametrize("data_has_nulls", [True, False])
+def test_simple_import(data_has_nulls):
+    data = get_all_types(data_has_nulls)
+
+    md_df_source = pd.DataFrame(data)
+    md_df_consumer = md_from_dataframe(md_df_source._query_compiler._modin_frame)
+
+    df_equals(md_df_source, md_df_consumer)
