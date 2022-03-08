@@ -114,30 +114,45 @@ class LatestCompatibleSeries(BaseCompatibilitySeries):
         return self._reset_index(level=level, drop=drop, name=name, inplace=inplace)
 
     def sum(
-            self,
-            axis=None,
-            skipna=True,
-            level=None,
-            numeric_only=None,
-            min_count=0,
-            **kwargs,
+        self,
+        axis=None,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        min_count=0,
+        **kwargs,
     ):  # noqa: PR01, RT01, D200
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
-        return self._sum(axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, min_count=min_count, **kwargs)
+        return self._sum(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            numeric_only=numeric_only,
+            min_count=min_count,
+            **kwargs,
+        )
 
     def to_frame(
-            self, name: "Hashable" = no_default
+        self, name: "Hashable" = no_default
     ) -> "DataFrame":  # noqa: PR01, RT01, D200
         return self._to_frame(name=name)
 
     def where(
-            self,
-            cond,
-            other=no_default,
-            inplace=False,
-            axis=None,
-            level=None,
-            errors=no_default,
-            try_cast=no_default,
+        self,
+        cond,
+        other=no_default,
+        inplace=False,
+        axis=None,
+        level=None,
+        errors=no_default,
+        try_cast=no_default,
     ):  # noqa: PR01, RT01, D200
-        return self._where(cond, other=other, inplace=inplace, axis=axis, level=level, errors=errors, try_cast=try_cast)
+        return self._where(
+            cond,
+            other=other,
+            inplace=inplace,
+            axis=axis,
+            level=level,
+            errors=errors,
+            try_cast=try_cast,
+        )

@@ -95,27 +95,42 @@ class Python36CompatibilitySeries(BaseCompatibilitySeries):
         return self._reset_index(level=level, drop=drop, name=name, inplace=inplace)
 
     def sum(
-            self,
-            axis=None,
-            skipna=None,
-            level=None,
-            numeric_only=None,
-            min_count=0,
-            **kwargs,
+        self,
+        axis=None,
+        skipna=None,
+        level=None,
+        numeric_only=None,
+        min_count=0,
+        **kwargs,
     ):  # noqa: PR01, RT01, D200
-        return self._sum(axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, min_count=min_count, **kwargs)
+        return self._sum(
+            axis=axis,
+            skipna=skipna,
+            level=level,
+            numeric_only=numeric_only,
+            min_count=min_count,
+            **kwargs,
+        )
 
     def to_frame(self, name=None) -> "DataFrame":  # noqa: PR01, RT01, D200
         return self._to_frame(name=name)
 
     def where(
-            self,
-            cond,
-            other=np.nan,
-            inplace=False,
-            axis=None,
-            level=None,
-            errors="raise",
-            try_cast=False,
+        self,
+        cond,
+        other=np.nan,
+        inplace=False,
+        axis=None,
+        level=None,
+        errors="raise",
+        try_cast=False,
     ):  # noqa: PR01, RT01, D200
-        return self._where(cond, other=other, inplace=inplace, axis=axis, level=level, errors=errors, try_cast=try_cast)
+        return self._where(
+            cond,
+            other=other,
+            inplace=inplace,
+            axis=axis,
+            level=level,
+            errors=errors,
+            try_cast=try_cast,
+        )

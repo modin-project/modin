@@ -845,7 +845,7 @@ class BaseIO(object):
         filepath_or_buffer,
         compression="infer",
         protocol: int = pickle.HIGHEST_PROTOCOL,
-        storage_options = None,
+        storage_options=None,
     ):  # noqa: PR01, D200
         """
         Pickle (serialize) object to file.
