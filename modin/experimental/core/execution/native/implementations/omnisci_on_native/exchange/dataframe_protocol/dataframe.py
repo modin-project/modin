@@ -66,7 +66,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
 
     @property
     def metadata(self) -> Dict[str, Any]:
-        # TODO: as the frame's index is stored as a separate column inside pyarrow table
+        # TODO: as the frame's index is stored as a separate column inside PyArrow table
         # we may want to return the column's name here instead of materialized index.
         # This will require the internal index column to be visible in the protocol's column
         # accessor methods.
@@ -77,8 +77,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         return len(self._df.columns)
 
     def num_rows(self) -> int:
-        if not self._allow_copy and not self._is_zero_copy_possible:
-            raise RuntimeError("Copy required with 'allow_copy=False'")
+        self._maybe_raise_if_materialize()
         return len(self._df.index)
 
     def num_chunks(self) -> int:
@@ -119,6 +118,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         """
         if self.__chunk_slices is None:
             at = self._pyarrow_table
+            # What we need to do is to union offsets of all the columns
             col_slices = set({0})
             for col in at.columns:
                 col_slices = col_slices.union(
@@ -151,11 +151,11 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         """
         if self.__is_zero_copy_possible is None:
             if self._df._has_arrow_table():
-                # If PyArrow is already materialized table then we can
-                # retrieve the  data zero-copy
+                # If PyArrow table is already materialized then we can
+                # retrieve data zero-copy
                 self.__is_zero_copy_possible = True
             elif not self._df._can_execute_arrow():
-                # When not able to execute the plan via Arrow means
+                # When not able to execute the plan via PyArrow means
                 # that we have to involve OmniSci, so no zero-copy.
                 self.__is_zero_copy_possible = False
             else:
@@ -236,6 +236,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
             yield OmnisciProtocolColumn(
                 OmnisciProtocolDataframe(
                     self._df.mask(col_labels=[name]),
+                    nan_as_null=self._nan_as_null,
                     allow_copy=self._allow_copy,
                 ),
             )
@@ -246,6 +247,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
 
         return OmnisciProtocolDataframe(
             self._df.mask(col_positions=list(indices)),
+            nan_as_null=self._nan_as_null,
             allow_copy=self._allow_copy,
         )
 
@@ -257,6 +259,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
 
         return OmnisciProtocolDataframe(
             self._df.mask(col_labels=list(names)),
+            nan_as_null=self._nan_as_null,
             allow_copy=self._allow_copy,
         )
 
@@ -318,6 +321,6 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
                 df=self._df.mask(
                     row_positions=range(chunk_slices[i], chunk_slices[i + 1])
                 ),
-                allow_copy=self._allow_copy,
                 nan_as_null=self._nan_as_null,
+                allow_copy=self._allow_copy,
             )

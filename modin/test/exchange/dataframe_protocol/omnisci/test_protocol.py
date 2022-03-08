@@ -57,8 +57,8 @@ def test_simple_export(data_has_nulls, from_omnisci):
 @pytest.mark.parametrize("nchunks", [2, 4, 7])
 @pytest.mark.parametrize("data_has_nulls", [True, False])
 def test_export_aligned_at_chunks(nchunks, data_has_nulls):
-    """Test export from DataFrame exchange protocol when internal arrow table is equaly chunked."""
-    # Modin DataFrame constructor can't process pyarrow's category, so exclude it
+    """Test export from DataFrame exchange protocol when internal PyArrow table is equaly chunked."""
+    # Modin DataFrame constructor can't process PyArrow's category, so exclude it
     data = get_all_types(has_nulls=data_has_nulls, exclude_dtypes=["category"])
     pd_df = pandas.DataFrame(data)
     pd_chunks = split_df_into_chunks(pd_df, nchunks)
@@ -86,13 +86,13 @@ def test_export_aligned_at_chunks(nchunks, data_has_nulls):
 @pytest.mark.parametrize("data_has_nulls", [True, False])
 def test_export_unaligned_at_chunks(data_has_nulls):
     """
-    Test export from DataFrame exchange protocol when internal arrow table's chunks are unaligned.
+    Test export from DataFrame exchange protocol when internal PyArrow table's chunks are unaligned.
 
     Arrow table allows for its columns to be chunked independently. Unaligned chunking means that
     each column has its individual chunking and so some preprocessing is required in order
     to emulate equaly chunked columns in the protocol.
     """
-    # Modin DataFrame constructor can't process pyarrow's category, so exclude it
+    # Modin DataFrame constructor can't process PyArrow's category, so exclude it
     data = get_all_types(has_nulls=data_has_nulls, exclude_dtypes=["category"])
     pd_df = pandas.DataFrame(data)
     # divide columns in 3 groups: unchunked, 2-chunked, 7-chunked

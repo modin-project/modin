@@ -51,7 +51,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
     Notes
     -----
     The object could be modified inplace due to casting PyArrow buffers to a new dtype:
-    ``_propagate_dtype``, ``_cast_at``), the methods replace the wrapped
+    ``_propagate_dtype``, ``_cast_at`` - the methods replace the wrapped
     ``OmnisciProtocolDataframe`` object with the new one holding the casted PyArrow table.
     """
 
@@ -170,7 +170,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
 
         # Although we can retrieve codes from pandas dtype, they're unsynced with
         # the actual PyArrow data most of the time. So getting the mapping directly
-        # from materialized PyArrow table.
+        # from the materialized PyArrow table.
         col = self._pyarrow_table.column(0)
         if len(col.chunks) > 1:
             if not self._col._allow_copy:
@@ -355,7 +355,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
         -------
         tuple or None
             Tuple of OmnisciProtocolBuffer and protocol dtype representation of the buffer's underlying data.
-            None if column is non-nullable (``self.describe_null == `ColumnNullType.NON_NULLABLE``).
+            None if column is non-nullable (``self.describe_null == ColumnNullType.NON_NULLABLE``).
         """
         validity_buffer = arr.buffers()[0]
         if validity_buffer is None:
@@ -365,7 +365,6 @@ class OmnisciProtocolColumn(ProtocolColumn):
         data_size = self._get_buffer_size(bit_width=1)
         return (
             OmnisciProtocolBuffer(validity_buffer, data_size),
-            # self._dtype_from_primitive_pandas(np.dtype("uint8")),
             (DTypeKind.BOOL, 1, "b", "="),
         )
 
