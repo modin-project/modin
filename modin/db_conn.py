@@ -104,6 +104,16 @@ class ModinDatabaseConnection:
 
         raise UnsupportedDatabaseException("Unsupported database library")
 
+    def get_string(self):
+        """
+        Get input connection string.
+
+        Returns
+        -------
+        str
+        """
+        return self.args[0]
+
     def column_names_query(self, query):
         """
         Get a query that gives the names of columns that `query` would produce.

@@ -30,6 +30,7 @@ from modin.config import (
     IsExperimental,
     TestReadFromPostgres,
     TestReadFromSqlServer,
+    ReadSqlEngine,
 )
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
@@ -1810,7 +1811,8 @@ class TestSql:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_sql(self, make_sql_connection):
+    @pytest.mark.parametrize("read_sql_engine", ["Pandas", "Connectorx"])
+    def test_read_sql(self, make_sql_connection, read_sql_engine):
         filename = get_unique_filename(extension="db")
         table = "test_read_sql"
         conn = make_sql_connection(filename, table)
@@ -1855,9 +1857,13 @@ class TestSql:
             con=sqlalchemy_connection,
         )
 
-        modin_df = pd.read_sql(
-            sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
-        )
+        ReadSqlEngine.put(read_sql_engine)
+        if ReadSqlEngine.get() == "Connectorx":
+            modin_df = pd.read_sql(sql=query, con=conn)
+        else:
+            modin_df = pd.read_sql(
+                sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
+            )
         pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
         df_equals(modin_df, pandas_df)
 
