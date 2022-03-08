@@ -23,7 +23,7 @@ from ..utils import (
 )
 
 
-class TimeReadParquet():
+class TimeReadParquet:
     shapes = get_benchmark_shapes("TimeReadParquet")
     data_type = "str_int"
 
@@ -34,9 +34,7 @@ class TimeReadParquet():
 
     # test data file should be created only once
     def setup_cache(self, test_filename="io_test_file"):
-        test_filenames = prepare_io_data_parquet(
-            test_filename, data_type, shapes
-        )
+        test_filenames = prepare_io_data_parquet(test_filename, data_type, shapes)
         return test_filenames
 
     def setup(self, test_filenames, shape):
