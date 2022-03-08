@@ -34,7 +34,9 @@ class TimeReadParquet:
 
     # test data file should be created only once
     def setup_cache(self, test_filename="io_test_file"):
-        test_filenames = prepare_io_data_parquet(test_filename, data_type, shapes)
+        test_filenames = prepare_io_data_parquet(
+            test_filename, self.data_type, get_benchmark_shapes(self.__class__.__name__)
+        )
         return test_filenames
 
     def setup(self, test_filenames, shape):
