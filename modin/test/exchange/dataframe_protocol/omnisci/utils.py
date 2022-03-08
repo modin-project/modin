@@ -16,7 +16,7 @@
 import pandas
 import numpy as np
 
-from modin.core.dataframe.base.exchange.dataframe_protocol.__utils import (
+from modin.core.dataframe.base.exchange.dataframe_protocol.from_dataframe import (
     from_dataframe,
 )
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.test.utils import (
@@ -131,7 +131,9 @@ def get_all_types(has_nulls=False, exclude_dtypes=None):
 
     # string
     string_data["string"] = np.array(
-        ["English: test string", " ", "Chinese: 测试字符串", "Russian: тестовая строка"] * 10
+        # Test multi-byte characters as well to ensure that the chunking works correctly for them
+        ["English: test string", " ", "Chinese: 测试字符串", "Russian: тестовая строка"]
+        * 10
     )
     if has_nulls:
         string_data["string_null"] = np.array(
