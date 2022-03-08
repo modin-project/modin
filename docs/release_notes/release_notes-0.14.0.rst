@@ -17,6 +17,7 @@ Key Features and Updates
   * FIX-#4057: Allow reading an empty parquet file (#4075)  
   * FIX-#3884: Fix read_excel() dropping empty rows (#4161)
   * FIX-#4257: Fix Categorical() for scalar categories (#4258) 
+  * FIX-#4300: Fix Modin Categorical column dtype categories (#4276) 
   * FIX-#4208: Fix lazy metadata update for `PandasDataFrame.from_labels` (#4209)
   * FIX-#3981, FIX-#3801, FIX-#4149: Stop broadcasting scalars to set items (#4160)
   * FIX-#4185: Fix rolling across column partitions (#4262)
