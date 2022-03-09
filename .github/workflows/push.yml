@@ -149,7 +149,8 @@ jobs:
       - name: Test postgres
         run: |
           sudo docker pull postgres
-          sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d postgres -p 5432:5432
+          sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
+          sudo docker container ls
           python -m pytest modin/pandas/test/test_io.py -k postgres
       # - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
       # - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py

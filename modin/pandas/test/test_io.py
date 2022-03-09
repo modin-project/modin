@@ -1871,7 +1871,7 @@ class TestSql:
     def test_read_sql_from_postgres(self):
         table_name = "test_1000x256"
         query = f"SELECT * FROM {table_name}"
-        connection = "postgresql://sa:Strong.Pwd-123@localhost:5432/postgres"
+        connection = "postgresql://sa:Strong.Pwd-123@localhost:2345/postgres"
         pandas_df_to_read = pandas.DataFrame(
             np.arange(
                 1000 * 256,
