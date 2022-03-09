@@ -159,5 +159,5 @@ class ModinDatabaseConnection:
                 + f" OFFSET {offset} ROWS FETCH NEXT {limit} ROWS ONLY"
             )
             if self._dialect_is_microsoft_sql()
-            else f"SELECT * FROM ({query}) LIMIT {limit} OFFSET {offset}"
+            else f"SELECT * FROM ({query}) AS _ LIMIT {limit} OFFSET {offset}"
         )

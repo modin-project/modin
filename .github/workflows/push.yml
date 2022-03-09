@@ -80,37 +80,37 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
       - uses: codecov/codecov-action@v2
 
-  test-omnisci:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    env:
-      MODIN_EXPERIMENTAL: "True"
-      MODIN_ENGINE: "native"
-      MODIN_STORAGE_FORMAT: "omnisci"
-    name: Test OmniSci storage format, Python 3.8
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 2
-      - name: Setting up Modin environment
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: modin_on_omnisci
-          environment-file: requirements/env_omnisci.yml
-          python-version: 3.8
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
-      - name: Install HDF5
-        run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest modin/test/storage_formats/omnisci/test_internals.py
-      - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
-      - run: pytest modin/pandas/test/test_io.py::TestCsv
-      - uses: codecov/codecov-action@v2
+  # test-omnisci:
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   env:
+  #     MODIN_EXPERIMENTAL: "True"
+  #     MODIN_ENGINE: "native"
+  #     MODIN_STORAGE_FORMAT: "omnisci"
+  #   name: Test OmniSci storage format, Python 3.8
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #       with:
+  #         fetch-depth: 2
+  #     - name: Setting up Modin environment
+  #       uses: conda-incubator/setup-miniconda@v2
+  #       with:
+  #         activate-environment: modin_on_omnisci
+  #         environment-file: requirements/env_omnisci.yml
+  #         python-version: 3.8
+  #         use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+  #     - name: Conda environment
+  #       run: |
+  #         conda info
+  #         conda list
+  #     - name: Install HDF5
+  #       run: sudo apt update && sudo apt install -y libhdf5-dev
+  #     - run: pytest modin/test/storage_formats/omnisci/test_internals.py
+  #     - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
+  #     - run: pytest modin/pandas/test/test_io.py::TestCsv
+  #     - uses: codecov/codecov-action@v2
 
   test-all:
     runs-on: ubuntu-latest
@@ -146,146 +146,151 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
-        if: matrix.engine == 'ray'
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
-        if: matrix.engine == 'ray'
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_concat.py
-        if: matrix.engine == 'python'
-      - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
-        if: matrix.engine != 'python'
-      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_general.py
-      - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
-      - run: ./.github/workflows/sql_server/set_up_sql_server.sh
-      - run: python -m pytest modin/pandas/test/test_io.py
-      - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - uses: codecov/codecov-action@v2
-
-  test-windows:
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    strategy:
-      matrix:
-        python-version: ["3.8"]
-        engine: ["ray", "dask"]
-        test-task:
-          - modin/pandas/test/dataframe/test_binary.py
-          - modin/pandas/test/dataframe/test_default.py
-          - modin/pandas/test/dataframe/test_indexing.py
-          - modin/pandas/test/dataframe/test_iter.py
-          - modin/pandas/test/dataframe/test_join_sort.py
-          - modin/pandas/test/dataframe/test_map_metadata.py
-          - modin/pandas/test/dataframe/test_reduce.py
-          - modin/pandas/test/dataframe/test_udf.py
-          - modin/pandas/test/dataframe/test_window.py
-          - modin/pandas/test/dataframe/test_pickle.py
-          - modin/pandas/test/test_series.py
-          - modin/pandas/test/test_rolling.py
-          - modin/pandas/test/test_concat.py
-          - modin/pandas/test/test_groupby.py
-          - modin/pandas/test/test_reshape.py
-          - modin/pandas/test/test_general.py
-          - modin/pandas/test/test_io.py
-    env:
-      MODIN_ENGINE: ${{matrix.engine}}
-      MODIN_MEMORY: 1000000000
-    name: test-windows
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 2
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: modin
-          environment-file: environment-dev.yml
-          python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          auto-update-conda: true # this enable `use-only-tar-bz2` feature on Windows
-      - name: Conda environment
+      - name: Test postgres
         run: |
-          conda info
-          conda list
-      - run: python -m pytest ${{matrix.test-task}}
-        if: matrix.test-task != 'modin/pandas/test/test_io.py'
-      - timeout-minutes: 30
-        run: python -m pytest modin/pandas/test/test_io.py
-        if: matrix.test-task == 'modin/pandas/test/test_io.py'
-      - uses: codecov/codecov-action@v2
+          sudo docker pull postgres
+          sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d postgres -p 5432:5432
+          python -m pytest modin/pandas/test/test_io.py -k postgres
+      # - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
+      # - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
+      #   if: matrix.engine == 'ray'
+      # - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
+      #   if: matrix.engine == 'ray'
+      # - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+      # - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
+      # - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
+      # - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+      # - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
+      # - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+      # - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
+      # - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
+      # - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
+      # - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
+      # - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+      # - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
+      # - run: python -m pytest -n 2 modin/pandas/test/test_concat.py
+      #   if: matrix.engine == 'python'
+      # - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+      #   if: matrix.engine != 'python'
+      # - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
+      # - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
+      # - run: python -m pytest -n 2 modin/pandas/test/test_general.py
+      # - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
+      # - run: ./.github/workflows/sql_server/set_up_sql_server.sh
+      # - run: python -m pytest modin/pandas/test/test_io.py
+      # - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
+      # - uses: codecov/codecov-action@v2
 
-  test-pyarrow:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    strategy:
-      matrix:
-        python-version: ["3.8"]
-    env:
-      MODIN_STORAGE_FORMAT: pyarrow
-      MODIN_EXPERIMENTAL: "True"
-    name: test (pyarrow, python ${{matrix.python-version}})
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: modin
-          environment-file: environment-dev.yml
-          python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
-      - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: python -m pytest modin/pandas/test/test_io.py::TestCsv
+  # test-windows:
+  #   runs-on: windows-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   strategy:
+  #     matrix:
+  #       python-version: ["3.8"]
+  #       engine: ["ray", "dask"]
+  #       test-task:
+  #         - modin/pandas/test/dataframe/test_binary.py
+  #         - modin/pandas/test/dataframe/test_default.py
+  #         - modin/pandas/test/dataframe/test_indexing.py
+  #         - modin/pandas/test/dataframe/test_iter.py
+  #         - modin/pandas/test/dataframe/test_join_sort.py
+  #         - modin/pandas/test/dataframe/test_map_metadata.py
+  #         - modin/pandas/test/dataframe/test_reduce.py
+  #         - modin/pandas/test/dataframe/test_udf.py
+  #         - modin/pandas/test/dataframe/test_window.py
+  #         - modin/pandas/test/dataframe/test_pickle.py
+  #         - modin/pandas/test/test_series.py
+  #         - modin/pandas/test/test_rolling.py
+  #         - modin/pandas/test/test_concat.py
+  #         - modin/pandas/test/test_groupby.py
+  #         - modin/pandas/test/test_reshape.py
+  #         - modin/pandas/test/test_general.py
+  #         - modin/pandas/test/test_io.py
+  #   env:
+  #     MODIN_ENGINE: ${{matrix.engine}}
+  #     MODIN_MEMORY: 1000000000
+  #   name: test-windows
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #       with:
+  #         fetch-depth: 2
+  #     - uses: conda-incubator/setup-miniconda@v2
+  #       with:
+  #         activate-environment: modin
+  #         environment-file: environment-dev.yml
+  #         python-version: ${{matrix.python-version}}
+  #         channel-priority: strict
+  #         use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+  #         auto-update-conda: true # this enable `use-only-tar-bz2` feature on Windows
+  #     - name: Conda environment
+  #       run: |
+  #         conda info
+  #         conda list
+  #     - run: python -m pytest ${{matrix.test-task}}
+  #       if: matrix.test-task != 'modin/pandas/test/test_io.py'
+  #     - timeout-minutes: 30
+  #       run: python -m pytest modin/pandas/test/test_io.py
+  #       if: matrix.test-task == 'modin/pandas/test/test_io.py'
+  #     - uses: codecov/codecov-action@v2
 
-  test-spreadsheet:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    strategy:
-      matrix:
-        python-version: ["3.8"]
-        engine: ["ray", "dask"]
-    env:
-      MODIN_EXPERIMENTAL: "True"
-      MODIN_ENGINE: ${{matrix.engine}}
-    name: test-spreadsheet (engine ${{matrix.engine}}, python ${{matrix.python-version}})
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: modin
-          environment-file: environment-dev.yml
-          python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
-      - run: python -m pytest modin/experimental/spreadsheet/test/test_general.py
+  # test-pyarrow:
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   strategy:
+  #     matrix:
+  #       python-version: ["3.8"]
+  #   env:
+  #     MODIN_STORAGE_FORMAT: pyarrow
+  #     MODIN_EXPERIMENTAL: "True"
+  #   name: test (pyarrow, python ${{matrix.python-version}})
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #       with:
+  #         fetch-depth: 1
+  #     - uses: conda-incubator/setup-miniconda@v2
+  #       with:
+  #         activate-environment: modin
+  #         environment-file: environment-dev.yml
+  #         python-version: ${{matrix.python-version}}
+  #         channel-priority: strict
+  #         use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+  #     - name: Conda environment
+  #       run: |
+  #         conda info
+  #         conda list
+  #     - run: sudo apt update && sudo apt install -y libhdf5-dev
+  #     - run: python -m pytest modin/pandas/test/test_io.py::TestCsv
+
+  # test-spreadsheet:
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   strategy:
+  #     matrix:
+  #       python-version: ["3.8"]
+  #       engine: ["ray", "dask"]
+  #   env:
+  #     MODIN_EXPERIMENTAL: "True"
+  #     MODIN_ENGINE: ${{matrix.engine}}
+  #   name: test-spreadsheet (engine ${{matrix.engine}}, python ${{matrix.python-version}})
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #       with:
+  #         fetch-depth: 1
+  #     - uses: conda-incubator/setup-miniconda@v2
+  #       with:
+  #         activate-environment: modin
+  #         environment-file: environment-dev.yml
+  #         python-version: ${{matrix.python-version}}
+  #         channel-priority: strict
+  #         use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+  #     - name: Conda environment
+  #       run: |
+  #         conda info
+  #         conda list
+  #     - run: python -m pytest modin/experimental/spreadsheet/test/test_general.py
