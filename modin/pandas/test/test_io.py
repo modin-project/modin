@@ -1889,7 +1889,6 @@ class TestSql:
         )
         pandas_df = pandas.read_sql(query, connection)
         df_equals(modin_df, pandas_df)
-        assert modin_df.shape == (1001, 256)
 
     def test_invalid_modin_database_connections(self):
         with pytest.raises(UnsupportedDatabaseException):
