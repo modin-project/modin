@@ -49,7 +49,8 @@ def create_test_series(vals):
 @pytest.mark.parametrize("window", [5, 100])
 @pytest.mark.parametrize("min_periods", [None, 5])
 @pytest.mark.parametrize("win_type", [None, "triang"])
-def test_dataframe(data, window, min_periods, win_type):
+@pytest.mark.parametrize("axis", [0, 1])
+def test_dataframe(data, window, min_periods, win_type, axis):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
     if window > len(pandas_df):
@@ -59,19 +60,25 @@ def test_dataframe(data, window, min_periods, win_type):
         min_periods=min_periods,
         win_type=win_type,
         center=True,
+        axis=axis,
     )
     modin_rolled = modin_df.rolling(
         window=window,
         min_periods=min_periods,
         win_type=win_type,
         center=True,
+        axis=axis,
     )
     # Testing of Window class
     if win_type is not None:
-        df_equals(modin_rolled.mean(), pandas_rolled.mean())
-        df_equals(modin_rolled.sum(), pandas_rolled.sum())
-        df_equals(modin_rolled.var(ddof=0), pandas_rolled.var(ddof=0))
-        df_equals(modin_rolled.std(ddof=0), pandas_rolled.std(ddof=0))
+        # TODO(https://github.com/modin-project/modin/issues/4261): Once pandas
+        # allows rolling with (axis=1, win_type=, center=True), test that, as
+        # well.
+        if axis == 0:
+            df_equals(pandas_rolled.mean(), modin_rolled.mean())
+            df_equals(modin_rolled.sum(), pandas_rolled.sum())
+            df_equals(modin_rolled.var(ddof=0), pandas_rolled.var(ddof=0))
+            df_equals(modin_rolled.std(ddof=0), pandas_rolled.std(ddof=0))
     # Testing of Rolling class
     else:
         df_equals(modin_rolled.count(), pandas_rolled.count())
@@ -86,10 +93,14 @@ def test_dataframe(data, window, min_periods, win_type):
         df_equals(modin_rolled.kurt(), pandas_rolled.kurt())
         df_equals(modin_rolled.apply(np.sum), pandas_rolled.apply(np.sum))
         df_equals(modin_rolled.aggregate(np.sum), pandas_rolled.aggregate(np.sum))
-        df_equals(
-            modin_rolled.aggregate([np.sum, np.mean]),
-            pandas_rolled.aggregate([np.sum, np.mean]),
-        )
+        # TODO(https://github.com/modin-project/modin/issues/4260): Once pandas
+        # allows us to rolling aggregate a list of functions over axis 1, test
+        # that, too.
+        if axis != 1:
+            df_equals(
+                pandas_rolled.aggregate([np.sum, np.mean]),
+                modin_rolled.aggregate([np.sum, np.mean]),
+            )
         df_equals(modin_rolled.quantile(0.1), pandas_rolled.quantile(0.1))
 
 

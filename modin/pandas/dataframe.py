@@ -107,6 +107,9 @@ class DataFrame(BasePandasDataset):
         copy=None,
         query_compiler=None,
     ):
+        # Siblings are other dataframes that share the same query compiler. We
+        # use this list to update inplace when there is a shallow copy.
+        self._siblings = []
         Engine.subscribe(_update_engine)
         if isinstance(data, (DataFrame, Series)):
             self._query_compiler = data._query_compiler.copy()
@@ -2448,9 +2451,18 @@ class DataFrame(BasePandasDataset):
         value : Any
             Value to set.
         """
-        # We have to check for this first because we have to be able to set
-        # _query_compiler before we check if the key is in self
-        if key in ["_query_compiler"] or key in self.__dict__:
+        # While we let users assign to a column labeled "x" with "df.x" , there
+        # are some attributes that we should assume are NOT column names and
+        # therefore should follow the default Python object assignment
+        # behavior. These are:
+        # - anything in self.__dict__. This includes any attributes that the
+        #   user has added to the dataframe with,  e.g., `df.c = 3`, and
+        #   any attribute that Modin has added to the frame, e.g.
+        #   `_query_compiler` and `_siblings`
+        # - `_query_compiler`, which Modin initializes before it appears in
+        #   __dict__
+        # - `_siblings`, which Modin initializes before it appears in __dict__
+        if key in ["_query_compiler", "_siblings"] or key in self.__dict__:
             pass
         elif key in self and key not in dir(self):
             self.__setitem__(key, value)

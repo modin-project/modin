@@ -37,6 +37,7 @@ from modin.pandas.test.utils import (
     df_equals_with_non_stable_indices,
 )
 from modin.utils import try_cast_to_pandas
+from modin.pandas.utils import from_arrow
 
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.partitioning.partition_manager import (
     OmnisciOnNativeDataframePartitionManager,
@@ -1931,6 +1932,80 @@ class TestBadData:
             return df["d"].fillna("a")
 
         run_and_compare(fillna, data=self.ok_data, force_lazy=False)
+
+    @pytest.mark.parametrize(
+        "md_df_constructor",
+        [
+            pytest.param(pd.DataFrame, id="from_pandas_dataframe"),
+            pytest.param(
+                lambda pd_df: from_arrow(pyarrow.Table.from_pandas(pd_df)),
+                id="from_pyarrow_table",
+            ),
+        ],
+    )
+    def test_uint(self, md_df_constructor):
+        """
+        Verify that unsigned integer data could be imported-exported via OmniSci with no errors.
+
+        Originally, OmniSci does not support unsigned integers, there's a logic in Modin that
+        upcasts unsigned types to the compatible ones prior importing to OmniSci.
+        """
+        pd_df = pandas.DataFrame(
+            {
+                "uint8_in_int_bounds": np.array([1, 2, 3], dtype="uint8"),
+                "uint8_out-of_int_bounds": np.array(
+                    [(2**8) - 1, (2**8) - 2, (2**8) - 3], dtype="uint8"
+                ),
+                "uint16_in_int_bounds": np.array([1, 2, 3], dtype="uint16"),
+                "uint16_out-of_int_bounds": np.array(
+                    [(2**16) - 1, (2**16) - 2, (2**16) - 3], dtype="uint16"
+                ),
+                "uint32_in_int_bounds": np.array([1, 2, 3], dtype="uint32"),
+                "uint32_out-of_int_bounds": np.array(
+                    [(2**32) - 1, (2**32) - 2, (2**32) - 3], dtype="uint32"
+                ),
+                "uint64_in_int_bounds": np.array([1, 2, 3], dtype="uint64"),
+            }
+        )
+        md_df = md_df_constructor(pd_df)
+
+        with ForceOmnisciImport(md_df) as instance:
+            md_df_exported = instance.export_frames()[0]
+            result = md_df_exported.values
+            reference = pd_df.values
+            np.testing.assert_array_equal(result, reference)
+
+    @pytest.mark.parametrize(
+        "md_df_constructor",
+        [
+            pytest.param(pd.DataFrame, id="from_pandas_dataframe"),
+            pytest.param(
+                lambda pd_df: from_arrow(pyarrow.Table.from_pandas(pd_df)),
+                id="from_pyarrow_table",
+            ),
+        ],
+    )
+    def test_uint_overflow(self, md_df_constructor):
+        """
+        Verify that the exception is arisen when overflow occurs due to 'uint -> int' compatibility conversion.
+
+        Originally, OmniSci does not support unsigned integers, there's a logic in Modin that upcasts
+        unsigned types to the compatible ones prior importing to OmniSci. This test ensures that the
+        error is arisen when such conversion causes a data loss.
+        """
+        md_df = md_df_constructor(
+            pandas.DataFrame(
+                {
+                    "col": np.array(
+                        [(2**64) - 1, (2**64) - 2, (2**64) - 3], dtype="uint64"
+                    )
+                }
+            )
+        )
+
+        with pytest.raises(OverflowError):
+            with ForceOmnisciImport(md_df):
+                pass
 
 
 class TestDropna:

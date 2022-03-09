@@ -78,6 +78,8 @@ _DEFAULT_CONFIG_T = [
             "TimeSortValues",
             "TimeDrop",
             "TimeHead",
+            "TimeTail",
+            "TimeExplode",
             "TimeFillna",
             "TimeFillnaDataFrame",
             "TimeValueCountsFrame",
@@ -92,6 +94,7 @@ _DEFAULT_CONFIG_T = [
             "TimeReadCsvSkiprows",
             "TimeReadCsvTrueFalseValues",
             "TimeReadCsvNamesDtype",
+            "TimeReadParquet",
             # Scalability benchmarks
             "TimeFromPandas",
             "TimeToPandas",

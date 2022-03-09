@@ -302,6 +302,9 @@ class TimeArithmetic:
     def time_sum(self, shape, axis):
         execute(self.df.sum(axis=axis))
 
+    def time_count(self, shape, axis):
+        execute(self.df.count(axis=axis))
+
     def time_median(self, shape, axis):
         execute(self.df.median(axis=axis))
 
@@ -313,6 +316,30 @@ class TimeArithmetic:
 
     def time_mean(self, shape, axis):
         execute(self.df.mean(axis=axis))
+
+    def time_mode(self, shape, axis):
+        execute(self.df.mode(axis=axis))
+
+    def time_add(self, shape, axis):
+        execute(self.df.add(2, axis=axis))
+
+    def time_mul(self, shape, axis):
+        execute(self.df.mul(2, axis=axis))
+
+    def time_mod(self, shape, axis):
+        execute(self.df.mod(2, axis=axis))
+
+    def time_abs(self, shape, axis):
+        execute(self.df.abs())
+
+    def time_aggregate(self, shape, axis):
+        execute(self.df.aggregate(lambda df: df.sum(), axis=axis))
+
+    def time_is_in(self, shape, axis):
+        execute(self.df.isin([0, 2]))
+
+    def time_transpose(self, shape, axis):
+        execute(self.df.transpose())
 
 
 class TimeSortValues:
@@ -374,6 +401,40 @@ class TimeHead:
 
     def time_head(self, shape, head_count):
         execute(self.df.head(self.head_count))
+
+
+class TimeTail:
+    param_names = ["shape", "tail_count"]
+    params = [
+        get_benchmark_shapes("TimeTail"),
+        [5, 0.8],
+    ]
+
+    def setup(self, shape, tail_count):
+        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        self.tail_count = (
+            int(tail_count * len(self.df.index))
+            if isinstance(tail_count, float)
+            else tail_count
+        )
+
+    def time_tail(self, shape, tail_count):
+        execute(self.df.tail(self.tail_count))
+
+
+class TimeExplode:
+    param_names = ["shape"]
+    params = [
+        get_benchmark_shapes("TimeExplode"),
+    ]
+
+    def setup(self, shape):
+        self.df = generate_dataframe(
+            ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH, gen_unique_key=True
+        )
+
+    def time_explode(self, shape):
+        execute(self.df.explode("col1"))
 
 
 class TimeFillnaSeries:
