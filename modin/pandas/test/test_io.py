@@ -28,6 +28,7 @@ from modin.config import (
     Engine,
     StorageFormat,
     IsExperimental,
+    TestReadFromPostgres,
     TestReadFromSqlServer,
 )
 from modin.utils import to_pandas
@@ -1868,6 +1869,10 @@ class TestSql:
         pandas_df = pandas.read_sql(query, sqlalchemy_connection_string)
         df_equals(modin_df, pandas_df)
 
+    @pytest.mark.skipif(
+        not TestReadFromPostgres.get(),
+        reason="Skip the test when the postgres server is not set up.",
+    )
     def test_read_sql_from_postgres(self):
         table_name = "test_1000x256"
         query = f"SELECT * FROM {table_name}"
@@ -1884,6 +1889,7 @@ class TestSql:
         )
         pandas_df = pandas.read_sql(query, connection)
         df_equals(modin_df, pandas_df)
+        assert modin_df.shape == (1001, 256)
 
     def test_invalid_modin_database_connections(self):
         with pytest.raises(UnsupportedDatabaseException):
