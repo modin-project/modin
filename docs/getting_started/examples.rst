@@ -28,7 +28,7 @@ The following tutorials covers more advanced features in Modin:
 - Exercise 5: Setting up Modin in a Cluster Environment [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.ipynb>`__]
 - Exercise 6: Running Modin in a Cluster Environment [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_6.ipynb>`__]
 
-How to get required dependencies for the tutorial notebooks and to run them please refer to the respective `README.md <https://github.com/modin-project/modin/tree/master/examples/tutorial/jupyter/README.md>`_ file.
+How to get required dependencies for the tutorial notebooks and to run them please refer to the respective `README.md <https://github.com/modin-project/modin/tree/master/examples/tutorial/jupyter/README.md>`__ file.
 
 Talks & Podcasts
 ''''''''''''''''
