@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Licensed to Modin Development Team under one or more contributor license agreements.
 # See the NOTICE file distributed with this work for additional information regarding
 # copyright ownership.  The Modin Development Team licenses this file to you under the
@@ -38,7 +39,7 @@ def test_noncontiguous_columns():
     if os.name == 'nt':
         assert df["a"].to_numpy().strides == (4,)
     elif os.name == 'posix':
-        assert df["a"].to_numpy().strides == (8,)        
+        assert df["a"].to_numpy().strides == (8,)
     df_equals(df, from_dataframe(df.__dataframe__()))
 
 
