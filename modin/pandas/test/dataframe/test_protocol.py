@@ -35,9 +35,9 @@ def test_float_only(data):
 def test_noncontiguous_columns():
     arr = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
     df = pd.DataFrame(arr, columns=["a", "b", "c"])
-    if os.name == 'nt':
+    if os.name == "nt":
         assert df["a"].to_numpy().strides == (4,)
-    elif os.name == 'posix':
+    elif os.name == "posix":
         assert df["a"].to_numpy().strides == (8,)
     df_equals(df, from_dataframe(df.__dataframe__()))
 
@@ -49,7 +49,7 @@ def test_categorical_dtype_two_columns():
 
     col = df.__dataframe__().get_column_by_name("B")
     assert col.dtype[0] == DTypeKind.CATEGORICAL
-    assert col.null_count == 1
+    assert col.null_count == 0
     if StorageFormat.get() != "Omnisci":
         assert col.describe_null == (2, -1)
     assert col.num_chunks() == 1
@@ -102,7 +102,7 @@ def test_float_data(data):
 
     for col_name in df.columns:
         assert df2[col_name].tolist() == df[col_name].tolist()
-        #assert convert_column_to_array(df2.get_column_by_name(col_name) == df[col_name].tolist()
+        # assert convert_column_to_array(df2.get_column_by_name(col_name) == df[col_name].tolist()
         assert df2.get_column_by_name(col_name).null_count == 0
 
 
@@ -118,7 +118,7 @@ def test_mixed_missing():
     df2 = df.__dataframe__()
 
     for col_name in df.columns:
-        #assert convert_column_to_array(df2.get_column_by_name(col_name) == df[col_name].tolist()
+        # assert convert_column_to_array(df2.get_column_by_name(col_name) == df[col_name].tolist()
         assert df2.get_column_by_name(col_name).null_count == 2
         assert df[col_name].dtype == df2[col_name].dtype
 
@@ -135,9 +135,9 @@ def test_missing_from_masked():
     df2 = df.__dataframe__()
 
     for col_name in df.columns:
-        #assert convert_column_to_array(df2.get_column_by_name(col_name) == df[col_name].tolist()
+        # assert convert_column_to_array(df2.get_column_by_name(col_name) == df[col_name].tolist()
         assert df[col_name].dtype == df2[col_name].dtype
-    
+
     dict_null = {}
     for col_name in df.columns:
         num_null = np.random.randint(5)
@@ -150,7 +150,7 @@ def test_missing_from_masked():
                 list_null.append(ind_null)
                 num_nulls += 1
         dict_null[col_name] = num_nulls
-    
+
     df2 = df.__dataframe__()
 
     assert df2.get_column_by_name("x").null_count == dict_null["x"]
