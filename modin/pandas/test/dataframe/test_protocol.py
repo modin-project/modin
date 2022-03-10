@@ -1,8 +1,23 @@
+# Licensed to Modin Development Team under one or more contributor license agreements.
+# See the NOTICE file distributed with this work for additional information regarding
+# copyright ownership.  The Modin Development Team licenses this file to you under the
+# Apache License, Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
+# ANY KIND, either express or implied. See the License for the specific language
+# governing permissions and limitations under the License.
+
 import modin.pandas as pd
 import numpy as np
 import pytest
 from modin.pandas.test.utils import df_equals
-from modin.core.dataframe.pandas.exchange.dataframe_protocol.utils import from_dataframe
+from modin.pandas.utils import from_dataframe
+from modin.core.dataframe.base.exchange.dataframe_protocol.utils import DTypeKind
+from modin.config import StorageFormat
 
 
 @pytest.mark.parametrize(
@@ -20,18 +35,23 @@ def test_float_only(data):
 def test_noncontiguous_columns():
     arr = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
     df = pd.DataFrame(arr, columns=["a", "b", "c"])
-    assert df["a"].to_numpy().strides == (24,)
+    if os.name == 'nt':
+        assert df["a"].to_numpy().strides == (4,)
+    elif os.name == 'posix':
+        assert df["a"].to_numpy().strides == (8,)        
     df_equals(df, from_dataframe(df.__dataframe__()))
 
 
 def test_categorical_dtype_two_columns():
-    df = pd.DataFrame({"A": [1, 2, 5, 1]})
-    df["B"] = df["A"].astype("category")
+    pd_df = pandas.DataFrame({"A": [1, 2, 5, 1]})
+    pd_df["B"] = pd_df["A"].astype("category")
+    df = pd.DataFrame(pd_df)
 
     col = df.__dataframe__().get_column_by_name("B")
-    assert col.dtype[0] == 23
+    assert col.dtype[0] == DTypeKind.CATEGORICAL
     assert col.null_count == 1
-    assert col.describe_null == (2, -1)
+    if StorageFormat.get() != "Omnisci":
+        assert col.describe_null == (2, -1)
     assert col.num_chunks() == 1
     assert col.describe_categorical == (False, True, {0: 1, 1: 2, 2: 5})
 
@@ -40,12 +60,13 @@ def test_categorical_dtype_two_columns():
 
 def test_string_dtype():
     df = pd.DataFrame({"A": ["a", "b", "cdef", "", "g"]})
-    df["B"] = df["A"].astype("object")
+    df["B"] = df["A"]
 
     col = df.__dataframe__().get_column_by_name("B")
-    assert col.dtype[0] == 21
+    assert col.dtype[0] == DTypeKind.STRING
     assert col.null_count == 1
-    assert col.describe_null == (4, 0)
+    if StorageFormat.get() != "Omnisci":
+        assert col.describe_null == (4, 0)
     assert col.num_chunks() == 1
 
 
@@ -81,6 +102,7 @@ def test_float_data(data):
 
     for col_name in df.columns:
         assert df2[col_name].tolist() == df[col_name].tolist()
+        #assert convert_column_to_array(df2.get_column_by_name(col_name) == df[col_name].tolist()
         assert df2.get_column_by_name(col_name).null_count == 0
 
 
@@ -96,8 +118,7 @@ def test_mixed_missing():
     df2 = df.__dataframe__()
 
     for col_name in df.columns:
-        assert df[col_name].tolist() == df2[col_name].tolist()
-        assert not df2[col_name].is_masked
+        #assert convert_column_to_array(df2.get_column_by_name(col_name) == df[col_name].tolist()
         assert df2.get_column_by_name(col_name).null_count == 2
         assert df[col_name].dtype == df2[col_name].dtype
 
@@ -114,55 +135,71 @@ def test_missing_from_masked():
     df2 = df.__dataframe__()
 
     for col_name in df.columns:
-        assert df[col_name].tolist() == df2[col_name].tolist()
-        assert not df2[col_name].is_masked
+        #assert convert_column_to_array(df2.get_column_by_name(col_name) == df[col_name].tolist()
         assert df[col_name].dtype == df2[col_name].dtype
+    
+    dict_null = {}
+    for col_name in df.columns:
+        num_null = np.random.randint(5)
+        list_null = []
+        num_nulls = 0
+        for ind in num_null:
+            ind_null = np.random.randint(5)
+            if ind_null not in list_null:
+                (df[col_name])[ind_null] = None
+                list_null.append(ind_null)
+                num_nulls += 1
+        dict_null[col_name] = num_nulls
+    
+    df2 = df.__dataframe__()
 
-    assert df2.get_column_by_name("x").null_count == 2
-    assert df2.get_column_by_name("y").null_count == 3
-    assert df2.get_column_by_name("z").null_count == 2
+    assert df2.get_column_by_name("x").null_count == dict_null["x"]
+    assert df2.get_column_by_name("y").null_count == dict_null["y"]
+    assert df2.get_column_by_name("z").null_count == dict_null["z"]
 
 
 def test_string():
     df = pd.DataFrame({"A": ["a", None, "cdef", "", "g"]})
     col = df.__dataframe__().get_column_by_name("A")
 
-    assert col._col.tolist() == df.A.tolist()
     assert col.size == 5
     assert col.null_count == 1
-    assert col.dtype[0] == 21
-    assert col.describe_null == (3, 0)
+    assert col.dtype[0] == DTypeKind.STRING
+    if StorageFormat.get() != "Omnisci":
+        assert col.describe_null == (4, 0)
 
     df2 = df.__dataframe__()
     assert df2.A.tolist() == df.A.tolist()
     assert df2.get_column_by_name("A").null_count == 1
-    assert df2.get_column_by_name("A").describe_null == (3, 0)
-    assert df2.get_column_by_name("A").dtype[0] == 21
+    if StorageFormat.get() != "Omnisci":
+        assert df2.get_column_by_name("A").describe_null == (4, 0)
+    assert df2.get_column_by_name("A").dtype[0] == DTypeKind.STRING
 
     df_sliced = df[1:]
     col = df_sliced.__dataframe__().get_column_by_name("A")
     assert col.size == 4
     assert col.null_count == 1
-    assert col.dtype[0] == 21
-    assert col.describe_null == (3, 0)
+    assert col.dtype[0] == DTypeKind.STRING
+    if StorageFormat.get() != "Omnisci":
+        assert col.describe_null == (4, 0)
 
     df2 = df_sliced.__dataframe__()
     assert df2.A.tolist() == df_sliced.A.tolist()
     assert df2.get_column_by_name("A").null_count == 1
-    assert df2.get_column_by_name("A").describe_null == (3, 0)
-    assert df2.get_column_by_name("A").dtype[0] == 21
+    if StorageFormat.get() != "Omnisci":
+        assert df2.get_column_by_name("A").describe_null == (4, 0)
+    assert df2.get_column_by_name("A").dtype[0] == DTypeKind.STRING
 
 
 def test_object():
     df = pd.DataFrame({"x": np.array([None, True, False])})
     col = df.__dataframe__().get_column_by_name("x")
 
-    assert col._col.tolist() == df.x.tolist()
     assert col.size == 3
 
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         assert col.dtype
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         assert col.describe_null
 
 
@@ -182,12 +219,7 @@ def test_DataFrame():
     assert df2.num_rows() == 3
     assert df2.num_chunks() == 1
 
-    assert df2.column_names() == ["x", "y", "z"]
-    assert df2.get_column(0)._col.tolist() == df.x.tolist()
-    assert df2.get_column_by_name("y")._col.tolist() == df.y.tolist()
-
-    for col in df2.get_columns():
-        assert col._col.tolist() == df[col._col.expression].tolist()
+    assert list(df2.column_names()) == ["x", "y", "z"]
 
     assert (
         df2.select_columns((0, 2))._df[:, 0].tolist()
@@ -217,18 +249,17 @@ def test_categorical_dtype():
     df = pd.DataFrame({"A": [1, 2, 5, 1]})
     df["A"].astype("category")
     col = df.__dataframe__().get_column_by_name("A")
-    assert col.dtype[0] == 23
+    assert col.dtype[0] == DTypeKind.CATEGORICAL
     assert col.describe_categorical == (False, True, {0: 1, 1: 2, 2: 5})
 
 
 def test_NA_categorical_dtype():
     df = pd.DataFrame({"A": [1, 2, 5, 1]})
-    df["B"] = df["A"]
+    df["B"] = df["A"].astype("category")
 
     col = df.__dataframe__().get_column_by_name("B")
-    assert col.dtype[0] == 23
+    assert col.dtype[0] == DTypeKind.CATEGORICAL
     assert col.null_count == 0
-    assert col.describe_null == (3, 0)
     assert col.num_chunks() == 1
     assert col.describe_categorical == (False, True, {0: 1, 1: 2, 2: 5})
 
@@ -238,7 +269,8 @@ def test_NA_string_dtype():
     df["B"] = df["A"].astype("object")
 
     col = df.__dataframe__().get_column_by_name("B")
-    assert col.dtype[0] == 21
+    assert col.dtype[0] == DTypeKind.STRING
     assert col.null_count == 0
-    assert col.describe_null == (3, 0)
+    if StorageFormat.get() != "Omnisci":
+        assert col.describe_null == (4, 0)
     assert col.num_chunks() == 1
