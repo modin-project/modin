@@ -1951,6 +1951,25 @@ class DataFrame(BasePandasDataset):
                 return frame
             else:
                 return
+
+        missing = []
+        for col in keys:
+            # everything else gets tried as a key;
+            # see https://github.com/pandas-dev/pandas/issues/24969
+            try:
+                found = col in self.columns
+            except TypeError as err:
+                raise TypeError(
+                    'The parameter "keys" may be a column key, one-dimensional '
+                    + "array, or a list containing only valid column keys and "
+                    + f"one-dimensional arrays. Received column of type {type(col)}"
+                ) from err
+            else:
+                if not found:
+                    missing.append(col)
+        if missing:
+            raise KeyError(f"None of {missing} are in the columns")
+
         new_query_compiler = self._query_compiler.set_index_from_columns(
             keys, drop=drop, append=append
         )
