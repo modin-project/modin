@@ -453,6 +453,13 @@ class TestReadFromSqlServer(EnvironmentVariable, type=bool):
     default = False
 
 
+class TestReadFromPostgres(EnvironmentVariable, type=bool):
+    """Set to true to test reading from Postgres."""
+
+    varname = "MODIN_TEST_READ_FROM_POSTGRES"
+    default = False
+
+
 def _check_vars():
     """
     Check validity of environment variables.

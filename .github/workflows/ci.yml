@@ -420,10 +420,11 @@ jobs:
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: 1000000000
-      # Only test reading from SQL server on ubuntu for now. Eventually, we
-      # should test on Windows, too, but we will have to set up the SQL
-      # server differently.
+      # Only test reading from SQL server and postgres on ubuntu for now.
+      # Eventually, we should test on Windows, too, but we will have to set up
+      # the servers differently.
       MODIN_TEST_READ_FROM_SQL_SERVER: true
+      MODIN_TEST_READ_FROM_POSTGRES: true
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
@@ -442,6 +443,12 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
+      - name: Set up postgres
+        # Locally, specifying port 2345:5432 works, but 2345:2345 and 5432:5432 do not. This solution is from
+        # https://stackoverflow.com/questions/36415654/cant-connect-docker-postgresql-9-3
+        run: |
+          sudo docker pull postgres
+          sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
       - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py

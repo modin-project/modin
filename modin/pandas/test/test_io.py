@@ -28,6 +28,7 @@ from modin.config import (
     Engine,
     StorageFormat,
     IsExperimental,
+    TestReadFromPostgres,
     TestReadFromSqlServer,
 )
 from modin.utils import to_pandas
@@ -1866,6 +1867,27 @@ class TestSql:
             ModinDatabaseConnection("sqlalchemy", sqlalchemy_connection_string),
         )
         pandas_df = pandas.read_sql(query, sqlalchemy_connection_string)
+        df_equals(modin_df, pandas_df)
+
+    @pytest.mark.skipif(
+        not TestReadFromPostgres.get(),
+        reason="Skip the test when the postgres server is not set up.",
+    )
+    def test_read_sql_from_postgres(self):
+        table_name = "test_1000x256"
+        query = f"SELECT * FROM {table_name}"
+        connection = "postgresql://sa:Strong.Pwd-123@localhost:2345/postgres"
+        pandas_df_to_read = pandas.DataFrame(
+            np.arange(
+                1000 * 256,
+            ).reshape(1000, 256)
+        ).add_prefix("col")
+        pandas_df_to_read.to_sql(table_name, connection, if_exists="replace")
+        modin_df = pd.read_sql(
+            query,
+            ModinDatabaseConnection("psycopg2", connection),
+        )
+        pandas_df = pandas.read_sql(query, connection)
         df_equals(modin_df, pandas_df)
 
     def test_invalid_modin_database_connections(self):
