@@ -472,8 +472,11 @@ class OmnisciOnNativeIO(BaseIO, TextFileDispatcher):
         if parse_dates_unsupported:
             return (
                 False,
-                "read_csv with 'arrow' engine supports only bool and "
-                "flattened list of string column names for the 'parse_dates' parameter",
+                (
+                    "read_csv with 'arrow' engine supports only bool and "
+                    + "flattened list of string column names for the "
+                    + "'parse_dates' parameter"
+                ),
             )
         if names and names != lib.no_default:
             if header not in [None, 0, "infer"]:
