@@ -730,6 +730,21 @@ def test_to_pandas_indices(data):
         ), f"Levels of indices at axis {axis} are different!"
 
 
+def test_create_categorical_dataframe_with_duplicate_column_name():
+    # This tests for https://github.com/modin-project/modin/issues/4312
+    kwargs = dict(
+        data=[
+            ["a", "b", "c"],
+            ["d", "e", "f"],
+        ],
+        columns=[0, 0, 1],
+        dtype="category",
+    )
+    pd_df = pandas.DataFrame(**kwargs)
+    md_df = pd.DataFrame(**kwargs)
+    df_equals(md_df, pd_df)
+
+
 @pytest.mark.skipif(
     get_current_execution() != "BaseOnPython",
     reason="This test make sense only on BaseOnPython execution.",
