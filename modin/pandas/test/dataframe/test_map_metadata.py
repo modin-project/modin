@@ -483,6 +483,32 @@ def test_astype():
     with pytest.raises(KeyError):
         modin_df.astype({"not_exists": np.uint8})
 
+    # The dtypes series must have a unique index.
+    with pytest.raises(ValueError):
+        modin_df.astype(pd.Series([str, str], index=["col1", "col1"]))
+
+
+@pytest.mark.parametrize("dtypes_are_dict", [True, False])
+def test_astype_dict_or_series_multiple_column_partitions(dtypes_are_dict):
+    # Test astype with a dtypes dict that is complex in that:
+    # - It applies to columns spanning multiple column partitions
+    # - Within a partition frame df:
+    #   - dtypes.index is not a subset of df.columns
+    #   - df.columns is not a subset of dtypes.index
+
+    pandas_df = pandas.DataFrame(test_data["int_data"])
+    modin_df = pd.DataFrame(pandas_df)
+    if dtypes_are_dict:
+        new_dtypes = {}
+    else:
+        new_dtypes = pandas.Series()
+    for i, column in enumerate(pandas_df.columns):
+        if i % 3 == 1:
+            new_dtypes[column] = "string"
+        elif i % 3 == 2:
+            new_dtypes[column] = float
+    df_equals(modin_df.astype(new_dtypes), pandas_df.astype(new_dtypes))
+
 
 def test_astype_category():
     modin_df = pd.DataFrame(
