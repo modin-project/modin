@@ -488,8 +488,6 @@ class BasePandasDataset(object):
             return Series(result)
         # inplace
         elif result is None:
-            import modin.pandas as pd
-
             return self._create_or_update_from_compiler(
                 getattr(pd, type(pandas_obj).__name__)(pandas_obj)._query_compiler,
                 inplace=True,
