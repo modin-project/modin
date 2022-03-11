@@ -27,6 +27,7 @@ Notes
 
 import collections
 from typing import Any, Dict, Optional, Iterable, Sequence
+import numpy as np
 
 from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
@@ -138,11 +139,16 @@ class PandasProtocolDataframe(ProtocolDataframe):
         cur_n_chunks = self.num_chunks()
         n_rows = self.num_rows()
         if n_chunks is None or n_chunks == cur_n_chunks:
-            for length in self._df._row_lengths:
+            cum_row_lengths = np.cumsum([0] + self._df._row_lengths)
+            for i in range(len(cum_row_lengths) - 1):
                 yield PandasProtocolDataframe(
-                    self._df.mask(row_positions=range(length), col_positions=None),
+                    self._df.mask(
+                        row_positions=range(cum_row_lengths[i], cum_row_lengths[i + 1]),
+                        col_positions=None,
+                    ),
                     allow_copy=self._allow_copy,
                 )
+            return
         if n_chunks % cur_n_chunks != 0:
             raise RuntimeError(
                 "The passed `n_chunks` must be a multiple of `self.num_chunks()`."
@@ -171,8 +177,12 @@ class PandasProtocolDataframe(ProtocolDataframe):
             new_lengths,
             self._df._column_widths,
         )
-        for length in new_df._row_lengths:
+        cum_row_lengths = np.cumsum([0] + new_df._row_lengths)
+        for i in range(len(cum_row_lengths) - 1):
             yield PandasProtocolDataframe(
-                self._df.mask(row_positions=range(length), col_positions=None),
+                new_df.mask(
+                    row_positions=range(cum_row_lengths[i], cum_row_lengths[i + 1]),
+                    col_positions=None,
+                ),
                 allow_copy=self._allow_copy,
             )

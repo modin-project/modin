@@ -36,6 +36,7 @@ from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
 from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
     DTypeKind,
     pandas_dtype_to_arrow_c,
+    ColumnNullType,
 )
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from .buffer import PandasProtocolBuffer
@@ -188,20 +189,18 @@ class PandasProtocolColumn(ProtocolColumn):
         kind = self.dtype[0]
         value = None
         if kind == DTypeKind.FLOAT:
-            null = 1  # np.nan
+            null = ColumnNullType.USE_NAN
         elif kind == DTypeKind.DATETIME:
-            null = 1  # np.datetime64('NaT')
+            null = ColumnNullType.USE_NAN
         elif kind in (DTypeKind.INT, DTypeKind.UINT, DTypeKind.BOOL):
-            # TODO: check if extension dtypes are used once support for them is
-            #       implemented in this protocol code
-            null = 0  # integer and boolean dtypes are non-nullable
+            null = ColumnNullType.NON_NULLABLE
         elif kind == DTypeKind.CATEGORICAL:
             # Null values for categoricals are stored as `-1` sentinel values
             # in the category date (e.g., `col.values.codes` is int8 np.ndarray)
-            null = 2
+            null = ColumnNullType.USE_SENTINEL
             value = -1
         elif kind == DTypeKind.STRING:
-            null = 4
+            null = ColumnNullType.USE_BYTEMASK
             value = (
                 0  # follow Arrow in using 1 as valid value and 0 for missing/null value
             )
@@ -249,11 +248,16 @@ class PandasProtocolColumn(ProtocolColumn):
         cur_n_chunks = self.num_chunks()
         n_rows = self.size
         if n_chunks is None or n_chunks == cur_n_chunks:
-            for length in self._col._row_lengths:
+            cum_row_lengths = np.cumsum([0] + self._col._row_lengths)
+            for i in range(len(cum_row_lengths) - 1):
                 yield PandasProtocolColumn(
-                    self._col.mask(row_positions=range(length), col_positions=None),
+                    self._col.mask(
+                        row_positions=range(cum_row_lengths[i], cum_row_lengths[i + 1]),
+                        col_positions=None,
+                    ),
                     allow_copy=self._col._allow_copy,
                 )
+            return
 
         if n_chunks % cur_n_chunks != 0:
             raise RuntimeError(
@@ -283,9 +287,13 @@ class PandasProtocolColumn(ProtocolColumn):
             new_lengths,
             self._col._column_widths,
         )
-        for length in new_df._row_lengths:
+        cum_row_lengths = np.cumsum([0] + new_df._row_lengths)
+        for i in range(len(cum_row_lengths) - 1):
             yield PandasProtocolColumn(
-                self._col.mask(row_positions=range(length), col_positions=None),
+                new_df.mask(
+                    row_positions=range(cum_row_lengths[i], cum_row_lengths[i + 1]),
+                    col_positions=None,
+                ),
                 allow_copy=self._allow_copy,
             )
 
@@ -388,9 +396,9 @@ class PandasProtocolColumn(ProtocolColumn):
 
             return buffer, dtype
 
-        if null == 0:
+        if null == ColumnNullType.NON_NULLABLE:
             msg = "This column is non-nullable so does not have a mask"
-        elif null == 1:
+        elif null == ColumnNullType.USE_NAN:
             msg = "This column uses NaN as null so does not have a separate mask"
         else:
             raise NotImplementedError("See self.describe_null")
