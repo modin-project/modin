@@ -20,7 +20,7 @@ class DaskWrapper:
     """The class responsible for execution of remote operations."""
 
     @classmethod
-    def deploy(cls, func, num_returns, *args, **kwargs):
+    def deploy(cls, func, *args, num_returns=1, **kwargs):
         """
         Deploy a function in a worker process.
 

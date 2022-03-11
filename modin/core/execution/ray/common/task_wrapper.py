@@ -46,7 +46,7 @@ class RayTask:
     """Mixin that provides means of running functions remotely and getting local results."""
 
     @classmethod
-    def deploy(cls, func, num_returns, *args, **kwargs):
+    def deploy(cls, func, *args, num_returns=1, **kwargs):
         """
         Run local `func` remotely.
 

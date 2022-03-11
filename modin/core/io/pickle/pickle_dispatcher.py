@@ -71,7 +71,7 @@ class PickleExperimentalDispatcher(FileDispatcher):
         for file_name in filepath_or_buffer:
             partition_id = cls.deploy(
                 cls.parse,
-                3,
+                num_returns=3,
                 fname=file_name,
                 **kwargs,
             )

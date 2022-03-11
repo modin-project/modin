@@ -82,7 +82,7 @@ class SQLDispatcher(FileDispatcher):
             query = con.partition_query(sql, limit, offset)
             partition_id = cls.deploy(
                 cls.parse,
-                num_partitions + 2,
+                num_returns=num_partitions + 2,
                 num_splits=num_partitions,
                 sql=query,
                 con=con,
