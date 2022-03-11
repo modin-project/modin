@@ -23,6 +23,7 @@ Key Features and Updates
   * FIX-#4185: Fix rolling across column partitions (#4262)
   * FIX-#4303: Fix the syntax error in reading from postgres (#4304)
   * FIX-#4308: Add proper error handling in df.set_index (#4309)
+  * FIX-#4314: Allow passing a series of dtypes to astype (#4318)
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
   * FIX-#4183: Stop shallow copies from creating global shared state. (#4184)
