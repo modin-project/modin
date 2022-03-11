@@ -84,7 +84,7 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         lengths = kwargs.get("_lengths", None)
         result_num_splits = len(lengths) if lengths else num_splits
         num_returns = result_num_splits * 4
-        axis_result = DaskWrapper.deploy(
+        return DaskWrapper.deploy(
             deploy_dask_func,
             num_returns,
             PandasDataframeAxisPartition.deploy_axis_func,
@@ -96,7 +96,6 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             *partitions,
             pure=False,
         )
-        return axis_result
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
@@ -129,7 +128,7 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             A list of distributed.Future.
         """
         num_returns = num_splits * 4
-        axis_result = DaskWrapper.deploy(
+        return DaskWrapper.deploy(
             deploy_dask_func,
             num_returns,
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
@@ -142,7 +141,6 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             *partitions,
             pure=False,
         )
-        return axis_result
 
     def _wrap_partitions(self, partitions):
         """

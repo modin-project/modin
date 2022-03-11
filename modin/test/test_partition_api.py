@@ -90,12 +90,7 @@ def test_unwrap_partitions(axis):
         actual_axis_partitions = unwrap_partitions(df, axis=axis)
         assert len(expected_axis_partitions) == len(actual_axis_partitions)
         for item_idx in range(len(expected_axis_partitions)):
-            if Engine.get() == "Ray":
-                df_equals(
-                    ray.get(expected_axis_partitions[item_idx]),
-                    ray.get(actual_axis_partitions[item_idx]),
-                )
-            if Engine.get() == "Dask":
+            if Engine.get() in ["Ray", "Dask"]:
                 df_equals(
                     get_func(expected_axis_partitions[item_idx]),
                     get_func(actual_axis_partitions[item_idx]),
@@ -133,14 +128,14 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
 
     if Engine.get() == "Ray":
         if axis is None:
-            futures = [[ray.put(df1), ray.put(df2)]]
+            futures = [[put_func(df1), put_func(df2)]]
         else:
-            futures = [ray.put(df1), ray.put(df2)]
+            futures = [put_func(df1), put_func(df2)]
     if Engine.get() == "Dask":
         if axis is None:
-            futures = [DaskWrapper.put([df1, df2], hash=False)]
+            futures = [put_func([df1, df2], hash=False)]
         else:
-            futures = DaskWrapper.put([df1, df2], hash=False)
+            futures = put_func([df1, df2], hash=False)
     actual_df = from_partitions(
         futures,
         axis,
