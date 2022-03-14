@@ -196,25 +196,23 @@ class PandasProtocolColumn(ProtocolColumn):
 
     @property
     def describe_null(self) -> Tuple[int, Any]:
-        kind = self.dtype[0]
-        value = None
-        if kind == DTypeKind.FLOAT:
-            null = ColumnNullType.USE_NAN
-        elif kind == DTypeKind.DATETIME:
-            null = ColumnNullType.USE_NAN
-        elif kind in (DTypeKind.INT, DTypeKind.UINT, DTypeKind.BOOL):
-            null = ColumnNullType.NON_NULLABLE
-        elif kind == DTypeKind.CATEGORICAL:
+        nulls = {
+            DTypeKind.FLOAT: (ColumnNullType.USE_NAN, None),
+            DTypeKind.DATETIME: (ColumnNullType.USE_NAN, None),
+            DTypeKind.INT: (ColumnNullType.NON_NULLABLE, None),
+            DTypeKind.UINT: (ColumnNullType.NON_NULLABLE, None),
+            DTypeKind.BOOL: (ColumnNullType.NON_NULLABLE, None),
             # Null values for categoricals are stored as `-1` sentinel values
             # in the category date (e.g., `col.values.codes` is int8 np.ndarray)
-            null = ColumnNullType.USE_SENTINEL
-            value = -1
-        elif kind == DTypeKind.STRING:
-            null = ColumnNullType.USE_BYTEMASK
-            value = (
-                0  # follow Arrow in using 1 as valid value and 0 for missing/null value
-            )
-        else:
+            DTypeKind.CATEGORICAL: (ColumnNullType.USE_SENTINEL, -1),
+            # follow Arrow in using 1 as valid value and 0 for missing/null value
+            DTypeKind.STRING: (ColumnNullType.USE_BYTEMASK, 0),
+        }
+
+        kind = self.dtype[0]
+        try:
+            null, value = nulls[kind]
+        except KeyError:
             raise NotImplementedError(f"Data type {kind} not yet supported")
 
         return null, value
