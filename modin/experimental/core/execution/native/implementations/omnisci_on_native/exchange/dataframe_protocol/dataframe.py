@@ -21,7 +21,9 @@ from typing import Optional, Iterable, Sequence, Dict, Any
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe import (
     OmnisciOnNativeDataframe,
 )
-from modin.core.dataframe.base.exchange.dataframe_protocol import ProtocolDataframe
+from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+    ProtocolDataframe,
+)
 from modin.utils import _inherit_docstrings
 from modin.error_message import ErrorMessage
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra import (

@@ -96,8 +96,9 @@ def from_dataframe(
 
     pandas_df = pandas.concat(pandas_dfs, axis=0, ignore_index=True)
 
-    if "index" in df.metadata:
-        pandas_df.index = df.metadata["index"]
+    index_obj = df.metadata.get("modin.index", df.metadata.get("pandas.index", None))
+    if index_obj is not None:
+        pandas_df.index = index_obj
 
     return pandas_df
 
