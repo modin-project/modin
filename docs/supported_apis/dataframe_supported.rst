@@ -13,7 +13,8 @@ the method in the left column. ``Y`` stands for yes, ``N`` stands for no, ``P`` 
 for partial (meaning some parameters may not be supported yet), and ``D`` stands for
 default to pandas.
 **Currently third column reflects implementation status for Ray and Dask engines. By default support of a method
-in the Omnisci engine could be treated as ``D`` unless ``Notes`` column contains additional information.**
+in the Omnisci engine could be treated as ``D`` unless ``Notes`` column contains additional information. Similarly,
+by default ``Notes`` contains information about ``Ray`` and ``Dask`` engines unless ``Omnisci`` explicitly mentioned.**
 
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | DataFrame method           | pandas Doc link           | Implemented? (Y/N/P/D) | Notes for Current implementation                   |
@@ -22,7 +23,8 @@ in the Omnisci engine could be treated as ``D`` unless ``Notes`` column contains
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``abs``                    | `abs`_                    | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``add``                    | `add`_                    | Y                      | Shuffles data in operations between DataFrames     |
+| ``add``                    | `add`_                    | Y                      | **Ray** and **Dask**:Shuffles data in operations   |
+|                            |                           |                        | between DataFrames                                 |
 |                            |                           |                        | **Omnisci**:``Y``                                  |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``add_prefix``             | `add_prefix`_             | Y                      |                                                    |
@@ -39,7 +41,7 @@ in the Omnisci engine could be treated as ``D`` unless ``Notes`` column contains
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``any``                    | `any`_                    | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``append``                 | `append`_                 | Y                      |                                                    |
+| ``append``                 | `append`_                 | Y                      | **Omnisci**:``Y``?                                 |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``apply``                  | `apply`_                  | Y                      | See ``agg``                                        |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
@@ -51,7 +53,7 @@ in the Omnisci engine could be treated as ``D`` unless ``Notes`` column contains
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``assign``                 | `assign`_                 | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``astype``                 | `astype`_                 | Y                      | **Omnisci**:``P``, not all types supported?        |
+| ``astype``                 | `astype`_                 | Y                      | **Omnisci**:``P``, ``int`` and ``float`` supported |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``at``                     | `at`_                     | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
@@ -117,7 +119,7 @@ in the Omnisci engine could be treated as ``D`` unless ``Notes`` column contains
 | ``dropna``                 | `dropna`_                 | Y                      | **Omnisci**:``P``, same as ``drop``,               |
 |                            |                           |                        | also ``D`` for ``thresh`` and ``axis`` parameters  |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``dtypes``                 | `dtypes`_                 | Y                      |                                                    |
+| ``dtypes``                 | `dtypes`_                 | Y                      | **Omnisci**:``Y`` ?                                |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``duplicated``             | `duplicated`_             | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
@@ -245,7 +247,8 @@ in the Omnisci engine could be treated as ``D`` unless ``Notes`` column contains
 |                            |                           |                        | ``right_index=False`` or ``left_index=False``      |
 |                            |                           |                        | and ``right_index=True``.                          |
 |                            |                           |                        | Defaults to pandas otherwise.                      |
-|                            |                           |                        | **Omnisci**: ``P``, only non-index joins with      |
+|                            |                           |                        | **Omnisci**: ``P``, only non-index joins for       |
+|                            |                           |                        | ``how=left`` and ``how=inner`` with                |
 |                            |                           |                        | explicit 'on' are supported                        |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``min``                    | `min`_                    | Y                      | **Omnisci**:``P``, only default params supported,  |

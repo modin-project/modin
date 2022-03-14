@@ -13,7 +13,8 @@ for partial (meaning some parameters may not be supported yet), and ``D`` stands
 default to pandas. To learn more about the implementations that default to pandas, see
 the related section on :doc:`Defaulting to pandas </supported_apis/index>`.
 **Currently second column reflects implementation status for ``Ray`` and ``Dask`` engines. By default support of a method
-in the ``Omnisci`` engine could be treated as ``D`` unless ``Notes`` column contains additional information.**
+in the ``Omnisci`` engine could be treated as ``D`` unless ``Notes`` column contains additional information. Similarly,
+by default ``Notes`` contains information about ``Ray`` and ``Dask`` engines unless ``Omnisci`` explicitly mentioned.**
 
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | Series method               | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
@@ -36,7 +37,7 @@ in the ``Omnisci`` engine could be treated as ``D`` unless ``Notes`` column cont
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``any``                     | Y                               |                                                    |
 +-----------------------------+---------------------------------+----------------------------------------------------+
-| ``append``                  | Y                               |                                                    |
+| ``append``                  | Y                               | **Omnisci**:``Y``?                                 |
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``apply``                   | Y                               |                                                    |
 +-----------------------------+---------------------------------+----------------------------------------------------+
@@ -54,7 +55,7 @@ in the ``Omnisci`` engine could be treated as ``D`` unless ``Notes`` column cont
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``asof``                    | Y                               |                                                    |
 +-----------------------------+---------------------------------+----------------------------------------------------+
-| ``astype``                  | Y                               | **Omnisci**:``P``, not all types supported?        |
+| ``astype``                  | Y                               | **Omnisci**:``P``, ``int`` and ``float`` supported |
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``at``                      | Y                               |                                                    |
 +-----------------------------+---------------------------------+----------------------------------------------------+
@@ -135,7 +136,7 @@ in the ``Omnisci`` engine could be treated as ``D`` unless ``Notes`` column cont
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``dtype``                   | Y                               |                                                    |
 +-----------------------------+---------------------------------+----------------------------------------------------+
-| ``dtypes``                  | Y                               |                                                    |
+| ``dtypes``                  | Y                               | **Omnisci**:``Y`` ?                                |
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``duplicated``              | Y                               |                                                    |
 +-----------------------------+---------------------------------+----------------------------------------------------+
@@ -475,6 +476,7 @@ in the ``Omnisci`` engine could be treated as ``D`` unless ``Notes`` column cont
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``value_counts``            | Y                               | The indices order of resulting object may differ   |
 |                             |                                 | from pandas.                                       |
+|                             |                                 | **Omnisci**:``Y``?                                 |
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``values``                  | Y                               |                                                    |
 +-----------------------------+---------------------------------+----------------------------------------------------+
