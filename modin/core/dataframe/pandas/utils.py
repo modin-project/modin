@@ -42,14 +42,13 @@ def concatenate(dfs):
         for df in dfs:
             categorical_columns_in_df = df[column_name]
             # Fast path for when the column name is unique.
-            if type(categorical_columns_in_df) == pandas.Series:
+            if isinstance(categorical_columns_in_df, pandas.Series):
                 categorical_columns_with_name.append(categorical_columns_in_df)
             else:
                 # If the column name is repeated, df[column_name] gives a
                 # a dataframe with all matching columns instead of a series.
                 categorical_columns_with_name.extend(
-                    categorical_columns_in_df.iloc[:, i]
-                    for i in range(len(categorical_columns_in_df.columns))
+                    col for _, col in categorical_columns_in_df.iteritems()
                 )
         # Make a new category unioning all columns with the current name.
         categories = union_categoricals(categorical_columns_with_name).categories
@@ -57,7 +56,7 @@ def concatenate(dfs):
         for df in dfs:
             categorical_columns_in_df = df[column_name]
             # Fast path for when the column name is unique.
-            if type(categorical_columns_in_df) == pandas.Series:
+            if isinstance(categorical_columns_in_df, pandas.Series):
                 df[column_name] = pandas.Categorical(
                     df[column_name], categories=categories
                 )
