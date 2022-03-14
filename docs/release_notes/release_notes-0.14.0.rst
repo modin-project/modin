@@ -14,12 +14,16 @@ Key Features and Updates
   * FIX-#4177: Support read_feather from pathlike objects (#4177)
   * FIX-#4234: Upgrade pandas to 1.4.1 (#4235)
   * FIX-#3368: support unsigned integers in OmniSci backend (#4256)
-  * FIX-#4057: Allow reading an empty parquet file (#4075)  
+  * FIX-#4057: Allow reading an empty parquet file (#4075)
   * FIX-#3884: Fix read_excel() dropping empty rows (#4161)
-  * FIX-#4257: Fix Categorical() for scalar categories (#4258) 
+  * FIX-#4257: Fix Categorical() for scalar categories (#4258)
+  * FIX-#4300: Fix Modin Categorical column dtype categories (#4276)
   * FIX-#4208: Fix lazy metadata update for `PandasDataFrame.from_labels` (#4209)
   * FIX-#3981, FIX-#3801, FIX-#4149: Stop broadcasting scalars to set items (#4160)
   * FIX-#4185: Fix rolling across column partitions (#4262)
+  * FIX-#4303: Fix the syntax error in reading from postgres (#4304)
+  * FIX-#4308: Add proper error handling in df.set_index (#4309)
+  * FIX-#4056: Allow an empty parse_date list in `read_csv_glob` (#4074)
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
   * FIX-#4183: Stop shallow copies from creating global shared state. (#4184)
@@ -36,7 +40,7 @@ Key Features and Updates
   * REFACTOR-#4093: Refactor base to be smaller (#4220)
   * REFACTOR-#4047: Rename `cluster` directory to `cloud` in examples (#4212)
 * Pandas API implementations and improvements
-  *
+  * FEAT-#979: Enable reading from SQL server (#4279)
 * OmniSci enhancements
   *
 * XGBoost enhancements
@@ -47,6 +51,7 @@ Key Features and Updates
   * TEST-#3628: Report coverage data for `test-internals` CI job (#4198)
   * TEST-#3938: Test tutorial notebooks in CI (#4145)
   * TEST-#4153: Fix condition of running lint-commit and set of CI triggers (#4156)
+  * TEST-#4201: Add read_parquet, explode, tail, and various arithmetic functions to asv_bench (#4203)
 * Documentation improvements
   * DOCS-#4077: Add release notes template to docs folder (#4078)
   * DOCS-#4082: Add pdf/epub/htmlzip formats for doc builds (#4083)
@@ -69,6 +74,7 @@ Key Features and Updates
 
 Contributors
 ------------
+
 @prutskov
 @amyskov
 @paulovn

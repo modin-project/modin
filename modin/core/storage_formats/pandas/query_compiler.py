@@ -266,9 +266,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Dataframe exchange protocol
 
-    def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True) -> dict:
-        raise NotImplementedError(
-            "The selected execution does not implement the DataFrame exchange protocol yet."
+    def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True):
+        return self._modin_frame.__dataframe__(
+            nan_as_null=nan_as_null, allow_copy=allow_copy
         )
 
     @classmethod

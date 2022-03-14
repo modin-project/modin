@@ -330,6 +330,10 @@ class ProtocolColumn(ABC):
         ------
         DataFrame
             A ``DataFrame`` object(s).
+
+        Raises
+        ------
+        ``RuntimeError`` if ``n_chunks`` is not a multiple of ``self.num_chunks()``.
         """
         pass
 
@@ -539,5 +543,9 @@ class ProtocolDataframe(ABC):
         ------
         ProtocolDataframe
             A ``ProtocolDataframe`` object(s).
+
+        Raises
+        ------
+        ``RuntimeError`` if ``n_chunks`` is not a multiple of ``self.num_chunks()``.
         """
         pass

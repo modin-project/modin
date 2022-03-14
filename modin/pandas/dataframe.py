@@ -1949,6 +1949,25 @@ class DataFrame(BasePandasDataset):
                 return frame
             else:
                 return
+
+        missing = []
+        for col in keys:
+            # everything else gets tried as a key;
+            # see https://github.com/pandas-dev/pandas/issues/24969
+            try:
+                found = col in self.columns
+            except TypeError as err:
+                raise TypeError(
+                    'The parameter "keys" may be a column key, one-dimensional '
+                    + "array, or a list containing only valid column keys and "
+                    + f"one-dimensional arrays. Received column of type {type(col)}"
+                ) from err
+            else:
+                if not found:
+                    missing.append(col)
+        if missing:
+            raise KeyError(f"None of {missing} are in the columns")
+
         new_query_compiler = self._query_compiler.set_index_from_columns(
             keys, drop=drop, append=append
         )
@@ -2635,7 +2654,7 @@ class DataFrame(BasePandasDataset):
     __rmod__ = rmod
     __rdiv__ = rdiv
 
-    def __dataframe__(self, nan_as_null: bool = False, allow_copy: bool = True) -> dict:
+    def __dataframe__(self, nan_as_null: bool = False, allow_copy: bool = True):
         """
         Get a Modin DataFrame that implements the dataframe exchange protocol.
 
@@ -2657,8 +2676,8 @@ class DataFrame(BasePandasDataset):
 
         Returns
         -------
-        dict
-            A dictionary object following the dataframe protocol specification.
+        ProtocolDataframe
+            A dataframe object following the dataframe protocol specification.
         """
         return self._query_compiler.to_dataframe(
             nan_as_null=nan_as_null, allow_copy=allow_copy
