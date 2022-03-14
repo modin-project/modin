@@ -16,9 +16,9 @@
 import pyarrow as pa
 import pandas
 import numpy as np
-
 from typing import Any, Optional, Tuple, Dict, Iterable
 from math import ceil
+
 from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
     DTypeKind,
     ColumnNullType,

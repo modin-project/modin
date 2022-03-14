@@ -14,13 +14,12 @@
 """The module houses OmnisciOnNative implementation of the Buffer class of DataFrame exchange protocol."""
 
 import pyarrow as pa
-
 from typing import Tuple, Optional
+
 from modin.core.dataframe.base.exchange.dataframe_protocol.utils import DlpackDeviceType
 from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
     ProtocolBuffer,
 )
-
 from modin.utils import _inherit_docstrings
 
 

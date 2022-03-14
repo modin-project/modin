@@ -16,14 +16,13 @@
 import collections
 import numpy as np
 import pyarrow as pa
-
 from typing import Optional, Iterable, Sequence, Dict, Any
+
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe import (
     OmnisciOnNativeDataframe,
 )
 from modin.core.dataframe.base.exchange.dataframe_protocol import ProtocolDataframe
 from modin.utils import _inherit_docstrings
-
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra import (
     MaskNode,
     FrameNode,
@@ -36,7 +35,7 @@ from .column import OmnisciProtocolColumn
 @_inherit_docstrings(ProtocolDataframe)
 class OmnisciProtocolDataframe(ProtocolDataframe):
     """
-    Implement DataFrame exchange protocol class for OmniSciOnNative execution.
+    Implement the DataFrame exchange protocol class for ``OmnisciOnNative`` execution.
 
     Parameters
     ----------
@@ -71,7 +70,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         # This will require the internal index column to be visible in the protocol's column
         # accessor methods.
         self._maybe_raise_if_materialize()
-        return {"index": self._df.index}
+        return {"modin.index": self._df.index}
 
     def num_columns(self) -> int:
         return len(self._df.columns)
@@ -164,7 +163,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         return self.__is_zero_copy_possible
 
     @classmethod
-    def _is_zero_copy_op(cls, op) -> bool:
+    def _is_zero_copy_arrow_op(cls, op) -> bool:
         """
         Check whether the passed node of the delayed computation tree could be executed zero-copy via PyArrow execution.
 
