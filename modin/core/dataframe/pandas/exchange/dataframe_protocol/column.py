@@ -110,8 +110,15 @@ class PandasProtocolColumn(ProtocolColumn):
     def offset(self) -> int:
         return 0
 
+    _dtype_cache = None
+
+    # TODO: since python 3.9:
+    # @cached_property
     @property
     def dtype(self) -> Tuple[DTypeKind, int, str, str]:
+        if self._dtype_cache is not None:
+            return self._dtype_cache
+
         dtype = self._col.dtypes[0]
 
         if pandas.api.types.is_categorical_dtype(dtype):
@@ -123,16 +130,19 @@ class PandasProtocolColumn(ProtocolColumn):
                 c_arrow_dtype_f_str,
                 _,
             ) = self._dtype_from_primitive_pandas_dtype(codes.dtype)
-            return (
+            dtype_cache = (
                 DTypeKind.CATEGORICAL,
                 bitwidth,
                 c_arrow_dtype_f_str,
                 "=",
             )
         elif pandas.api.types.is_string_dtype(dtype):
-            return (DTypeKind.STRING, 8, pandas_dtype_to_arrow_c(dtype), "=")
+            dtype_cache = (DTypeKind.STRING, 8, pandas_dtype_to_arrow_c(dtype), "=")
         else:
-            return self._dtype_from_primitive_pandas_dtype(dtype)
+            dtype_cache = self._dtype_from_primitive_pandas_dtype(dtype)
+
+        self._dtype_cache = dtype_cache
+        return self._dtype_cache
 
     def _dtype_from_primitive_pandas_dtype(
         self, dtype
@@ -229,7 +239,8 @@ class PandasProtocolColumn(ProtocolColumn):
         # 1) We internally use '__reduced__' for labels of a reduced axis
         # 2) The return value of `reduce_func` is a pandas DataFrame with
         # index and column labels set to ``pandas.RangeIndex(1)``
-        # 3) We further use `to_pandas().squeeze()` to get an integer value of the null count
+        # 3) We further use `to_pandas().squeeze()` to get an integer value of the null count.
+        # Otherwise, we get mismatching internal and external indices for both axes
         intermediate_df.index = pandas.RangeIndex(1)
         intermediate_df.columns = pandas.RangeIndex(1)
         self._null_count_cache = intermediate_df.to_pandas().squeeze()
@@ -312,6 +323,8 @@ class PandasProtocolColumn(ProtocolColumn):
 
         return buffers
 
+    _data_buffer_cache = None
+
     def _get_data_buffer(
         self,
     ) -> Tuple[PandasProtocolBuffer, Any]:  # Any is for self.dtype tuple
@@ -323,6 +336,9 @@ class PandasProtocolColumn(ProtocolColumn):
         tuple
             The data buffer.
         """
+        if self._data_buffer_cache is not None:
+            return self._data_buffer_cache
+
         dtype = self.dtype
         if dtype[0] in (DTypeKind.INT, DTypeKind.UINT, DTypeKind.FLOAT, DTypeKind.BOOL):
             buffer = PandasProtocolBuffer(
@@ -356,7 +372,10 @@ class PandasProtocolColumn(ProtocolColumn):
         else:
             raise NotImplementedError(f"Data type {self._col.dtype[0]} not handled yet")
 
-        return buffer, dtype
+        self._data_buffer_cache = (buffer, dtype)
+        return self._data_buffer_cache
+
+    _validity_buffer_cache = None
 
     def _get_validity_buffer(self) -> Tuple[PandasProtocolBuffer, Any]:
         """
@@ -374,19 +393,19 @@ class PandasProtocolColumn(ProtocolColumn):
         ------
         ``NoValidityBuffer`` if null representation is not a bit or byte mask.
         """
+        if self._validity_buffer_cache is not None:
+            return self._validity_buffer_cache
+
         null, invalid = self.describe_null
 
         if self.dtype[0] == DTypeKind.STRING:
             # For now, have the mask array be comprised of bytes, rather than a bit array
             buf = self._col.to_numpy().flatten()
-            mask = []
 
             # Determine the encoding for valid values
             valid = 1 if invalid == 0 else 0
 
-            for i in range(buf.size):
-                v = valid if type(buf[i]) == str else invalid
-                mask.append(v)
+            mask = [valid if type(buf[i]) == str else invalid for i in range(buf.size)]
 
             # Convert the mask array to a Pandas "buffer" using a NumPy array as the backing store
             buffer = PandasProtocolBuffer(np.asarray(mask, dtype="uint8"))
@@ -394,7 +413,8 @@ class PandasProtocolColumn(ProtocolColumn):
             # Define the dtype of the returned buffer
             dtype = (DTypeKind.UINT, 8, "C", "=")
 
-            return buffer, dtype
+            self._validity_buffer_cache = (buffer, dtype)
+            return self._validity_buffer_cache
 
         if null == ColumnNullType.NON_NULLABLE:
             msg = "This column is non-nullable so does not have a mask"
@@ -404,6 +424,8 @@ class PandasProtocolColumn(ProtocolColumn):
             raise NotImplementedError("See self.describe_null")
 
         raise NoValidityBuffer(msg)
+
+    _offsets_buffer_cache = None
 
     def _get_offsets_buffer(self) -> Tuple[PandasProtocolBuffer, Any]:
         """
@@ -421,18 +443,21 @@ class PandasProtocolColumn(ProtocolColumn):
         ------
         ``NoOffsetsBuffer`` if the data buffer does not have an associated offsets buffer.
         """
+        if self._offsets_buffer_cache is not None:
+            return self._offsets_buffer_cache
+
         if self.dtype[0] == DTypeKind.STRING:
             # For each string, we need to manually determine the next offset
             values = self._col.to_numpy().flatten()
             ptr = 0
-            offsets = [ptr]
-            for v in values:
+            offsets = [ptr] + [None] * len(values)
+            for i, v in enumerate(values):
                 # For missing values (in this case, `np.nan` values), we don't increment the pointer)
                 if type(v) == str:
                     b = v.encode(encoding="utf-8")
                     ptr += len(b)
 
-                offsets.append(ptr)
+                offsets[i + 1] = ptr
 
             # Convert the list of offsets to a NumPy array of signed 64-bit integers (note: Arrow allows the offsets array to be either `int32` or `int64`; here, we default to the latter)
             buf = np.asarray(offsets, dtype="int64")
@@ -452,4 +477,5 @@ class PandasProtocolColumn(ProtocolColumn):
                 "This column has a fixed-length dtype so does not have an offsets buffer"
             )
 
-        return buffer, dtype
+        self._offsets_buffer_cache = (buffer, dtype)
+        return self._offsets_buffer_cache
