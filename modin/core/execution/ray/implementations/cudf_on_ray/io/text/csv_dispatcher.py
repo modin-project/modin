@@ -94,7 +94,9 @@ class cuDFCSVDispatcher(CSVDispatcher):
         for idx, (start, end) in enumerate(splits):
             partition_kwargs.update({"start": start, "end": end, "gpu": gpu_manager})
             *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
-                cls.parse, partition_kwargs.get("num_splits") + 2, **partition_kwargs
+                cls.parse,
+                num_returns=partition_kwargs.get("num_splits") + 2,
+                **partition_kwargs
             )
             gpu_manager += 1
         return partition_ids, index_ids, dtypes_ids

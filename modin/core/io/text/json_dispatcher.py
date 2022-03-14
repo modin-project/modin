@@ -69,7 +69,7 @@ class JSONDispatcher(TextFileDispatcher):
             for idx, (start, end) in enumerate(splits):
                 args.update({"start": start, "end": end})
                 *partition_ids[idx], index_ids[idx], dtypes_ids[idx], _ = cls.deploy(
-                    cls.parse, num_splits + 3, **args
+                    cls.parse, num_returns=num_splits + 3, **args
                 )
         # partition_id[-1] contains the columns for each partition, which will be useful
         # for implementing when `lines=False`.
