@@ -19,8 +19,18 @@ import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
 from pathlib import Path
 from collections import OrderedDict
-from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
-from modin.config import TestDatasetSize, Engine, StorageFormat, IsExperimental
+from modin.db_conn import (
+    ModinDatabaseConnection,
+    UnsupportedDatabaseException,
+)
+from modin.config import (
+    TestDatasetSize,
+    Engine,
+    StorageFormat,
+    IsExperimental,
+    TestReadFromPostgres,
+    TestReadFromSqlServer,
+)
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 from modin.test.test_utils import warns_that_defaulting_to_pandas
@@ -50,6 +60,8 @@ from .utils import (
     teardown_test_files,
     generate_dataframe,
     default_to_pandas_ignore_string,
+    parse_dates_values_by_id,
+    time_parsing_csv_path,
 )
 
 if StorageFormat.get() == "Omnisci":
@@ -869,14 +881,29 @@ class TestCsv:
 
     @pytest.mark.parametrize("encoding", [None, "utf-8"])
     @pytest.mark.parametrize("encoding_errors", ["strict", "ignore"])
-    @pytest.mark.parametrize("parse_dates", [False, ["timestamp"]])
-    @pytest.mark.parametrize("index_col", [None, 0, 2])
+    @pytest.mark.parametrize(
+        "parse_dates",
+        [pytest.param(value, id=id) for id, value in parse_dates_values_by_id.items()],
+    )
+    @pytest.mark.parametrize("index_col", [None, 0, 5])
     @pytest.mark.parametrize("header", ["infer", 0])
     @pytest.mark.parametrize(
         "names",
         [
             None,
-            ["timestamp", "symbol", "high", "low", "open", "close", "spread", "volume"],
+            [
+                "timestamp",
+                "year",
+                "month",
+                "date",
+                "symbol",
+                "high",
+                "low",
+                "open",
+                "close",
+                "spread",
+                "volume",
+            ],
         ],
     )
     def test_read_csv_parse_dates(
@@ -890,7 +917,7 @@ class TestCsv:
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
-            filepath_or_buffer="modin/pandas/test/data/test_time_parsing.csv",
+            filepath_or_buffer=time_parsing_csv_path,
             names=names,
             header=header,
             index_col=index_col,
@@ -1834,6 +1861,53 @@ class TestSql:
         pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
         df_equals(modin_df, pandas_df)
 
+    @pytest.mark.skipif(
+        not TestReadFromSqlServer.get(),
+        reason="Skip the test when the test SQL server is not set up.",
+    )
+    def test_read_sql_from_sql_server(self):
+        table_name = "test_1000x256"
+        query = f"SELECT * FROM {table_name}"
+        sqlalchemy_connection_string = (
+            "mssql+pymssql://sa:Strong.Pwd-123@0.0.0.0:1433/master"
+        )
+        pandas_df_to_read = pandas.DataFrame(
+            np.arange(
+                1000 * 256,
+            ).reshape(1000, 256)
+        ).add_prefix("col")
+        pandas_df_to_read.to_sql(
+            table_name, sqlalchemy_connection_string, if_exists="replace"
+        )
+        modin_df = pd.read_sql(
+            query,
+            ModinDatabaseConnection("sqlalchemy", sqlalchemy_connection_string),
+        )
+        pandas_df = pandas.read_sql(query, sqlalchemy_connection_string)
+        df_equals(modin_df, pandas_df)
+
+    @pytest.mark.skipif(
+        not TestReadFromPostgres.get(),
+        reason="Skip the test when the postgres server is not set up.",
+    )
+    def test_read_sql_from_postgres(self):
+        table_name = "test_1000x256"
+        query = f"SELECT * FROM {table_name}"
+        connection = "postgresql://sa:Strong.Pwd-123@localhost:2345/postgres"
+        pandas_df_to_read = pandas.DataFrame(
+            np.arange(
+                1000 * 256,
+            ).reshape(1000, 256)
+        ).add_prefix("col")
+        pandas_df_to_read.to_sql(table_name, connection, if_exists="replace")
+        modin_df = pd.read_sql(
+            query,
+            ModinDatabaseConnection("psycopg2", connection),
+        )
+        pandas_df = pandas.read_sql(query, connection)
+        df_equals(modin_df, pandas_df)
+
+    def test_invalid_modin_database_connections(self):
         with pytest.raises(UnsupportedDatabaseException):
             ModinDatabaseConnection("unsupported_database")
 

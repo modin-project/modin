@@ -18,12 +18,30 @@ single-threaded, Modin lets you instantly speed up your workflows by scaling pan
 cores. Modin works especially well on larger datasets, where pandas becomes painfully slow or runs
 [out of memory](https://modin.readthedocs.io/en/latest/getting_started/why_modin/out_of_core.html).
 
-Using modin is as simple as replacing the pandas import:
+By simply replacing the import statement, Modin offers users effortless speed and scale for their pandas workflows:
 
-```python
-# import pandas as pd
-import modin.pandas as pd
-```
+<img src="https://github.com/modin-project/modin/blob/master/docs/img/Import.gif" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
+
+In the GIFs below, Modin (left) and pandas (right) perform *the same pandas operations* on a 2GB dataset. The only difference between the two notebook examples is the import statement. 
+
+<table class="tg">
+<thead>
+  <tr>
+    <th class="tg-0lax" style="text-align: center;"><img src="https://github.com/modin-project/modin/blob/master/docs/img/MODIN_ver2_hrz.png?raw=True" height="35px"></th>
+    <th class="tg-0lax" style="text-align: center;"><img src="https://pandas.pydata.org/static/img/pandas.svg" height="50px"></img></th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td class="tg-0lax"><img src="https://github.com/modin-project/modin/blob/master/docs/img/Modin.gif"></img></td>
+    <td class="tg-0lax"><img src="https://github.com/modin-project/modin/blob/master/docs/img/Pandas.gif"></img></td>
+  </tr>
+</tbody>
+</table>
+
+The charts below show the speedup you get by replacing pandas with Modin based on the examples above. The example notebooks can be found [here](examples/jupyter). To learn more about the speedups you could get with Modin and try out some examples on your own, check out our [10-minute quickstart guide](https://modin.readthedocs.io/en/latest/getting_started/quickstart.html) to try out some examples on your own!
+
+<img src="https://github.com/modin-project/modin/blob/master/docs/img/Modin_Speedup.svg" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
 
 ### Installation
 

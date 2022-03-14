@@ -2139,6 +2139,10 @@ def test_set_ordered_categorical_column():
     pdf["a"] = pandas.Categorical(pdf["a"], ordered=True)
     df_equals(mdf, pdf)
 
+    modin_categories = mdf["a"].dtype
+    pandas_categories = pdf["a"].dtype
+    assert modin_categories == pandas_categories
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_lt(data):

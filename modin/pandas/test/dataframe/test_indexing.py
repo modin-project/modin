@@ -283,6 +283,9 @@ def test_set_index(data):
     pandas_result = pandas_df.set_index([pandas_df.index, pandas_df.columns[0]])
     df_equals(modin_result, pandas_result)
 
+    # test for the case from https://github.com/modin-project/modin/issues/4308
+    eval_general(modin_df, pandas_df, lambda df: df.set_index("inexistent_col"))
+
 
 @pytest.mark.gpu
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
