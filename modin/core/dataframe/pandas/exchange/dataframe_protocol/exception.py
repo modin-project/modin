@@ -11,8 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""
-Base Modin Dataframe functionality related to the dataframe exchange protocol.
+"""Exceptions that can be caught by dataframe exchange protocol implementation for pandas storage format."""
 
-See more in https://data-apis.org/dataframe-protocol/latest/index.html.
-"""
+
+class NoValidityBuffer(Exception):
+    """Exception to be raised if there is no validity buffer for ``PandasProtocolColumn``."""
+
+    pass
+
+
+class NoOffsetsBuffer(Exception):
+    """Exception to be raised if there is no offsets buffer for ``PandasProtocolColumn``."""
+
+    pass

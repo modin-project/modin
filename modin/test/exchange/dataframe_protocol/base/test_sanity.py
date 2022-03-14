@@ -21,7 +21,7 @@ from modin.pandas.test.utils import default_to_pandas_ignore_string
 
 def test_sanity():
     """Test that the DataFrame protocol module is valid and could be imported correctly."""
-    from modin.core.dataframe.base.exchange.dataframe_protocol import (  # noqa
+    from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (  # noqa
         ProtocolDataframe,
     )
 
