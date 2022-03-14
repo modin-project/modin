@@ -27,7 +27,7 @@ class BaseDataframePartition(ABC):  # pragma: no cover
         Returns
         -------
         object
-            The object that was wrapped by this partition.
+            The object that is wrapped by this partition.
 
         Notes
         -----
@@ -58,9 +58,10 @@ class BaseDataframePartition(ABC):  # pragma: no cover
 
         Notes
         -----
-        It is up to the implementation how `kwargs` are handled. They are
-        an important part of many implementations. As of right now, they
-        are not serialized.
+        It is up to the implementation how `kwargs` are handled.
+        They are an important part of many implementations.
+        E.g. they are serialized for Ray execution engine
+        in case `len(call_queue) == 1`.
         """
         pass
 
@@ -85,7 +86,7 @@ class BaseDataframePartition(ABC):  # pragma: no cover
 
         Notes
         -----
-        This function will be executed when `apply` is called. It will be executed
+        This passed function will be executed when `apply` is called. It will be executed
         in the order inserted; apply's func operates the last and return.
         """
         pass
@@ -167,7 +168,7 @@ class BaseDataframePartition(ABC):  # pragma: no cover
         Parameters
         ----------
         **kwargs : dict
-            Additional keyword arguments to be passed in ``to_numpy``.
+            Additional keyword arguments to be passed in `to_numpy`.
 
         Returns
         -------
