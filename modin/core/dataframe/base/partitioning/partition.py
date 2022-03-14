@@ -16,7 +16,7 @@
 from abc import ABC, abstractmethod
 
 
-class BaseDataframePartition(ABC):  # pragma: no cover
+class BaseDataframePartition(ABC):
     """An abstract class that represents the parent class for any partition class."""
 
     @abstractmethod
