@@ -29,11 +29,11 @@ class DaskWrapper:
         func : callable
             Function to be deployed in a worker process.
         *args : list
-            Additional positional arguments to be passed in ``func``.
+            Additional positional arguments to be passed in `func`.
         num_returns : int, default: 1
             The number of returned objects.
         pure : bool, optional
-            Whether or not `func` is pure. See `client.submit` for details.
+            Whether or not `func` is pure. See `Client.submit` for details.
         **kwargs : dict
             Additional keyword arguments to be passed in ``func``.
 
@@ -79,7 +79,7 @@ class DaskWrapper:
         data : list, dict, or object
             Data to scatter out to workers. Output type matches input type.
         **kwargs : dict
-            Additional keyword arguments to be passed in ``client.scatter``.
+            Additional keyword arguments to be passed in `Client.scatter`.
 
         Returns
         -------

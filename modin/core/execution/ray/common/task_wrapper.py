@@ -55,11 +55,11 @@ class RayTask:
         func : callable
             A function to call.
         *args : list
-            Additional positional arguments to be passed in ``func``.
+            Additional positional arguments to be passed in `func`.
         num_returns : int, default: 1
-            Amount of return values expected from ``func``.
+            Amount of return values expected from `func`.
         **kwargs : dict
-            Additional keyword arguments to be passed in ``func``.
+            Additional keyword arguments to be passed in `func`.
 
         Returns
         -------
