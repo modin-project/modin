@@ -35,16 +35,6 @@ def test_float_only(data):
     df_equals(df, from_dataframe(df.__dataframe__()))
 
 
-def test_noncontiguous_columns():
-    arr = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
-    df = pd.DataFrame(arr, columns=["a", "b", "c"])
-    if os.name == "nt":
-        assert df["a"].to_numpy().strides == (4,)
-    elif os.name == "posix":
-        assert df["a"].to_numpy().strides == (8,)
-    df_equals(df, from_dataframe(df.__dataframe__()))
-
-
 def test_categorical_dtype_two_columns():
     pd_df = pandas.DataFrame({"A": [1, 2, 5, 1]})
     pd_df["B"] = pd_df["A"].astype("category")
@@ -67,9 +57,8 @@ def test_string_dtype():
 
     col = df.__dataframe__().get_column_by_name("B")
     assert col.dtype[0] == DTypeKind.STRING
-    assert col.null_count == 1
     if StorageFormat.get() != "Omnisci":
-        assert col.describe_null == (4, 0)
+        assert col.describe_null == (ColumnNullType.USE_BYTEMASK, 0)
     assert col.num_chunks() == 1
 
 
@@ -141,18 +130,13 @@ def test_missing_from_masked():
         # assert convert_column_to_array(df2.get_column_by_name(col_name) == df[col_name].tolist()
         assert df[col_name].dtype == df2[col_name].dtype
 
-    dict_null = {}
-    for col_name in df.columns:
-        num_null = np.random.randint(5)
-        list_null = []
-        num_nulls = 0
-        for ind in num_null:
-            ind_null = np.random.randint(5)
-            if ind_null not in list_null:
-                (df[col_name])[ind_null] = None
-                list_null.append(ind_null)
-                num_nulls += 1
-        dict_null[col_name] = num_nulls
+    rng = np.random.RandomState(42)
+    dict_null = {col: rng.randint(low=0, high=len(df)) for col in df.columns}
+    for col, num_nulls in dict_null.items():
+        null_idx = df.index[
+            rng.choice(np.arange(len(df)), size=num_nulls, replace=False)
+        ]
+        df.loc[null_idx, col] = None
 
     df2 = df.__dataframe__()
 
@@ -254,7 +238,7 @@ def test_chunks():
 
 def test_categorical_dtype():
     df = pd.DataFrame({"A": [1, 2, 5, 1]})
-    df["A"].astype("category")
+    df = df.astype({"A": "category"})
     col = df.__dataframe__().get_column_by_name("A")
     assert col.dtype[0] == DTypeKind.CATEGORICAL
     assert col.null_count == 0
