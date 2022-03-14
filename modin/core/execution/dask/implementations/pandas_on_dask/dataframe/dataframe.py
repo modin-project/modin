@@ -15,7 +15,6 @@
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from ..partitioning.partition_manager import PandasOnDaskDataframePartitionManager
-from modin.core.execution.dask.common.task_wrapper import DaskWrapper
 
 
 class PandasOnDaskDataframe(PandasDataframe):
@@ -53,8 +52,10 @@ class PandasOnDaskDataframe(PandasDataframe):
             A list of row partitions lengths.
         """
         if self._row_lengths_cache is None:
-            self._row_lengths_cache = DaskWrapper.materialize(
-                [obj.apply(lambda df: len(df)).future for obj in self._partitions.T[0]]
+            self._row_lengths_cache = (
+                self._partition_mgr_cls.get_objects_from_partitions(
+                    [obj.apply(lambda df: len(df)) for obj in self._partitions.T[0]]
+                )
             )
         return self._row_lengths_cache
 
@@ -69,10 +70,12 @@ class PandasOnDaskDataframe(PandasDataframe):
             A list of column partitions widths.
         """
         if self._column_widths_cache is None:
-            self._column_widths_cache = DaskWrapper.materialize(
-                [
-                    obj.apply(lambda df: len(df.columns)).future
-                    for obj in self._partitions[0]
-                ]
+            self._column_widths_cache = (
+                self._partition_mgr_cls.get_objects_from_partitions(
+                    [
+                        obj.apply(lambda df: len(df.columns))
+                        for obj in self._partitions[0]
+                    ]
+                )
             )
         return self._column_widths_cache
