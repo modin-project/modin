@@ -68,13 +68,11 @@ def export_frame(md_df, from_omnisci=False, **kwargs):
     pandas.DataFrame
     """
     if not from_omnisci:
-        return from_dataframe(md_df._query_compiler._modin_frame, **kwargs)
+        return from_dataframe(md_df, **kwargs)
 
     with ForceOmnisciImport(md_df) as instance:
         md_df_exported = instance.export_frames()[0]
-        exported_df = from_dataframe(
-            md_df_exported._query_compiler._modin_frame, **kwargs
-        )
+        exported_df = from_dataframe(md_df_exported, **kwargs)
 
     return exported_df
 

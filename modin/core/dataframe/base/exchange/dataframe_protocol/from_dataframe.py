@@ -51,7 +51,9 @@ def from_dataframe(
     if not hasattr(df, "__dataframe__"):
         raise ValueError("`df` does not support __dataframe__")
 
-    df = df.__dataframe__()["dataframe"]
+    df = df.__dataframe__()
+    if isinstance(df, dict):
+        df = df["dataframe"]
 
     def get_pandas_df(df):
         # We need a dict of columns here, with each column being a numpy array (at

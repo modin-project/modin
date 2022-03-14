@@ -23,6 +23,7 @@ from modin.experimental.core.execution.native.implementations.omnisci_on_native.
 )
 from modin.core.dataframe.base.exchange.dataframe_protocol import ProtocolDataframe
 from modin.utils import _inherit_docstrings
+from modin.error_message import ErrorMessage
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra import (
     MaskNode,
     FrameNode,
@@ -159,7 +160,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
                 self.__is_zero_copy_possible = False
             else:
                 # Check whether the plan for PyArrow can be executed zero-copy
-                self.__is_zero_copy_possible = self._is_zero_copy_op(self._df._op)
+                self.__is_zero_copy_possible = self._is_zero_copy_arrow_op(self._df._op)
         return self.__is_zero_copy_possible
 
     @classmethod
@@ -188,14 +189,14 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
             is_zero_copy_op = True
         return is_zero_copy_op and all(
             # Walk the computation tree
-            cls._is_zero_copy_op(_op)
+            cls._is_zero_copy_arrow_op(_op)
             for _op in getattr(op, "inputs", [])
         )
 
     @property
     def _pyarrow_table(self) -> pa.Table:
         """
-        Get PyArrow table representing the column.
+        Get PyArrow table representing the DataFrame.
 
         Returns
         -------
@@ -279,6 +280,8 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
             )
 
         extra_chunks = n_chunks - self.num_chunks()
+        # `._chunk_slices` is a cached property, we don't want to modify the property's
+        # array inplace, so doing a copy here
         subdivided_slices = self._chunk_slices.copy()
 
         # The subdividing behavior is a bit different from "subdividing each chunk",
@@ -292,8 +295,10 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
                 subdivided_slices[biggest_chunk_idx + 1]
                 - subdivided_slices[biggest_chunk_idx]
             ) // 2
-            if new_chunk_offset == 0:
-                raise RuntimeError("No more chunks to subdivide.")
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=new_chunk_offset == 0,
+                extra_log="No more chunks to subdivide",
+            )
             subdivided_slices = np.insert(
                 subdivided_slices,
                 biggest_chunk_idx + 1,
