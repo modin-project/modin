@@ -19,6 +19,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from modin.utils import get_current_execution, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from pandas.testing import assert_frame_equal
 
 from .utils import (
     test_data_values,
@@ -740,9 +741,21 @@ def test_create_categorical_dataframe_with_duplicate_column_name():
         columns=[0, 0, 1],
         dtype="category",
     )
-    pd_df = pandas.DataFrame(**kwargs)
     md_df = pd.DataFrame(**kwargs)
-    df_equals(md_df, pd_df)
+    pd_df = pandas.DataFrame(**kwargs)
+    # Use assert_frame_equal instead of the common modin util df_equals because
+    # we should check dtypes of the new categorical with check_dtype=True.
+    # TODO(https://github.com/modin-project/modin/issues/3804): Make
+    # df_equals set check_dtype=True and use df_equals instead.
+    assert_frame_equal(
+        md_df._to_pandas(),
+        pd_df,
+        check_dtype=True,
+        check_index_type=True,
+        check_column_type=True,
+        check_names=True,
+        check_categorical=True,
+    )
 
 
 @pytest.mark.skipif(

@@ -32,38 +32,13 @@ def concatenate(dfs):
     pandas.DataFrame
         A pandas DataFrame.
     """
-    categoricals_column_names = set.intersection(
-        *[set(df.select_dtypes("category").columns.tolist()) for df in dfs]
-    )
-
-    for column_name in categoricals_column_names:
-        # Build a list of all columns in all dfs with name column_name.
-        categorical_columns_with_name = []
+    for i in range(len(dfs[0].columns)):
+        if dfs[0].dtypes.iloc[i].name != "category":
+            continue
+        columns = [df.iloc[:, i] for df in dfs]
+        union = union_categoricals(columns)
         for df in dfs:
-            categorical_columns_in_df = df[column_name]
-            # Fast path for when the column name is unique.
-            if isinstance(categorical_columns_in_df, pandas.Series):
-                categorical_columns_with_name.append(categorical_columns_in_df)
-            else:
-                # If the column name is repeated, df[column_name] gives a
-                # a dataframe with all matching columns instead of a series.
-                categorical_columns_with_name.extend(
-                    col for _, col in categorical_columns_in_df.iteritems()
-                )
-        # Make a new category unioning all columns with the current name.
-        categories = union_categoricals(categorical_columns_with_name).categories
-        # Replace all columns having the current name with the new category.
-        for df in dfs:
-            categorical_columns_in_df = df[column_name]
-            # Fast path for when the column name is unique.
-            if isinstance(categorical_columns_in_df, pandas.Series):
-                df[column_name] = pandas.Categorical(
-                    df[column_name], categories=categories
-                )
-            else:
-                for i in range(len(categorical_columns_in_df.columns)):
-                    df.iloc[:, i] = pandas.Categorical(
-                        df.iloc[:, i], categories=categories
-                    )
-
+            df.iloc[:, i] = pandas.Categorical(
+                df.iloc[:, i], categories=union.categories
+            )
     return pandas.concat(dfs)
