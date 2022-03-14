@@ -35,7 +35,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
     Parameters
     ----------
-    object_id : ray.ObjectRef
+    data : ray.ObjectRef
         A reference to ``pandas.DataFrame`` that need to be wrapped with this class.
     length : ray.ObjectRef or int, optional
         Length or reference to it of wrapped ``pandas.DataFrame``.
@@ -47,11 +47,10 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         Call queue that needs to be executed on wrapped ``pandas.DataFrame``.
     """
 
-    def __init__(self, object_id, length=None, width=None, ip=None, call_queue=None):
-        assert isinstance(object_id, ObjectIDType)
-        self.oid = object_id
+    def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
+        assert isinstance(data, ObjectIDType)
         self._ip_cache = ip
-        super().__init__(length, width, call_queue)
+        super().__init__(data, length, width, call_queue)
 
     def get(self):
         """
@@ -64,7 +63,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         """
         if len(self.call_queue):
             self.drain_call_queue()
-        return ray.get(self.oid)
+        return ray.get(self.data)
 
     def apply(self, func, *args, **kwargs):
         """
@@ -89,15 +88,15 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
-        oid = self.oid
+        data = self.data
         call_queue = self.call_queue + [(func, args, kwargs)]
         if len(call_queue) > 1:
-            result, length, width, ip = _apply_list_of_funcs.remote(call_queue, oid)
+            result, length, width, ip = _apply_list_of_funcs.remote(call_queue, data)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
-            result, length, width, ip = _apply_func.remote(oid, func, *args, **kwargs)
+            result, length, width, ip = _apply_func.remote(data, func, *args, **kwargs)
         return PandasOnRayDataframePartition(result, length, width, ip)
 
     def add_to_apply_calls(self, func, *args, **kwargs):
@@ -124,38 +123,38 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         return PandasOnRayDataframePartition(
-            self.oid, call_queue=self.call_queue + [(func, args, kwargs)]
+            self.data, call_queue=self.call_queue + [(func, args, kwargs)]
         )
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
         if len(self.call_queue) == 0:
             return
-        oid = self.oid
+        data = self.data
         call_queue = self.call_queue
         if len(call_queue) > 1:
             (
-                self.oid,
+                self.data,
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
-            ) = _apply_list_of_funcs.remote(call_queue, oid)
+            ) = _apply_list_of_funcs.remote(call_queue, data)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
             (
-                self.oid,
+                self.data,
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
-            ) = _apply_func.remote(oid, func, *args, **kwargs)
+            ) = _apply_func.remote(data, func, *args, **kwargs)
         self.call_queue = []
 
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        ray.wait([self.oid])
+        ray.wait([self.data])
 
     def __copy__(self):
         """
@@ -167,7 +166,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             A copy of this partition.
         """
         return PandasOnRayDataframePartition(
-            self.oid,
+            self.data,
             length=self._length_cache,
             width=self._width_cache,
             ip=self._ip_cache,
@@ -255,7 +254,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self.drain_call_queue()
             else:
                 self._length_cache, self._width_cache = _get_index_and_columns.remote(
-                    self.oid
+                    self.data
                 )
         if isinstance(self._length_cache, ObjectIDType):
             self._length_cache = ray.get(self._length_cache)
@@ -275,7 +274,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self.drain_call_queue()
             else:
                 self._length_cache, self._width_cache = _get_index_and_columns.remote(
-                    self.oid
+                    self.data
                 )
         if isinstance(self._width_cache, ObjectIDType):
             self._width_cache = ray.get(self._width_cache)

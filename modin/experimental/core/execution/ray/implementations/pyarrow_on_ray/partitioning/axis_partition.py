@@ -36,7 +36,7 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
 
     def __init__(self, list_of_blocks):
         # Unwrap from PandasDataframePartition object for ease of use
-        self.list_of_blocks = [obj.oid for obj in list_of_blocks]
+        self.list_of_blocks = [obj.data for obj in list_of_blocks]
 
     def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
         """

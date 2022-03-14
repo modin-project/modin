@@ -109,7 +109,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         list
             The objects wrapped by `partitions`.
         """
-        return ray.get([partition.oid for partition in partitions])
+        return ray.get([partition.data for partition in partitions])
 
     @classmethod
     def concat(cls, axis, left_parts, right_parts):

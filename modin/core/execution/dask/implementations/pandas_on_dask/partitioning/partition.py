@@ -31,7 +31,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
 
     Parameters
     ----------
-    future : distributed.Future
+    data : distributed.Future
         A reference to pandas DataFrame that need to be wrapped with this class.
     length : distributed.Future or int, optional
         Length or reference to it of wrapped pandas DataFrame.
@@ -43,11 +43,10 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         Call queue that needs to be executed on wrapped pandas DataFrame.
     """
 
-    def __init__(self, future, length=None, width=None, ip=None, call_queue=None):
-        assert isinstance(future, Future)
-        self.future = future
+    def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
+        assert isinstance(data, Future)
         self._ip_cache = ip
-        super().__init__(length, width, call_queue)
+        super().__init__(data, length, width, call_queue)
 
     def get(self):
         """
@@ -60,9 +59,9 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         """
         self.drain_call_queue()
         # blocking operation
-        if isinstance(self.future, pandas.DataFrame):
-            return self.future
-        return self.future.result()
+        if isinstance(self.data, pandas.DataFrame):
+            return self.data
+        return self.data.result()
 
     def apply(self, func, *args, **kwargs):
         """
@@ -90,13 +89,13 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         call_queue = self.call_queue + [[func, args, kwargs]]
         if len(call_queue) > 1:
             future = client.submit(
-                apply_list_of_funcs, call_queue, self.future, pure=False
+                apply_list_of_funcs, call_queue, self.data, pure=False
             )
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this improves performance a bit.
             func, args, kwargs = call_queue[0]
-            future = client.submit(apply_func, self.future, func, *args, **kwargs)
+            future = client.submit(apply_func, self.data, func, *args, **kwargs)
         futures = [
             client.submit(lambda l, i: l[i], future, i, pure=False) for i in range(2)
         ]
@@ -125,7 +124,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         The keyword arguments are sent as a dictionary.
         """
         return PandasOnDaskDataframePartition(
-            self.future, call_queue=self.call_queue + [[func, args, kwargs]]
+            self.data, call_queue=self.call_queue + [[func, args, kwargs]]
         )
 
     def drain_call_queue(self):
@@ -136,24 +135,24 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         client = default_client()
         if len(call_queue) > 1:
             future = client.submit(
-                apply_list_of_funcs, call_queue, self.future, pure=False
+                apply_list_of_funcs, call_queue, self.data, pure=False
             )
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this improves performance a bit.
             func, args, kwargs = call_queue[0]
-            future = client.submit(apply_func, self.future, func, *args, **kwargs)
+            future = client.submit(apply_func, self.data, func, *args, **kwargs)
         futures = [
             client.submit(lambda l, i: l[i], future, i, pure=False) for i in range(2)
         ]
-        self.future = futures[0]
+        self.data = futures[0]
         self._ip_cache = futures[1]
         self.call_queue = []
 
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        wait(self.future)
+        wait(self.data)
 
     def mask(self, row_labels, col_labels):
         """
@@ -193,7 +192,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             A copy of this partition.
         """
         return PandasOnDaskDataframePartition(
-            self.future,
+            self.data,
             length=self._length_cache,
             width=self._width_cache,
             ip=self._ip_cache,
@@ -245,7 +244,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             The length of the object.
         """
         if self._length_cache is None:
-            self._length_cache = self.apply(lambda df: len(df)).future
+            self._length_cache = self.apply(lambda df: len(df)).data
         if isinstance(self._length_cache, Future):
             self._length_cache = self._length_cache.result()
         return self._length_cache
@@ -260,7 +259,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             The width of the object.
         """
         if self._width_cache is None:
-            self._width_cache = self.apply(lambda df: len(df.columns)).future
+            self._width_cache = self.apply(lambda df: len(df.columns)).data
         if isinstance(self._width_cache, Future):
             self._width_cache = self._width_cache.result()
         return self._width_cache

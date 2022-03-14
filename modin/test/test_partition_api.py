@@ -67,14 +67,9 @@ def test_unwrap_partitions(axis):
         )
         for row_idx in range(expected_partitions.shape[0]):
             for col_idx in range(expected_partitions.shape[1]):
-                if Engine.get() == "Ray":
+                if Engine.get() in ["Ray", "Dask"]:
                     assert (
-                        expected_partitions[row_idx][col_idx].oid
-                        == actual_partitions[row_idx][col_idx]
-                    )
-                if Engine.get() == "Dask":
-                    assert (
-                        expected_partitions[row_idx][col_idx].future
+                        expected_partitions[row_idx][col_idx].data
                         == actual_partitions[row_idx][col_idx]
                     )
     else:

@@ -31,6 +31,8 @@ class PandasDataframePartition(BaseDataframePartition):
 
     Parameters
     ----------
+    data : object
+        Any object.
     length : future-like or int, optional
         Length or reference to it of wrapped DataFrame-like object.
     width : future-like or int, optional
@@ -39,7 +41,8 @@ class PandasDataframePartition(BaseDataframePartition):
         Call queue that needs to be executed on wrapped DataFrame-like object.
     """
 
-    def __init__(self, length=None, width=None, call_queue=None):
+    def __init__(self, data, length=None, width=None, call_queue=None):
+        self.data = data
         self._length_cache = length
         self._width_cache = width
         self.call_queue = call_queue or []

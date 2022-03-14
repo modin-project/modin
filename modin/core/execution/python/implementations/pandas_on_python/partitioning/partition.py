@@ -42,8 +42,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
     """
 
     def __init__(self, data, length=None, width=None, call_queue=None):
-        self.data = data
-        super().__init__(length, width, call_queue)
+        super().__init__(data, length, width, call_queue)
 
     def get(self):
         """

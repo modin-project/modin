@@ -115,7 +115,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         result = [None] * len(self.list_of_partitions_to_combine)
         for idx, partition in enumerate(self.list_of_partitions_to_combine):
             partition.drain_call_queue()
-            result[idx] = partition.oid
+            result[idx] = partition.data
         return result
 
     @property
@@ -234,8 +234,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             List of ``PandasOnRayDataframePartition`` objects.
         """
         return [
-            self.partition_type(object_id, length, width, ip)
-            for (object_id, length, width, ip) in zip(*[iter(partitions)] * 4)
+            self.partition_type(data, length, width, ip)
+            for (data, length, width, ip) in zip(*[iter(partitions)] * 4)
         ]
 
     def apply(

@@ -52,28 +52,29 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
 
     if axis is None:
 
-        def _unwrap_partitions(oid):
+        def _unwrap_partitions(data):
             if get_ip:
                 return [
                     [
-                        (partition._ip_cache, getattr(partition, oid))
+                        (partition._ip_cache, getattr(partition, data))
                         for partition in row
                     ]
                     for row in api_layer_object._query_compiler._modin_frame._partitions
                 ]
             else:
                 return [
-                    [getattr(partition, oid) for partition in row]
+                    [getattr(partition, data) for partition in row]
                     for row in api_layer_object._query_compiler._modin_frame._partitions
                 ]
 
         actual_engine = type(
             api_layer_object._query_compiler._modin_frame._partitions[0][0]
         ).__name__
-        if actual_engine in ("PandasOnRayDataframePartition",):
-            return _unwrap_partitions("oid")
-        elif actual_engine in ("PandasOnDaskDataframePartition",):
-            return _unwrap_partitions("future")
+        if actual_engine in (
+            "PandasOnRayDataframePartition",
+            "PandasOnDaskDataframePartition",
+        ):
+            return _unwrap_partitions("data")
         raise ValueError(
             f"Do not know how to unwrap '{actual_engine}' underlying partitions"
         )
