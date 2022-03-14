@@ -200,6 +200,7 @@ class BaseDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
+    @abstractmethod
     def length(self):
         """
         Get the length of the object wrapped by this partition.
@@ -209,12 +210,9 @@ class BaseDataframePartition(ABC):  # pragma: no cover
         int
             The length of the object.
         """
-        if self._length_cache is None:
-            func = self._length_extraction_fn()
-            preprocessed_func = self.preprocess_func(func)
-            self._length_cache = self.apply(preprocessed_func)
-        return self._length_cache
+        pass
 
+    @abstractmethod
     def width(self):
         """
         Get the width of the object wrapped by the partition.
@@ -224,11 +222,7 @@ class BaseDataframePartition(ABC):  # pragma: no cover
         int
             The width of the object.
         """
-        if self._width_cache is None:
-            func = self._width_extraction_fn()
-            preprocessed_func = self.preprocess_func(func)
-            self._width_cache = self.apply(preprocessed_func)
-        return self._width_cache
+        pass
 
     @classmethod
     @abstractmethod

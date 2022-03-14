@@ -18,11 +18,11 @@ import cudf
 import cupy
 import numpy as np
 import cupy as cp
-from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
+from modin.core.dataframe.base.partitioning.partition import BaseDataframePartition
 from pandas.core.dtypes.common import is_list_like
 
 
-class cuDFOnRayDataframePartition(PandasDataframePartition):
+class cuDFOnRayDataframePartition(BaseDataframePartition):
     """
     The class implements the interface in ``PandasDataframePartition`` using cuDF on Ray.
 
