@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 """
-Base Modin Dataframe functionality related to the dataframe exchange protocol.
+Base Modin Dataframe functionality related to the dataframe exchange protocol and optimized for pandas storage format.
 
 See more in https://data-apis.org/dataframe-protocol/latest/index.html.
 """
