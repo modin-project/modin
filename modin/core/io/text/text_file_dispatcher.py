@@ -35,6 +35,7 @@ from modin.utils import _inherit_docstrings
 from modin.core.io.text.utils import CustomNewlineIterator
 from modin.config import NPartitions
 from modin.error_message import ErrorMessage
+from modin.logging.logger_function import logger_decorator
 
 ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
 IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
@@ -48,6 +49,7 @@ class TextFileDispatcher(FileDispatcher):
     read_callback = None
 
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher.get_path_or_buffer", "INFO")
     def get_path_or_buffer(cls, filepath_or_buffer):
         """
         Extract path from `filepath_or_buffer`.
@@ -80,6 +82,7 @@ class TextFileDispatcher(FileDispatcher):
         return filepath_or_buffer
 
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher.build_partition", "INFO")
     def build_partition(cls, partition_ids, row_lengths, column_widths):
         """
         Build array with partitions of `cls.frame_partition_cls` class.
@@ -114,6 +117,7 @@ class TextFileDispatcher(FileDispatcher):
         )
 
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher.pathlib_or_pypath", "INFO")
     def pathlib_or_pypath(cls, filepath_or_buffer):
         """
         Check if `filepath_or_buffer` is instance of `py.path.local` or `pathlib.Path`.
@@ -146,6 +150,7 @@ class TextFileDispatcher(FileDispatcher):
         return False
 
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher.offset", "INFO")
     def offset(
         cls,
         f,
@@ -203,6 +208,7 @@ class TextFileDispatcher(FileDispatcher):
         return outside_quotes
 
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher.partitioned_file", "INFO")
     def partitioned_file(
         cls,
         f,
@@ -331,6 +337,7 @@ class TextFileDispatcher(FileDispatcher):
         return result
 
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher._read_rows", "INFO")
     def _read_rows(
         cls,
         f,
@@ -402,6 +409,7 @@ class TextFileDispatcher(FileDispatcher):
         return outside_quotes, rows_read
 
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher.compute_newline", "INFO")
     def compute_newline(cls, file_like, encoding, quotechar):
         """
         Compute byte or sequence of bytes indicating line endings.
@@ -457,6 +465,7 @@ class TextFileDispatcher(FileDispatcher):
 
     # _read helper functions
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher.rows_skipper_builder", "INFO")
     def rows_skipper_builder(
         cls, f, quotechar, is_quoting, encoding=None, newline=None
     ):
@@ -498,6 +507,7 @@ class TextFileDispatcher(FileDispatcher):
         return skipper
 
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher._define_header_size", "INFO")
     def _define_header_size(
         cls,
         header: Union[int, Sequence[int], str, None] = "infer",
@@ -529,6 +539,7 @@ class TextFileDispatcher(FileDispatcher):
         return header_size
 
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher._define_metadata", "INFO")
     def _define_metadata(
         cls,
         df: pandas.DataFrame,
@@ -576,6 +587,7 @@ class TextFileDispatcher(FileDispatcher):
         return column_widths, num_splits
 
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher._launch_tasks", "INFO")
     def _launch_tasks(cls, splits: list, **partition_kwargs) -> Tuple[list, list, list]:
         """
         Launch tasks to read partitions.
@@ -610,6 +622,7 @@ class TextFileDispatcher(FileDispatcher):
         return partition_ids, index_ids, dtypes_ids
 
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher.check_parameters_support", "INFO")
     def check_parameters_support(
         cls,
         filepath_or_buffer,
@@ -668,6 +681,7 @@ class TextFileDispatcher(FileDispatcher):
 
     @classmethod
     @_inherit_docstrings(pandas.io.parsers.base_parser.ParserBase._validate_usecols_arg)
+    @logger_decorator("PANDAS-API", "TextFileDispatcher._validate_usecols_arg", "INFO")
     def _validate_usecols_arg(cls, usecols):
         msg = (
             "'usecols' must either be list-like of all strings, all unicode, "
@@ -691,6 +705,7 @@ class TextFileDispatcher(FileDispatcher):
         return usecols, None
 
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher._manage_skiprows_parameter", "INFO")
     def _manage_skiprows_parameter(
         cls,
         skiprows: Union[int, Sequence[int], Callable, None] = None,
@@ -794,6 +809,7 @@ class TextFileDispatcher(FileDispatcher):
         return skiprows_md, pre_reading, skiprows_partitioning
 
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher._define_index", "INFO")
     def _define_index(
         cls,
         index_ids: list,
@@ -829,6 +845,7 @@ class TextFileDispatcher(FileDispatcher):
         return new_index, row_lengths
 
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher._get_new_qc", "INFO")
     def _get_new_qc(
         cls,
         partition_ids: list,
@@ -935,6 +952,7 @@ class TextFileDispatcher(FileDispatcher):
         return new_query_compiler
 
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher._read", "INFO")
     def _read(cls, filepath_or_buffer, **kwargs):
         """
         Read data from `filepath_or_buffer` according to `kwargs` parameters.
@@ -1064,6 +1082,7 @@ class TextFileDispatcher(FileDispatcher):
         return new_query_compiler
 
     @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher._get_skip_mask", "INFO")
     def _get_skip_mask(cls, rows_index: pandas.Index, skiprows: Callable):
         """
         Get mask of skipped by callable `skiprows` rows.
