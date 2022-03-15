@@ -541,4 +541,4 @@ def is_reduce_function(fn):
     bool
         Whether all functions defined by `fn` are reductions.
     """
-    return _is_reduce_function_with_depth(fn, 0)
+    return _is_reduce_function_with_depth(fn, depth=0)
