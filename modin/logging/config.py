@@ -1,6 +1,9 @@
 import logging
 import datetime as dt
 import os
+import platform
+import psutil
+import pkg_resources
 
 __LOGGER_CONFIGURED__: bool = False
 
@@ -34,7 +37,33 @@ def configure_logging():
     __LOGGER_CONFIGURED__ = True
 
 
+def get_size(bytes, suffix="B"):
+    """
+    Scale bytes to its proper format
+    e.g:
+        1253656 => '1.20MB'
+        1253656678 => '1.17GB'
+    """
+    factor = 1024
+    for unit in ["", "K", "M", "G", "T", "P"]:
+        if bytes < factor:
+            return f"{bytes:.2f}{unit}{suffix}"
+        bytes /= factor
+
+
 def get_logger():
     if not __LOGGER_CONFIGURED__:
         configure_logging()
+        logger = logging.getLogger("modin.logger")
+        logger.info("OS Version: " + platform.platform())
+        logger.info("Python Version: " + platform.python_version())
+        logger.info("Modin Version: " + pkg_resources.get_distribution("modin").version)
+        logger.info("Pandas Version: " + pkg_resources.get_distribution("pandas").version)
+        logger.info("Physical Cores: " + str(psutil.cpu_count(logical=False)))
+        logger.info("Total Cores: " + str(psutil.cpu_count(logical=True)))
+        svmem = psutil.virtual_memory()
+        logger.info(f"Memory Total: {get_size(svmem.total)}")
+        logger.info(f"Memory Available: {get_size(svmem.available)}")
+        logger.info(f"Memory Used: {get_size(svmem.used)}")
+        logger.info(f"Memory Percentage: {svmem.percent}%")
     return logging.getLogger("modin.logger")

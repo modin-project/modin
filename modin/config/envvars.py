@@ -358,6 +358,23 @@ class BenchmarkMode(EnvironmentVariable, type=bool):
         super().put(value)
 
 
+class LogMode(EnvironmentVariable, type=ExactStr):
+    """Set ``LogMode`` value if users want to opt-in."""
+
+    varname = "MODIN_LOG_MODE"
+    default = None
+
+    @classmethod
+    def enable_api_only(cls):
+        """Enable API level logging."""
+        cls.put("API_ONLY")
+
+    @classmethod
+    def disable(cls):
+        """Disable logging feature."""
+        cls.put(None)
+
+
 class PersistentPickle(EnvironmentVariable, type=bool):
     """Wheather serialization should be persistent."""
 

@@ -12,12 +12,8 @@
 # governing permissions and limitations under the License.
 
 import warnings
-import platform
-import psutil
-import subprocess
 
 from ._version import get_versions
-from modin.logging import get_logger
 
 
 def custom_formatwarning(msg, category, *args, **kwargs):
@@ -34,33 +30,6 @@ warnings.filterwarnings(
     message="The pandas.datetime class is deprecated and will be removed from pandas in a future version. "
     + "Import from datetime module instead.",
 )
-
-
-def get_size(bytes, suffix="B"):
-    """
-    Scale bytes to its proper format
-    e.g:
-        1253656 => '1.20MB'
-        1253656678 => '1.17GB'
-    """
-    factor = 1024
-    for unit in ["", "K", "M", "G", "T", "P"]:
-        if bytes < factor:
-            return f"{bytes:.2f}{unit}{suffix}"
-        bytes /= factor
-
-
-logger = get_logger()
-logger.info("OS Version: " + platform.platform())
-logger.info("Python Version: " + platform.python_version())
-logger.info("Modin Version: " + str(subprocess.check_output(["pip", "show", "modin"]).splitlines()[1:2][0][9:]))
-logger.info("Physical Cores: " + str(psutil.cpu_count(logical=False)))
-logger.info("Total Cores: " + str(psutil.cpu_count(logical=True)))
-svmem = psutil.virtual_memory()
-logger.info(f"Memory Total: {get_size(svmem.total)}")
-logger.info(f"Memory Available: {get_size(svmem.available)}")
-logger.info(f"Memory Used: {get_size(svmem.used)}")
-logger.info(f"Memory Percentage: {svmem.percent}%")
 
 
 def set_execution(engine=None, storage_format=None):
