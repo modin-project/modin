@@ -374,6 +374,18 @@ class LogMode(EnvironmentVariable, type=ExactStr):
         """Disable logging feature."""
         cls.put(None)
 
+    @classmethod
+    def put(cls, value):
+        """
+        Set ``LogMode`` value.
+
+        Parameters
+        ----------
+        value : str
+            Config value to set.
+        """
+        super().put(value)
+
 
 class PersistentPickle(EnvironmentVariable, type=bool):
     """Wheather serialization should be persistent."""
