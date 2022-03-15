@@ -33,7 +33,7 @@ def configure_logging():
 
     logger.setLevel(logging.INFO)
     logfile = logging.FileHandler(log_filename, "a")
-    formatter = MyFormatter(fmt='%(asctime)s %(message)s', datefmt='%Y-%m-%d,%H:%M:%S.%f')
+    formatter = MyFormatter(fmt='%(process)d, %(thread)d, %(asctime)s, %(message)s', datefmt='%Y-%m-%d,%H:%M:%S.%f')
     logfile.setFormatter(formatter)
     logger.addHandler(logfile)
 
