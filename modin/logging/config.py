@@ -1,6 +1,7 @@
 import logging
 import datetime as dt
 import os
+import uuid
 import platform
 import psutil
 import pkg_resources
@@ -24,9 +25,11 @@ class MyFormatter(logging.Formatter):
 def configure_logging():
     global __LOGGER_CONFIGURED__
     logger = logging.getLogger("modin.logger")
-    job_id = "0001"
+    job_id = uuid.uuid4().hex
     log_filename = f".modin/logs/job_{job_id}.log"
-    os.makedirs(os.path.dirname(log_filename), exist_ok=True)
+
+    if not os.path.isdir(".modin/logs"):
+        os.makedirs(os.path.dirname(log_filename), exist_ok=False)
 
     logger.setLevel(logging.INFO)
     logfile = logging.FileHandler(log_filename, "a")
