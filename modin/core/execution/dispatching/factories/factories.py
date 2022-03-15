@@ -532,6 +532,15 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
         return cls.io_cls.read_pickle_distributed(**kwargs)
 
     @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="Custom text files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_custom_text(cls, **kwargs):
+        return cls.io_cls.read_custom_text(**kwargs)
+
+    @classmethod
     def _to_pickle_distributed(cls, *args, **kwargs):
         """
         Distributed pickle query compiler object.

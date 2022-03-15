@@ -40,6 +40,7 @@ Key Features and Updates
   * REFACTOR-#4093: Refactor base to be smaller (#4220)
   * REFACTOR-#4047: Rename `cluster` directory to `cloud` in examples (#4212)
 * Pandas API implementations and improvements
+  * FEAT-#3603: add experimental `read_custom_text` function that can read custom line-by-line text files (#3441)
   * FEAT-#979: Enable reading from SQL server (#4279)
 * OmniSci enhancements
   *
