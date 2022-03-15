@@ -518,9 +518,9 @@ def _is_reduce_function_with_depth(fn, depth: int = 0):
             depth > 0 and len(fn) == 2
         ), f"Got the renamer with incorrect length, expected 2 got {len(fn)}."
         return (
-            all(is_reduce_function(f, depth + 1) for f in fn)
+            all(_is_reduce_function_with_depth(f, depth + 1) for f in fn)
             if depth == 0
-            else is_reduce_function(fn[1], depth + 1)
+            else _is_reduce_function_with_depth(fn[1], depth + 1)
         )
     return isinstance(fn, str) and fn in groupby_reduce_functions
 
