@@ -50,9 +50,10 @@ class OmnisciProtocolColumn(ProtocolColumn):
 
     Notes
     -----
-    The object could be modified inplace due to casting PyArrow buffers to a new dtype:
-    ``_propagate_dtype``, ``_cast_at`` - the methods replace the wrapped
-    ``OmnisciProtocolDataframe`` object with the new one holding the casted PyArrow table.
+    The object could be modified inplace due to either casting PyArrow buffers to a new dtype
+    or combining physical chunks into a single congingous buffer:
+    ``_propagate_dtype``, ``_cast_at``, ``_combine_chunks`` - the methods replace the wrapped
+    ``OmnisciProtocolDataframe`` object with the new one holding the modified PyArrow table.
     """
 
     def __init__(self, column: "OmnisciProtocolDataframe") -> None:
@@ -244,10 +245,6 @@ class OmnisciProtocolColumn(ProtocolColumn):
             yield OmnisciProtocolColumn(chunk)
 
     def get_buffers(self) -> Dict[str, Any]:
-        if self.num_chunks() != 1:
-            # TODO: do chunks combining
-            raise NotImplementedError()
-
         self._materialize_actual_buffers()
         at = self._pyarrow_table
         pyarrow_array = at.column(0).chunks[0]
@@ -264,11 +261,18 @@ class OmnisciProtocolColumn(ProtocolColumn):
         Materialize PyArrow table's buffers that can be zero-copy returned to a consumer, if they aren't already materialized.
 
         Besides materializing PyArrow table itself (if there were some delayed computations)
-        the function also propagates external dtypes to the PyArrow table. For example,
-        if ``self.dtype`` is a string kind, but internal PyArrow dtype is a dictionary
-        (if the table were just exported from OmniSci), then the dictionary will be casted
-        to string dtype.
+        the function also may do the following if required:
+        1. Propagate external dtypes to the PyArrow table. For example,
+            if ``self.dtype`` is a string kind, but internal PyArrow dtype is a dictionary
+            (if the table were just exported from OmniSci), then the dictionary will be casted
+            to string dtype.
+        2. Combine physical chunks of PyArrow table into a single contiguous buffer.
         """
+        if self.num_chunks() != 1:
+            if not self._col._allow_copy:
+                raise RuntimeError("Copy required with 'allow_copy=False' flag")
+            self._combine_chunks()
+
         external_dtype = self.dtype
         internal_dtype = self._dtype_from_pyarrow(self._arrow_dtype)
 
@@ -483,6 +487,22 @@ class OmnisciProtocolColumn(ProtocolColumn):
         casted_at = self._pyarrow_table.cast(new_schema)
         self._col = type(self._col)(
             self._col._df.from_arrow(casted_at),
+            self._col._nan_as_null,
+            self._col._allow_copy,
+        )
+
+    def _combine_chunks(self):
+        """
+        Combine physical chunks of underlying PyArrow table.
+
+        Notes
+        -----
+        This method modifies the column inplace by replacing the wrapped ``OmnisciProtocolDataframe``
+        with the new one holding PyArrow table with the column's data placed in a single contingous buffer.
+        """
+        contiguous_at = self._pyarrow_table.combine_chunks()
+        self._col = type(self._col)(
+            self._col._df.from_arrow(contiguous_at),
             self._col._nan_as_null,
             self._col._allow_copy,
         )

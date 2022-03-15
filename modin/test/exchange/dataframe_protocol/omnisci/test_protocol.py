@@ -17,12 +17,16 @@ import pytest
 import modin.pandas as pd
 import pyarrow as pa
 import pandas
+import numpy as np
 
 from modin.pandas.test.utils import df_equals
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.pandas.utils import from_arrow, from_dataframe as md_from_dataframe
 
 from modin.core.dataframe.base.exchange.dataframe_protocol.from_dataframe import (
     convert_primitive_column_to_ndarray,
+    buffer_to_ndarray,
+    set_nulls,
 )
 
 from .utils import get_all_types, split_df_into_chunks, export_frame
@@ -216,3 +220,47 @@ def test_bitmask_chunking():
     # of the second byte
     exported_df = export_frame(md_df, nchunks=2)
     df_equals(md_df, exported_df)
+
+
+@pytest.mark.parametrize("data_has_nulls", [True, False])
+@pytest.mark.parametrize("nchunks", [2, 9])
+def test_buffer_of_chunked_at(data_has_nulls, nchunks):
+    """Test that getting buffers of physically chunked column works properly."""
+    data = get_all_types(
+        # For the simplicity of the test include only primitive types, so the test can use
+        # only one function to export a column instead of if-elsing to find a type-according one
+        has_nulls=data_has_nulls,
+        include_dtypes=["bool", "int", "uint", "float"],
+    )
+
+    pd_df = pandas.DataFrame(data)
+    pd_chunks = split_df_into_chunks(pd_df, nchunks)
+
+    chunked_at = pa.concat_tables([pa.Table.from_pandas(pd_df) for pd_df in pd_chunks])
+    md_df = from_arrow(chunked_at)
+
+    protocol_df = md_df.__dataframe__()
+    for i, col in enumerate(protocol_df.get_columns()):
+        assert col.num_chunks() > 1
+        assert len(col._pyarrow_table.column(0).chunks) > 1
+
+        buffers = col.get_buffers()
+        data_buff, data_dtype = buffers["data"]
+        result = buffer_to_ndarray(data_buff, data_dtype, col.offset, col.size)
+        result = set_nulls(result, col, buffers["validity"])
+
+        # Our configuration in pytest.ini requires that we explicitly catch all
+        # instances of defaulting to pandas, this one raises a warning on `.to_numpy()`
+        with warns_that_defaulting_to_pandas():
+            reference = md_df.iloc[:, i].to_numpy()
+
+        np.testing.assert_array_equal(reference, result)
+
+    protocol_df = md_df.__dataframe__(allow_copy=False)
+    for i, col in enumerate(protocol_df.get_columns()):
+        assert col.num_chunks() > 1
+        assert len(col._pyarrow_table.column(0).chunks) > 1
+
+        # Catch exception on attempt of doing a copy due to chunks combining
+        with pytest.raises(RuntimeError):
+            col.get_buffers()
