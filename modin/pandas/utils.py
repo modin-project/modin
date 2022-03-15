@@ -14,7 +14,21 @@
 """Implement utils for pandas component."""
 
 from pandas import MultiIndex
+from pandas.util._decorators import doc
 from modin.utils import hashable
+
+_doc_binary_operation = """
+Return {operation} of {primary_object} and `{other}` (binary operator `{bin_op}`).
+
+Parameters
+----------
+{other} : {other_type}
+    The second operand to perform computation.
+
+Returns
+-------
+{returns}
+"""
 
 
 def from_non_pandas(df, index, columns, dtype):
@@ -236,6 +250,50 @@ def check_both_not_none(option1, option2):
         True if both option1 and option2 are not None, False otherwise.
     """
     return not (option1 is None or option2 is None)
+
+
+def _doc_binary_op(
+    operation, bin_op, other="right", returns="Series", primary_object="Series"
+):
+    """
+    Return callable documenting `Series` or `DataFrame` binary operator.
+
+    Parameters
+    ----------
+    operation : str
+        Operation name.
+    bin_op : str
+        Binary operation name.
+    other : str, default: 'right'
+        The second operand name.
+    returns : str, default: 'Series'
+        Type of returns.
+    primary_object : str, default: 'Series'
+        The primary object to document.
+
+    Returns
+    -------
+    callable
+    """
+    if primary_object == "Series":
+        other_type = "Series or scalar value"
+    elif primary_object == "DataFrame":
+        other_type = "DataFrame, Series or scalar value"
+    else:
+        raise NotImplementedError(
+            f"Only 'DataFrame' and 'Series' `primary_object` are allowed, actually passed: {primary_object}"
+        )
+    doc_op = doc(
+        _doc_binary_operation,
+        operation=operation,
+        other=other,
+        other_type=other_type,
+        bin_op=bin_op,
+        returns=returns,
+        primary_object=primary_object,
+    )
+
+    return doc_op
 
 
 _original_pandas_MultiIndex_from_frame = MultiIndex.from_frame

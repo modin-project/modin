@@ -23,7 +23,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas._libs.lib import no_default
 from pandas._typing import IndexKeyFunc
-from pandas.util._decorators import doc
+# from pandas.util._decorators import doc
 import sys
 from typing import Union, Optional
 import warnings
@@ -32,52 +32,52 @@ from modin.utils import _inherit_docstrings, to_pandas, Engine
 from modin.config import IsExperimental, PersistentPickle
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
-from .utils import from_pandas, is_scalar
+from .utils import from_pandas, is_scalar, _doc_binary_op
 from .accessor import CachedAccessor, SparseAccessor
 from . import _update_engine
 
-_doc_binary_operation = """
-Return {operation} of Series and `{other}` (binary operator `{bin_op}`).
+# _doc_binary_operation = """
+# Return {operation} of Series and `{other}` (binary operator `{bin_op}`).
 
-Parameters
-----------
-{other} : Series or scalar value
-    The second operand to perform computation.
+# Parameters
+# ----------
+# {other} : Series or scalar value
+#     The second operand to perform computation.
 
-Returns
--------
-{returns}
-"""
+# Returns
+# -------
+# {returns}
+# """
 
 
-def _doc_binary_op(operation, bin_op, other="right", returns="Series"):
-    """
-    Return callable documenting `Series` binary operator.
+# def _doc_binary_op(operation, bin_op, other="right", returns="Series"):
+#     """
+#     Return callable documenting `Series` binary operator.
 
-    Parameters
-    ----------
-    operation : str
-        Operation name.
-    bin_op : str
-        Binary operation name.
-    other : str, default: 'right'
-        The second operand name.
-    returns : str, default: 'Series'
-        Type of returns.
+#     Parameters
+#     ----------
+#     operation : str
+#         Operation name.
+#     bin_op : str
+#         Binary operation name.
+#     other : str, default: 'right'
+#         The second operand name.
+#     returns : str, default: 'Series'
+#         Type of returns.
 
-    Returns
-    -------
-    callable
-    """
-    doc_op = doc(
-        _doc_binary_operation,
-        operation=operation,
-        other=other,
-        bin_op=bin_op,
-        returns=returns,
-    )
+#     Returns
+#     -------
+#     callable
+#     """
+#     doc_op = doc(
+#         _doc_binary_operation,
+#         operation=operation,
+#         other=other,
+#         bin_op=bin_op,
+#         returns=returns,
+#     )
 
-    return doc_op
+#     return doc_op
 
 
 @_inherit_docstrings(

@@ -252,6 +252,7 @@ def _replace_doc(
     target_doc = target_obj.__doc__ or ""
     overwrite = overwrite or not target_doc
     doc = source_doc if overwrite else target_doc
+    apilink = apilink if isinstance(apilink, list) else [apilink]
 
     if parent_cls and not attr_name:
         if isinstance(target_obj, property):
@@ -264,19 +265,25 @@ def _replace_doc(
     if (
         source_doc.strip()
         and apilink
-        and "`pandas API documentation for " not in target_doc
+        and "pandas API documentation for " not in target_doc
         and (not (attr_name or "").startswith("_"))
     ):
-        if attr_name:
-            token = f"{apilink}.{attr_name}"
-        else:
-            token = apilink
-        url = _make_api_url(token)
+        links = []
+        for link in apilink:
+            if attr_name:
+                token = f"{link}.{attr_name}"
+            else:
+                token = link
+            url = _make_api_url(token)
+            links.append(f"`{token} <{url}>`_")
 
         indent_line = " " * _get_indent(doc)
         notes_section = f"\n{indent_line}Notes\n{indent_line}-----\n"
-        url_line = f"{indent_line}See `pandas API documentation for {token} <{url}>`_ for more.\n"
+        
+        url_line = f"{indent_line}See pandas API documentation for {', '.join(links)} for more.\n"
         notes_section_with_url = notes_section + url_line
+        # if attr_name == "to_csv":
+        #     import pdb; pdb.set_trace()
 
         if notes_section in doc:
             doc = doc.replace(notes_section, notes_section_with_url)

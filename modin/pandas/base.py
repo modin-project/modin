@@ -48,7 +48,7 @@ from typing import Optional, Union, Sequence, Hashable
 import warnings
 import pickle as pkl
 
-from .utils import is_full_grab_slice
+from .utils import is_full_grab_slice, _doc_binary_op
 from modin.utils import try_cast_to_pandas, _inherit_docstrings
 from modin.error_message import ErrorMessage
 import modin.pandas as pd
@@ -95,8 +95,13 @@ _DEFAULT_BEHAVIOUR = {
     "__reduce_ex__",
 } | _ATTRS_NO_LOOKUP
 
+_doc_binary_op_kwargs = {"returns": "DataFrame", "primary_object": "DataFrame"}
 
-@_inherit_docstrings(pandas.DataFrame, apilink="pandas.DataFrame")
+
+# @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
+@_inherit_docstrings(
+    pandas.core.generic.NDFrame, apilink=["pandas.DataFrame", "pandas.Series"]
+)
 class BasePandasDataset(object):
     """
     Implement most of the common code that exists in DataFrame/Series.
@@ -550,6 +555,9 @@ class BasePandasDataset(object):
         return type(self)(*args, **kwargs)
 
     def abs(self):
+        """
+        Return a Series/DataFrame with absolute numeric value of each element.
+        """
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(query_compiler=self._query_compiler.abs())
 
@@ -578,11 +586,17 @@ class BasePandasDataset(object):
     index = property(_get_index, _set_index)
 
     def add(self, other, axis="columns", level=None, fill_value=None):
+        """
+        Return addition of Series/DataFrame and other, element-wise (binary operator `add`).
+        """
         return self._binary_op(
             "add", other, axis=axis, level=level, fill_value=fill_value
         )
 
     def aggregate(self, func=None, axis=0, *args, **kwargs):
+        """
+        Aggregate using one or more operations over the specified axis.
+        """
         axis = self._get_axis_number(axis)
         result = None
 
@@ -691,6 +705,9 @@ class BasePandasDataset(object):
         fill_axis=0,
         broadcast_axis=None,
     ):
+        """
+        Align two objects on their axes with the specified join method.
+        """
         return self._default_to_pandas(
             "align",
             other,
@@ -706,6 +723,9 @@ class BasePandasDataset(object):
         )
 
     def all(self, axis=0, bool_only=None, skipna=True, level=None, **kwargs):
+        """
+        Return whether all elements are True, potentially over an axis.
+        """
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if axis is not None:
             axis = self._get_axis_number(axis)
@@ -764,6 +784,9 @@ class BasePandasDataset(object):
             return result
 
     def any(self, axis=0, bool_only=None, skipna=True, level=None, **kwargs):
+        """
+        Return whether any element is True, potentially over an axis.
+        """
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if axis is not None:
             axis = self._get_axis_number(axis)
@@ -831,6 +854,10 @@ class BasePandasDataset(object):
         args=(),
         **kwds,
     ):
+        """
+        Apply a function along an axis of the DataFrame/Series.
+        """
+
         def error_raiser(msg, exception):
             """Convert passed exception to the same type as pandas do and raise it."""
             # HACK: to concord with pandas error types by replacing all of the
@@ -867,6 +894,9 @@ class BasePandasDataset(object):
         return query_compiler
 
     def asfreq(self, freq, method=None, how=None, normalize=False, fill_value=None):
+        """
+        Convert time series to specified frequency.
+        """
         return self._default_to_pandas(
             "asfreq",
             freq,
@@ -877,6 +907,9 @@ class BasePandasDataset(object):
         )
 
     def asof(self, where, subset=None):
+        """
+        Return the last row(s) without any NaNs before `where`.
+        """
         scalar = not is_list_like(where)
         if isinstance(where, pandas.Index):
             # Prevent accidental mutation of original:
@@ -902,6 +935,9 @@ class BasePandasDataset(object):
         return result
 
     def astype(self, dtype, copy=True, errors="raise"):
+        """
+        Cast a Modin object to a specified dtype ``dtype``.
+        """
         # dtype can be a series, a dict, or a scalar. If it's series or scalar,
         # convert it to a dict before passing it to the query compiler.
         if isinstance(dtype, (pd.Series, pandas.Series)):
@@ -933,11 +969,17 @@ class BasePandasDataset(object):
 
     @property
     def at(self, axis=None):
+        """
+        Access a single value for a row/column label pair.
+        """
         from .indexing import _LocIndexer
 
         return _LocIndexer(self)
 
     def at_time(self, time, asof=False, axis=None):
+        """
+        Select values at particular time of day (e.g., 9:30AM).
+        """
         axis = self._get_axis_number(axis)
         idx = self.index if axis == 0 else self.columns
         indexer = pandas.Series(index=idx).at_time(time, asof=asof).index
@@ -952,6 +994,9 @@ class BasePandasDataset(object):
         inclusive: "str | None" = None,
         axis=None,
     ):
+        """
+        Select values between particular times of the day (e.g., 9:00-9:30 AM).
+        """
         axis = self._get_axis_number(axis)
         idx = self.index if axis == 0 else self.columns
         indexer = (
@@ -968,6 +1013,9 @@ class BasePandasDataset(object):
         return self.loc[indexer] if axis == 0 else self.loc[:, indexer]
 
     def bfill(self, axis=None, inplace=False, limit=None, downcast=None):
+        """
+        Synonym for `DataFrame.fillna` with ``method='bfill'``.
+        """
         return self.fillna(
             method="bfill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
         )
@@ -975,6 +1023,9 @@ class BasePandasDataset(object):
     backfill = bfill
 
     def bool(self):
+        """
+        Return the bool of a single element Series or DataFrame.
+        """
         shape = self.shape
         if shape != (1,) and shape != (1, 1):
             raise ValueError(
@@ -988,6 +1039,9 @@ class BasePandasDataset(object):
             return self._to_pandas().bool()
 
     def clip(self, lower=None, upper=None, axis=None, inplace=False, *args, **kwargs):
+        """
+        Trim values at input threshold(s).
+        """
         # validate inputs
         if axis is not None:
             axis = self._get_axis_number(axis)
@@ -1012,14 +1066,23 @@ class BasePandasDataset(object):
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def combine(self, other, func, fill_value=None, **kwargs):
+        """
+        Perform combination of Modin objects according to `func`.
+        """
         return self._binary_op(
             "combine", other, _axis=0, func=func, fill_value=fill_value, **kwargs
         )
 
     def combine_first(self, other):
+        """
+        Update null elements with value in the same location in `other`.
+        """
         return self._binary_op("combine_first", other, _axis=0)
 
     def copy(self, deep=True):
+        """
+        Make a copy of the object's metadata.
+        """
         if deep:
             return self.__constructor__(query_compiler=self._query_compiler.copy())
         new_obj = self.__constructor__(query_compiler=self._query_compiler)
@@ -1027,6 +1090,9 @@ class BasePandasDataset(object):
         return new_obj
 
     def count(self, axis=0, level=None, numeric_only=False):
+        """
+        Count non-NA cells for Modin object..
+        """
         axis = self._get_axis_number(axis)
         frame = self.select_dtypes([np.number, np.bool]) if numeric_only else self
 
@@ -1041,6 +1107,9 @@ class BasePandasDataset(object):
         )
 
     def cummax(self, axis=None, skipna=True, *args, **kwargs):
+        """
+        Return cumulative maximum over a DataFrame or Series axis.
+        """
         axis = self._get_axis_number(axis)
         if axis == 1:
             self._validate_dtypes(numeric_only=True)
@@ -1053,6 +1122,9 @@ class BasePandasDataset(object):
         )
 
     def cummin(self, axis=None, skipna=True, *args, **kwargs):
+        """
+        Return cumulative minimum over a DataFrame or Series axis.
+        """
         axis = self._get_axis_number(axis)
         if axis == 1:
             self._validate_dtypes(numeric_only=True)
@@ -1065,6 +1137,9 @@ class BasePandasDataset(object):
         )
 
     def cumprod(self, axis=None, skipna=True, *args, **kwargs):
+        """
+        Return cumulative product over a DataFrame or Series axis.
+        """
         axis = self._get_axis_number(axis)
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
@@ -1076,6 +1151,9 @@ class BasePandasDataset(object):
         )
 
     def cumsum(self, axis=None, skipna=True, *args, **kwargs):
+        """
+        Return cumulative sum over a DataFrame or Series axis.
+        """
         axis = self._get_axis_number(axis)
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
@@ -1089,6 +1167,9 @@ class BasePandasDataset(object):
     def describe(
         self, percentiles=None, include=None, exclude=None, datetime_is_numeric=False
     ):
+        """
+        Generate descriptive statistics.
+        """
         if include is not None and (isinstance(include, np.dtype) or include != "all"):
             if not is_list_like(include):
                 include = [include]
@@ -1147,6 +1228,9 @@ class BasePandasDataset(object):
         )
 
     def diff(self, periods=1, axis=0):
+        """
+        First discrete difference of element.
+        """
         axis = self._get_axis_number(axis)
         return self.__constructor__(
             query_compiler=self._query_compiler.diff(
@@ -1164,6 +1248,9 @@ class BasePandasDataset(object):
         inplace=False,
         errors="raise",
     ):
+        """
+        Drop specified labels from Modin object.
+        """
         # TODO implement level
         if level is not None:
             return self._default_to_pandas(
@@ -1237,6 +1324,9 @@ class BasePandasDataset(object):
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def dropna(self, axis=0, how="any", thresh=None, subset=None, inplace=False):
+        """
+        Remove missing values.
+        """
         inplace = validate_bool_kwarg(inplace, "inplace")
 
         if is_list_like(axis):
@@ -1264,6 +1354,9 @@ class BasePandasDataset(object):
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def droplevel(self, level, axis=0):
+        """
+        Return Series/DataFrame with requested index / column level(s) removed.
+        """
         axis = self._get_axis_number(axis)
         new_axis = self.axes[axis].droplevel(level)
         result = self.copy()
@@ -1274,6 +1367,9 @@ class BasePandasDataset(object):
         return result
 
     def drop_duplicates(self, keep="first", inplace=False, **kwargs):
+        """
+        Return DataFrame/Series with duplicate rows removed.
+        """
         inplace = validate_bool_kwarg(inplace, "inplace")
         subset = kwargs.get("subset", None)
         if subset is not None:
@@ -1289,9 +1385,15 @@ class BasePandasDataset(object):
         return self.drop(index=self.index[indices], inplace=inplace)
 
     def eq(self, other, axis="columns", level=None):
+        """
+        Get equality of DataFrame/Series and ``other``, element-wise (binary operator ``eq``).
+        """
         return self._binary_op("eq", other, axis=axis, level=level)
 
     def explode(self, column, ignore_index: bool = False):
+        """
+        Transform each element of a list-like to a row.
+        """
         exploded = self.__constructor__(
             query_compiler=self._query_compiler.explode(column)
         )
@@ -1312,6 +1414,9 @@ class BasePandasDataset(object):
         times: "str | np.ndarray | BasePandasDataset | None" = None,
         method: "str" = "single",
     ) -> "ExponentialMovingWindow":
+        """
+        Provide exponentially weighted (EW) calculations.
+        """
         return self._default_to_pandas(
             "ewm",
             com=com,
@@ -1327,6 +1432,9 @@ class BasePandasDataset(object):
         )
 
     def expanding(self, min_periods=1, center=None, axis=0, method="single"):
+        """
+        Provide expanding window calculations.
+        """
         return self._default_to_pandas(
             "expanding",
             min_periods=min_periods,
@@ -1336,6 +1444,9 @@ class BasePandasDataset(object):
         )
 
     def ffill(self, axis=None, inplace=False, limit=None, downcast=None):
+        """
+        Synonym for `DataFrame.fillna` with ``method='ffill'``.
+        """
         return self.fillna(
             method="ffill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
         )
@@ -1436,6 +1547,9 @@ class BasePandasDataset(object):
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def filter(self, items=None, like=None, regex=None, axis=None):
+        """
+        Subset the dataframe rows or columns according to the specified index labels.
+        """
         nkw = count_not_none(items, like, regex)
         if nkw > 1:
             raise TypeError(
@@ -1469,38 +1583,65 @@ class BasePandasDataset(object):
         return self[self.columns[bool_arr]]
 
     def first(self, offset):
+        """
+        Select initial periods of time series data based on a date offset.
+        """
         return self.loc[pandas.Series(index=self.index).first(offset).index]
 
     def first_valid_index(self):
+        """
+        Return index for first non-NA value or None, if no non-NA value is found.
+        """
         return self._query_compiler.first_valid_index()
 
     def floordiv(self, other, axis="columns", level=None, fill_value=None):
+        """
+        Get integer division of DataFrame/Series and ``other``, element-wise (binary operator ``floordiv``).
+        """
         return self._binary_op(
             "floordiv", other, axis=axis, level=level, fill_value=fill_value
         )
 
     def ge(self, other, axis="columns", level=None):
+        """
+        Get greater than or equal comparison of DataFrame/Series and ``other``, element-wise (binary operator ``ge``).
+        """
         return self._binary_op("ge", other, axis=axis, level=level)
 
     def get(self, key, default=None):
+        """
+        Get item from object for given key
+        """
         if key in self.keys():
             return self.__getitem__(key)
         else:
             return default
 
     def gt(self, other, axis="columns", level=None):
+        """
+        Get greater than comparison of DataFrame/Series and ``other``, element-wise (binary operator ``gt``).
+        """
         return self._binary_op("gt", other, axis=axis, level=level)
 
     def head(self, n=5):
+        """
+        Return the first `n` rows.
+        """
         return self.iloc[:n]
 
     @property
     def iat(self, axis=None):
+        """
+        Access a single value for a row/column pair by integer position.
+        """
         from .indexing import _iLocIndexer
 
         return _iLocIndexer(self)
 
     def idxmax(self, axis=0, skipna=True):
+        """
+        Return index of first occurrence of maximum over requested axis.
+        """
         if not all(d != np.dtype("O") for d in self._get_dtypes()):
             raise TypeError("reduce operation 'argmax' not allowed for this dtype")
         axis = self._get_axis_number(axis)
@@ -1509,6 +1650,9 @@ class BasePandasDataset(object):
         )
 
     def idxmin(self, axis=0, skipna=True):
+        """
+        Return index of first occurrence of minimum over requested axis.
+        """
         if not all(d != np.dtype("O") for d in self._get_dtypes()):
             raise TypeError("reduce operation 'argmin' not allowed for this dtype")
         axis = self._get_axis_number(axis)
@@ -1517,6 +1661,9 @@ class BasePandasDataset(object):
         )
 
     def infer_objects(self):
+        """
+        Attempt to infer better dtypes for object columns.
+        """
         return self._default_to_pandas("infer_objects")
 
     def convert_dtypes(
@@ -1527,6 +1674,9 @@ class BasePandasDataset(object):
         convert_boolean: bool = True,
         convert_floating: bool = True,
     ):
+        """
+        Convert columns to best possible dtypes using dtypes supporting ``pd.NA``.
+        """
         return self._default_to_pandas(
             "convert_dtypes",
             infer_objects=infer_objects,
@@ -1536,17 +1686,26 @@ class BasePandasDataset(object):
         )
 
     def isin(self, values):
+        """
+        Whether elements in DataFrame/Series are contained in `values`.
+        """
         return self.__constructor__(
             query_compiler=self._query_compiler.isin(values=values)
         )
 
     def isna(self):
+        """
+        Detect missing values.
+        """
         return self.__constructor__(query_compiler=self._query_compiler.isna())
 
     isnull = isna
 
     @property
     def iloc(self):
+        """
+        Purely integer-location based indexing for selection by position.
+        """
         from .indexing import _iLocIndexer
 
         return _iLocIndexer(self)
@@ -1559,6 +1718,9 @@ class BasePandasDataset(object):
         numeric_only=None,
         **kwargs,
     ):
+        """
+        Return unbiased kurtosis over requested axis.
+        """
         axis = self._get_axis_number(axis)
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
@@ -1594,24 +1756,42 @@ class BasePandasDataset(object):
     kurtosis = kurt
 
     def last(self, offset):
+        """
+        Select final periods of time series data based on a date offset.
+        """
         return self.loc[pandas.Series(index=self.index).last(offset).index]
 
     def last_valid_index(self):
+        """
+        Return index for last non-NA value or None, if no non-NA value is found.
+        """
         return self._query_compiler.last_valid_index()
 
     def le(self, other, axis="columns", level=None):
+        """
+        Get less than or equal comparison of DataFrame/Series and ``other``, element-wise (binary operator ``le``).
+        """
         return self._binary_op("le", other, axis=axis, level=level)
 
     def lt(self, other, axis="columns", level=None):
+        """
+        Get less than comparison of DataFrame/Series and ``other``, element-wise (binary operator ``lt``).
+        """
         return self._binary_op("lt", other, axis=axis, level=level)
 
     @property
     def loc(self):
+        """
+        Access a group of rows and columns by label(s) or a boolean array.
+        """
         from .indexing import _LocIndexer
 
         return _LocIndexer(self)
 
     def mad(self, axis=None, skipna=True, level=None):
+        """
+        Return the mean absolute deviation of the values over the requested axis.
+        """
         axis = self._get_axis_number(axis)
         validate_bool_kwarg(skipna, "skipna", none_allowed=True)
         if level is not None:
@@ -1638,6 +1818,9 @@ class BasePandasDataset(object):
         errors="raise",
         try_cast=no_default,
     ):
+        """
+        Replace values where the condition is True.
+        """
         return self._default_to_pandas(
             "mask",
             cond,
@@ -1657,6 +1840,9 @@ class BasePandasDataset(object):
         numeric_only=None,
         **kwargs,
     ):
+        """
+        Return the maximum of the values over the requested axis.
+        """
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             return self._default_to_pandas(
@@ -1762,6 +1948,9 @@ class BasePandasDataset(object):
         numeric_only=None,
         **kwargs,
     ):
+        """
+        Return the mean of the values over the requested axis.
+        """
         return self._stat_operation("mean", axis, skipna, level, numeric_only, **kwargs)
 
     def median(
@@ -1772,11 +1961,17 @@ class BasePandasDataset(object):
         numeric_only=None,
         **kwargs,
     ):
+        """
+        Return the median of the values over the requested axis.
+        """
         return self._stat_operation(
             "median", axis, skipna, level, numeric_only, **kwargs
         )
 
     def memory_usage(self, index=True, deep=False):
+        """
+        Return the memory usage of the Modin object.
+        """
         return self._reduce_dimension(
             self._query_compiler.memory_usage(index=index, deep=deep)
         )
@@ -1789,6 +1984,9 @@ class BasePandasDataset(object):
         numeric_only=None,
         **kwargs,
     ):
+        """
+        Return the minimum of the values over the requested axis.
+        """
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             return self._default_to_pandas(
@@ -1812,11 +2010,17 @@ class BasePandasDataset(object):
         )
 
     def mod(self, other, axis="columns", level=None, fill_value=None):
+        """
+        Get modulo of DataFrame/Series and ``other``, element-wise (binary operator `mod`).
+        """
         return self._binary_op(
             "mod", other, axis=axis, level=level, fill_value=fill_value
         )
 
     def mode(self, axis=0, numeric_only=False, dropna=True):
+        """
+        Get the mode(s) of each element along the selected axis.
+        """
         axis = self._get_axis_number(axis)
         return self.__constructor__(
             query_compiler=self._query_compiler.mode(
@@ -1825,6 +2029,9 @@ class BasePandasDataset(object):
         )
 
     def mul(self, other, axis="columns", level=None, fill_value=None):
+        """
+        Get multiplication of DataFrame/Series and ``other``, element-wise (binary operator `mul`).
+        """
         return self._binary_op(
             "mul", other, axis=axis, level=level, fill_value=fill_value
         )
@@ -1832,20 +2039,32 @@ class BasePandasDataset(object):
     multiply = mul
 
     def ne(self, other, axis="columns", level=None):
+        """
+        Get Not equal comparison of DataFrame/Series and ``other``, element-wise (binary operator `ne`).
+        """
         return self._binary_op("ne", other, axis=axis, level=level)
 
     def notna(self):
+        """
+        Detect existing (non-missing) values.
+        """
         return self.__constructor__(query_compiler=self._query_compiler.notna())
 
     notnull = notna
 
     def nunique(self, axis=0, dropna=True):
+        """
+        Return number of unique elements in the object.
+        """
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
             self._query_compiler.nunique(axis=axis, dropna=dropna)
         )
 
     def pct_change(self, periods=1, fill_method="pad", limit=None, freq=None, **kwargs):
+        """
+        Percentage change between the current and a prior element.
+        """
         return self._default_to_pandas(
             "pct_change",
             periods=periods,
@@ -1856,14 +2075,23 @@ class BasePandasDataset(object):
         )
 
     def pipe(self, func, *args, **kwargs):
+        """
+        Apply chainable functions that expect Series or DataFrames.
+        """
         return pipe(self, func, *args, **kwargs)
 
     def pop(self, item):
+        """
+        Return item and drop from frame. Raise KeyError if not found.
+        """
         result = self[item]
         del self[item]
         return result
 
     def pow(self, other, axis="columns", level=None, fill_value=None):
+        """
+        Get exponential power of DataFrame/Series and ``other``, element-wise (binary operator `pow`).
+        """
         return self._binary_op(
             "pow", other, axis=axis, level=level, fill_value=fill_value
         )
@@ -1871,6 +2099,9 @@ class BasePandasDataset(object):
     radd = add
 
     def quantile(self, q=0.5, axis=0, numeric_only=True, interpolation="linear"):
+        """
+        Return values at the given quantile over requested axis.
+        """
         axis = self._get_axis_number(axis)
 
         def check_dtype(t):
@@ -1934,6 +2165,9 @@ class BasePandasDataset(object):
         ascending: "bool_t" = True,
         pct: "bool_t" = False,
     ):
+        """
+        Compute numerical data ranks (1 through n) along axis.
+        """
         axis = self._get_axis_number(axis)
         return self.__constructor__(
             query_compiler=self._query_compiler.rank(
@@ -1953,6 +2187,9 @@ class BasePandasDataset(object):
         copy=True,
         **kwargs,
     ):
+        """
+        Conform Series/DataFrame to new index with optional filling logic.
+        """
         if (
             kwargs.get("level") is not None
             or (index is not None and self._query_compiler.has_multiindex())
@@ -1986,6 +2223,9 @@ class BasePandasDataset(object):
         return self._create_or_update_from_compiler(final_query_compiler, not copy)
 
     def reindex_like(self, other, method=None, copy=True, limit=None, tolerance=None):
+        """
+        Return an object with matching indices as ``other`` object.
+        """
         return self._default_to_pandas(
             "reindex_like",
             other,
@@ -1998,6 +2238,9 @@ class BasePandasDataset(object):
     def rename_axis(
         self, mapper=None, index=None, columns=None, axis=None, copy=True, inplace=False
     ):
+        """
+        Set the name of the axis for the index or columns.
+        """
         kwargs = {
             "index": index,
             "columns": columns,
@@ -2059,6 +2302,9 @@ class BasePandasDataset(object):
                 return result
 
     def reorder_levels(self, order, axis=0):
+        """
+        Rearrange index levels using input order.
+        """
         axis = self._get_axis_number(axis)
         new_labels = self.axes[axis].reorder_levels(order)
         return self.set_axis(new_labels, axis=axis, inplace=False)
@@ -2078,6 +2324,9 @@ class BasePandasDataset(object):
         origin: Union[str, TimestampConvertibleTypes] = "start_day",
         offset: Optional[TimedeltaConvertibleTypes] = None,
     ):
+        """
+        Resample time-series data.
+        """
         from .resample import Resampler
 
         return Resampler(
@@ -2099,6 +2348,9 @@ class BasePandasDataset(object):
     def reset_index(
         self, level=None, drop=False, inplace=False, col_level=0, col_fill=""
     ):
+        """
+        Reset the index, or a level of it.
+        """
         inplace = validate_bool_kwarg(inplace, "inplace")
         # Error checking for matching pandas. Pandas does not allow you to
         # insert a dropped index into a DataFrame if these columns already
@@ -2119,11 +2371,17 @@ class BasePandasDataset(object):
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def rfloordiv(self, other, axis="columns", level=None, fill_value=None):
+        """
+        Get integer division of DataFrame/Series and ``other``, element-wise (binary operator ``rfloordiv``).
+        """
         return self._binary_op(
             "rfloordiv", other, axis=axis, level=level, fill_value=fill_value
         )
 
     def rmod(self, other, axis="columns", level=None, fill_value=None):
+        """
+        Get modulo of DataFrame/Series and ``other``, element-wise (binary operator `rmod`).
+        """
         return self._binary_op(
             "rmod", other, axis=axis, level=level, fill_value=fill_value
         )
@@ -2141,6 +2399,9 @@ class BasePandasDataset(object):
         closed=None,
         method="single",
     ):
+        """
+        Provide rolling window calculations.
+        """
         if win_type is not None:
             from .window import Window
 
@@ -2170,6 +2431,9 @@ class BasePandasDataset(object):
         )
 
     def round(self, decimals=0, *args, **kwargs):
+        """
+        Round a DataFrame/Series to a variable number of decimal places.
+        """
         # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
         # purpose and does not affect the result, we shouldn't pass them to the query compiler.
         return self.__constructor__(
@@ -2177,16 +2441,25 @@ class BasePandasDataset(object):
         )
 
     def rpow(self, other, axis="columns", level=None, fill_value=None):
+        """
+        Get exponential power of DataFrame/Series and ``other``, element-wise (binary operator `rpow`).
+        """
         return self._binary_op(
             "rpow", other, axis=axis, level=level, fill_value=fill_value
         )
 
     def rsub(self, other, axis="columns", level=None, fill_value=None):
+        """
+        Get subtraction of DataFrame/Series and ``other``, element-wise (binary operator `rsub`).
+        """
         return self._binary_op(
             "rsub", other, axis=axis, level=level, fill_value=fill_value
         )
 
     def rtruediv(self, other, axis="columns", level=None, fill_value=None):
+        """
+        Get floating division of DataFrame/Series and ``other``, element-wise (binary operator `rtruediv`).
+        """
         return self._binary_op(
             "rtruediv", other, axis=axis, level=level, fill_value=fill_value
         )
@@ -2203,6 +2476,9 @@ class BasePandasDataset(object):
         axis=None,
         ignore_index=False,
     ):
+        """
+        Return a random sample of items from an axis of object.
+        """
         axis = self._get_axis_number(axis)
         if axis:
             axis_labels = self.columns
@@ -2324,11 +2600,17 @@ class BasePandasDataset(object):
         numeric_only=None,
         **kwargs,
     ):
+        """
+        Return unbiased standard error of the mean over requested axis.
+        """
         return self._stat_operation(
             "sem", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
         )
 
     def set_axis(self, labels, axis=0, inplace=False):
+        """
+        Assign desired index to given axis.
+        """
         if is_scalar(labels):
             warnings.warn(
                 'set_axis now takes "labels" as first argument, and '
@@ -2349,6 +2631,9 @@ class BasePandasDataset(object):
     def set_flags(
         self, *, copy: bool = False, allows_duplicate_labels: Optional[bool] = None
     ):
+        """
+        Return a new object with updated flags.
+        """
         return self._default_to_pandas(
             pandas.DataFrame.set_flags,
             copy=copy,
@@ -2357,12 +2642,19 @@ class BasePandasDataset(object):
 
     @property
     def flags(self):
+        """
+        Get the properties associated with this object.
+        """
+
         def flags(df):
             return df.flags
 
         return self._default_to_pandas(flags)
 
     def shift(self, periods=1, freq=None, axis=0, fill_value=no_default):
+        """
+        Shift index by desired number of periods with an optional time `freq`.
+        """
         if periods == 0:
             # Check obvious case first
             return self.copy()
@@ -2449,6 +2741,9 @@ class BasePandasDataset(object):
         numeric_only=None,
         **kwargs,
     ):
+        """
+        Return unbiased skew over requested axis.
+        """
         return self._stat_operation("skew", axis, skipna, level, numeric_only, **kwargs)
 
     def sort_index(
@@ -2463,6 +2758,9 @@ class BasePandasDataset(object):
         ignore_index: bool = False,
         key: Optional[IndexKeyFunc] = None,
     ):
+        """
+        Sort object by labels (along an axis).
+        """
         # pandas throws this exception. See pandas issie #39434
         if ascending is None:
             raise ValueError(
@@ -2494,6 +2792,9 @@ class BasePandasDataset(object):
         ignore_index: bool = False,
         key: Optional[IndexKeyFunc] = None,
     ):
+        """
+        Sort by the values along either axis.
+        """
         axis = self._get_axis_number(axis)
         inplace = validate_bool_kwarg(inplace, "inplace")
         ascending = validate_ascending(ascending)
@@ -2526,6 +2827,9 @@ class BasePandasDataset(object):
         numeric_only=None,
         **kwargs,
     ):
+        """
+        Return sample standard deviation over requested axis.
+        """
         return self._stat_operation(
             "std", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
         )
@@ -2589,6 +2893,9 @@ class BasePandasDataset(object):
         errors: str = "strict",
         storage_options: StorageOptions = None,
     ):  # pragma: no cover
+        """
+        Write object to a comma-separated values (csv) file.
+        """
 
         kwargs = {
             "path_or_buf": path_or_buf,
@@ -2622,6 +2929,9 @@ class BasePandasDataset(object):
         return FactoryDispatcher.to_csv(new_query_compiler, **kwargs)
 
     def to_dict(self, orient="dict", into=dict):  # pragma: no cover
+        """
+        Convert the DataFrame/Series to a dictionary.
+        """
         return self._default_to_pandas("to_dict", orient=orient, into=into)
 
     def to_excel(
@@ -2644,6 +2954,9 @@ class BasePandasDataset(object):
         freeze_panes=None,
         storage_options: StorageOptions = None,
     ):  # pragma: no cover
+        """
+        Write object to an Excel sheet.
+        """
         return self._default_to_pandas(
             "to_excel",
             excel_writer,
@@ -2666,6 +2979,9 @@ class BasePandasDataset(object):
         )
 
     def to_hdf(self, path_or_buf, key, format="table", **kwargs):  # pragma: no cover
+        """
+        Write the contained data to an HDF5 file using HDFStore.
+        """
         return self._default_to_pandas(
             "to_hdf", path_or_buf, key, format=format, **kwargs
         )
@@ -2685,6 +3001,9 @@ class BasePandasDataset(object):
         indent=None,
         storage_options: StorageOptions = None,
     ):  # pragma: no cover
+        """
+        Convert the object to a JSON string.
+        """
         return self._default_to_pandas(
             "to_json",
             path_or_buf,
@@ -2726,6 +3045,9 @@ class BasePandasDataset(object):
         label=None,
         position=None,
     ):  # pragma: no cover
+        """
+        Render object to a LaTeX tabular, longtable, or nested table.
+        """
         return self._default_to_pandas(
             "to_latex",
             buf=buf,
@@ -2759,6 +3081,9 @@ class BasePandasDataset(object):
         storage_options: StorageOptions = None,
         **kwargs,
     ):
+        """
+        Print DataFrame/Series in Markdown-friendly format.
+        """
         return self._default_to_pandas(
             "to_markdown",
             buf=buf,
@@ -2769,6 +3094,9 @@ class BasePandasDataset(object):
         )
 
     def to_numpy(self, dtype=None, copy=False, na_value=no_default):
+        """
+        Convert the DataFrame/Series to a NumPy array.
+        """
         return self._query_compiler.to_numpy(
             dtype=dtype,
             copy=copy,
@@ -2777,6 +3105,9 @@ class BasePandasDataset(object):
 
     # TODO(williamma12): When this gets implemented, have the series one call this.
     def to_period(self, freq=None, axis=0, copy=True):  # pragma: no cover
+        """
+        Convert DataFrame/Series from DatetimeIndex to PeriodIndex.
+        """
         return self._default_to_pandas("to_period", freq=freq, axis=axis, copy=copy)
 
     def to_pickle(
@@ -2786,6 +3117,9 @@ class BasePandasDataset(object):
         protocol: int = pkl.HIGHEST_PROTOCOL,
         storage_options: StorageOptions = None,
     ):  # pragma: no cover
+        """
+        Pickle (serialize) object to file.
+        """
         from modin.pandas.io import to_pickle
 
         to_pickle(
@@ -2818,6 +3152,9 @@ class BasePandasDataset(object):
         max_colwidth=None,
         encoding=None,
     ):
+        """
+        Render a DataFrame/Series to a console-friendly tabular output.
+        """
         return self._default_to_pandas(
             "to_string",
             buf=buf,
@@ -2852,6 +3189,9 @@ class BasePandasDataset(object):
         dtype=None,
         method=None,
     ):
+        """
+        Write records stored in a DataFrame to a SQL database.
+        """
         new_query_compiler = self._query_compiler
         # writing the index to the database by inserting it to the DF
         if index:
@@ -2880,14 +3220,23 @@ class BasePandasDataset(object):
 
     # TODO(williamma12): When this gets implemented, have the series one call this.
     def to_timestamp(self, freq=None, how="start", axis=0, copy=True):
+        """
+        Cast to DatetimeIndex of timestamps, at *beginning* of period.
+        """
         return self._default_to_pandas(
             "to_timestamp", freq=freq, how=how, axis=axis, copy=copy
         )
 
     def to_xarray(self):
+        """
+        Return an xarray object from the pandas object.
+        """
         return self._default_to_pandas("to_xarray")
 
     def truediv(self, other, axis="columns", level=None, fill_value=None):
+        """
+        Get floating division of DataFrame/Series and ``other``, element-wise (binary operator `truediv`).
+        """
         return self._binary_op(
             "truediv", other, axis=axis, level=level, fill_value=fill_value
         )
@@ -2895,6 +3244,9 @@ class BasePandasDataset(object):
     div = divide = truediv
 
     def truncate(self, before=None, after=None, axis=None, copy=True):
+        """
+        Truncate a Series or DataFrame before and after some index value.
+        """
         axis = self._get_axis_number(axis)
         if (
             not self.axes[axis].is_monotonic_increasing
@@ -2906,11 +3258,17 @@ class BasePandasDataset(object):
         return self.iloc[slice_obj]
 
     def tshift(self, periods=1, freq=None, axis=0):
+        """
+        Shift the time index, using the index's frequency if available.
+        """
         axis = self._get_axis_number(axis)
         new_labels = self.axes[axis].shift(periods, freq=freq)
         return self.set_axis(new_labels, axis=axis, inplace=False)
 
     def transform(self, func, axis=0, *args, **kwargs):
+        """
+        Call ``func`` on self producing a DataFrame/Series with the same axis shape as self.
+        """
         kwargs["is_transform"] = True
         self._validate_function(func)
         try:
@@ -2926,6 +3284,9 @@ class BasePandasDataset(object):
         return result
 
     def tz_convert(self, tz, axis=0, level=None, copy=True):
+        """
+        Convert tz-aware axis to target time zone.
+        """
         axis = self._get_axis_number(axis)
         if level is not None:
             new_labels = (
@@ -2939,6 +3300,9 @@ class BasePandasDataset(object):
     def tz_localize(
         self, tz, axis=0, level=None, copy=True, ambiguous="raise", nonexistent="raise"
     ):
+        """
+        Localize tz-naive index of a Series or DataFrame to target time zone.
+        """
         axis = self._get_axis_number(axis)
         new_labels = (
             pandas.Series(index=self.axes[axis])
@@ -2971,6 +3335,9 @@ class BasePandasDataset(object):
         ascending: bool = False,
         dropna: bool = True,
     ):
+        """
+        Count unique values in the DataFrame/Series.
+        """
         if subset is None:
             subset = self._query_compiler.columns
         counted_values = self.groupby(by=subset, dropna=dropna, observed=True).size()
@@ -2989,45 +3356,115 @@ class BasePandasDataset(object):
     def var(
         self, axis=None, skipna=True, level=None, ddof=1, numeric_only=None, **kwargs
     ):
+        """
+        Return unbiased variance over requested axis.
+        """
         return self._stat_operation(
             "var", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
         )
 
     def __abs__(self):
+        """
+        Return a Series/DataFrame with absolute numeric value of each element.
+        """
         return self.abs()
 
+    @_doc_binary_op(
+        operation="union", bin_op="and", other="other", **_doc_binary_op_kwargs
+    )
     def __and__(self, other):
         return self._binary_op("__and__", other, axis=0)
 
+    @_doc_binary_op(
+        operation="union", bin_op="rand", other="other", **_doc_binary_op_kwargs
+    )
     def __rand__(self, other):
         return self._binary_op("__rand__", other, axis=0)
 
     def __array__(self, dtype=None):
+        """
+        Return the values as a NumPy array.
+        """
         arr = self.to_numpy(dtype)
         return arr
 
     def __array_wrap__(self, result, context=None):
+        """
+        Gets called after a ufunc and other functions.
+        """
         # TODO: This is very inefficient. __array__ and as_matrix have been
         # changed to call the more efficient to_numpy, but this has been left
         # unchanged since we are not sure of its purpose.
         return self._default_to_pandas("__array_wrap__", result, context=context)
 
     def __copy__(self, deep=True):
+        """
+        Return the copy of the DataFrame/Series.
+
+        Parameters
+        ----------
+        deep : bool, default: True
+            Whether the copy should be deep or not.
+
+        Returns
+        -------
+        DataFrame/Series
+        """
         return self.copy(deep=deep)
 
     def __deepcopy__(self, memo=None):
+        """
+        Return the deep copy of the DataFrame/Series.
+
+        Parameters
+        ----------
+        memo : Any, optional
+           Deprecated parameter.
+
+        Returns
+        -------
+        DataFrame/Series
+        """
         return self.copy(deep=True)
 
+    @_doc_binary_op(
+        operation="equality comparison",
+        bin_op="eq",
+        other="other",
+        **_doc_binary_op_kwargs,
+    )
     def __eq__(self, other):
         return self.eq(other)
 
     def __finalize__(self, other, method=None, **kwargs):
+        """
+        Propagate metadata from ``other`` to ``self``.
+        """
         return self._default_to_pandas("__finalize__", other, method=method, **kwargs)
 
+    @_doc_binary_op(
+        operation="greater than or equal comparison",
+        bin_op="ge",
+        other="right",
+        **_doc_binary_op_kwargs,
+    )
     def __ge__(self, right):
         return self.ge(right)
 
     def __getitem__(self, key):
+        """
+        Retrieve dataset according to `key`.
+
+        Parameters
+        ----------
+        key : callable, scalar, slice, str or tuple
+            The global row index to retrieve data from.
+
+        Returns
+        -------
+        DataFrame or Series
+            Located dataset.
+        """
         if not self._query_compiler.lazy_execution and len(self) == 0:
             return self._default_to_pandas("__getitem__", key)
         # see if we can slice the rows
@@ -3083,10 +3520,24 @@ class BasePandasDataset(object):
             return self.copy()
         return self.iloc[key]
 
+    @_doc_binary_op(
+        operation="greater than comparison",
+        bin_op="gt",
+        other="right",
+        **_doc_binary_op_kwargs,
+    )
     def __gt__(self, right):
         return self.gt(right)
 
     def __invert__(self):
+        """
+        Apply bitwise invertion for each element of the DataFrame/Series.
+
+        Returns
+        -------
+        DataFrame/Series
+            New DataFrame/Series containing bitwise invertion for each value.
+        """
         if not all(is_numeric_dtype(d) for d in self._get_dtypes()):
             raise TypeError(
                 "bad operand type for unary ~: '{}'".format(
@@ -3095,26 +3546,65 @@ class BasePandasDataset(object):
             )
         return self.__constructor__(query_compiler=self._query_compiler.invert())
 
+    @_doc_binary_op(
+        operation="less than or equal comparison",
+        bin_op="le",
+        other="right",
+        **_doc_binary_op_kwargs,
+    )
     def __le__(self, right):
         return self.le(right)
 
     def __len__(self):
+        """
+        Return length of info axis.
+        """
         return len(self.index)
 
+    @_doc_binary_op(
+        operation="less than comparison",
+        bin_op="lt",
+        other="right",
+        **_doc_binary_op_kwargs,
+    )
     def __lt__(self, right):
         return self.lt(right)
 
     def __matmul__(self, other):
+        """
+        Matrix multiplication using binary `@` operator in Python>=3.5.
+        """
         return self.dot(other)
 
+    @_doc_binary_op(
+        operation="not equal comparison",
+        bin_op="ne",
+        other="other",
+        **_doc_binary_op_kwargs,
+    )
     def __ne__(self, other):
         return self.ne(other)
 
     def __neg__(self):
+        """
+        Change the sign for every value of self.
+
+        Returns
+        -------
+        DataFrame/Series
+        """
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(query_compiler=self._query_compiler.negative())
 
     def __nonzero__(self):
+        """
+        Evaluate Modin object as boolean object.
+
+        Raises
+        ------
+        ValueError
+            Always since truth value for self is ambiguous.
+        """
         raise ValueError(
             f"The truth value of a {self.__class__.__name__} is ambiguous. "
             + "Use a.empty, a.bool(), a.item(), a.any() or a.all()."
@@ -3122,33 +3612,81 @@ class BasePandasDataset(object):
 
     __bool__ = __nonzero__
 
+    @_doc_binary_op(
+        operation="disjunction",
+        bin_op="or",
+        other="other",
+        **_doc_binary_op_kwargs,
+    )
     def __or__(self, other):
         return self._binary_op("__or__", other, axis=0)
 
+    @_doc_binary_op(
+        operation="disjunction",
+        bin_op="ror",
+        other="other",
+        **_doc_binary_op_kwargs,
+    )
     def __ror__(self, other):
         return self._binary_op("__ror__", other, axis=0)
 
     def __sizeof__(self):
+        """
+        Generates the total memory usage for an object.
+        """
         return self._default_to_pandas("__sizeof__")
 
     def __str__(self):  # pragma: no cover
+        """
+        Return str(self).
+        """
         return repr(self)
 
+    @_doc_binary_op(
+        operation="exclusive disjunction",
+        bin_op="xor",
+        other="other",
+        **_doc_binary_op_kwargs,
+    )
     def __xor__(self, other):
         return self._binary_op("__xor__", other, axis=0)
 
+    @_doc_binary_op(
+        operation="exclusive disjunction",
+        bin_op="rxor",
+        other="other",
+        **_doc_binary_op_kwargs,
+    )
     def __rxor__(self, other):
         return self._binary_op("__rxor__", other, axis=0)
 
     @property
     def size(self):
+        """
+        Return an int representing the number of elements in this object.
+        """
         return len(self._query_compiler.index) * len(self._query_compiler.columns)
 
     @property
     def values(self):
+        """
+        Return a Numpy representation of the DataFrame/Series.
+        """
         return self.to_numpy()
 
     def __getattribute__(self, item):
+        """
+        Return item from the object.
+
+        Parameters
+        ----------
+        item : hashable
+            Item to get.
+
+        Returns
+        -------
+        Any
+        """
         attr = super().__getattribute__(item)
         if item not in _DEFAULT_BEHAVIOUR and not self._query_compiler.lazy_execution:
             # We default to pandas on empty DataFrames. This avoids a large amount of
