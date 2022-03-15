@@ -15,6 +15,7 @@
 
 import pandas
 import numpy as np
+from typing import Dict
 
 from modin.core.dataframe.base.exchange.dataframe_protocol.from_dataframe import (
     from_dataframe,
@@ -77,7 +78,32 @@ def export_frame(md_df, from_omnisci=False, **kwargs):
     return exported_df
 
 
-def get_all_types(has_nulls=False, exclude_dtypes=None, include_dtypes=None):
+def get_data_of_all_types(
+    has_nulls=False, exclude_dtypes=None, include_dtypes=None
+) -> Dict[str, np.ndarray]:
+    """
+    Generate a dictionary containing every datatype that is supported by Omnisci implementation of the exchange protocol.
+
+    Parameters
+    ----------
+    has_nulls : bool, default: False
+        Whether to include columns containing null values.
+    exclude_dtypes : list, optional
+        List of type prefixes to exclude in the dictionary. For example,
+        passing ``["int", "float"]`` excludes all of the signed integer (``int16``,
+         ``int32``, ``int64``) and float (``float32``, ``float64``) types.
+    include_dtypes : list, optional
+        List of type prefixes to include in the dictionary. For example,
+        passing ``["int", "float"]`` will include ONLY signed integer (``int16``,
+         ``int32``, ``int64``) and float (``float32``, ``float64``) types.
+
+    Returns
+    -------
+    dict
+        Dictionary to pass to a DataFrame constructor. The keys are string column names
+        that are equal to the type name of the according column. Columns containing null
+        types have a ``"_null"`` suffix in their names.
+    """
     bool_data = {}
     int_data = {}
     uint_data = {}

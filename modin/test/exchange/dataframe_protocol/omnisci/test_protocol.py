@@ -14,22 +14,20 @@
 """Dataframe exchange protocol tests that are specific for OmniSci implementation."""
 
 import pytest
-import modin.pandas as pd
 import pyarrow as pa
 import pandas
 import numpy as np
 
-from modin.pandas.test.utils import df_equals
-from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.pandas.utils import from_arrow, from_dataframe as md_from_dataframe
-
+import modin.pandas as pd
 from modin.core.dataframe.base.exchange.dataframe_protocol.from_dataframe import (
     convert_primitive_column_to_ndarray,
     buffer_to_ndarray,
     set_nulls,
 )
-
-from .utils import get_all_types, split_df_into_chunks, export_frame
+from modin.pandas.utils import from_arrow, from_dataframe as md_from_dataframe
+from modin.pandas.test.utils import df_equals
+from modin.test.test_utils import warns_that_defaulting_to_pandas
+from .utils import get_data_of_all_types, split_df_into_chunks, export_frame
 
 
 @pytest.mark.parametrize("data_has_nulls", [True, False])
@@ -42,7 +40,9 @@ def test_simple_export(data_has_nulls, from_omnisci):
     else:
         exclude_dtypes = None
 
-    data = get_all_types(has_nulls=data_has_nulls, exclude_dtypes=exclude_dtypes)
+    data = get_data_of_all_types(
+        has_nulls=data_has_nulls, exclude_dtypes=exclude_dtypes
+    )
     md_df = pd.DataFrame(data)
 
     exported_df = export_frame(md_df, from_omnisci)
@@ -63,7 +63,7 @@ def test_simple_export(data_has_nulls, from_omnisci):
 def test_export_aligned_at_chunks(nchunks, data_has_nulls):
     """Test export from DataFrame exchange protocol when internal PyArrow table is equaly chunked."""
     # Modin DataFrame constructor can't process PyArrow's category, so exclude it
-    data = get_all_types(has_nulls=data_has_nulls, exclude_dtypes=["category"])
+    data = get_data_of_all_types(has_nulls=data_has_nulls, exclude_dtypes=["category"])
     pd_df = pandas.DataFrame(data)
     pd_chunks = split_df_into_chunks(pd_df, nchunks)
 
@@ -97,7 +97,7 @@ def test_export_unaligned_at_chunks(data_has_nulls):
     to emulate equaly chunked columns in the protocol.
     """
     # Modin DataFrame constructor can't process PyArrow's category, so exclude it
-    data = get_all_types(has_nulls=data_has_nulls, exclude_dtypes=["category"])
+    data = get_data_of_all_types(has_nulls=data_has_nulls, exclude_dtypes=["category"])
     pd_df = pandas.DataFrame(data)
     # divide columns in 3 groups: unchunked, 2-chunked, 7-chunked
     chunk_groups = [1, 2, 7]
@@ -156,7 +156,7 @@ def test_export_when_delayed_computations():
     """
     # OmniSci can't import 'uint64' as well as booleans, so exclude them
     # issue for bool: https://github.com/modin-project/modin/issues/4299
-    data = get_all_types(has_nulls=True, exclude_dtypes=["uint64", "bool"])
+    data = get_data_of_all_types(has_nulls=True, exclude_dtypes=["uint64", "bool"])
     md_df = pd.DataFrame(data)
     pd_df = pandas.DataFrame(data)
 
@@ -173,7 +173,7 @@ def test_export_when_delayed_computations():
 @pytest.mark.parametrize("data_has_nulls", [True, False])
 def test_simple_import(data_has_nulls):
     """Test that ``modin.pandas.utils.from_dataframe`` works properly."""
-    data = get_all_types(data_has_nulls)
+    data = get_data_of_all_types(data_has_nulls)
 
     md_df_source = pd.DataFrame(data)
     md_df_consumer = md_from_dataframe(md_df_source._query_compiler._modin_frame)
@@ -184,7 +184,7 @@ def test_simple_import(data_has_nulls):
 @pytest.mark.parametrize("data_has_nulls", [True, False])
 def test_zero_copy_export_for_primitives(data_has_nulls):
     """Test that basic data types can be zero-copy exported from OmnisciOnNative dataframe."""
-    data = get_all_types(
+    data = get_data_of_all_types(
         has_nulls=data_has_nulls, include_dtypes=["int", "uint", "float"]
     )
     at = pa.Table.from_pydict(data)
@@ -226,7 +226,7 @@ def test_bitmask_chunking():
 @pytest.mark.parametrize("nchunks", [2, 9])
 def test_buffer_of_chunked_at(data_has_nulls, nchunks):
     """Test that getting buffers of physically chunked column works properly."""
-    data = get_all_types(
+    data = get_data_of_all_types(
         # For the simplicity of the test include only primitive types, so the test can use
         # only one function to export a column instead of if-elsing to find a type-according one
         has_nulls=data_has_nulls,

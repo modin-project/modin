@@ -160,7 +160,8 @@ class OmnisciProtocolColumn(ProtocolColumn):
 
         if dtype != "category":
             raise RuntimeError(
-                f"Column 'dtype' has to be categorical to be able to dectribe categiries, met: {dtype}"
+                "`describe_categorical only works on a column with "
+                + "categorical dtype!"
             )
 
         ordered = dtype.ordered
@@ -324,7 +325,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
         Returns
         -------
         tuple
-            Tuple of OmnisciProtocolBuffer and protocol dtype representation of the buffer's underlying data.
+            Tuple of ``OmnisciProtocolBuffer`` and protocol dtype representation of the buffer's underlying data.
         """
         if self.dtype[0] == DTypeKind.CATEGORICAL:
             # For dictionary data the buffer has to return categories codes
@@ -340,6 +341,9 @@ class OmnisciProtocolColumn(ProtocolColumn):
         )
 
         return (
+            # According to the Arrow's memory layout, the validity buffer is always present
+            # at the last position of `.buffers()`:
+            # https://arrow.apache.org/docs/format/Columnar.html#buffer-listing-for-each-layout
             OmnisciProtocolBuffer(arr.buffers()[-1], buff_size),
             arrow_type,
         )
@@ -358,9 +362,11 @@ class OmnisciProtocolColumn(ProtocolColumn):
         Returns
         -------
         tuple or None
-            Tuple of OmnisciProtocolBuffer and protocol dtype representation of the buffer's underlying data.
+            Tuple of ``OmnisciProtocolBuffer`` and protocol dtype representation of the buffer's underlying data.
             None if column is non-nullable (``self.describe_null == ColumnNullType.NON_NULLABLE``).
         """
+        # According to the Arrow's memory layout, the validity buffer is always present at zero position:
+        # https://arrow.apache.org/docs/format/Columnar.html#buffer-listing-for-each-layout
         validity_buffer = arr.buffers()[0]
         if validity_buffer is None:
             return validity_buffer
@@ -386,10 +392,15 @@ class OmnisciProtocolColumn(ProtocolColumn):
         Returns
         -------
         tuple or None
-            Tuple of OmnisciProtocolBuffer and protocol dtype representation of the buffer's underlying data.
+            Tuple of ``OmnisciProtocolBuffer`` and protocol dtype representation of the buffer's underlying data.
             None if the column's dtype is fixed-size.
         """
         buffs = arr.buffers()
+        # According to the Arrow's memory layout, the offsets buffer is always at the second position
+        # of `.buffers()` if present. Considering the support of only Primitive, Variable-length binary,
+        # and Dict-encoded types from the layout table, we can assume that there's no offsets buffer
+        # if there are fewer than 3 buffers available.
+        # https://arrow.apache.org/docs/format/Columnar.html#buffer-listing-for-each-layout
         if len(buffs) < 3:
             return None
 

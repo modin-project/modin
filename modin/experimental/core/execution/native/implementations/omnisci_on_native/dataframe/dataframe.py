@@ -2069,7 +2069,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 + "that are unsupported by OmniSci."
             )
 
-        from ..exchange.dataframe_protocol import OmnisciProtocolDataframe
+        from ..exchange.dataframe_protocol.dataframe import OmnisciProtocolDataframe
 
         return OmnisciProtocolDataframe(
             self, nan_as_null=nan_as_null, allow_copy=allow_copy
