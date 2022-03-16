@@ -2535,6 +2535,39 @@ class DataFrame(BasePandasDataset):
             self.insert(loc=len(self.columns), column=key, value=value)
             return
 
+        if isinstance(key, list) and is_list_like(value):
+            if not isinstance(
+                value,
+                (
+                    np.ndarray,
+                    pandas.Index,
+                    pandas.Series,
+                    pandas.DataFrame,
+                    Series,
+                    DataFrame,
+                ),
+            ):
+                # Converting to numpy to be able to access `.shape` property
+                value = np.array(value)
+
+            if len(key) != value.shape[0 if value.ndim == 1 else 1]:
+                raise ValueError("Columns must be same length as key")
+
+            if isinstance(value, (Series, DataFrame)):
+                ErrorMessage.default_to_pandas("Multi-column `__setitem__`")
+                value = try_cast_to_pandas(value)
+
+            if value.ndim != 2:
+                value = np.broadcast_to(value, shape=(len(self), len(key)))
+
+            res = self._query_compiler.write_items(
+                row_numeric_index=slice(None),
+                col_numeric_index=self.columns.get_indexer_for(key),
+                broadcasted_items=value,
+            )
+            self._update_inplace(res)
+            return
+
         if not hashable(key):
             if isinstance(key, DataFrame) or isinstance(key, np.ndarray):
                 if isinstance(key, np.ndarray):

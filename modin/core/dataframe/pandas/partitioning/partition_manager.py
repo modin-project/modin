@@ -1210,8 +1210,13 @@ class PandasDataframePartitionManager(ABC):
                 )
 
                 if item_to_distribute is not no_default:
-                    if isinstance(item_to_distribute, np.ndarray):
+                    if isinstance(item_to_distribute, (np.ndarray, pandas.Series)):
                         item = item_to_distribute[
+                            row_position_counter : row_position_counter + row_offset,
+                            col_position_counter : col_position_counter + col_offset,
+                        ]
+                    elif isinstance(item_to_distribute, pandas.DataFrame):
+                        item = item_to_distribute.iloc[
                             row_position_counter : row_position_counter + row_offset,
                             col_position_counter : col_position_counter + col_offset,
                         ]
