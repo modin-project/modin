@@ -733,16 +733,15 @@ def test_to_pandas_indices(data):
 
 def test_create_categorical_dataframe_with_duplicate_column_name():
     # This tests for https://github.com/modin-project/modin/issues/4312
-    kwargs = dict(
-        data=[
-            ["a", "b", "c"],
-            ["d", "e", "f"],
-        ],
-        columns=[0, 0, 1],
-        dtype="category",
+    pd_df = pandas.DataFrame(
+        {
+            "a": pandas.Categorical([1, 2]),
+            "b": [4, 5],
+            "c": pandas.Categorical([7, 8]),
+        }
     )
-    md_df = pd.DataFrame(**kwargs)
-    pd_df = pandas.DataFrame(**kwargs)
+    pd_df.columns = ["a", "b", "a"]
+    md_df = pd.DataFrame(pd_df)
     # Use assert_frame_equal instead of the common modin util df_equals because
     # we should check dtypes of the new categorical with check_dtype=True.
     # TODO(https://github.com/modin-project/modin/issues/3804): Make

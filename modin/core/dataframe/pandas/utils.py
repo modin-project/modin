@@ -22,6 +22,8 @@ def concatenate(dfs):
     """
     Concatenate pandas DataFrames with saving 'category' dtype.
 
+    All dataframes' columns must be equal to each other.
+
     Parameters
     ----------
     dfs : list
