@@ -37,7 +37,7 @@ from modin.core.storage_formats.pandas.parsers import (
     PandasSQLParser,
     PandasExcelParser,
 )
-from modin.core.execution.dask.common.task_wrapper import DaskWrapper
+from modin.core.execution.dask.common.dask_wrapper import DaskWrapper
 
 
 class PandasOnDaskIO(BaseIO):

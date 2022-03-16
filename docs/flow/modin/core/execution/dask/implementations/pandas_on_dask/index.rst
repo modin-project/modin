@@ -69,7 +69,7 @@ When reading data from a CSV file, for example, the :py:class:`~modin.core.execu
 the user query to the :meth:`~modin.core.io.text.CSVDispatcher._read` method of :py:class:`~modin.core.io.text.CSVDispatcher`, where the query's parameters are preprocessed
 to check if they are supported by the execution (defaulting to pandas if they are not) and computes some metadata
 common for all partitions to be read. Then, the file is split into row chunks, and this data is used to launch remote tasks on the Dask workers
-via the :meth:`~modin.core.execution.dask.common.task_wrapper.DaskWrapper.deploy` method of :py:class:`~modin.core.execution.dask.common.task_wrapper.DaskWrapper`.
+via the :meth:`~modin.core.execution.dask.common.dask_wrapper.DaskWrapper.deploy` method of :py:class:`~modin.core.execution.dask.common.dask_wrapper.DaskWrapper`.
 On each Dask worker, the :py:class:`~modin.core.storage_formats.pandas.parsers.PandasCSVParser` parses data.
 After the remote tasks are finished, additional result postprocessing is performed,
 and a new query compiler with the data read is returned.
