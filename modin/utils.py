@@ -254,8 +254,6 @@ def _replace_doc(
     doc = source_doc if overwrite else target_doc
     apilink = apilink if isinstance(apilink, list) else [apilink]
 
-    # if attr_name == "__array_wrap__":
-    #     import pdb; pdb.set_trace()
     if parent_cls and not attr_name:
         if isinstance(target_obj, property):
             attr_name = target_obj.fget.__name__
@@ -284,8 +282,6 @@ def _replace_doc(
         
         url_line = f"{indent_line}See pandas API documentation for {', '.join(links)} for more.\n"
         notes_section_with_url = notes_section + url_line
-        # if attr_name == "to_csv":
-        #     import pdb; pdb.set_trace()
 
         if notes_section in doc:
             doc = doc.replace(notes_section, notes_section_with_url)

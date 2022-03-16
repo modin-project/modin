@@ -98,7 +98,6 @@ _DEFAULT_BEHAVIOUR = {
 _doc_binary_op_kwargs = {"returns": "DataFrame", "primary_object": "DataFrame"}
 
 
-# @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
 @_inherit_docstrings(
     pandas.core.generic.NDFrame, apilink=["pandas.DataFrame", "pandas.Series"]
 )

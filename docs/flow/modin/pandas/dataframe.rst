@@ -20,6 +20,9 @@ Public API
 ----------
 
 .. autoclass:: modin.pandas.dataframe.DataFrame
+  :noindex:
+  :members:
+  :inherited-members:
 
 Usage Guide
 '''''''''''

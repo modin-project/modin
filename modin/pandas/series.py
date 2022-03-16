@@ -23,6 +23,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas._libs.lib import no_default
 from pandas._typing import IndexKeyFunc
+
 # from pandas.util._decorators import doc
 import sys
 from typing import Union, Optional
@@ -35,49 +36,6 @@ from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar, _doc_binary_op
 from .accessor import CachedAccessor, SparseAccessor
 from . import _update_engine
-
-# _doc_binary_operation = """
-# Return {operation} of Series and `{other}` (binary operator `{bin_op}`).
-
-# Parameters
-# ----------
-# {other} : Series or scalar value
-#     The second operand to perform computation.
-
-# Returns
-# -------
-# {returns}
-# """
-
-
-# def _doc_binary_op(operation, bin_op, other="right", returns="Series"):
-#     """
-#     Return callable documenting `Series` binary operator.
-
-#     Parameters
-#     ----------
-#     operation : str
-#         Operation name.
-#     bin_op : str
-#         Binary operation name.
-#     other : str, default: 'right'
-#         The second operand name.
-#     returns : str, default: 'Series'
-#         Type of returns.
-
-#     Returns
-#     -------
-#     callable
-#     """
-#     doc_op = doc(
-#         _doc_binary_operation,
-#         operation=operation,
-#         other=other,
-#         bin_op=bin_op,
-#         returns=returns,
-#     )
-
-#     return doc_op
 
 
 @_inherit_docstrings(
@@ -645,7 +603,11 @@ class Series(BasePandasDataset):
         else:
             return Series(query_compiler=query_compiler)
 
-    def aggregate(self, func=None, axis=0, *args, **kwargs):
+    def aggregate(self, func=None, axis=0, *args, **kwargs):  # noqa: PR01, RT01, D200
+        """
+        Aggregate using one or more operations over the specified axis.
+        """
+
         def error_raiser(msg, exception):
             """Convert passed exception to the same type as pandas do and raise it."""
             # HACK: to concord with pandas error types by replacing all of the
@@ -1171,7 +1133,10 @@ class Series(BasePandasDataset):
         max_cols: "int | None" = None,
         memory_usage: "bool | str | None" = None,
         show_counts: "bool" = True,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Print a concise summary of a Series.
+        """
         return self._default_to_pandas(
             pandas.Series.info,
             verbose=verbose,

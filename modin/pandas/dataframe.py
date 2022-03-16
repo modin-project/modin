@@ -859,7 +859,10 @@ class DataFrame(BasePandasDataset):
         inplace=False,
         limit=None,
         downcast=None,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Fill NA/NaN values using the specified method.
+        """
         return super(DataFrame, self)._fillna(
             squeeze_self=False,
             squeeze_value=isinstance(value, Series),
@@ -2190,8 +2193,10 @@ class DataFrame(BasePandasDataset):
         partition_cols=None,
         storage_options: StorageOptions = None,
         **kwargs,
-    ):
-
+    ):  # noqa: PR01, RT01, D200
+        """
+        Write a DataFrame to the binary parquet format.
+        """
         config = {
             "path": path,
             "engine": engine,
@@ -2292,7 +2297,10 @@ class DataFrame(BasePandasDataset):
         stylesheet=None,
         compression="infer",
         storage_options=None,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Render a DataFrame to an XML document.
+        """
         return self.__constructor__(
             query_compiler=self._query_compiler.default_to_pandas(
                 pandas.DataFrame.to_xml,

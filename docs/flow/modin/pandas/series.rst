@@ -20,6 +20,9 @@ Public API
 ----------
 
 .. autoclass:: modin.pandas.series.Series
+  :noindex:
+  :members:
+  :inherited-members:
 
 Usage Guide
 '''''''''''

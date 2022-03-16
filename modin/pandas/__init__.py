@@ -180,6 +180,7 @@ def _update_engine(publisher: Parameter):
 
 
 from .. import __version__
+# from .base import BasePandasDataset
 from .dataframe import DataFrame
 from .io import (
     read_csv,
