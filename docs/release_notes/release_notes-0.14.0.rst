@@ -39,7 +39,7 @@ Key Features and Updates
   * REFACTOR-#3900: add flake8-no-implicit-concat plugin and refactor flake8 error codes (#3901)
   * REFACTOR-#4093: Refactor base to be smaller (#4220)
   * REFACTOR-#4047: Rename `cluster` directory to `cloud` in examples (#4212)
-  * REFACTOR-#4323: Move is_reduce_fn outside of groupby_agg (#4323)
+  * REFACTOR-#4322: Move is_reduce_fn outside of groupby_agg (#4323)
 * Pandas API implementations and improvements
   * FEAT-#979: Enable reading from SQL server (#4279)
 * OmniSci enhancements
