@@ -198,8 +198,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
 
     @property
     def null_count(self) -> int:
-        ncount = self._pyarrow_table.column(0).null_count
-        return ncount if ncount >= 0 else None
+        return self._pyarrow_table.column(0).null_count
 
     @property
     def metadata(self) -> Dict[str, Any]:
