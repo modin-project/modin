@@ -32,6 +32,8 @@ def concatenate(dfs):
     pandas.DataFrame
         A pandas DataFrame.
     """
+    for df in dfs:
+        assert df.columns.equals(dfs[0].columns)
     for i in range(len(dfs[0].columns)):
         if dfs[0].dtypes.iloc[i].name != "category":
             continue
