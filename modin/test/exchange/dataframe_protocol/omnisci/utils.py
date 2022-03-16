@@ -17,7 +17,7 @@ import pandas
 import numpy as np
 from typing import Dict
 
-from modin.core.dataframe.base.exchange.dataframe_protocol.from_dataframe import (
+from modin.core.dataframe.pandas.exchange.dataframe_protocol.from_dataframe import (
     from_dataframe_to_pandas,
 )
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.test.utils import (

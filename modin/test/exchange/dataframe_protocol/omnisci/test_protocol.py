@@ -19,7 +19,7 @@ import pandas
 import numpy as np
 
 import modin.pandas as pd
-from modin.core.dataframe.base.exchange.dataframe_protocol.from_dataframe import (
+from modin.core.dataframe.pandas.exchange.dataframe_protocol.from_dataframe import (
     convert_primitive_column_to_ndarray,
     buffer_to_ndarray,
     set_nulls,

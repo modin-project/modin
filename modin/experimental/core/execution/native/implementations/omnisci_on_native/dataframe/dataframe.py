@@ -2100,7 +2100,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 "`df` does not support DataFrame exchange protocol (``__dataframe__``)"
             )
 
-        from modin.core.dataframe.base.exchange.dataframe_protocol.from_dataframe import (
+        from modin.core.dataframe.pandas.exchange.dataframe_protocol.from_dataframe import (
             from_dataframe_to_pandas,
         )
 
