@@ -114,7 +114,7 @@ def convert_primitive_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray
     Returns
     -------
     tuple
-        Tuple of numpy.ndarray holding the data and the memory owner object that keeps the memory alive.
+        Tuple of np.ndarray holding the data and the memory owner object that keeps the memory alive.
     """
     buffers = col.get_buffers()
 
@@ -170,7 +170,7 @@ def convert_string_column(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     Returns
     -------
     tuple
-        Tuple of numpy.ndarray holding the data and the memory owner object that keeps the memory alive.
+        Tuple of np.ndarray holding the data and the memory owner object that keeps the memory alive.
     """
     if col.describe_null[0] not in (
         ColumnNullType.NON_NULLABLE,
@@ -244,7 +244,7 @@ def convert_datetime_column(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     Returns
     -------
     tuple
-        Tuple of numpy.ndarray holding the data and the memory owner object that keeps the memory alive.
+        Tuple of np.ndarray holding the data and the memory owner object that keeps the memory alive.
     """
     buffers = col.get_buffers()
 
@@ -418,7 +418,7 @@ def set_nulls(
 
     Parameters
     ----------
-    data : numpy.ndarray or pandas.Series
+    data : np.ndarray or pandas.Series
         Data to set nulls in.
     col : ProtocolColumn
         Column object that describes the `data`.
@@ -431,7 +431,7 @@ def set_nulls(
 
     Returns
     -------
-    numpy.ndarray or pandas.Series
+    np.ndarray or pandas.Series
         Data with the nulls being set.
     """
     null_kind, sentinel_val = col.describe_null
