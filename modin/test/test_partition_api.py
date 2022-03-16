@@ -33,7 +33,7 @@ if Engine.get() == "Ray":
     get_func = ray.get
     FutureType = ray.ObjectRef
 elif Engine.get() == "Dask":
-    from modin.core.execution.dask.common.task_wrapper import DaskWrapper
+    from modin.core.execution.dask.common.dask_wrapper import DaskWrapper
     from distributed import Future
 
     put_func = lambda x: DaskWrapper.put(x)  # noqa: E731
