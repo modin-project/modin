@@ -254,6 +254,8 @@ def _replace_doc(
     doc = source_doc if overwrite else target_doc
     apilink = apilink if isinstance(apilink, list) else [apilink]
 
+    # if attr_name == "__array_wrap__":
+    #     import pdb; pdb.set_trace()
     if parent_cls and not attr_name:
         if isinstance(target_obj, property):
             attr_name = target_obj.fget.__name__
