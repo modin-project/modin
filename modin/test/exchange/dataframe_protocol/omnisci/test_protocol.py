@@ -176,7 +176,7 @@ def test_simple_import(data_has_nulls):
     data = get_data_of_all_types(data_has_nulls)
 
     md_df_source = pd.DataFrame(data)
-    md_df_consumer = md_from_dataframe(md_df_source._query_compiler._modin_frame)
+    md_df_consumer = md_from_dataframe(md_df_source)
 
     df_equals(md_df_source, md_df_consumer)
 
