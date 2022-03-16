@@ -29,7 +29,7 @@ from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
 )
 
 
-def from_dataframe(
+def from_dataframe_to_pandas(
     df: ProtocolDataframe, allow_copy: bool = True, nchunks: Optional[int] = None
 ):
     """
@@ -79,7 +79,7 @@ def from_dataframe(
             elif dtype == DTypeKind.STRING:
                 columns[name], buf = convert_string_column(col)
             elif dtype == DTypeKind.DATETIME:
-                columns[name], buf = convert_datetime_col(col)
+                columns[name], buf = convert_datetime_column(col)
             else:
                 raise NotImplementedError(f"Data type {dtype} not handled yet")
 
@@ -149,7 +149,7 @@ def convert_categorical_column(col: ProtocolColumn) -> Tuple[pandas.Series, Any]
     codes_buff, codes_dtype = buffers["data"]
     codes = buffer_to_ndarray(codes_buff, codes_dtype, col.offset, col.size)
 
-    # Doing module in order to not get IndexError for out-of-bounds sentinel values in `codes`
+    # Doing module in order to not get ``IndexError`` for out-of-bounds sentinel values in `codes`
     values = categories[codes % len(categories)]
 
     cat = pandas.Categorical(values, categories=categories, ordered=ordered)
@@ -233,7 +233,7 @@ def convert_string_column(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     return np.asarray(str_list, dtype="object"), buffers
 
 
-def convert_datetime_col(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
+def convert_datetime_column(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     """
     Convert Column holding DateTime data to a NumPy array.
 
@@ -431,7 +431,7 @@ def set_nulls(
 
     Returns
     -------
-    numpy.ndarray of pandas.Series
+    numpy.ndarray or pandas.Series
         Data with the nulls being set.
     """
     null_kind, sentinel_val = col.describe_null

@@ -18,7 +18,7 @@ import numpy as np
 from typing import Dict
 
 from modin.core.dataframe.base.exchange.dataframe_protocol.from_dataframe import (
-    from_dataframe,
+    from_dataframe_to_pandas,
 )
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.test.utils import (
     ForceOmnisciImport,
@@ -69,11 +69,11 @@ def export_frame(md_df, from_omnisci=False, **kwargs):
     pandas.DataFrame
     """
     if not from_omnisci:
-        return from_dataframe(md_df, **kwargs)
+        return from_dataframe_to_pandas(md_df, **kwargs)
 
     with ForceOmnisciImport(md_df) as instance:
         md_df_exported = instance.export_frames()[0]
-        exported_df = from_dataframe(md_df_exported, **kwargs)
+        exported_df = from_dataframe_to_pandas(md_df_exported, **kwargs)
 
     return exported_df
 

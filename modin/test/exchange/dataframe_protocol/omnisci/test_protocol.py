@@ -24,7 +24,7 @@ from modin.core.dataframe.base.exchange.dataframe_protocol.from_dataframe import
     buffer_to_ndarray,
     set_nulls,
 )
-from modin.pandas.utils import from_arrow, from_dataframe as md_from_dataframe
+from modin.pandas.utils import from_arrow, from_dataframe
 from modin.pandas.test.utils import df_equals
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from .utils import get_data_of_all_types, split_df_into_chunks, export_frame
@@ -176,7 +176,7 @@ def test_simple_import(data_has_nulls):
     data = get_data_of_all_types(data_has_nulls)
 
     md_df_source = pd.DataFrame(data)
-    md_df_consumer = md_from_dataframe(md_df_source)
+    md_df_consumer = from_dataframe(md_df_source)
 
     df_equals(md_df_source, md_df_consumer)
 

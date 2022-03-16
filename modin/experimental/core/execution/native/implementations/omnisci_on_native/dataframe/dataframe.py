@@ -2101,12 +2101,12 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             )
 
         from modin.core.dataframe.base.exchange.dataframe_protocol.from_dataframe import (
-            from_dataframe,
+            from_dataframe_to_pandas,
         )
 
         # TODO: build PyArrow table instead of pandas DataFrame from the protocol object
         # as it's possible to do zero-copy with `cls.from_arrow`
-        pd_df = from_dataframe(df)
+        pd_df = from_dataframe_to_pandas(df)
         return cls.from_pandas(pd_df)
 
     columns = property(_get_columns)
