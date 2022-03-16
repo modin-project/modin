@@ -21,6 +21,7 @@ from modin.utils import get_current_execution, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 from .utils import (
+    test_data,
     test_data_values,
     test_data_keys,
     df_equals,
@@ -177,6 +178,21 @@ def test_merge():
 
     with pytest.raises(TypeError):
         pd.merge("Non-valid type", modin_df2)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_merge_pandas(data):
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    df_equals(modin_df.merge(pandas_df), modin_df.merge(modin_df))
+
+
+def test_join_pandas():
+    data = test_data["int_data"]
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    df_equals(
+        modin_df.join(pandas_df, lsuffix="left", on="col3"),
+        modin_df.join(modin_df, lsuffix="left", on="col3"),
+    )
 
 
 def test_merge_ordered():
