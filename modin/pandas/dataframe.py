@@ -1387,19 +1387,25 @@ class DataFrame(BasePandasDataset):
                 raise ValueError("Cannot merge a Series without a name")
             else:
                 right = right.to_frame()
-        if not isinstance(right, DataFrame):
+        if not isinstance(right, (DataFrame, pandas.DataFrame)):
             raise TypeError(
                 f"Can only merge Series or DataFrame objects, a {type(right)} was passed"
             )
 
         if left_index and right_index:
+            if not isinstance(right, DataFrame):
+                raise TypeError(
+                    f"Can only merge Series or DataFrame objects, a {type(right)} was passed"
+                )
             return self.join(
                 right, how=how, lsuffix=suffixes[0], rsuffix=suffixes[1], sort=sort
             )
 
         return self.__constructor__(
             query_compiler=self._query_compiler.merge(
-                right._query_compiler,
+                right._query_compiler
+                if not isinstance(right, pandas.DataFrame)
+                else right,
                 how=how,
                 on=on,
                 left_on=left_on,

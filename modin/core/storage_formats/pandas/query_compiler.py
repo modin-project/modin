@@ -448,7 +448,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort = kwargs.get("sort", False)
 
         if how in ["left", "inner"] and left_index is False and right_index is False:
-            right = right.to_pandas()
+            if not isinstance(right, pandas.DataFrame):
+                right = right.to_pandas()
 
             kwargs["sort"] = False
 
