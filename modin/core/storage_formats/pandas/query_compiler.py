@@ -30,7 +30,7 @@ from pandas.core.dtypes.common import (
     is_datetime_or_timedelta_dtype,
 )
 from pandas.core.base import DataError
-from collections.abc import Iterable, Container
+from collections.abc import Iterable
 from typing import List, Hashable
 import warnings
 
@@ -51,6 +51,7 @@ from modin.core.dataframe.algebra import (
     Binary,
     GroupByReduce,
     groupby_reduce_functions,
+    is_reduce_function,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
 
@@ -2632,27 +2633,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         how="axis_wise",
         drop=False,
     ):
-        def is_reduce_fn(fn, deep_level=0):
-            """Check whether all functions which is defined by `fn` can be implemented via TreeReduce approach."""
-            if not isinstance(fn, str) and isinstance(fn, Container):
-                # `deep_level` parameter specifies the number of nested containers that was met:
-                # - if it's 0, then we're outside of container, `fn` could be either function name
-                #   or container of function names/renamers.
-                # - if it's 1, then we're inside container of function names/renamers. `fn` must be
-                #   either function name or renamer (renamer is some container which length == 2,
-                #   the first element is the new column name and the second is the function name).
-                assert deep_level == 0 or (
-                    deep_level > 0 and len(fn) == 2
-                ), f"Got the renamer with incorrect length, expected 2 got {len(fn)}."
-                return (
-                    all(is_reduce_fn(f, deep_level + 1) for f in fn)
-                    if deep_level == 0
-                    else is_reduce_fn(fn[1], deep_level + 1)
-                )
-            return isinstance(fn, str) and fn in groupby_reduce_functions
-
         if isinstance(agg_func, dict) and all(
-            is_reduce_fn(x) for x in agg_func.values()
+            is_reduce_function(x) for x in agg_func.values()
         ):
             return self._groupby_dict_reduce(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, drop
