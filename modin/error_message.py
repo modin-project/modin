@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 import warnings
-from modin.logging import LoggerMetaClass
+from modin.logging.logger_function import logger_decorator
 
 
 class ErrorMessage(object, metaclass=LoggerMetaClass):
@@ -21,6 +21,7 @@ class ErrorMessage(object, metaclass=LoggerMetaClass):
     printed_warnings = set()
 
     @classmethod
+    @logger_decorator("MODIN-ERROR", "ErrorMessage.not_implemented", "INFO")
     def not_implemented(cls, message=""):
         if message == "":
             message = "This functionality is not yet available in Modin."
@@ -32,6 +33,7 @@ class ErrorMessage(object, metaclass=LoggerMetaClass):
         )
 
     @classmethod
+    @logger_decorator("MODIN-ERROR", "ErrorMessage.single_warning", "INFO")
     def single_warning(cls, message):
         message_hash = hash(message)
         if message_hash in cls.printed_warnings:
@@ -41,6 +43,7 @@ class ErrorMessage(object, metaclass=LoggerMetaClass):
         cls.printed_warnings.add(message_hash)
 
     @classmethod
+    @logger_decorator("MODIN-ERROR", "ErrorMessage.default_to_pandas", "INFO")
     def default_to_pandas(cls, message=""):
         if message != "":
             message = f"{message} defaulting to pandas implementation."
@@ -57,6 +60,7 @@ class ErrorMessage(object, metaclass=LoggerMetaClass):
         warnings.warn(message)
 
     @classmethod
+    @logger_decorator("MODIN-ERROR", "ErrorMessage.catch_bugs_and_request_email", "INFO")
     def catch_bugs_and_request_email(cls, failure_condition, extra_log=""):
         if failure_condition:
             raise Exception(
@@ -68,6 +72,7 @@ class ErrorMessage(object, metaclass=LoggerMetaClass):
             )
 
     @classmethod
+    @logger_decorator("MODIN-ERROR", "ErrorMessage.non_verified_udf", "INFO")
     def non_verified_udf(cls):
         warnings.warn(
             "User-defined function verification is still under development in Modin. "
@@ -75,12 +80,14 @@ class ErrorMessage(object, metaclass=LoggerMetaClass):
         )
 
     @classmethod
+    @logger_decorator("MODIN-ERROR", "ErrorMessage.mismatch_with_pandas", "INFO")
     def missmatch_with_pandas(cls, operation, message):
         cls.single_warning(
             f"`{operation}` implementation has mismatches with pandas:\n{message}."
         )
 
     @classmethod
+    @logger_decorator("MODIN-ERROR", "ErrorMessage.not_initialized", "INFO")
     def not_initialized(cls, engine, code):
         warnings.warn(
             f"{engine} execution environment not yet initialized. Initializing...\n"
