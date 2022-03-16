@@ -1258,7 +1258,9 @@ class DataFrame(BasePandasDataset):
         if on is not None:
             return self.__constructor__(
                 query_compiler=self._query_compiler.join(
-                    other._query_compiler,
+                    other._query_compiler
+                    if not isinstance(other, pandas.DataFrame)
+                    else other,
                     on=on,
                     how=how,
                     lsuffix=lsuffix,
@@ -1266,6 +1268,8 @@ class DataFrame(BasePandasDataset):
                     sort=sort,
                 )
             )
+        if isinstance(other, pandas.DataFrame):
+            other = DataFrame(other)
         if isinstance(other, DataFrame):
             # Joining the empty DataFrames with either index or columns is
             # fast. It gives us proper error checking for the edge cases that

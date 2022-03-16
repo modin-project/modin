@@ -496,7 +496,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort = kwargs.get("sort", False)
 
         if how in ["left", "inner"]:
-            right = right.to_pandas()
+            if not isinstance(right, pandas.DataFrame):
+                right = right.to_pandas()
 
             def map_func(left, right=right, kwargs=kwargs):
                 return pandas.DataFrame.join(left, right, **kwargs)
