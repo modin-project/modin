@@ -71,13 +71,13 @@ def from_dataframe_to_pandas(df: ProtocolDataframe, n_chunks: Optional[int] = No
                 DTypeKind.FLOAT,
                 DTypeKind.BOOL,
             ):
-                columns[name], buf = convert_primitive_column_to_ndarray(col)
+                columns[name], buf = primitive_column_to_ndarray(col)
             elif dtype == DTypeKind.CATEGORICAL:
-                columns[name], buf = convert_categorical_column(col)
+                columns[name], buf = categorical_column_to_series(col)
             elif dtype == DTypeKind.STRING:
-                columns[name], buf = convert_string_column(col)
+                columns[name], buf = string_column_to_ndarray(col)
             elif dtype == DTypeKind.DATETIME:
-                columns[name], buf = convert_datetime_column(col)
+                columns[name], buf = datetime_column_to_ndarray(col)
             else:
                 raise NotImplementedError(f"Data type {dtype} not handled yet")
 
@@ -101,7 +101,7 @@ def from_dataframe_to_pandas(df: ProtocolDataframe, n_chunks: Optional[int] = No
     return pandas_df
 
 
-def convert_primitive_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
+def primitive_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     """
     Convert a column holding one of the primitive dtypes (int, uint, float or bool) to a NumPy array.
 
@@ -123,7 +123,7 @@ def convert_primitive_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray
     return data, buffers
 
 
-def convert_categorical_column(col: ProtocolColumn) -> Tuple[pandas.Series, Any]:
+def categorical_column_to_series(col: ProtocolColumn) -> Tuple[pandas.Series, Any]:
     """
     Convert a column holding categorical data to a pandas Series.
 
@@ -157,7 +157,7 @@ def convert_categorical_column(col: ProtocolColumn) -> Tuple[pandas.Series, Any]
     return data, buffers
 
 
-def convert_string_column(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
+def string_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     """
     Convert a column holding string data to a NumPy array.
 
@@ -231,7 +231,7 @@ def convert_string_column(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     return np.asarray(str_list, dtype="object"), buffers
 
 
-def convert_datetime_column(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
+def datetime_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     """
     Convert a column holding DateTime data to a NumPy array.
 
@@ -343,14 +343,14 @@ def buffer_to_ndarray(
     if bit_width == 1:
         assert length is not None, "`length` must be specified for a bit-mask buffer."
         arr = np.ctypeslib.as_array(data_pointer, shape=(buffer.bufsize,))
-        return bitmask_to_bool_array(arr, length, first_byte_offset=offset % 8)
+        return bitmask_to_bool_ndarray(arr, length, first_byte_offset=offset % 8)
     else:
         return np.ctypeslib.as_array(
             data_pointer, shape=(buffer.bufsize // (bit_width // 8),)
         )
 
 
-def bitmask_to_bool_array(
+def bitmask_to_bool_ndarray(
     bitmask: np.ndarray, mask_length: int, first_byte_offset: int = 0
 ) -> np.ndarray:
     """
