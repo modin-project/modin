@@ -37,8 +37,6 @@ def from_dataframe_to_pandas(df: ProtocolDataframe, n_chunks: Optional[int] = No
     ----------
     df : ProtocolDataframe
         Object supporting the exchange protocol, i.e. `__dataframe__` method.
-    allow_copy : bool, default: True
-        Whether to allow for `df` providing a copy of underlying data.
     n_chunks : int, optional
         Number of chunks to split `df`.
 
