@@ -46,7 +46,7 @@ class RayTask:
     """Mixin that provides means of running functions remotely and getting local results."""
 
     @classmethod
-    def deploy(cls, func, num_returns, kwargs):
+    def deploy(cls, func, *args, num_returns=1, **kwargs):
         """
         Run local `func` remotely.
 
@@ -54,17 +54,21 @@ class RayTask:
         ----------
         func : callable
             A function to call.
-        num_returns : int
+        *args : list
+            Additional positional arguments to be passed in `func`.
+        num_returns : int, default: 1
             Amount of return values expected from `func`.
-        kwargs : dict
-            Keyword arguments to pass to remote instance of `func`.
+        **kwargs : dict
+            Additional keyword arguments to be passed in `func`.
 
         Returns
         -------
         ray.ObjectRef or list
             Ray identifier of the result being put to Plasma store.
         """
-        return _deploy_ray_func.options(num_returns=num_returns).remote(func, kwargs)
+        return _deploy_ray_func.options(num_returns=num_returns).remote(
+            func, *args, kwargs
+        )
 
     @classmethod
     def materialize(cls, obj_id):

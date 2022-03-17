@@ -40,6 +40,7 @@ Key Features and Updates
   * REFACTOR-#3900: add flake8-no-implicit-concat plugin and refactor flake8 error codes (#3901)
   * REFACTOR-#4093: Refactor base to be smaller (#4220)
   * REFACTOR-#4047: Rename `cluster` directory to `cloud` in examples (#4212)
+  * REFACTOR-#3853: interacting with Dask interface through `DaskWrapper` class (#3854)
   * REFACTOR-#4322: Move is_reduce_fn outside of groupby_agg (#4323)
 * Pandas API implementations and improvements
   * FEAT-#3603: add experimental `read_custom_text` function that can read custom line-by-line text files (#3441)

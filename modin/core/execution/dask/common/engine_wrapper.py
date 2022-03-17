@@ -16,11 +16,11 @@
 from distributed.client import default_client
 
 
-class DaskTask:
+class DaskWrapper:
     """The class responsible for execution of remote operations."""
 
     @classmethod
-    def deploy(cls, func, num_returns, kwargs):
+    def deploy(cls, func, *args, num_returns=1, pure=None, **kwargs):
         """
         Deploy a function in a worker process.
 
@@ -28,9 +28,13 @@ class DaskTask:
         ----------
         func : callable
             Function to be deployed in a worker process.
-        num_returns : int
+        *args : list
+            Additional positional arguments to be passed in `func`.
+        num_returns : int, default: 1
             The number of returned objects.
-        kwargs : dict
+        pure : bool, optional
+            Whether or not `func` is pure. See `Client.submit` for details.
+        **kwargs : dict
             Additional keyword arguments to be passed in ``func``.
 
         Returns
@@ -39,11 +43,13 @@ class DaskTask:
             The result of ``func`` splitted into parts in accordance with ``num_returns``.
         """
         client = default_client()
-        remote_task_future = client.submit(func, **kwargs)
-        return [
-            client.submit(lambda l, i: l[i], remote_task_future, i)
-            for i in range(num_returns)
-        ]
+        remote_task_future = client.submit(func, *args, pure=pure, **kwargs)
+        if num_returns != 1:
+            return [
+                client.submit(lambda l, i: l[i], remote_task_future, i)
+                for i in range(num_returns)
+            ]
+        return remote_task_future
 
     @classmethod
     def materialize(cls, future):
@@ -62,3 +68,22 @@ class DaskTask:
         """
         client = default_client()
         return client.gather(future)
+
+    @classmethod
+    def put(cls, data, **kwargs):
+        """
+        Put data into distributed memory.
+
+        Parameters
+        ----------
+        data : list, dict, or object
+            Data to scatter out to workers. Output type matches input type.
+        **kwargs : dict
+            Additional keyword arguments to be passed in `Client.scatter`.
+
+        Returns
+        -------
+        List, dict, iterator, or queue of futures matching the type of input.
+        """
+        client = default_client()
+        return client.scatter(data, **kwargs)
