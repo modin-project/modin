@@ -18,8 +18,16 @@ in the ``Omnisci`` engine could be treated as ``D`` unless ``Notes`` column cont
 +--------------------+---------------------------------+----------------------------------------------------+
 | IO method          | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
 +--------------------+---------------------------------+----------------------------------------------------+
-| `read_csv`_        | Y                               | **Omnisci**:``P``, only basic cases supported,     |
-|                    |                                 | otherwise ``D``                                    |
+| `read_csv`_        | Y                               | **Omnisci**: ``P``, only basic cases and parameters|
+|                    |                                 | supported: ``filepath_or_buffer`` can be local file|
+|                    |                                 | only, ``sep``, ``delimiter``,  ``header`` (partly) |
+|                    |                                 | ``names``, ``usecols``, ``dtype``,                 |
+|                    |                                 | ``true/false_values``, ``skiprows`` (partly)       |
+|                    |                                 | ``skip_blank_lines`` (partly), ``parse_dates``     |
+|                    |                                 | (partly), ``compression`` (infered automatically,  |
+|                    |                                 | should not be specified), ``quotechar``,           |
+|                    |                                 | ``escapechar``, ``doublequote``,                   |
+|                    |                                 | ``delim_whitespace``                               |
 +--------------------+---------------------------------+----------------------------------------------------+
 | `read_table`_      | Y                               |                                                    |
 +--------------------+---------------------------------+----------------------------------------------------+
