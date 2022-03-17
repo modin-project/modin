@@ -3474,7 +3474,7 @@ def test_value_counts(sort, normalize, bins, dropna, ascending):
     )
 
     # from issue #2365
-    arr = np.random.rand(2 ** 6)
+    arr = np.random.rand(2**6)
     arr[::10] = np.nan
     eval_general(
         *create_test_series(arr),
