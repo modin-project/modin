@@ -21,7 +21,7 @@ from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
 from .partition import PandasOnDaskDataframePartition
-from modin.core.execution.dask.common.dask_wrapper import DaskWrapper
+from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
 
 
 class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):

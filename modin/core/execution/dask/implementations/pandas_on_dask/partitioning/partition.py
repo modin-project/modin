@@ -19,7 +19,7 @@ from dask.distributed import wait
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
-from modin.core.execution.dask.common.dask_wrapper import DaskWrapper
+from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
 
 
 class PandasOnDaskDataframePartition(PandasDataframePartition):

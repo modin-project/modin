@@ -16,7 +16,7 @@
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
-from modin.core.execution.dask.common.dask_wrapper import DaskWrapper
+from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
 from .virtual_partition import (
     PandasOnDaskDataframeColumnPartition,
     PandasOnDaskDataframeRowPartition,
