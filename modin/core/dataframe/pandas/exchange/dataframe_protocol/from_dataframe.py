@@ -11,13 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses functions building a ``pandas.DataFrame`` from DataFrame exchange protocol object."""
+"""Module houses the functions building a ``pandas.DataFrame`` from a DataFrame exchange protocol object."""
 
 import pandas
-import ctypes
 import numpy as np
-
+import ctypes
 from typing import Optional, Tuple, Any, Union
+
 from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
     DTypeKind,
     ColumnNullType,
@@ -30,15 +30,15 @@ from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
 
 
 def from_dataframe_to_pandas(
-    df: ProtocolDataframe, allow_copy: bool = True, nchunks: Optional[int] = None
+    df: ProtocolDataframe, nchunks: Optional[int] = None
 ):
     """
-    Build ``pandas.DataFrame`` from an object supporting DataFrame exchange protocol (__dataframe__).
+    Build a ``pandas.DataFrame`` from an object supporting the DataFrame exchange protocol, i.e. `__dataframe__` method.
 
     Parameters
     ----------
     df : ProtocolDataframe
-        Object supporting the exchange protocol (__dataframe__).
+        Object supporting the exchange protocol, i.e. `__dataframe__` method.
     allow_copy : bool, default: True
         Whether to allow for `df` providing a copy of underlying data.
     nchunks : int, optional
@@ -56,8 +56,8 @@ def from_dataframe_to_pandas(
         df = df["dataframe"]
 
     def get_pandas_df(df):
-        # We need a dict of columns here, with each column being a numpy array (at
-        # least for now, deal with non-numpy dtypes later).
+        # We need a dict of columns here, with each column being a NumPy array (at
+        # least for now, deal with non-NumPy dtypes later).
         columns = dict()
         buffers = []  # hold on to buffers, keeps memory alive
         for name in df.column_names():
@@ -105,7 +105,7 @@ def from_dataframe_to_pandas(
 
 def convert_primitive_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     """
-    Convert Column holding one of the primitive dtypes (int, uint, float or bool) to a NumPy array.
+    Convert a column holding one of the primitive dtypes (int, uint, float or bool) to a NumPy array.
 
     Parameters
     ----------
@@ -127,7 +127,7 @@ def convert_primitive_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray
 
 def convert_categorical_column(col: ProtocolColumn) -> Tuple[pandas.Series, Any]:
     """
-    Convert Column holding categorical data to a pandas Series.
+    Convert a column holding categorical data to a pandas Series.
 
     Parameters
     ----------
@@ -161,7 +161,7 @@ def convert_categorical_column(col: ProtocolColumn) -> Tuple[pandas.Series, Any]
 
 def convert_string_column(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     """
-    Convert Column holding string data to a NumPy array.
+    Convert a column holding string data to a NumPy array.
 
     Parameters
     ----------
@@ -235,7 +235,7 @@ def convert_string_column(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
 
 def convert_datetime_column(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     """
-    Convert Column holding DateTime data to a NumPy array.
+    Convert a column holding DateTime data to a NumPy array.
 
     Parameters
     ----------
@@ -274,7 +274,7 @@ def convert_datetime_column(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
         # date 'td{Days/Ms}'
         unit = format_str[2:]
         if unit == "D":
-            # numpy doesn't support DAY unit, so converting days to seconds
+            # NumPy doesn't support DAY unit, so converting days to seconds
             # (converting to uint64 to avoid overflow)
             data = (data.astype(np.uint64) * (24 * 60 * 60)).astype("datetime64[s]")
         elif unit == "m":

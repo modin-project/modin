@@ -2058,7 +2058,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         Returns
         -------
         ProtocolDataframe
-            A dataframe object following the dataframe protocol specification.
+            A dataframe object following the dataframe exchange protocol specification.
         """
         if self._has_unsupported_data:
             pd_df = self.to_pandas()
@@ -2097,14 +2097,14 @@ class OmnisciOnNativeDataframe(PandasDataframe):
 
         if not hasattr(df, "__dataframe__"):
             raise ValueError(
-                "`df` does not support DataFrame exchange protocol (``__dataframe__``)"
+                "`df` does not support DataFrame exchange protocol, i.e. `__dataframe__` method"
             )
 
         from modin.core.dataframe.pandas.exchange.dataframe_protocol.from_dataframe import (
             from_dataframe_to_pandas,
         )
 
-        # TODO: build PyArrow table instead of pandas DataFrame from the protocol object
+        # TODO: build a PyArrow table instead of a pandas DataFrame from the protocol object
         # as it's possible to do zero-copy with `cls.from_arrow`
         pd_df = from_dataframe_to_pandas(df)
         return cls.from_pandas(pd_df)
