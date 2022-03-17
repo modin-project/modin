@@ -306,6 +306,46 @@ class AsvDataSizeConfig(EnvironmentVariable, type=ExactStr):
     default = None
 
 
+class MicroPartitions(EnvironmentVariable, type=int):
+    """Whether the Modin partitions should include micro-partitions at head and tail."""
+
+    varname = "MODIN_MICRO_PARTITIONS"
+    default = 0
+
+    @classmethod
+    def enable(cls, micro_partition_size=100):
+        """
+        Enable MicroPartitions with a specific value.
+
+        Parameters
+        ----------
+        micro_partition_size : int
+            MicroPartition size.
+
+        Notes
+        -----
+        This method determines the size of the head and tail micro-partition
+        """
+        cls.put(micro_partition_size)
+
+    @classmethod
+    def disable(cls):
+        """Disable ``MicroPartitions`` feature."""
+        cls.put(0)
+
+    @classmethod
+    def put(cls, value):
+        """
+        Set ``MicroPartitions`` value.
+
+        Parameters
+        ----------
+        value : bool
+            Config value to set.
+        """
+        super().put(value)
+
+
 class ProgressBar(EnvironmentVariable, type=bool):
     """Whether or not to show the progress bar."""
 
