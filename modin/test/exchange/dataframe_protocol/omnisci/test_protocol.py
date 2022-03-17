@@ -63,6 +63,7 @@ def test_export_aligned_at_chunks(n_chunks, data_has_nulls):
     md_df = from_arrow(chunked_at)
     assert (
         len(md_df._query_compiler._modin_frame._partitions[0][0].get().column(0).chunks)
+        == md_df.__dataframe__().num_chunks()
         == n_chunks
     )
 
