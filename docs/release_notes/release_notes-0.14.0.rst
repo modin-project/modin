@@ -34,6 +34,7 @@ Key Features and Updates
   * REFACTOR-#4229: remove unused `dask_client` global variable in `modin\pandas\__init__.py` (#4230)
   * REFACTOR-#3997: remove code duplication for `broadcast_apply` method (#3996)
   * REFACTOR-#3994: remove code duplication for `get_indices` function (#3995)
+  * REFACTOR-#4331: remove code duplication for `to_pandas`, `to_numpy` functions in `QueryCompiler` hierarchy (#4332)
   * REFACTOR-#4213: Refactor `modin/examples/tutorial/` directory (#4214)
   * REFACTOR-#4206: add assert check into `__init__` method of `PandasOnDaskDataframePartition` class (#4207)
   * REFACTOR-#3900: add flake8-no-implicit-concat plugin and refactor flake8 error codes (#3901)
