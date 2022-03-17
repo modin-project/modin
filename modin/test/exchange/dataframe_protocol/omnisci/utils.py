@@ -25,15 +25,15 @@ from modin.experimental.core.execution.native.implementations.omnisci_on_native.
 )
 
 
-def split_df_into_chunks(df, nchunks):
+def split_df_into_chunks(df, n_chunks):
     """
-    Split passed DataFrame into `nchunks` along row axis.
+    Split passed DataFrame into `n_chunks` along row axis.
 
     Parameters
     ----------
     df : DataFrame
         DataFrame to split into chunks.
-    nchunks : int
+    n_chunks : int
         Number of chunks to split `df` into.
 
     Returns
@@ -41,9 +41,9 @@ def split_df_into_chunks(df, nchunks):
     list of DataFrames
     """
     chunks = []
-    for i in range(nchunks):
-        start = i * len(df) // nchunks
-        end = (i + 1) * len(df) // nchunks
+    for i in range(n_chunks):
+        start = i * len(df) // n_chunks
+        end = (i + 1) * len(df) // n_chunks
         chunks.append(df.iloc[start:end])
 
     return chunks

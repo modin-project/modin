@@ -29,9 +29,7 @@ from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
 )
 
 
-def from_dataframe_to_pandas(
-    df: ProtocolDataframe, nchunks: Optional[int] = None
-):
+def from_dataframe_to_pandas(df: ProtocolDataframe, n_chunks: Optional[int] = None):
     """
     Build a ``pandas.DataFrame`` from an object supporting the DataFrame exchange protocol, i.e. `__dataframe__` method.
 
@@ -41,7 +39,7 @@ def from_dataframe_to_pandas(
         Object supporting the exchange protocol, i.e. `__dataframe__` method.
     allow_copy : bool, default: True
         Whether to allow for `df` providing a copy of underlying data.
-    nchunks : int, optional
+    n_chunks : int, optional
         Number of chunks to split `df`.
 
     Returns
@@ -90,7 +88,7 @@ def from_dataframe_to_pandas(
         return pandas_df
 
     pandas_dfs = []
-    for chunk in df.get_chunks(nchunks):
+    for chunk in df.get_chunks(n_chunks):
         pandas_df = get_pandas_df(chunk)
         pandas_dfs.append(pandas_df)
 

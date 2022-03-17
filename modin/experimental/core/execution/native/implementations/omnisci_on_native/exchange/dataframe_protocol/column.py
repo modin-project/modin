@@ -475,7 +475,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
         )
 
         # TODO: currently, each column chunk casts its buffers independently which results
-        # in an `NCHUNKS - 1` amount of redundant casts. We can make the PyArrow table
+        # in an `N_CHUNKS - 1` amount of redundant casts. We can make the PyArrow table
         # being shared across all the chunks, so the cast being triggered in a single chunk
         # propagate to all of them.
         self._cast_at(schema_to_cast)

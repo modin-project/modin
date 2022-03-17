@@ -48,42 +48,42 @@ def test_simple_export(data_has_nulls, from_omnisci):
     exported_df = export_frame(md_df, from_omnisci)
     df_equals(md_df, exported_df)
 
-    exported_df = export_frame(md_df, from_omnisci, nchunks=3)
+    exported_df = export_frame(md_df, from_omnisci, n_chunks=3)
     df_equals(md_df, exported_df)
 
-    exported_df = export_frame(md_df, from_omnisci, nchunks=5)
+    exported_df = export_frame(md_df, from_omnisci, n_chunks=5)
     df_equals(md_df, exported_df)
 
-    exported_df = export_frame(md_df, from_omnisci, nchunks=12)
+    exported_df = export_frame(md_df, from_omnisci, n_chunks=12)
     df_equals(md_df, exported_df)
 
 
-@pytest.mark.parametrize("nchunks", [2, 4, 7])
+@pytest.mark.parametrize("n_chunks", [2, 4, 7])
 @pytest.mark.parametrize("data_has_nulls", [True, False])
-def test_export_aligned_at_chunks(nchunks, data_has_nulls):
+def test_export_aligned_at_chunks(n_chunks, data_has_nulls):
     """Test export from DataFrame exchange protocol when internal PyArrow table is equaly chunked."""
     # Modin DataFrame constructor can't process PyArrow's category, so exclude it
     data = get_data_of_all_types(has_nulls=data_has_nulls, exclude_dtypes=["category"])
     pd_df = pandas.DataFrame(data)
-    pd_chunks = split_df_into_chunks(pd_df, nchunks)
+    pd_chunks = split_df_into_chunks(pd_df, n_chunks)
 
     chunked_at = pa.concat_tables([pa.Table.from_pandas(pd_df) for pd_df in pd_chunks])
     md_df = from_arrow(chunked_at)
     assert (
         len(md_df._query_compiler._modin_frame._partitions[0][0].get().column(0).chunks)
-        == nchunks
+        == n_chunks
     )
 
     exported_df = export_frame(md_df)
     df_equals(md_df, exported_df)
 
-    exported_df = export_frame(md_df, nchunks=nchunks)
+    exported_df = export_frame(md_df, n_chunks=n_chunks)
     df_equals(md_df, exported_df)
 
-    exported_df = export_frame(md_df, nchunks=nchunks * 2)
+    exported_df = export_frame(md_df, n_chunks=n_chunks * 2)
     df_equals(md_df, exported_df)
 
-    exported_df = export_frame(md_df, nchunks=nchunks * 3)
+    exported_df = export_frame(md_df, n_chunks=n_chunks * 3)
     df_equals(md_df, exported_df)
 
 
@@ -110,8 +110,8 @@ def test_export_unaligned_at_chunks(data_has_nulls):
     ]
 
     pd_chunk_groups = [
-        split_df_into_chunks(pd_df.iloc[:, cols], nchunks)
-        for nchunks, cols in zip(chunk_groups, chunk_col_ilocs)
+        split_df_into_chunks(pd_df.iloc[:, cols], n_chunks)
+        for n_chunks, cols in zip(chunk_groups, chunk_col_ilocs)
     ]
     at_chunk_groups = [
         pa.concat_tables([pa.Table.from_pandas(pd_df) for pd_df in chunk_group])
@@ -127,22 +127,22 @@ def test_export_unaligned_at_chunks(data_has_nulls):
 
     # verify that test generated the correct chunking
     internal_at = md_df._query_compiler._modin_frame._partitions[0][0].get()
-    for nchunks_group, cols in zip(chunk_groups, chunk_col_ilocs):
+    for n_chunks_group, cols in zip(chunk_groups, chunk_col_ilocs):
         for col in internal_at.select(range(cols.start, cols.stop)).columns:
-            assert len(col.chunks) == nchunks_group
+            assert len(col.chunks) == n_chunks_group
 
-    nchunks = md_df.__dataframe__().num_chunks()
+    n_chunks = md_df.__dataframe__().num_chunks()
 
     exported_df = export_frame(md_df)
     df_equals(md_df, exported_df)
 
-    exported_df = export_frame(md_df, nchunks=nchunks)
+    exported_df = export_frame(md_df, n_chunks=n_chunks)
     df_equals(md_df, exported_df)
 
-    exported_df = export_frame(md_df, nchunks=nchunks * 2)
+    exported_df = export_frame(md_df, n_chunks=n_chunks * 2)
     df_equals(md_df, exported_df)
 
-    exported_df = export_frame(md_df, nchunks=nchunks * 3)
+    exported_df = export_frame(md_df, n_chunks=n_chunks * 3)
     df_equals(md_df, exported_df)
 
 
@@ -216,15 +216,15 @@ def test_bitmask_chunking():
     assert at["col"].type.bit_width == 1
 
     md_df = from_arrow(at)
-    # Column length is 25, nchunks is 2, meaning that the split will occur in the middle
+    # Column length is 25, n_chunks is 2, meaning that the split will occur in the middle
     # of the second byte
-    exported_df = export_frame(md_df, nchunks=2)
+    exported_df = export_frame(md_df, n_chunks=2)
     df_equals(md_df, exported_df)
 
 
 @pytest.mark.parametrize("data_has_nulls", [True, False])
-@pytest.mark.parametrize("nchunks", [2, 9])
-def test_buffer_of_chunked_at(data_has_nulls, nchunks):
+@pytest.mark.parametrize("n_chunks", [2, 9])
+def test_buffer_of_chunked_at(data_has_nulls, n_chunks):
     """Test that getting buffers of physically chunked column works properly."""
     data = get_data_of_all_types(
         # For the simplicity of the test include only primitive types, so the test can use
@@ -234,7 +234,7 @@ def test_buffer_of_chunked_at(data_has_nulls, nchunks):
     )
 
     pd_df = pandas.DataFrame(data)
-    pd_chunks = split_df_into_chunks(pd_df, nchunks)
+    pd_chunks = split_df_into_chunks(pd_df, n_chunks)
 
     chunked_at = pa.concat_tables([pa.Table.from_pandas(pd_df) for pd_df in pd_chunks])
     md_df = from_arrow(chunked_at)
