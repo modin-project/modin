@@ -288,9 +288,3 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
             old_blocks=old_blocks,
         )
         return index_obj[new_indices] if compute_diff else new_indices
-
-    def to_pandas(self):
-        return self._modin_frame.to_pandas()
-
-    def to_numpy(self, **kwargs):
-        return self._modin_frame.to_numpy(**kwargs)
