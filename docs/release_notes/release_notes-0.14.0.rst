@@ -65,6 +65,7 @@ Key Features and Updates
   * DOCS-#4176: Update OmniSci usage section (#4192)
   * DOCS-#4027: Add GIF images and chart to Modin README demonstrating speedups (#4232)
   * DOCS-#3954: Add Dask example notebooks (#4139)
+  * DOCS-#4272: Add bar chart comparisons to quick start guide (#4277)
   * DOCS-#3953: Add docs and notebook examples on running Modin with OmniSci (#4001)
   * DOCS-#4280: Change links in jupyter notebooks (#4281)
   * DOCS-#4290: Add changes for OmniSci notebooks (#4291)
@@ -90,4 +91,5 @@ Contributors
 @mvashishtha
 @naren-ponder
 @jeffreykennethli
+@dorisjlee
 @Rubtsowa
