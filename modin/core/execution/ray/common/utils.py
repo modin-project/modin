@@ -171,8 +171,14 @@ def initialize_ray(
             else:
                 object_store_memory = int(object_store_memory)
 
-            mac_size_limit = ray.ray_constants.MAC_DEGRADED_PERF_MMAP_SIZE_LIMIT
-            if sys.platform == "darwin" and object_store_memory > mac_size_limit:
+            mac_size_limit = getattr(
+                ray.ray_constants, "MAC_DEGRADED_PERF_MMAP_SIZE_LIMIT", None
+            )
+            if (
+                sys.platform == "darwin"
+                and mac_size_limit is not None
+                and object_store_memory > mac_size_limit
+            ):
                 warnings.warn(
                     "On Macs, Ray's performance is known to degrade with "
                     + "object store size greater than "
