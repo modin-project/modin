@@ -36,7 +36,7 @@ import warnings
 
 from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
-from modin.utils import _inherit_docstrings, to_pandas, hashable
+from modin.utils import _inherit_docstrings, to_pandas, hashable, try_cast_to_pandas
 from modin.config import Engine, IsExperimental, PersistentPickle
 from .utils import (
     from_pandas,

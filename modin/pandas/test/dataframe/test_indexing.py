@@ -1779,6 +1779,17 @@ def test___setitem__unhashable_list():
     df_equals(modin_df, pandas_df)
 
 
+def test_setitem_unhashable_key():
+    data = test_data["float_nan_data"]
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    count_rows = modin_df.shape[0]
+    value = [[1, 2]] * count_rows
+    key = ["test_col1", "test_col2"]
+    # TODO: add no warning check
+    modin_df[key], pandas_df[key] = value, value
+    df_equals(modin_df, pandas_df)
+
+
 def test___setitem__single_item_in_series():
     # Test assigning a single item in a Series for issue
     # https://github.com/modin-project/modin/issues/3860

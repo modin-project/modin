@@ -1210,7 +1210,7 @@ class PandasDataframePartitionManager(ABC):
                 )
 
                 if item_to_distribute is not no_default:
-                    if isinstance(item_to_distribute, (np.ndarray, pandas.Series)):
+                    if isinstance(item_to_distribute, np.ndarray):
                         item = item_to_distribute[
                             row_position_counter : row_position_counter + row_offset,
                             col_position_counter : col_position_counter + col_offset,

@@ -376,14 +376,8 @@ class _LocationIndexerBase(object):
             self.df._create_or_update_from_compiler(new_qc, inplace=True)
         # Assignment to both axes.
         else:
-            if isinstance(row_lookup, slice):
-                new_row_len = len(self.df.index[row_lookup])
-            else:
-                new_row_len = len(row_lookup)
-            if isinstance(col_lookup, slice):
-                new_col_len = len(self.df.columns[col_lookup])
-            else:
-                new_col_len = len(col_lookup)
+            new_row_len = len(row_lookup)
+            new_col_len = len(col_lookup)
             to_shape = new_row_len, new_col_len
             if not is_scalar(item):
                 item = self._broadcast_item(row_lookup, col_lookup, item, to_shape)

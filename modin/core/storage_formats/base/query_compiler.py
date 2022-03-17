@@ -3062,9 +3062,9 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        row_numeric_index : list of ints
+        row_numeric_index : list of ints or slice
             Row positions to write value.
-        col_numeric_index : list of ints
+        col_numeric_index : list of ints or slice
             Column positions to write value.
         broadcasted_items : 2D-array
             Values to write. Have to be same size as defined by `row_numeric_index`
@@ -3079,9 +3079,7 @@ class BaseQueryCompiler(abc.ABC):
         def write_items(df, broadcasted_items):
             if isinstance(df.iloc[row_numeric_index, col_numeric_index], pandas.Series):
                 broadcasted_items = broadcasted_items.squeeze()
-            df.iloc[
-                list(row_numeric_index), list(col_numeric_index)
-            ] = broadcasted_items
+            df.iloc[row_numeric_index, col_numeric_index] = broadcasted_items
             return df
 
         return DataFrameDefault.register(write_items)(
