@@ -2877,7 +2877,7 @@ class PandasDataframe(object):
         PandasDataframe
             A new Core Modin Dataframe object.
         """
-        if isinstance(df, cls):
+        if type(df) == cls:
             return df
 
         if not hasattr(df, "__dataframe__"):
