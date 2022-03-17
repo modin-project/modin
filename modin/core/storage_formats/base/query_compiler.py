@@ -3062,9 +3062,9 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        row_numeric_index : list of ints or slice
+        row_numeric_index : list of ints
             Row positions to write value.
-        col_numeric_index : list of ints or slice
+        col_numeric_index : list of ints
             Column positions to write value.
         broadcasted_items : 2D-array
             Values to write. Have to be same size as defined by `row_numeric_index`

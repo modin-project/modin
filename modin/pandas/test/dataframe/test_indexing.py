@@ -1784,10 +1784,15 @@ def test_setitem_unhashable_key():
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
     count_rows = modin_df.shape[0]
     value = [[1, 2]] * count_rows
-    key = ["test_col1", "test_col2"]
+    # Failed with columns that doesn't exist
+    key = ["col1", "col2"]
     # TODO: add no warning check
     modin_df[key], pandas_df[key] = value, value
     df_equals(modin_df, pandas_df)
+    # This should also work
+    # df_value = pandas.DataFrame(value)
+    # modin_df[key], pandas_df[key] = df_value, df_value
+    # df_equals(modin_df, pandas_df)
 
 
 def test___setitem__single_item_in_series():

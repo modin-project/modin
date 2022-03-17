@@ -1215,11 +1215,6 @@ class PandasDataframePartitionManager(ABC):
                             row_position_counter : row_position_counter + row_offset,
                             col_position_counter : col_position_counter + col_offset,
                         ]
-                    elif isinstance(item_to_distribute, pandas.DataFrame):
-                        item = item_to_distribute.iloc[
-                            row_position_counter : row_position_counter + row_offset,
-                            col_position_counter : col_position_counter + col_offset,
-                        ]
                     else:
                         item = item_to_distribute
                     item = {"item": item}
