@@ -74,6 +74,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.githubpages",
     "sphinx.ext.graphviz",
+    'sphinx.ext.autosummary',
     "sphinxcontrib.plantuml",
     "sphinx_issues",
 ]
@@ -81,6 +82,8 @@ extensions = [
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
+
+autosummary_generate = True  # Turn on sphinx.ext.autosummary
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
