@@ -32,7 +32,8 @@ from .utils import get_data_of_all_types, split_df_into_chunks, export_frame
 
 @pytest.mark.parametrize("data_has_nulls", [True, False])
 @pytest.mark.parametrize("from_omnisci", [True, False])
-def test_simple_export(data_has_nulls, from_omnisci):
+@pytest.mark.parametrize("n_chunks", [None, 3, 5, 12])
+def test_simple_export(data_has_nulls, from_omnisci, n_chunks):
     if from_omnisci:
         # OmniSci can't import 'uint64' as well as booleans
         # issue for bool: https://github.com/modin-project/modin/issues/4299
@@ -45,16 +46,7 @@ def test_simple_export(data_has_nulls, from_omnisci):
     )
     md_df = pd.DataFrame(data)
 
-    exported_df = export_frame(md_df, from_omnisci)
-    df_equals(md_df, exported_df)
-
-    exported_df = export_frame(md_df, from_omnisci, n_chunks=3)
-    df_equals(md_df, exported_df)
-
-    exported_df = export_frame(md_df, from_omnisci, n_chunks=5)
-    df_equals(md_df, exported_df)
-
-    exported_df = export_frame(md_df, from_omnisci, n_chunks=12)
+    exported_df = export_frame(md_df, from_omnisci, n_chunks=n_chunks)
     df_equals(md_df, exported_df)
 
 
@@ -62,7 +54,7 @@ def test_simple_export(data_has_nulls, from_omnisci):
 @pytest.mark.parametrize("data_has_nulls", [True, False])
 def test_export_aligned_at_chunks(n_chunks, data_has_nulls):
     """Test export from DataFrame exchange protocol when internal PyArrow table is equaly chunked."""
-    # Modin DataFrame constructor can't process PyArrow's category, so exclude it
+    # Modin DataFrame constructor can't process PyArrow's category when using ``from_arrow``, so exclude it
     data = get_data_of_all_types(has_nulls=data_has_nulls, exclude_dtypes=["category"])
     pd_df = pandas.DataFrame(data)
     pd_chunks = split_df_into_chunks(pd_df, n_chunks)
@@ -96,7 +88,7 @@ def test_export_unaligned_at_chunks(data_has_nulls):
     each column has its individual chunking and so some preprocessing is required in order
     to emulate equaly chunked columns in the protocol.
     """
-    # Modin DataFrame constructor can't process PyArrow's category, so exclude it
+    # Modin DataFrame constructor can't process PyArrow's category when using ``from_arrow``, so exclude it
     data = get_data_of_all_types(has_nulls=data_has_nulls, exclude_dtypes=["category"])
     pd_df = pandas.DataFrame(data)
     # divide columns in 3 groups: unchunked, 2-chunked, 7-chunked
@@ -175,10 +167,10 @@ def test_simple_import(data_has_nulls):
     """Test that ``modin.pandas.utils.from_dataframe`` works properly."""
     data = get_data_of_all_types(data_has_nulls)
 
-    md_df_source = pd.DataFrame(data)
-    md_df_consumer = from_dataframe(md_df_source)
+    md_df_producer = pd.DataFrame(data)
+    md_df_consumer = from_dataframe(md_df_producer)
 
-    df_equals(md_df_source, md_df_consumer)
+    df_equals(md_df_producer, md_df_consumer)
 
 
 @pytest.mark.parametrize("data_has_nulls", [True, False])
@@ -196,9 +188,9 @@ def test_zero_copy_export_for_primitives(data_has_nulls):
         col_arr, memory_owner = primitive_column_to_ndarray(col)
 
         exported_ptr = col_arr.__array_interface__["data"][0]
-        source_ptr = at.column(i).chunks[0].buffers()[-1].address
-        # Verify that the pointers of source and exported objects point to the same data
-        assert source_ptr == exported_ptr
+        producer_ptr = at.column(i).chunks[0].buffers()[-1].address
+        # Verify that the pointers of produce and exported objects point to the same data
+        assert producer_ptr == exported_ptr
 
     # Can't export `md_df` zero-copy no more as it has delayed 'fillna' operation
     md_df = md_df.fillna({"float32": 32.0})

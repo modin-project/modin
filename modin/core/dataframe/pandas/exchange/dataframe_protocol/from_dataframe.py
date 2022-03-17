@@ -170,13 +170,15 @@ def string_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     tuple
         Tuple of np.ndarray holding the data and the memory owner object that keeps the memory alive.
     """
-    if col.describe_null[0] not in (
+    null_kind, sentinel_val = col.describe_null
+
+    if null_kind not in (
         ColumnNullType.NON_NULLABLE,
         ColumnNullType.USE_BITMASK,
         ColumnNullType.USE_BYTEMASK,
     ):
         raise NotImplementedError(
-            f"{col.describe_null[0]} null kind is not yet supported for string columns."
+            f"{null_kind} null kind is not yet supported for string columns."
         )
 
     buffers = col.get_buffers()
@@ -198,9 +200,7 @@ def string_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     offset_buff, offset_dtype = buffers["offsets"]
     offsets = buffer_to_ndarray(offset_buff, offset_dtype, col.offset, col.size + 1)
 
-    null_kind, sentinel_val = col.describe_null
     null_pos = None
-
     if null_kind in (ColumnNullType.USE_BITMASK, ColumnNullType.USE_BYTEMASK):
         valid_buff, valid_dtype = buffers["validity"]
         null_pos = buffer_to_ndarray(valid_buff, valid_dtype, col.offset, col.size)

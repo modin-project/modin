@@ -62,7 +62,7 @@ def export_frame(md_df, from_omnisci=False, **kwargs):
         data into OmniSci and then export it back, so the origin for underlying `md_df`
         data is OmniSci.
     **kwargs : dict
-        Additional parameters to pass to the ``from_dataframe`` function.
+        Additional parameters to pass to the ``from_dataframe_to_pandas`` function.
 
     Returns
     -------
