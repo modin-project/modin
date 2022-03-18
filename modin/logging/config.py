@@ -5,6 +5,8 @@ import uuid
 import platform
 import psutil
 import pkg_resources
+import threading
+import time
 
 __LOGGER_CONFIGURED__: bool = False
 
@@ -20,6 +22,20 @@ class MyFormatter(logging.Formatter):
             t = ct.strftime("%Y-%m-%d %H:%M:%S")
             s = "%s,%03d" % (t, record.msecs)
         return s
+
+
+def get_size(bytes, suffix="B"):
+    """
+    Scale bytes to its proper format
+    e.g:
+        1253656 => '1.20MB'
+        1253656678 => '1.17GB'
+    """
+    factor = 1024
+    for unit in ["", "K", "M", "G", "T", "P"]:
+        if bytes < factor:
+            return f"{bytes:.2f}{unit}{suffix}"
+        bytes /= factor
 
 
 def configure_logging():
@@ -40,18 +56,10 @@ def configure_logging():
     __LOGGER_CONFIGURED__ = True
 
 
-def get_size(bytes, suffix="B"):
-    """
-    Scale bytes to its proper format
-    e.g:
-        1253656 => '1.20MB'
-        1253656678 => '1.17GB'
-    """
-    factor = 1024
-    for unit in ["", "K", "M", "G", "T", "P"]:
-        if bytes < factor:
-            return f"{bytes:.2f}{unit}{suffix}"
-        bytes /= factor
+def memory_thread(logger, svmem):
+    while True:
+        logger.info(f"Memory Percentage: {svmem.percent}%")
+        time.sleep(5)
 
 
 def get_logger():
@@ -69,4 +77,12 @@ def get_logger():
         logger.info(f"Memory Available: {get_size(svmem.available)}")
         logger.info(f"Memory Used: {get_size(svmem.used)}")
         logger.info(f"Memory Percentage: {svmem.percent}%")
+
+        try:
+            mem = threading.Thread(target=memory_thread, args=[logger, svmem])
+            mem.start()
+        except (KeyboardInterrupt, SystemExit):
+            mem.join()
+            sys.exit()
+
     return logging.getLogger("modin.logger")

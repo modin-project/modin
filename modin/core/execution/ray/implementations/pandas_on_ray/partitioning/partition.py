@@ -60,6 +60,10 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         self._ip_cache = ip
         self._identity = uuid.uuid4().hex[8:]
 
+        logger = get_logger()
+        logger.info("Height of each Partition: " + str(width))
+        logger.info("Width of each Partition: " + str(length))
+
     def get(self):
         """
         Get the object wrapped by this partition out of the Plasma store.
