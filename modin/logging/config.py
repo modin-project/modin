@@ -56,8 +56,9 @@ def configure_logging():
     __LOGGER_CONFIGURED__ = True
 
 
-def memory_thread(logger, svmem):
+def memory_thread(logger):
     while True:
+        svmem = psutil.virtual_memory()
         logger.info(f"Memory Percentage: {svmem.percent}%")
         time.sleep(5)
 
@@ -79,7 +80,7 @@ def get_logger():
         logger.info(f"Memory Percentage: {svmem.percent}%")
 
         try:
-            mem = threading.Thread(target=memory_thread, args=[logger, svmem])
+            mem = threading.Thread(target=memory_thread, args=[logger])
             mem.start()
         except (KeyboardInterrupt, SystemExit):
             mem.join()
