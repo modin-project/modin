@@ -496,13 +496,16 @@ def df_categories_equals(df1, df2):
         else:
             return True
 
-    df1_categorical_columns = df1.select_dtypes(include="category").columns
-    df2_categorical_columns = df2.select_dtypes(include="category").columns
-    assert df1_categorical_columns.equals(df2_categorical_columns)
-    for column in df1_categorical_columns:
+    df1_categorical = df1.select_dtypes(include="category")
+    df2_categorical = df2.select_dtypes(include="category")
+    assert df1_categorical.columns.equals(df2_categorical.columns)
+    # Use an index instead of a column name to iterate through columns. There
+    # may be duplicate colum names. e.g. if two columns are named col1,
+    # selecting df1_categorical["col1"] gives a dataframe of width 2 instead of a series.
+    for i in range(len(df1_categorical.columns)):
         assert_extension_array_equal(
-            df1[column].values,
-            df2[column].values,
+            df1_categorical.iloc[:, i].values,
+            df2_categorical.iloc[:, i].values,
             check_dtype=False,
         )
 
