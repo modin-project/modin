@@ -24,7 +24,6 @@ from pandas.core.dtypes.common import (
 from pandas._libs.lib import no_default
 from pandas._typing import IndexKeyFunc
 
-# from pandas.util._decorators import doc
 import sys
 from typing import Union, Optional
 import warnings
