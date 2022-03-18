@@ -19,6 +19,14 @@ pandas ``Series`` method output.
     TODO: add link to the docs with detailed description of queries compilation
     and execution ater DOCS-#2996 is merged.
 
+Public API
+''''''''''
+
+.. autosummary::
+    :toctree: api/
+    
+    Series
+
 Usage Guide
 '''''''''''
 
@@ -104,11 +112,3 @@ Let's consider simple example of creation and interacting with Modin ``Series``:
 
 As we show in the example above, Modin ``Series`` can be easily created, and supports any input that pandas ``Series`` supports.
 Also note that tuning of the ``Series`` partitioning can be done by just setting a single config.
-
-Public API
-''''''''''
-
-.. autosummary::
-    :toctree: api/
-    
-    Series

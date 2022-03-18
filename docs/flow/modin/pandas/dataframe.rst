@@ -19,6 +19,14 @@ pandas ``DataFrame`` method output.
     TODO: add link to the docs with detailed description of queries compilation
     and execution ater DOCS-#2996 is merged.
 
+Public API
+''''''''''
+
+.. autosummary::
+    :toctree: api/
+    
+    DataFrame
+
 Usage Guide
 '''''''''''
 
@@ -107,11 +115,3 @@ Let's consider simple example of creation and interacting with Modin ``DataFrame
 
 As we show in the example above, Modin ``DataFrame`` can be easily created, and supports any input that pandas ``DataFrame`` supports.
 Also note that tuning of the ``DataFrame`` partitioning can be done by just setting a single config.
-
-Public API
-''''''''''
-
-.. autosummary::
-    :toctree: api/
-    
-    DataFrame
