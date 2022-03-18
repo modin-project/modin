@@ -25,6 +25,7 @@ Key Features and Updates
   * FIX-#4308: Add proper error handling in df.set_index (#4309)
   * FIX-#4056: Allow an empty parse_date list in `read_csv_glob` (#4074)
   * FIX-#4312: Fix constructing categorical frame with duplicate column names (#4313).  
+  * FIX-#4314: Allow passing a series of dtypes to astype (#4318)  
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
   * FIX-#4183: Stop shallow copies from creating global shared state. (#4184)
