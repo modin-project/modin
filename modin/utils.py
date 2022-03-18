@@ -252,9 +252,7 @@ def _replace_doc(
     target_doc = target_obj.__doc__ or ""
     overwrite = overwrite or not target_doc
     doc = source_doc if overwrite else target_doc
-    apilink = (
-        [apilink] if not isinstance(apilink, list) and apilink is not None else apilink
-    )
+    apilink = [apilink] if not isinstance(apilink, list) and apilink else apilink
 
     if parent_cls and not attr_name:
         if isinstance(target_obj, property):
@@ -347,8 +345,6 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
         )
 
     def decorator(cls_or_func):
-        # if cls_or_func.__name__ == "read_json":
-        #     import pdb; pdb.set_trace()
         if parent not in excluded:
             _replace_doc(parent, cls_or_func, overwrite_existing, apilink)
 
