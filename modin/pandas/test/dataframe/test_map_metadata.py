@@ -491,7 +491,7 @@ def test_astype():
             pd.Series([str, str], index=["col1", "col1"])
             if isinstance(df, pd.DataFrame)
             else pandas.Series([str, str], index=["col1", "col1"])
-        )
+        ),
     )
 
 
