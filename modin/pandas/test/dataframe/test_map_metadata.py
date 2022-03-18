@@ -496,8 +496,7 @@ def test_astype_dict_or_series_multiple_column_partitions(dtypes_are_dict):
     #   - dtypes.index is not a subset of df.columns
     #   - df.columns is not a subset of dtypes.index
 
-    pandas_df = pandas.DataFrame(test_data["int_data"])
-    modin_df = pd.DataFrame(pandas_df)
+    modin_df, pandas_df = create_test_dfs(test_data["int_data"])
     if dtypes_are_dict:
         new_dtypes = {}
     else:
@@ -507,7 +506,7 @@ def test_astype_dict_or_series_multiple_column_partitions(dtypes_are_dict):
             new_dtypes[column] = "string"
         elif i % 3 == 2:
             new_dtypes[column] = float
-    df_equals(modin_df.astype(new_dtypes), pandas_df.astype(new_dtypes))
+    eval_general(modin_df, pandas_df, lambda df: df.astype(new_dtypes))
 
 
 def test_astype_category():
