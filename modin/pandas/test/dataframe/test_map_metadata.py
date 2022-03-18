@@ -487,7 +487,11 @@ def test_astype():
     eval_general(
         modin_df,
         expected_df,
-        lambda df: df.astype(pd.Series([str, str], index=["col1", "col1"])),
+        lambda df: df.astype(
+            pd.Series([str, str], index=["col1", "col1"])
+            if isinstance(df, pd.DataFrame)
+            else pandas.Series([str, str], index=["col1", "col1"])
+        )
     )
 
 
