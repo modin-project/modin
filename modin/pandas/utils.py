@@ -277,11 +277,11 @@ def _doc_binary_op(
     """
     if primary_object == "Series":
         other_type = "Series or scalar value"
-    elif primary_object == "DataFrame":
-        other_type = "DataFrame, Series or scalar value"
+    elif primary_object == "BasePandasDataset":
+        other_type = "BasePandasDataset or scalar value"
     else:
         raise NotImplementedError(
-            f"Only 'DataFrame' and 'Series' `primary_object` are allowed, actually passed: {primary_object}"
+            f"Only 'BasePandasDataset' and 'Series' `primary_object` are allowed, actually passed: {primary_object}"
         )
     doc_op = doc(
         _doc_binary_operation,
