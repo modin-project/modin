@@ -74,7 +74,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.githubpages",
     "sphinx.ext.graphviz",
-    'sphinx.ext.autosummary',
+    "sphinx.ext.autosummary",
     "sphinxcontrib.plantuml",
     "sphinx_issues",
 ]

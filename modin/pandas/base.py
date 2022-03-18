@@ -98,9 +98,7 @@ _DEFAULT_BEHAVIOUR = {
 _doc_binary_op_kwargs = {"returns": "DataFrame", "primary_object": "BasePandasDataset"}
 
 
-@_inherit_docstrings(
-    pandas.core.generic.NDFrame, apilink=["pandas.DataFrame", "pandas.Series"]
-)
+@_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
 class BasePandasDataset(object):
     """
     Implement most of the common code that exists in DataFrame/Series.
@@ -555,7 +553,7 @@ class BasePandasDataset(object):
 
     def abs(self):  # noqa: RT01, D200
         """
-        Return a BasePandasDataset with absolute numeric value of each element.
+        Return a `BasePandasDataset` with absolute numeric value of each element.
         """
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(query_compiler=self._query_compiler.abs())
@@ -588,7 +586,7 @@ class BasePandasDataset(object):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Return addition of BasePandasDataset and `other`, element-wise (binary operator `add`).
+        Return addition of `BasePandasDataset` and `other`, element-wise (binary operator `add`).
         """
         return self._binary_op(
             "add", other, axis=axis, level=level, fill_value=fill_value
@@ -860,7 +858,7 @@ class BasePandasDataset(object):
         **kwds,
     ):  # noqa: PR01, RT01, D200
         """
-        Apply a function along an axis of the BasePandasDataset.
+        Apply a function along an axis of the `BasePandasDataset`.
         """
 
         def error_raiser(msg, exception):
@@ -1033,7 +1031,7 @@ class BasePandasDataset(object):
 
     def bool(self):  # noqa: RT01, D200
         """
-        Return the bool of a single element BasePandasDataset.
+        Return the bool of a single element `BasePandasDataset`.
         """
         shape = self.shape
         if shape != (1,) and shape != (1, 1):
