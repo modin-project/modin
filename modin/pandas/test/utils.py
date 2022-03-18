@@ -69,6 +69,15 @@ test_data = {
         )
         for i in range(NCOLS)
     },
+    "float_data": {
+        "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): [
+            x
+            for j, x in enumerate(
+                random_state.uniform(RAND_LOW, RAND_HIGH, size=(NROWS))
+            )
+        ]
+        for i in range(NCOLS)
+    },
     "float_nan_data": {
         "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): [
             x
