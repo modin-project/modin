@@ -120,6 +120,19 @@ test_data = {
     #     "col2": True,
     # },
 }
+# The parse_dates param can take several different types and combinations of
+# types. Use the following values to test date parsing on a CSV created for
+# that purpose at `time_parsing_csv_path`
+parse_dates_values_by_id = {
+    "bool": False,
+    "list_of_single_int": [0],
+    "list_of_single_string": ["timestamp"],
+    "list_of_list_of_strings": [["year", "month", "date"]],
+    "list_of_string_and_list_of_strings": ["timestamp", ["year", "month", "date"]],
+    "empty_list": [],
+    "nonexistent_string_column": ["z"],
+    "nonexistent_int_column": [99],
+}
 
 # See details in #1403
 test_data["int_data"]["index"] = test_data["int_data"].pop(
@@ -464,6 +477,9 @@ default_to_pandas_ignore_string = "default:.*defaulting to pandas.*:UserWarning"
 COMP_TO_EXT = {"gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
 
 
+time_parsing_csv_path = "modin/pandas/test/data/test_time_parsing.csv"
+
+
 def categories_equals(left, right):
     assert (left.ordered and right.ordered) or (not left.ordered and not right.ordered)
     assert_extension_array_equal(left, right)
@@ -480,13 +496,16 @@ def df_categories_equals(df1, df2):
         else:
             return True
 
-    df1_categorical_columns = df1.select_dtypes(include="category").columns
-    df2_categorical_columns = df2.select_dtypes(include="category").columns
-    assert df1_categorical_columns.equals(df2_categorical_columns)
-    for column in df1_categorical_columns:
+    df1_categorical = df1.select_dtypes(include="category")
+    df2_categorical = df2.select_dtypes(include="category")
+    assert df1_categorical.columns.equals(df2_categorical.columns)
+    # Use an index instead of a column name to iterate through columns. There
+    # may be duplicate colum names. e.g. if two columns are named col1,
+    # selecting df1_categorical["col1"] gives a dataframe of width 2 instead of a series.
+    for i in range(len(df1_categorical.columns)):
         assert_extension_array_equal(
-            df1[column].values,
-            df2[column].values,
+            df1_categorical.iloc[:, i].values,
+            df2_categorical.iloc[:, i].values,
             check_dtype=False,
         )
 

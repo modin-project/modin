@@ -26,10 +26,15 @@ from modin.core.storage_formats.pandas.parsers import (
     _split_result_for_readers,
     PandasCSVGlobParser,
     PandasPickleExperimentalParser,
+    CustomTextExperimentalParser,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.ray.implementations.pandas_on_ray.io import PandasOnRayIO
-from modin.core.io import CSVGlobDispatcher, PickleExperimentalDispatcher
+from modin.core.io import (
+    CSVGlobDispatcher,
+    PickleExperimentalDispatcher,
+    CustomTextExperimentalDispatcher,
+)
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe import (
     PandasOnRayDataframe,
 )
@@ -61,6 +66,12 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
     read_pickle_distributed = type(
         "",
         (RayTask, PandasPickleExperimentalParser, PickleExperimentalDispatcher),
+        build_args,
+    )._read
+
+    read_custom_text = type(
+        "",
+        (RayTask, CustomTextExperimentalParser, CustomTextExperimentalDispatcher),
         build_args,
     )._read
 

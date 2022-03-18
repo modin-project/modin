@@ -11,24 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Modin Dataframe algebra (core operators)."""
+"""
+Base Modin Dataframe functionality related to the dataframe exchange protocol and optimized for pandas storage format.
 
-from .operator import Operator
-from .map import Map
-from .tree_reduce import TreeReduce
-from .reduce import Reduce
-from .fold import Fold
-from .binary import Binary
-from .groupby import GroupByReduce, groupby_reduce_functions, is_reduce_function
-
-__all__ = [
-    "Operator",
-    "Map",
-    "TreeReduce",
-    "Reduce",
-    "Fold",
-    "Binary",
-    "GroupByReduce",
-    "groupby_reduce_functions",
-    "is_reduce_function",
-]
+See more in https://data-apis.org/dataframe-protocol/latest/index.html.
+"""
