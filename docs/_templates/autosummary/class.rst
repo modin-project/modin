@@ -2,12 +2,12 @@
 
 {% block methods %}
 {% if methods %}
+.. rubric:: {{ _('Methods') }}
 
 .. autosummary::
-    :members:
     :toctree:
     {% for item in all_methods %}
-    {%- if not item.startswith('_') or item in ['__call__'] %}
+    {%- if not item.startswith('_') %}
     {{ name }}.{{ item }}
     {%- endif -%}
     {%- endfor %}
@@ -17,9 +17,9 @@
 
 {% block attributes %}
 {% if attributes %}
+.. rubric:: {{ _('Attributes') }}
 
 .. autosummary::
-    :members:
     :toctree:
     {% for item in all_attributes %}
     {%- if not item.startswith('_') %}
