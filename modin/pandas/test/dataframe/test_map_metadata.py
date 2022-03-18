@@ -484,8 +484,11 @@ def test_astype():
         modin_df.astype({"not_exists": np.uint8})
 
     # The dtypes series must have a unique index.
-    with pytest.raises(ValueError):
-        modin_df.astype(pd.Series([str, str], index=["col1", "col1"]))
+    eval_general(
+        modin_df,
+        expected_df,
+        lambda df: df.astype(pd.Series([str, str], index=["col1", "col1"])),
+    )
 
 
 @pytest.mark.parametrize("dtypes_are_dict", [True, False])

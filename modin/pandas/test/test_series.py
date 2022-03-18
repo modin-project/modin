@@ -1047,8 +1047,7 @@ def test_astype(data):
         pandas_series.astype({series_name: str}),
     )
 
-    with pytest.raises(KeyError):
-        modin_series.astype({"wrong_name": str})
+    eval_general(modin_series, pandas_series, lambda df: df.astype({"wrong_name": str}))
 
     # TODO(https://github.com/modin-project/modin/issues/4317): Test passing a
     # dict to astype() for a series with no name.
