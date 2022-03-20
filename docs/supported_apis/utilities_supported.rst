@@ -12,12 +12,13 @@ the method in the left column. ``Y`` stands for yes, ``N`` stands for no, ``P`` 
 for partial (meaning some parameters may not be supported yet), and ``D`` stands for
 default to pandas.
 **Currently second column reflects implementation status for Ray and Dask engines. By default support of a method
-in the Omnisci engine could be treated as ``D`` unless ``Notes`` column contains additional information.**
+in the Omnisci engine could be treated as ``D`` unless ``Notes`` column contains additional information. imilarly,
+by default ``Notes`` contains information about ``Ray`` and ``Dask`` engines unless ``Omnisci`` explicitly mentioned.**
 
 +---------------------------+---------------------------------+----------------------------------------------------+
 | Utility method            | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.concat`_              | Y                               |  **Omnisci**:``Y``                                 |
+| `pd.concat`_              | Y                               |  **Omnisci**:``P``?                                |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | `pd.eval`_                | Y                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
