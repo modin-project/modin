@@ -674,7 +674,9 @@ def crosstab(
 
 
 @_inherit_docstrings(pandas.lreshape, apilink="pandas.lreshape")
-def lreshape(data: DataFrame, groups, dropna=True, label=None):  # noqa: PR01, RT01, D200
+def lreshape(
+    data: DataFrame, groups, dropna=True, label=None
+):  # noqa: PR01, RT01, D200
     """
     Reshape wide-format data to long.
     """
