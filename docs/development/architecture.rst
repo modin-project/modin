@@ -273,9 +273,12 @@ API
 The API is the outer-most layer that faces users. The following classes contain Modin's implementation of the pandas API:
 
 .. toctree::
+   :maxdepth: 2
+
    /flow/modin/pandas/base
    /flow/modin/pandas/dataframe
    /flow/modin/pandas/series
+   /flow/modin/pandas/general
 
 Module/Class View
 -----------------
