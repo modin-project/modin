@@ -1016,6 +1016,8 @@ def test_asof_large(where):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_astype(data):
     modin_series, pandas_series = create_test_series(data)
+    series_name = "test_series"
+    modin_series.name = pandas_series.name = series_name
     try:
         pandas_result = pandas_series.astype(str)
     except Exception as e:
@@ -1039,6 +1041,16 @@ def test_astype(data):
             repr(modin_series.astype(np.float64))  # repr to force materialization
     else:
         df_equals(modin_series.astype(np.float64), pandas_result)
+
+    df_equals(
+        modin_series.astype({series_name: str}),
+        pandas_series.astype({series_name: str}),
+    )
+
+    eval_general(modin_series, pandas_series, lambda df: df.astype({"wrong_name": str}))
+
+    # TODO(https://github.com/modin-project/modin/issues/4317): Test passing a
+    # dict to astype() for a series with no name.
 
 
 def test_astype_categorical():

@@ -51,6 +51,7 @@ import pickle as pkl
 from .utils import is_full_grab_slice
 from modin.utils import try_cast_to_pandas, _inherit_docstrings
 from modin.error_message import ErrorMessage
+import modin.pandas as pd
 from modin.pandas.utils import is_scalar
 from modin.config import IsExperimental
 
@@ -487,8 +488,6 @@ class BasePandasDataset(object):
             return Series(result)
         # inplace
         elif result is None:
-            import modin.pandas as pd
-
             return self._create_or_update_from_compiler(
                 getattr(pd, type(pandas_obj).__name__)(pandas_obj)._query_compiler,
                 inplace=True,
@@ -903,20 +902,31 @@ class BasePandasDataset(object):
         return result
 
     def astype(self, dtype, copy=True, errors="raise"):
-        col_dtypes = {}
+        # dtype can be a series, a dict, or a scalar. If it's series or scalar,
+        # convert it to a dict before passing it to the query compiler.
+        if isinstance(dtype, (pd.Series, pandas.Series)):
+            if not dtype.index.is_unique:
+                raise ValueError(
+                    "The new Series of types must have a unique index, i.e. "
+                    + "it must be one-to-one mapping from column names to "
+                    + " their new dtypes."
+                )
+            dtype = {column: dtype for column, dtype in dtype.items()}
+        # If we got a series or dict originally, dtype is a dict now. Its keys
+        # must be column names.
         if isinstance(dtype, dict):
             if (
                 not set(dtype.keys()).issubset(set(self._query_compiler.columns))
                 and errors == "raise"
             ):
                 raise KeyError(
-                    "Only a column name can be used for the key in"
+                    "Only a column name can be used for the key in "
                     + "a dtype mappings argument."
                 )
             col_dtypes = dtype
         else:
-            for column in self._query_compiler.columns:
-                col_dtypes[column] = dtype
+            # Assume that the dtype is a scalar.
+            col_dtypes = {column: dtype for column in self._query_compiler.columns}
 
         new_query_compiler = self._query_compiler.astype(col_dtypes)
         return self._create_or_update_from_compiler(new_query_compiler, not copy)

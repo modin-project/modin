@@ -146,7 +146,7 @@ class PandasParser(object):
         num_splits = kwargs.pop("num_splits", None)
         start = kwargs.pop("start", None)
         end = kwargs.pop("end", None)
-        header_size = kwargs.pop("header_size", None)
+        header_size = kwargs.pop("header_size", 0)
         encoding = kwargs.get("encoding", None)
         callback = kwargs.pop("callback")
         if start is None or end is None:
@@ -378,6 +378,14 @@ class PandasPickleExperimentalParser(PandasParser):
         width = len(df.columns)
 
         return _split_result_for_readers(1, num_splits, df) + [length, width]
+
+
+@doc(_doc_pandas_parser_class, data_type="custom text")
+class CustomTextExperimentalParser(PandasParser):
+    @staticmethod
+    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
+    def parse(fname, **kwargs):
+        return PandasParser.generic_parse(fname, **kwargs)
 
 
 @doc(_doc_pandas_parser_class, data_type="tables with fixed-width formatted lines")
@@ -617,7 +625,7 @@ class PandasJSONParser(PandasParser):
             # This only happens when we are reading with only one worker (Default)
             return pandas.read_json(fname, **kwargs)
         if not pandas_df.columns.equals(columns):
-            raise NotImplementedError("Columns must be the same across all rows.")
+            raise ValueError("Columns must be the same across all rows.")
         partition_columns = pandas_df.columns
         return _split_result_for_readers(1, num_splits, pandas_df) + [
             len(pandas_df),

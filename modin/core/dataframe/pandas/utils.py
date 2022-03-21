@@ -22,6 +22,8 @@ def concatenate(dfs):
     """
     Concatenate pandas DataFrames with saving 'category' dtype.
 
+    All dataframes' columns must be equal to each other.
+
     Parameters
     ----------
     dfs : list
@@ -32,13 +34,15 @@ def concatenate(dfs):
     pandas.DataFrame
         A pandas DataFrame.
     """
-    categoricals_columns = set.intersection(
-        *[set(df.select_dtypes("category").columns.tolist()) for df in dfs]
-    )
-
-    for col in categoricals_columns:
-        uc = union_categoricals([df[col] for df in dfs])
+    for df in dfs:
+        assert df.columns.equals(dfs[0].columns)
+    for i in range(len(dfs[0].columns)):
+        if dfs[0].dtypes.iloc[i].name != "category":
+            continue
+        columns = [df.iloc[:, i] for df in dfs]
+        union = union_categoricals(columns)
         for df in dfs:
-            df[col] = pandas.Categorical(df[col], categories=uc.categories)
-
+            df.iloc[:, i] = pandas.Categorical(
+                df.iloc[:, i], categories=union.categories
+            )
     return pandas.concat(dfs)

@@ -11,24 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Modin Dataframe algebra (core operators)."""
+"""Exceptions that can be caught by dataframe exchange protocol implementation for pandas storage format."""
 
-from .operator import Operator
-from .map import Map
-from .tree_reduce import TreeReduce
-from .reduce import Reduce
-from .fold import Fold
-from .binary import Binary
-from .groupby import GroupByReduce, groupby_reduce_functions, is_reduce_function
 
-__all__ = [
-    "Operator",
-    "Map",
-    "TreeReduce",
-    "Reduce",
-    "Fold",
-    "Binary",
-    "GroupByReduce",
-    "groupby_reduce_functions",
-    "is_reduce_function",
-]
+class NoValidityBuffer(Exception):
+    """Exception to be raised if there is no validity buffer for ``PandasProtocolColumn``."""
+
+    pass
+
+
+class NoOffsetsBuffer(Exception):
+    """Exception to be raised if there is no offsets buffer for ``PandasProtocolColumn``."""
+
+    pass

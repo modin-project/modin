@@ -19,6 +19,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from modin.utils import get_current_execution, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from pandas.testing import assert_frame_equal
 
 from .utils import (
     test_data_values,
@@ -728,6 +729,32 @@ def test_to_pandas_indices(data):
         assert md_df.axes[axis].equal_levels(
             pd_df.axes[axis]
         ), f"Levels of indices at axis {axis} are different!"
+
+
+def test_create_categorical_dataframe_with_duplicate_column_name():
+    # This tests for https://github.com/modin-project/modin/issues/4312
+    pd_df = pandas.DataFrame(
+        {
+            "a": pandas.Categorical([1, 2]),
+            "b": [4, 5],
+            "c": pandas.Categorical([7, 8]),
+        }
+    )
+    pd_df.columns = ["a", "b", "a"]
+    md_df = pd.DataFrame(pd_df)
+    # Use assert_frame_equal instead of the common modin util df_equals because
+    # we should check dtypes of the new categorical with check_dtype=True.
+    # TODO(https://github.com/modin-project/modin/issues/3804): Make
+    # df_equals set check_dtype=True and use df_equals instead.
+    assert_frame_equal(
+        md_df._to_pandas(),
+        pd_df,
+        check_dtype=True,
+        check_index_type=True,
+        check_column_type=True,
+        check_names=True,
+        check_categorical=True,
+    )
 
 
 @pytest.mark.skipif(

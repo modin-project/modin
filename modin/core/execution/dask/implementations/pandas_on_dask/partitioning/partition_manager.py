@@ -13,11 +13,10 @@
 
 """Module houses class that implements ``PandasDataframePartitionManager``."""
 
-from distributed.client import default_client
-
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
+from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
 from .virtual_partition import (
     PandasOnDaskDataframeColumnPartition,
     PandasOnDaskDataframeRowPartition,
@@ -48,5 +47,4 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         list
             The objects wrapped by `partitions`.
         """
-        client = default_client()
-        return client.gather([partition.future for partition in partitions])
+        return DaskWrapper.materialize([partition.future for partition in partitions])

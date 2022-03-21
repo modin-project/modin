@@ -33,11 +33,11 @@ if Engine.get() == "Ray":
     get_func = ray.get
     FutureType = ray.ObjectRef
 elif Engine.get() == "Dask":
-    from distributed.client import default_client
+    from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
     from distributed import Future
 
-    put_func = lambda x: default_client().scatter(x)  # noqa: E731
-    get_func = lambda x: x.result()  # noqa: E731
+    put_func = lambda x: DaskWrapper.put(x)  # noqa: E731
+    get_func = lambda x: DaskWrapper.materialize(x)  # noqa: E731
     FutureType = Future
 elif Engine.get() == "Python":
     put_func = lambda x: x  # noqa: E731
@@ -90,15 +90,10 @@ def test_unwrap_partitions(axis):
         actual_axis_partitions = unwrap_partitions(df, axis=axis)
         assert len(expected_axis_partitions) == len(actual_axis_partitions)
         for item_idx in range(len(expected_axis_partitions)):
-            if Engine.get() == "Ray":
+            if Engine.get() in ["Ray", "Dask"]:
                 df_equals(
-                    ray.get(expected_axis_partitions[item_idx]),
-                    ray.get(actual_axis_partitions[item_idx]),
-                )
-            if Engine.get() == "Dask":
-                df_equals(
-                    expected_axis_partitions[item_idx].result(),
-                    actual_axis_partitions[item_idx].result(),
+                    get_func(expected_axis_partitions[item_idx]),
+                    get_func(actual_axis_partitions[item_idx]),
                 )
 
 
@@ -133,15 +128,14 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
 
     if Engine.get() == "Ray":
         if axis is None:
-            futures = [[ray.put(df1), ray.put(df2)]]
+            futures = [[put_func(df1), put_func(df2)]]
         else:
-            futures = [ray.put(df1), ray.put(df2)]
+            futures = [put_func(df1), put_func(df2)]
     if Engine.get() == "Dask":
-        client = default_client()
         if axis is None:
-            futures = [client.scatter([df1, df2], hash=False)]
+            futures = [put_func([df1, df2], hash=False)]
         else:
-            futures = client.scatter([df1, df2], hash=False)
+            futures = put_func([df1, df2], hash=False)
     actual_df = from_partitions(
         futures,
         axis,

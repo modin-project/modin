@@ -82,14 +82,12 @@ class SQLDispatcher(FileDispatcher):
             query = con.partition_query(sql, limit, offset)
             partition_id = cls.deploy(
                 cls.parse,
-                num_partitions + 2,
-                dict(
-                    num_splits=num_partitions,
-                    sql=query,
-                    con=con,
-                    index_col=index_col,
-                    **kwargs,
-                ),
+                num_returns=num_partitions + 2,
+                num_splits=num_partitions,
+                sql=query,
+                con=con,
+                index_col=index_col,
+                **kwargs,
             )
             partition_ids.append(
                 [cls.frame_partition_cls(obj) for obj in partition_id[:-2]]

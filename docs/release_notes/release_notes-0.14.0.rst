@@ -24,7 +24,9 @@ Key Features and Updates
   * FIX-#4303: Fix the syntax error in reading from postgres (#4304)
   * FIX-#4308: Add proper error handling in df.set_index (#4309)
   * FIX-#4056: Allow an empty parse_date list in `read_csv_glob` (#4074)
-  * FIX-#4310: Handle lists of lists of ints in read_csv_glob (#4319)
+  * FIX-#4312: Fix constructing categorical frame with duplicate column names (#4313).  
+  * FIX-#4314: Allow passing a series of dtypes to astype (#4318)  
+  * FIX-#4310: Handle lists of lists of ints in read_csv_glob (#4319)  
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
   * FIX-#4183: Stop shallow copies from creating global shared state. (#4184)
@@ -35,12 +37,16 @@ Key Features and Updates
   * REFACTOR-#4229: remove unused `dask_client` global variable in `modin\pandas\__init__.py` (#4230)
   * REFACTOR-#3997: remove code duplication for `broadcast_apply` method (#3996)
   * REFACTOR-#3994: remove code duplication for `get_indices` function (#3995)
+  * REFACTOR-#4331: remove code duplication for `to_pandas`, `to_numpy` functions in `QueryCompiler` hierarchy (#4332)
   * REFACTOR-#4213: Refactor `modin/examples/tutorial/` directory (#4214)
   * REFACTOR-#4206: add assert check into `__init__` method of `PandasOnDaskDataframePartition` class (#4207)
   * REFACTOR-#3900: add flake8-no-implicit-concat plugin and refactor flake8 error codes (#3901)
   * REFACTOR-#4093: Refactor base to be smaller (#4220)
   * REFACTOR-#4047: Rename `cluster` directory to `cloud` in examples (#4212)
+  * REFACTOR-#3853: interacting with Dask interface through `DaskWrapper` class (#3854)
+  * REFACTOR-#4322: Move is_reduce_fn outside of groupby_agg (#4323)
 * Pandas API implementations and improvements
+  * FEAT-#3603: add experimental `read_custom_text` function that can read custom line-by-line text files (#3441)
   * FEAT-#979: Enable reading from SQL server (#4279)
 * OmniSci enhancements
   *
@@ -63,6 +69,7 @@ Key Features and Updates
   * DOCS-#4176: Update OmniSci usage section (#4192)
   * DOCS-#4027: Add GIF images and chart to Modin README demonstrating speedups (#4232)
   * DOCS-#3954: Add Dask example notebooks (#4139)
+  * DOCS-#4272: Add bar chart comparisons to quick start guide (#4277)
   * DOCS-#3953: Add docs and notebook examples on running Modin with OmniSci (#4001)
   * DOCS-#4280: Change links in jupyter notebooks (#4281)
   * DOCS-#4290: Add changes for OmniSci notebooks (#4291)
@@ -88,4 +95,5 @@ Contributors
 @mvashishtha
 @naren-ponder
 @jeffreykennethli
+@dorisjlee
 @Rubtsowa
