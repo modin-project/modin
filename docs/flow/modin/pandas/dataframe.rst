@@ -17,7 +17,7 @@ pandas ``DataFrame`` method output.
     and execution ater DOCS-#2996 is merged.
 
 Public API
-----------
+''''''''''
 
 .. autoclass:: modin.pandas.dataframe.DataFrame
 
