@@ -71,7 +71,7 @@ def _read(**kwargs):
     return result
 
 
-@_inherit_docstrings(pandas.read_csv)
+@_inherit_docstrings(pandas.read_csv, apilink="pandas.read_csv")
 def read_csv(
     filepath_or_buffer: "FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str]",
     sep=lib.no_default,
@@ -125,7 +125,10 @@ def read_csv(
     memory_map=False,
     float_precision=None,
     storage_options: "StorageOptions" = None,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Read a comma-separated values (csv) file into DataFrame.
+    """
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_csv_signature = {
         val.name for val in inspect.signature(pandas.read_csv).parameters.values()
@@ -135,7 +138,7 @@ def read_csv(
     return _read(**kwargs)
 
 
-@_inherit_docstrings(pandas.read_table)
+@_inherit_docstrings(pandas.read_table, apilink="pandas.read_table")
 def read_table(
     filepath_or_buffer: "FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str]",
     sep=lib.no_default,
@@ -189,7 +192,10 @@ def read_table(
     memory_map=False,
     float_precision=None,
     storage_options: "StorageOptions" = None,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Read general delimited file into DataFrame.
+    """
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_csv_signature = {
         val.name for val in inspect.signature(pandas.read_csv).parameters.values()
@@ -201,7 +207,7 @@ def read_table(
     return _read(**kwargs)
 
 
-@_inherit_docstrings(pandas.read_parquet)
+@_inherit_docstrings(pandas.read_parquet, apilink="pandas.read_parquet")
 def read_parquet(
     path,
     engine: str = "auto",
@@ -209,7 +215,10 @@ def read_parquet(
     storage_options: StorageOptions = None,
     use_nullable_dtypes: bool = False,
     **kwargs,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Load a parquet object from the file path, returning a DataFrame.
+    """
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
@@ -225,7 +234,7 @@ def read_parquet(
     )
 
 
-@_inherit_docstrings(pandas.read_json)
+@_inherit_docstrings(pandas.read_json, apilink="pandas.read_json")
 def read_json(
     path_or_buf=None,
     orient=None,
@@ -244,7 +253,10 @@ def read_json(
     compression="infer",
     nrows: Optional[int] = None,
     storage_options: StorageOptions = None,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Load a parquet object from the file path, returning a DataFrame.
+    """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     Engine.subscribe(_update_engine)
@@ -253,7 +265,7 @@ def read_json(
     return DataFrame(query_compiler=FactoryDispatcher.read_json(**kwargs))
 
 
-@_inherit_docstrings(pandas.read_gbq)
+@_inherit_docstrings(pandas.read_gbq, apilink="pandas.read_gbq")
 def read_gbq(
     query: str,
     project_id: Optional[str] = None,
@@ -268,7 +280,10 @@ def read_gbq(
     use_bqstorage_api: Optional[bool] = None,
     progress_bar_type: Optional[str] = None,
     max_results: Optional[int] = None,
-) -> DataFrame:
+) -> DataFrame:  # noqa: PR01, RT01, D200
+    """
+    Load data from Google BigQuery.
+    """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
@@ -278,7 +293,7 @@ def read_gbq(
     return DataFrame(query_compiler=FactoryDispatcher.read_gbq(**kwargs))
 
 
-@_inherit_docstrings(pandas.read_html)
+@_inherit_docstrings(pandas.read_html, apilink="pandas.read_html")
 def read_html(
     io,
     match=".+",
@@ -295,7 +310,10 @@ def read_html(
     na_values=None,
     keep_default_na=True,
     displayed_only=True,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Read HTML tables into a ``DataFrame`` object.
+    """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     Engine.subscribe(_update_engine)
@@ -304,8 +322,11 @@ def read_html(
     return DataFrame(query_compiler=FactoryDispatcher.read_html(**kwargs))
 
 
-@_inherit_docstrings(pandas.read_clipboard)
-def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover
+@_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")
+def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover  # noqa: PR01, RT01, D200
+    """
+    Read text from clipboard and pass to read_csv.
+    """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
@@ -315,7 +336,7 @@ def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover
     return DataFrame(query_compiler=FactoryDispatcher.read_clipboard(**kwargs))
 
 
-@_inherit_docstrings(pandas.read_excel)
+@_inherit_docstrings(pandas.read_excel, apilink="pandas.read_excel")
 def read_excel(
     io,
     sheet_name: "str | int | list[IntStrT] | None" = 0,
@@ -344,7 +365,10 @@ def read_excel(
     convert_float: "bool | None" = None,
     mangle_dupe_cols: "bool" = True,
     storage_options: "StorageOptions" = None,
-) -> "DataFrame | dict[IntStrT, DataFrame]":
+) -> "DataFrame | dict[IntStrT, DataFrame]":  # noqa: PR01, RT01, D200
+    """
+    Read an Excel file into a DataFrame.
+    """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     Engine.subscribe(_update_engine)
@@ -360,7 +384,7 @@ def read_excel(
         return DataFrame(query_compiler=intermediate)
 
 
-@_inherit_docstrings(pandas.read_hdf)
+@_inherit_docstrings(pandas.read_hdf, apilink="pandas.read_hdf")
 def read_hdf(
     path_or_buf,
     key=None,
@@ -373,7 +397,10 @@ def read_hdf(
     iterator=False,
     chunksize: Optional[int] = None,
     **kwargs,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Read data from the store into DataFrame.
+    """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
@@ -383,13 +410,16 @@ def read_hdf(
     return DataFrame(query_compiler=FactoryDispatcher.read_hdf(**kwargs))
 
 
-@_inherit_docstrings(pandas.read_feather)
+@_inherit_docstrings(pandas.read_feather, apilink="pandas.read_feather")
 def read_feather(
     path,
     columns=None,
     use_threads: bool = True,
     storage_options: StorageOptions = None,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Load a feather-format object from the file path.
+    """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     Engine.subscribe(_update_engine)
@@ -398,7 +428,7 @@ def read_feather(
     return DataFrame(query_compiler=FactoryDispatcher.read_feather(**kwargs))
 
 
-@_inherit_docstrings(pandas.read_stata)
+@_inherit_docstrings(pandas.read_stata, apilink="pandas.read_stata")
 def read_stata(
     filepath_or_buffer,
     convert_dates=True,
@@ -412,7 +442,10 @@ def read_stata(
     iterator=False,
     compression="infer",
     storage_options: StorageOptions = None,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Read Stata file into a DataFrame.
+    """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     Engine.subscribe(_update_engine)
@@ -421,7 +454,7 @@ def read_stata(
     return DataFrame(query_compiler=FactoryDispatcher.read_stata(**kwargs))
 
 
-@_inherit_docstrings(pandas.read_sas)
+@_inherit_docstrings(pandas.read_sas, apilink="pandas.read_sas")
 def read_sas(
     filepath_or_buffer,
     format=None,
@@ -429,7 +462,10 @@ def read_sas(
     encoding=None,
     chunksize=None,
     iterator=False,
-):  # pragma: no cover
+):  # pragma: no cover  # noqa: PR01, RT01, D200
+    """
+    Read SAS files stored as either XPORT or SAS7BDAT format files.
+    """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     Engine.subscribe(_update_engine)
@@ -438,12 +474,15 @@ def read_sas(
     return DataFrame(query_compiler=FactoryDispatcher.read_sas(**kwargs))
 
 
-@_inherit_docstrings(pandas.read_pickle)
+@_inherit_docstrings(pandas.read_pickle, apilink="pandas.read_pickle")
 def read_pickle(
     filepath_or_buffer,
     compression: Optional[str] = "infer",
     storage_options: StorageOptions = None,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Load pickled Modin object (or any object) from file.
+    """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     Engine.subscribe(_update_engine)
@@ -452,7 +491,7 @@ def read_pickle(
     return DataFrame(query_compiler=FactoryDispatcher.read_pickle(**kwargs))
 
 
-@_inherit_docstrings(pandas.read_sql)
+@_inherit_docstrings(pandas.read_sql, apilink="pandas.read_sql")
 def read_sql(
     sql,
     con,
@@ -462,7 +501,10 @@ def read_sql(
     parse_dates=None,
     columns=None,
     chunksize=None,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Read SQL query or database table into a DataFrame.
+    """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     Engine.subscribe(_update_engine)
@@ -477,14 +519,17 @@ def read_sql(
     return DataFrame(query_compiler=FactoryDispatcher.read_sql(**kwargs))
 
 
-@_inherit_docstrings(pandas.read_fwf)
+@_inherit_docstrings(pandas.read_fwf, apilink="pandas.read_fwf")
 def read_fwf(
     filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
     colspecs="infer",
     widths=None,
     infer_nrows=100,
     **kwds,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Read a table of fixed-width formatted lines into DataFrame.
+    """
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
     from pandas.io.parsers.base_parser import parser_defaults
@@ -504,7 +549,7 @@ def read_fwf(
     return DataFrame(query_compiler=pd_obj)
 
 
-@_inherit_docstrings(pandas.read_sql_table)
+@_inherit_docstrings(pandas.read_sql_table, apilink="pandas.read_sql_table")
 def read_sql_table(
     table_name,
     con,
@@ -514,7 +559,10 @@ def read_sql_table(
     parse_dates=None,
     columns=None,
     chunksize=None,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Read SQL database table into a DataFrame.
+    """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     Engine.subscribe(_update_engine)
@@ -523,7 +571,7 @@ def read_sql_table(
     return DataFrame(query_compiler=FactoryDispatcher.read_sql_table(**kwargs))
 
 
-@_inherit_docstrings(pandas.read_sql_query)
+@_inherit_docstrings(pandas.read_sql_query, apilink="pandas.read_sql_query")
 def read_sql_query(
     sql,
     con,
@@ -533,7 +581,10 @@ def read_sql_query(
     parse_dates=None,
     chunksize=None,
     dtype=None,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Read SQL query into a DataFrame.
+    """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     Engine.subscribe(_update_engine)
@@ -542,12 +593,15 @@ def read_sql_query(
     return DataFrame(query_compiler=FactoryDispatcher.read_sql_query(**kwargs))
 
 
-@_inherit_docstrings(pandas.read_spss)
+@_inherit_docstrings(pandas.read_spss, apilink="pandas.read_spss")
 def read_spss(
     path: Union[str, pathlib.Path],
     usecols: Union[Sequence[str], type(None)] = None,
     convert_categoricals: bool = True,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Load an SPSS file from the file path, returning a DataFrame.
+    """
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
@@ -556,14 +610,17 @@ def read_spss(
     )
 
 
-@_inherit_docstrings(pandas.to_pickle)
+@_inherit_docstrings(pandas.to_pickle, apilink="pandas.to_pickle")
 def to_pickle(
     obj: Any,
     filepath_or_buffer,
     compression: CompressionOptions = "infer",
     protocol: int = pickle.HIGHEST_PROTOCOL,
     storage_options: StorageOptions = None,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Pickle (serialize) object to file.
+    """
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
@@ -578,7 +635,7 @@ def to_pickle(
     )
 
 
-@_inherit_docstrings(pandas.json_normalize)
+@_inherit_docstrings(pandas.json_normalize, apilink="pandas.json_normalize")
 def json_normalize(
     data: Union[Dict, List[Dict]],
     record_path: Optional[Union[str, List]] = None,
@@ -588,7 +645,10 @@ def json_normalize(
     errors: Optional[str] = "raise",
     sep: str = ".",
     max_level: Optional[int] = None,
-) -> DataFrame:
+) -> DataFrame:  # noqa: PR01, RT01, D200
+    """
+    Normalize semi-structured JSON data into a flat table.
+    """
     ErrorMessage.default_to_pandas("json_normalize")
     Engine.subscribe(_update_engine)
     return DataFrame(
@@ -598,14 +658,19 @@ def json_normalize(
     )
 
 
-@_inherit_docstrings(pandas.read_orc)
-def read_orc(path, columns: Optional[List[str]] = None, **kwargs) -> DataFrame:
+@_inherit_docstrings(pandas.read_orc, apilink="pandas.read_orc")
+def read_orc(
+    path, columns: Optional[List[str]] = None, **kwargs
+) -> DataFrame:  # noqa: PR01, RT01, D200
+    """
+    Load an ORC object from the file path, returning a DataFrame.
+    """
     ErrorMessage.default_to_pandas("read_orc")
     Engine.subscribe(_update_engine)
     return DataFrame(pandas.read_orc(path, columns, **kwargs))
 
 
-@_inherit_docstrings(pandas.read_xml)
+@_inherit_docstrings(pandas.read_xml, apilink="pandas.read_xml")
 def read_xml(
     path_or_buffer,
     xpath="./*",
@@ -618,7 +683,10 @@ def read_xml(
     stylesheet=None,
     compression="infer",
     storage_options=None,
-) -> DataFrame:
+) -> DataFrame:  # noqa: PR01, RT01, D200
+    """
+    Read XML document into a ``DataFrame`` object.
+    """
     ErrorMessage.default_to_pandas("read_xml")
     Engine.subscribe(_update_engine)
     return DataFrame(
@@ -638,8 +706,12 @@ def read_xml(
     )
 
 
-@_inherit_docstrings(pandas.HDFStore)
-class HDFStore(pandas.HDFStore):
+@_inherit_docstrings(pandas.HDFStore, apilink="pandas.HDFStore")
+class HDFStore(pandas.HDFStore):  # noqa: PR01, D200
+    """
+    Dict-like IO interface for storing pandas objects in PyTables.
+    """
+
     _return_modin_dataframe = True
 
     def __getattribute__(self, item):
@@ -691,8 +763,12 @@ class HDFStore(pandas.HDFStore):
         return method
 
 
-@_inherit_docstrings(pandas.ExcelFile)
-class ExcelFile(pandas.ExcelFile):
+@_inherit_docstrings(pandas.ExcelFile, apilink="pandas.ExcelFile")
+class ExcelFile(pandas.ExcelFile):  # noqa: PR01, D200
+    """
+    Class for parsing tabular excel sheets into DataFrame objects.
+    """
+
     def __getattribute__(self, item):
         default_behaviors = ["__init__", "__class__"]
         method = super(ExcelFile, self).__getattribute__(item)
