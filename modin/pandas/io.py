@@ -255,7 +255,7 @@ def read_json(
     storage_options: StorageOptions = None,
 ):  # noqa: PR01, RT01, D200
     """
-    Load a parquet object from the file path, returning a DataFrame.
+    Convert a JSON string to Modin object.
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
