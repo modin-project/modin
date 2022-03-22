@@ -268,14 +268,14 @@ def _replace_doc(
         and "pandas API documentation for " not in target_doc
         and (not (attr_name or "").startswith("_"))
     ):
-        links = []
-        for link in apilink:
+        links = [None] * len(apilink)
+        for i, link in enumerate(apilink):
             if attr_name:
                 token = f"{link}.{attr_name}"
             else:
                 token = link
             url = _make_api_url(token)
-            links.append(f"`{token} <{url}>`_")
+            links[i] = f"`{token} <{url}>`_"
 
         indent_line = " " * _get_indent(doc)
         notes_section = f"\n{indent_line}Notes\n{indent_line}-----\n"
