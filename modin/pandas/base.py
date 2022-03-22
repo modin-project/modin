@@ -95,7 +95,7 @@ _DEFAULT_BEHAVIOUR = {
     "__reduce_ex__",
 } | _ATTRS_NO_LOOKUP
 
-_doc_binary_op_kwargs = {"returns": "DataFrame", "primary_object": "BasePandasDataset"}
+_doc_binary_op_kwargs = {"returns": "BasePandasDataset", "left": "BasePandasDataset"}
 
 
 @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
@@ -3457,13 +3457,13 @@ class BasePandasDataset(object):
         return self.abs()
 
     @_doc_binary_op(
-        operation="union", bin_op="and", other="other", **_doc_binary_op_kwargs
+        operation="union", bin_op="and", right="other", **_doc_binary_op_kwargs
     )
     def __and__(self, other):
         return self._binary_op("__and__", other, axis=0)
 
     @_doc_binary_op(
-        operation="union", bin_op="rand", other="other", **_doc_binary_op_kwargs
+        operation="union", bin_op="rand", right="other", **_doc_binary_op_kwargs
     )
     def __rand__(self, other):
         return self._binary_op("__rand__", other, axis=0)
@@ -3542,7 +3542,7 @@ class BasePandasDataset(object):
     @_doc_binary_op(
         operation="equality comparison",
         bin_op="eq",
-        other="other",
+        right="other",
         **_doc_binary_op_kwargs,
     )
     def __eq__(self, other):
@@ -3572,7 +3572,7 @@ class BasePandasDataset(object):
     @_doc_binary_op(
         operation="greater than or equal comparison",
         bin_op="ge",
-        other="right",
+        right="right",
         **_doc_binary_op_kwargs,
     )
     def __ge__(self, right):
@@ -3650,7 +3650,7 @@ class BasePandasDataset(object):
     @_doc_binary_op(
         operation="greater than comparison",
         bin_op="gt",
-        other="right",
+        right="right",
         **_doc_binary_op_kwargs,
     )
     def __gt__(self, right):
@@ -3676,7 +3676,7 @@ class BasePandasDataset(object):
     @_doc_binary_op(
         operation="less than or equal comparison",
         bin_op="le",
-        other="right",
+        right="right",
         **_doc_binary_op_kwargs,
     )
     def __le__(self, right):
@@ -3695,7 +3695,7 @@ class BasePandasDataset(object):
     @_doc_binary_op(
         operation="less than comparison",
         bin_op="lt",
-        other="right",
+        right="right",
         **_doc_binary_op_kwargs,
     )
     def __lt__(self, right):
@@ -3719,7 +3719,7 @@ class BasePandasDataset(object):
     @_doc_binary_op(
         operation="not equal comparison",
         bin_op="ne",
-        other="other",
+        right="other",
         **_doc_binary_op_kwargs,
     )
     def __ne__(self, other):
@@ -3755,7 +3755,7 @@ class BasePandasDataset(object):
     @_doc_binary_op(
         operation="disjunction",
         bin_op="or",
-        other="other",
+        right="other",
         **_doc_binary_op_kwargs,
     )
     def __or__(self, other):
@@ -3764,7 +3764,7 @@ class BasePandasDataset(object):
     @_doc_binary_op(
         operation="disjunction",
         bin_op="ror",
-        other="other",
+        right="other",
         **_doc_binary_op_kwargs,
     )
     def __ror__(self, other):
@@ -3793,7 +3793,7 @@ class BasePandasDataset(object):
     @_doc_binary_op(
         operation="exclusive disjunction",
         bin_op="xor",
-        other="other",
+        right="other",
         **_doc_binary_op_kwargs,
     )
     def __xor__(self, other):
@@ -3802,7 +3802,7 @@ class BasePandasDataset(object):
     @_doc_binary_op(
         operation="exclusive disjunction",
         bin_op="rxor",
-        other="other",
+        right="other",
         **_doc_binary_op_kwargs,
     )
     def __rxor__(self, other):

@@ -1,10 +1,7 @@
 :orphan:
 
-======================
 Series Module Overview
-======================
-
-.. currentmodule:: modin.pandas
+""""""""""""""""""""""
 
 Modin's ``pandas.Series`` API
 '''''''''''''''''''''''''''''
@@ -20,12 +17,9 @@ pandas ``Series`` method output.
     and execution ater DOCS-#2996 is merged.
 
 Public API
-''''''''''
+----------
 
-.. autosummary::
-    :toctree: api/
-    
-    Series
+.. autoclass:: modin.pandas.series.Series
 
 Usage Guide
 '''''''''''

@@ -1,10 +1,7 @@
 :orphan:
 
-=========================
 DataFrame Module Overview
-=========================
-
-.. currentmodule:: modin.pandas
+"""""""""""""""""""""""""
 
 Modin's ``pandas.DataFrame`` API
 ''''''''''''''''''''''''''''''''
@@ -20,12 +17,9 @@ pandas ``DataFrame`` method output.
     and execution ater DOCS-#2996 is merged.
 
 Public API
-''''''''''
+----------
 
-.. autosummary::
-    :toctree: api/
-    
-    DataFrame
+.. autoclass:: modin.pandas.dataframe.DataFrame
 
 Usage Guide
 '''''''''''

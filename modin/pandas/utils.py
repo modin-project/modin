@@ -18,11 +18,11 @@ from pandas.util._decorators import doc
 from modin.utils import hashable
 
 _doc_binary_operation = """
-Return {operation} of {primary_object} and `{other}` (binary operator `{bin_op}`).
+Return {operation} of {left} and `{right}` (binary operator `{bin_op}`).
 
 Parameters
 ----------
-{other} : {other_type}
+{right} : {right_type}
     The second operand to perform computation.
 
 Returns
@@ -253,7 +253,7 @@ def check_both_not_none(option1, option2):
 
 
 def _doc_binary_op(
-    operation, bin_op, other="right", returns="Series", primary_object="Series"
+    operation, bin_op, right="right", returns="Series", left="Series"
 ):
     """
     Return callable documenting `Series` or `DataFrame` binary operator.
@@ -275,10 +275,10 @@ def _doc_binary_op(
     -------
     callable
     """
-    if primary_object == "Series":
-        other_type = "Series or scalar value"
-    elif primary_object == "BasePandasDataset":
-        other_type = "BasePandasDataset or scalar value"
+    if left == "Series":
+        right_type = "Series or scalar value"
+    elif left == "BasePandasDataset":
+        right_type = "BasePandasDataset or scalar value"
     else:
         raise NotImplementedError(
             f"Only 'BasePandasDataset' and 'Series' `primary_object` are allowed, actually passed: {primary_object}"
@@ -286,11 +286,11 @@ def _doc_binary_op(
     doc_op = doc(
         _doc_binary_operation,
         operation=operation,
-        other=other,
-        other_type=other_type,
+        right=right,
+        right_type=right_type,
         bin_op=bin_op,
         returns=returns,
-        primary_object=primary_object,
+        left=left,
     )
 
     return doc_op
