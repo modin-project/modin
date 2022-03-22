@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import numpy as np
+import pandas
 import pytest
 
 import modin.pandas as pd
@@ -20,23 +21,21 @@ from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
     DTypeKind,
     ColumnNullType,
 )
-from modin.pandas.test.utils import (
-    df_equals,
-    NCOLS,
-    NROWS,
-    test_bool_data,
-    test_data,
-    test_data_categorical,
-    test_string_data,
-)
+from modin.pandas.test.utils import df_equals, NCOLS, NROWS, test_bool_data, test_data, test_string_data
 from modin.pandas.utils import from_dataframe
 
 
+test_data_categorical = {
+    "ordered": pandas.Categorical(list("testdata")*30, ordered=True),
+    "unordered": pandas.Categorical(list("testdata")*30, ordered=False),
+}
+
+
 @pytest.mark.parametrize("num_partitions", [2, 4, 6])
-@pytest.mark.parametrize("data", test_data_categorical)
+@pytest.mark.parametrize("data", [("ordered", True), ("unordered", False)])
 def test_categorical_dtype_two_columns(data, num_partitions):
     NPartitions.put(num_partitions)
-    pd_df = pd.DataFrame({"A": test_data_categorical[data]})
+    pd_df = pd.DataFrame({"A": (test_data_categorical[data[0]])})
     df = pd.DataFrame(pd_df)
 
     col = df.__dataframe__().get_column_by_name("A")
@@ -48,7 +47,7 @@ def test_categorical_dtype_two_columns(data, num_partitions):
         assert col.describe_null == (ColumnNullType.USE_BYTEMASK, -1)
     if StorageFormat.get() == "Pandas":
         assert col.num_chunks() == num_partitions
-    assert col.describe_categorical == (False, True, {4: "s", 2: "d", 3: "e", 1: "t"})
+    assert tuple(col.describe_categorical.values()) == (data[1], True, {4: 's', 2: 'd', 3: 'e', 1: 't'})
 
     df_equals(df, from_dataframe(df.__dataframe__()))
 
@@ -68,9 +67,7 @@ def test_chunks():
 
 
 @pytest.mark.parametrize("num_partitions", [2, 4, 6])
-@pytest.mark.parametrize(
-    "data", [test_data["int_data"], test_data["float_data"], test_bool_data]
-)
+@pytest.mark.parametrize("data", [test_data["int_data"], test_data["float_data"], test_bool_data])
 def test_dataframe(data, num_partitions):
     NPartitions.put(num_partitions)
     df = pd.DataFrame(data)
@@ -98,6 +95,12 @@ def test_float_only():
     df_equals(df, from_dataframe(df.__dataframe__()))
 
 
+def test_get_chunks():
+    df = pd.DataFrame({"x": np.arange(10)})
+    df2 = df.__dataframe__()
+    chunk_iter = iter(df2.get_chunks())
+
+
 def test_metadata():
     df = pd.DataFrame(test_data["int_data"])
 
@@ -123,8 +126,8 @@ def test_missing_from_masked():
     df2 = df.__dataframe__()
 
     # for col_name in df.columns:
-    # assert convert_column_to_array(df2.get_column_by_name(col_name) == df[col_name].tolist()
-    # assert df[col_name].dtype == convert_column_to_array(df2.get_column_by_name(col_name)).dtype
+        # assert convert_column_to_array(df2.get_column_by_name(col_name) == df[col_name].tolist()
+        # assert df[col_name].dtype == convert_column_to_array(df2.get_column_by_name(col_name)).dtype
 
     rng = np.random.RandomState(42)
     dict_null = {col: rng.randint(low=0, high=len(df)) for col in df.columns}
@@ -191,6 +194,24 @@ def test_object():
         assert col.describe_null
 
 
+def test_select_columns_error():
+    df = pd.DataFrame(test_data["int_data"])
+
+    df2 = df.__dataframe__()
+    
+    with pytest.raises(ValueError):
+        assert from_dataframe(df2.select_columns(np.array([0, 2]))) == from_dataframe(df2.select_columns_by_name(("col33", "col35")))
+
+
+def test_select_columns_by_name_error():
+    df = pd.DataFrame(test_data["int_data"])
+
+    df2 = df.__dataframe__()
+    
+    with pytest.raises(ValueError):
+        assert from_dataframe(df2.select_columns_by_name(np.array(["col33", "col35"]))) == from_dataframe(df2.select_columns((0, 2)))
+    
+
 def test_string():
     test_str_data = test_string_data["separator data"]
     test_str_data.append("")
@@ -206,7 +227,7 @@ def test_string():
         assert col.describe_null == (ColumnNullType.USE_BYTEMASK, 0)
 
     df2 = df.__dataframe__()
-    # assert convert_column_to_array(df2.get_column_by_name("A") == df["A"].tolist()
+    #assert convert_column_to_array(df2.get_column_by_name("A") == df["A"].tolist()
     assert df2.get_column_by_name("A").null_count == 1
     if StorageFormat.get() == "Pandas" or StorageFormat.get() == "Omnisci":
         assert df2.get_column_by_name("A").describe_null == (
@@ -224,7 +245,7 @@ def test_string():
         assert col.describe_null == (ColumnNullType.USE_BYTEMASK, 0)
 
     df2 = df_sliced.__dataframe__()
-    # assert convert_column_to_array(df2.get_column_by_name("A") == df_sliced["A"].tolist()
+    #assert convert_column_to_array(df2.get_column_by_name("A") == df_sliced["A"].tolist()
     assert df2.get_column_by_name("A").null_count == 1
     if StorageFormat.get() == "Pandas" or StorageFormat.get() == "Omnisci":
         assert df2.get_column_by_name("A").describe_null == (
@@ -237,7 +258,7 @@ def test_string():
 @pytest.mark.parametrize("num_partitions", [2, 4, 6])
 def test_string_dtype(num_partitions):
     NPartitions.put(num_partitions)
-    df = pd.DataFrame({"A": ["a", "b", "cdef", "", "g"]})
+    df = pd.DataFrame({"A": (test_string_data["separator data"])*30})
 
     col = df.__dataframe__().get_column_by_name("A")
     assert col.dtype[0] == DTypeKind.STRING

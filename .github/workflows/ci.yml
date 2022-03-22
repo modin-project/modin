@@ -483,6 +483,7 @@ jobs:
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && pytest modin/experimental/sql/test/test_sql.py
       - run: pytest modin/test/exchange/dataframe_protocol/test_general.py
+      - run: pytest modin/test/exchange/dataframe_protocol/test_protocol.py
       - run: pytest modin/test/exchange/dataframe_protocol/pandas/test_protocol.py
       - uses: codecov/codecov-action@v2
 
