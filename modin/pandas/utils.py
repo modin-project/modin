@@ -264,12 +264,12 @@ def _doc_binary_op(
         Operation name.
     bin_op : str
         Binary operation name.
-    other : str, default: 'right'
-        The second operand name.
+    left : str, default: 'Series'
+        The left object to document.
+    right : str, default: 'right'
+        The right operand name.
     returns : str, default: 'Series'
         Type of returns.
-    primary_object : str, default: 'Series'
-        The primary object to document.
 
     Returns
     -------
