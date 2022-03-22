@@ -127,6 +127,15 @@ class ArrowCTypes:
     TIME = "tt{resolution}"
 
 
+class Edianness:
+    """Enum indicating the byte-order of a data-type."""
+
+    LITTLE = "<"
+    BIG = ">"
+    NATIVE = "="
+    NA = "|"
+
+
 def pandas_dtype_to_arrow_c(dtype) -> str:
     """
     Represent pandas `dtype` as a format string in Apache Arrow C notation.
@@ -159,3 +168,19 @@ def pandas_dtype_to_arrow_c(dtype) -> str:
     raise NotImplementedError(
         f"Convertion of {dtype} to Arrow C format string is not implemented."
     )
+
+
+def raise_copy_alert(copy_reason=None):
+    """
+    Raise a ``RuntimeError`` mentioning that there's a copy required.
+
+    Parameters
+    ----------
+    copy_reason : str, optional
+        The reason of making a copy. Should fit to the following format:
+        'The copy occured due to {copy_reason}.'.
+    """
+    msg = "Copy required but 'allow_copy=False' is set."
+    if copy_reason:
+        msg += f" The copy occured due to {copy_reason}."
+    raise RuntimeError(msg)

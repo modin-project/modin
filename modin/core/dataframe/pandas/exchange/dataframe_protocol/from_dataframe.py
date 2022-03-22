@@ -16,17 +16,29 @@
 import pandas
 import numpy as np
 import ctypes
+import re
 from typing import Optional, Tuple, Any, Union
 
 from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
     DTypeKind,
     ColumnNullType,
+    ArrowCTypes,
+    Edianness,
 )
 from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
     ProtocolColumn,
     ProtocolBuffer,
 )
+
+
+np_types_map = {
+    DTypeKind.INT: {8: np.int8, 16: np.int16, 32: np.int32, 64: np.int64},
+    DTypeKind.UINT: {8: np.uint8, 16: np.uint16, 32: np.uint32, 64: np.uint64},
+    DTypeKind.FLOAT: {32: np.float32, 64: np.float64},
+    # Consider bitmask to be a uint8 dtype to parse the bits later
+    DTypeKind.BOOL: {1: np.uint8, 8: bool},
+}
 
 
 def from_dataframe_to_pandas(df: ProtocolDataframe, n_chunks: Optional[int] = None):
@@ -51,43 +63,9 @@ def from_dataframe_to_pandas(df: ProtocolDataframe, n_chunks: Optional[int] = No
     if isinstance(df, dict):
         df = df["dataframe"]
 
-    def get_pandas_df(df):
-        # We need a dict of columns here, with each column being a NumPy array (at
-        # least for now, deal with non-NumPy dtypes later).
-        columns = dict()
-        buffers = []  # hold on to buffers, keeps memory alive
-        for name in df.column_names():
-            if not isinstance(name, str):
-                raise ValueError(f"Column {name} is not a string")
-            if name in columns:
-                raise ValueError(f"Column {name} is not unique")
-            col = df.get_column_by_name(name)
-            dtype = col.dtype[0]
-            if dtype in (
-                DTypeKind.INT,
-                DTypeKind.UINT,
-                DTypeKind.FLOAT,
-                DTypeKind.BOOL,
-            ):
-                columns[name], buf = primitive_column_to_ndarray(col)
-            elif dtype == DTypeKind.CATEGORICAL:
-                columns[name], buf = categorical_column_to_series(col)
-            elif dtype == DTypeKind.STRING:
-                columns[name], buf = string_column_to_ndarray(col)
-            elif dtype == DTypeKind.DATETIME:
-                columns[name], buf = datetime_column_to_ndarray(col)
-            else:
-                raise NotImplementedError(f"Data type {dtype} not handled yet")
-
-            buffers.append(buf)
-
-        pandas_df = pandas.DataFrame(columns)
-        pandas_df._buffers = buffers
-        return pandas_df
-
     pandas_dfs = []
     for chunk in df.get_chunks(n_chunks):
-        pandas_df = get_pandas_df(chunk)
+        pandas_df = protocol_df_chunk_to_pandas(chunk)
         pandas_dfs.append(pandas_df)
 
     pandas_df = pandas.concat(pandas_dfs, axis=0, ignore_index=True)
@@ -96,6 +74,52 @@ def from_dataframe_to_pandas(df: ProtocolDataframe, n_chunks: Optional[int] = No
     if index_obj is not None:
         pandas_df.index = index_obj
 
+    return pandas_df
+
+
+def protocol_df_chunk_to_pandas(df):
+    """
+    Convert exchange protocol chunk to ``pandas.DataFrame``.
+
+    Parameters
+    ----------
+    df : ProtocolDataframe
+
+    Returns
+    -------
+    pandas.DataFrame
+    """
+    # We need a dict of columns here, with each column being a NumPy array (at
+    # least for now, deal with non-NumPy dtypes later).
+    columns = dict()
+    buffers = []  # hold on to buffers, keeps memory alive
+    for name in df.column_names():
+        if not isinstance(name, str):
+            raise ValueError(f"Column {name} is not a string")
+        if name in columns:
+            raise ValueError(f"Column {name} is not unique")
+        col = df.get_column_by_name(name)
+        dtype = col.dtype[0]
+        if dtype in (
+            DTypeKind.INT,
+            DTypeKind.UINT,
+            DTypeKind.FLOAT,
+            DTypeKind.BOOL,
+        ):
+            columns[name], buf = primitive_column_to_ndarray(col)
+        elif dtype == DTypeKind.CATEGORICAL:
+            columns[name], buf = categorical_column_to_series(col)
+        elif dtype == DTypeKind.STRING:
+            columns[name], buf = string_column_to_ndarray(col)
+        elif dtype == DTypeKind.DATETIME:
+            columns[name], buf = datetime_column_to_ndarray(col)
+        else:
+            raise NotImplementedError(f"Data type {dtype} not handled yet")
+
+        buffers.append(buf)
+
+    pandas_df = pandas.DataFrame(columns)
+    pandas_df._buffers = buffers
     return pandas_df
 
 
@@ -182,21 +206,27 @@ def string_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     buffers = col.get_buffers()
 
     # Retrieve the data buffer containing the UTF-8 code units
-    data_buff, _ = buffers["data"]
+    data_buff, protocol_data_dtype = buffers["data"]
+    # We're going to reinterpret the buffer as uint8, so making sure we can do it safely
+    assert protocol_data_dtype[1] == 8  # bitwidth == 8
+    assert protocol_data_dtype[2] == ArrowCTypes.STRING  # format_str == utf-8
     # Convert the buffers to NumPy arrays, in order to go from STRING to an equivalent ndarray,
     # we claim that the buffer is uint8 (i.e., a byte array)
     data_dtype = (
         DTypeKind.UINT,
         8,
-        None,
-        None,
+        ArrowCTypes.UINT8,
+        Edianness.NATIVE,
     )
     # Specify zero offset as we don't want to chunk the string data
     data = buffer_to_ndarray(data_buff, data_dtype, offset=0, length=col.size)
 
     # Retrieve the offsets buffer containing the index offsets demarcating the beginning and end of each string
     offset_buff, offset_dtype = buffers["offsets"]
-    offsets = buffer_to_ndarray(offset_buff, offset_dtype, col.offset, col.size + 1)
+    # As the offsets buffer size is greater than the data size do `col.size + 1` here
+    offsets = buffer_to_ndarray(
+        offset_buff, offset_dtype, col.offset, length=col.size + 1
+    )
 
     null_pos = None
     if null_kind in (ColumnNullType.USE_BITMASK, ColumnNullType.USE_BYTEMASK):
@@ -206,11 +236,11 @@ def string_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
             null_pos = ~null_pos
 
     # Assemble the strings from the code units
-    str_list = []
-    for i in range(offsets.size - 1):
+    str_list = [None] * col.size
+    for i in range(col.size):
         # Check for missing values
         if null_pos is not None and null_pos[i]:
-            str_list.append(np.nan)
+            str_list[i] = np.nan
             continue
 
         # Extract a range of code units
@@ -223,7 +253,7 @@ def string_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
         string = str_bytes.decode(encoding="utf-8")
 
         # Add to our list of strings
-        str_list.append(string)
+        str_list[i] = string
 
     # Convert the string list to a NumPy array
     return np.asarray(str_list, dtype="object"), buffers
@@ -248,38 +278,49 @@ def datetime_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     dbuf, dtype = buffers["data"]
     # Consider dtype being `uint` to get number of units passed since the 01.01.1970
     data = buffer_to_ndarray(
-        dbuf, (DTypeKind.UINT, dtype[1], "u", "="), col.offset, col.size
+        dbuf,
+        (
+            DTypeKind.UINT,
+            dtype[1],
+            getattr(ArrowCTypes, f"UINT{dtype[1]}"),
+            Edianness.NATIVE,
+        ),
+        col.offset,
+        col.size,
     )
 
-    if format_str.startswith("ts"):
+    def parse_format_str(format_str, data):
+        """Parse datetime `format_str` to interpret the `data`."""
         # timestamp 'ts{unit}:tz'
-        meta = format_str[2:].split(":")
-        if len(meta) == 1:
-            unit = meta[0]
-            tz = ""
-        else:
-            unit, tz = meta
-        if tz != "":
-            raise NotImplementedError("Timezones are not supported yet")
-        if unit != "s":
-            # the format string describes only a first letter of the unit, add one extra
-            # letter to make the unit in numpy-style: 'm' -> 'ms', 'u' -> 'us', 'n' -> 'ns'
-            unit += "s"
-        data = data.astype(f"datetime64[{unit}]")
-    elif format_str.startswith("td"):
+        timestamp_meta = re.findall(r"ts([smun]):(.*)", format_str)
+        if timestamp_meta:
+            unit, tz = timestamp_meta[0]
+            if tz != "":
+                raise NotImplementedError("Timezones are not supported yet")
+            if unit != "s":
+                # the format string describes only a first letter of the unit, add one extra
+                # letter to make the unit in numpy-style: 'm' -> 'ms', 'u' -> 'us', 'n' -> 'ns'
+                unit += "s"
+            data = data.astype(f"datetime64[{unit}]")
+            return data
+
         # date 'td{Days/Ms}'
-        unit = format_str[2:]
-        if unit == "D":
-            # NumPy doesn't support DAY unit, so converting days to seconds
-            # (converting to uint64 to avoid overflow)
-            data = (data.astype(np.uint64) * (24 * 60 * 60)).astype("datetime64[s]")
-        elif unit == "m":
-            data = data.astype("datetime64[ms]")
-        else:
-            raise NotImplementedError(f"Date unit is not supported: {unit}")
-    else:
+        date_meta = re.findall(r"td([Dm])")
+        if date_meta:
+            unit = date_meta[0]
+            if unit == "D":
+                # NumPy doesn't support DAY unit, so converting days to seconds
+                # (converting to uint64 to avoid overflow)
+                data = (data.astype(np.uint64) * (24 * 60 * 60)).astype("datetime64[s]")
+            elif unit == "m":
+                data = data.astype("datetime64[ms]")
+            else:
+                raise NotImplementedError(f"Date unit is not supported: {unit}")
+            return data
+
         raise NotImplementedError(f"DateTime kind is not supported: {format_str}")
 
+    data = parse_format_str(format_str, data)
     data = set_nulls(data, col, buffers["validity"])
     return data, buffers
 
@@ -316,23 +357,13 @@ def buffer_to_ndarray(
     """
     kind, bit_width, _, _ = dtype
 
-    if kind not in (DTypeKind.INT, DTypeKind.UINT, DTypeKind.FLOAT, DTypeKind.BOOL):
-        raise RuntimeError("Not a boolean, integer or floating-point dtype")
-
-    np_kinds = {
-        DTypeKind.INT: {8: np.int8, 16: np.int16, 32: np.int32, 64: np.int64},
-        DTypeKind.UINT: {8: np.uint8, 16: np.uint16, 32: np.uint32, 64: np.uint64},
-        DTypeKind.FLOAT: {32: np.float32, 64: np.float64},
-        # Consider bitmask to be a uint8 dtype to parse the bits later
-        DTypeKind.BOOL: {1: np.uint8, 8: bool},
-    }
-
-    column_dtype = np_kinds[kind].get(bit_width, None)
+    column_dtype = np_types_map.get(kind, {}).get(bit_width, None)
     if column_dtype is None:
         raise NotImplementedError(f"Convertion for {dtype} is not yet supported.")
 
-    # No DLPack yet, so need to construct a new ndarray from the data pointer
-    # and size in the buffer plus the dtype on the column
+    # TODO: No DLPack yet, so need to construct a new ndarray from the data pointer
+    # and size in the buffer plus the dtype on the column. Use DLPack as NumPy supports
+    # it since https://github.com/numpy/numpy/pull/19083
     ctypes_type = np.ctypeslib.as_ctypes_type(column_dtype)
     data_pointer = ctypes.cast(
         buffer.ptr + (offset * bit_width // 8), ctypes.POINTER(ctypes_type)
@@ -367,10 +398,9 @@ def bitmask_to_bool_ndarray(
     -------
     np.ndarray[bool]
     """
-    if first_byte_offset > 8:
-        raise ValueError(
-            f"First byte offset can't be more than 8, met: {first_byte_offset}"
-        )
+    bytes_to_skip = first_byte_offset // 8
+    bitmask = bitmask[bytes_to_skip:]
+    first_byte_offset = first_byte_offset % 8
 
     bool_mask = np.zeros(mask_length, dtype=bool)
 

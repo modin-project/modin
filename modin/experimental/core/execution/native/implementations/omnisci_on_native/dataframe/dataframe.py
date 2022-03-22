@@ -2061,6 +2061,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             A dataframe object following the dataframe exchange protocol specification.
         """
         if self._has_unsupported_data:
+            ErrorMessage.default_to_pandas(message="`__dataframe__`")
             pd_df = self.to_pandas()
             if hasattr(pd_df, "__dataframe__"):
                 return pd_df.__dataframe__()
@@ -2106,6 +2107,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
 
         # TODO: build a PyArrow table instead of a pandas DataFrame from the protocol object
         # as it's possible to do zero-copy with `cls.from_arrow`
+        ErrorMessage.default_to_pandas(message="`from_dataframe`")
         pd_df = from_dataframe_to_pandas(df)
         return cls.from_pandas(pd_df)
 

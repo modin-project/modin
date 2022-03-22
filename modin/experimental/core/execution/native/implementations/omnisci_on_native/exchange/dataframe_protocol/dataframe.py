@@ -33,6 +33,7 @@ from modin.experimental.core.execution.native.implementations.omnisci_on_native.
     UnionNode,
 )
 from .column import OmnisciProtocolColumn
+from .utils import raise_copy_alert_if_materialize
 
 
 @_inherit_docstrings(ProtocolDataframe)
@@ -67,22 +68,24 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         self._allow_copy = allow_copy
 
     @property
+    @raise_copy_alert_if_materialize
     def metadata(self) -> Dict[str, Any]:
         # TODO: as the frame's index is stored as a separate column inside PyArrow table
         # we may want to return the column's name here instead of materialized index.
         # This will require the internal index column to be visible in the protocol's column
         # accessor methods.
-        self._maybe_raise_if_materialize()
         return {"modin.index": self._df.index}
 
     def num_columns(self) -> int:
         return len(self._df.columns)
 
+    @raise_copy_alert_if_materialize
     def num_rows(self) -> int:
-        self._maybe_raise_if_materialize()
         return len(self._df.index)
 
     def num_chunks(self) -> int:
+        # `._ chunk_slices` describe chunk offsets (start-stop indices of the chunks)
+        # meaning that there are actually `len(self._chunk_slices) - 1` amount of chunks
         return len(self._chunk_slices) - 1
 
     __chunk_slices = None
@@ -131,11 +134,6 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
             )
 
         return self.__chunk_slices
-
-    def _maybe_raise_if_materialize(self):
-        """Raise a ``RuntimeError`` if the way of retrieving the data violates the ``allow_copy`` flag."""
-        if not self._allow_copy and not self._is_zero_copy_possible:
-            raise RuntimeError("Copy required with 'allow_copy=False'")
 
     __is_zero_copy_possible = None
 
@@ -196,6 +194,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         )
 
     @property
+    @raise_copy_alert_if_materialize
     def _pyarrow_table(self) -> pa.Table:
         """
         Get PyArrow table representing the DataFrame.
@@ -204,8 +203,6 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         -------
         pyarrow.Table
         """
-        self._maybe_raise_if_materialize()
-
         if not self._df._has_arrow_table():
             self._df._execute()
 
@@ -214,8 +211,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         return at
 
     def column_names(self) -> Iterable[str]:
-        for col in self._df.columns:
-            yield col
+        return self._df.columns
 
     def get_column(self, i: int) -> OmnisciProtocolColumn:
         return OmnisciProtocolColumn(
@@ -268,7 +264,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
     def get_chunks(
         self, n_chunks: Optional[int] = None
     ) -> Iterable["OmnisciProtocolDataframe"]:
-        if n_chunks is None:
+        if n_chunks is None or n_chunks == self.num_chunks():
             return self._yield_chunks(self._chunk_slices)
 
         if n_chunks % self.num_chunks() != 0:
@@ -281,31 +277,55 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
                 "The passed `n_chunks` value is bigger than the amout of rows in the frame."
             )
 
-        extra_chunks = n_chunks - self.num_chunks()
-        # `._chunk_slices` is a cached property, we don't want to modify the property's
-        # array inplace, so doing a copy here
-        subdivided_slices = self._chunk_slices.copy()
+        extra_chunks = 0
+        to_subdivide = n_chunks // self.num_chunks()
+        subdivided_slices = []
 
-        # The subdividing behavior is a bit different from "subdividing each chunk",
-        # instead it subdivides the biggest chunks first, so overall chunking be as
-        # equal as possible
-        for _ in range(extra_chunks):
-            # 1. Find the biggest chunk
-            # 2. Split it in the middle
-            biggest_chunk_idx = np.argmax(np.diff(subdivided_slices))
-            new_chunk_offset = (
-                subdivided_slices[biggest_chunk_idx + 1]
-                - subdivided_slices[biggest_chunk_idx]
-            ) // 2
-            ErrorMessage.catch_bugs_and_request_email(
-                failure_condition=new_chunk_offset == 0,
-                extra_log="No more chunks to subdivide",
-            )
-            subdivided_slices = np.insert(
-                subdivided_slices,
-                biggest_chunk_idx + 1,
-                subdivided_slices[biggest_chunk_idx] + new_chunk_offset,
-            )
+        # The loop subdivides each chunk into `to_subdivide` chunks if possible
+        for i in range(len(self._chunk_slices) - 1):
+            chunk_length = self._chunk_slices[i + 1] - self._chunk_slices[i]
+            step = chunk_length // to_subdivide
+            if step == 0:
+                # Bad case: we're requested to subdivide a chunk in more pieces than it has rows in it.
+                # This means that there is a bigger chunk that we can subdivide into more pieces to get
+                # the required amount of chunks. For now, subdividing the current chunk into maximum possible
+                # pieces (TODO: maybe we should subdivide it into `sqrt(chunk_length)` chunks to make
+                # this more oprimal?), writing a number of missing pieces into `extra_chunks` variable
+                # to extract them from bigger chunks later.
+                step = 1
+                extra_chunks += to_subdivide - chunk_length
+                to_subdivide_chunk = chunk_length
+            else:
+                to_subdivide_chunk = to_subdivide
+
+            for j in range(to_subdivide_chunk):
+                subdivided_slices.append(self._chunk_slices[i] + step * j)
+        subdivided_slices.append(self._chunk_slices[-1])
+
+        if extra_chunks != 0:
+            # Making more pieces from big chunks to get the required amount of `n_chunks`
+            for _ in range(extra_chunks):
+                # 1. Find the biggest chunk
+                # 2. Split it in the middle
+                biggest_chunk_idx = np.argmax(np.diff(subdivided_slices))
+                new_chunk_offset = (
+                    subdivided_slices[biggest_chunk_idx + 1]
+                    - subdivided_slices[biggest_chunk_idx]
+                ) // 2
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=new_chunk_offset == 0,
+                    extra_log="No more chunks to subdivide",
+                )
+                subdivided_slices = np.insert(
+                    subdivided_slices,
+                    biggest_chunk_idx + 1,
+                    subdivided_slices[biggest_chunk_idx] + new_chunk_offset,
+                )
+
+        ErrorMessage.catch_bugs_and_request_email(
+            failure_condition=len(subdivided_slices) != n_chunks + 1,
+            extra_log=f"Chunks were incorrectly split: {len(subdivided_slices)} != {n_chunks + 1}",
+        )
 
         return self._yield_chunks(subdivided_slices)
 

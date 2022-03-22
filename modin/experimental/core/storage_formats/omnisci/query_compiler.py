@@ -210,7 +210,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     @classmethod
     def from_dataframe(cls, df, data_cls):
-        return data_cls.from_dataframe(df)
+        return cls(data_cls.from_dataframe(df))
 
     # END Dataframe exchange protocol
 

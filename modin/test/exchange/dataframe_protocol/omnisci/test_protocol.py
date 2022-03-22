@@ -139,6 +139,40 @@ def test_export_unaligned_at_chunks(data_has_nulls):
     df_equals(md_df, exported_df)
 
 
+@pytest.mark.parametrize("data_has_nulls", [True, False])
+def test_export_bad_chunking(data_has_nulls):
+    """
+    Test ``.get_chunks(n_chunks)`` when internal PyArrow table's is 'badly chunked'.
+
+    The setup for the test is a PyArrow table having one of the chunk consisting of a single row,
+    meaning that the chunk can't be subdivide.
+    """
+    data = get_data_of_all_types(has_nulls=data_has_nulls, exclude_dtypes=["category"])
+    pd_df = pandas.DataFrame(data)
+    pd_chunks = (pd_df.iloc[:1], pd_df.iloc[1:])
+
+    chunked_at = pa.concat_tables([pa.Table.from_pandas(pd_df) for pd_df in pd_chunks])
+    md_df = from_arrow(chunked_at)
+    assert (
+        len(md_df._query_compiler._modin_frame._partitions[0][0].get().column(0).chunks)
+        == md_df.__dataframe__().num_chunks()
+        == 2
+    )
+    # Meaning that we can't subdivide first chunk
+    np.testing.assert_array_equal(
+        md_df.__dataframe__()._chunk_slices, [0, 1, len(pd_df)]
+    )
+
+    exported_df = export_frame(md_df, n_chunks=2)
+    df_equals(md_df, exported_df)
+
+    exported_df = export_frame(md_df, n_chunks=4)
+    df_equals(md_df, exported_df)
+
+    exported_df = export_frame(md_df, n_chunks=40)
+    df_equals(md_df, exported_df)
+
+
 def test_export_when_delayed_computations():
     """
     Test that export works properly when OmnisciOnNative has delayed computations.
@@ -169,7 +203,22 @@ def test_simple_import(data_has_nulls):
     data = get_data_of_all_types(data_has_nulls)
 
     md_df_producer = pd.DataFrame(data)
-    md_df_consumer = from_dataframe(md_df_producer)
+    # Our configuration in pytest.ini requires that we explicitly catch all
+    # instances of defaulting to pandas, this one raises a warning on `.from_dataframe`
+    with warns_that_defaulting_to_pandas():
+        md_df_consumer = from_dataframe(md_df_producer)
+
+    # TODO: the following assertions verify that `from_dataframe` doesn't return
+    # the same object untouched due to optimization branching, it actually should
+    # do so but the logic is not implemented yet, so the assertions are passing
+    # for now. It's required to replace the producer's type with a different one
+    # to consumer when we have some other implementation of the protocol as the
+    # assertions may start failing shortly.
+    assert md_df_producer is not md_df_consumer
+    assert (
+        md_df_producer._query_compiler._modin_frame
+        is not md_df_consumer._query_compiler._modin_frame
+    )
 
     df_equals(md_df_producer, md_df_consumer)
 

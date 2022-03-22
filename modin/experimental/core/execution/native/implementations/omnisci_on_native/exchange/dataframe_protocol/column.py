@@ -22,14 +22,17 @@ from math import ceil
 from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
     DTypeKind,
     ColumnNullType,
+    ArrowCTypes,
+    Edianness,
     pandas_dtype_to_arrow_c,
+    raise_copy_alert,
 )
 from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
     ProtocolColumn,
 )
 from modin.utils import _inherit_docstrings
 from .buffer import OmnisciProtocolBuffer
-from .utils import arrow_dtype_to_arrow_c
+from .utils import arrow_dtype_to_arrow_c, arrow_types_map
 
 
 @_inherit_docstrings(ProtocolColumn)
@@ -76,16 +79,21 @@ class OmnisciProtocolColumn(ProtocolColumn):
         dtype = self._pandas_dtype
 
         if pandas.api.types.is_bool_dtype(dtype):
-            return (DTypeKind.BOOL, 1, pandas_dtype_to_arrow_c(np.dtype("bool")), "=")
+            return (DTypeKind.BOOL, 1, ArrowCTypes.BOOL, Edianness.NATIVE)
         elif pandas.api.types.is_datetime64_dtype(
             dtype
         ) or pandas.api.types.is_categorical_dtype(dtype):
             # For these types we have to use internal arrow dtype to get proper metadata
             return self._dtype_from_pyarrow(self._arrow_dtype)
         elif pandas.api.types.is_string_dtype(dtype):
-            return (DTypeKind.STRING, 8, pandas_dtype_to_arrow_c(dtype), "=")
+            return (
+                DTypeKind.STRING,
+                8,
+                pandas_dtype_to_arrow_c(dtype),
+                Edianness.NATIVE,
+            )
         else:
-            return self._dtype_from_primitive_pandas(dtype)
+            return self._dtype_from_primitive_numpy(dtype)
 
     def _dtype_from_pyarrow(self, dtype):
         """
@@ -119,17 +127,19 @@ class OmnisciProtocolColumn(ProtocolColumn):
             bit_width = dtype.bit_width
 
         if kind is not None:
-            return (kind, bit_width, arrow_dtype_to_arrow_c(dtype), "=")
+            return (kind, bit_width, arrow_dtype_to_arrow_c(dtype), Edianness.NATIVE)
         else:
-            return self._dtype_from_primitive_pandas(np.dtype(dtype.to_pandas_dtype()))
+            return self._dtype_from_primitive_numpy(np.dtype(dtype.to_pandas_dtype()))
 
-    def _dtype_from_primitive_pandas(self, dtype) -> Tuple[DTypeKind, int, str, str]:
+    def _dtype_from_primitive_numpy(
+        self, dtype: np.dtype
+    ) -> Tuple[DTypeKind, int, str, str]:
         """
         Build protocol dtype from primitive pandas dtype.
 
         Parameters
         ----------
-        dtype : {np.int, np.uint, np.float, np.bool}
+        dtype : np.dtype
             Data type to convert from.
 
         Returns
@@ -176,11 +186,13 @@ class OmnisciProtocolColumn(ProtocolColumn):
         col = self._pyarrow_table.column(0)
         if len(col.chunks) > 1:
             if not self._col._allow_copy:
-                raise RuntimeError("Copy required but 'allow_copy=False'")
+                raise_copy_alert(
+                    copy_reason="physical chunks combining due to contiguous buffer materialization"
+                )
             col = col.combine_chunks()
 
         col = col.chunks[0]
-        mapping = {index: value for index, value in enumerate(col.dictionary.tolist())}
+        mapping = dict(enumerate(col.dictionary.tolist()))
 
         return {
             "is_ordered": ordered,
@@ -270,7 +282,9 @@ class OmnisciProtocolColumn(ProtocolColumn):
         """
         if self.num_chunks() != 1:
             if not self._col._allow_copy:
-                raise RuntimeError("Copy required with 'allow_copy=False' flag")
+                raise_copy_alert(
+                    copy_reason="physical chunks combining due to contiguous buffer materialization"
+                )
             self._combine_chunks()
 
         external_dtype = self.dtype
@@ -340,7 +354,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
         )
 
         return (
-            # According to the Arrow's memory layout, the validity buffer is always present
+            # According to the Arrow's memory layout, the data buffer is always present
             # at the last position of `.buffers()`:
             # https://arrow.apache.org/docs/format/Columnar.html#buffer-listing-for-each-layout
             OmnisciProtocolBuffer(arr.buffers()[-1], buff_size),
@@ -368,13 +382,13 @@ class OmnisciProtocolColumn(ProtocolColumn):
         # https://arrow.apache.org/docs/format/Columnar.html#buffer-listing-for-each-layout
         validity_buffer = arr.buffers()[0]
         if validity_buffer is None:
-            return validity_buffer
+            return None
 
         # If exist, validity buffer is always a bit-mask.
         data_size = self._get_buffer_size(bit_width=1)
         return (
             OmnisciProtocolBuffer(validity_buffer, data_size),
-            (DTypeKind.BOOL, 1, "b", "="),
+            (DTypeKind.BOOL, 1, ArrowCTypes.BOOL, Edianness.NATIVE),
         )
 
     def _get_offsets_buffer(
@@ -405,7 +419,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
 
         offset_buff = buffs[1]
         # According to Arrow's data layout, the offset buffer type is "int32"
-        dtype = self._dtype_from_primitive_pandas(np.dtype("int32"))
+        dtype = self._dtype_from_primitive_numpy(np.dtype("int32"))
         return (
             OmnisciProtocolBuffer(
                 offset_buff,
@@ -427,25 +441,10 @@ class OmnisciProtocolColumn(ProtocolColumn):
             Data type conforming protocol dtypes format to cast underlying PyArrow table.
         """
         if not self._col._allow_copy:
-            raise RuntimeError("Copy required with 'allow_copy=False' flag")
+            raise_copy_alert(
+                copy_reason="casting to align pandas and PyArrow data types"
+            )
 
-        arrow_types_map = {
-            DTypeKind.BOOL: {8: pa.bool_()},
-            DTypeKind.INT: {
-                8: pa.int8(),
-                16: pa.int16(),
-                32: pa.int32(),
-                64: pa.int64(),
-            },
-            DTypeKind.UINT: {
-                8: pa.uint8(),
-                16: pa.uint16(),
-                32: pa.uint32(),
-                64: pa.uint64(),
-            },
-            DTypeKind.FLOAT: {16: pa.float16(), 32: pa.float32(), 64: pa.float64()},
-            DTypeKind.STRING: {8: pa.string()},
-        }
         kind, bit_width, format_str, _ = dtype
         arrow_type = None
 

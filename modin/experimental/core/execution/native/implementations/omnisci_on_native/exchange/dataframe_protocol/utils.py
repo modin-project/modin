@@ -15,11 +15,33 @@
 
 import pyarrow as pa
 import numpy as np
+import functools
 
 from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
     ArrowCTypes,
     pandas_dtype_to_arrow_c,
+    raise_copy_alert,
+    DTypeKind,
 )
+
+
+arrow_types_map = {
+    DTypeKind.BOOL: {8: pa.bool_()},
+    DTypeKind.INT: {
+        8: pa.int8(),
+        16: pa.int16(),
+        32: pa.int32(),
+        64: pa.int64(),
+    },
+    DTypeKind.UINT: {
+        8: pa.uint8(),
+        16: pa.uint16(),
+        32: pa.uint32(),
+        64: pa.uint64(),
+    },
+    DTypeKind.FLOAT: {16: pa.float16(), 32: pa.float32(), 64: pa.float64()},
+    DTypeKind.STRING: {8: pa.string()},
+}
 
 
 def arrow_dtype_to_arrow_c(dtype: pa.DataType) -> str:
@@ -46,8 +68,30 @@ def arrow_dtype_to_arrow_c(dtype: pa.DataType) -> str:
         # TODO: for some reason `time32` type doesn't have a `unit` attribute,
         # always return "s" for now.
         # return ArrowCTypes.TIME.format(resolution=dtype.unit[:1])
-        return ArrowCTypes.TIME.format(resolution="s")
+        return ArrowCTypes.TIME.format(resolution=getattr(dtype, "unit", "s")[:1])
     elif pa.types.is_dictionary(dtype):
         return arrow_dtype_to_arrow_c(dtype.index_type)
     else:
         return pandas_dtype_to_arrow_c(np.dtype(dtype.to_pandas_dtype()))
+
+
+def raise_copy_alert_if_materialize(fn):
+    """
+    Do docstring.
+
+    Parameters
+    ----------
+    fn : callable
+
+    Returns
+    -------
+    callable
+    """
+
+    @functools.wraps(fn)
+    def method(self, *args, **kwargs):
+        if not self._allow_copy and not self._is_zero_copy_possible:
+            raise_copy_alert()
+        return fn(self, *args, **kwargs)
+
+    return method
