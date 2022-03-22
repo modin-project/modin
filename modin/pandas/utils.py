@@ -252,9 +252,7 @@ def check_both_not_none(option1, option2):
     return not (option1 is None or option2 is None)
 
 
-def _doc_binary_op(
-    operation, bin_op, right="right", returns="Series", left="Series"
-):
+def _doc_binary_op(operation, bin_op, right="right", returns="Series", left="Series"):
     """
     Return callable documenting `Series` or `DataFrame` binary operator.
 
@@ -277,11 +275,13 @@ def _doc_binary_op(
     """
     if left == "Series":
         right_type = "Series or scalar value"
+    elif left == "DataFrame":
+        right_type = "DataFrame, Series or scalar value"
     elif left == "BasePandasDataset":
         right_type = "BasePandasDataset or scalar value"
     else:
         raise NotImplementedError(
-            f"Only 'BasePandasDataset' and 'Series' `left` are allowed, actually passed: {left}"
+            f"Only 'BasePandasDataset', `DataFrame` and 'Series' `left` are allowed, actually passed: {left}"
         )
     doc_op = doc(
         _doc_binary_operation,
