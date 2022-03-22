@@ -305,7 +305,7 @@ def datetime_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
             return data
 
         # date 'td{Days/Ms}'
-        date_meta = re.findall(r"td([Dm])")
+        date_meta = re.findall(r"td([Dm])", format_str)
         if date_meta:
             unit = date_meta[0]
             if unit == "D":
