@@ -183,8 +183,8 @@ jobs:
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: python -m pytest modin/pandas/test/test_io.py
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - run: pytest modin/test/exchange/dataframe_protocol/test_general.py
       - run: pytest modin/test/exchange/dataframe_protocol/test_protocol.py
+      - run: pytest modin/test/exchange/dataframe_protocol/generic/test_protocol.py
       - run: pytest modin/test/exchange/dataframe_protocol/pandas/test_protocol.py
       - uses: codecov/codecov-action@v2
 

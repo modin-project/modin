@@ -11,258 +11,163 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import numpy as np
-import pandas
+"""Dataframe exchange protocol tests that are common for every implementation."""
+
 import pytest
+import math
+import ctypes
 
 import modin.pandas as pd
-from modin.config import NPartitions, StorageFormat
-from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
-    DTypeKind,
-    ColumnNullType,
-)
-from modin.pandas.test.utils import df_equals, NCOLS, NROWS, test_bool_data, test_data, test_string_data
-from modin.pandas.utils import from_dataframe
 
 
-test_data_categorical = {
-    "ordered": pandas.Categorical(list("testdata")*30, ordered=True),
-    "unordered": pandas.Categorical(list("testdata")*30, ordered=False),
-}
+@pytest.fixture
+def df_from_dict():
+    def maker(dct, is_categorical=False):
+        df = pd.DataFrame(dct, dtype=("category" if is_categorical else None))
+        return df
 
-
-@pytest.mark.parametrize("num_partitions", [2, 4, 6])
-@pytest.mark.parametrize("data", [("ordered", True), ("unordered", False)])
-def test_categorical_dtype_two_columns(data, num_partitions):
-    NPartitions.put(num_partitions)
-    pd_df = pd.DataFrame({"A": (test_data_categorical[data[0]])})
-    df = pd.DataFrame(pd_df)
-
-    col = df.__dataframe__().get_column_by_name("A")
-    assert col.dtype[0] == DTypeKind.CATEGORICAL
-    assert col.null_count == 0
-    if StorageFormat.get() == "Pandas":
-        assert col.describe_null == (ColumnNullType.USE_SENTINEL, -1)
-    elif StorageFormat.get() == "Omnisci":
-        assert col.describe_null == (ColumnNullType.USE_BYTEMASK, -1)
-    if StorageFormat.get() == "Pandas":
-        assert col.num_chunks() == num_partitions
-    assert tuple(col.describe_categorical.values()) == (data[1], True, {4: 's', 2: 'd', 3: 'e', 1: 't'})
-
-    df_equals(df, from_dataframe(df.__dataframe__()))
-
-
-def test_chunks():
-    df = pd.DataFrame({"x": np.arange(10)})
-    df2 = df.__dataframe__()
-    chunk_iter = iter(df2.get_chunks(3))
-    chunk = next(chunk_iter)
-    assert chunk.num_rows() == 4
-    chunk = next(chunk_iter)
-    assert chunk.num_rows() == 4
-    chunk = next(chunk_iter)
-    assert chunk.num_rows() == 2
-    with pytest.raises(StopIteration):
-        chunk = next(chunk_iter)
-
-
-@pytest.mark.parametrize("num_partitions", [2, 4, 6])
-@pytest.mark.parametrize("data", [test_data["int_data"], test_data["float_data"], test_bool_data])
-def test_dataframe(data, num_partitions):
-    NPartitions.put(num_partitions)
-    df = pd.DataFrame(data)
-
-    df2 = df.__dataframe__()
-
-    assert df2._allow_copy is True
-    assert df2.num_columns() == NCOLS
-    assert df2.num_rows() == NROWS
-    if StorageFormat.get() == "Pandas":
-        assert df2.num_chunks() == num_partitions
-
-    assert list(df2.column_names()) == list(data.keys())
-
-    assert from_dataframe(df2.select_columns((0, 2))) == from_dataframe(
-        df2.select_columns_by_name(("col33", "col35"))
-    )
-    assert from_dataframe(df2.select_columns((0, 2))) == from_dataframe(
-        df2.select_columns_by_name(("col33", "col35"))
-    )
-
-
-def test_float_only():
-    df = pd.DataFrame(test_data["float_data"])
-    df_equals(df, from_dataframe(df.__dataframe__()))
-
-
-def test_get_chunks():
-    df = pd.DataFrame({"x": np.arange(10)})
-    df2 = df.__dataframe__()
-    chunk_iter = iter(df2.get_chunks())
-
-
-def test_metadata():
-    df = pd.DataFrame(test_data["int_data"])
-
-    df_metadata = df.__dataframe__().metadata
-    expected = {"modin.index": df.index}
-    for key in df_metadata:
-        assert all(df_metadata[key] == expected[key])
-    col_metadata = df.__dataframe__().get_column(0).metadata
-    for key in col_metadata:
-        assert all(col_metadata[key] == expected[key])
-    df_equals(df, from_dataframe(df.__dataframe__()))
-
-
-def test_missing_from_masked():
-    df = pd.DataFrame(
-        {
-            "x": np.array([1, 2, 3, 4, 0]),
-            "y": np.array([1.5, 2.5, 3.5, 4.5, 0]),
-            "z": np.array([True, False, True, True, True]),
-        }
-    )
-
-    df2 = df.__dataframe__()
-
-    # for col_name in df.columns:
-        # assert convert_column_to_array(df2.get_column_by_name(col_name) == df[col_name].tolist()
-        # assert df[col_name].dtype == convert_column_to_array(df2.get_column_by_name(col_name)).dtype
-
-    rng = np.random.RandomState(42)
-    dict_null = {col: rng.randint(low=0, high=len(df)) for col in df.columns}
-    for col, num_nulls in dict_null.items():
-        null_idx = df.index[
-            rng.choice(np.arange(len(df)), size=num_nulls, replace=False)
-        ]
-        df.loc[null_idx, col] = None
-
-    df2 = df.__dataframe__()
-
-    assert df2.get_column_by_name("x").null_count == dict_null["x"]
-    assert df2.get_column_by_name("y").null_count == dict_null["y"]
-    assert df2.get_column_by_name("z").null_count == dict_null["z"]
+    return maker
 
 
 @pytest.mark.parametrize(
-    "data",
+    "test_data",
     [
-        {"x": [1.5, 2.5, 3.5], "y": [9.2, 10.5, 11.8]},
-        {"x": [1, 2, 0], "y": [9.2, 10.5, 11.8]},
-        {
-            "x": np.array([True, True, False]),
-            "y": np.array([1, 2, 0]),
-            "z": np.array([9.2, 10.5, 11.8]),
-        },
+        {"a": ["foo", "bar"], "b": ["baz", "qux"]},
+        {"a": [1.5, 2.5, 3.5], "b": [9.2, 10.5, 11.8]},
+        {"A": [1, 2, 3, 4], "B": [1, 2, 3, 4]},
     ],
+    ids=["str_data", "float_data", "int_data"],
 )
-def test_mixed_data(data):
-    df = pd.DataFrame(data)
-    df2 = df.__dataframe__()
+def test_only_one_dtype(test_data, df_from_dict):
+    columns = list(test_data.keys())
+    df = df_from_dict(test_data)
+    dfX = df.__dataframe__()
 
-    for col_name in df.columns:
-        # assert convert_column_to_array(df2.get_column_by_name(col_name) == df[col_name].tolist()
-        assert df2.get_column_by_name(col_name).null_count == 0
+    column_size = len(test_data[columns[0]])
+    for column in columns:
+        assert dfX.get_column_by_name(column).null_count == 0
+        assert dfX.get_column_by_name(column).size == column_size
+        assert dfX.get_column_by_name(column).offset == 0
 
 
-def test_mixed_missing():
-    df = pd.DataFrame(
+def test_float_int(df_from_dict):
+    df = df_from_dict(
         {
-            "x": np.array([True, None, False, None, True]),
-            "y": np.array([None, 2, None, 1, 2]),
-            "z": np.array([9.2, 10.5, None, 11.8, None]),
+            "a": [1, 2, 3],
+            "b": [3, 4, 5],
+            "c": [1.5, 2.5, 3.5],
+            "d": [9, 10, 11],
+            "e": [True, False, True],
+            "f": ["a", "", "c"],
         }
     )
+    dfX = df.__dataframe__()
+    columns = {"a": 0, "b": 0, "c": 2, "d": 0, "e": 20, "f": 21}
 
-    df2 = df.__dataframe__()
+    for column, kind in columns.items():
+        colX = dfX.get_column_by_name(column)
+        assert colX.null_count == 0
+        assert colX.size == 3
+        assert colX.offset == 0
 
-    for col_name in df.columns:
-        # assert convert_column_to_array(df2.get_column_by_name(col_name) == df[col_name].tolist()
-        assert df2.get_column_by_name(col_name).null_count == 2
-        # assert df[col_name].dtype == convert_column_to_array(df2.get_column_by_name(col_name)).dtype
+        assert colX.dtype[0] == kind
 
-
-def test_object():
-    df = pd.DataFrame(test_bool_data)
-    col = df.__dataframe__().get_column_by_name("x")
-
-    assert col.size == NROWS
-
-    with pytest.raises(NotImplementedError):
-        assert col.dtype
-    with pytest.raises(NotImplementedError):
-        assert col.describe_null
+    assert dfX.get_column_by_name("c").dtype[1] == 64
 
 
-def test_select_columns_error():
-    df = pd.DataFrame(test_data["int_data"])
-
-    df2 = df.__dataframe__()
-    
-    with pytest.raises(ValueError):
-        assert from_dataframe(df2.select_columns(np.array([0, 2]))) == from_dataframe(df2.select_columns_by_name(("col33", "col35")))
+def test_na_float(df_from_dict):
+    df = df_from_dict({"a": [1.0, math.nan, 2.0]})
+    dfX = df.__dataframe__()
+    colX = dfX.get_column_by_name("a")
+    assert colX.null_count == 1
 
 
-def test_select_columns_by_name_error():
-    df = pd.DataFrame(test_data["int_data"])
-
-    df2 = df.__dataframe__()
-    
-    with pytest.raises(ValueError):
-        assert from_dataframe(df2.select_columns_by_name(np.array(["col33", "col35"]))) == from_dataframe(df2.select_columns((0, 2)))
-    
-
-def test_string():
-    test_str_data = test_string_data["separator data"]
-    test_str_data.append("")
-    df = pd.DataFrame({"A": test_str_data})
-    col = df.__dataframe__().get_column_by_name("A")
-
-    assert col.size == 6
-    assert col.null_count == 1
-    assert col.dtype[0] == DTypeKind.STRING
-    if StorageFormat.get() == "Pandas":
-        assert col.describe_null == (ColumnNullType.USE_BYTEMASK, 0)
-    elif StorageFormat.get() == "Omnisci":
-        assert col.describe_null == (ColumnNullType.USE_BYTEMASK, 0)
-
-    df2 = df.__dataframe__()
-    #assert convert_column_to_array(df2.get_column_by_name("A") == df["A"].tolist()
-    assert df2.get_column_by_name("A").null_count == 1
-    if StorageFormat.get() == "Pandas" or StorageFormat.get() == "Omnisci":
-        assert df2.get_column_by_name("A").describe_null == (
-            ColumnNullType.USE_BYTEMASK,
-            0,
-        )
-    assert df2.get_column_by_name("A").dtype[0] == DTypeKind.STRING
-
-    df_sliced = df[1:]
-    col = df_sliced.__dataframe__().get_column_by_name("A")
-    assert col.size == 5
-    assert col.null_count == 1
-    assert col.dtype[0] == DTypeKind.STRING
-    if StorageFormat.get() == "Pandas" or StorageFormat.get() == "Omnisci":
-        assert col.describe_null == (ColumnNullType.USE_BYTEMASK, 0)
-
-    df2 = df_sliced.__dataframe__()
-    #assert convert_column_to_array(df2.get_column_by_name("A") == df_sliced["A"].tolist()
-    assert df2.get_column_by_name("A").null_count == 1
-    if StorageFormat.get() == "Pandas" or StorageFormat.get() == "Omnisci":
-        assert df2.get_column_by_name("A").describe_null == (
-            ColumnNullType.USE_BYTEMASK,
-            0,
-        )
-    assert df2.get_column_by_name("A").dtype[0] == DTypeKind.STRING
+def test_noncategorical(df_from_dict):
+    df = df_from_dict({"a": [1, 2, 3]})
+    dfX = df.__dataframe__()
+    colX = dfX.get_column_by_name("a")
+    with pytest.raises(RuntimeError):
+        colX.describe_categorical
 
 
-@pytest.mark.parametrize("num_partitions", [2, 4, 6])
-def test_string_dtype(num_partitions):
-    NPartitions.put(num_partitions)
-    df = pd.DataFrame({"A": (test_string_data["separator data"])*30})
+def test_categorical(df_from_dict):
+    df = df_from_dict(
+        {"weekday": ["Mon", "Tue", "Mon", "Wed", "Mon", "Thu", "Fri", "Sat", "Sun"]},
+        is_categorical=True,
+    )
 
-    col = df.__dataframe__().get_column_by_name("A")
-    assert col.dtype[0] == DTypeKind.STRING
-    if StorageFormat.get() == "Pandas" or StorageFormat.get() == "Omnisci":
-        assert col.describe_null == (ColumnNullType.USE_BYTEMASK, 0)
-    if StorageFormat.get() == "Pandas":
-        assert col.num_chunks() == num_partitions
+    colX = df.__dataframe__().get_column_by_name("weekday")
+    is_ordered, is_dictionary, _ = colX.describe_categorical.values()
+    assert isinstance(is_ordered, bool)
+    assert isinstance(is_dictionary, bool)
+
+
+def test_dataframe(df_from_dict):
+    df = df_from_dict(
+        {"x": [True, True, False], "y": [1, 2, 0], "z": [9.2, 10.5, 11.8]}
+    )
+    dfX = df.__dataframe__()
+
+    assert dfX.num_columns() == 3
+    assert dfX.num_rows() == 3
+    assert dfX.num_chunks() == 1
+    assert list(dfX.column_names()) == ["x", "y", "z"]
+    assert list(dfX.select_columns((0, 2)).column_names()) == list(
+        dfX.select_columns_by_name(("x", "z")).column_names()
+    )
+
+
+@pytest.mark.parametrize(["size", "n_chunks"], [(10, 3), (12, 3), (12, 5)])
+def test_df_get_chunks(size, n_chunks, df_from_dict):
+    df = df_from_dict({"x": list(range(size))})
+    dfX = df.__dataframe__()
+    chunks = list(dfX.get_chunks(n_chunks))
+    assert len(chunks) == n_chunks
+    assert sum(chunk.num_rows() for chunk in chunks) == size
+
+
+@pytest.mark.parametrize(["size", "n_chunks"], [(10, 3), (12, 3), (12, 5)])
+def test_column_get_chunks(size, n_chunks, df_from_dict):
+    df = df_from_dict({"x": list(range(size))})
+    dfX = df.__dataframe__()
+    chunks = list(dfX.get_column(0).get_chunks(n_chunks))
+    assert len(chunks) == n_chunks
+    assert sum(chunk.size for chunk in chunks) == size
+
+
+def test_get_columns(df_from_dict):
+    df = df_from_dict({"a": [0, 1], "b": [2.5, 3.5]})
+    dfX = df.__dataframe__()
+    for colX in dfX.get_columns():
+        assert colX.size == 2
+        assert colX.num_chunks() == 1
+    assert dfX.get_column(0).dtype[0] == 0
+    assert dfX.get_column(1).dtype[0] == 2
+
+
+def test_buffer(df_from_dict):
+    arr = [0, 1, -1]
+    df = df_from_dict({"a": arr})
+    dfX = df.__dataframe__()
+    colX = dfX.get_column(0)
+    bufX = colX.get_buffers()
+
+    dataBuf, dataDtype = bufX["data"]
+    assert dataBuf.bufsize > 0
+    assert dataBuf.ptr != 0
+    device, _ = dataBuf.__dlpack_device__()
+
+    assert dataDtype[0] == 0
+
+    if device == 1:  # CPU-only as we're going to directly read memory here
+        bitwidth = dataDtype[1]
+        ctype = {
+            8: ctypes.c_int8,
+            16: ctypes.c_int16,
+            32: ctypes.c_int32,
+            64: ctypes.c_int64,
+        }[bitwidth]
+
+        for idx, truth in enumerate(arr):
+            val = ctype.from_address(dataBuf.ptr + idx * (bitwidth // 8)).value
+            assert val == truth, f"Buffer at index {idx} mismatch"
