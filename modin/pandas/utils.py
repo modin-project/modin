@@ -281,7 +281,7 @@ def _doc_binary_op(
         right_type = "BasePandasDataset or scalar value"
     else:
         raise NotImplementedError(
-            f"Only 'BasePandasDataset' and 'Series' `primary_object` are allowed, actually passed: {primary_object}"
+            f"Only 'BasePandasDataset' and 'Series' `left` are allowed, actually passed: {left}"
         )
     doc_op = doc(
         _doc_binary_operation,
