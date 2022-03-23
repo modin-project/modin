@@ -23,7 +23,7 @@ from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
     DTypeKind,
     ColumnNullType,
     ArrowCTypes,
-    Edianness,
+    Endianness,
 )
 from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
@@ -216,7 +216,7 @@ def string_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
         DTypeKind.UINT,
         8,
         ArrowCTypes.UINT8,
-        Edianness.NATIVE,
+        Endianness.NATIVE,
     )
     # Specify zero offset as we don't want to chunk the string data
     data = buffer_to_ndarray(data_buff, data_dtype, offset=0, length=col.size)
@@ -285,7 +285,7 @@ def datetime_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
             DTypeKind.UINT,
             dtype[1],
             getattr(ArrowCTypes, f"UINT{dtype[1]}"),
-            Edianness.NATIVE,
+            Endianness.NATIVE,
         ),
         col.offset,
         col.size,

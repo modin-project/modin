@@ -23,7 +23,7 @@ from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
     DTypeKind,
     ColumnNullType,
     ArrowCTypes,
-    Edianness,
+    Endianness,
     pandas_dtype_to_arrow_c,
     raise_copy_alert,
 )
@@ -79,7 +79,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
         dtype = self._pandas_dtype
 
         if pandas.api.types.is_bool_dtype(dtype):
-            return (DTypeKind.BOOL, 1, ArrowCTypes.BOOL, Edianness.NATIVE)
+            return (DTypeKind.BOOL, 1, ArrowCTypes.BOOL, Endianness.NATIVE)
         elif pandas.api.types.is_datetime64_dtype(
             dtype
         ) or pandas.api.types.is_categorical_dtype(dtype):
@@ -92,7 +92,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
                 DTypeKind.STRING,
                 8,
                 pandas_dtype_to_arrow_c(dtype),
-                Edianness.NATIVE,
+                Endianness.NATIVE,
             )
         else:
             return self._dtype_from_primitive_numpy(dtype)
@@ -129,7 +129,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
             bit_width = dtype.bit_width
 
         if kind is not None:
-            return (kind, bit_width, arrow_dtype_to_arrow_c(dtype), Edianness.NATIVE)
+            return (kind, bit_width, arrow_dtype_to_arrow_c(dtype), Endianness.NATIVE)
         else:
             return self._dtype_from_primitive_numpy(np.dtype(dtype.to_pandas_dtype()))
 
@@ -390,7 +390,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
         data_size = self._get_buffer_size(bit_width=1)
         return (
             OmnisciProtocolBuffer(validity_buffer, data_size),
-            (DTypeKind.BOOL, 1, ArrowCTypes.BOOL, Edianness.NATIVE),
+            (DTypeKind.BOOL, 1, ArrowCTypes.BOOL, Endianness.NATIVE),
         )
 
     def _get_offsets_buffer(

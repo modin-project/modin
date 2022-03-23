@@ -127,7 +127,7 @@ class ArrowCTypes:
     TIME = "tt{resolution}"
 
 
-class Edianness:
+class Endianness:
     """Enum indicating the byte-order of a data-type."""
 
     LITTLE = "<"
