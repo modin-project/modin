@@ -160,7 +160,8 @@ by default ``Notes`` contains information about ``Ray`` and ``Dask`` engines unl
 | ``get``                    | `get`_                    | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``groupby``                | `groupby`_                | Y                      | Not yet optimized for all operations               |
-|                            |                           |                        | **Omnisci**:``P``, ``count``, ``sum``, ``size``    |
+|                            |                           |                        | **Omnisci**:``P``, ``count``, ``sum``, ``size``,   |
+|                            |                           |                        | ``mean``, ``nunique``, ``std``, ``skew``           |
 |                            |                           |                        | supported, otherwise ``D``                         |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``gt``                     | `gt`_                     | Y                      | See ``add``                                        |
