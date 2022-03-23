@@ -2037,6 +2037,80 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         """
         return super(OmnisciOnNativeDataframe, self)._get_columns()
 
+    def __dataframe__(self, nan_as_null: bool = False, allow_copy: bool = True):
+        """
+        Get a DataFrame exchange protocol object representing data of the Modin DataFrame.
+
+        Parameters
+        ----------
+        nan_as_null : bool, default: False
+            A keyword intended for the consumer to tell the producer
+            to overwrite null values in the data with ``NaN`` (or ``NaT``).
+            This currently has no effect; once support for nullable extension
+            dtypes is added, this value should be propagated to columns.
+        allow_copy : bool, default: True
+            A keyword that defines whether or not the library is allowed
+            to make a copy of the data. For example, copying data would be necessary
+            if a library supports strided buffers, given that this protocol
+            specifies contiguous buffers. Currently, if the flag is set to ``False``
+            and a copy is needed, a ``RuntimeError`` will be raised.
+
+        Returns
+        -------
+        ProtocolDataframe
+            A dataframe object following the dataframe exchange protocol specification.
+        """
+        if self._has_unsupported_data:
+            ErrorMessage.default_to_pandas(message="`__dataframe__`")
+            pd_df = self.to_pandas()
+            if hasattr(pd_df, "__dataframe__"):
+                return pd_df.__dataframe__()
+            raise NotImplementedError(
+                "OmniSci execution does not support exchange protocol if the frame contains data types "
+                + "that are unsupported by OmniSci."
+            )
+
+        from ..exchange.dataframe_protocol.dataframe import OmnisciProtocolDataframe
+
+        return OmnisciProtocolDataframe(
+            self, nan_as_null=nan_as_null, allow_copy=allow_copy
+        )
+
+    @classmethod
+    def from_dataframe(cls, df: "ProtocolDataframe") -> "OmnisciOnNativeDataframe":
+        """
+        Convert a DataFrame implementing the dataframe exchange protocol to a Core Modin Dataframe.
+
+        See more about the protocol in https://data-apis.org/dataframe-protocol/latest/index.html.
+
+        Parameters
+        ----------
+        df : ProtocolDataframe
+            The DataFrame object supporting the dataframe exchange protocol.
+
+        Returns
+        -------
+        OmnisciOnNativeDataframe
+            A new Core Modin Dataframe object.
+        """
+        if isinstance(df, cls):
+            return df
+
+        if not hasattr(df, "__dataframe__"):
+            raise ValueError(
+                "`df` does not support DataFrame exchange protocol, i.e. `__dataframe__` method"
+            )
+
+        from modin.core.dataframe.pandas.exchange.dataframe_protocol.from_dataframe import (
+            from_dataframe_to_pandas,
+        )
+
+        # TODO: build a PyArrow table instead of a pandas DataFrame from the protocol object
+        # as it's possible to do zero-copy with `cls.from_arrow`
+        ErrorMessage.default_to_pandas(message="`from_dataframe`")
+        pd_df = from_dataframe_to_pandas(df)
+        return cls.from_pandas(pd_df)
+
     columns = property(_get_columns)
     index = property(_get_index)
 

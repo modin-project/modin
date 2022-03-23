@@ -53,6 +53,7 @@ Key Features and Updates
   *
 * Developer API enhancements
   * FEAT-#4245: Define base interface for dataframe exchange protocol (#4246)
+  * FEAT-#4244: Implement dataframe exchange protocol for OmnisciOnNative execution (#4269)
 * Update testing suite
   * TEST-#3628: Report coverage data for `test-internals` CI job (#4198)
   * TEST-#3938: Test tutorial notebooks in CI (#4145)
