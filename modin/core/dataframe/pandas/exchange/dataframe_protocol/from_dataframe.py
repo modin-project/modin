@@ -163,7 +163,7 @@ def categorical_column_to_series(col: ProtocolColumn) -> Tuple[pandas.Series, An
     if not is_dict:
         raise NotImplementedError("Non-dictionary categoricals not supported yet")
 
-    categories = np.array(list(mapping.values()))
+    categories = np.array(tuple(mapping.values()))
     buffers = col.get_buffers()
 
     codes_buff, codes_dtype = buffers["data"]
@@ -223,7 +223,9 @@ def string_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
 
     # Retrieve the offsets buffer containing the index offsets demarcating the beginning and end of each string
     offset_buff, offset_dtype = buffers["offsets"]
-    # As the offsets buffer size is greater than the data size do `col.size + 1` here
+    # Offsets buffer contains start-stop positions of strings in the data buffer,
+    # meaning that it has more elements than in the data buffer, do `col.size + 1` here
+    # to pass a proper offsets buffer size
     offsets = buffer_to_ndarray(
         offset_buff, offset_dtype, col.offset, length=col.size + 1
     )
@@ -292,9 +294,9 @@ def datetime_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     def parse_format_str(format_str, data):
         """Parse datetime `format_str` to interpret the `data`."""
         # timestamp 'ts{unit}:tz'
-        timestamp_meta = re.findall(r"ts([smun]):(.*)", format_str)
+        timestamp_meta = re.match(r"ts([smun]):(.*)", format_str)
         if timestamp_meta:
-            unit, tz = timestamp_meta[0]
+            unit, tz = timestamp_meta.group(1), timestamp_meta.group(2)
             if tz != "":
                 raise NotImplementedError("Timezones are not supported yet")
             if unit != "s":
@@ -305,9 +307,9 @@ def datetime_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
             return data
 
         # date 'td{Days/Ms}'
-        date_meta = re.findall(r"td([Dm])", format_str)
+        date_meta = re.match(r"td([Dm])", format_str)
         if date_meta:
-            unit = date_meta[0]
+            unit = date_meta.group(1)
             if unit == "D":
                 # NumPy doesn't support DAY unit, so converting days to seconds
                 # (converting to uint64 to avoid overflow)
@@ -400,7 +402,7 @@ def bitmask_to_bool_ndarray(
     """
     bytes_to_skip = first_byte_offset // 8
     bitmask = bitmask[bytes_to_skip:]
-    first_byte_offset = first_byte_offset % 8
+    first_byte_offset %= 8
 
     bool_mask = np.zeros(mask_length, dtype=bool)
 

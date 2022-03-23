@@ -140,9 +140,9 @@ def test_export_unaligned_at_chunks(data_has_nulls):
 
 
 @pytest.mark.parametrize("data_has_nulls", [True, False])
-def test_export_bad_chunking(data_has_nulls):
+def test_export_indivisible_chunking(data_has_nulls):
     """
-    Test ``.get_chunks(n_chunks)`` when internal PyArrow table's is 'badly chunked'.
+    Test ``.get_chunks(n_chunks)`` when internal PyArrow table's is 'indivisibly chunked'.
 
     The setup for the test is a PyArrow table having one of the chunk consisting of a single row,
     meaning that the chunk can't be subdivide.

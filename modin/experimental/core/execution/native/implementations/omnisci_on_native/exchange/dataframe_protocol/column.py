@@ -83,7 +83,9 @@ class OmnisciProtocolColumn(ProtocolColumn):
         elif pandas.api.types.is_datetime64_dtype(
             dtype
         ) or pandas.api.types.is_categorical_dtype(dtype):
-            # For these types we have to use internal arrow dtype to get proper metadata
+            # We can't fully describe an actual underlying type's metadata from pandas dtype,
+            # use a `._arrow_dtype` for missing parts of information like datetime resulution,
+            # dictionary metadata, etc?...
             return self._dtype_from_pyarrow(self._arrow_dtype)
         elif pandas.api.types.is_string_dtype(dtype):
             return (

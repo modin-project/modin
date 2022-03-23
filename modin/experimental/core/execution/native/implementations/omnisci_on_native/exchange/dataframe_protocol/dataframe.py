@@ -264,6 +264,37 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
     def get_chunks(
         self, n_chunks: Optional[int] = None
     ) -> Iterable["OmnisciProtocolDataframe"]:
+        """
+        Return an iterator yielding the chunks.
+
+        If `n_chunks` is not specified, yields the chunks that the data is stored underneath.
+        If given, `n_chunks` must be a multiple of ``self.num_chunks()``, meaning that each physical
+        chunk is going to be split into ``n_chunks // self.num_chunks()`` virtual chunks, that are
+        backed by the same physical buffers but have different ``.offset`` values.
+
+        Parameters
+        ----------
+        n_chunks : int, optional
+            Number of chunks to yield.
+
+        Returns
+        -------
+        Iterable["OmnisciProtocolDataframe"]
+            An iterator yielding ``OmnisciProtocolDataframe`` objects.
+
+        Raises
+        ------
+        ``RuntimeError`` if ``n_chunks`` is not a multiple of ``self.num_chunks()`` or ``n_chunks``
+        is greater than ``self.num_rows()``.
+
+        Notes
+        -----
+        There is a special casing in handling variable-sized columns (i.e. strings) when virtually chunked.
+        In order to make the offsets buffer be valid for each virtual chunk, the data buffer shouldn't be
+        chunked at all, meaning that ``.get_buffers()["data"]`` always returns a buffer owning the whole
+        physical chunk and the consumer must always interpret it with zero offset (validity and offsets
+        buffers must be interpret respecting the column's offset value).
+        """
         if n_chunks is None or n_chunks == self.num_chunks():
             return self._yield_chunks(self._chunk_slices)
 
