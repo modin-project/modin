@@ -2859,3 +2859,36 @@ class PandasDataframe(object):
         return PandasProtocolDataframe(
             self, nan_as_null=nan_as_null, allow_copy=allow_copy
         )
+
+    @classmethod
+    def from_dataframe(cls, df: "ProtocolDataframe") -> "PandasDataframe":
+        """
+        Convert a DataFrame implementing the dataframe exchange protocol to a Core Modin Dataframe.
+
+        See more about the protocol in https://data-apis.org/dataframe-protocol/latest/index.html.
+
+        Parameters
+        ----------
+        df : ProtocolDataframe
+            The DataFrame object supporting the dataframe exchange protocol.
+
+        Returns
+        -------
+        PandasDataframe
+            A new Core Modin Dataframe object.
+        """
+        if isinstance(df, cls):
+            return df
+
+        if not hasattr(df, "__dataframe__"):
+            raise ValueError(
+                "`df` does not support DataFrame exchange protocol, i.e. `__dataframe__` method"
+            )
+
+        from modin.core.dataframe.pandas.exchange.dataframe_protocol.from_dataframe import (
+            from_dataframe_to_pandas,
+        )
+
+        ErrorMessage.default_to_pandas(message="`from_dataframe`")
+        pandas_df = from_dataframe_to_pandas(df)
+        return cls.from_pandas(pandas_df)

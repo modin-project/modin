@@ -24,8 +24,8 @@ Key Features and Updates
   * FIX-#4303: Fix the syntax error in reading from postgres (#4304)
   * FIX-#4308: Add proper error handling in df.set_index (#4309)
   * FIX-#4056: Allow an empty parse_date list in `read_csv_glob` (#4074)
-  * FIX-#4312: Fix constructing categorical frame with duplicate column names (#4313).  
-  * FIX-#4314: Allow passing a series of dtypes to astype (#4318)  
+  * FIX-#4312: Fix constructing categorical frame with duplicate column names (#4313).
+  * FIX-#4314: Allow passing a series of dtypes to astype (#4318)
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
   * FIX-#4183: Stop shallow copies from creating global shared state. (#4184)
@@ -54,6 +54,8 @@ Key Features and Updates
 * Developer API enhancements
   * FEAT-#4245: Define base interface for dataframe exchange protocol (#4246)
   * FEAT-#4244: Implement dataframe exchange protocol for OmnisciOnNative execution (#4269)
+  * FEAT-#4144: Implement dataframe exchange protocol for pandas storage format (#4150)
+  * FEAT-#4342: Support `from_dataframe`` for pandas storage format (#4343)
 * Update testing suite
   * TEST-#3628: Report coverage data for `test-internals` CI job (#4198)
   * TEST-#3938: Test tutorial notebooks in CI (#4145)
