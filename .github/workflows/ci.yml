@@ -115,6 +115,7 @@ jobs:
             modin/experimental/core/execution/native/implementations/omnisci_on_native/expr.py \
             modin/experimental/core/execution/native/implementations/omnisci_on_native/omnisci_worker.py \
       - run: python scripts/doc_checker.py modin/experimental/core/storage_formats/omnisci
+      - run: python scripts/doc_checker.py modin/experimental/core/execution/native/implementations/omnisci_on_native/exchange/dataframe_protocol
 
   lint-flake8:
     name: lint (flake8)
@@ -339,6 +340,8 @@ jobs:
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv --verbose
+      - run: pytest modin/test/exchange/dataframe_protocol/test_general.py
+      - run: pytest modin/test/exchange/dataframe_protocol/omnisci
       - uses: codecov/codecov-action@v2
 
   test-asv-benchmarks:

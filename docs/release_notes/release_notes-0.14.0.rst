@@ -53,6 +53,7 @@ Key Features and Updates
   *
 * Developer API enhancements
   * FEAT-#4245: Define base interface for dataframe exchange protocol (#4246)
+  * FEAT-#4244: Implement dataframe exchange protocol for OmnisciOnNative execution (#4269)
 * Update testing suite
   * TEST-#3628: Report coverage data for `test-internals` CI job (#4198)
   * TEST-#3938: Test tutorial notebooks in CI (#4145)
@@ -73,6 +74,8 @@ Key Features and Updates
   * DOCS-#4280: Change links in jupyter notebooks (#4281)
   * DOCS-#4290: Add changes for OmniSci notebooks (#4291)
   * DOCS-#4241: Update warnings and docs regarding defaulting to pandas (#4242)
+  * DOCS-#3099: Fix `BasePandasDataSet` docstrings warnings (#4333)
+  * DOCS-#4339: Reformat I/O functions docstrings (#4341)
   * DOCS-#4336: Reformat general utilities docstrings (#4338)
 * Dependencies
   * FIX-#4113, FIX-#4116, FIX-#4115: Apply new `black` formatting, fix pydocstyle check and readthedocs build (#4114)

@@ -23,7 +23,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas._libs.lib import no_default
 from pandas._typing import IndexKeyFunc
-from pandas.util._decorators import doc
+
 import sys
 from typing import Union, Optional
 import warnings
@@ -32,52 +32,9 @@ from modin.utils import _inherit_docstrings, to_pandas, Engine
 from modin.config import IsExperimental, PersistentPickle
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
-from .utils import from_pandas, is_scalar
+from .utils import from_pandas, is_scalar, _doc_binary_op
 from .accessor import CachedAccessor, SparseAccessor
 from . import _update_engine
-
-_doc_binary_operation = """
-Return {operation} of Series and `{other}` (binary operator `{bin_op}`).
-
-Parameters
-----------
-{other} : Series or scalar value
-    The second operand to perform computation.
-
-Returns
--------
-{returns}
-"""
-
-
-def _doc_binary_op(operation, bin_op, other="right", returns="Series"):
-    """
-    Return callable documenting `Series` binary operator.
-
-    Parameters
-    ----------
-    operation : str
-        Operation name.
-    bin_op : str
-        Binary operation name.
-    other : str, default: 'right'
-        The second operand name.
-    returns : str, default: 'Series'
-        Type of returns.
-
-    Returns
-    -------
-    callable
-    """
-    doc_op = doc(
-        _doc_binary_operation,
-        operation=operation,
-        other=other,
-        bin_op=bin_op,
-        returns=returns,
-    )
-
-    return doc_op
 
 
 @_inherit_docstrings(
@@ -204,18 +161,18 @@ class Series(BasePandasDataset):
     def __add__(self, right):
         return self.add(right)
 
-    @_doc_binary_op(operation="addition", bin_op="add", other="left")
+    @_doc_binary_op(operation="addition", bin_op="add", right="left")
     def __radd__(self, left):
         return self.add(left)
 
-    @_doc_binary_op(operation="union", bin_op="and", other="other")
+    @_doc_binary_op(operation="union", bin_op="and", right="other")
     def __and__(self, other):
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__and__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__and__(new_other)
 
-    @_doc_binary_op(operation="union", bin_op="and", other="other")
+    @_doc_binary_op(operation="union", bin_op="and", right="other")
     def __rand__(self, other):
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__rand__, other)
@@ -327,7 +284,7 @@ class Series(BasePandasDataset):
     @_doc_binary_op(
         operation="integer division and modulo",
         bin_op="divmod",
-        other="left",
+        right="left",
         returns="tuple of two Series",
     )
     def __rdivmod__(self, left):
@@ -400,7 +357,7 @@ class Series(BasePandasDataset):
     def __mod__(self, right):
         return self.mod(right)
 
-    @_doc_binary_op(operation="modulo", bin_op="mod", other="left")
+    @_doc_binary_op(operation="modulo", bin_op="mod", right="left")
     def __rmod__(self, left):
         return self.rmod(left)
 
@@ -408,32 +365,32 @@ class Series(BasePandasDataset):
     def __mul__(self, right):
         return self.mul(right)
 
-    @_doc_binary_op(operation="multiplication", bin_op="mul", other="left")
+    @_doc_binary_op(operation="multiplication", bin_op="mul", right="left")
     def __rmul__(self, left):
         return self.rmul(left)
 
-    @_doc_binary_op(operation="disjunction", bin_op="or", other="other")
+    @_doc_binary_op(operation="disjunction", bin_op="or", right="other")
     def __or__(self, other):
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__or__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__or__(new_other)
 
-    @_doc_binary_op(operation="disjunction", bin_op="or", other="other")
+    @_doc_binary_op(operation="disjunction", bin_op="or", right="other")
     def __ror__(self, other):
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__ror__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__ror__(new_other)
 
-    @_doc_binary_op(operation="exclusive or", bin_op="xor", other="other")
+    @_doc_binary_op(operation="exclusive or", bin_op="xor", right="other")
     def __xor__(self, other):
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__xor__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__xor__(new_other)
 
-    @_doc_binary_op(operation="exclusive or", bin_op="xor", other="other")
+    @_doc_binary_op(operation="exclusive or", bin_op="xor", right="other")
     def __rxor__(self, other):
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__rxor__, other)
@@ -444,7 +401,7 @@ class Series(BasePandasDataset):
     def __pow__(self, right):
         return self.pow(right)
 
-    @_doc_binary_op(operation="exponential power", bin_op="pow", other="left")
+    @_doc_binary_op(operation="exponential power", bin_op="pow", right="left")
     def __rpow__(self, left):
         return self.rpow(left)
 
@@ -523,7 +480,7 @@ class Series(BasePandasDataset):
     def __sub__(self, right):
         return self.sub(right)
 
-    @_doc_binary_op(operation="subtraction", bin_op="sub", other="left")
+    @_doc_binary_op(operation="subtraction", bin_op="sub", right="left")
     def __rsub__(self, left):
         return self.rsub(left)
 
@@ -531,7 +488,7 @@ class Series(BasePandasDataset):
     def __truediv__(self, right):
         return self.truediv(right)
 
-    @_doc_binary_op(operation="floating division", bin_op="truediv", other="left")
+    @_doc_binary_op(operation="floating division", bin_op="truediv", right="left")
     def __rtruediv__(self, left):
         return self.rtruediv(left)
 
@@ -645,7 +602,11 @@ class Series(BasePandasDataset):
         else:
             return Series(query_compiler=query_compiler)
 
-    def aggregate(self, func=None, axis=0, *args, **kwargs):
+    def aggregate(self, func=None, axis=0, *args, **kwargs):  # noqa: PR01, RT01, D200
+        """
+        Aggregate using one or more operations over the specified axis.
+        """
+
         def error_raiser(msg, exception):
             """Convert passed exception to the same type as pandas do and raise it."""
             # HACK: to concord with pandas error types by replacing all of the
@@ -1171,7 +1132,10 @@ class Series(BasePandasDataset):
         max_cols: "int | None" = None,
         memory_usage: "bool | str | None" = None,
         show_counts: "bool" = True,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Print a concise summary of a Series.
+        """
         return self._default_to_pandas(
             pandas.Series.info,
             verbose=verbose,
