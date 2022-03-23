@@ -77,7 +77,7 @@ def arrow_dtype_to_arrow_c(dtype: pa.DataType) -> str:
 
 def raise_copy_alert_if_materialize(fn):
     """
-    Decorate ``OmnisciProtocolDataframe`` method with a check raising a copy-alert in case of disability to retrieve the data zero-copy.
+    Decorate ``OmnisciProtocolDataframe`` method with a check raising a copy-alert if it's impossible to retrieve the data in zero-copy way.
 
     Parameters
     ----------

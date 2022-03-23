@@ -293,7 +293,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         In order to make the offsets buffer be valid for each virtual chunk, the data buffer shouldn't be
         chunked at all, meaning that ``.get_buffers()["data"]`` always returns a buffer owning the whole
         physical chunk and the consumer must always interpret it with zero offset (validity and offsets
-        buffers must be interpret respecting the column's offset value).
+        buffers have to be interpreted respecting the column's offset value).
         """
         if n_chunks is None or n_chunks == self.num_chunks():
             return self._yield_chunks(self._chunk_slices)
