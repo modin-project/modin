@@ -204,15 +204,13 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     # Dataframe exchange protocol
 
     def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True):
-        raise NotImplementedError(
-            "The selected execution does not implement the DataFrame exchange protocol yet."
+        return self._modin_frame.__dataframe__(
+            nan_as_null=nan_as_null, allow_copy=allow_copy
         )
 
     @classmethod
     def from_dataframe(cls, df, data_cls):
-        raise NotImplementedError(
-            "The selected execution does not implement the DataFrame exchange protocol yet."
-        )
+        return cls(data_cls.from_dataframe(df))
 
     # END Dataframe exchange protocol
 

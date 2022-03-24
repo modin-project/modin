@@ -24,9 +24,9 @@ Key Features and Updates
   * FIX-#4303: Fix the syntax error in reading from postgres (#4304)
   * FIX-#4308: Add proper error handling in df.set_index (#4309)
   * FIX-#4056: Allow an empty parse_date list in `read_csv_glob` (#4074)
-  * FIX-#4312: Fix constructing categorical frame with duplicate column names (#4313).  
-  * FIX-#4314: Allow passing a series of dtypes to astype (#4318)  
-  * FIX-#4310: Handle lists of lists of ints in read_csv_glob (#4319)  
+  * FIX-#4312: Fix constructing categorical frame with duplicate column names (#4313).
+  * FIX-#4314: Allow passing a series of dtypes to astype (#4318)
+  * FIX-#4310: Handle lists of lists of ints in read_csv_glob (#4319)
 * Performance enhancements
   * FIX-#4138, FIX-#4009: remove redundant sorting in the internal '.mask()' flow (#4140)
   * FIX-#4183: Stop shallow copies from creating global shared state. (#4184)
@@ -54,6 +54,9 @@ Key Features and Updates
   *
 * Developer API enhancements
   * FEAT-#4245: Define base interface for dataframe exchange protocol (#4246)
+  * FEAT-#4244: Implement dataframe exchange protocol for OmnisciOnNative execution (#4269)
+  * FEAT-#4144: Implement dataframe exchange protocol for pandas storage format (#4150)
+  * FEAT-#4342: Support `from_dataframe`` for pandas storage format (#4343)
 * Update testing suite
   * TEST-#3628: Report coverage data for `test-internals` CI job (#4198)
   * TEST-#3938: Test tutorial notebooks in CI (#4145)
@@ -74,6 +77,9 @@ Key Features and Updates
   * DOCS-#4280: Change links in jupyter notebooks (#4281)
   * DOCS-#4290: Add changes for OmniSci notebooks (#4291)
   * DOCS-#4241: Update warnings and docs regarding defaulting to pandas (#4242)
+  * DOCS-#3099: Fix `BasePandasDataSet` docstrings warnings (#4333)
+  * DOCS-#4339: Reformat I/O functions docstrings (#4341)
+  * DOCS-#4336: Reformat general utilities docstrings (#4338)
 * Dependencies
   * FIX-#4113, FIX-#4116, FIX-#4115: Apply new `black` formatting, fix pydocstyle check and readthedocs build (#4114)
   * TEST-#3227: Use codecov github action instead of bash form in GA workflows (#3226)
