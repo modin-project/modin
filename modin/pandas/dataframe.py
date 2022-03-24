@@ -35,6 +35,7 @@ from typing import IO, Optional, Union, Iterator
 import warnings
 
 from modin.pandas import Categorical
+from modin.pandas.pipeline import PandasQueryPipeline
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, to_pandas, hashable
 from modin.config import Engine, IsExperimental, PersistentPickle
@@ -1679,6 +1680,9 @@ class DataFrame(BasePandasDataset):
     product = prod
     radd = add
 
+    # def build_query(self, func, axis=0, output=False):
+        
+
     def query(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
         """
         Query the columns of a ``DataFrame`` with a boolean expression.
@@ -1688,6 +1692,27 @@ class DataFrame(BasePandasDataset):
         inplace = validate_bool_kwarg(inplace, "inplace")
         new_query_compiler = self._query_compiler.query(expr, **kwargs)
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
+
+    def _batch_api(self, func, axis, **kwargs):
+        if hasattr(self, "_pipeline"):
+            self._pipeline.add_query(func, **kwargs)
+        else:
+            from modin.config import NPartitions
+            num_partitions = kwargs.pop("num_partitions", NPartitions.get())
+            self._pipeline = PandasQueryPipeline(self, axis, num_partitions)
+            self._pipeline.add_query(func, **kwargs)
+        return self
+
+    def _batch_results(self, **kwargs):
+        if hasattr(self, "_pipeline"):
+            results = self._pipeline.get_results(**kwargs)
+            del self._pipeline
+            return results
+        else:
+            ErrorMessage.single_warning(
+                "No batch pipeline currently exists. "
+                + "To get batch results, please add queries using df._batch_api"
+            )
 
     def reindex(
         self,
