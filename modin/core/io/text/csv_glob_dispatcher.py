@@ -251,10 +251,9 @@ class CSVGlobDispatcher(CSVDispatcher):
                     # named "b", the output dataframe has the single date
                     # column "a_b".
                     if isinstance(date, list):
-                        # TODO(https://github.com/modin-project/modin/issues/4310):
-                        # Handle parse_dates with lists that include lists that
-                        # include ints. This code assumes that all lists with
-                        # parse_dates are lists of column names.
+                        for i, part in enumerate(date):
+                            if isinstance(part, int):
+                                date[i] = column_names[part]
                         new_col_name = "_".join(date)
                         column_names = column_names.drop(date).insert(0, new_col_name)
             elif isinstance(parse_dates, dict):
