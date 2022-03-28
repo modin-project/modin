@@ -3062,13 +3062,13 @@ class BaseQueryCompiler(abc.ABC):
 
         Parameters
         ----------
-        row_numeric_index : list of ints
-            Row positions to write value.
-        col_numeric_index : list of ints
-            Column positions to write value.
-        broadcasted_items : 2D-array
+        row_numeric_index : list, np.ndarray, slice(None), pandas.RangeIndex
+            Row numeric positions to write value.
+        col_numeric_index : list, np.ndarray, slice(None), pandas.RangeIndex
+            Column numeric positions to write value.
+        broadcasted_items : 2D-array or scalar
             Values to write. Have to be same size as defined by `row_numeric_index`
-            and `col_numeric_index`.
+            and `col_numeric_index` except scalar case.
 
         Returns
         -------

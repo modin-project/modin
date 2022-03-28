@@ -323,7 +323,7 @@ class PandasDataframe(object):
         if old_len != new_len:
             raise ValueError(
                 f"Length mismatch: Expected axis has {old_len} elements, "
-                + "new values have {new_len} elements"
+                + f"new values have {new_len} elements"
             )
         return new_labels
 

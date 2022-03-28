@@ -384,6 +384,28 @@ def test_loc(data):
         modin_df.loc["NO_EXIST"]
 
 
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_loc_3764(data):
+    # From issue #3764
+    pandas_df = pandas.DataFrame([[1, 2, 3], [4, 5, 6]])
+    modin_df = pd.DataFrame([[1, 2, 3], [4, 5, 6]])
+
+    pandas_df.loc[2] = pandas_df.loc[1]
+    modin_df.loc[2] = modin_df.loc[1]
+    df_equals(modin_df, pandas_df)
+
+    pandas_df.loc[6] = pandas_df.loc[1]
+    modin_df.loc[6] = modin_df.loc[1]
+    df_equals(modin_df, pandas_df)
+
+    pandas_df.loc[lambda df: 70] = pandas_df.loc[1]
+    modin_df.loc[lambda df: 70] = modin_df.loc[1]
+    df_equals(modin_df, pandas_df)
+
+    pandas_df.loc[90] = pandas_df.loc[70]
+    modin_df.loc[90] = modin_df.loc[70]
+
+
 # This tests the bug from https://github.com/modin-project/modin/issues/3736
 def test_loc_setting_single_categorical_column():
     modin_df = pd.DataFrame({"status": ["a", "b", "c"]}, dtype="category")
@@ -1784,15 +1806,14 @@ def test_setitem_unhashable_key():
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
     count_rows = modin_df.shape[0]
     value = [[1, 2]] * count_rows
-    # Failed with columns that doesn't exist
-    key = ["col1", "col2"]
-    # TODO: add no warning check
-    modin_df[key], pandas_df[key] = value, value
+
+    for key in (["col1", "col2"], ["new_key1", "new_key2"]):
+        modin_df[key], pandas_df[key] = value, value
+        df_equals(modin_df, pandas_df)
+
+    df_value = pandas.DataFrame(value)
+    modin_df[key], pandas_df[key] = df_value, df_value
     df_equals(modin_df, pandas_df)
-    # This should also work
-    # df_value = pandas.DataFrame(value)
-    # modin_df[key], pandas_df[key] = df_value, df_value
-    # df_equals(modin_df, pandas_df)
 
 
 def test___setitem__single_item_in_series():

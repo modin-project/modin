@@ -34,7 +34,6 @@ import sys
 from typing import IO, Optional, Union, Iterator
 import warnings
 
-from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, to_pandas, hashable
 from modin.config import Engine, IsExperimental, PersistentPickle
@@ -2522,58 +2521,25 @@ class DataFrame(BasePandasDataset):
         if isinstance(key, slice):
             return self._setitem_slice(key, value)
 
-        if hashable(key) and key not in self.columns:
-            if isinstance(value, Series) and len(self.columns) == 0:
-                # Note: column information is lost when assigning a query compiler
-                prev_index = self.columns
-                self._query_compiler = value._query_compiler.copy()
-                # Now that the data is appended, we need to update the column name for
-                # that column to `key`, otherwise the name could be incorrect.
-                self.columns = prev_index.insert(0, key)
-                return
-            # Do new column assignment after error checks and possible value modifications
-            self.insert(loc=len(self.columns), column=key, value=value)
+        if isinstance(key, DataFrame) or isinstance(key, np.ndarray):
+            # maybe different behavior from `.loc`
+            if isinstance(key, np.ndarray):
+                if key.shape != self.shape:
+                    raise ValueError("Array must be same shape as DataFrame")
+                key = DataFrame(key, columns=self.columns)
+            return self.mask(key, value, inplace=True)
+
+        if hashable(key) or isinstance(key, list):
+            self.loc[:, key] = value
             return
 
-        if isinstance(key, list) and is_list_like(value):
-            self.loc[slice(None), key] = value
-            return
+        def setitem_unhashable_key(df, value):
+            df[key] = value
+            return df
 
-        if not hashable(key):
-            if isinstance(key, DataFrame) or isinstance(key, np.ndarray):
-                if isinstance(key, np.ndarray):
-                    if key.shape != self.shape:
-                        raise ValueError("Array must be same shape as DataFrame")
-                    key = DataFrame(key, columns=self.columns)
-                return self.mask(key, value, inplace=True)
-
-            def setitem_unhashable_key(df, value):
-                df[key] = value
-                return df
-
-            return self._update_inplace(
-                self._default_to_pandas(setitem_unhashable_key, value)._query_compiler
-            )
-        if is_list_like(value):
-            if isinstance(value, (pandas.DataFrame, DataFrame)):
-                value = value[value.columns[0]].values
-            elif isinstance(value, np.ndarray):
-                assert (
-                    len(value.shape) < 3
-                ), "Shape of new values must be compatible with manager shape"
-                value = value.T.reshape(-1)
-                if len(self) > 0:
-                    value = value[: len(self)]
-            if not isinstance(value, (Series, Categorical)):
-                value = list(value)
-
-        if not self._query_compiler.lazy_execution and len(self.index) == 0:
-            new_self = DataFrame({key: value}, columns=self.columns)
-            self._update_inplace(new_self._query_compiler)
-        else:
-            if isinstance(value, Series):
-                value = value._query_compiler
-            self._update_inplace(self._query_compiler.setitem(0, key, value))
+        return self._update_inplace(
+            self._default_to_pandas(setitem_unhashable_key, value)._query_compiler
+        )
 
     def __iter__(self):
         """

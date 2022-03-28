@@ -2223,6 +2223,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             """
             df = df.copy()
             if len(internal_indices) == 1:
+                # The following error appears when using `internal_indices`
+                # variable directly without getting the first element:
+                # ValueError: Columns must be same length as key
                 if axis == 0:
                     df[df.columns[internal_indices[0]]] = value
                 else:
@@ -2234,11 +2237,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     df.iloc[internal_indices] = value
             return df
 
+        key = [key]
         if isinstance(value, type(self)):
-            value.columns = [key]
+            value.columns = key
             if axis == 1:
                 value = value.transpose()
-            idx = self.get_axis(axis ^ 1).get_indexer_for([key])[0]
+            idx = self.get_axis(axis ^ 1).get_indexer_for(key)[0]
             return self.insert_item(axis ^ 1, idx, value, how, replace=True)
 
         # TODO: rework by passing list-like values to `apply_select_indices`
@@ -2247,7 +2251,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame.apply_full_axis_select_indices(
                 axis,
                 setitem_builder,
-                [key],
+                key,
                 new_index=self.index,
                 new_columns=self.columns,
                 keep_remaining=True,
@@ -2256,7 +2260,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame.apply_select_indices(
                 axis,
                 setitem_builder,
-                [key],
+                key,
                 new_index=self.index,
                 new_columns=self.columns,
                 keep_remaining=True,
@@ -3042,7 +3046,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             col_internal_indices : list of ints
                 Positional indices of columns in this particular partition
                 to write `item` to.
-            item : 2D-array
+            item : 2D-array or scalar
                 Value to write.
 
             Returns

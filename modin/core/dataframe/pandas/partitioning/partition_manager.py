@@ -1198,6 +1198,7 @@ class PandasDataframePartitionManager(ABC):
         for row_idx, row_values in enumerate(row_partitions_list):
             row_blk_idx, row_internal_idx = row_values
             col_position_counter = 0
+            row_offset = 0
             for col_idx, col_values in enumerate(col_partitions_list):
                 col_blk_idx, col_internal_idx = col_values
                 remote_part = partition_copy[row_blk_idx, col_blk_idx]
