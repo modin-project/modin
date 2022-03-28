@@ -1887,10 +1887,104 @@ class PandasDataframe(ClassLogger):
         (row if axis=1) down to a single value.
         """
 
+        axis = Axis(axis)
+
+        def window_function_complete(df):
+            # modifying the dataframe that's passed in or create a new df
+            # creating new df means will have 2 copies of the df in memory
+            # so just modify the dataframe that's passed in
+            # ok to modify bc the broadcast_axis makes a copy
+            # pass by value, not pass by reference
+            # when call df_equals, need to convert from modin frame to pandas
+
+            n = len(df.columns) if axis == Axis.COL_WISE else len(df.index)
+
+            for i in range(0, n):
+                window = df.iloc[:, i : i + window_size] if axis == Axis.COL_WISE else df.iloc[i : i + window_size, :]
+
+                reduction_result = reduce_fn(window)
+            
+                if axis == Axis.COL_WISE:
+                    df.iloc[:, i] = reduction_result
+                else:
+                    df.iloc[i, :] = reduction_result  
+
+            # fn that's passed in to map_axis_partitions needs to have a dataframe returned
+            return df
+
+        def window_function_partition(virtual_partition):
+            n = len(virtual_partition.columns) if axis == Axis.COL_WISE else len(virtual_partition.index)
+
+            for i in range(0, n):
+                window = virtual_partition.iloc[:, i : i + window_size] if axis == Axis.COL_WISE else virtual_partition.iloc[i : i + window_size, :]
+                
+                if ((axis == Axis.COL_WISE and len(window.columns) < window_size) or (axis == Axis.ROW_WISE and len(window.index) < window_size)):
+                    break
+
+                reduction_result = reduce_fn(window)
+
+                if axis == Axis.COL_WISE:
+                    virtual_partition.iloc[:, i] = reduction_result
+                else:
+                    virtual_partition.iloc[i, :] = reduction_result
+
+            return virtual_partition
+
+
+        num_parts = len(self._partitions) if axis == Axis.ROW_WISE else len(self._partitions[0])           
+        results = []
+
+        for i in range(num_parts):
+            # partitions to join in virtual partition
+            parts_to_join = []
+            # get the ith partition
+            starting_part = self._partitions[i]
+            parts_to_join.append(starting_part)
+
+            last_window_span = window_size - 1
+
+            k = i + 1
+
+            while (last_window_span > 0 and k < num_parts):
+                part = self._partitions[k] # partitions are 2d array, have to mask across all rows/cols
+
+                part_len = len(part) #len(part.columns) if axis == Axis.COL_WISE else len(part.index)
+
+                if (last_window_span <= part_len):
+                    if axis == Axis.ROW_WISE:
+                        print(part[0])
+                        masked_part = part.mask(row_labels = slice(start=last_window_span, stop=part_len), col_labels = slice(len(part[0])))
+                    else:
+                        print(part)
+                        masked_part = part.mask(row_labels = slice(len(part[0])), col_labels = slice(start=last_window_span, stop=part_len))
+
+                    parts_to_join.append(masked_part)
+                    break
+                else:
+                    # window continues into next part, so just add this part to parts_to_join
+                    parts_to_join.append(part)
+                    last_window_span -= part_len
+                    k += 1
+
+            # create virtual partition and perform window operation
+            virtual_partition = virtual_partition(parts_to_join, axis = axis)
+            result = virtual_partition.apply(window_function_partition)
+            results.append(result)
+
+        return self.__constructor__(
+            results,
+            self.index,
+            self.columns,
+            self._row_lengths,
+            self._column_widths,
+            result_schema
+        )                    
+
+        """
         # axis could also be passed in as an integer, so convert to Axis enum so that axis var
         # is always an enum in our code
         axis = Axis(axis)
-        
+
         def window_function(df):
             # modifying the dataframe that's passed in or create a new df
             # creating new df means will have 2 copies of the df in memory
@@ -1927,6 +2021,7 @@ class PandasDataframe(ClassLogger):
             self._column_widths,
             result_schema
         )
+        """
 
     @lazy_metadata_decorator(apply_axis="both")
     def fold(self, axis, func, new_columns=None):
