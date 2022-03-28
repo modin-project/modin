@@ -11,15 +11,17 @@ The second column is a flag for whether or not there is an implementation in Mod
 the method in the left column. ``Y`` stands for yes, ``N`` stands for no, ``P`` stands
 for partial (meaning some parameters may not be supported yet), and ``D`` stands for
 default to pandas.
-**Currently second column reflects implementation status for Ray and Dask engines. By default support of a method
-in the Omnisci engine could be treated as ``D`` unless ``Notes`` column contains additional information. imilarly,
-by default ``Notes`` contains information about ``Ray`` and ``Dask`` engines unless ``Omnisci`` explicitly mentioned.**
+
+.. note::
+    Currently, second column reflects implementation status for Ray and Dask engines. By default, support for a method
+    in the Omnisci engine could be treated as ``D`` unless ``Notes`` column contains additional information. Similarly,
+    by default ``Notes`` contains information about ``Ray`` and ``Dask`` engines unless ``Omnisci`` is explicitly mentioned.
 
 +---------------------------+---------------------------------+----------------------------------------------------+
 | Utility method            | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.concat`_              | Y                               | **Omnisci**:``Y`` but ``sort`` and ``ignore_index``|
-|                           |                                 | parameters ignored                                 |
+| `pd.concat`_              | Y                               | **Omnisci**: ``Y`` but ``sort`` and                |
+|                           |                                 | `ignore_index`` parameters ignored                 |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | `pd.eval`_                | Y                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
