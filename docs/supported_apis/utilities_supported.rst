@@ -13,7 +13,7 @@ for partial (meaning some parameters may not be supported yet), and ``D`` stands
 default to pandas.
 
 .. note::
-    Currently, second column reflects implementation status for Ray and Dask engines. By default, support for a method
+    Currently, the second column reflects implementation status for Ray and Dask engines. By default, support for a method
     in the Omnisci engine could be treated as ``D`` unless ``Notes`` column contains additional information. Similarly,
     by default ``Notes`` contains information about ``Ray`` and ``Dask`` engines unless ``Omnisci`` is explicitly mentioned.
 
