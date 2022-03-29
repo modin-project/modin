@@ -14,7 +14,7 @@ default to pandas. To learn more about the implementations that default to panda
 the related section on :doc:`Defaulting to pandas </supported_apis/index>`.
 
 .. note::
-    Currently, second column reflects implementation status for ``Ray`` and ``Dask`` engines. By default, support for a method
+    Currently, the second column reflects implementation status for ``Ray`` and ``Dask`` engines. By default, support for a method
     in the ``Omnisci`` engine could be treated as ``D`` unless ``Notes`` column contains additional information. Similarly,
     by default ``Notes`` contains information about ``Ray`` and ``Dask`` engines unless ``Omnisci`` is explicitly mentioned.
 
@@ -266,7 +266,7 @@ the related section on :doc:`Defaulting to pandas </supported_apis/index>`.
 | ``mean``                    | P                               | Modin defaults to pandas if given the ``level``    |
 |                             |                                 | param.                                             |
 |                             |                                 | **Omnisci**: ``P``. ``D`` for ``level``, ``axis``, |
-|                             |                                 | 'skipna' and 'numeric_only' params                 |
+|                             |                                 | `skipna` and `numeric_only` params                 |
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``median``                  | P                               | Modin defaults to pandas if given the ``level``    |
 |                             |                                 | param.                                             |
@@ -302,8 +302,8 @@ the related section on :doc:`Defaulting to pandas </supported_apis/index>`.
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``nsmallest``               | Y                               |                                                    |
 +-----------------------------+---------------------------------+----------------------------------------------------+
-| ``nunique``                 | Y                               | **Omnisci**: ``P``, no support for axis!=0 and     |
-|                             |                                 | dropna=False                                       |
+| ``nunique``                 | Y                               | **Omnisci**: ``P``, no support for ``axis!=0`` and |
+|                             |                                 | ``dropna=False``                                   |
 +-----------------------------+---------------------------------+----------------------------------------------------+
 | ``pct_change``              | D                               |                                                    |
 +-----------------------------+---------------------------------+----------------------------------------------------+
