@@ -290,15 +290,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # Metadata modification methods
     def add_prefix(self, prefix, axis=1):
         if axis == 1:
-            return self.__constructor__(self._modin_frame.rename(new_col_labels=lambda x: f"prefix{x}"))
+            return self.__constructor__(
+                self._modin_frame.rename(new_col_labels=lambda x: f"prefix{x}")
+            )
         else:
-            return self.__constructor__(self._modin_frame.rename(new_row_labels=lambda x: f"prefix{x}"))
+            return self.__constructor__(
+                self._modin_frame.rename(new_row_labels=lambda x: f"prefix{x}")
+            )
 
     def add_suffix(self, suffix, axis=1):
         if axis == 1:
-            return self.__constructor__(self._modin_frame.add_suffix(new_col_labels=lambda x: f"{x}suffix"))
+            return self.__constructor__(
+                self._modin_frame.add_suffix(new_col_labels=lambda x: f"{x}suffix")
+            )
         else:
-            return self.__constructor__(self._modin_frame.add_suffix(new_row_labels=lambda x: f"{x}suffix"))
+            return self.__constructor__(
+                self._modin_frame.add_suffix(new_row_labels=lambda x: f"{x}suffix")
+            )
 
     # END Metadata modification methods
 
