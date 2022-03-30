@@ -22,10 +22,9 @@ Key Features and Updates
 * Update testing suite
   *
 * Documentation improvements
-  * DOCS-#4350: Add release notes template for 0.15.0 (#4351)
+  *
 * Dependencies
   *
 
 Contributors
 ------------
-@YarShev
