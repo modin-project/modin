@@ -520,7 +520,7 @@ jobs:
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Install unidist latest  # Temporary step
         run: pip install git+https://github.com/modin-project/unidist#egg=unidist[all]
-      - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
+      # - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
       # - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py # Ray interface is used
       #   if: matrix.unidist-backend == 'ray'
