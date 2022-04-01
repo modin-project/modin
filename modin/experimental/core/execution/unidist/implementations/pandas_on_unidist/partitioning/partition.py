@@ -13,14 +13,10 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
-import pandas
-
-from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
-from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
-from modin.pandas.indexing import compute_sliced_len
-
 import unidist
 
+from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
+from modin.pandas.indexing import compute_sliced_len
 
 compute_sliced_len = unidist.remote(compute_sliced_len)
 
@@ -93,12 +89,12 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         oid = self.oid
         call_queue = self.call_queue + [[func, args, kwargs]]
         if len(call_queue) > 1:
-            result, length, width, ip = apply_list_of_funcs.remote(call_queue, oid)
+            result, length, width, ip = _apply_list_of_funcs.remote(call_queue, oid)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
-            result, length, width, ip = apply_func.remote(oid, func, *args, **kwargs)
+            result, length, width, ip = _apply_func.remote(oid, func, *args, **kwargs)
         return PandasOnUnidistDataframePartition(result, length, width, ip)
 
     def add_to_apply_calls(self, func, *args, **kwargs):
@@ -140,7 +136,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
-            ) = apply_list_of_funcs.remote(call_queue, oid)
+            ) = _apply_list_of_funcs.remote(call_queue, oid)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
@@ -150,7 +146,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
-            ) = apply_func.remote(oid, func, *args, **kwargs)
+            ) = _apply_func.remote(oid, func, *args, **kwargs)
         self.call_queue = []
 
     def wait(self):
@@ -175,57 +171,30 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             call_queue=self.call_queue,
         )
 
-    def to_pandas(self):
-        """
-        Convert the object wrapped by this partition to a ``pandas.DataFrame``.
-
-        Returns
-        -------
-        pandas DataFrame.
-        """
-        dataframe = self.get()
-        assert type(dataframe) is pandas.DataFrame or type(dataframe) is pandas.Series
-        return dataframe
-
-    def to_numpy(self, **kwargs):
-        """
-        Convert the object wrapped by this partition to a NumPy array.
-
-        Parameters
-        ----------
-        **kwargs : dict
-            Additional keyword arguments to be passed in ``to_numpy``.
-
-        Returns
-        -------
-        np.ndarray
-        """
-        return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
-
-    def mask(self, row_indices, col_indices):
+    def mask(self, row_labels, col_labels):
         """
         Lazily create a mask that extracts the indices provided.
 
         Parameters
         ----------
-        row_indices : list-like, slice or label
-            The indices for the rows to extract.
-        col_indices : list-like, slice or label
-            The indices for the columns to extract.
+        row_labels : list-like, slice or label
+            The row labels for the rows to extract.
+        col_labels : list-like, slice or label
+            The column labels for the columns to extract.
 
         Returns
         -------
         PandasOnUnidistDataframePartition
             A new ``PandasOnUnidistDataframePartition`` object.
         """
-        new_obj = super().mask(row_indices, col_indices)
-        if isinstance(row_indices, slice) and unidist.is_object_ref(self._length_cache):
+        new_obj = super().mask(row_labels, col_labels)
+        if isinstance(row_labels, slice) and unidist.is_object_ref(self._length_cache):
             new_obj._length_cache = compute_sliced_len.remote(
-                row_indices, self._length_cache
+                row_labels, self._length_cache
             )
-        if isinstance(col_indices, slice) and unidist.is_object_ref(self._width_cache):
+        if isinstance(col_labels, slice) and unidist.is_object_ref(self._width_cache):
             new_obj._width_cache = compute_sliced_len.remote(
-                col_indices, self._width_cache
+                col_labels, self._width_cache
             )
         return new_obj
 
@@ -278,7 +247,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._length_cache, self._width_cache = get_index_and_columns.remote(
+                self._length_cache, self._width_cache = _get_index_and_columns.remote(
                     self.oid
                 )
         if unidist.is_object_ref(self._length_cache):
@@ -298,7 +267,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._length_cache, self._width_cache = get_index_and_columns.remote(
+                self._length_cache, self._width_cache = _get_index_and_columns.remote(
                     self.oid
                 )
         if unidist.is_object_ref(self._width_cache):
@@ -323,45 +292,9 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             self._ip_cache = unidist.get(self._ip_cache)
         return self._ip_cache
 
-    @classmethod
-    def _length_extraction_fn(cls):
-        """
-        Return the function that computes the length of the object wrapped by this partition.
-
-        Returns
-        -------
-        callable
-            The function that computes the length of the object wrapped by this partition.
-        """
-        return length_fn_pandas
-
-    @classmethod
-    def _width_extraction_fn(cls):
-        """
-        Return the function that computes the width of the object wrapped by this partition.
-
-        Returns
-        -------
-        callable
-            The function that computes the width of the object wrapped by this partition.
-        """
-        return width_fn_pandas
-
-    @classmethod
-    def empty(cls):
-        """
-        Create a new partition that wraps an empty pandas DataFrame.
-
-        Returns
-        -------
-        PandasOnUnidistDataframePartition
-            A new ``PandasOnUnidistDataframePartition`` object.
-        """
-        return cls.put(pandas.DataFrame())
-
 
 @unidist.remote(num_returns=2)
-def get_index_and_columns(df):
+def _get_index_and_columns(df):
     """
     Get the number of rows and columns of a pandas DataFrame.
 
@@ -381,7 +314,7 @@ def get_index_and_columns(df):
 
 
 @unidist.remote(num_returns=4)
-def apply_func(partition, func, *args, **kwargs):  # pragma: no cover
+def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     """
     Execute a function on the partition in a worker process.
 
@@ -423,7 +356,7 @@ def apply_func(partition, func, *args, **kwargs):  # pragma: no cover
 
 
 @unidist.remote(num_returns=4)
-def apply_list_of_funcs(funcs, partition):  # pragma: no cover
+def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
     """
     Execute all operations stored in the call queue on the partition in a worker process.
 
