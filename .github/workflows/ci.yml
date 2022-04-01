@@ -410,83 +410,83 @@ jobs:
           path: asv_bench/benchmarks.log
         if: failure()
 
-  test-all:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    strategy:
-      matrix:
-        python-version: ["3.8"]
-        engine: ["python", "ray", "dask"]
-    env:
-      MODIN_ENGINE: ${{matrix.engine}}
-      MODIN_MEMORY: 1000000000
-      # Only test reading from SQL server and postgres on ubuntu for now.
-      # Eventually, we should test on Windows, too, but we will have to set up
-      # the servers differently.
-      MODIN_TEST_READ_FROM_SQL_SERVER: true
-      MODIN_TEST_READ_FROM_POSTGRES: true
-    name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 2
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: modin
-          environment-file: environment-dev.yml
-          python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
-      - name: Install HDF5
-        run: sudo apt update && sudo apt install -y libhdf5-dev
-      - name: Set up postgres
-        # Locally, specifying port 2345:5432 works, but 2345:2345 and 5432:5432 do not. This solution is from
-        # https://stackoverflow.com/questions/36415654/cant-connect-docker-postgresql-9-3
-        run: |
-          sudo docker pull postgres
-          sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
-      - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
-        if: matrix.engine == 'ray'
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
-        if: matrix.engine == 'ray'
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_concat.py
-        if: matrix.engine == 'python'
-      - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
-        if: matrix.engine != 'python'
-      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_general.py
-      - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
-      - run: ./.github/workflows/sql_server/set_up_sql_server.sh
-      - run: python -m pytest modin/pandas/test/test_io.py --verbose
-      - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && pytest modin/experimental/sql/test/test_sql.py
-      - run: pytest modin/test/exchange/dataframe_protocol/test_general.py
-      - run: pytest modin/test/exchange/dataframe_protocol/pandas/test_protocol.py
-      - uses: codecov/codecov-action@v2
+  # test-all:
+  #   needs: [lint-flake8, lint-black, test-api, test-headers]
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   strategy:
+  #     matrix:
+  #       python-version: ["3.8"]
+  #       engine: ["python", "ray", "dask"]
+  #   env:
+  #     MODIN_ENGINE: ${{matrix.engine}}
+  #     MODIN_MEMORY: 1000000000
+  #     # Only test reading from SQL server and postgres on ubuntu for now.
+  #     # Eventually, we should test on Windows, too, but we will have to set up
+  #     # the servers differently.
+  #     MODIN_TEST_READ_FROM_SQL_SERVER: true
+  #     MODIN_TEST_READ_FROM_POSTGRES: true
+  #   name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #       with:
+  #         fetch-depth: 2
+  #     - uses: conda-incubator/setup-miniconda@v2
+  #       with:
+  #         activate-environment: modin
+  #         environment-file: environment-dev.yml
+  #         python-version: ${{matrix.python-version}}
+  #         channel-priority: strict
+  #         use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+  #     - name: Conda environment
+  #       run: |
+  #         conda info
+  #         conda list
+  #     - name: Install HDF5
+  #       run: sudo apt update && sudo apt install -y libhdf5-dev
+  #     - name: Set up postgres
+  #       # Locally, specifying port 2345:5432 works, but 2345:2345 and 5432:5432 do not. This solution is from
+  #       # https://stackoverflow.com/questions/36415654/cant-connect-docker-postgresql-9-3
+  #       run: |
+  #         sudo docker pull postgres
+  #         sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
+  #     - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
+  #     - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
+  #     - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
+  #       if: matrix.engine == 'ray'
+  #     - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
+  #       if: matrix.engine == 'ray'
+  #     - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+  #     - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
+  #     - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
+  #     - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+  #     - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
+  #     - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+  #     - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
+  #     - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
+  #     - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
+  #     - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
+  #     - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+  #     - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
+  #     - run: python -m pytest -n 2 modin/pandas/test/test_concat.py
+  #       if: matrix.engine == 'python'
+  #     - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+  #       if: matrix.engine != 'python'
+  #     - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
+  #     - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
+  #     - run: python -m pytest -n 2 modin/pandas/test/test_general.py
+  #     - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
+  #     - run: ./.github/workflows/sql_server/set_up_sql_server.sh
+  #     - run: python -m pytest modin/pandas/test/test_io.py --verbose
+  #     - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
+  #     - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && pytest modin/experimental/sql/test/test_sql.py
+  #     - run: pytest modin/test/exchange/dataframe_protocol/test_general.py
+  #     - run: pytest modin/test/exchange/dataframe_protocol/pandas/test_protocol.py
+  #     - uses: codecov/codecov-action@v2
 
-  test-all:
+  test-all-unidist:
     needs: [lint-commit, lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
@@ -494,10 +494,11 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.7", "3.8"]
-        unidist-backend: ["Ray", "Dask", "MultiProcessing", "Python"]
+        python-version: ["3.8"] # 3.8 only just temporarily
+        unidist-backend: ["ray", "mpi", "python"] # ray and mpi only to not load testing temporarily
     env:
       MODIN_ENGINE: "unidist"
+      MODIN_EXPERIMENTAL: "True"
       UNIDIST_BACKEND: ${{matrix.unidist-backend}}
     name: test-ubuntu (engine unidist ${{matrix.unidist-backend}}, python ${{matrix.python-version}})
     steps:
@@ -517,32 +518,34 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
+      - name: Install unidist latest  # Temporary step
+        run: pip install git+https://github.com/modin-project/unidist#egg=unidist[all]
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
-        if: matrix.unidist-backend == 'Ray'
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduction.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_concat.py
-        if: matrix.unidist-backend == 'Python'
-      - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
-        if: matrix.unidist-backend != 'Python'
-      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_general.py
-      - run: python -m pytest modin/pandas/test/test_io.py --verbose
-      - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - run: pip install "dfsql>=0.4.2" && pytest modin/experimental/sql/test/test_sql.py
+      # - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py # Ray interface is used
+      #   if: matrix.unidist-backend == 'ray'
+      - run: unidist -m pytest modin/pandas/test/dataframe/test_binary.py
+      - run: unidist -m pytest modin/pandas/test/dataframe/test_default.py
+      - run: unidist -m pytest modin/pandas/test/dataframe/test_indexing.py
+      - run: unidist -m pytest modin/pandas/test/dataframe/test_iter.py
+      - run: unidist -m pytest modin/pandas/test/dataframe/test_join_sort.py
+      - run: unidist -m pytest modin/pandas/test/dataframe/test_map_metadata.py
+      - run: unidist -m pytest modin/pandas/test/dataframe/test_reduction.py
+      - run: unidist -m pytest modin/pandas/test/dataframe/test_udf.py
+      - run: unidist -m pytest modin/pandas/test/dataframe/test_window.py
+      - run: unidist -m pytest modin/pandas/test/dataframe/test_pickle.py
+      - run: unidist -m pytest modin/pandas/test/test_series.py
+      - run: unidist -m pytest modin/pandas/test/test_rolling.py
+      - run: unidist -m pytest modin/pandas/test/test_concat.py
+        if: matrix.unidist-backend == 'python'
+      - run: unidist -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+        if: matrix.unidist-backend != 'python'
+      - run: unidist -m pytest modin/pandas/test/test_groupby.py
+      - run: unidist -m pytest modin/pandas/test/test_reshape.py
+      - run: unidist -m pytest modin/pandas/test/test_general.py
+      - run: unidist -m pytest modin/pandas/test/test_io.py --verbose
+      - run: unidist -m pytest modin/experimental/pandas/test/test_io_exp.py
+      - run: pip install "dfsql>=0.4.2" && unidist -m pytest modin/experimental/sql/test/test_sql.py
       - run: |
           curl -o codecov https://codecov.io/bash
           VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
@@ -554,36 +557,36 @@ jobs:
               exit 10
           fi
 
-  test-experimental:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    env:
-      MODIN_ENGINE: "python"
-      MODIN_EXPERIMENTAL: "True"
-      MODIN_MEMORY: 1000000000
-    name: test experimental
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 2
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: modin
-          environment-file: environment-dev.yml
-          python-version: 3.8
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
-      - run: python -m pytest modin/pandas/test/test_io.py --verbose
-      - uses: codecov/codecov-action@v2
+  # test-experimental:
+  #   needs: [lint-flake8, lint-black, test-api, test-headers]
+  #   runs-on: ubuntu-latest
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   env:
+  #     MODIN_ENGINE: "python"
+  #     MODIN_EXPERIMENTAL: "True"
+  #     MODIN_MEMORY: 1000000000
+  #   name: test experimental
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #       with:
+  #         fetch-depth: 2
+  #     - uses: conda-incubator/setup-miniconda@v2
+  #       with:
+  #         activate-environment: modin
+  #         environment-file: environment-dev.yml
+  #         python-version: 3.8
+  #         channel-priority: strict
+  #         use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+  #     - name: Conda environment
+  #       run: |
+  #         conda info
+  #         conda list
+  #     - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+  #     - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+  #     - run: python -m pytest modin/pandas/test/test_io.py --verbose
+  #     - uses: codecov/codecov-action@v2
 
   test-cloud:
     needs: [lint-flake8, lint-black, test-api, test-headers]
