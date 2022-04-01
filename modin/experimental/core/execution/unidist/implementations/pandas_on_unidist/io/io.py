@@ -13,7 +13,7 @@
 
 """The module holds the factory which performs I/O using pandas on unidist."""
 
-import io
+# import io #TODO[unidist]: Issues with signal actor
 import os
 
 import pandas
