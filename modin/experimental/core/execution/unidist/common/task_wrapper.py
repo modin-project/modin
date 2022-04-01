@@ -67,7 +67,7 @@ class UnidistTask:
             unidist identifier of the result being put to object store.
         """
         return _deploy_remote_func.options(num_returns=num_returns).remote(
-            func, *args, **kwargs
+            func, *args, kwargs
         )
 
     @classmethod
