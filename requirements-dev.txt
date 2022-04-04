@@ -14,14 +14,14 @@ scipy
 s3fs>=2021.8
 pytest
 pytest-benchmark
-coverage<5.0
+coverage
 pytest-cov
 pytest-xdist
 feather-format
 lxml
 openpyxl
 xlrd
-matplotlib<=3.2.2
+matplotlib
 sqlalchemy>=1.4.0
 msgpack
 pandas_gbq
