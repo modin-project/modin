@@ -19,12 +19,12 @@ Using `-export_path` option configs description can be exported to the external 
 provided with this flag.
 """
 
+from textwrap import dedent
+
 from . import *  # noqa: F403, F401
 from .pubsub import Parameter
 import pandas
 import argparse
-
-from modin.utils import _get_indent
 
 
 def print_config_help():
@@ -48,18 +48,6 @@ def export_config_help(filename: str):
     for objname in sorted(globals()):
         obj = globals()[objname]
         if isinstance(obj, type) and issubclass(obj, Parameter) and not obj.is_abstract:
-            doc = obj.__doc__
-            description = []
-            indent = _get_indent(doc)
-            # remove indent
-            for line in doc.split("\n"):
-                if line:
-                    line = line[indent:]
-                description.append(line)
-
-            description = "\n".join(description)
-            # `Notes` `-` underlining can't be correctly parsed inside csv table by sphinx
-            description = description.replace("Notes\n-----", "Notes:\n")
             data = {
                 "Config Name": obj.__name__,
                 "Env. Variable Name": getattr(
@@ -68,12 +56,21 @@ def export_config_help(filename: str):
                 "Default Value": obj._get_default()
                 if obj.__name__ != "RayRedisPassword"
                 else "random string",
-                "Description": description,
+                "Description": dedent(obj.__doc__).replace("Notes\n-----", "Notes:\n"),
                 "Options": obj.choices,
             }
             configs_data.append(data)
 
-    pandas.DataFrame(configs_data).to_csv(filename, index=False)
+    pandas.DataFrame(
+        configs_data,
+        columns=[
+            "Config Name",
+            "Env. Variable Name",
+            "Default Value",
+            "Description",
+            "Options",
+        ],
+    ).to_csv(filename, index=False)
 
 
 if __name__ == "__main__":
