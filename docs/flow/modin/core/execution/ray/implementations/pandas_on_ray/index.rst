@@ -32,7 +32,7 @@ generic functionality from the ``GenericRayDataframe`` and the :py:class:`~modin
 PandasOnRay Dataframe implementation
 ------------------------------------
 
-Modin implements ``Dataframe``, ``PartitionManager``, ``VirtualPartition`` (specific version of ``AxisPartition`` with capability
+Modin implements ``Dataframe``, ``PartitionManager``, ``VirtualPartition`` (a specific kind of ``AxisPartition`` with the capability
 to combine smaller partitions into the one "virtual") and ``Partition`` classes specifically for the ``PandasOnRay`` execution:
 
 * :doc:`PandasOnRayDataframe <dataframe>`
