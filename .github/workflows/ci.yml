@@ -495,7 +495,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.8"] # 3.8 only just temporarily
-        unidist-backend: ["ray", "python"] # ray and python only to not load testing temporarily
+        unidist-backend: ["ray", "python", "mpi"] # ray, mpi and python only to not load testing temporarily
     env:
       UNIDIST_BACKEND: ${{matrix.unidist-backend}}
       MODIN_ENGINE: "unidist"
@@ -532,6 +532,7 @@ jobs:
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - name: Install unidist latest  # Temporary step
         run: pip install git+https://github.com/modin-project/unidist#egg=unidist[all]
+      - run: pip install -e .
       - run: MODIN_BENCHMARK_MODE=True unidist -m pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: unidist -m pytest modin/experimental/xgboost/test/test_default.py
       # - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py # Ray interface is used
