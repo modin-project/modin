@@ -495,7 +495,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.8"] # 3.8 only just temporarily
-        unidist-backend: ["ray", "python", "mpi"] # ray, mpi and python only to not load testing temporarily
+        unidist-backend: ["ray", "mpi"] # ray, mpi only to not load testing temporarily
     env:
       UNIDIST_BACKEND: ${{matrix.unidist-backend}}
       MODIN_ENGINE: "unidist"
