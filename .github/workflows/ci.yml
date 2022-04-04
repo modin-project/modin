@@ -497,9 +497,15 @@ jobs:
         python-version: ["3.8"] # 3.8 only just temporarily
         unidist-backend: ["ray", "python"] # ray and python only to not load testing temporarily
     env:
+      UNIDIST_BACKEND: ${{matrix.unidist-backend}}
       MODIN_ENGINE: "unidist"
       MODIN_EXPERIMENTAL: "True"
-      UNIDIST_BACKEND: ${{matrix.unidist-backend}}
+      MODIN_MEMORY: 1000000000
+      # Only test reading from SQL server and postgres on ubuntu for now.
+      # Eventually, we should test on Windows, too, but we will have to set up
+      # the servers differently.
+      MODIN_TEST_READ_FROM_SQL_SERVER: true
+      MODIN_TEST_READ_FROM_POSTGRES: true
     name: test-ubuntu (engine unidist ${{matrix.unidist-backend}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
@@ -524,22 +530,21 @@ jobs:
       - run: unidist -m pytest modin/experimental/xgboost/test/test_default.py
       # - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py # Ray interface is used
       #   if: matrix.unidist-backend == 'ray'
+      # - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
+      #   if: matrix.engine == 'ray'
       - run: unidist -m pytest modin/pandas/test/dataframe/test_binary.py
       - run: unidist -m pytest modin/pandas/test/dataframe/test_default.py
       - run: unidist -m pytest modin/pandas/test/dataframe/test_indexing.py
       - run: unidist -m pytest modin/pandas/test/dataframe/test_iter.py
       - run: unidist -m pytest modin/pandas/test/dataframe/test_join_sort.py
       - run: unidist -m pytest modin/pandas/test/dataframe/test_map_metadata.py
-      - run: unidist -m pytest modin/pandas/test/dataframe/test_reduction.py
+      - run: unidist -m pytest modin/pandas/test/dataframe/test_reduce.py
       - run: unidist -m pytest modin/pandas/test/dataframe/test_udf.py
       - run: unidist -m pytest modin/pandas/test/dataframe/test_window.py
       - run: unidist -m pytest modin/pandas/test/dataframe/test_pickle.py
       - run: unidist -m pytest modin/pandas/test/test_series.py
       - run: unidist -m pytest modin/pandas/test/test_rolling.py
       - run: unidist -m pytest modin/pandas/test/test_concat.py
-        if: matrix.unidist-backend == 'python'
-      - run: unidist -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
-        if: matrix.unidist-backend != 'python'
       - run: unidist -m pytest modin/pandas/test/test_groupby.py
       - run: unidist -m pytest modin/pandas/test/test_reshape.py
       - run: unidist -m pytest modin/pandas/test/test_general.py
