@@ -22,7 +22,23 @@ from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 class FWFDispatcher(TextFileDispatcher):
     """Class handles utils for reading of tables with fixed-width formatted lines."""
 
-    read_callback = pandas.read_fwf
+    def read_callback(*args, **kwargs):
+        """
+        Parse data on each partition.
+
+        Parameters
+        ----------
+        *args : list
+            Positional arguments to be passed to the callback function.
+        **kwargs : dict
+            Keyward arguments to be passed to the callback function.
+
+        Returns
+        -------
+        pandas.DataFrame or pandas.io.parsers.TextFileReader
+            Function call result.
+        """
+        return pandas.read_fwf(*args, **kwargs)
 
     @classmethod
     def check_parameters_support(

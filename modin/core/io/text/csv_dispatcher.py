@@ -21,4 +21,20 @@ from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 class CSVDispatcher(TextFileDispatcher):
     """Class handles utils for reading `.csv` files."""
 
-    read_callback = pandas.read_csv
+    def read_callback(*args, **kwargs):
+        """
+        Parse data on each partition.
+
+        Parameters
+        ----------
+        *args : list
+            Positional arguments to be passed to the callback function.
+        **kwargs : dict
+            Keyward arguments to be passed to the callback function.
+
+        Returns
+        -------
+        pandas.DataFrame or pandas.io.parsers.TextParser
+            Function call result.
+        """
+        return pandas.read_csv(*args, **kwargs)
