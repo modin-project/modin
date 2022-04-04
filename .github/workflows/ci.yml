@@ -560,6 +560,7 @@ jobs:
       - run: unidist -m pytest modin/pandas/test/test_io.py --verbose
       - run: unidist -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install "dfsql>=0.4.2" && unidist -m pytest modin/experimental/sql/test/test_sql.py
+        if: matrix.unidist-backend != 'python' # TODO[unidist]: python backend doesn't rise warnings in the test
       - uses: codecov/codecov-action@v2
 
   # test-experimental:

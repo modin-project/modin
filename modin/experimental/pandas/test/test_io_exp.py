@@ -64,6 +64,10 @@ def test_from_sql_distributed(make_sql_connection):  # noqa: F811
 
 
 @pytest.mark.skipif(
+    Engine.get() == "Unidist",
+    reason="Unidist does not have experimental API because it's experimental",  # TODO[unidist]: align read_sql impl
+)
+@pytest.mark.skipif(
     Engine.get() == "Dask",
     reason="Dask does not have experimental API",
 )
