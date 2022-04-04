@@ -524,6 +524,12 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
+      - name: Set up postgres
+        # Locally, specifying port 2345:5432 works, but 2345:2345 and 5432:5432 do not. This solution is from
+        # https://stackoverflow.com/questions/36415654/cant-connect-docker-postgresql-9-3
+        run: |
+          sudo docker pull postgres
+          sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - name: Install unidist latest  # Temporary step
         run: pip install git+https://github.com/modin-project/unidist#egg=unidist[all]
       - run: MODIN_BENCHMARK_MODE=True unidist -m pytest modin/pandas/test/internals/test_benchmark_mode.py
@@ -548,19 +554,12 @@ jobs:
       - run: unidist -m pytest modin/pandas/test/test_groupby.py
       - run: unidist -m pytest modin/pandas/test/test_reshape.py
       - run: unidist -m pytest modin/pandas/test/test_general.py
+      - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
+      - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: unidist -m pytest modin/pandas/test/test_io.py --verbose
       - run: unidist -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install "dfsql>=0.4.2" && unidist -m pytest modin/experimental/sql/test/test_sql.py
-      - run: |
-          curl -o codecov https://codecov.io/bash
-          VERSION=$(grep -o 'VERSION=\"[0-9\.]*\"' codecov | cut -d'"' -f2);
-          curl -o SHA512SUM "https://raw.githubusercontent.com/codecov/codecov-bash/${VERSION}/SHA512SUM"
-          if sha512sum -c --ignore-missing --status SHA512SUM; then
-              bash ./codecov
-          else
-              echo 'CORRUPTED CODECOV SCRIPT!!!'
-              exit 10
-          fi
+      - uses: codecov/codecov-action@v2
 
   # test-experimental:
   #   needs: [lint-flake8, lint-black, test-api, test-headers]
