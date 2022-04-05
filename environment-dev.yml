@@ -42,4 +42,4 @@ dependencies:
       - modin-spreadsheet>=0.1.1
       - tqdm
       - git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
-      - ray
+      - ray[default]
