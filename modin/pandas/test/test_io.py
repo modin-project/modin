@@ -1282,6 +1282,20 @@ class TestParquet:
             columns=columns,
         )
 
+    @pytest.mark.parametrize("nrows", [32, 64, 128, 256, 512, 1024, 2048, 4096])
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
+    def test_read_parquet_indexing_by_column(self, make_parquet_file, nrows):
+        # Test indexing into a column of modin with various parquet file row lengths.
+        unique_filename = get_unique_filename(extension="parquet")
+        make_parquet_file(filename=unique_filename, nrows=nrows)
+
+        parquet_df = pd.read_parquet(unique_filename)
+        for col in parquet_df.columns:
+            parquet_df[col]
+
     @pytest.mark.parametrize("columns", [None, ["col1"]])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
