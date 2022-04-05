@@ -56,6 +56,7 @@ def export_config_help(filename: str):
                 "Default Value": obj._get_default()
                 if obj.__name__ != "RayRedisPassword"
                 else "random string",
+                # `Notes` `-` underlining can't be correctly parsed inside csv table by sphinx
                 "Description": dedent(obj.__doc__).replace("Notes\n-----", "Notes:\n"),
                 "Options": obj.choices,
             }
