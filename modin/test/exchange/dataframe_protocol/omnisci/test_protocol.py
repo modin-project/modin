@@ -17,15 +17,17 @@ import pytest
 import pyarrow as pa
 import pandas
 import numpy as np
+from pyarrow.lib import ArrowNotImplementedError
 
 import modin.pandas as pd
+from modin.core.dataframe.base.exchange.dataframe_protocol.utils import DTypeKind
 from modin.core.dataframe.pandas.exchange.dataframe_protocol.from_dataframe import (
     primitive_column_to_ndarray,
     buffer_to_ndarray,
     set_nulls,
 )
 from modin.pandas.utils import from_arrow, from_dataframe
-from modin.pandas.test.utils import df_equals
+from modin.pandas.test.utils import df_equals, test_data
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from .utils import get_data_of_all_types, split_df_into_chunks, export_frame
 
@@ -290,6 +292,7 @@ def test_buffer_of_chunked_at(data_has_nulls, n_chunks):
         data_buff, data_dtype = buffers["data"]
         result = buffer_to_ndarray(data_buff, data_dtype, col.offset, col.size)
         result = set_nulls(result, col, buffers["validity"])
+        buffers.__repr__
 
         # Our configuration in pytest.ini requires that we explicitly catch all
         # instances of defaulting to pandas, this one raises a warning on `.to_numpy()`
@@ -306,3 +309,72 @@ def test_buffer_of_chunked_at(data_has_nulls, n_chunks):
         # Catch exception on attempt of doing a copy due to chunks combining
         with pytest.raises(RuntimeError):
             col.get_buffers()
+
+
+@pytest.mark.skip(reason="Issue-#4366")
+def test_dtype_categorical_column():
+    pd_df = pd.DataFrame(
+        {"a": pd.Categorical(list("testdataforexchangedataframeprotocol"))}
+    )
+    pd_chunks = split_df_into_chunks(pd_df, 2)
+    md_df = pd.concat(pd_chunks)
+    protocol_df = md_df.__dataframe__()
+    df_col = protocol_df.get_column(0)
+
+    assert df_col.dtype[0] == DTypeKind.CATEGORICAL
+
+
+@pytest.mark.skip(reason="NotImplementedError")
+@pytest.mark.parametrize("order", [True, False])
+def test_describe_categorical_column(order):
+    pd_df = pd.DataFrame(
+        {
+            "a": pd.Categorical(
+                list("testdataforexchangedataframeprotocol"), ordered=order
+            )
+        }
+    )
+    pd_chunks = split_df_into_chunks(pd_df, 2)
+    md_df = pd.concat(pd_chunks)
+    protocol_df = md_df.__dataframe__()
+    df_col = protocol_df.get_column(0)
+    assert (df_col.describe_categorical.values()) == (
+        order,
+        True,
+        {
+            14: "h",
+            3: "p",
+            13: "d",
+            2: "f",
+            0: "x",
+            4: "m",
+            10: "n",
+            12: "o",
+            15: "r",
+            1: "s",
+            6: "t",
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        (DTypeKind.CATEGORICAL, 8, "c", "="),
+        (DTypeKind.DATETIME, 64, "tsn:", "="),
+        (DTypeKind.INT, 64, "l", "="),
+        (DTypeKind.FLOAT, 64, "g", "="),
+    ],
+    ids=["categorical", "datetime", "int", "float"],
+)
+def test_propagate_dtype_column(dtype):
+    pd_df = pd.DataFrame(test_data["int_data"])
+    protocol_df = pd_df.__dataframe__()
+    df_col = protocol_df.get_column(0)
+    # TODO: delete if-else when will be fixed
+    if dtype[0] == DTypeKind.CATEGORICAL:
+        with pytest.raises(ArrowNotImplementedError):
+            df_col._propagate_dtype(dtype)
+    else:
+        res = df_col._propagate_dtype(dtype)
+        assert res is None
