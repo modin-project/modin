@@ -20,7 +20,7 @@ Key Features and Updates
 * Developer API enhancements
   *
 * Update testing suite
-  * Use Ray from pypi in CI (#4364)
+  * TEST-#4363: Use Ray from pypi in CI (#4364)
 * Documentation improvements
   *
 * Dependencies
