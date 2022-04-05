@@ -134,7 +134,7 @@ class ColumnStoreDispatcher(FileDispatcher):
         else:
             row_lengths = [
                 index_chunksize
-                if i * index_chunksize < index_len
+                if (i + 1) * index_chunksize < index_len
                 else max(0, index_len - (index_chunksize * i))
                 for i in range(num_partitions)
             ]
