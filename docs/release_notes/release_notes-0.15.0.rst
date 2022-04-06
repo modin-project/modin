@@ -18,7 +18,7 @@ Key Features and Updates
 * XGBoost enhancements
   *
 * Developer API enhancements
-  *
+  * FEAT-#4359: Add __dataframe__ method to the protocol dataframe (#4360)
 * Update testing suite
   * TEST-#4363: Use Ray from pypi in CI (#4364)
 * Documentation improvements
@@ -28,3 +28,4 @@ Key Features and Updates
 
 Contributors
 ------------
+@YarShev

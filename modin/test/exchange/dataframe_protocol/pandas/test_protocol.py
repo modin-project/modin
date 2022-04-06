@@ -21,10 +21,12 @@ from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 def test_simple_import():
     modin_df_producer = pd.DataFrame(test_data["int_data"])
+    internal_modin_df_producer = modin_df_producer.__dataframe__()
     # Our configuration in pytest.ini requires that we explicitly catch all
     # instances of defaulting to pandas, this one raises a warning on `.from_dataframe`
     with warns_that_defaulting_to_pandas():
         modin_df_consumer = from_dataframe(modin_df_producer)
+        internal_modin_df_consumer = from_dataframe(internal_modin_df_producer)
 
     # TODO: the following assertions verify that `from_dataframe` doesn't return
     # the same object untouched due to optimization branching, it actually should
@@ -33,9 +35,11 @@ def test_simple_import():
     # to consumer when we have some other implementation of the protocol as the
     # assertions may start failing shortly.
     assert modin_df_producer is not modin_df_consumer
+    assert internal_modin_df_producer is not internal_modin_df_consumer
     assert (
         modin_df_producer._query_compiler._modin_frame
         is not modin_df_consumer._query_compiler._modin_frame
     )
 
     df_equals(modin_df_producer, modin_df_consumer)
+    df_equals(modin_df_producer, internal_modin_df_consumer)
