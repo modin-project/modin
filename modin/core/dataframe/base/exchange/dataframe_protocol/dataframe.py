@@ -401,6 +401,7 @@ class ProtocolDataframe(ABC):
         -------
         ProtocolDataframe
         """
+        pass
 
     @property
     @abstractmethod
