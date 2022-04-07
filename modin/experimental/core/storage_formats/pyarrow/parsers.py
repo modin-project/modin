@@ -13,9 +13,10 @@
 
 """Module houses Modin parser classes, that are used for data parsing on the workers."""
 
-from modin.core.storage_formats.pandas.utils import compute_chunksize
-from io import BytesIO
 import pandas
+from io import BytesIO
+
+from modin.core.storage_formats.pandas.utils import compute_chunksize
 
 
 class PyarrowCSVParser:

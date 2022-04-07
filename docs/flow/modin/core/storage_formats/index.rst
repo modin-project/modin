@@ -9,7 +9,7 @@ The base storage format in Modin is pandas. In that format, Modin Dataframe oper
 partitions that hold ``pandas.DataFrame`` objects. Pandas is the most natural storage format
 since high-level DataFrame objects mirror its API, however, Modin's storage formats are not
 limited to the objects that conform to pandas API. There are formats that are able to store
-``pyarrow.Table`` (:doc:`pyarrow storage format <pyarrow/index>`) or even instances of 
+``pyarrow.Table`` (:doc:`pyarrow storage format </flow/modin/experimental/core/storage_formats/pyarrow/index>`) or even instances of
 SQL-like databases (:doc:`OmniSci storage format </flow/modin/experimental/core/storage_formats/omnisci/index>`)
 inside Modin Dataframe's partitions.
 
@@ -26,7 +26,6 @@ Query Compiler
 
     base/query_compiler
     pandas/index
-    pyarrow/index
 
 Modin supports several execution backends (storage format + execution engine). Calling any
 DataFrame API function will end up in some execution-specific method. The query compiler is
@@ -65,6 +64,7 @@ interprets a one-column query compiler as Series or DataFrame depending on the o
 
 High-level module overview
 ''''''''''''''''''''''''''
+
 This module houses submodules of all of the stable storage formats:
 
 ..
@@ -73,6 +73,5 @@ This module houses submodules of all of the stable storage formats:
 - :doc:`Base module <base/query_compiler>` contains an abstract query compiler class which defines common API.
 - :doc:`Pandas module <pandas/index>` contains query compiler and text parsers for pandas storage format.
 - cuDF module contains query compiler and text parsers for cuDF storage format.
-- :doc:`Pyarrow module <pyarrow/index>` contains query compiler and text parsers for Pyarrow storage format.
 
 You can find more in the :doc:`experimental section </flow/modin/experimental/core/storage_formats/index>`.

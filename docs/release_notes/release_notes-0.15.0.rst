@@ -17,7 +17,7 @@ Key Features and Updates
 * Benchmarking enhancements
   *
 * Refactor Codebase
-  *
+  * REFACTOR-#3642: Move PyArrow storage format usage from main feature to experimental ones (#4374)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements

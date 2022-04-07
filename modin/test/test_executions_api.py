@@ -11,13 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import pytest
+
 from modin.core.storage_formats import (
     BaseQueryCompiler,
     PandasQueryCompiler,
-    PyarrowQueryCompiler,
 )
+from modin.experimental.core.storage_formats.pyarrow import PyarrowQueryCompiler
 
-import pytest
 
 BASE_EXECUTION = BaseQueryCompiler
 EXECUTIONS = [PandasQueryCompiler, PyarrowQueryCompiler]
