@@ -1289,12 +1289,13 @@ class TestParquet:
     def test_read_parquet_indexing_by_column(self, make_parquet_file):
         # Test indexing into a column of modin with various parquet file row lengths.
         # Specifically, tests for https://github.com/modin-project/modin/issues/3527
-        # which fails when min_chunk_size (32) < nrows <= min_chunk_size * (num_partitions - 1)
+        # which fails when min_partition_size < nrows < min_partition_size * (num_partitions - 1)
+        from modin.config.envvars import MinPartitionSize
 
+        nrows = (
+            MinPartitionSize.get() + 1
+        )  # Use the minimal guaranteed failing value for nrows.
         unique_filename = get_unique_filename(extension="parquet")
-        from modin.config import NPartitions
-
-        nrows = (NPartitions.get() - 1) * 32 - 1
         make_parquet_file(filename=unique_filename, nrows=nrows)
 
         parquet_df = pd.read_parquet(unique_filename)
