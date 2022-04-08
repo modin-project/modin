@@ -706,7 +706,7 @@ def read_xml(
     )
 
 
-@_inherit_docstrings(pandas.HDFStore, apilink="pandas.HDFStore")
+@_inherit_docstrings(pandas.HDFStore)
 class HDFStore(pandas.HDFStore):  # noqa: PR01, D200
     """
     Dict-like IO interface for storing pandas objects in PyTables.
@@ -763,7 +763,7 @@ class HDFStore(pandas.HDFStore):  # noqa: PR01, D200
         return method
 
 
-@_inherit_docstrings(pandas.ExcelFile, apilink="pandas.ExcelFile")
+@_inherit_docstrings(pandas.ExcelFile)
 class ExcelFile(pandas.ExcelFile):  # noqa: PR01, D200
     """
     Class for parsing tabular excel sheets into DataFrame objects.
