@@ -18,7 +18,7 @@ dependencies:
   - lxml
   - openpyxl
   - xlrd
-  - matplotlib<=3.2.2
+  - matplotlib
   - sqlalchemy>=1.4.0
   - pandas-gbq
   - pytables
@@ -29,7 +29,7 @@ dependencies:
   - pytest-cov>=2.10.1
   - pytest-xdist>=2.1.0
   - packaging
-  - coverage<5.0
+  - coverage
   - pygithub==1.53
   - rpyc==4.1.5
   - cloudpickle

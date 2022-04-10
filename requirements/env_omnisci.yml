@@ -10,7 +10,7 @@ dependencies:
   - pytest>=6.0.1
   - pytest-cov>=2.10.1
   - pytest-xdist>=2.1.0
-  - coverage<5.0
+  - coverage
   - pygithub==1.53
   - pyomniscidbe==5.10.1
   - s3fs>=2021.8
