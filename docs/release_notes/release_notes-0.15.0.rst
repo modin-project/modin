@@ -5,6 +5,7 @@ Key Features and Updates
 
 * Stability and Bugfixes
   * FIX-#4376: Upgrade pandas to 1.4.2 (#4377)
+  * FIX-#3615: Relax some deps in development env (#4365)
 * Performance enhancements
   *
 * Benchmarking enhancements
