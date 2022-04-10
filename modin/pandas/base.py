@@ -3822,31 +3822,31 @@ class BasePandasDataset(object):
         """
         return self.to_numpy()
 
-    def __getattribute__(self, item):
-        """
-        Return item from the `BasePandasDataset`.
-
-        Parameters
-        ----------
-        item : hashable
-            Item to get.
-
-        Returns
-        -------
-        Any
-        """
-        attr = super().__getattribute__(item)
-        if item not in _DEFAULT_BEHAVIOUR and not self._query_compiler.lazy_execution:
-            # We default to pandas on empty DataFrames. This avoids a large amount of
-            # pain in underlying implementation and returns a result immediately rather
-            # than dealing with the edge cases that empty DataFrames have.
-            if callable(attr) and self.empty and hasattr(self._pandas_class, item):
-
-                def default_handler(*args, **kwargs):
-                    return self._default_to_pandas(item, *args, **kwargs)
-
-                return default_handler
-        return attr
+    # def __getattribute__(self, item):
+    #     """
+    #     Return item from the `BasePandasDataset`.
+    #
+    #     Parameters
+    #     ----------
+    #     item : hashable
+    #         Item to get.
+    #
+    #     Returns
+    #     -------
+    #     Any
+    #     """
+    #     attr = super().__getattribute__(item)
+    #     if item not in _DEFAULT_BEHAVIOUR and not self._query_compiler.lazy_execution:
+    #         # We default to pandas on empty DataFrames. This avoids a large amount of
+    #         # pain in underlying implementation and returns a result immediately rather
+    #         # than dealing with the edge cases that empty DataFrames have.
+    #         if callable(attr) and self.empty and hasattr(self._pandas_class, item):
+    #
+    #             def default_handler(*args, **kwargs):
+    #                 return self._default_to_pandas(item, *args, **kwargs)
+    #
+    #             return default_handler
+    #     return attr
 
 
 if IsExperimental.get():
