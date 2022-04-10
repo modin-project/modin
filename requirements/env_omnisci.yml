@@ -2,7 +2,7 @@ name: modin_on_omnisci
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.4.1
+  - pandas==1.4.2
   - pyarrow=6
   - numpy>=1.18.5
   - fsspec

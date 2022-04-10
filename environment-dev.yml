@@ -2,7 +2,7 @@ name: modin
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.4.1
+  - pandas==1.4.2
   - numpy>=1.18.5
   - pyarrow>=4.0.1
   - dask[complete]>=2.22.0,<2022.2.0
