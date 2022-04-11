@@ -370,12 +370,32 @@ def unique(values):  # noqa: PR01, RT01, D200
     return Series(values).unique()
 
 
-@_inherit_docstrings(pandas.value_counts, apilink="pandas.value_counts")
+# adding docstring since pandas docs doesn't have web section for this function
 def value_counts(
     values, sort=True, ascending=False, normalize=False, bins=None, dropna=True
-):  # noqa: PR01, RT01, D200
+):
     """
     Compute a histogram of the counts of non-null values.
+
+    Parameters
+    ----------
+    values : ndarray (1-d)
+        Values to perform computation.
+    sort : bool, default: True
+        Sort by values.
+    ascending : bool, default: False
+        Sort in ascending order.
+    normalize : bool, default: False
+        If True then compute a relative histogram.
+    bins : integer, optional
+        Rather than count values, group them into half-open bins,
+        convenience for pd.cut, only works with numeric data.
+    dropna : bool, default: True
+        Don't include counts of NaN.
+
+    Returns
+    -------
+    Series
     """
     return Series(values).value_counts(
         sort=sort,
@@ -673,12 +693,30 @@ def crosstab(
     return DataFrame(pandas_crosstab)
 
 
-@_inherit_docstrings(pandas.lreshape, apilink="pandas.lreshape")
-def lreshape(
-    data: DataFrame, groups, dropna=True, label=None
-):  # noqa: PR01, RT01, D200
+# adding docstring since pandas docs doesn't have web section for this function
+def lreshape(data: DataFrame, groups, dropna=True, label=None):
     """
-    Reshape wide-format data to long.
+    Reshape wide-format data to long. Generalized inverse of DataFrame.pivot.
+
+    Accepts a dictionary, ``groups``, in which each key is a new column name
+    and each value is a list of old column names that will be "melted" under
+    the new column name as part of the reshape.
+
+    Parameters
+    ----------
+    data : DataFrame
+        The wide-format DataFrame.
+    groups : dict
+        {new_name : list_of_columns}.
+    dropna : bool, default: True
+        Do not include columns whose entries are all NaN.
+    label : optional
+        Not used.
+
+    Returns
+    -------
+    DataFrame
+        Reshaped DataFrame.
     """
     if not isinstance(data, DataFrame):
         raise ValueError("can not lreshape with instance of type {}".format(type(data)))
