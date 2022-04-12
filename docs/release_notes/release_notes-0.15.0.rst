@@ -6,6 +6,7 @@ Key Features and Updates
 * Stability and Bugfixes
   * FIX-#4376: Upgrade pandas to 1.4.2 (#4377)
   * FIX-#3615: Relax some deps in development env (#4365)
+  * FIX-#4370: Fix broken docstring links (#4375)
 * Performance enhancements
   *
 * Benchmarking enhancements
@@ -32,3 +33,4 @@ Contributors
 @YarShev
 @Garra1980
 @prutskov
+@alexander3774
