@@ -128,7 +128,8 @@ class ColumnStoreDispatcher(FileDispatcher):
             Index of resulting Modin DataFrame.
         needs_index_sync : bool
             Whether the partition indices need to be synced with frame
-            index because there are no index columns.
+            index because there's no index column, or at least one
+            index column is a RangeIndex.
         """
         # num_partitions = NPartitions.get()
         # index_len = (
@@ -158,14 +159,12 @@ class ColumnStoreDispatcher(FileDispatcher):
             path, use_legacy_dataset=False
         ).schema.pandas_metadata
         if pandas_metadata is not None:
-            index_columns = [
-                c
-                for c in pandas_metadata.get("index_columns", index_columns)
-                if isinstance(c, str)
-            ]
+            index_columns = pandas_metadata.get("index_columns", index_columns)
         file = ParquetFile(path)
         index = file.read(columns=[], use_pandas_metadata=True).to_pandas().index
-        return index, len(index_columns) == 0
+        return index, len(index_columns) == 0 or any(
+            not isinstance(c, str) for c in index_columns
+        )
 
     @classmethod
     def build_columns(cls, columns):
