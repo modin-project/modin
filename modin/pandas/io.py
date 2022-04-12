@@ -610,7 +610,7 @@ def read_spss(
     )
 
 
-# adding docstring since pandas docs doesn't have web section for this function
+# Adding docstring since pandas docs don't have web section for this function.
 def to_pickle(
     obj: Any,
     filepath_or_buffer,

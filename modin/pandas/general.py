@@ -370,7 +370,7 @@ def unique(values):  # noqa: PR01, RT01, D200
     return Series(values).unique()
 
 
-# adding docstring since pandas docs doesn't have web section for this function
+# Adding docstring since pandas docs don't have web section for this function.
 def value_counts(
     values, sort=True, ascending=False, normalize=False, bins=None, dropna=True
 ):
@@ -693,7 +693,7 @@ def crosstab(
     return DataFrame(pandas_crosstab)
 
 
-# adding docstring since pandas docs doesn't have web section for this function
+# Adding docstring since pandas docs don't have web section for this function.
 def lreshape(data: DataFrame, groups, dropna=True, label=None):
     """
     Reshape wide-format data to long. Generalized inverse of DataFrame.pivot.
