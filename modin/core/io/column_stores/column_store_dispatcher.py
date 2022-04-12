@@ -20,7 +20,9 @@ used as base class for dipatchers of specific columnar store formats.
 """
 
 import numpy as np
+import os
 import pandas
+import warnings
 
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.core.io.file_dispatcher import FileDispatcher
@@ -54,22 +56,31 @@ class ColumnStoreDispatcher(FileDispatcher):
         np.ndarray
             Array with references to the task deploy result for each partition.
         """
+        from pyarrow.parquet import ParquetFile
+
+        num_row_groups = ParquetFile(fname).metadata.num_row_groups
+        step = num_row_groups // NPartitions.get()
+        if num_row_groups % NPartitions.get() != 0:
+            step += 1
         return np.array(
             [
-                cls.deploy(
-                    cls.parse,
-                    num_returns=NPartitions.get() + 2,
-                    fname=fname,
-                    columns=cols,
-                    num_splits=NPartitions.get(),
-                    **kwargs,
-                )
-                for cols in col_partitions
+                [
+                    cls.deploy(
+                        cls.parse,
+                        fname=fname,
+                        columns=cols,
+                        row_group_start=row_start,
+                        row_group_end=row_start + step,
+                        **kwargs,
+                    )
+                    for cols in col_partitions
+                ]
+                for row_start in range(0, num_row_groups, step)
             ]
-        ).T
+        )
 
     @classmethod
-    def build_partition(cls, partition_ids, row_lengths, column_widths):
+    def build_partition(cls, partition_ids, column_widths):
         """
         Build array with partitions of `cls.frame_partition_cls` class.
 
@@ -93,7 +104,6 @@ class ColumnStoreDispatcher(FileDispatcher):
                 [
                     cls.frame_partition_cls(
                         partition_ids[i][j],
-                        length=row_lengths[i],
                         width=column_widths[j],
                     )
                     for j in range(len(partition_ids[i]))
@@ -103,42 +113,59 @@ class ColumnStoreDispatcher(FileDispatcher):
         )
 
     @classmethod
-    def build_index(cls, partition_ids):
+    def build_index(cls, path):
         """
         Compute index and its split sizes of resulting Modin DataFrame.
 
         Parameters
         ----------
-        partition_ids : list
-            Array with references to the partitions data.
+        path : Pathlike
+            Path to dataset
 
         Returns
         -------
         index : pandas.Index
             Index of resulting Modin DataFrame.
-        row_lengths : list
-            List with lengths of index chunks.
+        needs_index_sync : bool
+            Whether the partition indices need to be synced with frame
+            index because there are no index columns.
         """
-        num_partitions = NPartitions.get()
-        index_len = (
-            0 if len(partition_ids) == 0 else cls.materialize(partition_ids[-2][0])
-        )
-        if isinstance(index_len, int):
-            index = pandas.RangeIndex(index_len)
-        else:
-            index = index_len
-            index_len = len(index)
-        index_chunksize = compute_chunksize(index_len, num_partitions)
-        if index_chunksize > index_len:
-            row_lengths = [index_len] + [0 for _ in range(num_partitions - 1)]
-        else:
-            row_lengths = [
-                index_chunksize
-                if (i + 1) * index_chunksize < index_len
-                else max(0, index_len - (index_chunksize * i))
-                for i in range(num_partitions)
+        # num_partitions = NPartitions.get()
+        # index_len = (
+        #     0 if len(partition_ids) == 0 else cls.materialize(partition_ids[-2][0])
+        # )
+        # if isinstance(index_len, int):
+        #     index = pandas.RangeIndex(index_len)
+        # else:
+        #     index = index_len
+        #     index_len = len(index)
+        # index_chunksize = compute_chunksize(index_len, num_partitions)
+        # if index_chunksize > index_len:
+        #     row_lengths = [index_len] + [0 for _ in range(num_partitions - 1)]
+        # else:
+        #     row_lengths = [
+        #         index_chunksize
+        #         if (i + 1) * index_chunksize < index_len
+        #         else max(0, index_len - (index_chunksize * i))
+        #         for i in range(num_partitions)
+        #     ]
+        # return index, row_lengths
+
+        from pyarrow.parquet import ParquetFile, ParquetDataset
+
+        index_columns = []
+        pandas_metadata = ParquetDataset(
+            path, use_legacy_dataset=False
+        ).schema.pandas_metadata
+        if pandas_metadata is not None:
+            index_columns = [
+                c
+                for c in pandas_metadata.get("index_columns", index_columns)
+                if isinstance(c, str)
             ]
-        return index, row_lengths
+        file = ParquetFile(path)
+        index = file.read(columns=[], use_pandas_metadata=True).to_pandas().index
+        return index, len(index_columns) == 0
 
     @classmethod
     def build_columns(cls, columns):
@@ -191,7 +218,9 @@ class ColumnStoreDispatcher(FileDispatcher):
         dtypes : pandas.Series
             Series with dtypes for columns.
         """
-        dtypes = pandas.concat(cls.materialize(list(partition_ids)), axis=0)
+        dtypes = pandas.concat(
+            [df.dtypes for df in cls.materialize(list(partition_ids))], axis=0
+        )
         dtypes.index = columns
         return dtypes
 
@@ -216,21 +245,23 @@ class ColumnStoreDispatcher(FileDispatcher):
         """
         col_partitions, column_widths = cls.build_columns(columns)
         partition_ids = cls.call_deploy(path, col_partitions, **kwargs)
-        index, row_lens = cls.build_index(partition_ids)
-        remote_parts = cls.build_partition(partition_ids[:-2], row_lens, column_widths)
+        index, needs_index_sync = cls.build_index(path)
+        remote_parts = cls.build_partition(partition_ids, column_widths)
         dtypes = (
-            cls.build_dtypes(partition_ids[-1], columns)
+            cls.build_dtypes(partition_ids[0], columns)
             if len(partition_ids) > 0
             else None
         )
-        new_query_compiler = cls.query_compiler_cls(
-            cls.frame_cls(
-                remote_parts,
-                index,
-                columns,
-                row_lens,
-                column_widths,
-                dtypes=dtypes,
-            )
+        frame = cls.frame_cls(
+            remote_parts,
+            index,
+            columns,
+            # TODO: see if there's a way to get row lengths without reading partition.
+            row_lengths=None,
+            column_widths=column_widths,
+            dtypes=dtypes,
         )
+        new_query_compiler = cls.query_compiler_cls(frame)
+        if needs_index_sync:
+            frame.synchronize_labels(axis=0)
         return new_query_compiler

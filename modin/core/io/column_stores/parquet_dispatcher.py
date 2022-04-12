@@ -56,6 +56,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         from modin.pandas.io import PQ_INDEX_REGEX
 
         if isinstance(path, str) and os.path.isdir(path):
+            raise NotImplementedError('Cannot read a directory of parquet files by partitioning along rows.')
             partitioned_columns = set()
             # We do a tree walk of the path directory because partitioned
             # parquet directories have a unique column at each directory level.
