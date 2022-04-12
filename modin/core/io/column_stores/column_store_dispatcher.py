@@ -251,7 +251,6 @@ class ColumnStoreDispatcher(FileDispatcher):
         partition_ids = cls.call_deploy(path, col_partitions, **kwargs)
         index, needs_index_sync = cls.build_index(path)
         remote_parts = cls.build_partition(partition_ids, column_widths)
-
         dtypes = (
             cls.build_dtypes(partition_ids[0], columns)
             if len(partition_ids) > 0
@@ -266,6 +265,7 @@ class ColumnStoreDispatcher(FileDispatcher):
             column_widths=column_widths,
             dtypes=dtypes,
         )
+        new_query_compiler = cls.query_compiler_cls(frame)
         new_query_compiler = cls.query_compiler_cls(frame)
         new_query_compiler = cls.query_compiler_cls(frame)
         if needs_index_sync:
