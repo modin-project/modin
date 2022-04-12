@@ -641,9 +641,11 @@ class PandasJSONParser(PandasParser):
 class PandasParquetParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
-    def parse(fname, row_group_start, row_group_end, **kwargs):
+    def parse(fname, row_group_start, row_group_end,  start, **kwargs):
+        import time
+        columns = kwargs.get("columns", None)        
+        print(f'row{row_group_start}-{row_group_end},columns{columns}: start {time.time()- start}')
         from pyarrow.parquet import ParquetFile, ParquetDataset
-        columns = kwargs.get("columns", None)
         file = ParquetFile(fname)
         df = file.read_row_groups(
                 list(range(row_group_start, min(row_group_end, file.metadata.num_row_groups))),
@@ -653,6 +655,7 @@ class PandasParquetParser(PandasParser):
         columns = [c for c in columns if c not in df.index.names and c in df.columns]
         if columns is not None:
             df = df[columns]
+        print(f'row{row_group_start}-{row_group_end},columns{columns}: end {time.time() - start}')
         return df
 
 @doc(_doc_pandas_parser_class, data_type="HDF data")

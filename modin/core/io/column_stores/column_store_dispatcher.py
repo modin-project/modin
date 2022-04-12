@@ -62,6 +62,9 @@ class ColumnStoreDispatcher(FileDispatcher):
         step = num_row_groups // NPartitions.get()
         if num_row_groups % NPartitions.get() != 0:
             step += 1
+        import time
+
+        start = time.time()
         return np.array(
             [
                 [
@@ -71,6 +74,8 @@ class ColumnStoreDispatcher(FileDispatcher):
                         columns=cols,
                         row_group_start=row_start,
                         row_group_end=row_start + step,
+                        row_group_end=row_start + step,
+                        start=start,
                         **kwargs,
                     )
                     for cols in col_partitions
