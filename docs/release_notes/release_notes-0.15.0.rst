@@ -25,9 +25,10 @@ Key Features and Updates
 * Documentation improvements
   *
 * Dependencies
-  *
+  * FIX-#4327: Update min pin for xgboost version (#4328)
 
 Contributors
 ------------
 @YarShev
 @Garra1980
+@prutskov
