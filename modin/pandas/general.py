@@ -711,7 +711,7 @@ def lreshape(data: DataFrame, groups, dropna=True, label=None):
     dropna : bool, default: True
         Whether include columns whose entries are all NaN or not.
     label : optional
-        Not used.
+        Deprecated parameter.
 
     Returns
     -------
