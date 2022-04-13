@@ -1931,14 +1931,14 @@ class PandasDataframe(ClassLogger):
             return virtual_partition
 
 
-        num_parts = len(self._partitions) if axis == Axis.ROW_WISE else len(self._partitions[0])           
+        num_parts = len(self._partitions[0]) if axis == Axis.COL_WISE else len(self._partitions)
         results = []
 
         for i in range(num_parts):
             # partitions to join in virtual partition
             parts_to_join = []
-            # get the ith partition
-            starting_part = self._partitions[i] if axis == Axis.ROW_WISE else self._partitions[:, [i]]
+            # get the ith partition 
+            starting_part =  self._partitions[:, [i]] if axis == Axis.COL_WISE else self._partitions[i]
             parts_to_join.append(starting_part)
 
             last_window_span = window_size - 1
@@ -1946,36 +1946,36 @@ class PandasDataframe(ClassLogger):
             k = i + 1
 
             while (last_window_span > 0 and k < num_parts):
-                part = self._partitions[k] if axis == Axis.ROW_WISE else self._partitions[:, k]
+                new_parts = self._partitions[:, k] if axis == Axis.COL_WISE else self._partitions[k] 
 
-                part_len = len(part)
+                part_len = new_parts[0].width() if axis == Axis.COL_WISE else new_parts[0].length()
 
                 if (last_window_span <= part_len):
-                    if axis == Axis.ROW_WISE:
-                        #print(part[0])
-                        masked_part = [part[i].mask(row_labels = slice(last_window_span, part_len), col_labels = slice(part[i].width())) for i in range(part_len)]
+                    if axis == Axis.COL_WISE:
+                        masked_new_parts = np.array([[part.mask(row_labels = slice(None), col_labels = slice(last_window_span, part_len))] for part in new_parts])
                     else:
-                        print(part)
-                        masked_part = [part[i].mask(row_labels = slice(part[i].length()), col_labels = slice(last_window_span, part_len)) for i in range(part_len)]
+                        # BUG: for the 100 x 100 df, first new virtual partition is 60 x 32, but i think it's supposed to be 36 x 32
+                        masked_new_parts = np.array([[part.mask(row_labels = slice(last_window_span, part_len), col_labels=slice(None))] for part in new_parts])
 
-                    parts_to_join.append(masked_part)
+                    parts_to_join.append(masked_new_parts)
                     break
                 else:
                     # window continues into next part, so just add this part to parts_to_join
-                    parts_to_join.append(part)
+                    parts_to_join.append(new_parts)
                     last_window_span -= part_len
                     k += 1
 
             # create virtual partition and perform window operation
-            virtual_partitions = self._partition_mgr_cls.columns_partitions(parts_to_join) if axis == Axis.ROW_WISE else self._partition_mgr_cls.row_partitions(parts_to_join)
-            print(len(parts_to_join))
-            print(len(parts_to_join[0]))
-            print(parts_to_join)
-            print("********************************")
-            print(len(virtual_partitions))
-            print(virtual_partitions)
+            # BUG: should set full_axis in row_partitions() and column_partitions()
+            virtual_partitions = self._partition_mgr_cls.row_partitions(parts_to_join) if axis == Axis.COL_WISE else self._partition_mgr_cls.column_partitions(parts_to_join)
+            # BUG: window_function_partition is returning a list for each virtual partition
+            
             result = [virtual_partition.apply(window_function_partition) for virtual_partition in virtual_partitions]
-            results.append(result)
+            if axis == Axis.ROW_WISE:
+                results.append(result)
+            else:
+                for i, r in enumerate(results):
+                    r.append(result[i])
 
         return self.__constructor__(
             results,
