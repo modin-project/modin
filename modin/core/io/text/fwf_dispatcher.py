@@ -31,7 +31,7 @@ class FWFDispatcher(TextFileDispatcher):
         *args : list
             Positional arguments to be passed to the callback function.
         **kwargs : dict
-            Keyward arguments to be passed to the callback function.
+            Keyword arguments to be passed to the callback function.
 
         Returns
         -------
