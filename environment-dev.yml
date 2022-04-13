@@ -10,7 +10,6 @@ dependencies:
   - fsspec
   - xarray
   - Jinja2
-  - pathlib
   - scipy
   - pip
   - s3fs>=2021.8
