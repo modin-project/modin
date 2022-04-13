@@ -696,9 +696,9 @@ def crosstab(
 # Adding docstring since pandas docs don't have web section for this function.
 def lreshape(data: DataFrame, groups, dropna=True, label=None):
     """
-    Reshape wide-format data to long. Generalized inverse of DataFrame.pivot.
+    Reshape wide-format data to long. Generalized inverse of ``DataFrame.pivot``.
 
-    Accepts a dictionary, ``groups``, in which each key is a new column name
+    Accepts a dictionary, `groups`, in which each key is a new column name
     and each value is a list of old column names that will be "melted" under
     the new column name as part of the reshape.
 
@@ -707,9 +707,9 @@ def lreshape(data: DataFrame, groups, dropna=True, label=None):
     data : DataFrame
         The wide-format DataFrame.
     groups : dict
-        {new_name : list_of_columns}.
+        Dictionary in the form: `{new_name : list_of_columns}`.
     dropna : bool, default: True
-        Do not include columns whose entries are all NaN.
+        Whether include columns whose entries are all NaN or not.
     label : optional
         Not used.
 
