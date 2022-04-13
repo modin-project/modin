@@ -656,7 +656,7 @@ class PandasParquetParser(PandasParser):
         if columns is not None:
             df = df[columns]
         print(f'row{row_group_start}-{row_group_end},columns{columns}: end {time.time() - start}')
-        return df
+        return df, df.dtypes
 
 @doc(_doc_pandas_parser_class, data_type="HDF data")
 class PandasHDFParser(PandasParser):  # pragma: no cover

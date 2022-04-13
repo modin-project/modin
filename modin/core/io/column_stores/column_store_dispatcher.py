@@ -76,6 +76,7 @@ class ColumnStoreDispatcher(FileDispatcher):
                         row_group_end=row_start + step,
                         row_group_end=row_start + step,
                         start=start,
+                        num_returns=2,
                         **kwargs,
                     )
                     for cols in col_partitions
@@ -108,7 +109,7 @@ class ColumnStoreDispatcher(FileDispatcher):
             [
                 [
                     cls.frame_partition_cls(
-                        partition_ids[i][j],
+                        partition_ids[i][j][0],
                         width=column_widths[j],
                     )
                     for j in range(len(partition_ids[i]))
@@ -249,24 +250,22 @@ class ColumnStoreDispatcher(FileDispatcher):
         """
         col_partitions, column_widths = cls.build_columns(columns)
         partition_ids = cls.call_deploy(path, col_partitions, **kwargs)
-        index, needs_index_sync = cls.build_index(path)
+        index, needs_index_sync = cls.build_index(path) 
         remote_parts = cls.build_partition(partition_ids, column_widths)
-        dtypes = (
-            cls.build_dtypes(partition_ids[0], columns)
-            if len(partition_ids) > 0
-            else None
-        )
-        frame = cls.frame_cls(
-            remote_parts,
-            index,
-            columns,
-            # TODO: see if there's a way to get row lengths without reading partition.
-            row_lengths=None,
-            column_widths=column_widths,
-            dtypes=dtypes,
-        )
-        new_query_compiler = cls.query_compiler_cls(frame)
-        new_query_compiler = cls.query_compiler_cls(frame)
+        if len(partition_ids) > 0:
+            first_row = partition_ids[0]            
+            dtypes = cls.build_dtypes([dtype_and_partition[1] for dtype_and_partition in first_row], columns)
+        else:
+            dtypes = None
+        frame =             cls.frame_cls(
+                        remote_parts,
+                        index,
+                        columns,
+                        # TODO: see if there's a way to get row lengths without reading partition.
+                        row_lengths=None,
+                        column_widths=column_widths,
+                        dtypes=dtypes,
+                    )        
         new_query_compiler = cls.query_compiler_cls(frame)
         if needs_index_sync:
             frame.synchronize_labels(axis=0)
