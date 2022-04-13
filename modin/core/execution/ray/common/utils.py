@@ -186,7 +186,8 @@ def initialize_ray(
                     + "not allow setting an object store size greater than "
                     + "that. Modin is overriding that default limit because "
                     + "it would rather have a larger, slower object store "
-                    + "than spill to disk more often."
+                    + "than spill to disk more often. To override Modin's "
+                    + "behavior, you can initialize Ray yourself."
                 )
                 os.environ["RAY_ENABLE_MAC_LARGE_OBJECT_STORE"] = "1"
 
