@@ -33,6 +33,8 @@ for mod_name in ("cudf", "cupy", "pyarrow.gandiva", "omniscidbe"):
         )
 if not hasattr(sys.modules["cudf"], "DataFrame"):
     sys.modules["cudf"].DataFrame = type("DataFrame", (object,), {})
+if not hasattr(sys.modules["cupy"], "ndarray"):
+    sys.modules["cupy"].ndarray = type("ndarray", (object,), {})
 if not hasattr(sys.modules["omniscidbe"], "PyDbEngine"):
     sys.modules["omniscidbe"].PyDbEngine = type("PyDbEngine", (object,), {})
 

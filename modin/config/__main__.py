@@ -19,6 +19,8 @@ Using `-export_path` option configs description can be exported to the external 
 provided with this flag.
 """
 
+from textwrap import dedent
+
 from . import *  # noqa: F403, F401
 from .pubsub import Parameter
 import pandas
@@ -42,15 +44,7 @@ def export_config_help(filename: str):
     filename : str
         Name of the file to export configs data.
     """
-    configs = pandas.DataFrame(
-        columns=[
-            "Config Name",
-            "Env. Variable Name",
-            "Default Value",
-            "Description",
-            "Options",
-        ]
-    )
+    configs_data = []
     for objname in sorted(globals()):
         obj = globals()[objname]
         if isinstance(obj, type) and issubclass(obj, Parameter) and not obj.is_abstract:
@@ -62,12 +56,22 @@ def export_config_help(filename: str):
                 "Default Value": obj._get_default()
                 if obj.__name__ != "RayRedisPassword"
                 else "random string",
-                "Description": obj.__doc__,
+                # `Notes` `-` underlining can't be correctly parsed inside csv table by sphinx
+                "Description": dedent(obj.__doc__).replace("Notes\n-----", "Notes:\n"),
                 "Options": obj.choices,
             }
-            configs = configs.append(data, ignore_index=True)
+            configs_data.append(data)
 
-    configs.to_csv(filename, index=False)
+    pandas.DataFrame(
+        configs_data,
+        columns=[
+            "Config Name",
+            "Env. Variable Name",
+            "Default Value",
+            "Description",
+            "Options",
+        ],
+    ).to_csv(filename, index=False)
 
 
 if __name__ == "__main__":

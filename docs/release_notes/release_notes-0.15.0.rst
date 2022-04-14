@@ -1,3 +1,5 @@
+:orphan:
+
 Modin 0.15.0
 
 Key Features and Updates
@@ -24,7 +26,7 @@ Key Features and Updates
 * Update testing suite
   * TEST-#4363: Use Ray from pypi in CI (#4364)
 * Documentation improvements
-  *
+  * DOCS-#4296: Fix docs warnings (#4297)
 * Dependencies
   * FIX-#4327: Update min pin for xgboost version (#4328)
   * FIX-#4383: Remove `pathlib` from deps (#4384)
@@ -35,3 +37,4 @@ Contributors
 @Garra1980
 @prutskov
 @alexander3774
+@amyskov

@@ -151,10 +151,9 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
 
         Rebalance the partitions by building a new array
         of partitions out of the original ones so that:
-          - If all partitions have a length, each new partition has roughly the
-            same number of rows.
-          - Otherwise, each new partition spans roughly the same number of old
-            partitions.
+
+        - If all partitions have a length, each new partition has roughly the same number of rows.
+        - Otherwise, each new partition spans roughly the same number of old partitions.
 
         Parameters
         ----------

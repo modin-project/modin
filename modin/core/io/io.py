@@ -847,7 +847,10 @@ class BaseIO(object):
         compression: CompressionOptions = "infer",
         protocol: int = pickle.HIGHEST_PROTOCOL,
         storage_options: StorageOptions = None,
-    ):  # noqa: PR01
+    ):  # noqa: PR01, D200
+        """
+        Pickle (serialize) object to file.
+        """
         ErrorMessage.default_to_pandas("`to_pickle`")
         if isinstance(obj, BaseQueryCompiler):
             obj = obj.to_pandas()

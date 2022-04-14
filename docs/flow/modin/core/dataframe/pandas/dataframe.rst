@@ -1,7 +1,7 @@
 PandasDataframe
 """""""""""""""
 
-:py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe` is a direct descendant of :py:class:`~modin.core.dataframe.base.dataframe.dataframe.ModinDataframe`. Its purpose is to implement the abstract interfaces for usage with all ``pandas``-based :doc:`storage formats<flow/modin/core/storage_formats/index.html>`.
+:py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe` is a direct descendant of :py:class:`~modin.core.dataframe.base.dataframe.dataframe.ModinDataframe`. Its purpose is to implement the abstract interfaces for usage with all ``pandas``-based :doc:`storage formats</flow/modin/core/storage_formats/index>`.
 :py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe` could be inherited and augmented further by any specific implementation which needs it to take special care of some behavior or to improve performance for certain execution engine.
 
 The class serves as the intermediate level
