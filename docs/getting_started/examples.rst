@@ -9,8 +9,8 @@ Usage Examples
 
 The following notebooks demonstrate how Modin can be used for scalable data science:
 
-- Quickstart Guide to Modin [`Source <https://github.com/modin-project/modin/tree/master/examples/quickstart.ipynb>`_]
-- Using Modin with the NYC Taxi Dataset [`Source <https://github.com/modin-project/modin/blob/master/examples/jupyter/Modin_Taxi.ipynb>`_]
+- Quickstart Guide to Modin [`Source <https://github.com/modin-project/modin/tree/master/examples/quickstart.ipynb>`__]
+- Using Modin with the NYC Taxi Dataset [`Source <https://github.com/modin-project/modin/blob/master/examples/jupyter/Modin_Taxi.ipynb>`__]
 - Modin for Machine Learning with scikit-learn [`Source <https://github.com/modin-project/modin/blob/master/examples/modin-scikit-learn-example.ipynb>`__]
 
 Tutorials
