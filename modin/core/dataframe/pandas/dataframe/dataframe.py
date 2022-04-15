@@ -2510,7 +2510,7 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
         # unwrap list returned by `copartition`.
         right_parts = right_parts[0]
         new_frame = self._partition_mgr_cls.binary_operation(
-            left_parts, lambda l, r: op(l, r), right_parts
+            left_parts, lambda l, r: op(l, r), right_parts, axis=1
         )
         new_columns = self.columns.join(right_frame.columns, how=join_type)
         return self.__constructor__(

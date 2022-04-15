@@ -525,7 +525,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
 
     @classmethod
     @progress_bar_wrapper
-    def binary_operation(cls, left, func, right):
+    def binary_operation(cls, left, func, right, axis=1):
         """
         Apply a function that requires partitions of two ``PandasOnRayDataframe`` objects.
 
@@ -537,12 +537,21 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             The function to apply.
         right : np.ndarray
             The partitions of right ``PandasOnRayDataframe``.
+        axis : {0, 1}, default: 1
+            The axis to apply the function over (0 - rows, 1 - columns).
 
         Returns
         -------
         np.ndarray
             A NumPy array with new partitions.
         """
-        return super(PandasOnRayDataframePartitionManager, cls).binary_operation(
-            left, func, right
+        func = cls.preprocess_func(func)
+        return np.array(
+            [
+                [
+                    part.apply(func, right[row_idx][col_idx].oid)
+                    for col_idx, part in enumerate(left[row_idx])
+                ]
+                for row_idx in range(len(left))
+            ]
         )

@@ -1242,34 +1242,44 @@ class PandasDataframePartitionManager(ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def binary_operation(cls, left, func, right):
+    def binary_operation(cls, left, func, right, axis=1):
         """
-        Apply a function that requires two PandasDataframe objects.
+        Apply a function that requires two ``PandasDataframe`` objects.
 
         Parameters
         ----------
         left : np.ndarray
-            The partitions of left PandasDataframe.
+            The partitions of left ``PandasDataframe``.
         func : callable
             The function to apply.
         right : np.ndarray
-            The partitions of right PandasDataframe.
+            The partitions of right ``PandasDataframe``.
+        axis : {0, 1}, default: 1
+            The axis to apply the function over (0 - rows, 1 - columns).
 
         Returns
         -------
         np.ndarray
             A NumPy array with new partitions.
         """
+        if axis:
+            left_partitions = cls.row_partitions(left)
+            right_partitions = cls.row_partitions(right)
+        else:
+            left_partitions = cls.column_partitions(left)
+            right_partitions = cls.column_partitions(right)
         func = cls.preprocess_func(func)
-        return np.array(
+        result = np.array(
             [
-                [
-                    part.apply(func, right[row_idx][col_idx].oid)
-                    for col_idx, part in enumerate(left[row_idx])
-                ]
-                for row_idx in range(len(left))
+                left_partitions[i].apply(
+                    func,
+                    num_splits=NPartitions.get(),
+                    other_axis_partition=right_partitions[i],
+                )
+                for i in range(len(left_partitions))
             ]
         )
+        return result if axis else result.T
 
     @classmethod
     @wait_computations_if_benchmark_mode

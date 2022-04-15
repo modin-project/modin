@@ -13,6 +13,8 @@
 
 """Module houses class that implements ``PandasDataframePartitionManager``."""
 
+import numpy as np
+
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
@@ -47,4 +49,36 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         list
             The objects wrapped by `partitions`.
         """
-        return DaskWrapper.materialize([partition._data for partition in partitions])
+        return DaskWrapper.materialize([partition.future for partition in partitions])
+
+    @classmethod
+    def binary_operation(cls, left, func, right, axis=1):
+        """
+        Apply a function that requires partitions of two ``PandasOnRayDataframe`` objects.
+
+        Parameters
+        ----------
+        left : np.ndarray
+            The partitions of left ``PandasOnRayDataframe``.
+        func : callable
+            The function to apply.
+        right : np.ndarray
+            The partitions of right ``PandasOnRayDataframe``.
+        axis : {0, 1}, default: 1
+            The axis to apply the function over (0 - rows, 1 - columns).
+
+        Returns
+        -------
+        np.ndarray
+            A NumPy array with new partitions.
+        """
+        func = cls.preprocess_func(func)
+        return np.array(
+            [
+                [
+                    part.apply(func, right[row_idx][col_idx].future)
+                    for col_idx, part in enumerate(left[row_idx])
+                ]
+                for row_idx in range(len(left))
+            ]
+        )
