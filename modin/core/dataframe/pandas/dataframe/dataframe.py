@@ -1889,7 +1889,7 @@ class PandasDataframe(ClassLogger):
 
         axis = Axis(axis)
 
-        def window_function_complete(df):
+        def window_function_complete(virtual_partition):
             # modifying the dataframe that's passed in or create a new df
             # creating new df means will have 2 copies of the df in memory
             # so just modify the dataframe that's passed in
@@ -1897,26 +1897,30 @@ class PandasDataframe(ClassLogger):
             # pass by value, not pass by reference
             # when call df_equals, need to convert from modin frame to pandas
 
-            n = len(df.columns) if axis == Axis.COL_WISE else len(df.index)
+            virtual_partition_copy = virtual_partition.copy()
+
+            n = len(virtual_partition_copy.columns) if axis == Axis.COL_WISE else len(virtual_partition_copy.index)
 
             for i in range(0, n):
-                window = df.iloc[:, i : i + window_size] if axis == Axis.COL_WISE else df.iloc[i : i + window_size, :]
+                window = virtual_partition_copy.iloc[:, i : i + window_size] if axis == Axis.COL_WISE else virtual_partition_copy.iloc[i : i + window_size, :]
 
                 reduction_result = reduce_fn(window)
             
                 if axis == Axis.COL_WISE:
-                    df.iloc[:, i] = reduction_result
+                    virtual_partition_copy.iloc[:, i] = reduction_result
                 else:
-                    df.iloc[i, :] = reduction_result  
+                    virtual_partition_copy.iloc[i, :] = reduction_result  
 
             # fn that's passed in to map_axis_partitions needs to have a dataframe returned
-            return df
+            return virtual_partition_copy
 
         def window_function_partition(virtual_partition):
-            n = len(virtual_partition.columns) if axis == Axis.COL_WISE else len(virtual_partition.index)
+            virtual_partition_copy = virtual_partition.copy()
+
+            n = len(virtual_partition_copy.columns) if axis == Axis.COL_WISE else len(virtual_partition_copy.index)
 
             for i in range(0, n):
-                window = virtual_partition.iloc[:, i : i + window_size] if axis == Axis.COL_WISE else virtual_partition.iloc[i : i + window_size, :]
+                window = virtual_partition_copy.iloc[:, i : i + window_size] if axis == Axis.COL_WISE else virtual_partition_copy.iloc[i : i + window_size, :]
                 
                 if ((axis == Axis.COL_WISE and len(window.columns) < window_size) or (axis == Axis.ROW_WISE and len(window.index) < window_size)):
                     break
@@ -1924,11 +1928,11 @@ class PandasDataframe(ClassLogger):
                 reduction_result = reduce_fn(window)
 
                 if axis == Axis.COL_WISE:
-                    virtual_partition.iloc[:, i] = reduction_result
+                    virtual_partition_copy.iloc[:, i] = reduction_result
                 else:
-                    virtual_partition.iloc[i, :] = reduction_result
+                    virtual_partition_copy.iloc[i, :] = reduction_result
 
-            return virtual_partition
+            return virtual_partition_copy
 
 
         num_parts = len(self._partitions[0]) if axis == Axis.COL_WISE else len(self._partitions)
@@ -1967,15 +1971,20 @@ class PandasDataframe(ClassLogger):
 
             # create virtual partition and perform window operation
             # BUG: should set full_axis in row_partitions() and column_partitions()
-            virtual_partitions = self._partition_mgr_cls.row_partitions(parts_to_join) if axis == Axis.COL_WISE else self._partition_mgr_cls.column_partitions(parts_to_join)
+            virtual_partitions = self._partition_mgr_cls.row_partitions(parts_to_join) if axis == Axis.ROW_WISE else self._partition_mgr_cls.column_partitions(parts_to_join)
             # BUG: window_function_partition is returning a list for each virtual partition
             
             result = [virtual_partition.apply(window_function_partition) for virtual_partition in virtual_partitions]
+
+            # changed variable to x to not conflict with i of big for loop over num_parts
             if axis == Axis.ROW_WISE:
                 results.append(result)
             else:
-                for i, r in enumerate(results):
-                    r.append(result[i])
+                if results == []:
+                    results = [x for x in result]
+                else:    
+                    for x, r in enumerate(results):
+                        r.append(result[x]) 
 
         return self.__constructor__(
             results,
