@@ -27,6 +27,7 @@ Key Features and Updates
   * TEST-#4363: Use Ray from pypi in CI (#4364)
 * Documentation improvements
   * DOCS-#4296: Fix docs warnings (#4297)
+  * DOCS-#4388: Turn off fail_on_warning option for docs build (#4389)
 * Dependencies
   * FIX-#4327: Update min pin for xgboost version (#4328)
   * FIX-#4383: Remove `pathlib` from deps (#4384)
