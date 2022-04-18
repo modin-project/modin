@@ -1886,7 +1886,11 @@ class PandasDataframe(ClassLogger):
         The user-defined reduce function must reduce each window’s column
         (row if axis=1) down to a single value.
         """
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> 9a6c6ff0 (fixed row actually?)
         axis = Axis(axis)
 
         def window_function_complete(virtual_partition):
@@ -1928,12 +1932,18 @@ class PandasDataframe(ClassLogger):
 
         num_parts = len(self._partitions[0]) if axis == Axis.COL_WISE else len(self._partitions)
         results = []
+        is_last_virtual_part = False
 
         for i in range(num_parts):
             # partitions to join in virtual partition
             parts_to_join = []
             # get the ith partition 
             starting_part =  self._partitions[:, [i]] if axis == Axis.COL_WISE else self._partitions[i]
+
+            #print(starting_part[0].to_pandas())
+            #print(starting_part[1].to_pandas())
+            #print(starting_part[2].to_pandas())
+            #print(starting_part[3].to_pandas())
 
             parts_to_join.append(starting_part)
 
@@ -1944,6 +1954,11 @@ class PandasDataframe(ClassLogger):
             while (last_window_span > 0 and k < num_parts):
                 new_parts = self._partitions[:, [k]] if axis == Axis.COL_WISE else self._partitions[k] 
                 part_len = new_parts[0].width() if axis == Axis.COL_WISE else new_parts[0].length()
+
+                if (k == (num_parts - 1)):
+                    is_last_virtual_part = True
+                    parts_to_join.append(np.array(new_parts))
+                    break
 
                 if (last_window_span <= part_len):
                     if axis == Axis.COL_WISE:
@@ -1964,11 +1979,23 @@ class PandasDataframe(ClassLogger):
             virtual_partitions = self._partition_mgr_cls.row_partitions(parts_to_join) if axis == Axis.ROW_WISE else self._partition_mgr_cls.column_partitions(parts_to_join)
             # BUG: window_function_partition is returning a list for each virtual partition
 
-            if i == (num_parts - 1):
+            if is_last_virtual_part:
+                #for v in virtual_partitions:
+                    #print(v.to_pandas())
+
                 reduce_result = [virtual_partition.apply(window_function_complete) for virtual_partition in virtual_partitions]
+
+                #for r in reduce_result:
+                    #print(r.to_pandas())
             else:
+                #for v in virtual_partitions:
+                    #print(v.to_pandas())
+
                 reduce_result = [virtual_partition.apply(window_function_partition) for virtual_partition in virtual_partitions]
-            
+
+                #for r in reduce_result:
+                    #print(r.to_pandas())
+
             if axis == Axis.ROW_WISE:
                 results.append(reduce_result)
             else:
@@ -1976,7 +2003,10 @@ class PandasDataframe(ClassLogger):
                     results = [x for x in reduce_result]
                 else:    
                     for x, r in enumerate(results):
-                        r.append(reduce_result[x])      
+                        r.append(reduce_result[x])  
+
+            if (is_last_virtual_part):
+                break                
 
         return self.__constructor__(
             results,
