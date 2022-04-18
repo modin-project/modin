@@ -1940,11 +1940,6 @@ class PandasDataframe(ClassLogger):
             # get the ith partition 
             starting_part =  self._partitions[:, [i]] if axis == Axis.COL_WISE else self._partitions[i]
 
-            #print(starting_part[0].to_pandas())
-            #print(starting_part[1].to_pandas())
-            #print(starting_part[2].to_pandas())
-            #print(starting_part[3].to_pandas())
-
             parts_to_join.append(starting_part)
 
             last_window_span = window_size - 1
@@ -1980,21 +1975,9 @@ class PandasDataframe(ClassLogger):
             # BUG: window_function_partition is returning a list for each virtual partition
 
             if is_last_virtual_part:
-                #for v in virtual_partitions:
-                    #print(v.to_pandas())
-
                 reduce_result = [virtual_partition.apply(window_function_complete) for virtual_partition in virtual_partitions]
-
-                #for r in reduce_result:
-                    #print(r.to_pandas())
             else:
-                #for v in virtual_partitions:
-                    #print(v.to_pandas())
-
                 reduce_result = [virtual_partition.apply(window_function_partition) for virtual_partition in virtual_partitions]
-
-                #for r in reduce_result:
-                    #print(r.to_pandas())
 
             if axis == Axis.ROW_WISE:
                 results.append(reduce_result)
