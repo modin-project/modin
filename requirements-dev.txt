@@ -4,6 +4,7 @@ pyarrow>=4.0.1
 dask[complete]>=2.22.0,<2022.2.0
 distributed>=2.22.0,<2022.2.0
 ray[default]>=1.4.0
+redis
 psutil==5.6.6
 fsspec
 xarray
