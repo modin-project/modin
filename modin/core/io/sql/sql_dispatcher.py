@@ -26,7 +26,7 @@ import warnings
 
 from modin.core.io.file_dispatcher import FileDispatcher
 from modin.db_conn import ModinDatabaseConnection
-from modin.config import NPartitions
+from modin.config import NPartitions, ReadSqlEngine
 
 
 class SQLDispatcher(FileDispatcher):
@@ -63,7 +63,13 @@ class SQLDispatcher(FileDispatcher):
                 + f"of {type(con)}. For documentation of ModinDatabaseConnection, see "
                 + "https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html#connecting-to-a-database-for-read-sql"
             )
-            return cls.single_worker_read(sql, con=con, index_col=index_col, **kwargs)
+            return cls.single_worker_read(
+                sql,
+                con=con,
+                index_col=index_col,
+                read_sql_engine=ReadSqlEngine.get(),
+                **kwargs,
+            )
         row_count_query = con.row_count_query(sql)
         connection_for_pandas = con.get_connection()
         colum_names_query = con.column_names_query(sql)
@@ -87,6 +93,7 @@ class SQLDispatcher(FileDispatcher):
                 sql=query,
                 con=con,
                 index_col=index_col,
+                read_sql_engine=ReadSqlEngine.get(),
                 **kwargs,
             )
             partition_ids.append(

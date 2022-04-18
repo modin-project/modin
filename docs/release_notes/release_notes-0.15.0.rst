@@ -10,7 +10,7 @@ Key Features and Updates
   * FIX-#3615: Relax some deps in development env (#4365)
   * FIX-#4370: Fix broken docstring links (#4375)
 * Performance enhancements
-  *
+  * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
 * Benchmarking enhancements
   *
 * Refactor Codebase
@@ -39,3 +39,4 @@ Contributors
 @prutskov
 @alexander3774
 @amyskov
+@wangxiaoying
