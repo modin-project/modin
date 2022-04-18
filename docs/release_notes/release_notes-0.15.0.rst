@@ -1,9 +1,14 @@
+:orphan:
+
 Modin 0.15.0
 
 Key Features and Updates
 ------------------------
 
 * Stability and Bugfixes
+  * FIX-#4376: Upgrade pandas to 1.4.2 (#4377)
+  * FIX-#3615: Relax some deps in development env (#4365)
+  * FIX-#4370: Fix broken docstring links (#4375)
   * FEAT-#4394: Fix issue with multiindex metadata desync (#4395)
 * Performance enhancements
   *
@@ -22,10 +27,17 @@ Key Features and Updates
 * Update testing suite
   * TEST-#4363: Use Ray from pypi in CI (#4364)
 * Documentation improvements
-  *
+  * DOCS-#4296: Fix docs warnings (#4297)
+  * DOCS-#4388: Turn off fail_on_warning option for docs build (#4389)
 * Dependencies
-  *
+  * FIX-#4327: Update min pin for xgboost version (#4328)
+  * FIX-#4383: Remove `pathlib` from deps (#4384)
 
 Contributors
 ------------
-@YarShev @devin-petersohn
+@YarShev
+@Garra1980
+@prutskov
+@alexander3774
+@amyskov
+@devin-petersohn

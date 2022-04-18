@@ -2147,11 +2147,11 @@ class BaseQueryCompiler(abc.ABC):
         result_type : {"expand", "reduce", "broadcast", None}, default: None
             Determines how to treat list-like return type of the `func` (works only if
             a single function was passed):
-                - "expand": expand list-like result into columns.
-                - "reduce": keep result into a single cell (opposite of "expand").
-                - "broadcast": broadcast result to original data shape (overwrite the
-                  existing column/row with the function result).
-                - None: use "expand" strategy if Series is returned, "reduce" otherwise.
+
+            - "expand": expand list-like result into columns.
+            - "reduce": keep result into a single cell (opposite of "expand").
+            - "broadcast": broadcast result to original data shape (overwrite the existing column/row with the function result).
+            - None: use "expand" strategy if Series is returned, "reduce" otherwise.
         *args : iterable
             Positional arguments to pass to `func`.
         **kwargs : dict
