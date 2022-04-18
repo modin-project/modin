@@ -4,7 +4,7 @@ Key Features and Updates
 ------------------------
 
 * Stability and Bugfixes
-  *
+  * FEAT-#4394: Fix issue with multiindex metadata desync (#4395)
 * Performance enhancements
   *
 * Benchmarking enhancements
@@ -28,4 +28,4 @@ Key Features and Updates
 
 Contributors
 ------------
-@YarShev
+@YarShev @devin-petersohn
