@@ -28,7 +28,7 @@ cloudpickle
 rpyc==4.1.5
 scikit-learn
 git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
-xgboost>=1.5.0
+xgboost>=1.6.0
 tqdm
 modin-spreadsheet>=0.1.1
 pymssql
