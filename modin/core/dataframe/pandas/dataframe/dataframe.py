@@ -1934,7 +1934,6 @@ class PandasDataframe(ClassLogger):
 
             return virtual_partition_copy
 
-
         num_parts = len(self._partitions[0]) if axis == Axis.COL_WISE else len(self._partitions)
         results = []
 
@@ -1973,10 +1972,12 @@ class PandasDataframe(ClassLogger):
             # BUG: should set full_axis in row_partitions() and column_partitions()
             virtual_partitions = self._partition_mgr_cls.row_partitions(parts_to_join) if axis == Axis.ROW_WISE else self._partition_mgr_cls.column_partitions(parts_to_join)
             # BUG: window_function_partition is returning a list for each virtual partition
-            
-            result = [virtual_partition.apply(window_function_partition) for virtual_partition in virtual_partitions]
 
-            # changed variable to x to not conflict with i of big for loop over num_parts
+            if i == (num_parts - 1):
+                result = [virtual_partition.apply(window_function_complete) for virtual_partition in virtual_partitions]
+            else:
+                result = [virtual_partition.apply(window_function_partition) for virtual_partition in virtual_partitions]
+            
             if axis == Axis.ROW_WISE:
                 results.append(result)
             else:
