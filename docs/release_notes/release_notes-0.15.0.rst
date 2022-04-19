@@ -9,6 +9,7 @@ Key Features and Updates
   * FIX-#4376: Upgrade pandas to 1.4.2 (#4377)
   * FIX-#3615: Relax some deps in development env (#4365)
   * FIX-#4370: Fix broken docstring links (#4375)
+  * FIX-#4392: Align Modin XGBoost with xgb>=1.6 (#4393)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
 * Benchmarking enhancements
