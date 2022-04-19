@@ -192,6 +192,10 @@ class PandasDataframe(object):
                     sum(row_lengths), len(self._index_cache)
                 ),
             )
+            ErrorMessage.catch_bugs_and_request_email(
+                any(val < 0 for val in row_lengths),
+                "Row lengths cannot be negative: {}".format(row_lengths),
+            )
         self._row_lengths_cache = row_lengths
         if column_widths is not None and len(self.columns) > 0:
             ErrorMessage.catch_bugs_and_request_email(
@@ -199,6 +203,10 @@ class PandasDataframe(object):
                 "Column widths: {} != {}".format(
                     sum(column_widths), len(self._columns_cache)
                 ),
+            )
+            ErrorMessage.catch_bugs_and_request_email(
+                any(val < 0 for val in column_widths),
+                "Column widths cannot be negative: {}".format(column_widths),
             )
         self._column_widths_cache = column_widths
         self._dtypes = dtypes

@@ -11,6 +11,7 @@ Key Features and Updates
   * FIX-#4370: Fix broken docstring links (#4375)
   * FIX-#4392: Align Modin XGBoost with xgb>=1.6 (#4393)
   * FIX-#4385: Get rid of `use-deprecated` option in `pip` (#4386)
+  * FIX-#3527: Fix parquet partitioning issue causing negative row length partitions (#4368)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
 * Benchmarking enhancements
@@ -43,3 +44,4 @@ Contributors
 @alexander3774
 @amyskov
 @wangxiaoying
+@jeffreykennethli
