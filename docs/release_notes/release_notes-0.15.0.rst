@@ -32,6 +32,7 @@ Key Features and Updates
 * Dependencies
   * FIX-#4327: Update min pin for xgboost version (#4328)
   * FIX-#4383: Remove `pathlib` from deps (#4384)
+  * FIX-#4390: Align `redis` dependency with new Ray requirements (#4396)
 
 Contributors
 ------------
