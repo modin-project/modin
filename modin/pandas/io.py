@@ -395,6 +395,16 @@ def read_parquet(
 ):  # noqa: PR01, RT01, D200
     """
     Load a parquet object from the file path, returning a DataFrame.
+
+
+    Parameters notes:
+
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=========================+=================+================+================+==================================+
+    | All parameters          | -               | -              | Harmful        | OmniSci execution is not         |
+    |                         |                 |                | Non-lazy       | supported                        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+   
     """
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
@@ -434,6 +444,23 @@ def read_json(
 ):  # noqa: PR01, RT01, D200
     """
     Convert a JSON string to Modin object.
+
+    Parameters notes:
+
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=========================+=================+================+================+==================================+
+    | All parameters          | Partial         | Partial        | Harmful        | OmniSci execution is not         |
+    |                         |                 |                | Non-lazy       | supported                        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+ 
+    | path_or_buf             | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
+    |                         |                 |                | Non-lazy       | string parameters and some       |
+    |                         |                 |                |                | buffer formats are not supported |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+ 
+    | lines                   | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
+    |                         |                 |                | Non-lazy       | False parameter value is not     |
+    |                         |                 |                |                | supported                        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+ 
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
