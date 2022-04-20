@@ -143,18 +143,18 @@ def read_csv(
     |                         |                 |                |                | file pattern: read_csv_glob      |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | filepath_or_buffer      | -               | -              | Partial        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | some buffer formats can be       |
+    |                         |                 |                | Non-lazy       | Some buffer formats can be       |
     |                         |                 |                |                | unsupported                      |
     |                         |                 |                |                | **OmniSci**:                     |
-    |                         |                 |                |                | only local non-buffered files    |
+    |                         |                 |                |                | Only local non-buffered files    |
     |                         |                 |                |                | are supported                    |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | header                  | -               | -              | Partial        | **OmniSci**:                     |
-    |                         |                 |                | Non-lazy       | if `names` is defined, `header`  |
+    |                         |                 |                | Non-lazy       | If `names` is defined, `header`  |
     |                         |                 |                |                | can be only 0, None or "infer"   |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | names                   | -               | -              | Partial        | **OmniSci**:                     |
-    |                         |                 |                | Non-lazy       | parameter is unsupported if      |
+    |                         |                 |                | Non-lazy       | Parameter is unsupported if      |
     |                         |                 |                |                | the number of provided names     |
     |                         |                 |                |                | doesn't correpond to the actual  |
     |                         |                 |                |                | columns number                   |
@@ -178,11 +178,11 @@ def read_csv(
     |                         |                 |                | Non-lazy       |                                  |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | skiprows                | Partial         | Partial        | Partial        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | parameter is unsupported only    |
+    |                         |                 |                | Non-lazy       | Parameter is unsupported only    |
     |                         |                 |                |                | if `skiprows` and `header`       |
-    |                         |                 |                |                | values have intersection         |
+    |                         |                 |                |                | values have intersections        |
     |                         |                 |                |                | **OmniSci**:                     |
-    |                         |                 |                |                | only integers values are         |
+    |                         |                 |                |                | Only integer values are          |
     |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | nrows                   | -               | -              | Harmful        |                                  |
@@ -204,7 +204,7 @@ def read_csv(
     |                         |                 |                | Non-lazy       | Only True value is supported     |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | parse_dates             | -               | -              | Partial        | **OmniSci**:                     |
-    |                         |                 |                | Non-lazy       | bool and flattened list of       |
+    |                         |                 |                | Non-lazy       | Bool and flattened list of       |
     |                         |                 |                |                | string column names are          |
     |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
@@ -360,13 +360,13 @@ def read_table(
     |                         |                 |                | Non-lazy       | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | filepath_or_buffer      | -               | -              | Partial        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | some buffer formats can be       |
+    |                         |                 |                | Non-lazy       | Some buffer formats can be       |
     |                         |                 |                |                | unsupported                      |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | skiprows                | Partial         | Partial        | Partial        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | parameter is unsupported only    |
+    |                         |                 |                | Non-lazy       | Parameter is unsupported only    |
     |                         |                 |                |                | if `skiprows` and `header`       |
-    |                         |                 |                |                | values have intersection         |
+    |                         |                 |                |                | values have intersections        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | chunksize               | Harmful         | Harmful        | Harmful        |                                  |
     |                         |                 |                | Non-lazy       |                                  |
@@ -453,7 +453,7 @@ def read_json(
     |                         |                 |                | Non-lazy       | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | path_or_buf             | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | string parameters and some       |
+    |                         |                 |                | Non-lazy       | String parameters and some       |
     |                         |                 |                |                | buffer formats are not supported |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | lines                   | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
@@ -831,7 +831,7 @@ def read_sql(
     |                         |                 |                |                | `ModinDatabaseConnection`        |
     |                         |                 |                |                | instead of sqlalchemy            |
     |                         |                 |                |                | connections to avoid performance |
-    |                         |                 |                |                | decrease                         |
+    |                         |                 |                |                | degradation                      |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -869,7 +869,7 @@ def read_fwf(
     |                         |                 |                | Non-lazy       | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | filepath_or_buffer      | -               | -              | Partial        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | some buffer formats can be       |
+    |                         |                 |                | Non-lazy       | Some buffer formats can be       |
     |                         |                 |                |                | unsupported                      |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | infer_nrows             | Partial         | Partial        | Partial        | **Ray/Dask**:                    |
@@ -877,9 +877,9 @@ def read_fwf(
     |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | skiprows                | Partial         | Partial        | Partial        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | parameter is unsupported only    |
+    |                         |                 |                | Non-lazy       | Parameter is unsupported only    |
     |                         |                 |                |                | if `skiprows` and `header`       |
-    |                         |                 |                |                | values have intersection         |
+    |                         |                 |                |                | values have intersections        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | chunksize               | Harmful         | Harmful        | Harmful        |                                  |
     |                         |                 |                | Non-lazy       |                                  |

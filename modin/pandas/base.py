@@ -3028,17 +3028,17 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         |                         |                 |                |                | contain compression extensions   |
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
         | mode                    | Partial         | Harmful        | Harmful        | **Ray**:                         |
-        |                         |                 |                | Non-lazy       | modes with "r+" components are   |
+        |                         |                 |                | Non-lazy       | Modes with "r+" components are   |
         |                         |                 |                |                | not supported                    |
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
         | encoding                | Partial         | Harmful        | Harmful        | **Ray**:                         |
-        |                         |                 |                | Non-lazy       | encodings with BOMs are not      |
-        |                         |                 |                |                | supported (utf-16 and utf-16     |
-        |                         |                 |                |                | with all aliases)                |
+        |                         |                 |                | Non-lazy       | Encodings with BOMs (utf-16 and  |
+        |                         |                 |                |                | utf-16 with all aliases) are not |
+        |                         |                 |                |                | supported                        |
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
         | compression             | Partial         | Harmful        | Harmful        | **Ray**:                         |
-        |                         |                 |                | Non-lazy       | compressions are not supported   |
-        |                         |                 |                |                | ("infer" and None parameter      |
+        |                         |                 |                | Non-lazy       | Compressions are not supported   |
+        |                         |                 |                |                | (only "infer" and None parameter |
         |                         |                 |                |                | values are supported)            |
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
         """

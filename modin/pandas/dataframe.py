@@ -2244,9 +2244,9 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         |                         |                 |                |                | contain compression extensions   |
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
         | compression             | Partial         | Harmful        | Harmful        | **Ray**:                         |
-        |                         |                 |                | Non-lazy       | compressions are not supported   |
-        |                         |                 |                |                | ("snappy" and None parameter     |
-        |                         |                 |                |                | values are supported)            |
+        |                         |                 |                | Non-lazy       | Compressions are not supported   |
+        |                         |                 |                |                | (only "snappy" and None          |
+        |                         |                 |                |                | parameter values are supported)  |
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
         """
         config = {
