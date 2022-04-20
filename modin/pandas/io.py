@@ -229,8 +229,8 @@ def read_csv(
     | chunksize               | Harmful         | Harmful        | Harmful        |                                  |
     |                         |                 |                | Non-lazy       |                                  |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
-    | compression             | -               | -              | -              | **OmniSci**                      |
-    |                         |                 |                | Non-lazy       | `compression` is inferred        |
+    | compression             | -               | -              | Non-lazy       | **OmniSci**:                     |
+    |                         |                 |                |                | `compression` is inferred        |
     |                         |                 |                |                | automatically and shouldn't be   |
     |                         |                 |                |                | specified                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
@@ -395,7 +395,6 @@ def read_parquet(
 ):  # noqa: PR01, RT01, D200
     """
     Load a parquet object from the file path, returning a DataFrame.
-
 
     Parameters notes:
 
