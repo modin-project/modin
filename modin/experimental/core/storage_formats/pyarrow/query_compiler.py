@@ -18,14 +18,14 @@ Module contains ``PyarrowQueryCompiler`` class.
 queries for the ``PyarrowOnRayDataframe``.
 """
 
+import pandas
+import pyarrow as pa
+
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.utils import _inherit_docstrings
-import pandas
 from pandas.core.computation.expr import Expr
 from pandas.core.computation.scope import Scope
 from pandas.core.computation.ops import UnaryOp, BinOp, Term, MathCall, Constant
-
-import pyarrow as pa
 
 
 class FakeSeries:

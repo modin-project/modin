@@ -19,6 +19,7 @@ Key Features and Updates
   *
 * Refactor Codebase
   * REFACTOR-#4284: use variable length unpacking when getting results from `deploy` function (#4285)
+  * REFACTOR-#3642: Move PyArrow storage format usage from main feature to experimental ones (#4374)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements

@@ -11,8 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""The module represents the query compiler level for the PyArrow storage format."""
+"""Experimental Modin functionality specific to PyArrow storage format."""
 
 from .query_compiler import PyarrowQueryCompiler
+from .parsers import PyarrowCSVParser
 
-__all__ = ["PyarrowQueryCompiler"]
+__all__ = ["PyarrowQueryCompiler", "PyarrowCSVParser"]
