@@ -29,3 +29,12 @@ def test_syncronous_mode():
         else nullcontext()
     ):
         pd.DataFrame(test_data_values[0]).mean()
+
+
+def test_finalize():
+    assert BenchmarkMode.get()
+
+    # GH-4273
+    s1 = pd.Series(range(10))
+    s2 = pd.Series(range(10))
+    s2.isin(s1)

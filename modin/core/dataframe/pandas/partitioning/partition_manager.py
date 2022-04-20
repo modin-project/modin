@@ -56,6 +56,8 @@ def wait_computations_if_benchmark_mode(func):
         def wait(*args, **kwargs):
             """Wait for computation results."""
             result = func(*args, **kwargs)
+            if result is None:
+                return result
             if isinstance(result, tuple):
                 partitions = result[0]
             else:
@@ -1273,7 +1275,6 @@ class PandasDataframePartitionManager(ABC):
         return result if axis else result.T
 
     @classmethod
-    @wait_computations_if_benchmark_mode
     def finalize(cls, partitions):
         """
         Perform all deferred calls on partitions.
