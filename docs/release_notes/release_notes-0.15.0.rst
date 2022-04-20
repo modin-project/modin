@@ -13,6 +13,7 @@ Key Features and Updates
   * FIX-#4385: Get rid of `use-deprecated` option in `pip` (#4386)
   * FIX-#3527: Fix parquet partitioning issue causing negative row length partitions (#4368)
   * FIX-#4330: Override the memory limit to start ray 1.11.0 on Macs (#4335)
+  * FIX-#4273: Fix waiting of None-returning methods in benchmark mode (#4403)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
 * Benchmarking enhancements
@@ -49,3 +50,4 @@ Contributors
 @jeffreykennethli
 @mvashishtha
 @anmyachev
+@dchigarev
