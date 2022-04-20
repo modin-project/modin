@@ -2101,6 +2101,14 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
     def to_feather(self, path, **kwargs):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Write a ``DataFrame`` to the binary Feather format.
+
+        Parameters notes:
+
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=================+=================+================+================+==================================+
+        | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(pandas.DataFrame.to_feather, path, **kwargs)
 
@@ -2119,6 +2127,14 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
     ):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Write a ``DataFrame`` to a Google BigQuery table.
+
+        Parameters notes:
+
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=================+=================+================+================+==================================+
+        | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
             pandas.DataFrame.to_gbq,
@@ -2162,6 +2178,14 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
     ):  # noqa: PR01, RT01, D200
         """
         Render a ``DataFrame`` as an HTML table.
+
+        Parameters notes:
+
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=================+=================+================+================+==================================+
+        | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
             pandas.DataFrame.to_html,
@@ -2202,6 +2226,25 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
     ):  # noqa: PR01, RT01, D200
         """
         Write a DataFrame to the binary parquet format.
+
+        Parameters notes:
+
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=========================+=================+================+================+==================================+
+        | All parameters          | Partial         | Harmful        | Harmful        | OmniSci and PandasOnDask         |
+        |                         |                 |                | Non-lazy       | executions are not supported     |
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
+        | path                    | Partial         | Harmful        | Harmful        | **Ray**:                         |
+        |                         |                 |                | Non-lazy       | Only str parameter type is       |
+        |                         |                 |                |                | supported. File path shouldn't   |
+        |                         |                 |                |                | contain compression extensions   |
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
+        | compression             | Partial         | Harmful        | Harmful        | **Ray**:                         |
+        |                         |                 |                | Non-lazy       | compressions are not supported   |
+        |                         |                 |                |                | ("snappy" and None parameter     |
+        |                         |                 |                |                | values are supported)            |
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
         """
         config = {
             "path": path,
@@ -2258,6 +2301,14 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
     ):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Export ``DataFrame`` object to Stata data format.
+
+        Parameters notes:
+
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=================+=================+================+================+==================================+
+        | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
             pandas.DataFrame.to_stata,
@@ -2306,6 +2357,14 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
     ):  # noqa: PR01, RT01, D200
         """
         Render a DataFrame to an XML document.
+
+        Parameters notes:
+
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=================+=================+================+================+==================================+
+        | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self.__constructor__(
             query_compiler=self._query_compiler.default_to_pandas(
