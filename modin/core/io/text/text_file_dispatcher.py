@@ -597,20 +597,16 @@ class TextFileDispatcher(FileDispatcher):
         dtypes_ids : list
             array with references to the partitions dtypes objects.
         """
-        partition_ids = []
-        index_ids = []
-        dtypes_ids = []
-        for start, end in splits:
+        partition_ids = [None] * len(splits)
+        index_ids = [None] * len(splits)
+        dtypes_ids = [None] * len(splits)
+        for idx, (start, end) in enumerate(splits):
             partition_kwargs.update({"start": start, "end": end})
-            partition_id = cls.deploy(
+            *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
                 cls.parse,
                 num_returns=partition_kwargs.get("num_splits") + 2,
                 **partition_kwargs,
             )
-            partition_ids.append(partition_id[:-2])
-            index_ids.append(partition_id[-2])
-            dtypes_ids.append(partition_id[-1])
-
         return partition_ids, index_ids, dtypes_ids
 
     @classmethod
