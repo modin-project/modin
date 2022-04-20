@@ -18,7 +18,7 @@ Key Features and Updates
 * Benchmarking enhancements
   *
 * Refactor Codebase
-  *
+  * REFACTOR-#4284: use variable length unpacking when getting results from `deploy` function (#4285)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
@@ -47,3 +47,4 @@ Contributors
 @wangxiaoying
 @jeffreykennethli
 @mvashishtha
+@anmyachev
