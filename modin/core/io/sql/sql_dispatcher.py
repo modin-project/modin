@@ -79,14 +79,14 @@ class SQLDispatcher(FileDispatcher):
         )
         cols_names = cols_names_df.columns
         num_partitions = NPartitions.get()
-        partition_ids = []
-        index_ids = []
-        dtype_ids = []
+        partition_ids = [None] * num_partitions
+        index_ids = [None] * num_partitions
+        dtypes_ids = [None] * num_partitions
         limit = math.ceil(row_cnt / num_partitions)
         for part in range(num_partitions):
             offset = part * limit
             query = con.partition_query(sql, limit, offset)
-            partition_id = cls.deploy(
+            *partition_ids[part], index_ids[part], dtypes_ids[part] = cls.deploy(
                 cls.parse,
                 num_returns=num_partitions + 2,
                 num_splits=num_partitions,
@@ -96,11 +96,9 @@ class SQLDispatcher(FileDispatcher):
                 read_sql_engine=ReadSqlEngine.get(),
                 **kwargs,
             )
-            partition_ids.append(
-                [cls.frame_partition_cls(obj) for obj in partition_id[:-2]]
-            )
-            index_ids.append(partition_id[-2])
-            dtype_ids.append(partition_ids[-1])
+            partition_ids[part] = [
+                cls.frame_partition_cls(obj) for obj in partition_ids[part]
+            ]
         if index_col is None:  # sum all lens returned from partitions
             index_lens = cls.materialize(index_ids)
             new_index = pandas.RangeIndex(sum(index_lens))

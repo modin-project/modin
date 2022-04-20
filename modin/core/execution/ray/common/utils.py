@@ -171,6 +171,26 @@ def initialize_ray(
             else:
                 object_store_memory = int(object_store_memory)
 
+            mac_size_limit = getattr(
+                ray.ray_constants, "MAC_DEGRADED_PERF_MMAP_SIZE_LIMIT", None
+            )
+            if (
+                sys.platform == "darwin"
+                and mac_size_limit is not None
+                and object_store_memory > mac_size_limit
+            ):
+                warnings.warn(
+                    "On Macs, Ray's performance is known to degrade with "
+                    + "object store size greater than "
+                    + f"{mac_size_limit / 2 ** 30:.4} GiB. Ray by default does "
+                    + "not allow setting an object store size greater than "
+                    + "that. Modin is overriding that default limit because "
+                    + "it would rather have a larger, slower object store "
+                    + "than spill to disk more often. To override Modin's "
+                    + "behavior, you can initialize Ray yourself."
+                )
+                os.environ["RAY_ENABLE_MAC_LARGE_OBJECT_STORE"] = "1"
+
             ray_init_kwargs = {
                 "num_cpus": CpuCount.get(),
                 "num_gpus": GpuCount.get(),

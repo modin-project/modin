@@ -7,9 +7,11 @@ Experimental storage formats
 and provides a limited set of functionality:
 
 * :doc:`omnisci <omnisci/index>`
+* :doc:`pyarrow <pyarrow/index>`
 
 
 .. toctree::
     :hidden:
 
     omnisci/index
+    pyarrow/index

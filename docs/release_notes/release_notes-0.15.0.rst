@@ -12,13 +12,15 @@ Key Features and Updates
   * FIX-#4392: Align Modin XGBoost with xgb>=1.6 (#4393)
   * FIX-#4385: Get rid of `use-deprecated` option in `pip` (#4386)
   * FIX-#3527: Fix parquet partitioning issue causing negative row length partitions (#4368)
-  * FEAT-#4394: Fix issue with multiindex metadata desync (#4395)
+  * FIX-#4330: Override the memory limit to start ray 1.11.0 on Macs (#4335)
+  * FIX-#4394: Fix issue with multiindex metadata desync (#4395)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
 * Benchmarking enhancements
   *
 * Refactor Codebase
-  *
+  * REFACTOR-#4284: use variable length unpacking when getting results from `deploy` function (#4285)
+  * REFACTOR-#3642: Move PyArrow storage format usage from main feature to experimental ones (#4374)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
@@ -46,4 +48,6 @@ Contributors
 @amyskov
 @wangxiaoying
 @jeffreykennethli
+@mvashishtha
+@anmyachev
 @devin-petersohn

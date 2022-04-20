@@ -60,25 +60,21 @@ class PickleExperimentalDispatcher(FileDispatcher):
                 f"There are no files matching the pattern: {filepath_or_buffer}"
             )
 
-        partition_ids = []
-        lengths_ids = []
-        widths_ids = []
+        partition_ids = [None] * len(filepath_or_buffer)
+        lengths_ids = [None] * len(filepath_or_buffer)
+        widths_ids = [None] * len(filepath_or_buffer)
 
         if len(filepath_or_buffer) != NPartitions.get():
             # do we need to do a repartitioning?
             warnings.warn("can be inefficient partitioning")
 
-        for file_name in filepath_or_buffer:
-            partition_id = cls.deploy(
+        for idx, file_name in enumerate(filepath_or_buffer):
+            *partition_ids[idx], lengths_ids[idx], widths_ids[idx] = cls.deploy(
                 cls.parse,
                 num_returns=3,
                 fname=file_name,
                 **kwargs,
             )
-            partition_ids.append(partition_id[:-2])
-            lengths_ids.append(partition_id[-2])
-            widths_ids.append(partition_id[-1])
-
         lengths = cls.materialize(lengths_ids)
         widths = cls.materialize(widths_ids)
 
