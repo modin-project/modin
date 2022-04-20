@@ -1046,7 +1046,7 @@ def test_reset_index_multiindex_groupby(data):
     eval_general(
         modin_df,
         pandas_df,
-        lambda df: df.reset_index().groupby(list(df.columns[:2])).count()
+        lambda df: df.reset_index().groupby(list(df.columns[:2])).count(),
     )
 
 
