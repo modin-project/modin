@@ -1036,18 +1036,17 @@ def test_reset_index(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_reset_index_multiindex_groupby(data):
     # GH#4394
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
+    modin_df, pandas_df = create_test_dfs(data)
     modin_df.index = pd.MultiIndex.from_tuples(
         [(i // 10, i // 5, i) for i in range(len(modin_df))]
     )
     pandas_df.index = pandas.MultiIndex.from_tuples(
         [(i // 10, i // 5, i) for i in range(len(pandas_df))]
     )
-    df_equals(
-        modin_df.reset_index().groupby(list(modin_df.columns[:2])).count(),
-        pandas_df.reset_index().groupby(list(pandas_df.columns[:2])).count(),
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.reset_index().groupby(list(df.columns[:2])).count()
     )
 
 
