@@ -2982,6 +2982,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas("to_clipboard", excel=excel, sep=sep, **kwargs)
@@ -3109,6 +3110,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
@@ -3144,6 +3146,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
@@ -3174,6 +3177,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
@@ -3226,6 +3230,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
@@ -3310,7 +3315,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        | **Ray**                          |
-        |                 |                 |                |                | Experimental implementation:     |
+        |                 |                 |                | Non-lazy       | Experimental implementation:     |
         |                 |                 |                |                | to_pickle_distributed            |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """

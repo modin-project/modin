@@ -2108,6 +2108,7 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(pandas.DataFrame.to_feather, path, **kwargs)
@@ -2134,6 +2135,7 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
@@ -2185,6 +2187,7 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
@@ -2308,6 +2311,7 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
@@ -2364,6 +2368,7 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self.__constructor__(

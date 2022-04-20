@@ -496,6 +496,7 @@ def read_gbq(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -535,6 +536,7 @@ def read_html(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -557,6 +559,7 @@ def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover  # noqa: PR01, RT0
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -664,6 +667,7 @@ def read_hdf(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -731,6 +735,7 @@ def read_stata(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -760,6 +765,7 @@ def read_sas(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -786,7 +792,7 @@ def read_pickle(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        | **Ray**:                         |
-    |                 |                 |                |                | Experimental implementation:     |
+    |                 |                 |                | Non-lazy       | Experimental implementation:     |
     |                 |                 |                |                | read_pickle_distributed          |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
@@ -920,6 +926,7 @@ def read_sql_table(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        | Please use `pd.read_sql` instead |
+    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -951,6 +958,7 @@ def read_sql_query(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        | Please use `pd.read_sql` instead |
+    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -977,6 +985,7 @@ def read_spss(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     Engine.subscribe(_update_engine)
@@ -1005,7 +1014,7 @@ def to_pickle(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        | **Ray**                          |
-    |                 |                 |                |                | Experimental implementation:     |
+    |                 |                 |                | Non-lazy       | Experimental implementation:     |
     |                 |                 |                |                | to_pickle_distributed            |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
 
@@ -1076,6 +1085,7 @@ def json_normalize(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     ErrorMessage.default_to_pandas("json_normalize")
@@ -1101,6 +1111,7 @@ def read_orc(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     ErrorMessage.default_to_pandas("read_orc")
@@ -1132,6 +1143,7 @@ def read_xml(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     ErrorMessage.default_to_pandas("read_xml")
