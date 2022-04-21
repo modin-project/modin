@@ -14,6 +14,7 @@ Key Features and Updates
   * FIX-#3527: Fix parquet partitioning issue causing negative row length partitions (#4368)
   * FIX-#4330: Override the memory limit to start ray 1.11.0 on Macs (#4335)
   * FIX-#4407: Align `insert` function with pandas in case of numpy array with several columns (#4408)
+  * FIX-#4373: Fix invalid file path when trying `read_csv_glob` with `usecols` parameter (#4405)
   * FIX-#4394: Fix issue with multiindex metadata desync (#4395)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
@@ -22,6 +23,7 @@ Key Features and Updates
 * Refactor Codebase
   * REFACTOR-#4284: use variable length unpacking when getting results from `deploy` function (#4285)
   * REFACTOR-#3642: Move PyArrow storage format usage from main feature to experimental ones (#4374)
+  * REFACTOR-#4003: Delete the deprecated cloud mortgage example (#4406)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
