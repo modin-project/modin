@@ -138,7 +138,7 @@ class CSVGlobDispatcher(CSVDispatcher):
         if usecols is not None and usecols_md[1] != "integer":
             del kwargs["usecols"]
             all_cols = pandas.read_csv(
-                OpenFile(filepath_or_buffer, "rb"),
+                filepath_or_buffer,
                 **dict(kwargs, nrows=0, skipfooter=0),
             ).columns
             usecols = all_cols.get_indexer_for(list(usecols_md[0]))
