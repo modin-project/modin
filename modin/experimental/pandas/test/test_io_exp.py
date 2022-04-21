@@ -127,6 +127,15 @@ class TestCsvGlob:
             with pytest.raises(FileNotFoundError):
                 pd.read_csv_glob("s3://nyc-tlc/trip data/yellow_tripdata_2020-")
 
+    def test_read_csv_glob_4373(self):
+        columns, filename = ["col0"], "1x1.csv"
+        pd.DataFrame([[1]], columns=columns).to_csv(filename)
+
+        kwargs = {"filepath_or_buffer": filename, "usecols": columns}
+        modin_df = pd.read_csv_glob(**kwargs)
+        pandas_df = pandas.read_csv(**kwargs)
+        df_equals(modin_df, pandas_df)
+
     @pytest.mark.parametrize(
         "parse_dates",
         [pytest.param(value, id=id) for id, value in parse_dates_values_by_id.items()],
