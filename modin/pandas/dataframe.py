@@ -1136,6 +1136,11 @@ class DataFrame(BasePandasDataset):
                     f"Expected a 1D array, got an array with shape {value.shape}"
                 )
             value = value.squeeze(axis=1)
+        elif isinstance(value, np.ndarray) and len(value.shape) > 1:
+            if value.shape[1] > 1:
+                raise ValueError(
+                    f"Expected a 1D array, got an array with shape {value.shape}"
+                )
         if not self._query_compiler.lazy_execution and len(self.index) == 0:
             if not hasattr(value, "index"):
                 try:
