@@ -14,7 +14,7 @@
 import pytest
 import numpy as np
 import pandas
-from pandas.testing import assert_index_equal
+from pandas.testing import assert_index_equal, assert_series_equal
 import matplotlib
 import modin.pandas as pd
 from modin.utils import get_current_execution
@@ -1034,16 +1034,22 @@ def test_insert(data):
 
 def test_insert_4407():
     data = {"col1": [1, 2, 3], "col2": [2, 3, 4]}
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
-    eval_insert(
-        modin_df,
-        pandas_df,
-        loc=0,
-        col="test_col",
-        value=pandas_df.to_numpy(),
-    )
+    def comparator(df1, df2):
+        assert_series_equal(df1.dtypes, df2.dtypes, check_index=False)
+        return df_equals(df1, df2)
+
+    for idx, value in enumerate((pandas_df["col1"].to_numpy(), np.array([[1]] * 3))):
+        eval_insert(
+            modin_df,
+            pandas_df,
+            loc=0,
+            col=f"test_col{idx}",
+            value=value,
+            __inplace__=True,
+            comparator=lambda df1, df2: comparator(df1, df2),
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

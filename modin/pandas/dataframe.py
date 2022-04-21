@@ -1133,7 +1133,10 @@ class DataFrame(BasePandasDataset):
                 )
             value = value.squeeze(axis=1)
         elif isinstance(value, np.ndarray) and len(value.shape) > 1:
-            if value.shape[1] > 1:
+            if value.shape[1] == 1:
+                # Transform into columnar table and take first column
+                value = value.copy().T[0]
+            else:
                 raise ValueError(
                     f"Expected a 1D array, got an array with shape {value.shape}"
                 )
