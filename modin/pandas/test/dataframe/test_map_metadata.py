@@ -71,6 +71,7 @@ def eval_insert(modin_df, pandas_df, **kwargs):
         modin_df,
         pandas_df,
         operation=lambda df, **kwargs: df.insert(**kwargs),
+        __inplace__=True,
         **_kwargs,
     )
 
@@ -1049,7 +1050,6 @@ def test_insert_4407():
             loc=0,
             col=f"test_col{idx}",
             value=value,
-            __inplace__=True,
             comparator=lambda df1, df2: comparator(df1, df2),
         )
 
