@@ -11,7 +11,26 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses ``DataFrame`` class, that is distributed version of ``pandas.DataFrame``."""
+"""
+Module houses ``DataFrame`` class, that is distributed version of ``pandas.DataFrame``.
+
+Methods docstrings contain tables with different flags describing particular properties
+of method parameters for a concrete execution. The flags stand for the following:
+
++-----------+-----------------------------------------------------------------------------------------------+
+| Flag      | Meaning                                                                                       |
++===========+===============================================================================================+
+| Harmful   | Usage of this parameter can be harmfull for performance of your application                   |
++-----------+-----------------------------------------------------------------------------------------------+
+| Non-lazy  | Usage of this parameter can trigger non-lazy execution (actual for OmniSci execution only)    |
++-----------+-----------------------------------------------------------------------------------------------+
+| Partial   | Parameter can be partly unsupported, it's usage can be harmfull for performance of your       |
+|           | appcication                                                                                   |
++-----------+-----------------------------------------------------------------------------------------------+
+| pandas    | Usage of this parameter, triggers usage of original pandas function as is, no performance     |
+|           | degradation/improvement should be observed                                                    |
++-----------+-----------------------------------------------------------------------------------------------+
+"""
 
 import pandas
 from pandas.core.common import apply_if_callable

@@ -17,6 +17,23 @@ Implement I/O public API as pandas does.
 Almost all docstrings for public and magic methods should be inherited from pandas
 for better maintability.
 Manually add documentation for methods which are not presented in pandas.
+
+Methods docstrings contain tables with different flags describing particular properties
+of method parameters for a concrete execution. The flags stand for the following:
+
++-----------+-----------------------------------------------------------------------------------------------+
+| Flag      | Meaning                                                                                       |
++===========+===============================================================================================+
+| Harmful   | Usage of this parameter can be harmfull for performance of your application                   |
++-----------+-----------------------------------------------------------------------------------------------+
+| Non-lazy  | Usage of this parameter can trigger non-lazy execution (actual for OmniSci execution only)    |
++-----------+-----------------------------------------------------------------------------------------------+
+| Partial   | Parameter can be partly unsupported, it's usage can be harmfull for performance of your       |
+|           | appcication                                                                                   |
++-----------+-----------------------------------------------------------------------------------------------+
+| pandas    | Usage of this parameter, triggers usage of original pandas function as is, no performance     |
+|           | degradation/improvement should be observed                                                    |
++-----------+-----------------------------------------------------------------------------------------------+
 """
 
 import inspect
