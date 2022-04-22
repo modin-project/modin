@@ -1172,7 +1172,7 @@ class DataFrame(BasePandasDataset):
                 raise IndexError(
                     f"index {loc} is out of bounds for axis 0 with size {len(self.columns)}"
                 )
-            if loc < 0:
+            elif loc < 0:
                 raise ValueError("unbounded slice")
             if isinstance(value, Series):
                 value = value._query_compiler
@@ -2523,31 +2523,6 @@ class DataFrame(BasePandasDataset):
             return self._setitem_slice(key, value)
 
         if hashable(key) and key not in self.columns:
-            if isinstance(value, Series) and len(self.columns) == 0:
-                self._query_compiler = value._query_compiler.copy()
-                # Now that the data is appended, we need to update the column name for
-                # that column to `key`, otherwise the name could be incorrect. Drop the
-                # last column name from the list (the appended value's name and append
-                # the new name.
-                self.columns = self.columns[:-1].append(pandas.Index([key]))
-                return
-            elif (
-                isinstance(value, (pandas.DataFrame, DataFrame)) and value.shape[1] != 1
-            ):
-                raise ValueError(
-                    "Wrong number of items passed %i, placement implies 1"
-                    % value.shape[1]
-                )
-            elif isinstance(value, np.ndarray) and len(value.shape) > 1:
-                if value.shape[1] == 1:
-                    # Transform into columnar table and take first column
-                    value = value.copy().T[0]
-                else:
-                    raise ValueError(
-                        "Wrong number of items passed %i, placement implies 1"
-                        % value.shape[1]
-                    )
-
             # Do new column assignment after error checks and possible value modifications
             self.insert(loc=len(self.columns), column=key, value=value)
             return
