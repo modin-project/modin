@@ -213,8 +213,15 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             self.partition_type(future, length, width, ip)
             for (future, length, width, ip) in zip(*[iter(partitions)] * 4)
         ]
-    
-    def apply(self, func, num_splits=None, other_axis_partition=None, maintain_partitioning=True, **kwargs):
+
+    def apply(
+        self,
+        func,
+        num_splits=None,
+        other_axis_partition=None,
+        maintain_partitioning=True,
+        **kwargs
+    ):
         """
         Apply a function to this axis partition along full axis.
 
@@ -253,7 +260,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             return result
         else:
             return result[0]
-    
+
     def force_materialization(self, get_ip=False):
         """
         Materialize partitions into a single partition.
@@ -268,10 +275,12 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         PandasOnDaskDataframeVirtualPartition
             An axis partition containing only a single materialized partition.
         """
-        materialized = super(PandasOnDaskDataframeVirtualPartition, self).force_materialization(get_ip=get_ip)
+        materialized = super(
+            PandasOnDaskDataframeVirtualPartition, self
+        ).force_materialization(get_ip=get_ip)
         self.list_of_partitions_to_combine = materialized.list_of_partitions_to_combine
         return materialized
-        
+
     def mask(self, row_indices, col_indices):
         """
         Create (synchronously) a mask that extracts the indices provided.
@@ -294,7 +303,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             .list_of_partitions_to_combine[0]
             .mask(row_indices, col_indices)
         )
-    
+
     def to_pandas(self):
         """
         Convert the data in this partition to a ``pandas.DataFrame``.
@@ -324,7 +333,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             else:
                 self._length_cache = self.list_of_partitions_to_combine[0].length()
         return self._length_cache
-    
+
     _width_cache = None
 
     def width(self):
@@ -338,7 +347,9 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         """
         if self._width_cache is None:
             if self.axis == 1:
-                self._width_cache = sum(o.width() for o in self.list_of_partitions_to_combine)
+                self._width_cache = sum(
+                    o.width() for o in self.list_of_partitions_to_combine
+                )
             else:
                 self._width_cache = self.list_of_partitions_to_combine[0].width()
         return self._width_cache
@@ -350,7 +361,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             for func, args, kwargs in self.call_queue:
                 df = func(df, *args, **kwargs)
             return df
-        
+
         drained = super(PandasOnDaskDataframeVirtualPartition, self).apply(drain)
         self.list_of_partitions_to_combine = drained
         self.call_queue = []
@@ -359,7 +370,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
         wait(self.list_of_blocks)
-    
+
     def add_to_apply_calls(self, func, *args, **kwargs):
         """
         Add a function to the call queue.
@@ -387,6 +398,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             full_axis=self.full_axis,
             call_queue=self.call_queue + [(func, args, kwargs)],
         )
+
 
 class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeVirtualPartition):
     """
