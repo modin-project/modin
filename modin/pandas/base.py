@@ -14,8 +14,11 @@
 """
 Implement DataFrame/Series public API as pandas does.
 
-Methods docstrings contain tables with different flags describing particular properties
-of method parameters for a concrete execution. The flags stand for the following:
+Methods docstrings contain tables with supported parameters information.
+These tables are structed as follows: The first column contains the parameter name,
+the second, third and fourth column - flags describing particular properties of
+method parameters for a concrete execution supported by Modin (`PandasOnRay`, `PandasOnDask`
+or `OmniSci`), and the last one is for parameter notes. The flags stand for the following:
 
 +-----------+-----------------------------------------------------------------------------------------------+
 | Flag      | Meaning                                                                                       |
@@ -30,6 +33,11 @@ of method parameters for a concrete execution. The flags stand for the following
 | pandas    | Usage of this parameter, triggers usage of original pandas function as is, no performance     |
 |           | degradation/improvement should be observed                                                    |
 +-----------+-----------------------------------------------------------------------------------------------+
+
+Also, the first row (`All parameters` parameter name) shows summary support status for the
+whole method and only further rows describe exact parameters support status. Please note,
+that tables lists only unsupported/partially supported parameters, if parameter is supported,
+it won't be present in the table.
 """
 
 import numpy as np
@@ -2995,7 +3003,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         """
         Copy object to the system clipboard.
 
-        Parameters notes:
+        Parameters Support Status:
 
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -3033,7 +3041,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         """
         Write object to a comma-separated values (csv) file.
 
-        Parameters notes:
+        Parameters Support Status:
 
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
         | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -3123,7 +3131,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         """
         Write object to an Excel sheet.
 
-        Parameters notes:
+        Parameters Support Status:
 
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -3159,7 +3167,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         """
         Write the contained data to an HDF5 file using HDFStore.
 
-        Parameters notes:
+        Parameters Support Status:
 
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -3190,7 +3198,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         """
         Convert the object to a JSON string.
 
-        Parameters notes:
+        Parameters Support Status:
 
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -3243,7 +3251,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         """
         Render object to a LaTeX tabular, longtable, or nested table.
 
-        Parameters notes:
+        Parameters Support Status:
 
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -3328,7 +3336,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         """
         Pickle (serialize) object to file.
 
-        Parameters notes:
+        Parameters Support Status:
 
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -3410,7 +3418,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         """
         Write records stored in a `BasePandasDataset` to a SQL database.
 
-        Parameters notes:
+        Parameters Support Status:
 
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
         | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |

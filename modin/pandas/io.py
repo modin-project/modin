@@ -14,12 +14,11 @@
 """
 Implement I/O public API as pandas does.
 
-Almost all docstrings for public and magic methods should be inherited from pandas
-for better maintability.
-Manually add documentation for methods which are not presented in pandas.
-
-Methods docstrings contain tables with different flags describing particular properties
-of method parameters for a concrete execution. The flags stand for the following:
+Methods docstrings contain tables with supported parameters information.
+These tables are structed as follows: The first column contains the parameter name,
+the second, third and fourth column - flags describing particular properties of
+method parameters for a concrete execution supported by Modin (`PandasOnRay`, `PandasOnDask`
+or `OmniSci`), and the last one is for parameter notes. The flags stand for the following:
 
 +-----------+-----------------------------------------------------------------------------------------------+
 | Flag      | Meaning                                                                                       |
@@ -34,6 +33,11 @@ of method parameters for a concrete execution. The flags stand for the following
 | pandas    | Usage of this parameter, triggers usage of original pandas function as is, no performance     |
 |           | degradation/improvement should be observed                                                    |
 +-----------+-----------------------------------------------------------------------------------------------+
+
+Also, the first row (`All parameters` parameter name) shows summary support status for the
+whole method and only further rows describe exact parameters support status. Please note,
+that tables lists only unsupported/partially supported parameters, if parameter is supported,
+it won't be present in the table.
 """
 
 import inspect
@@ -148,7 +152,7 @@ def read_csv(
     """
     Read a comma-separated values (csv) file into DataFrame.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -368,7 +372,7 @@ def read_table(
     """
     Read general delimited file into DataFrame.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -413,7 +417,7 @@ def read_parquet(
     """
     Load a parquet object from the file path, returning a DataFrame.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -461,7 +465,7 @@ def read_json(
     """
     Convert a JSON string to Modin object.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -506,7 +510,7 @@ def read_gbq(
     """
     Load data from Google BigQuery.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -546,7 +550,7 @@ def read_html(
     """
     Read HTML tables into a ``DataFrame`` object.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -569,7 +573,7 @@ def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover  # noqa: PR01, RT0
     """
     Read text from clipboard and pass to read_csv.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -621,7 +625,7 @@ def read_excel(
     """
     Read an Excel file into a DataFrame.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -677,7 +681,7 @@ def read_hdf(
     """
     Read data from the store into DataFrame.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -706,7 +710,7 @@ def read_feather(
     """
     Load a feather-format object from the file path.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -745,7 +749,7 @@ def read_stata(
     """
     Read Stata file into a DataFrame.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -775,7 +779,7 @@ def read_sas(
     """
     Read SAS files stored as either XPORT or SAS7BDAT format files.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -802,7 +806,7 @@ def read_pickle(
     """
     Load pickled Modin object (or any object) from file.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -835,7 +839,7 @@ def read_sql(
     """
     Read SQL query or database table into a DataFrame.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -877,7 +881,7 @@ def read_fwf(
     """
     Read a table of fixed-width formatted lines into DataFrame.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -936,7 +940,7 @@ def read_sql_table(
     """
     Read SQL database table into a DataFrame.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -968,7 +972,7 @@ def read_sql_query(
     """
     Read SQL query into a DataFrame.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -995,7 +999,7 @@ def read_spss(
     """
     Load an SPSS file from the file path, returning a DataFrame.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -1024,7 +1028,7 @@ def to_pickle(
     """
     Pickle (serialize) object to file.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -1095,7 +1099,7 @@ def json_normalize(
     """
     Normalize semi-structured JSON data into a flat table.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -1121,7 +1125,7 @@ def read_orc(
     """
     Load an ORC object from the file path, returning a DataFrame.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -1153,7 +1157,7 @@ def read_xml(
     """
     Read XML document into a ``DataFrame`` object.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -1186,7 +1190,7 @@ class HDFStore(pandas.HDFStore, metaclass=LoggerMetaClass):  # noqa: PR01, D200
     """
     Dict-like IO interface for storing pandas objects in PyTables.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
@@ -1252,7 +1256,7 @@ class ExcelFile(pandas.ExcelFile, metaclass=LoggerMetaClass):  # noqa: PR01, D20
     """
     Class for parsing tabular excel sheets into DataFrame objects.
 
-    Parameters notes:
+    Parameters Support Status:
 
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
