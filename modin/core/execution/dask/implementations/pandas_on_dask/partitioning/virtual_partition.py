@@ -15,6 +15,8 @@
 
 from distributed import Future
 from distributed.utils import get_ip
+from dask.distributed import wait
+
 import pandas
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
@@ -24,7 +26,7 @@ from .partition import PandasOnDaskDataframePartition
 from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
 
 
-class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
+class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
     """
     The class implements the interface in ``PandasDataframeAxisPartition``.
 
@@ -38,20 +40,73 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         Whether or not the virtual partition encompasses the whole axis.
     """
 
-    def __init__(self, list_of_blocks, get_ip=False, full_axis=True):
-        if not full_axis:
-            raise NotImplementedError(
-                "Pandas on Dask execution requires full-axis partitions."
+    axis = None
+
+    def __init__(self, list_of_blocks, get_ip=False, full_axis=True, call_queue=None):
+        self.call_queue = call_queue or []
+        self.full_axis = full_axis
+        if isinstance(list_of_blocks, PandasOnDaskDataframePartition):
+            list_of_blocks = [list_of_blocks]
+        if not any(
+            isinstance(o, PandasOnDaskDataframeVirtualPartition) for o in list_of_blocks
+        ):
+            self.list_of_partitions_to_combine = list_of_blocks
+            return
+
+        assert (
+            len(
+                set(
+                    o.axis
+                    for o in list_of_blocks
+                    if isinstance(o, PandasOnDaskDataframeVirtualPartition)
+                )
             )
-        for obj in list_of_blocks:
-            obj.drain_call_queue()
-        # Unwrap from PandasDataframePartition object for ease of use
-        self.list_of_blocks = [obj.future for obj in list_of_blocks]
-        if get_ip:
-            self.list_of_ips = [obj._ip_cache for obj in list_of_blocks]
+            == 1
+        )
+        if (
+            next(
+                o
+                for o in list_of_blocks
+                if isinstance(o, PandasOnDaskDataframeVirtualPartition)
+            ).axis
+            == self.axis
+        ):
+            new_list_of_blocks = []
+            for o in list_of_blocks:
+                new_list_of_blocks.extend(
+                    o.list_of_partitions_to_combine
+                ) if isinstance(
+                    0, PandasOnDaskDataframeVirtualPartition
+                ) else new_list_of_blocks.append(
+                    o
+                )
+            self.list_of_partitions_to_combine = new_list_of_blocks
+        else:
+            self.list_of_partitions_to_combine = [
+                obj.force_materialization().list_of_partitions_to_combine[0]
+                if isinstance(obj, PandasOnDaskDataframeVirtualPartition)
+                else obj
+                for obj in list_of_blocks
+            ]
 
     partition_type = PandasOnDaskDataframePartition
     instance_type = Future
+
+    @property
+    def list_of_blocks(self):
+        """
+        Get the list of physical partition objects that compose this partition.
+
+        Returns
+        -------
+        List
+            A list of ``distributed.Future``.
+        """
+        result = [None] * len(self.list_of_partitions_to_combine)
+        for idx, ptn in enumerate(self.list_of_partitions_to_combine):
+            ptn.drain_call_queue()
+            result[idx] = ptn._ip_cache
+        return result
 
     @classmethod
     def deploy_axis_func(
@@ -158,9 +213,182 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             self.partition_type(future, length, width, ip)
             for (future, length, width, ip) in zip(*[iter(partitions)] * 4)
         ]
+    
+    def apply(self, func, num_splits=None, other_axis_partition=None, maintain_partitioning=True, **kwargs):
+        """
+        Apply a function to this axis partition along full axis.
 
+        Parameters
+        ----------
+        func : callable
+            The function to apply.
+        num_splits : int, default: None
+            The number of times to split the result object.
+        other_axis_partition : PandasDataframeAxisPartition, default: None
+            Another `PandasDataframeAxisPartition` object to be applied
+            to func. This is for operations that are between two data sets.
+        maintain_partitioning : bool, default: True
+            Whether to keep the partitioning in the same
+            orientation as it was previously or not. This is important because we may be
+            operating on an individual AxisPartition and not touching the rest.
+            In this case, we have to return the partitioning to its previous
+            orientation (the lengths will remain the same). This is ignored between
+            two axis partitions.
+        **kwargs : dict
+            Additional keywords arguments to be passed in `func`.
 
-class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeAxisPartition):
+        Returns
+        -------
+        list
+            A list of `PandasOnDaskDataframeVirtualPartition` objects.
+        """
+        if not self.full_axis:
+            num_splits = 1
+        if len(self.call_queue) > 0:
+            self.drain_call_queue()
+        result = super(PandasOnDaskDataframeVirtualPartition, self).apply(
+            func, num_splits, other_axis_partition, maintain_partitioning, **kwargs
+        )
+        if self.full_axis:
+            return result
+        else:
+            return result[0]
+    
+    def force_materialization(self, get_ip=False):
+        """
+        Materialize partitions into a single partition.
+
+        Parameters
+        ----------
+        get_ip : bool, default: False
+            Whether to get node ip address to a single partition or not.
+
+        Returns
+        -------
+        PandasOnDaskDataframeVirtualPartition
+            An axis partition containing only a single materialized partition.
+        """
+        materialized = super(PandasOnDaskDataframeVirtualPartition, self).force_materialization(get_ip=get_ip)
+        self.list_of_partitions_to_combine = materialized.list_of_partitions_to_combine
+        return materialized
+        
+    def mask(self, row_indices, col_indices):
+        """
+        Create (synchronously) a mask that extracts the indices provided.
+
+        Parameters
+        ----------
+        row_indices : list-like, slice or label
+            The row labels for the rows to extract.
+        col_indices : list-like, slice or label
+            The column labels for the columns to extract.
+
+        Returns
+        -------
+        PandasOnDaskDataframeVirtualPartition
+            A new ``PandasOnDaskDataframeVirtualPartition`` object,
+            materialized.
+        """
+        return (
+            self.force_materialization()
+            .list_of_partitions_to_combine[0]
+            .mask(row_indices, col_indices)
+        )
+    
+    def to_pandas(self):
+        """
+        Convert the data in this partition to a ``pandas.DataFrame``.
+
+        Returns
+        -------
+        pandas DataFrame.
+        """
+        return self.force_materialization().list_of_partitions_to_combine[0].to_pandas()
+
+    _length_cache = None
+
+    def length(self):
+        """
+        Get the length of this partition.
+
+        Returns
+        -------
+        int
+            The length of the partition.
+        """
+        if self._length_cache is None:
+            if self.axis == 0:
+                self._length_cache = sum(
+                    o.length() for o in self.list_of_partitions_to_combine
+                )
+            else:
+                self._length_cache = self.list_of_partitions_to_combine[0].length()
+        return self._length_cache
+    
+    _width_cache = None
+
+    def width(self):
+        """
+        Get the width of this partition.
+
+        Returns
+        -------
+        int
+            THe width of the partition.
+        """
+        if self._width_cache is None:
+            if self.axis == 1:
+                self._width_cache = sum(o.width() for o in self.list_of_partitions_to_combine)
+            else:
+                self._width_cache = self.list_of_partitions_to_combine[0].width()
+        return self._width_cache
+
+    def drain_call_queue(self):
+        """Execute all operations stored in this partition's call queue."""
+
+        def drain(df):
+            for func, args, kwargs in self.call_queue:
+                df = func(df, *args, **kwargs)
+            return df
+        
+        drained = super(PandasOnDaskDataframeVirtualPartition, self).apply(drain)
+        self.list_of_partitions_to_combine = drained
+        self.call_queue = []
+
+    def wait(self):
+        """Wait completing computations on the object wrapped by the partition."""
+        self.drain_call_queue()
+        wait(self.list_of_blocks)
+    
+    def add_to_apply_calls(self, func, *args, **kwargs):
+        """
+        Add a function to the call queue.
+
+        Parameters
+        ----------
+        func : callable
+            Function to be added to the call queue.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
+        **kwargs : dict
+            Additional keyword arguments to be passed in `func`.
+
+        Returns
+        -------
+        PandasOnDaskDataframeVirtualPartition
+            A new ``PandasOnDaskDataframeVirtualPartition`` object.
+
+        Notes
+        -----
+        The keyword arguments are sent as a dictionary.
+        """
+        return type(self)(
+            self.list_of_partitions_to_combine,
+            full_axis=self.full_axis,
+            call_queue=self.call_queue + [(func, args, kwargs)],
+        )
+
+class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeVirtualPartition):
     """
     The column partition implementation.
 
@@ -180,7 +408,7 @@ class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeAxisPartition):
     axis = 0
 
 
-class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeAxisPartition):
+class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeVirtualPartition):
     """
     The row partition implementation.
 
