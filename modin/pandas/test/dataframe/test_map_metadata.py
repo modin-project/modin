@@ -1040,7 +1040,9 @@ def test_insert_4407():
         assert_series_equal(df1.dtypes, df2.dtypes, check_index=False)
         return df_equals(df1, df2)
 
-    for idx, value in enumerate((pandas_df.to_numpy(), np.array([[1]] * 3))):
+    for idx, value in enumerate(
+        (pandas_df.to_numpy(), np.array([[1]] * 3), np.array([[1, 2, 3], [4, 5, 6]]))
+    ):
         eval_insert(
             modin_df,
             pandas_df,
