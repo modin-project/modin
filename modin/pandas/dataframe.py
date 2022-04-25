@@ -2519,6 +2519,12 @@ class DataFrame(BasePandasDataset):
             return self._setitem_slice(key, value)
 
         if hashable(key) and key not in self.columns:
+            if isinstance(value, Series) and len(self.columns) == 0:
+                self._query_compiler = value._query_compiler.copy()
+                # Now that the data is appended, we need to update the column name for
+                # that column to `key`, otherwise the name could be incorrect.
+                self.columns = pandas.Index([key])
+                return
             # Do new column assignment after error checks and possible value modifications
             self.insert(loc=len(self.columns), column=key, value=value)
             return
