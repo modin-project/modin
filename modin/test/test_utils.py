@@ -16,6 +16,7 @@ import modin.utils
 import json
 
 from textwrap import dedent, indent
+from modin.error_message import ErrorMessage
 
 
 # Note: classes below are used for purely testing purposes - they
@@ -251,7 +252,7 @@ def warns_that_defaulting_to_pandas():
         A WarningsChecker checking for a UserWarning saying that Modin is
         defaulting to Pandas.
     """
-    return pytest.warns(UserWarning, match="defaulting to pandas")
+    return pytest.warns(UserWarning, match="[Dd]efaulting to pandas")
 
 
 @pytest.mark.parametrize("as_json", [True, False])
@@ -263,3 +264,11 @@ def test_show_versions(as_json, capsys):
     if as_json:
         versions = json.loads(versions)
         assert versions["modin dependencies"]["modin"] == modin.__version__
+
+
+def test_warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas():
+        ErrorMessage.default_to_pandas()
+
+    with warns_that_defaulting_to_pandas():
+        ErrorMessage.default_to_pandas(message="Function name")
