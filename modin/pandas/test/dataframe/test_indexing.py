@@ -664,6 +664,17 @@ def test_iloc_assignment():
     df_equals(modin_df, pandas_df)
 
 
+def test_loc_multiple_arguments():
+    arrays = [
+        np.array(["bar", "bar", "baz", "baz", "foo", "foo", "qux", "qux"]),
+        np.array(["one", "two", "one", "two", "one", "two", "one", "two"]),
+    ]
+    values = np.random.randn(8, 4)
+    modin_df = pd.DataFrame(values, index=arrays)
+    pandas_df = pandas.DataFrame(values, index=arrays)
+    df_equals(modin_df.loc['bar', 'one'], pandas_df.loc['bar', 'one'])
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_iloc_nested_assignment(data):
     modin_df = pd.DataFrame(data)
