@@ -293,8 +293,16 @@ class DataFrameGroupBy(object):
         self._indices_cache = self._compute_index_grouped(numerical=True)
         return self._indices_cache
 
-    def pct_change(self):
-        return self._default_to_pandas(lambda df: df.pct_change())
+    def pct_change(self, periods=1, fill_method="ffill", limit=None, freq=None, axis=0):
+        return self._default_to_pandas(
+            lambda df: df.pct_change(
+                periods=periods,
+                fill_method=fill_method,
+                limit=limit,
+                freq=freq,
+                axis=axis,
+            )
+        )
 
     def filter(self, func, dropna=True, *args, **kwargs):
         return self._default_to_pandas(
