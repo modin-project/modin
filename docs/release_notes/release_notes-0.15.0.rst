@@ -33,6 +33,7 @@ Key Features and Updates
   * FEAT-#4359: Add __dataframe__ method to the protocol dataframe (#4360)
 * Update testing suite
   * TEST-#4363: Use Ray from pypi in CI (#4364)
+  * TEST-#4426: Stop passing is_default kwarg to Modin and pandas (#4428)
 * Documentation improvements
   * DOCS-#4296: Fix docs warnings (#4297)
   * DOCS-#4388: Turn off fail_on_warning option for docs build (#4389)
