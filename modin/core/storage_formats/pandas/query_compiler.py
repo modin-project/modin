@@ -494,15 +494,46 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort = kwargs.get("sort", False)
 
         if how in ["left", "inner"]:
-            right = right.to_pandas()
+            from time import time
 
-            def map_func(left, right=right, kwargs=kwargs):
-                return pandas.DataFrame.join(left, right, **kwargs)
+            if how == "left":
+                partitions = self._modin_frame._partitions
+                all(
+                    map(
+                        lambda partition: partition.wait() or True, partitions.flatten()
+                    )
+                )
+                partitions = right._modin_frame._partitions
+                all(
+                    map(
+                        lambda partition: partition.wait() or True, partitions.flatten()
+                    )
+                )
+                # import pdb;pdb.set_trace()
+                right._modin_frame._deferred_column = False
+                right._modin_frame._deferred_index = False
+                start = time()
+                if not all(map(lambda name: name in right.index.names, on)):
+                    right = right.drop(columns=on)
+                    right.index = self.index
+                new_self = self.concat(1, right, join="left")
+                partitions = new_self._modin_frame._partitions
+                all(
+                    map(
+                        lambda partition: partition.wait() or True, partitions.flatten()
+                    )
+                )
+                print(f"concat time: {time()-start}")
+                return new_self.sort_rows_by_column_values(on) if sort else new_self
+            else:
 
-            new_self = self.__constructor__(
-                self._modin_frame.apply_full_axis(1, map_func)
-            )
-            return new_self.sort_rows_by_column_values(on) if sort else new_self
+                def map_func(left, right):
+                    return pandas.DataFrame.join(left, right, **kwargs)
+
+                new_self = self.__constructor__(
+                    self._modin_frame.apply_full_axis(1, map_func)
+                )
+                return new_self.sort_rows_by_column_values(on) if sort else new_self
         else:
             return self.default_to_pandas(pandas.DataFrame.join, right, **kwargs)
 

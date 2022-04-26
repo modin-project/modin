@@ -1259,6 +1259,21 @@ class DataFrame(BasePandasDataset):
                 raise ValueError("Other Series must have a name")
             other = DataFrame({other.name: other})
         if on is not None:
+            from time import time
+
+            if isinstance(other, DataFrame):
+                start = time()
+                if self._query_compiler.has_multiindex(axis=0) and all(
+                    map(lambda name: name in self.index.names, on)
+                ):
+                    new_index = self.index
+                    for name in new_index.names:
+                        if name not in on:
+                            new_index = new_index.droplevel(name)
+                        other = other.reindex(index=new_index)
+                else:
+                    other = other.reindex(index=self[on])
+                print(f"reindex in join: {time()-start}")
             return self.__constructor__(
                 query_compiler=self._query_compiler.join(
                     other._query_compiler,
