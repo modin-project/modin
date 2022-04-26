@@ -15,7 +15,7 @@
 
 from contextlib import nullcontext
 import modin.pandas as pd
-from modin.pandas.test.utils import test_data_values
+from modin.pandas.test.utils import test_data_values, df_equals
 from modin.config import BenchmarkMode, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
@@ -31,10 +31,15 @@ def test_syncronous_mode():
         pd.DataFrame(test_data_values[0]).mean()
 
 
-def test_finalize():
+def test_serialization():
     assert BenchmarkMode.get()
 
-    # GH-4273
-    s1 = pd.Series(range(10))
-    s2 = pd.Series(range(10))
-    s2.isin(s1)
+    sr1 = pd.Series(range(10))
+    constructor, args = sr1.__reduce__()
+    sr2 = constructor(*args)
+    df_equals(sr1, sr2)
+
+    df1 = pd.DataFrame(range(10))
+    constructor, args = df1.__reduce__()
+    df2 = constructor(*args)
+    df_equals(df1, df2)
