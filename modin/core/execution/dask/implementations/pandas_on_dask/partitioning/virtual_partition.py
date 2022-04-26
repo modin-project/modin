@@ -102,10 +102,29 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         List
             A list of ``distributed.Future``.
         """
+        # Defer draining call queue until we get the partitions
+        # TODO Look into draining call queue at the same time as the task
         result = [None] * len(self.list_of_partitions_to_combine)
-        for idx, ptn in enumerate(self.list_of_partitions_to_combine):
-            ptn.drain_call_queue()
-            result[idx] = ptn._ip_cache
+        for idx, partition in enumerate(self.list_of_partitions_to_combine):
+            partition.drain_call_queue()
+            result[idx] = partition.future
+        return result
+
+    @property
+    def list_of_ips(self):
+        """
+        Get the IPs holding the physical objects composing this partition.
+
+        Returns
+        -------
+        List
+            A list of IPs as ``distributed.Future`` or str.
+        """
+        # Defer draining call queue until we get the ip address
+        result = [None] * len(self.list_of_partitions_to_combine)
+        for idx, partition in enumerate(self.list_of_partitions_to_combine):
+            partition.drain_call_queue()
+            result[idx] = partition._ip_cache
         return result
 
     @classmethod
