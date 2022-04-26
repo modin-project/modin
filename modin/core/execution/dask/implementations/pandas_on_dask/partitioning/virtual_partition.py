@@ -38,6 +38,8 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         Whether to get node IP addresses of conforming partitions or not.
     full_axis : bool, default: True
         Whether or not the virtual partition encompasses the whole axis.
+    call_queue : list, optional
+        A list of tuples (callable, args, kwargs) that contains deferred calls.
     """
 
     axis = None
@@ -434,6 +436,8 @@ class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeVirtualPartition
         Whether to get node IP addresses to conforming partitions or not.
     full_axis : bool, default: True
         Whether or not the virtual partition encompasses the whole axis.
+    call_queue : list, optional
+        A list of tuples (callable, args, kwargs) that contains deferred calls.
     """
 
     axis = 0
@@ -454,6 +458,8 @@ class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeVirtualPartition):
         Whether to get node IP addresses to conforming partitions or not.
     full_axis : bool, default: True
         Whether or not the virtual partition encompasses the whole axis.
+    call_queue : list, optional
+        A list of tuples (callable, args, kwargs) that contains deferred calls.
     """
 
     axis = 1
