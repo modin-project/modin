@@ -664,7 +664,7 @@ def test_iloc_assignment():
     df_equals(modin_df, pandas_df)
 
 
-def test_loc_multiple_arguments():
+def test_loc_tuple_argument():
     arrays = [
         np.array(["bar", "bar", "baz", "baz", "foo", "foo", "qux", "qux"]),
         np.array(["one", "two", "one", "two", "one", "two", "one", "two"]),
