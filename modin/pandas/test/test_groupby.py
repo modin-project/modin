@@ -363,7 +363,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
         modin_groupby,
         pandas_groupby,
         lambda df: df.pct_change(
-            periods=1, fill_method="ffill", limit=None, freq=None, axis=0
+            periods=2, fill_method="pad", limit=1, freq=None, axis=1
         ),
         modin_df_almost_equals_pandas,
         is_default=True,
