@@ -20,14 +20,17 @@ from modin.config import BenchmarkMode, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 
+default_to_pandas_context = (
+    warns_that_defaulting_to_pandas()
+    if StorageFormat.get() == "Omnisci"
+    else nullcontext()
+)
+
+
 def test_syncronous_mode():
     assert BenchmarkMode.get()
     # On Omnisci storage, transpose() defaults to Pandas.
-    with (
-        warns_that_defaulting_to_pandas()
-        if StorageFormat.get() == "Omnisci"
-        else nullcontext()
-    ):
+    with default_to_pandas_context:
         pd.DataFrame(test_data_values[0]).mean()
 
 
@@ -35,11 +38,15 @@ def test_serialization():
     assert BenchmarkMode.get()
 
     sr1 = pd.Series(range(10))
-    constructor, args = sr1.__reduce__()
+    # On Omnisci `__finalize__` raises a warning
+    with default_to_pandas_context:
+        constructor, args = sr1.__reduce__()
     sr2 = constructor(*args)
     df_equals(sr1, sr2)
 
     df1 = pd.DataFrame(range(10))
-    constructor, args = df1.__reduce__()
+    # On Omnisci `__finalize__` raises a warning
+    with default_to_pandas_context:
+        constructor, args = df1.__reduce__()
     df2 = constructor(*args)
     df_equals(df1, df2)
