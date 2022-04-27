@@ -15,6 +15,7 @@ Key Features and Updates
   * FIX-#4330: Override the memory limit to start ray 1.11.0 on Macs (#4335)
   * FIX-#4373: Fix invalid file path when trying `read_csv_glob` with `usecols` parameter (#4405)
   * FIX-#4394: Fix issue with multiindex metadata desync (#4395)
+  * FIX-#4425: Add parameters to groupby pct_change (#4429)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
 * Benchmarking enhancements
