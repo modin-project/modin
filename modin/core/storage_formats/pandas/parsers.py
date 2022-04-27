@@ -708,15 +708,36 @@ class PandasSQLParser(PandasParser):
 con : SQLAlchemy connectable, str, or sqlite3 connection
     Connection object to database.
 index_col : str or list of str
-    Column(s) to set as index(MultiIndex).""",
+    Column(s) to set as index(MultiIndex).
+read_sql_engine : str
+    Underlying engine ('pandas' or 'connectorx') used for fetching query result.""",
     )
-    def parse(sql, con, index_col, **kwargs):
+    def parse(sql, con, index_col, read_sql_engine, **kwargs):
+
+        enable_cx = False
+        if read_sql_engine == "Connectorx":
+            try:
+                import connectorx as cx
+
+                enable_cx = True
+            except ImportError:
+                warnings.warn(
+                    "Switch to 'pandas.read_sql' since 'connectorx' is not installed, please run 'pip install connectorx'."
+                )
+
         num_splits = kwargs.pop("num_splits", None)
         if isinstance(con, ModinDatabaseConnection):
-            con = con.get_connection()
+            con = con.get_string() if enable_cx else con.get_connection()
+
         if num_splits is None:
+            if enable_cx:
+                return cx.read_sql(con, sql, index_col=index_col)
             return pandas.read_sql(sql, con, index_col=index_col, **kwargs)
-        df = pandas.read_sql(sql, con, index_col=index_col, **kwargs)
+
+        if enable_cx:
+            df = cx.read_sql(con, sql, index_col=index_col)
+        else:
+            df = pandas.read_sql(sql, con, index_col=index_col, **kwargs)
         if index_col is None:
             index = len(df)
         else:

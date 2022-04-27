@@ -22,8 +22,8 @@ Please note, that while Modin covers a large portion of the pandas API, not all 
 
 To understand which functions will lead to this warning, we have compiled a list of :doc:`currently supported methods </supported_apis/index>`. When you see this warning, Modin defaults to pandas by converting the Modin dataframe to pandas to perform the operation. Once the operation is complete in pandas, it is converted back to a Modin dataframe. These operations will have a high overhead due to the communication involved and will take longer than pandas. When this is happening, a warning will be given to the user to inform them that this operation will take longer than usual. You can learn more about this :doc:`here </supported_apis/defaulting_to_pandas>`.
 
-If you would like to request a particular method be implemented, feel free to `open an
-issue`_. Before you open an issue please make sure that someone else has not already
+If you would like to request a particular method be implemented, feel free to open an
+`issue`_. Before you open an issue please make sure that someone else has not already
 requested that functionality.
 
 Hanging on ``import modin.pandas as pd``

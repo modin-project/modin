@@ -2,7 +2,7 @@ Modin PandasDataframe Objects
 =============================
 
 ``modin.core.dataframe.pandas`` is the package which houses common implementations
-of different Modin internal classes used by most `pandas`-based :doc:`storage formats</flow/modin/core/storage_formats>`.
+of different Modin internal classes used by most `pandas`-based :doc:`storage formats</flow/modin/core/storage_formats/index>`.
 
 It also double-serves as the full example of how to implement Modin execution backend pieces (sans the :doc:`execution part</flow/modin/core/execution/dispatching>` which is absent here),
 as it implements everything an execution backend needs to be fully conformant to Modin expectations.

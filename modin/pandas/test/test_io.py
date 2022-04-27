@@ -19,6 +19,7 @@ import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
 from pathlib import Path
 from collections import OrderedDict
+from modin.config.envvars import MinPartitionSize
 from modin.db_conn import (
     ModinDatabaseConnection,
     UnsupportedDatabaseException,
@@ -30,6 +31,7 @@ from modin.config import (
     IsExperimental,
     TestReadFromPostgres,
     TestReadFromSqlServer,
+    ReadSqlEngine,
 )
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
@@ -1281,6 +1283,25 @@ class TestParquet:
             columns=columns,
         )
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
+    def test_read_parquet_indexing_by_column(self, make_parquet_file):
+        # Test indexing into a column of Modin with various parquet file row lengths.
+        # Specifically, tests for https://github.com/modin-project/modin/issues/3527
+        # which fails when min_partition_size < nrows < min_partition_size * (num_partitions - 1)
+
+        nrows = (
+            MinPartitionSize.get() + 1
+        )  # Use the minimal guaranteed failing value for nrows.
+        unique_filename = get_unique_filename(extension="parquet")
+        make_parquet_file(filename=unique_filename, nrows=nrows)
+
+        parquet_df = pd.read_parquet(unique_filename)
+        for col in parquet_df.columns:
+            parquet_df[col]
+
     @pytest.mark.parametrize("columns", [None, ["col1"]])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1810,7 +1831,8 @@ class TestSql:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_sql(self, make_sql_connection):
+    @pytest.mark.parametrize("read_sql_engine", ["Pandas", "Connectorx"])
+    def test_read_sql(self, make_sql_connection, read_sql_engine):
         filename = get_unique_filename(extension="db")
         table = "test_read_sql"
         conn = make_sql_connection(filename, table)
@@ -1855,9 +1877,13 @@ class TestSql:
             con=sqlalchemy_connection,
         )
 
-        modin_df = pd.read_sql(
-            sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
-        )
+        ReadSqlEngine.put(read_sql_engine)
+        if ReadSqlEngine.get() == "Connectorx":
+            modin_df = pd.read_sql(sql=query, con=conn)
+        else:
+            modin_df = pd.read_sql(
+                sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
+            )
         pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
         df_equals(modin_df, pandas_df)
 

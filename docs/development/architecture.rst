@@ -173,7 +173,7 @@ Data Ingress
    partitions and vice versa for data egress (e.g. ``to_csv``) operation.
    Improved performance is achieved by reading/writing in partitions in parallel.
 
-Data ingress starts with a function in the pandas API layer (e.g. ``read_csv``). Then the user's 
+Data ingress starts with a function in the pandas API layer (e.g. ``read_csv``). Then the user's
 query is passed to the :doc:`Factory Dispatcher </flow/modin/core/execution/dispatching>`,
 which defines a factory specific for the execution. The factory for execution contains an IO class
 (e.g. ``PandasOnRayIO``) whose responsibility is to perform a parallel read/write from/to a file.
@@ -220,7 +220,7 @@ documentation page on :doc:`contributing </development/contributing>`.
     - Uses native python execution - mainly used for debugging.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`pandas on Python </flow/modin/core/execution/python/implementations/pandas_on_python/index>` page.
-- :doc:`pandas on Ray` (experimental)
+- pandas on Ray (experimental)
     - Uses the Ray_ execution framework.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`experimental pandas on Ray </flow/modin/experimental/core/execution/ray/implementations/pandas_on_ray/index>` page.
@@ -252,7 +252,7 @@ following figure illustrates this concept.
    :align: center
 
 Currently, the main in-memory format of each partition is a `pandas DataFrame`_ (:doc:`pandas storage format </flow/modin/core/storage_formats/pandas/index>`).
-:doc:`Omnisci </flow/modin/experimental/core/storage_formats/omnisci/index>`, :doc:`PyArrow </flow/modin/core/storage_formats/pyarrow/index>`
+:doc:`Omnisci </flow/modin/experimental/core/storage_formats/omnisci/index>`, :doc:`PyArrow </flow/modin/experimental/core/storage_formats/pyarrow/index>`
 and cuDF are also supported as experimental in-memory formats in Modin.
 
 
@@ -316,8 +316,7 @@ details. The documentation covers most modules, with more docs being added every
    │   │   └─── :doc:`storage_formats </flow/modin/core/storage_formats/index>`
    │   │       ├─── :doc:`base </flow/modin/core/storage_formats/base/query_compiler>`
    │   │       ├───cudf
-   │   │       ├─── :doc:`pandas </flow/modin/core/storage_formats/pandas/index>`
-   │   │       └─── :doc:`pyarrow </flow/modin/core/storage_formats/pyarrow/index>`
+   │   │       └─── :doc:`pandas </flow/modin/core/storage_formats/pandas/index>`
    │   ├───distributed
    │   │   ├───dataframe
    │   │   │   └─── :doc:`pandas </flow/modin/distributed/dataframe/pandas>`
@@ -333,7 +332,8 @@ details. The documentation covers most modules, with more docs being added every
    │   │   │   │           ├─── :doc:`pandas_on_ray </flow/modin/experimental/core/execution/ray/implementations/pandas_on_ray/index>`
    │   │   │   │           └─── :doc:`pyarrow_on_ray </flow/modin/experimental/core/execution/ray/implementations/pyarrow_on_ray>`
    │   │   │   └─── :doc:`storage_formats </flow/modin/experimental/core/storage_formats/index>`
-   │   │   │       └─── :doc:`omnisci </flow/modin/experimental/core/storage_formats/omnisci/index>`
+   |   │   │       ├─── :doc:`omnisci </flow/modin/experimental/core/storage_formats/omnisci/index>`
+   │   │   │       └─── :doc:`pyarrow </flow/modin/experimental/core/storage_formats/pyarrow/index>`
    │   │   ├─── :doc:`pandas </flow/modin/experimental/pandas>`
    │   │   ├─── :doc:`sklearn </flow/modin/experimental/sklearn>`
    │   │   ├───spreadsheet

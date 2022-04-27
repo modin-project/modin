@@ -357,10 +357,9 @@ def to_pickle_distributed(
         passed as additional compression options.
     protocol : int, default: pickle.HIGHEST_PROTOCOL
         Int which indicates which protocol should be used by the pickler,
-        default HIGHEST_PROTOCOL (see [1]_ paragraph 12.1.2). The possible
-        values are 0, 1, 2, 3, 4, 5. A negative value for the protocol
-        parameter is equivalent to setting its value to HIGHEST_PROTOCOL.
-        .. [1] https://docs.python.org/3/library/pickle.html.
+        default HIGHEST_PROTOCOL (see `pickle docs <https://docs.python.org/3/library/pickle.html>`_
+        paragraph 12.1.2 for details). The possible  values are 0, 1, 2, 3, 4, 5. A negative value
+        for the protocol parameter is equivalent to setting its value to HIGHEST_PROTOCOL.
     storage_options : dict, optional
         Extra options that make sense for a particular storage connection, e.g.
         host, port, username, password, etc., if using a URL that will be parsed by

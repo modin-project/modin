@@ -460,6 +460,14 @@ class TestReadFromPostgres(EnvironmentVariable, type=bool):
     default = False
 
 
+class ReadSqlEngine(EnvironmentVariable, type=str):
+    """Engine to run `read_sql`."""
+
+    varname = "MODIN_READ_SQL_ENGINE"
+    default = "Pandas"
+    choices = ("Pandas", "Connectorx")
+
+
 def _check_vars():
     """
     Check validity of environment variables.

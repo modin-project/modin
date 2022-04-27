@@ -192,6 +192,10 @@ class PandasDataframe(object):
                     sum(row_lengths), len(self._index_cache)
                 ),
             )
+            ErrorMessage.catch_bugs_and_request_email(
+                any(val < 0 for val in row_lengths),
+                "Row lengths cannot be negative: {}".format(row_lengths),
+            )
         self._row_lengths_cache = row_lengths
         if column_widths is not None and len(self.columns) > 0:
             ErrorMessage.catch_bugs_and_request_email(
@@ -199,6 +203,10 @@ class PandasDataframe(object):
                 "Column widths: {} != {}".format(
                     sum(column_widths), len(self._columns_cache)
                 ),
+            )
+            ErrorMessage.catch_bugs_and_request_email(
+                any(val < 0 for val in column_widths),
+                "Column widths cannot be negative: {}".format(column_widths),
             )
         self._column_widths_cache = column_widths
         self._dtypes = dtypes
@@ -831,15 +839,18 @@ class PandasDataframe(object):
 
             # Handling of a case when columns have the same name as one of index levels names.
             # In this case `df.reset_index` provides errors related to columns duplication.
-            # This case is possible because columns metadata updating is deffered. To workaround
-            # `df.reset_index` error we allow columns duplucation in "if" branch via `concat`.
+            # This case is possible because columns metadata updating is deferred. To workaround
+            # `df.reset_index` error we allow columns duplication in "if" branch via `concat`.
             if any(name_level in df.columns for name_level in df.index.names):
                 columns_to_add = df.index.to_frame()
                 columns_to_add.reset_index(drop=True, inplace=True)
                 df = df.reset_index(drop=True)
-                return pandas.concat([columns_to_add, df], axis=1, copy=False)
+                result = pandas.concat([columns_to_add, df], axis=1, copy=False)
             else:
-                return df.reset_index()
+                result = df.reset_index()
+            # Put the index back to the original due to GH#4394
+            result.index = df.index
+            return result
 
         new_parts = self._partition_mgr_cls.apply_func_to_select_indices(
             0,
