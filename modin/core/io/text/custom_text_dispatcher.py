@@ -51,7 +51,7 @@ class CustomTextExperimentalDispatcher(TextFileDispatcher):
         filepath_or_buffer_md = (
             cls.get_path(filepath_or_buffer)
             if isinstance(filepath_or_buffer, str)
-            else cls.get_path_or_buffer(filepath_or_buffer)
+            else cls.get_path_or_buffer(filepath_or_buffer, kwargs["storage_options"])
         )
         compression_infered = cls.infer_compression(
             filepath_or_buffer, kwargs["compression"]

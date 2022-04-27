@@ -22,7 +22,6 @@ import fsspec
 import os
 import re
 from modin.config import StorageFormat
-from modin.utils import import_optional_dependency
 import numpy as np
 
 S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
@@ -108,6 +107,15 @@ class OpenFile:
             Variable positional arguments, all unused.
         """
         self.file.close()
+
+    @classmethod
+    def glob(cls, file_path, **kwargs):
+        for anon in (False, True):
+            fs = fsspec.core.url_to_fs(file_path, anon=anon, **kwargs)[0]
+            files = fs.glob(file_path)
+            if files != []:
+                break
+        return files
 
 
 class FileDispatcher:
@@ -251,23 +259,16 @@ class FileDispatcher:
             Whether file exists or not.
         """
         if isinstance(file_path, str):
-            match = S3_ADDRESS_REGEX.search(file_path)
-            if match is not None:
-                if file_path[0] == "S":
-                    file_path = "{}{}".format("s", file_path[1:])
-                S3FS = import_optional_dependency(
-                    "s3fs", "Module s3fs is required to read S3FS files."
-                )
-                from botocore.exceptions import NoCredentialsError
+            from botocore.exceptions import NoCredentialsError
 
-                s3fs = S3FS.S3FileSystem(anon=False)
-                exists = False
-                try:
-                    exists = s3fs.exists(file_path) or exists
-                except NoCredentialsError:
-                    pass
-                s3fs = S3FS.S3FileSystem(anon=True)
-                return exists or s3fs.exists(file_path)
+            fs = fsspec.core.url_to_fs(file_path, anon=False)[0]
+            exists = False
+            try:
+                exists = fs.exists(file_path)
+            except (NoCredentialsError, PermissionError):
+                pass
+            fs = fsspec.core.url_to_fs(file_path, anon=True)[0]
+            return exists or fs.exists(file_path)
         return os.path.exists(file_path)
 
     @classmethod

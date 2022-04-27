@@ -15,6 +15,7 @@
 
 from contextlib import ExitStack
 import csv
+import fsspec
 import glob
 import os
 import sys
@@ -26,9 +27,7 @@ import pandas._libs.lib as lib
 
 from modin.config import NPartitions
 from modin.core.io.file_dispatcher import OpenFile
-from modin.core.io.file_dispatcher import S3_ADDRESS_REGEX
 from modin.core.io.text.csv_dispatcher import CSVDispatcher
-from modin.utils import import_optional_dependency
 
 
 class CSVGlobDispatcher(CSVDispatcher):
@@ -52,7 +51,9 @@ class CSVGlobDispatcher(CSVDispatcher):
             Query compiler with imported data for further processing.
         """
         # Ensures that the file is a string file path. Otherwise, default to pandas.
-        filepath_or_buffer = cls.get_path_or_buffer(filepath_or_buffer)
+        filepath_or_buffer = cls.get_path_or_buffer(
+            filepath_or_buffer, kwargs["storage_options"]
+        )
         if isinstance(filepath_or_buffer, str):
             # os.altsep == None on Linux
             is_folder = any(
@@ -66,7 +67,7 @@ class CSVGlobDispatcher(CSVDispatcher):
             if not cls.file_exists(filepath_or_buffer):
                 return cls.single_worker_read(filepath_or_buffer, **kwargs)
             filepath_or_buffer = cls.get_path(filepath_or_buffer)
-        elif not cls.pathlib_or_pypath(filepath_or_buffer):
+        else:
             return cls.single_worker_read(filepath_or_buffer, **kwargs)
 
         # We read multiple csv files when the file path is a list of absolute file paths. We assume that all of the files will be essentially replicas of the
@@ -298,23 +299,16 @@ class CSVGlobDispatcher(CSVDispatcher):
             True if the path is valid.
         """
         if isinstance(file_path, str):
-            match = S3_ADDRESS_REGEX.search(file_path)
-            if match is not None:
-                if file_path[0] == "S":
-                    file_path = "{}{}".format("s", file_path[1:])
-                S3FS = import_optional_dependency(
-                    "s3fs", "Module s3fs is required to read S3FS files."
-                )
-                from botocore.exceptions import NoCredentialsError
+            from botocore.exceptions import NoCredentialsError
 
-                s3fs = S3FS.S3FileSystem(anon=False)
-                exists = False
-                try:
-                    exists = len(s3fs.glob(file_path)) > 0 or exists
-                except NoCredentialsError:
-                    pass
-                s3fs = S3FS.S3FileSystem(anon=True)
-                return exists or len(s3fs.glob(file_path)) > 0
+            fs = fsspec.core.url_to_fs(file_path, anon=False)[0]
+            exists = False
+            try:
+                exists = len(fs.glob(file_path)) > 0
+            except (NoCredentialsError, PermissionError):
+                pass
+            fs = fsspec.core.url_to_fs(file_path, anon=True)[0]
+            return exists or len(fs.glob(file_path)) > 0
         return len(glob.glob(file_path)) > 0
 
     @classmethod
@@ -332,32 +326,40 @@ class CSVGlobDispatcher(CSVDispatcher):
         list
             List of strings of absolute file paths.
         """
-        if S3_ADDRESS_REGEX.search(file_path):
-            # S3FS does not allow captial S in s3 addresses.
-            if file_path[0] == "S":
-                file_path = "{}{}".format("s", file_path[1:])
+        # import pdb;pdb.set_trace()
+        if isinstance(file_path, str):
+            from fsspec.implementations.local import LocalFileSystem
 
-            S3FS = import_optional_dependency(
-                "s3fs", "Module s3fs is required to read S3FS files."
-            )
-            from botocore.exceptions import NoCredentialsError
+            fs = fsspec.core.url_to_fs(file_path, anon=False)[0]
+            if not isinstance(fs, LocalFileSystem):
+                from botocore.exceptions import NoCredentialsError
 
-            def get_file_path(fs_handle) -> List[str]:
-                file_paths = fs_handle.glob(file_path)
-                s3_addresses = ["{}{}".format("s3://", path) for path in file_paths]
-                return s3_addresses
+                def get_file_path(fs_handle) -> List[str]:
+                    file_paths = fs_handle.glob(file_path)
+                    protocols = fs_handle.protocol
+                    protocol = None
+                    for _protocol in protocols:
+                        if file_path.startswith(_protocol):
+                            protocol = _protocol
 
-            s3fs = S3FS.S3FileSystem(anon=False)
-            try:
-                return get_file_path(s3fs)
-            except NoCredentialsError:
-                pass
-            s3fs = S3FS.S3FileSystem(anon=True)
-            return get_file_path(s3fs)
-        else:
-            relative_paths = glob.glob(file_path)
-            abs_paths = [os.path.abspath(path) for path in relative_paths]
-            return abs_paths
+                    assert protocol is not None
+
+                    full_addresses = [
+                        "{}://{}".format(protocol, path) for path in file_paths
+                    ]
+                    return full_addresses
+
+                filepaths = []
+                try:
+                    filepaths = get_file_path(fs)
+                except (NoCredentialsError, PermissionError):
+                    pass
+                fs = fsspec.core.url_to_fs(file_path, anon=True)[0]
+                return filepaths or get_file_path(fs)
+
+        relative_paths = glob.glob(file_path)
+        abs_paths = [os.path.abspath(path) for path in relative_paths]
+        return abs_paths
 
     @classmethod
     def partitioned_file(

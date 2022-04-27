@@ -42,7 +42,7 @@ class JSONDispatcher(TextFileDispatcher):
         BaseQueryCompiler
             Query compiler with imported data for further processing.
         """
-        path_or_buf = cls.get_path_or_buffer(path_or_buf)
+        path_or_buf = cls.get_path_or_buffer(path_or_buf, kwargs["storage_options"])
         if isinstance(path_or_buf, str):
             if not cls.file_exists(path_or_buf):
                 return cls.single_worker_read(path_or_buf, **kwargs)
