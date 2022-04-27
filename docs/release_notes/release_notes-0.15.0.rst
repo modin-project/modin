@@ -34,6 +34,7 @@ Key Features and Updates
   * FEAT-#4359: Add __dataframe__ method to the protocol dataframe (#4360)
 * Update testing suite
   * TEST-#4363: Use Ray from pypi in CI (#4364)
+  * FIX-#4422: get rid of case sensitivity for `warns_that_defaulting_to_pandas` (#4423)
 * Documentation improvements
   * DOCS-#4296: Fix docs warnings (#4297)
   * DOCS-#4388: Turn off fail_on_warning option for docs build (#4389)
