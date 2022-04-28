@@ -23,12 +23,15 @@ or `OmniSci`), and the last one is for parameter notes. The flags stand for the 
 +-----------+-----------------------------------------------------------------------------------------------+
 | Flag      | Meaning                                                                                       |
 +===========+===============================================================================================+
-| Harmful   | Usage of this parameter can be harmfull for performance of your application                   |
+| Harmful   | Usage of this parameter can be harmful for performance of your application. Usually this      |
+|           | happens when parameter (full range of values and all types) is not supported and default      |
+|           | pandas implementation is used                                                                 |
 +-----------+-----------------------------------------------------------------------------------------------+
 | Non-lazy  | Usage of this parameter can trigger non-lazy execution (actual for OmniSci execution only)    |
 +-----------+-----------------------------------------------------------------------------------------------+
-| Partial   | Parameter can be partly unsupported, it's usage can be harmfull for performance of your       |
-|           | appcication                                                                                   |
+| Partial   | Parameter can be partly unsupported, it's usage can be harmful for performance of your        |
+|           | appcication. This can happen if some parameter values or types are not supported (for example |
+|           | boolean values are suported while integer are not) and default pandas implementation is used  |
 +-----------+-----------------------------------------------------------------------------------------------+
 | pandas    | Usage of this parameter, triggers usage of original pandas function as is, no performance     |
 |           | degradation/improvement should be observed                                                    |
