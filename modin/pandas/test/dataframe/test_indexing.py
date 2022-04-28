@@ -673,6 +673,7 @@ def test_loc_tuple_argument():
     modin_df = pd.DataFrame(values, index=arrays)
     pandas_df = pandas.DataFrame(values, index=arrays)
     df_equals(modin_df.loc["bar", "one"], pandas_df.loc["bar", "one"])
+    df_equals(modin_df.loc['bar', 0], pandas_df.loc['bar', 0])
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

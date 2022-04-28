@@ -623,7 +623,7 @@ class _LocIndexer(metaclass_resolver(_LocationIndexerBase)):
         """
         if self.df.empty:
             return self.df._default_to_pandas(lambda df: df.loc[key])
-        if isinstance(key, tuple):
+        if isinstance(key, tuple) and key[1] not in self.df.columns:
             loc_series = _LocIndexer(self.__getitem__(key[0])).__getitem__(key[1])
             loc_series.name = (key[0], key[1])
             return loc_series
