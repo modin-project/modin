@@ -33,20 +33,13 @@ def test_syncronous_mode():
     with default_to_pandas_context:
         pd.DataFrame(test_data_values[0]).mean()
 
-
-def test_serialization():
+@pytest.mark.parametrize("data_type", [pd.Series, pd.DataFrame])
+def test_serialization(data_type):
     assert BenchmarkMode.get()
 
-    sr1 = pd.Series(range(10))
+    dataset1 = data_type(range(10))
     # On Omnisci `__finalize__` raises a warning
     with default_to_pandas_context:
-        constructor, args = sr1.__reduce__()
-    sr2 = constructor(*args)
-    df_equals(sr1, sr2)
-
-    df1 = pd.DataFrame(range(10))
-    # On Omnisci `__finalize__` raises a warning
-    with default_to_pandas_context:
-        constructor, args = df1.__reduce__()
-    df2 = constructor(*args)
-    df_equals(df1, df2)
+        constructor, args = dataset1.__reduce__()
+    dataset2 = constructor(*args)
+    df_equals(dataset1, dataset2)
