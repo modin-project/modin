@@ -61,8 +61,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         self._identity = uuid.uuid4().hex[8:]
 
         logger = get_logger()
-        logger.info("Height of each Partition: " + str(width))
-        logger.info("Width of each Partition: " + str(length))
+        logger.debug("Height of each Partition: " + str(width))
+        logger.debug("Width of each Partition: " + str(length))
 
     def get(self):
         """
