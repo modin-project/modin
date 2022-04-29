@@ -1262,6 +1262,7 @@ class DataFrame(BasePandasDataset):
             from time import time
 
             if isinstance(other, DataFrame):
+                # import pdb;pdb.set_trace()
                 start = time()
                 if self._query_compiler.has_multiindex(axis=0) and all(
                     map(lambda name: name in self.index.names, on)
@@ -1270,9 +1271,10 @@ class DataFrame(BasePandasDataset):
                     for name in new_index.names:
                         if name not in on:
                             new_index = new_index.droplevel(name)
-                        other = other.reindex(index=new_index)
+                    other = other.reindex(index=new_index, _reset_index=self.index)
                 else:
-                    other = other.reindex(index=self[on])
+                    other = other.reindex(index=self[on], _reset_index=self.index)
+                # import pdb;pdb.set_trace()
                 print(f"reindex in join: {time()-start}")
             return self.__constructor__(
                 query_compiler=self._query_compiler.join(
@@ -1719,6 +1721,7 @@ class DataFrame(BasePandasDataset):
         fill_value=np.nan,
         limit=None,
         tolerance=None,
+        **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Conform ``DataFrame`` to new index with optional filling logic.
@@ -1737,6 +1740,7 @@ class DataFrame(BasePandasDataset):
             fill_value=fill_value,
             limit=limit,
             tolerance=tolerance,
+            **kwargs,
         )
 
     def rename(

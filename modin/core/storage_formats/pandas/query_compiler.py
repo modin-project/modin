@@ -515,7 +515,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 start = time()
                 if not all(map(lambda name: name in right.index.names, on)):
                     right = right.drop(columns=on)
-                    right.index = self.index
+                right._modin_frame._deferred_column = False
+                right._modin_frame._deferred_index = False
                 new_self = self.concat(1, right, join="left")
                 partitions = new_self._modin_frame._partitions
                 all(
@@ -543,11 +544,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def reindex(self, axis, labels, **kwargs):
         new_index = self.index if axis else labels
         new_columns = labels if axis else self.columns
+        # import pdb;pdb.set_trace()
+        actual_index = None
+        if "_reset_index" in kwargs:
+            actual_index = kwargs.pop("_reset_index")
+
+        def _reindex(df):
+            # print(df, labels, f"AXIS:{axis}")
+            df = df.reindex(labels=labels, axis=axis, **kwargs)
+            if actual_index is not None:
+                df.index = actual_index
+            # print(df.index)
+            return df
+
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
-            lambda df: df.reindex(labels=labels, axis=axis, **kwargs),
-            new_index=new_index,
-            new_columns=new_columns,
+            _reindex,
+            new_index=new_index if axis == 1 else actual_index,
+            new_columns=new_columns,  # if axis == 0 else actual_index,
         )
         return self.__constructor__(new_modin_frame)
 
