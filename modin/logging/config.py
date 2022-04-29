@@ -48,7 +48,6 @@ def configure_logging(level):
     if not os.path.isdir(".modin/logs"):
         os.makedirs(os.path.dirname(log_filename), exist_ok=False)
 
-    logger.setLevel(level)
     logfile = logging.FileHandler(log_filename, "a")
     formatter = MyFormatter(
         fmt="%(process)d, %(thread)d, %(asctime)s, %(message)s",
@@ -56,6 +55,7 @@ def configure_logging(level):
     )
     logfile.setFormatter(formatter)
     logger.addHandler(logfile)
+    logger.setLevel(level)
 
     __LOGGER_CONFIGURED__ = True
 
@@ -69,7 +69,11 @@ def memory_thread(logger):
 
 def get_logger():
     if not __LOGGER_CONFIGURED__ and LogMode.get() != "none":
-        configure_logging(logging.INFO)
+        if LogMode.get() == "api_only":
+            configure_logging(logging.INFO)
+        else:
+            configure_logging(logging.DEBUG)
+
         logger = logging.getLogger("modin.logger")
         logger.info("OS Version: " + platform.platform())
         logger.info("Python Version: " + platform.python_version())
@@ -85,11 +89,12 @@ def get_logger():
         logger.info(f"Memory Used: {get_size(svmem.used)}")
         logger.info(f"Memory Percentage: {svmem.percent}%")
 
-        try:
-            mem = threading.Thread(target=memory_thread, args=[logger])
-            mem.start()
-        except (KeyboardInterrupt, SystemExit):
-            mem.join()
-            sys.exit()
+        if LogMode.get() != "api_only":
+            try:
+                mem = threading.Thread(target=memory_thread, args=[logger])
+                mem.start()
+            except (KeyboardInterrupt, SystemExit):
+                mem.join()
+                sys.exit()
 
     return logging.getLogger("modin.logger")

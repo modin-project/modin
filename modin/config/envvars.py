@@ -370,14 +370,14 @@ class LogMode(EnvironmentVariable, type=ExactStr):
         cls.put("all")
 
     @classmethod
-    def enable_api_only(cls):
-        """Enable API level logging."""
-        cls.put("api_only")
-
-    @classmethod
     def disable(cls):
         """Disable logging feature."""
         cls.put("none")
+
+    @classmethod
+    def enable_api_only(cls):
+        """Enable API level logging."""
+        cls.put("api_only")
 
     @classmethod
     def put(cls, value):
