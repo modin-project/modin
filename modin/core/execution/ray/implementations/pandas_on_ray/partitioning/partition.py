@@ -117,7 +117,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             func, args, kwargs = call_queue[0]
             result, length, width, ip = _apply_func.remote(oid, func, *args, **kwargs)
             logger.debug(f"SUBMIT::_apply_func::{self._identity}")
-            logger.debug(f"CREATE-FUTURE::{result._identity}::{self._identity}")
             logger.debug(f"EXIT::Partition.apply::{self._identity}")
         return PandasOnRayDataframePartition(result, length, width, ip)
 
@@ -157,7 +156,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         oid = self.oid
         call_queue = self.call_queue
         if len(call_queue) > 1:
-            logger.debug(f"SUBMIT::apply_list_of_funcs::{self._identity}")
+            logger.debug(f"SUBMIT::_apply_list_of_funcs::{self._identity}")
             (
                 self.oid,
                 self._length_cache,
@@ -168,14 +167,13 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
-            logger.debug(f"SUBMIT::apply_func::{self._identity}")
+            logger.debug(f"SUBMIT::_apply_func::{self._identity}")
             (
                 self.oid,
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
             ) = _apply_func.remote(oid, func, oid_hash=self._identity, *args, **kwargs)
-            logger.debug(f"CREATE-FUTURE::{self._identity}::{self._identity}")
         logger.debug(f"EXIT::Partition.drain_call_queue::{self._identity}")
         self.call_queue = []
 
@@ -361,6 +359,8 @@ def _apply_func(partition, func, oid_hash=None, *args, **kwargs):  # pragma: no 
         A pandas DataFrame the function needs to be executed on.
     func : callable
         Function that needs to be executed on the partition.
+    oid_hash : int
+        Hash of object ID used for logging.
     *args : iterable
         Additional positional arguments to be passed in `func`.
     **kwargs : dict
@@ -406,6 +406,8 @@ def _apply_list_of_funcs(funcs, partition, oid_hash=None):  # pragma: no cover
         A call queue that needs to be executed on the partition.
     partition : pandas.DataFrame
         A pandas DataFrame the call queue needs to be executed on.
+    oid_hash : int
+        Hash of object ID used for logging.
 
     Returns
     -------
