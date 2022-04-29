@@ -46,3 +46,13 @@ def test_serialization(data_type):
         constructor, args = dataset1.__reduce__()
     dataset2 = constructor(*args)
     df_equals(dataset1, dataset2)
+
+
+@pytest.mark.parametrize("data_type", [pd.Series, pd.DataFrame])
+def test_finalize(data_type):
+    assert BenchmarkMode.get()
+
+    dataset = data_type(range(10))
+    # On Omnisci `__finalize__` raises a warning
+    with default_to_pandas_context:
+        dataset._query_compiler.finalize()
