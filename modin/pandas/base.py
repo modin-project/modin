@@ -2202,17 +2202,6 @@ class BasePandasDataset(ClassLogger):
         """
         Conform `BasePandasDataset` to new index with optional filling logic.
         """
-        if (
-            kwargs.get("level") is not None
-            or (index is not None and self._query_compiler.has_multiindex())
-            or (columns is not None and self._query_compiler.has_multiindex(axis=1))
-        ):
-            if index is not None:
-                kwargs["index"] = index
-            if columns is not None:
-                kwargs["columns"] = columns
-            return self._default_to_pandas("reindex", copy=copy, **kwargs)
-
         new_query_compiler = None
         if index is not None:
             if not isinstance(index, pandas.Index):
