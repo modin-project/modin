@@ -30,6 +30,7 @@ from pandas._typing import CompressionOptions, StorageOptions
 from typing import Union, IO, AnyStr, Sequence, Dict, List, Optional, Any
 
 from modin.error_message import ErrorMessage
+from modin.logging import LoggerMetaClass
 from modin.logging import logger_decorator
 from .dataframe import DataFrame
 from modin.utils import _inherit_docstrings, Engine
