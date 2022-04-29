@@ -15,7 +15,7 @@ import warnings
 from modin.logging.logger_function import logger_decorator
 
 
-class ErrorMessage(object, metaclass=LoggerMetaClass):
+class ErrorMessage(object):
     # Only print full ``default to pandas`` warning one time.
     printed_default_to_pandas = False
     printed_warnings = set()
@@ -60,7 +60,9 @@ class ErrorMessage(object, metaclass=LoggerMetaClass):
         warnings.warn(message)
 
     @classmethod
-    @logger_decorator("MODIN-ERROR", "ErrorMessage.catch_bugs_and_request_email", "WARNING")
+    @logger_decorator(
+        "MODIN-ERROR", "ErrorMessage.catch_bugs_and_request_email", "WARNING"
+    )
     def catch_bugs_and_request_email(cls, failure_condition, extra_log=""):
         if failure_condition:
             raise Exception(

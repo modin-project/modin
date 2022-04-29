@@ -50,7 +50,10 @@ def configure_logging(level):
 
     logger.setLevel(level)
     logfile = logging.FileHandler(log_filename, "a")
-    formatter = MyFormatter(fmt='%(process)d, %(thread)d, %(asctime)s, %(message)s', datefmt='%Y-%m-%d,%H:%M:%S.%f')
+    formatter = MyFormatter(
+        fmt="%(process)d, %(thread)d, %(asctime)s, %(message)s",
+        datefmt="%Y-%m-%d,%H:%M:%S.%f",
+    )
     logfile.setFormatter(formatter)
     logger.addHandler(logfile)
 
@@ -71,7 +74,9 @@ def get_logger():
         logger.info("OS Version: " + platform.platform())
         logger.info("Python Version: " + platform.python_version())
         logger.info("Modin Version: " + pkg_resources.get_distribution("modin").version)
-        logger.info("Pandas Version: " + pkg_resources.get_distribution("pandas").version)
+        logger.info(
+            "Pandas Version: " + pkg_resources.get_distribution("pandas").version
+        )
         logger.info("Physical Cores: " + str(psutil.cpu_count(logical=False)))
         logger.info("Total Cores: " + str(psutil.cpu_count(logical=True)))
         svmem = psutil.virtual_memory()

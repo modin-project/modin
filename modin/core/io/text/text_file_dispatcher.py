@@ -622,7 +622,9 @@ class TextFileDispatcher(FileDispatcher):
         return partition_ids, index_ids, dtypes_ids
 
     @classmethod
-    @logger_decorator("PANDAS-API", "TextFileDispatcher.check_parameters_support", "INFO")
+    @logger_decorator(
+        "PANDAS-API", "TextFileDispatcher.check_parameters_support", "INFO"
+    )
     def check_parameters_support(
         cls,
         filepath_or_buffer,
@@ -705,7 +707,9 @@ class TextFileDispatcher(FileDispatcher):
         return usecols, None
 
     @classmethod
-    @logger_decorator("PANDAS-API", "TextFileDispatcher._manage_skiprows_parameter", "INFO")
+    @logger_decorator(
+        "PANDAS-API", "TextFileDispatcher._manage_skiprows_parameter", "INFO"
+    )
     def _manage_skiprows_parameter(
         cls,
         skiprows: Union[int, Sequence[int], Callable, None] = None,
