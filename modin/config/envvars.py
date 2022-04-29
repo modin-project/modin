@@ -362,22 +362,22 @@ class LogMode(EnvironmentVariable, type=ExactStr):
     """Set ``LogMode`` value if users want to opt-in."""
 
     varname = "MODIN_LOG_MODE"
-    default = None
+    default = "none"
 
     @classmethod
     def enable(cls):
-        """Enable API level logging."""
-        cls.put(True)
+        """Enable all logging levels."""
+        cls.put("all")
 
     @classmethod
     def enable_api_only(cls):
         """Enable API level logging."""
-        cls.put("API_ONLY")
+        cls.put("api_only")
 
     @classmethod
     def disable(cls):
         """Disable logging feature."""
-        cls.put(None)
+        cls.put("none")
 
     @classmethod
     def put(cls, value):

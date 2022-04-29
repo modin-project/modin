@@ -7,6 +7,7 @@ import psutil
 import pkg_resources
 import threading
 import time
+from modin.config import LogMode
 
 __LOGGER_CONFIGURED__: bool = False
 
@@ -38,7 +39,7 @@ def get_size(bytes, suffix="B"):
         bytes /= factor
 
 
-def configure_logging():
+def configure_logging(level):
     global __LOGGER_CONFIGURED__
     logger = logging.getLogger("modin.logger")
     job_id = uuid.uuid4().hex
@@ -47,7 +48,7 @@ def configure_logging():
     if not os.path.isdir(".modin/logs"):
         os.makedirs(os.path.dirname(log_filename), exist_ok=False)
 
-    logger.setLevel(logging.INFO)
+    logger.setLevel(level)
     logfile = logging.FileHandler(log_filename, "a")
     formatter = MyFormatter(fmt='%(process)d, %(thread)d, %(asctime)s, %(message)s', datefmt='%Y-%m-%d,%H:%M:%S.%f')
     logfile.setFormatter(formatter)
@@ -64,8 +65,8 @@ def memory_thread(logger):
 
 
 def get_logger():
-    if not __LOGGER_CONFIGURED__:
-        configure_logging()
+    if not __LOGGER_CONFIGURED__ and LogMode.get() != "none":
+        configure_logging(logging.INFO)
         logger = logging.getLogger("modin.logger")
         logger.info("OS Version: " + platform.platform())
         logger.info("Python Version: " + platform.python_version())

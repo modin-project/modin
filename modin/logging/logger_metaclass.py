@@ -1,16 +1,20 @@
 from functools import wraps
 from .config import get_logger
 from types import FunctionType, MethodType
+from modin.config import LogMode
 
 
 def logger_class_wrapper(classname, name, method):
     @wraps(method)
     def log_wrap(*args, **kwargs):
-        logger = get_logger()
-        logger.info(f"START::PANDAS-API::{classname}.{name}")
-        result = method(*args, **kwargs)
-        logger.info(f"END::PANDAS-API::{classname}.{name}")
-        return result
+        if LogMode.get() != "none":
+            logger = get_logger()
+            logger.info(f"START::PANDAS-API::{classname}.{name}")
+            result = method(*args, **kwargs)
+            logger.info(f"END::PANDAS-API::{classname}.{name}")
+            return result
+        else:
+            return method(*args, **kwargs)
 
     return log_wrap
 
