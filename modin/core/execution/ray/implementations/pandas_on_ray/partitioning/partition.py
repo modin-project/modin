@@ -359,7 +359,7 @@ def _apply_func(partition, func, oid_hash=None, *args, **kwargs):  # pragma: no 
         A pandas DataFrame the function needs to be executed on.
     func : callable
         Function that needs to be executed on the partition.
-    oid_hash : int
+    oid_hash : int, default: None
         Hash of object ID used for logging.
     *args : iterable
         Additional positional arguments to be passed in `func`.
@@ -406,7 +406,7 @@ def _apply_list_of_funcs(funcs, partition, oid_hash=None):  # pragma: no cover
         A call queue that needs to be executed on the partition.
     partition : pandas.DataFrame
         A pandas DataFrame the call queue needs to be executed on.
-    oid_hash : int
+    oid_hash : int, default: None
         Hash of object ID used for logging.
 
     Returns
