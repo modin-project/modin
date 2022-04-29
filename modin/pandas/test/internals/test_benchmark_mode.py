@@ -53,6 +53,7 @@ def test_finalize(data_type):
     assert BenchmarkMode.get()
 
     dataset = data_type(range(10))
-    # On Omnisci `__finalize__` raises a warning
+    # On Omnisci `abs` and `__finalize__` raise a warning
     with default_to_pandas_context:
+        dataset = dataset.abs()
         dataset._query_compiler.finalize()
