@@ -13,6 +13,8 @@
 
 # test BenchmarkMode == True
 
+import pytest
+
 from contextlib import nullcontext
 import modin.pandas as pd
 from modin.pandas.test.utils import test_data_values, df_equals
@@ -32,6 +34,7 @@ def test_syncronous_mode():
     # On Omnisci storage, transpose() defaults to Pandas.
     with default_to_pandas_context:
         pd.DataFrame(test_data_values[0]).mean()
+
 
 @pytest.mark.parametrize("data_type", [pd.Series, pd.DataFrame])
 def test_serialization(data_type):
