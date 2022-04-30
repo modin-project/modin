@@ -12,31 +12,59 @@ from modin.config import LogMode
 __LOGGER_CONFIGURED__: bool = False
 
 
-class MyFormatter(logging.Formatter):
-    converter = dt.datetime.fromtimestamp
+class ModinFormatter(logging.Formatter):
 
     def formatTime(self, record, datefmt=None):
-        ct = self.converter(record.created)
+        """
+        Return the creation time of the specified LogRecord as formatted text.
+        This custom logging formatter inherits from the logging module and
+        records timestamps at the microsecond level of granularity.
+
+        Parameters
+        ----------
+        record: LogRecord
+            The specified LogRecord object.
+        datefmt: str, default: None
+            Used with time.ststrftime() to format time record.
+
+        Returns
+        -------
+        datetime
+            datetime object containing microsecond timestamp.
+        """
+        ct = dt.datetime.fromtimestamp(record.created)
         if datefmt:
             s = ct.strftime(datefmt)
         else:
+            # Format datetime object ct to microseconds
             t = ct.strftime("%Y-%m-%d %H:%M:%S")
             s = "%s,%03d" % (t, record.msecs)
         return s
 
 
-def get_size(bytes, suffix="B"):
+def bytes_int_to_str(num_bytes, suffix="B"):
     """
-    Scale bytes to its proper format
-    e.g:
-        1253656 => '1.20MB'
-        1253656678 => '1.17GB'
+    Scale bytes to its human-readable format (e.g: 1253656678 => '1.17GiB').
+
+    Parameters
+    ----------
+    num_bytes: int
+        Number of bytes.
+    suffix: str, default: "B"
+        Suffix to add to conversion of num_bytes.
+
+    Returns
+    -------
+    str
+        Human-readable string format.
     """
     factor = 1024
-    for unit in ["", "K", "M", "G", "T", "P"]:
-        if bytes < factor:
-            return f"{bytes:.2f}{unit}{suffix}"
-        bytes /= factor
+    if num_bytes > 1000000000000000000:
+        raise ValueError("System memory exceeds expectations")
+    for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi"]:
+        if num_bytes < factor:
+            return f"{num_bytes:.2f}{unit}{suffix}"
+        num_bytes /= factor
 
 
 def configure_logging(level):
@@ -49,7 +77,7 @@ def configure_logging(level):
         os.makedirs(os.path.dirname(log_filename), exist_ok=False)
 
     logfile = logging.FileHandler(log_filename, "a")
-    formatter = MyFormatter(
+    formatter = ModinFormatter(
         fmt="%(process)d, %(thread)d, %(asctime)s, %(message)s",
         datefmt="%Y-%m-%d,%H:%M:%S.%f",
     )
@@ -84,9 +112,9 @@ def get_logger():
         logger.info("Physical Cores: " + str(psutil.cpu_count(logical=False)))
         logger.info("Total Cores: " + str(psutil.cpu_count(logical=True)))
         svmem = psutil.virtual_memory()
-        logger.info(f"Memory Total: {get_size(svmem.total)}")
-        logger.info(f"Memory Available: {get_size(svmem.available)}")
-        logger.info(f"Memory Used: {get_size(svmem.used)}")
+        logger.info(f"Memory Total: {bytes_int_to_str(svmem.total)}")
+        logger.info(f"Memory Available: {bytes_int_to_str(svmem.available)}")
+        logger.info(f"Memory Used: {bytes_int_to_str(svmem.used)}")
         logger.info(f"Memory Percentage: {svmem.percent}%")
 
         if LogMode.get() != "api_only":

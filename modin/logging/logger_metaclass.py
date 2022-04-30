@@ -26,7 +26,7 @@ class LoggerMetaClass(type):
             if (
                 isinstance(attribute, (FunctionType, MethodType))
                 and attribute_name != "__getattribute__"
-            ):  # and (attribute_name[0] != "_" or attribute_name[1] == "_"):
+            ):
                 attribute = logger_class_wrapper(classname, attribute_name, attribute)
             new_class_dict[attribute_name] = attribute
         return type.__new__(mcs, classname, bases, new_class_dict)
