@@ -13,7 +13,6 @@ __LOGGER_CONFIGURED__: bool = False
 
 
 class ModinFormatter(logging.Formatter):
-
     def formatTime(self, record, datefmt=None):
         """
         Return the creation time of the specified LogRecord as formatted text.
