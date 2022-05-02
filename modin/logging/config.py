@@ -37,7 +37,7 @@ class ModinFormatter(logging.Formatter):
         else:
             # Format datetime object ct to microseconds
             t = ct.strftime("%Y-%m-%d %H:%M:%S")
-            s = "%s,%03d" % (t, record.msecs)
+            s = f"{t},{record.msecs:03}"
         return s
 
 
