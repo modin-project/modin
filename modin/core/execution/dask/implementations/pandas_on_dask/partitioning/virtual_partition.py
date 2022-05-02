@@ -78,7 +78,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
                 new_list_of_blocks.extend(
                     o.list_of_partitions_to_combine
                 ) if isinstance(
-                    0, PandasOnDaskDataframeVirtualPartition
+                    o, PandasOnDaskDataframeVirtualPartition
                 ) else new_list_of_blocks.append(
                     o
                 )
