@@ -726,7 +726,7 @@ def read_orc(
 
 
 @_inherit_docstrings(pandas.read_xml, apilink="pandas.read_xml")
-@logger_decorator("PANDAS-API", "read_orc", "info")
+@logger_decorator("PANDAS-API", "read_xml", "info")
 def read_xml(
     path_or_buffer,
     xpath="./*",
