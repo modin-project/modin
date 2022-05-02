@@ -120,7 +120,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             func, args, kwargs = call_queue[0]
             result, length, width, ip = _apply_func.remote(oid, func, *args, **kwargs)
             logger.debug(f"SUBMIT::_apply_func::{self._identity}")
-            logger.debug(f"EXIT::Partition.apply::{self._identity}")
+        logger.debug(f"EXIT::Partition.apply::{self._identity}")
         return PandasOnRayDataframePartition(result, length, width, ip)
 
     def add_to_apply_calls(self, func, *args, **kwargs):
