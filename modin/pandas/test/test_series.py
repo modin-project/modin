@@ -1586,8 +1586,14 @@ def test_dtype(data):
     df_equals(modin_series.dtype, pandas_series.dtypes)
 
 
-def test_dt():
-    data = pd.date_range("2016-12-31", periods=128, freq="D", tz="Europe/Berlin")
+# Bug https://github.com/modin-project/modin/issues/4436 in
+# Series.dt.to_pydatetime is only reproducible when the date range out of which
+# the frame is created has timezone None, so that its dtype is datetime64[ns]
+# as opposed to, e.g. datetime64[ns, Europe/Berlin]. To reproduce that bug, we
+# use timezones None and Europe/Berlin.
+@pytest.mark.parametrize("timezone", [None, "Europe/Berlin"])
+def test_dt(timezone):
+    data = pd.date_range("2016-12-31", periods=128, freq="D", tz=timezone)
     modin_series = pd.Series(data)
     pandas_series = pandas.Series(data)
 
@@ -1627,10 +1633,11 @@ def test_dt():
         modin_series.dt.tz_localize(None),
         pandas_series.dt.tz_localize(None),
     )
-    df_equals(
-        modin_series.dt.tz_convert(tz="Europe/Berlin"),
-        pandas_series.dt.tz_convert(tz="Europe/Berlin"),
-    )
+    if timezone:
+        df_equals(
+            modin_series.dt.tz_convert(tz="Europe/Berlin"),
+            pandas_series.dt.tz_convert(tz="Europe/Berlin"),
+        )
 
     df_equals(modin_series.dt.normalize(), pandas_series.dt.normalize())
     df_equals(
