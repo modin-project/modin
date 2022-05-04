@@ -24,7 +24,9 @@ from pandas.testing import (
     assert_extension_array_equal,
 )
 from pandas.core.dtypes.common import is_list_like
-from modin.config import MinPartitionSize, NPartitions
+from modin.config import MinPartitionSize, NPartitions, StorageFormat
+from contextlib import nullcontext
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 import modin.pandas as pd
 from modin.utils import to_pandas, try_cast_to_pandas
 from modin.config import TestDatasetSize, TrackFileLeaks
@@ -1403,3 +1405,23 @@ def dict_equals(dict1, dict2):
     for key1, key2 in itertools.zip_longest(sorted(dict1), sorted(dict2)):
         value_equals(key1, key2)
         value_equals(dict1[key1], dict2[key2])
+
+
+def catch_default_to_pandas_warnings_if_omnisci():
+    """
+    Return a StorageFormat-dependent default-to-pandas warnings catching context.
+
+    If StorageFormat is Omnisci, returns a context that asserts for a warning to be
+    raised inside it, otherwise returns ``nullcontext``.
+
+    Notes
+    -----
+    As Omnisci execution tends to raise a lot of warnings, it's convenient in execution-common
+    tests to wrap by this context a piece of code that defaults-to-pandas on Omnisci and never
+    with other executions.
+    """
+    return (
+        warns_that_defaulting_to_pandas()
+        if StorageFormat.get() == "Omnisci"
+        else nullcontext()
+    )

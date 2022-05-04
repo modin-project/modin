@@ -19,9 +19,12 @@ The manager also allows manipulating the data - running functions at each partit
 
 from abc import ABC
 from functools import wraps
+from itertools import chain
 import numpy as np
 import pandas
+
 from pandas._libs.lib import no_default
+from pandas.core.dtypes.common import is_list_like
 import warnings
 
 from modin.error_message import ErrorMessage
@@ -52,20 +55,40 @@ def wait_computations_if_benchmark_mode(func):
     """
     if BenchmarkMode.get():
 
+        def extract_waitable(obj):
+            """Return a tuple of waitable objects contained in the `obj`."""
+            if hasattr(obj, "wait"):
+                return (obj,)
+            # fastpath for NumPy array of partitions
+            elif (
+                isinstance(obj, np.ndarray)
+                and obj.dtype == np.object
+                and len(obj) > 0
+                and hasattr(obj[np.unravel_index(0, shape=obj.shape)], "wait")
+            ):
+                return obj.flatten()
+            elif is_list_like(obj):
+                return tuple(chain(*(extract_waitable(o) for o in obj)))
+            else:
+                return tuple()
+
         @wraps(func)
         def wait(*args, **kwargs):
             """Wait for computation results."""
             result = func(*args, **kwargs)
             if result is None:
-                return result
-            if isinstance(result, tuple):
-                partitions = result[0]
+                # operation on partition was applied inplace, extracting partition objects from arguments
+                partitions = extract_waitable((args, kwargs.values()))
             else:
-                partitions = result
+                partitions = extract_waitable(result)
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=len(partitions) == 0,
+                extra_log=f"No partitions to wait was produced by wrapped function: {func}",
+            )
             # need to go through all the values of the map iterator
             # since `wait` does not return anything, we need to explicitly add
             # the return `True` value from the lambda
-            all(map(lambda partition: partition.wait() or True, partitions.flatten()))
+            all(map(lambda partition: partition.wait() or True, partitions))
             return result
 
         return wait
@@ -1275,6 +1298,7 @@ class PandasDataframePartitionManager(ABC):
         return result if axis else result.T
 
     @classmethod
+    @wait_computations_if_benchmark_mode
     def finalize(cls, partitions):
         """
         Perform all deferred calls on partitions.
