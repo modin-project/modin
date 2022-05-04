@@ -14,8 +14,10 @@ Key Features and Updates
   * FIX-#3527: Fix parquet partitioning issue causing negative row length partitions (#4368)
   * FIX-#4330: Override the memory limit to start ray 1.11.0 on Macs (#4335)
   * FIX-#4273: Fix waiting of None-returning methods in benchmark mode (#4404)
+  * FIX-#4407: Align `insert` function with pandas in case of numpy array with several columns (#4408)
   * FIX-#4373: Fix invalid file path when trying `read_csv_glob` with `usecols` parameter (#4405)
   * FIX-#4394: Fix issue with multiindex metadata desync (#4395)
+  * FIX-#4425: Add parameters to groupby pct_change (#4429)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
 * Benchmarking enhancements
@@ -35,6 +37,8 @@ Key Features and Updates
 * Update testing suite
   * TEST-#4363: Use Ray from pypi in CI (#4364)
   * FIX-#4422: get rid of case sensitivity for `warns_that_defaulting_to_pandas` (#4423)
+  * TEST-#4426: Stop passing is_default kwarg to Modin and pandas (#4428)
+  * FIX-#4439: Fix flake8 CI fail (#4440)
 * Documentation improvements
   * DOCS-#4296: Fix docs warnings (#4297)
   * DOCS-#4388: Turn off fail_on_warning option for docs build (#4389)

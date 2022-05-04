@@ -266,7 +266,7 @@ class DFAlgNode(abc.ABC):
         prefix : str, default: ''
             A prefix to add at each string of the dump.
         """
-        print(self.dumps(prefix))  # noqa: T001
+        print(self.dumps(prefix))  # noqa: T201
 
     def dumps(self, prefix=""):
         """
