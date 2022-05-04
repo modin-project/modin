@@ -528,8 +528,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Reindex/reset_index (may shuffle data)
     def reindex(self, axis, labels, **kwargs):
-        new_index = self.index if axis else labels
-        new_columns = labels if axis else self.columns
+        new_index, _ = (self.index, None) if axis else self.index.reindex(labels)
+        new_columns, _ = self.columns.reindex(labels) if axis else (self.columns, None)
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             lambda df: df.reindex(labels=labels, axis=axis, **kwargs),
@@ -2218,22 +2218,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             return self.getitem_column_array(key)
 
-    def getitem_column_array(self, key, numeric=False):
-        # Convert to list for type checking
-        if numeric:
-            new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
+    def getitem_column_array(self, key):
+        if all(map(lambda name: name in self.index.names, key)):
+            return self.from_pandas(self.index.to_frame()[key], type(self._modin_frame))
+        else:
+            return self._modin_frame.take_2d_labels_or_positional(
                 col_positions=key
             )
-        else:
-            new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
-                col_labels=key
-            )
-        return self.__constructor__(new_modin_frame)
 
     def getitem_row_array(self, key):
-        return self.__constructor__(
-            self._modin_frame.take_2d_labels_or_positional(row_positions=key)
-        )
+        # import pdb;pdb.set_trace()
+        if all(map(lambda name: name in self.columns.names, key)):
+            return self.from_pandas(
+                self.columns.to_frame()[key].T.reset_index(drop=True),
+                type(self._modin_frame),
+            )
+        else:
+            return self.__constructor__(
+                self._modin_frame.take_2d_labels_or_positional(row_positions=key)
+            )
 
     def setitem(self, axis, key, value):
         return self._setitem(axis=axis, key=key, value=value, how=None)
@@ -3284,6 +3287,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             [row for row, idx in index_builder], copy=False
         )
         broadcast_values.columns = self.columns
+        # broadcast_values.index = [1,2,3,4]
         new_columns = broadcast_values.sort_values(
             by=rows, axis=1, ascending=ascending, **kwargs
         ).columns

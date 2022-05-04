@@ -2654,6 +2654,7 @@ def test_reindex(data):
     modin_series.index, pandas_series.index = [
         generate_multiindex(len(pandas_series))
     ] * 2
+    # import pdb;pdb.set_trace()
     pandas_result = pandas_series.reindex(list(reversed(pandas_series.index)))
     modin_result = modin_series.reindex(list(reversed(modin_series.index)))
     df_equals(pandas_result, modin_result)
