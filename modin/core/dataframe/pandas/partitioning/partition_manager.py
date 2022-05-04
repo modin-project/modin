@@ -152,7 +152,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         ]
 
     @classmethod
-    def row_partitions(cls, partitions):
+    def row_partitions(cls, partitions, full_axis=True):
         """
         List of `BaseDataframeAxisPartition` objects representing row-wise partitions.
 
@@ -173,7 +173,11 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         """
         if not isinstance(partitions, list):
             partitions = [partitions]
-        return [cls._row_partition_class(row) for frame in partitions for row in frame]
+        return [
+            cls._row_partition_class(row, full_axis=full_axis) 
+            for frame in partitions 
+            for row in frame
+        ]
 
     @classmethod
     def axis_partition(cls, partitions, axis, full_axis: bool = True):
