@@ -337,6 +337,8 @@ class CSVGlobDispatcher(CSVDispatcher):
                 def get_file_path(fs_handle) -> List[str]:
                     file_paths = fs_handle.glob(file_path)
                     protocols = fs_handle.protocol
+                    if not isinstance(protocols, list):
+                        protocols = list(protocols)
                     protocol = None
                     for _protocol in protocols:
                         if file_path.startswith(_protocol):
