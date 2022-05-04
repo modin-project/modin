@@ -2235,9 +2235,7 @@ class BasePandasDataset(object):
             return self._default_to_pandas("reindex", copy=copy, **kwargs)
         new_query_compiler = None
         if index is not None:
-            if not isinstance(index, pandas.Index):
-                index = pandas.Index(index)
-            if not index.equals(self.index):
+            if not isinstance(index, pandas.Index) or not index.equals(self.index):
                 new_query_compiler = self._query_compiler.reindex(
                     axis=0, labels=index, **kwargs
                 )
@@ -2245,9 +2243,9 @@ class BasePandasDataset(object):
             new_query_compiler = self._query_compiler
         final_query_compiler = None
         if columns is not None:
-            if not isinstance(columns, pandas.Index):
-                columns = pandas.Index(columns)
-            if not columns.equals(self.columns):
+            if not isinstance(columns, pandas.Index) or not columns.equals(
+                self.columns
+            ):
                 final_query_compiler = new_query_compiler.reindex(
                     axis=1, labels=columns, **kwargs
                 )

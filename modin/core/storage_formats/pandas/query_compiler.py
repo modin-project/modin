@@ -510,8 +510,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Reindex/reset_index (may shuffle data)
     def reindex(self, axis, labels, **kwargs):
-        new_index = self.index if axis else labels
-        new_columns = labels if axis else self.columns
+        new_index, _ = (self.index, None) if axis else self.index.reindex(labels)
+        new_columns, _ = self.columns.reindex(labels) if axis else (self.columns, None)
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             lambda df: df.reindex(labels=labels, axis=axis, **kwargs),

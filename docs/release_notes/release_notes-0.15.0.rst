@@ -16,6 +16,7 @@ Key Features and Updates
   * FIX-#4407: Align `insert` function with pandas in case of numpy array with several columns (#4408)
   * FIX-#4373: Fix invalid file path when trying `read_csv_glob` with `usecols` parameter (#4405)
   * FIX-#4394: Fix issue with multiindex metadata desync (#4395)
+  * FIX-#4438: Fix `reindex` function that doesn't preserve initial index metadata (#4442)
   * FIX-#4425: Add parameters to groupby pct_change (#4429)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)

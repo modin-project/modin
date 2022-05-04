@@ -671,6 +671,25 @@ def test_reindex():
     )
 
 
+def test_reindex_4438():
+    index = pd.date_range(end="1/1/2018", periods=3, freq="h", name="some meta")
+    new_index = list(reversed(index))
+
+    # index case
+    modin_df = pd.DataFrame([1, 2, 3], index=index)
+    pandas_df = pandas.DataFrame([1, 2, 3], index=index)
+    new_modin_df = modin_df.reindex(new_index)
+    new_pandas_df = pandas_df.reindex(new_index)
+    df_equals(new_modin_df, new_pandas_df)
+
+    # column case
+    modin_df = pd.DataFrame(np.array([[1], [2], [3]]).T, columns=index)
+    pandas_df = pandas.DataFrame(np.array([[1], [2], [3]]).T, columns=index)
+    new_modin_df = modin_df.reindex(columns=new_index)
+    new_pandas_df = pandas_df.reindex(columns=new_index)
+    df_equals(new_modin_df, new_pandas_df)
+
+
 def test_reindex_like():
     df1 = pd.DataFrame(
         [
