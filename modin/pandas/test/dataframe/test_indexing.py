@@ -689,6 +689,25 @@ def test_reindex_4438():
     new_pandas_df = pandas_df.reindex(columns=new_index)
     df_equals(new_modin_df, new_pandas_df)
 
+    # multiindex case
+    multi_index = pandas.MultiIndex.from_arrays(
+        [("a", "b", "c"), ("a", "b", "c")], names=["first", "second"]
+    )
+    new_multi_index = list(reversed(multi_index))
+
+    modin_df = pd.DataFrame([1, 2, 3], index=multi_index)
+    pandas_df = pandas.DataFrame([1, 2, 3], index=multi_index)
+    new_modin_df = modin_df.reindex(new_multi_index)
+    new_pandas_df = pandas_df.reindex(new_multi_index)
+    df_equals(new_modin_df, new_pandas_df)
+
+    # multicolumn case
+    modin_df = pd.DataFrame(np.array([[1], [2], [3]]).T, columns=multi_index)
+    pandas_df = pandas.DataFrame(np.array([[1], [2], [3]]).T, columns=multi_index)
+    new_modin_df = modin_df.reindex(columns=new_multi_index)
+    new_pandas_df = pandas_df.reindex(columns=new_multi_index)
+    df_equals(new_modin_df, new_pandas_df)
+
 
 def test_reindex_like():
     df1 = pd.DataFrame(
