@@ -657,6 +657,11 @@ class TextFileDispatcher(FileDispatcher):
                 return False
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return False
+        elif not (
+            hasattr(filepath_or_buffer, "name")
+            and cls.file_exists(filepath_or_buffer.name)
+        ):
+            return False
 
         if read_kwargs["chunksize"] is not None:
             return False
@@ -975,11 +980,6 @@ class TextFileDispatcher(FileDispatcher):
         new_query_compiler : BaseQueryCompiler
             Query compiler with imported data for further processing.
         """
-        filepath_or_buffer_md = (
-            cls.get_path(filepath_or_buffer)
-            if isinstance(filepath_or_buffer, str)
-            else cls.get_path_or_buffer(filepath_or_buffer)
-        )
         compression_infered = cls.infer_compression(
             filepath_or_buffer, kwargs["compression"]
         )
@@ -1019,7 +1019,11 @@ class TextFileDispatcher(FileDispatcher):
 
         # We know for sure that the buffer is not used further in the code,
         # renaming in order not to be misleading
-        filepath = filepath_or_buffer_md
+        filepath = (
+            cls.get_path(filepath_or_buffer)
+            if isinstance(filepath_or_buffer, str)
+            else cls.get_path_or_buffer(filepath_or_buffer)
+        )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE
         use_inferred_column_names = cls._uses_inferred_column_names(

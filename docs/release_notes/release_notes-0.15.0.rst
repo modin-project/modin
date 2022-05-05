@@ -44,6 +44,7 @@ Key Features and Updates
   * REFACTOR-#4003: Delete the deprecated cloud mortgage example (#4406)
   * REFACTOR-#4513: Fix spelling mistakes in docs and docstrings (#4514)
   * REFACTOR-#4510: Align experimental and regular IO modules initializations (#4511)
+  * REFACTOR-#4282: rename `filepath_or_buffer_md` variable name as it is misleading since no buffer is used in it (#4283)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
