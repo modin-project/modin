@@ -465,15 +465,15 @@ def trigger_import(*dfs):
     if ASV_USE_STORAGE_FORMAT != "omnisci" or ASV_USE_IMPL == "pandas":
         return
 
-    from modin.experimental.core.execution.native.implementations.omnisci_on_native.omnisci_worker import (
-        OmnisciServer,
+    from modin.experimental.core.execution.native.implementations.omnisci_on_native.db_worker import (
+        DbWorker,
     )
 
     for df in dfs:
         df.shape  # to trigger real execution
         df._query_compiler._modin_frame._partitions[0][
             0
-        ].frame_id = OmnisciServer().put_arrow_to_omnisci(
+        ].frame_id = DbWorker().import_arrow_table(
             df._query_compiler._modin_frame._partitions[0][0].get()
         )  # to trigger real execution
 
