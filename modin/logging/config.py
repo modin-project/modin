@@ -87,14 +87,14 @@ def configure_logging(level):
     __LOGGER_CONFIGURED__ = True
 
 
-def memory_thread(logger):
+def memory_thread(logger, sleep_time):
     while True:
         svmem = psutil.virtual_memory()
         logger.info(f"Memory Percentage: {svmem.percent}%")
-        time.sleep(5)
+        time.sleep(sleep_time)
 
 
-def get_logger():
+def get_logger(mem_sleep=5):
     if not __LOGGER_CONFIGURED__ and LogMode.get() != "none":
         if LogMode.get() == "api_only":
             configure_logging(logging.INFO)
@@ -102,15 +102,17 @@ def get_logger():
             configure_logging(logging.DEBUG)
 
         logger = logging.getLogger("modin.logger")
-        logger.info("OS Version: " + platform.platform())
-        logger.info("Python Version: " + platform.python_version())
-        logger.info("Modin Version: " + pkg_resources.get_distribution("modin").version)
-        logger.info(
-            "Pandas Version: " + pkg_resources.get_distribution("pandas").version
-        )
-        logger.info("Physical Cores: " + str(psutil.cpu_count(logical=False)))
-        logger.info("Total Cores: " + str(psutil.cpu_count(logical=True)))
+        logger.info(f"OS Version: {platform.platform()}")
+        logger.info(f"Python Version: {platform.python_version()}")
+        modin_version = pkg_resources.get_distribution("modin").version
+        pandas_version = pkg_resources.get_distribution("pandas").version
+        num_physical_cores = str(psutil.cpu_count(logical=False))
+        num_total_cores = str(psutil.cpu_count(logical=True))
         svmem = psutil.virtual_memory()
+        logger.info(f"Modin Version: {modin_version}")
+        logger.info(f"Pandas Version: {pandas_version}")
+        logger.info(f"Physical Cores: {num_physical_cores}")
+        logger.info(f"Total Cores: {num_total_cores}")
         logger.info(f"Memory Total: {bytes_int_to_str(svmem.total)}")
         logger.info(f"Memory Available: {bytes_int_to_str(svmem.available)}")
         logger.info(f"Memory Used: {bytes_int_to_str(svmem.used)}")
@@ -118,7 +120,7 @@ def get_logger():
 
         if LogMode.get() != "api_only":
             try:
-                mem = threading.Thread(target=memory_thread, args=[logger])
+                mem = threading.Thread(target=memory_thread, args=[logger, mem_sleep])
                 mem.start()
             except (KeyboardInterrupt, SystemExit):
                 mem.join()
