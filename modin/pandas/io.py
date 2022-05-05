@@ -631,7 +631,7 @@ def read_spss(
 
 
 # Adding docstring since pandas docs don't have web section for this function.
-@logger_decorator("PANDAS-API", "read_to_pickle", "info")
+@logger_decorator("PANDAS-API", "to_pickle", "info")
 def to_pickle(
     obj: Any,
     filepath_or_buffer,
@@ -689,7 +689,7 @@ def to_pickle(
 
 
 @_inherit_docstrings(pandas.json_normalize, apilink="pandas.json_normalize")
-@logger_decorator("PANDAS-API", "read_json_normalize", "info")
+@logger_decorator("PANDAS-API", "json_normalize", "info")
 def json_normalize(
     data: Union[Dict, List[Dict]],
     record_path: Optional[Union[str, List]] = None,
