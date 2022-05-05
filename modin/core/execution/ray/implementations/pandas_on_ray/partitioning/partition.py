@@ -380,8 +380,6 @@ def _apply_func(partition, func, oid_hash=None, *args, **kwargs):  # pragma: no 
     str
         The node IP address of the worker process.
     """
-    logger = get_logger()
-    logger.debug(f"BEGIN::_apply_func::{oid_hash}")
     try:
         result = func(partition, *args, **kwargs)
     # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
@@ -389,7 +387,6 @@ def _apply_func(partition, func, oid_hash=None, *args, **kwargs):  # pragma: no 
     # we absolutely have to.
     except ValueError:
         result = func(partition.copy(), *args, **kwargs)
-    logger.debug(f"END::_apply_func::{oid_hash}")
     return (
         result,
         len(result) if hasattr(result, "__len__") else 0,
@@ -438,8 +435,6 @@ def _apply_list_of_funcs(funcs, partition, oid_hash=None):  # pragma: no cover
         else:
             return obj
 
-    logger = get_logger()
-    logger.debug(f"BEGIN::_apply_list_of_funcs::{oid_hash}")
     for func, args, kwargs in funcs:
         func = deserialize(func)
         args = deserialize(args)
@@ -451,7 +446,6 @@ def _apply_list_of_funcs(funcs, partition, oid_hash=None):  # pragma: no cover
         # we absolutely have to.
         except ValueError:
             partition = func(partition.copy(), *args, **kwargs)
-    logger.debug(f"END::_apply_list_of_funcs::{oid_hash}")
     return (
         partition,
         len(partition) if hasattr(partition, "__len__") else 0,

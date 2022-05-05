@@ -362,6 +362,7 @@ class LogMode(EnvironmentVariable, type=ExactStr):
     """Set ``LogMode`` value if users want to opt-in."""
 
     varname = "MODIN_LOG_MODE"
+    choices = ("enable", "disable", "enable_api_only")
     default = "none"
 
     @classmethod
@@ -378,18 +379,6 @@ class LogMode(EnvironmentVariable, type=ExactStr):
     def enable_api_only(cls):
         """Enable API level logging."""
         cls.put("api_only")
-
-    @classmethod
-    def put(cls, value):
-        """
-        Set ``LogMode`` value.
-
-        Parameters
-        ----------
-        value : str
-            Config value to set.
-        """
-        super().put(value)
 
 
 class PersistentPickle(EnvironmentVariable, type=bool):
