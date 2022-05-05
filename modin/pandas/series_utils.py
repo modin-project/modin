@@ -20,7 +20,7 @@ Accessors: `Series.cat`, `Series.str`, `Series.dt`
 import sys
 import numpy as np
 import pandas
-from modin.logging import LoggerMetaClass
+from modin.modin_logging import LoggerMetaClass
 from modin.utils import _inherit_docstrings
 from .series import Series
 

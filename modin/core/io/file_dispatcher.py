@@ -23,7 +23,7 @@ import os
 import re
 from modin.config import StorageFormat
 from modin.utils import import_optional_dependency
-from modin.logging.logger_function import logger_decorator
+from modin.modin_logging.logger_function import logger_decorator
 import numpy as np
 
 S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")

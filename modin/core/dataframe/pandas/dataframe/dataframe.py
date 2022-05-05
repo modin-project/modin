@@ -38,7 +38,7 @@ from modin.core.dataframe.base.dataframe.utils import (
 )
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
-from modin.logging import LoggerMetaClass
+from modin.modin_logging import LoggerMetaClass
 
 
 def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
