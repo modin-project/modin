@@ -1161,7 +1161,11 @@ class DataFrame(BasePandasDataset):
                 and not isinstance(value, (pandas.Series, Series))
                 and len(value) != len(self.index)
             ):
-                raise ValueError("Length of values does not match length of index")
+                raise ValueError(
+                    "Length of values ({}) does not match length of index ({})".format(
+                        len(value), len(self.index)
+                    )
+                )
             if not allow_duplicates and column in self.columns:
                 raise ValueError(f"cannot insert {column}, already exists")
             if not -len(self.columns) <= loc <= len(self.columns):

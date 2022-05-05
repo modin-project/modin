@@ -38,6 +38,7 @@ Key Features and Updates
   * FIX-#4422: get rid of case sensitivity for `warns_that_defaulting_to_pandas` (#4423)
   * TEST-#4426: Stop passing is_default kwarg to Modin and pandas (#4428)
   * FIX-#4439: Fix flake8 CI fail (#4440)
+  * FIX-#4409: Fix `eval_insert` utility that doesn't actually check results of `insert` function (#4410)
 * Documentation improvements
   * DOCS-#4296: Fix docs warnings (#4297)
   * DOCS-#4388: Turn off fail_on_warning option for docs build (#4389)
