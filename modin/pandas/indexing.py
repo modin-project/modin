@@ -701,35 +701,6 @@ class _LocIndexer(_LocationIndexerBase):
         if isinstance(row_loc, slice) and row_loc == slice(None):
             # fast path for columns case
             if hashable(col_loc) and col_loc not in self.qc.columns:
-                if isinstance(item, Series) and len(self.qc.columns) == 0:
-                    self.df._update_inplace(item._query_compiler.copy())
-                    # Now that the data is appended, we need to update the column name for
-                    # that column to `key`, otherwise the name could be incorrect. Drop the
-                    # last column name from the list (the appended item's name and append
-                    # the new name.
-                    self.df.columns = self.df.columns[:-1].append(
-                        pandas.Index([col_loc])
-                    )
-                    self.qc = self.df._query_compiler
-                    return
-                elif (
-                    isinstance(item, (pandas.DataFrame, DataFrame))
-                    and item.shape[1] != 1
-                ):
-                    raise ValueError(
-                        "Wrong number of items passed %i, placement implies 1"
-                        % item.shape[1]
-                    )
-                elif isinstance(item, np.ndarray) and len(item.shape) > 1:
-                    if item.shape[1] == 1:
-                        # Transform into columnar table and take first column
-                        item = item.copy().T[0]
-                    else:
-                        raise ValueError(
-                            "Wrong number of items passed %i, placement implies 1"
-                            % item.shape[1]
-                        )
-
                 # Do new column assignment after error checks and possible item modifications
                 # inplace operation
                 self.df.insert(loc=len(self.qc.columns), column=col_loc, value=item)
