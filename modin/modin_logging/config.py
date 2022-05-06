@@ -95,8 +95,8 @@ def memory_thread(logger, sleep_time):
 
 
 def get_logger(mem_sleep=5):
-    if not __LOGGER_CONFIGURED__ and LogMode.get() != "none":
-        if LogMode.get() == "api_only":
+    if not __LOGGER_CONFIGURED__ and LogMode.get() != "disable":
+        if LogMode.get() == "enable_api_only":
             configure_logging(logging.INFO)
         else:
             configure_logging(logging.DEBUG)
@@ -118,7 +118,7 @@ def get_logger(mem_sleep=5):
         logger.info(f"Memory Used: {bytes_int_to_str(svmem.used)}")
         logger.info(f"Memory Percentage: {svmem.percent}%")
 
-        if LogMode.get() != "api_only":
+        if LogMode.get() != "enable_api_only":
             try:
                 mem = threading.Thread(target=memory_thread, args=[logger, mem_sleep])
                 mem.start()

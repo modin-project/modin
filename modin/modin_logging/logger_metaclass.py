@@ -7,7 +7,7 @@ from modin.config import LogMode
 def logger_class_wrapper(classname, name, method):
     @wraps(method)
     def log_wrap(*args, **kwargs):
-        if LogMode.get() != "none":
+        if LogMode.get() != "disable":
             logger = get_logger()
             logger.info(f"START::PANDAS-API::{classname}.{name}")
             result = method(*args, **kwargs)

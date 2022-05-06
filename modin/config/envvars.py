@@ -363,22 +363,22 @@ class LogMode(EnvironmentVariable, type=ExactStr):
 
     varname = "MODIN_LOG_MODE"
     choices = ("enable", "disable", "enable_api_only")
-    default = "none"
+    default = "disable"
 
     @classmethod
     def enable(cls):
         """Enable all logging levels."""
-        cls.put("all")
+        cls.put("enable")
 
     @classmethod
     def disable(cls):
         """Disable logging feature."""
-        cls.put("none")
+        cls.put("disable")
 
     @classmethod
     def enable_api_only(cls):
         """Enable API level logging."""
-        cls.put("api_only")
+        cls.put("enable_api_only")
 
 
 class PersistentPickle(EnvironmentVariable, type=bool):
