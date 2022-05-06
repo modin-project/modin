@@ -2231,9 +2231,13 @@ class BasePandasDataset(object):
         if (
             self._query_compiler.has_multiindex(axis=axis)
             and isinstance(index_like, list)
-            and all(map(lambda elem: isinstance(elem, tuple), index_like))
+            and isinstance(index_like[0], tuple)
         ):
-            return pandas.MultiIndex.from_tuples(index_like)
+            try:
+                return pandas.MultiIndex.from_tuples(index_like)
+            except TypeError:
+                # not all tuples
+                pass
         return ensure_index(index_like)
 
     def reindex(
