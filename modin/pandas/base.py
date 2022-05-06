@@ -2214,17 +2214,15 @@ class BasePandasDataset(object):
             )
         )
 
-    def _copy_index_metadata(
-        self, source_index, destination_index
-    ):  # noqa: PR01, RT01, D200
+    def _copy_index_metadata(self, source, destination):  # noqa: PR01, RT01, D200
         """
-        Copy metadata from `source_index` to `destination_index` inplace.
+        Copy Index metadata from `source` to `destination` inplace.
         """
-        if hasattr(source_index, "name") and hasattr(destination_index, "name"):
-            destination_index.name = source_index.name
-        if hasattr(source_index, "names") and hasattr(destination_index, "names"):
-            destination_index.names = source_index.names
-        return destination_index
+        if hasattr(source, "name") and hasattr(destination, "name"):
+            destination.name = source.name
+        if hasattr(source, "names") and hasattr(destination, "names"):
+            destination.names = source.names
+        return destination
 
     def _ensure_index(self, index_like, axis=0):  # noqa: PR01, RT01, D200
         """
@@ -2262,7 +2260,7 @@ class BasePandasDataset(object):
         if index is not None:
             if not isinstance(index, pandas.Index):
                 index = self._copy_index_metadata(
-                    self.index, self._ensure_index(index, axis=0)
+                    source=self.index, destination=self._ensure_index(index, axis=0)
                 )
             if not index.equals(self.index):
                 new_query_compiler = self._query_compiler.reindex(
@@ -2274,7 +2272,7 @@ class BasePandasDataset(object):
         if columns is not None:
             if not isinstance(columns, pandas.Index):
                 columns = self._copy_index_metadata(
-                    self.columns, self._ensure_index(columns, axis=1)
+                    source=self.columns, destination=self._ensure_index(columns, axis=1)
                 )
             if not columns.equals(self.columns):
                 final_query_compiler = new_query_compiler.reindex(
