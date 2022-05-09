@@ -165,7 +165,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
-            ) = _apply_list_of_funcs.remote(call_queue, oid, oid_hash=self._identity)
+            ) = _apply_list_of_funcs.remote(call_queue, oid)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
@@ -176,7 +176,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
-            ) = _apply_func.remote(oid, func, oid_hash=self._identity, *args, **kwargs)
+            ) = _apply_func.remote(oid, func, *args, **kwargs)
         logger.debug(f"EXIT::Partition.drain_call_queue::{self._identity}")
         self.call_queue = []
 
@@ -352,7 +352,7 @@ def _get_index_and_columns(df):
 
 
 @ray.remote(num_returns=4)
-def _apply_func(partition, func, oid_hash=None, *args, **kwargs):  # pragma: no cover
+def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     """
     Execute a function on the partition in a worker process.
 
@@ -362,8 +362,6 @@ def _apply_func(partition, func, oid_hash=None, *args, **kwargs):  # pragma: no 
         A pandas DataFrame the function needs to be executed on.
     func : callable
         Function that needs to be executed on the partition.
-    oid_hash : int, default: None
-        Hash of object ID used for logging.
     *args : iterable
         Additional positional arguments to be passed in `func`.
     **kwargs : dict
@@ -396,7 +394,7 @@ def _apply_func(partition, func, oid_hash=None, *args, **kwargs):  # pragma: no 
 
 
 @ray.remote(num_returns=4)
-def _apply_list_of_funcs(funcs, partition, oid_hash=None):  # pragma: no cover
+def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
     """
     Execute all operations stored in the call queue on the partition in a worker process.
 
@@ -406,8 +404,6 @@ def _apply_list_of_funcs(funcs, partition, oid_hash=None):  # pragma: no cover
         A call queue that needs to be executed on the partition.
     partition : pandas.DataFrame
         A pandas DataFrame the call queue needs to be executed on.
-    oid_hash : int, default: None
-        Hash of object ID used for logging.
 
     Returns
     -------
