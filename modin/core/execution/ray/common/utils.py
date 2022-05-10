@@ -217,7 +217,13 @@ def initialize_ray(
         _move_stdlib_ahead_of_site_packages
     )
     ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
-    num_cpus = int(ray.cluster_resources()["CPU"])
+    num_cpus = ray.cluster_resources().get("CPU", None)
+    if num_cpus is None:
+        import warnings
+        warnings.warn("The current Ray cluster does not have any CPU Resources.\nModin uses the number of CPUs to determine how many partitions to create.\nNumber of partitions defaulting to 4. To update, run the following python code:\n\tfrom modin.config import NPartitions\n\tNPartitions.put(desired_num_cpus)")
+        num_cpus = 4
+    else:
+        num_cpus = int(num_cpus)
     num_gpus = int(ray.cluster_resources().get("GPU", 0))
     if StorageFormat.get() == "Cudf":
         NPartitions._put(num_gpus)
