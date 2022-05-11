@@ -219,8 +219,6 @@ def initialize_ray(
     ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
     num_cpus = ray.cluster_resources().get("CPU", None)
     if num_cpus is None:
-        import warnings
-
         warnings.warn(
             "The current Ray cluster does not have any CPU Resources.\nModin uses the number of "
             + "CPUs to determine how many partitions to create.\nNumber of partitions defaulting to"
