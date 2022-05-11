@@ -2230,6 +2230,7 @@ class BasePandasDataset(object):
         """
         if (
             self._query_compiler.has_multiindex(axis=axis)
+            and not isinstance(index_like, pandas.Index)
             and is_list_like(index_like)
             and len(index_like) > 0
             and isinstance(index_like[0], tuple)
