@@ -59,28 +59,6 @@ def test_wait_decorator_on_arbitrary_func():
         func(("Not partitions", "Not partitions"))
 
 
-@pytest.mark.parametrize("partitions_container", [np.array, list])
-def test_wait_decorator_on_none_returning_function(partitions_container):
-    """
-    Test that ``wait_computations_if_benchmark_mode`` decorator indeed calls ``.wait()``
-    on partitions that was passed to the wrapped function if it returns ``None``.
-    """
-    assert BenchmarkMode.get()
-
-    @wait_computations_if_benchmark_mode
-    def none_returning_func(arg1, arg2, arg3):
-        return
-
-    parts1 = partitions_container([[Waitable(), Waitable()], [Waitable(), Waitable()]])
-    parts2 = partitions_container([[Waitable(), Waitable()], [Waitable(), Waitable()]])
-    assert all(not part.is_wait_called for row in parts1 for part in row)
-    assert all(not part.is_wait_called for row in parts2 for part in row)
-
-    none_returning_func(parts1, arg2="Not partitions", arg3=parts2)
-    assert all(part.is_wait_called for row in parts1 for part in row)
-    assert all(part.is_wait_called for row in parts2 for part in row)
-
-
 def test_wait_decorator_on_partitions_returning_function():
     """
     Test that ``wait_computations_if_benchmark_mode`` decorator indeed calls ``.wait()``

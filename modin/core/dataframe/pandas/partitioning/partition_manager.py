@@ -76,14 +76,10 @@ def wait_computations_if_benchmark_mode(func):
         def wait(*args, **kwargs):
             """Wait for computation results."""
             result = func(*args, **kwargs)
-            if result is None:
-                # the operation was applied on partitions inplace so extracting those from arguments
-                partitions = extract_waitable((args, kwargs.values()))
-            else:
-                partitions = extract_waitable(result)
+            partitions = extract_waitable(result)
             ErrorMessage.catch_bugs_and_request_email(
                 failure_condition=len(partitions) == 0,
-                extra_log=f"No partitions to wait was produced by wrapped function: {func}",
+                extra_log=f"No partitions to wait was returned from the wrapped function: {func}",
             )
             # need to go through all the values of the map iterator
             # since `wait` does not return anything, we need to explicitly add
