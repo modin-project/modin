@@ -708,6 +708,13 @@ def test_reindex_4438():
     new_pandas_df = pandas_df.reindex(columns=new_multi_index)
     df_equals(new_modin_df, new_pandas_df)
 
+    # index + multiindex case
+    modin_df = pd.DataFrame([1, 2, 3], index=index)
+    pandas_df = pandas.DataFrame([1, 2, 3], index=index)
+    new_modin_df = modin_df.reindex(new_multi_index)
+    new_pandas_df = pandas_df.reindex(new_multi_index)
+    df_equals(new_modin_df, new_pandas_df)
+
 
 def test_reindex_like():
     df1 = pd.DataFrame(
