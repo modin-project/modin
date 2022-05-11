@@ -56,7 +56,7 @@ def wait_computations_if_benchmark_mode(func):
     if BenchmarkMode.get():
 
         def extract_waitable(obj):
-            """Return a tuple of waitable objects contained in the `obj`."""
+            """Return an iterable of waitable objects contained in the `obj`."""
             if hasattr(obj, "wait"):
                 return (obj,)
             # fastpath for NumPy array of partitions
@@ -77,7 +77,7 @@ def wait_computations_if_benchmark_mode(func):
             """Wait for computation results."""
             result = func(*args, **kwargs)
             if result is None:
-                # operation on partition was applied inplace, extracting partition objects from arguments
+                # the operation was applied on partitions inplace so extracting those from arguments
                 partitions = extract_waitable((args, kwargs.values()))
             else:
                 partitions = extract_waitable(result)
@@ -1307,8 +1307,17 @@ class PandasDataframePartitionManager(ABC):
         ----------
         partitions : np.ndarray
             Partitions of Modin Dataframe on which all deferred calls should be performed.
+
+        Returns
+        -------
+        np.ndarray
+            Partitions with the no deferred calls. Note that this is the same partition objects
+            that were passed as `partitions` argument. The value is returned for the sake of
+            interface alignment with other manager's methods and may be safely omitted if performed
+            in in-place mode.
         """
         [part.drain_call_queue() for row in partitions for part in row]
+        return partitions
 
     @classmethod
     def rebalance_partitions(cls, partitions):

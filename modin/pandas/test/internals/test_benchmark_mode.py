@@ -32,13 +32,13 @@ class Waitable:
     """Emulates a partition class that can be awaited."""
 
     def __init__(self):
-        self.wait_was_called = False
+        self.is_wait_called = False
 
     def wait(self):
-        self.wait_was_called = True
+        self.is_wait_called = True
 
 
-def test_wait_decorator_on_arbitary_func():
+def test_wait_decorator_on_arbitrary_func():
     """
     Test that ``wait_computations_if_benchmark_mode`` decorator raises
     a proper error when applied to non-partitions-related function.
@@ -59,7 +59,8 @@ def test_wait_decorator_on_arbitary_func():
         func(("Not partitions", "Not partitions"))
 
 
-def test_wait_decorator_none_returning_function():
+@pytest.mark.parametrize("partitions_container", [np.array, list])
+def test_wait_decorator_on_none_returning_function(partitions_container):
     """
     Test that ``wait_computations_if_benchmark_mode`` decorator indeed calls ``.wait()``
     on partitions that was passed to the wrapped function if it returns ``None``.
@@ -70,17 +71,17 @@ def test_wait_decorator_none_returning_function():
     def none_returning_func(arg1, arg2, arg3):
         return
 
-    parts1 = np.array([[Waitable(), Waitable()], [Waitable(), Waitable()]])
-    parts2 = np.array([[Waitable(), Waitable()], [Waitable(), Waitable()]])
-    assert all(not part.wait_was_called for part in parts1.flatten())
-    assert all(not part.wait_was_called for part in parts2.flatten())
+    parts1 = partitions_container([[Waitable(), Waitable()], [Waitable(), Waitable()]])
+    parts2 = partitions_container([[Waitable(), Waitable()], [Waitable(), Waitable()]])
+    assert all(not part.is_wait_called for row in parts1 for part in row)
+    assert all(not part.is_wait_called for row in parts2 for part in row)
 
     none_returning_func(parts1, arg2="Not partitions", arg3=parts2)
-    assert all(part.wait_was_called for part in parts1.flatten())
-    assert all(part.wait_was_called for part in parts2.flatten())
+    assert all(part.is_wait_called for row in parts1 for part in row)
+    assert all(part.is_wait_called for row in parts2 for part in row)
 
 
-def test_wait_decorator_partitions_returning_function():
+def test_wait_decorator_on_partitions_returning_function():
     """
     Test that ``wait_computations_if_benchmark_mode`` decorator indeed calls ``.wait()``
     on partitions that were returned from the wrapped function.
@@ -88,24 +89,24 @@ def test_wait_decorator_partitions_returning_function():
     assert BenchmarkMode.get()
 
     @wait_computations_if_benchmark_mode
-    def parts_returning_func(parts_location_in_res, nreturns):
-        """Return `nreturns` objects and waitable objects are located in the `parts_location_in_res` position of the return value."""
+    def partitions_returning_func(partitions_loc_in_result, num_returns):
+        """Return `num_returns` objects and waitable objects are located in the `partitions_loc_in_result` position of the return value."""
         parts = np.array([[Waitable(), Waitable()], [Waitable(), Waitable()]])
-        assert all(not part.wait_was_called for part in parts.flatten())
-        result = ["Not partitions" for _ in range(nreturns - 1)]
-        result.insert(parts_location_in_res, parts)
+        assert all(not part.is_wait_called for part in parts.flatten())
+        result = ["Not partitions"] * (num_returns - 1)
+        result.insert(partitions_loc_in_result, parts)
         return tuple(result) if len(result) > 1 else result[0]
 
     parts_location_in_res = 0
-    parts = parts_returning_func(parts_location_in_res, nreturns=1)
-    assert all(part.wait_was_called for part in parts.flatten())
+    parts = partitions_returning_func(parts_location_in_res, num_returns=1)
+    assert all(part.is_wait_called for part in parts.flatten())
 
-    result = parts_returning_func(parts_location_in_res, nreturns=4)
-    assert all(part.wait_was_called for part in result[parts_location_in_res].flatten())
+    result = partitions_returning_func(parts_location_in_res, num_returns=4)
+    assert all(part.is_wait_called for part in result[parts_location_in_res].flatten())
 
     parts_location_in_res = 2
-    result = parts_returning_func(parts_location_in_res, nreturns=4)
-    assert all(part.wait_was_called for part in result[parts_location_in_res].flatten())
+    result = partitions_returning_func(parts_location_in_res, num_returns=4)
+    assert all(part.is_wait_called for part in result[parts_location_in_res].flatten())
 
 
 def test_syncronous_mode():
