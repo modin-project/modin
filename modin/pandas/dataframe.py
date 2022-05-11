@@ -33,14 +33,11 @@ or `OmniSci`), and the last one is for parameter notes. The flags stand for the 
 |           | appcication. This can happen if some parameter values or types are not supported (for example |
 |           | boolean values are suported while integer are not) and default pandas implementation is used  |
 +-----------+-----------------------------------------------------------------------------------------------+
-| pandas    | Usage of this parameter, triggers usage of original pandas function as is, no performance     |
-|           | degradation/improvement should be observed                                                    |
-+-----------+-----------------------------------------------------------------------------------------------+
 
 Also, the first row (`All parameters` parameter name) shows summary support status for the
 whole method and only further rows describe exact parameters support status. Please note,
 that tables lists only unsupported/partially supported parameters, if parameter is supported,
-it won't be present in the table.
+it won't be present or marked somehow in the table.
 """
 
 import pandas
