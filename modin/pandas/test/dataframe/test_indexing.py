@@ -384,6 +384,42 @@ def test_loc(data):
         modin_df.loc["NO_EXIST"]
 
 
+def test_loc_4456():
+    data = test_data["float_nan_data"]
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+
+    key = ["col1", "col2"]
+    value = [[1, 2]] * pandas_df.shape[0]
+
+    # len(key) == df_value.columns; different columns
+    df_value = pandas.DataFrame(value, columns=["value_col1", "value_col2"])
+    modin_df.loc[:, key] = df_value
+    pandas_df.loc[:, key] = df_value
+    df_equals(modin_df, pandas_df)
+
+    # len(key) == df_value.columns; different index
+    df_value = pandas.DataFrame(
+        value, columns=key, index=list(reversed(pandas_df.index))
+    )
+    modin_df.loc[:, key] = df_value
+    pandas_df.loc[:, key] = df_value
+    df_equals(modin_df, pandas_df)
+
+    value = [[1]] * pandas_df.shape[0]
+    # len(key) > df_value.columns
+    df_value = pandas.DataFrame(value, columns=key[:1])
+    modin_df.loc[:, key] = df_value
+    pandas_df.loc[:, key] = df_value
+    df_equals(modin_df, pandas_df)
+
+    value = [[1, 2, 3]] * pandas_df.shape[0]
+    # len(key) < df_value.columns
+    df_value = pandas.DataFrame(value, columns=key + ["col3"])
+    modin_df.loc[:, key] = df_value
+    pandas_df.loc[:, key] = df_value
+    df_equals(modin_df, pandas_df)
+
+
 # This tests the bug from https://github.com/modin-project/modin/issues/3736
 def test_loc_setting_single_categorical_column():
     modin_df = pd.DataFrame({"status": ["a", "b", "c"]}, dtype="category")
