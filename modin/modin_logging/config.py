@@ -20,7 +20,7 @@ import psutil
 import pkg_resources
 import threading
 import time
-from modin.config import LogMode
+from modin.config import LogMemoryInterval, LogMode
 
 __LOGGER_CONFIGURED__: bool = False
 
@@ -107,7 +107,7 @@ def memory_thread(logger, sleep_time):
         time.sleep(sleep_time)
 
 
-def get_logger(mem_sleep=5):
+def get_logger():
     if not __LOGGER_CONFIGURED__ and LogMode.get() != "disable":
         if LogMode.get() == "enable_api_only":
             configure_logging(logging.INFO)
@@ -133,6 +133,7 @@ def get_logger(mem_sleep=5):
 
         if LogMode.get() != "enable_api_only":
             try:
+                mem_sleep = LogMemoryInterval.get()
                 mem = threading.Thread(target=memory_thread, args=[logger, mem_sleep])
                 mem.start()
             except (KeyboardInterrupt, SystemExit):

@@ -27,7 +27,6 @@ from pandas._typing import IndexKeyFunc
 import sys
 from typing import Union, Optional
 import warnings
-from six import with_metaclass
 
 from modin.utils import _inherit_docstrings, to_pandas, Engine
 from modin.config import IsExperimental, PersistentPickle
@@ -42,7 +41,7 @@ from . import _update_engine
 @_inherit_docstrings(
     pandas.Series, excluded=[pandas.Series.__init__], apilink="pandas.Series"
 )
-class Series(with_metaclass(LoggerMetaClass, BasePandasDataset)):
+class Series(BasePandasDataset, metaclass=LoggerMetaClass):
     """
     Modin distributed representation of `pandas.Series`.
 
