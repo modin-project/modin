@@ -1411,13 +1411,13 @@ def catch_default_to_pandas_warnings_if_omnisci():
     """
     Return a StorageFormat-dependent default-to-pandas warnings catching context.
 
-    If StorageFormat is Omnisci, returns a context that asserts for a warning to be
+    If StorageFormat is OmniSci, returns a context that asserts for a warning to be
     raised inside it, otherwise returns ``nullcontext``.
 
     Notes
     -----
-    As Omnisci execution tends to raise a lot of warnings, it's convenient in execution-common
-    tests to wrap by this context a piece of code that defaults-to-pandas on Omnisci and never
+    As OmniSci execution tends to raise a lot of warnings, it's convenient in execution-common
+    tests to wrap by this context a piece of code that defaults-to-pandas on OmniSci and never
     with other executions.
     """
     return (

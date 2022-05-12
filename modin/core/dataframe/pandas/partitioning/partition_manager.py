@@ -22,7 +22,6 @@ from functools import wraps
 from itertools import chain
 import numpy as np
 import pandas
-
 from pandas._libs.lib import no_default
 from pandas.core.dtypes.common import is_list_like
 import warnings
@@ -79,7 +78,7 @@ def wait_computations_if_benchmark_mode(func):
             partitions = extract_waitable(result)
             ErrorMessage.catch_bugs_and_request_email(
                 failure_condition=len(partitions) == 0,
-                extra_log=f"No partitions to wait was returned from the wrapped function: {func}",
+                extra_log=f"No partition to wait was returned from the wrapped function: {func}",
             )
             # need to go through all the values of the map iterator
             # since `wait` does not return anything, we need to explicitly add
