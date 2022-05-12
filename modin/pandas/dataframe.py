@@ -2543,6 +2543,15 @@ class DataFrame(BasePandasDataset):
                     key = DataFrame(key, columns=self.columns)
                 return self.mask(key, value, inplace=True)
 
+            if isinstance(key, list) and all((x in self.columns for x in key)):
+                if is_list_like(value):
+                    if not (hasattr(value, "shape") and hasattr(value, "ndim")):
+                        value = np.array(value)
+                    if len(key) != value.shape[0 if value.ndim == 1 else 1]:
+                        raise ValueError("Columns must be same length as key")
+                self.loc[:, key] = value
+                return
+
             def setitem_unhashable_key(df, value):
                 df[key] = value
                 return df

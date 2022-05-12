@@ -1779,6 +1779,54 @@ def test___setitem__unhashable_list():
     df_equals(modin_df, pandas_df)
 
 
+def test_setitem_unhashable_key():
+    data = test_data["float_nan_data"]
+    source_modin_df, source_pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    count_rows = source_modin_df.shape[0]
+
+    def _make_copy(df1, df2):
+        return df1.copy(deep=True), df2.copy(deep=True)
+
+    for key in (["col1", "col2"], ["new_col1", "new_col2"]):
+        # 1d list case
+        value = [1, 2]
+        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
+        eval_setitem(modin_df, pandas_df, value, key)
+
+        # 2d list case
+        value = [[1, 2]] * count_rows
+        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
+        eval_setitem(modin_df, pandas_df, value, key)
+
+        # pandas DataFrame case
+        df_value = pandas.DataFrame(value, columns=["value_col1", "value_col2"])
+        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
+        eval_setitem(modin_df, pandas_df, value, key)
+
+        # numpy array case
+        value = df_value.to_numpy()
+        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
+        eval_setitem(modin_df, pandas_df, value, key)
+
+        # pandas Series case
+        value = df_value["value_col1"]
+        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
+        eval_setitem(modin_df, pandas_df, value, key[:1])
+
+        # pandas Index case
+        value = df_value.index
+        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
+        eval_setitem(modin_df, pandas_df, value, key[:1])
+
+        # scalar case
+        value = 3
+        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
+        eval_setitem(modin_df, pandas_df, value, key)
+
+        # failed case
+        eval_setitem(modin_df, pandas_df, df_value[["value_col1"]], key)
+
+
 def test___setitem__single_item_in_series():
     # Test assigning a single item in a Series for issue
     # https://github.com/modin-project/modin/issues/3860
