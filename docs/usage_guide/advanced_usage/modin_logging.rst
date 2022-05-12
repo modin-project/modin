@@ -14,7 +14,6 @@ In the example below, we enable logging for internal Modin API calls.
 
   import modin.pandas as pd
   from modin.config import LogMode
-
   LogMode.enable_api_only()
 
   # Your code goes here
@@ -26,9 +25,8 @@ We can set the granularity (in seconds) at which the system memory utilization i
 
   import modin.pandas as pd
   from modin.config import LogMode, LogMemoryInterval
-
   LogMode.enable()
-  LogMemoryInterval(2) # Defaults to 5 seconds
+  LogMemoryInterval.put(2) # Defaults to 5 seconds
 
   # Your code goes here
 
