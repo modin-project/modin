@@ -11,6 +11,7 @@ Advanced Usage
    modin_sql
    modin_xgboost
    modin_in_the_cloud
+   modin_logging
 
 .. meta::
     :description lang=en:
@@ -83,6 +84,14 @@ Modin provides an implementation of `distributed XGBoost`_ machine learning algo
 :doc:`Distributed XGBoost on Modin documentation <modin_xgboost>` for details about installation and usage, as well as
 :doc:`Modin XGBoost architecture documentation </flow/modin/experimental/xgboost>` for information about implementation and
 internal execution flow.
+
+Logging and Tracing with Modin
+------------------------------
+
+Modin logging and tracing allows users to gain observability into their queries by logging internal Modin API calls, partition metadata, 
+and profiling memory. When Modin logging is enabled (default disabled), log files are written to a local `.modin` directory at the same
+directory level as the notebook/script used to run Modin. See our :doc:`Logging and Tracing with Modin documentation <modin_logging>` 
+for usage information.
 
 .. _`blog post`: https://medium.com/riselab/why-every-data-scientist-using-pandas-needs-modin-bringing-sql-to-dataframes-3b216b29a7c0
 .. _`Modin SQL documentation`: modin_sql.html
