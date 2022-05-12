@@ -359,6 +359,7 @@ class _LocationIndexerBase(object):
         """
         # Convert slices to indices for the purposes of application.
         # TODO (devin-petersohn): Apply to slice without conversion to list
+        # import pdb;pdb.set_trace()
         if isinstance(row_lookup, slice):
             row_lookup = range(len(self.qc.index))[row_lookup]
         if isinstance(col_lookup, slice):
@@ -366,12 +367,16 @@ class _LocationIndexerBase(object):
         # This is True when we dealing with assignment of a full column. This case
         # should be handled in a fastpath with `df[col] = item`.
         if axis == 0:
-            self.df[self.df.columns[col_lookup][0]] = item
+            assert len(col_lookup) == 1
+            self.df[self.df.columns[col_lookup[0]]] = item
         # This is True when we are assigning to a full row. We want to reuse the setitem
         # mechanism to operate along only one axis for performance reasons.
         elif axis == 1:
             if hasattr(item, "_query_compiler"):
+                if isinstance(item, DataFrame):
+                    item = item.squeeze(axis=0)
                 item = item._query_compiler
+            assert len(row_lookup) == 1
             new_qc = self.qc.setitem(1, self.qc.index[row_lookup[0]], item)
             self.df._create_or_update_from_compiler(new_qc, inplace=True)
         # Assignment to both axes.
@@ -505,11 +510,14 @@ class _LocationIndexerBase(object):
             axis = None
         elif (
             row_lookup_len == len(self.qc.index)
+            # and not is_list_like(row_lookup)
             and col_lookup_len == 1
             and isinstance(self.df, DataFrame)
         ):
             axis = 0
-        elif col_lookup_len == len(self.qc.columns) and row_lookup_len == 1:
+        elif (
+            col_lookup_len == len(self.qc.columns) and row_lookup_len == 1
+        ):  # and not is_list_like(col_lookup):
             axis = 1
         else:
             axis = None

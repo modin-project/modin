@@ -37,6 +37,7 @@ import warnings
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
+from modin.pandas.utils import is_scalar
 from modin.utils import (
     try_cast_to_pandas,
     wrap_udf_function,
@@ -2190,9 +2191,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         ----------
         axis : {0, 1}
             Axis to set `value` along. 0 means set row, 1 means set column.
-        key : label
+        key : scalar
             Row/column label to set `value` in.
-        value : PandasQueryCompiler, list-like or scalar
+        value : PandasQueryCompiler (from Series), list-like or scalar
             Define new row/column value.
         how : {"inner", "outer", "left", "right", None}, default: "inner"
             Type of join to perform if specified axis of `self` and `value` are not
@@ -2203,6 +2204,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         BaseQueryCompiler
             New QueryCompiler with updated `key` value.
         """
+        assert is_scalar(key)
 
         def setitem_builder(df, internal_indices=[]):
             """
@@ -2235,6 +2237,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return df
 
         if isinstance(value, type(self)):
+            # import pdb;pdb.set_trace()
             value.columns = [key]
             if axis == 1:
                 value = value.transpose()

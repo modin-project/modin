@@ -215,6 +215,7 @@ def test_iloc(request, data):
 
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
+        # import pdb;pdb.set_trace()
         modin_df.iloc[0] = modin_df.iloc[1]
         pandas_df.iloc[0] = pandas_df.iloc[1]
         df_equals(modin_df, pandas_df)
@@ -1801,7 +1802,8 @@ def test_setitem_unhashable_key():
         # pandas DataFrame case
         df_value = pandas.DataFrame(value, columns=["value_col1", "value_col2"])
         modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, value, key)
+        # import pdb;pdb.set_trace()
+        eval_setitem(modin_df, pandas_df, df_value, key)
 
         # numpy array case
         value = df_value.to_numpy()
