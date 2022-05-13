@@ -73,12 +73,11 @@ def bytes_int_to_str(num_bytes, suffix="B"):
     """
 
     factor = 1000
-    if num_bytes > 1000000000000000000:
-        raise ValueError("System memory exceeds expectations")
     for unit in ["", "K", "M", "G", "T", "P"]:
         if num_bytes < factor:
             return f"{num_bytes:.2f}{unit}{suffix}"
         num_bytes /= factor
+    return f"{num_bytes:.2f}{1000+P}{suffix}"
 
 
 def configure_logging(level):
