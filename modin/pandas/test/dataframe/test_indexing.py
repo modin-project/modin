@@ -67,6 +67,24 @@ def eval_setitem(md_df, pd_df, value, col=None, loc=None):
     )
 
 
+def eval_loc(md_df, pd_df, value, key):
+    if isinstance(value, tuple):
+        assert len(value) == 2
+        # case when value for pandas different
+        md_value, pd_value = value
+    else:
+        md_value, pd_value = value, value
+
+    eval_general(
+        md_df,
+        pd_df,
+        lambda df: df.loc.__setitem__(
+            key, pd_value if isinstance(df, pandas.DataFrame) else md_value
+        ),
+        __inplace__=True,
+    )
+
+
 @pytest.mark.parametrize(
     "dates",
     [
@@ -389,35 +407,39 @@ def test_loc_4456():
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
     key = ["col1", "col2"]
-    value = [[1, 2]] * pandas_df.shape[0]
 
     # len(key) == df_value.columns; different columns
+    value = [[1, 2]] * pandas_df.shape[0]
     df_value = pandas.DataFrame(value, columns=["value_col1", "value_col2"])
-    modin_df.loc[:, key] = df_value
-    pandas_df.loc[:, key] = df_value
-    df_equals(modin_df, pandas_df)
+    eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
+
+    # len(key) == df_value.columns; different columns; modin DataFrame
+    mdf_value = pd.DataFrame(df_value)
+    eval_loc(modin_df, pandas_df, (mdf_value, df_value), (slice(None), key))
 
     # len(key) == df_value.columns; different index
     df_value = pandas.DataFrame(
         value, columns=key, index=list(reversed(pandas_df.index))
     )
-    modin_df.loc[:, key] = df_value
-    pandas_df.loc[:, key] = df_value
-    df_equals(modin_df, pandas_df)
+    eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
 
-    value = [[1]] * pandas_df.shape[0]
     # len(key) > df_value.columns
+    value = [[1]] * pandas_df.shape[0]
     df_value = pandas.DataFrame(value, columns=key[:1])
-    modin_df.loc[:, key] = df_value
-    pandas_df.loc[:, key] = df_value
-    df_equals(modin_df, pandas_df)
+    eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
 
-    value = [[1, 2, 3]] * pandas_df.shape[0]
+    # len(key) == df_value.columns; different columns; modin Series
+    # import pdb; pdb.set_trace()
+    md_series_value = mdf_value[mdf_value.columns[0]]
+    pd_series_value = df_value[df_value.columns[0]]
+    eval_loc(
+        modin_df, pandas_df, (md_series_value, pd_series_value), (slice(None), key)
+    )
+
     # len(key) < df_value.columns
+    value = [[1, 2, 3]] * pandas_df.shape[0]
     df_value = pandas.DataFrame(value, columns=key + ["col3"])
-    modin_df.loc[:, key] = df_value
-    pandas_df.loc[:, key] = df_value
-    df_equals(modin_df, pandas_df)
+    eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
 
 
 # This tests the bug from https://github.com/modin-project/modin/issues/3736
