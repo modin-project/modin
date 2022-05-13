@@ -1864,6 +1864,7 @@ class PandasDataframe(object):
         new_index=None,
         new_columns=None,
         dtypes=None,
+        func_may_change_complementary_index_size=True,
     ):
         """
         Perform a function across an entire axis.
@@ -1884,6 +1885,14 @@ class PandasDataframe(object):
             The data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
+        func_may_change_complementary_index_size : bool, optional
+            Whether the per-axis function may change the complementary axis
+            width/length for each partition. e.g. for a function that applies
+            per column, this parameter should only be set to false if that
+            function is guaranteed not to change the number of columns. Setting
+            this parameter to true can improve performance because the
+            resulting frame doesn't have to recompute the complementary axis
+            lengths for its partitions.
 
         Returns
         -------
@@ -1894,6 +1903,13 @@ class PandasDataframe(object):
         -----
         The data shape may change as a result of the function.
         """
+        new_row_lengths = None
+        new_column_widths = None
+        if not func_may_change_complementary_index_size:
+            if axis == 0:
+                new_column_widths = self._column_widths
+            else:
+                new_row_lengths = self._row_lengths
         return self.broadcast_apply_full_axis(
             axis=axis,
             func=func,
@@ -1901,6 +1917,8 @@ class PandasDataframe(object):
             new_columns=new_columns,
             dtypes=dtypes,
             other=None,
+            new_row_lengths=new_row_lengths,
+            new_column_widths=new_column_widths,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -2267,6 +2285,8 @@ class PandasDataframe(object):
         apply_indices=None,
         enumerate_partitions=False,
         dtypes=None,
+        new_row_lengths=None,
+        new_column_widths=None,
     ):
         """
         Broadcast partitions of `other` Modin DataFrame and apply a function along full axis.
@@ -2294,6 +2314,10 @@ class PandasDataframe(object):
             Data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
+        new_row_lengths : list, optional
+            The length of each partition in the rows.
+        new_column_widths : list, optional
+            The width of each partition in the columns.
 
         Returns
         -------
@@ -2336,9 +2360,9 @@ class PandasDataframe(object):
         result = self.__constructor__(
             new_partitions,
             *new_axes,
-            None,
-            None,
-            dtypes,
+            column_widths=new_column_widths,
+            row_lengths=new_row_lengths,
+            dtypes=dtypes,
         )
         if new_index is not None:
             result.synchronize_labels(axis=0)

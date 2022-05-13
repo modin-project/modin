@@ -2434,6 +2434,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             lambda df: pandas.DataFrame(df.apply(func, axis, *args, **kwargs)),
             new_index=new_index,
             new_columns=new_columns,
+            func_may_change_complementary_index_size=False,
         )
         return self.__constructor__(new_modin_frame)
 
@@ -2462,8 +2463,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if callable(func):
             func = wrap_udf_function(func)
 
+        if axis == 0:
+            new_index = None
+            new_columns = self._modin_frame.columns
+        else:
+            new_index = self._modin_frame.index
+            new_columns = None
         new_modin_frame = self._modin_frame.apply_full_axis(
-            axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
+            axis,
+            lambda df: df.apply(
+                func,
+                axis=axis,
+                *args,
+                **kwargs,
+            ),
+            new_index=new_index,
+            new_columns=new_columns,
+            func_may_change_complementary_index_size=False,
         )
         return self.__constructor__(new_modin_frame)
 
