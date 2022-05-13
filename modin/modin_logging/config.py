@@ -80,14 +80,9 @@ def bytes_int_to_str(num_bytes, suffix="B"):
     return f"{num_bytes:.2f}{1000+P}{suffix}"
 
 
-def configure_logging(level):
+def configure_logging():
     """
     Configure Modin logging by setting up directory structure and formatting.
-
-    Parameters
-    ----------
-    level: str
-        The log level (logging.INFO, logging.DEBUG).
     """
 
     global __LOGGER_CONFIGURED__
@@ -104,7 +99,31 @@ def configure_logging(level):
     )
     logfile.setFormatter(formatter)
     logger.addHandler(logfile)
-    logger.setLevel(level)
+
+    if LogMode.get() == "enable_api_only":
+        logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
+
+    logger = logging.getLogger("modin.logger")
+    logger.info(f"OS Version: {platform.platform()}")
+    logger.info(f"Python Version: {platform.python_version()}")
+    modin_version = pkg_resources.get_distribution("modin").version
+    pandas_version = pkg_resources.get_distribution("pandas").version
+    num_physical_cores = str(psutil.cpu_count(logical=False))
+    num_total_cores = str(psutil.cpu_count(logical=True))
+    svmem = psutil.virtual_memory()
+    logger.info(f"Modin Version: {modin_version}")
+    logger.info(f"Pandas Version: {pandas_version}")
+    logger.info(f"Physical Cores: {num_physical_cores}")
+    logger.info(f"Total Cores: {num_total_cores}")
+    logger.info(f"Memory Total: {bytes_int_to_str(svmem.total)}")
+    logger.info(f"Memory Available: {bytes_int_to_str(svmem.available)}")
+    logger.info(f"Memory Used: {bytes_int_to_str(svmem.used)}")
+
+    if LogMode.get() != "enable_api_only":
+        mem_sleep = LogMemoryInterval.get()
+        mem = threading.Thread(target=memory_thread, args=[logger, mem_sleep])
+        mem.start()
 
     __LOGGER_CONFIGURED__ = True
 
@@ -138,35 +157,5 @@ def get_logger():
     """
 
     if not __LOGGER_CONFIGURED__ and LogMode.get() != "disable":
-        if LogMode.get() == "enable_api_only":
-            configure_logging(logging.INFO)
-        else:
-            configure_logging(logging.DEBUG)
-
-        logger = logging.getLogger("modin.logger")
-        logger.info(f"OS Version: {platform.platform()}")
-        logger.info(f"Python Version: {platform.python_version()}")
-        modin_version = pkg_resources.get_distribution("modin").version
-        pandas_version = pkg_resources.get_distribution("pandas").version
-        num_physical_cores = str(psutil.cpu_count(logical=False))
-        num_total_cores = str(psutil.cpu_count(logical=True))
-        svmem = psutil.virtual_memory()
-        logger.info(f"Modin Version: {modin_version}")
-        logger.info(f"Pandas Version: {pandas_version}")
-        logger.info(f"Physical Cores: {num_physical_cores}")
-        logger.info(f"Total Cores: {num_total_cores}")
-        logger.info(f"Memory Total: {bytes_int_to_str(svmem.total)}")
-        logger.info(f"Memory Available: {bytes_int_to_str(svmem.available)}")
-        logger.info(f"Memory Used: {bytes_int_to_str(svmem.used)}")
-        logger.info(f"Memory Percentage: {svmem.percent}%")
-
-        if LogMode.get() != "enable_api_only":
-            try:
-                mem_sleep = LogMemoryInterval.get()
-                mem = threading.Thread(target=memory_thread, args=[logger, mem_sleep])
-                mem.start()
-            except (KeyboardInterrupt, SystemExit):
-                mem.join()
-                sys.exit()
-
+        configure_logging()
     return logging.getLogger("modin.logger")
