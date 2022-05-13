@@ -20,7 +20,7 @@ ep = ExecutePreprocessor(timeout=600, kernel_name="python3")
 download_taxi_dataset = f"""import os
 import urllib.request
 if not os.path.exists("{test_dataset_path}"):
-    url_path = "https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv"
+    url_path = "https://dask-data.s3.amazonaws.com/nyc-taxi/2015/yellow_tripdata_2015-01.csv"
     urllib.request.urlretrieve(url_path, "{test_dataset_path}")
     """
 
