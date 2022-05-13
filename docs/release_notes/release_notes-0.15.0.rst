@@ -22,6 +22,7 @@ Key Features and Updates
   * FIX-#4449: Drain the call queue before waiting on result in benchmark mode (#4472)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
+  * FEAT-#4445: Stop recomputing both indices for axis-wide applies (#4460).
 * Benchmarking enhancements
   *
 * Refactor Codebase
