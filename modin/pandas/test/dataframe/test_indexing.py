@@ -429,7 +429,6 @@ def test_loc_4456():
     eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
 
     # len(key) == df_value.columns; different columns; modin Series
-    # import pdb; pdb.set_trace()
     md_series_value = mdf_value[mdf_value.columns[0]]
     pd_series_value = df_value[df_value.columns[0]]
     eval_loc(
