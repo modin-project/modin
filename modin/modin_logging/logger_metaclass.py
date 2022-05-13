@@ -78,11 +78,14 @@ def metaclass_resolver(*classes):
 class LoggerMetaClass(type):
     def __new__(mcs, classname, bases, class_dict):
         new_class_dict = {}
+        seen_attributes = {}
         for attribute_name, attribute in class_dict.items():
             if (
                 isinstance(attribute, (FunctionType, MethodType))
                 and attribute_name != "__getattribute__"
             ):
-                attribute = logger_class_wrapper(classname, attribute_name, attribute)
+                if attribute not in seen_attributes:
+                    seen_attributes[attribute] = logger_class_wrapper(classname, attribute_name, attribute)
+                attribute = seen_attributes[attribute]
             new_class_dict[attribute_name] = attribute
         return type.__new__(mcs, classname, bases, new_class_dict)
