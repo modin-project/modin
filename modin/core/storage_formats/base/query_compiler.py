@@ -91,7 +91,7 @@ def _set_axis(axis):
 # not presented in the function's signature it makes linter to raise `PR02: unknown parameters`
 # warning. For now, they're silenced by using `noqa` (Modin issue #3108).
 class BaseQueryCompiler(
-    abc.ABC, metaclass=type("", (LoggerMetaClass, abc.ABCMeta), {})
+    abc.ABC, metaclass=type("", (abc.ABCMeta, LoggerMetaClass), {})
 ):
     """
     Abstract class that handles the queries to Modin dataframes.
