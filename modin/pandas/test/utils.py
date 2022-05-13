@@ -738,11 +738,6 @@ def eval_general(
                 ), "Got Modin Exception type {}, but pandas Exception type {} was expected".format(
                     type(md_e.value), type(pd_e)
                 )
-                assert str(md_e.value) == str(
-                    pd_e
-                ), "Got Modin exception message '{}', but pandas exception message '{}'".format(
-                    md_e.value, pd_e
-                )
                 if raising_exceptions:
                     assert not isinstance(
                         md_e.value, tuple(raising_exceptions)
