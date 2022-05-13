@@ -39,7 +39,7 @@ from modin.error_message import ErrorMessage
 
 from .dataframe import DataFrame
 from .series import Series
-from .utils import is_scalar
+from .utils import is_scalar, broadcast_item
 
 
 def is_slice(x):
@@ -381,81 +381,9 @@ class _LocationIndexerBase(object):
             self.df._create_or_update_from_compiler(new_qc, inplace=True)
         # Assignment to both axes.
         else:
-            if isinstance(row_lookup, slice):
-                new_row_len = len(self.df.index[row_lookup])
-            else:
-                new_row_len = len(row_lookup)
-            if isinstance(col_lookup, slice):
-                new_col_len = len(self.df.columns[col_lookup])
-            else:
-                new_col_len = len(col_lookup)
-            to_shape = new_row_len, new_col_len
             if not is_scalar(item):
-                item = self._broadcast_item(row_lookup, col_lookup, item, to_shape)
+                item = broadcast_item(self.qc, row_lookup, col_lookup, item)
             self._write_items(row_lookup, col_lookup, item)
-
-    def _broadcast_item(self, row_lookup, col_lookup, item, to_shape):
-        """
-        Use NumPy to broadcast or reshape item.
-
-        Parameters
-        ----------
-        row_lookup : slice or scalar
-            The global row index to locate inside of `item`.
-        col_lookup : slice or scalar
-            The global col index to locate inside of `item`.
-        item : DataFrame, Series, or query_compiler
-            Value that should be broadcast to a new shape of `to_shape`.
-        to_shape : tuple of two int
-            Shape of dataset that `item` should be broadcasted to.
-
-        Returns
-        -------
-        numpy.ndarray
-            `item` after it was broadcasted to `to_shape`.
-
-        Raises
-        ------
-        ValueError
-            If `row_lookup` or `col_lookup` contain values missing in
-            `self` index or columns correspondingly.
-            If `item` cannot be broadcast from its own shape to `to_shape`.
-
-        Notes
-        -----
-        NumPy is memory efficient, there shouldn't be performance issue.
-        """
-        # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
-        # the target the user is trying to overwrite. This
-        if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
-            # convert indices in lookups to names, as Pandas reindex expects them to be so
-            kw = {}
-            index_values = self.qc.index[row_lookup]
-            if len(index_values) < len(item.index) or not all(
-                idx in item.index for idx in index_values
-            ):
-                kw["index"] = index_values
-            if hasattr(item, "columns"):
-                column_values = self.qc.columns[col_lookup]
-                if len(column_values) < len(item.columns) or not all(
-                    col in item.columns for col in column_values
-                ):
-                    kw["columns"] = column_values
-            # New value for columns/index make that reindex add NaN values
-            if kw:
-                item = item.reindex(**kw)
-        try:
-            item = np.array(item)
-            if np.prod(to_shape) == np.prod(item.shape):
-                return item.reshape(to_shape)
-            else:
-                return np.broadcast_to(item, to_shape)
-        except ValueError:
-            from_shape = np.array(item).shape
-            raise ValueError(
-                f"could not broadcast input array from shape {from_shape} into shape "
-                + f"{to_shape}"
-            )
 
     def _write_items(self, row_lookup, col_lookup, item):
         """

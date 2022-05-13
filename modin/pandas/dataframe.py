@@ -41,6 +41,7 @@ from modin.config import Engine, IsExperimental, PersistentPickle
 from .utils import (
     from_pandas,
     from_non_pandas,
+    broadcast_item,
 )
 from . import _update_engine
 from .iterator import PartitionIterator
@@ -2549,7 +2550,15 @@ class DataFrame(BasePandasDataset):
                         value = np.array(value)
                     if len(key) != value.shape[0 if value.ndim == 1 else 1]:
                         raise ValueError("Columns must be same length as key")
-                self.loc[:, key] = value
+                item = broadcast_item(
+                    self._query_compiler, slice(None), key, value, need_reindex=False
+                )
+                new_qc = self._query_compiler.write_items(
+                    slice(None), self.columns.get_indexer_for(key), item
+                )
+                self._update_inplace(new_qc)
+
+                # self.loc[:, key] = value
                 return
 
             def setitem_unhashable_key(df, value):

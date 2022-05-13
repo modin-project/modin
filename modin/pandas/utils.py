@@ -15,6 +15,9 @@
 
 from pandas import MultiIndex
 from pandas.util._decorators import doc
+import pandas
+import numpy as np
+
 from modin.utils import hashable
 
 _doc_binary_operation = """
@@ -250,6 +253,88 @@ def check_both_not_none(option1, option2):
         True if both option1 and option2 are not None, False otherwise.
     """
     return not (option1 is None or option2 is None)
+
+
+def broadcast_item(
+    query_compiler, row_lookup, col_lookup, item, to_shape=None, need_reindex=True
+):
+    """
+    Use NumPy to broadcast or reshape item.
+
+    Parameters
+    ----------
+
+    row_lookup : slice or scalar
+        The global row index to locate inside of `item`.
+    col_lookup : range, array, list, slice or scalar
+        The global col index to locate inside of `item`.
+    item : DataFrame, Series, or query_compiler
+        Value that should be broadcast to a new shape of `to_shape`.
+    to_shape : tuple of two int
+        Shape of dataset that `item` should be broadcasted to.
+
+    Returns
+    -------
+    numpy.ndarray
+        `item` after it was broadcasted to `to_shape`.
+
+    Raises
+    ------
+    ValueError
+        If `row_lookup` or `col_lookup` contain values missing in
+        `self` index or columns correspondingly.
+        If `item` cannot be broadcast from its own shape to `to_shape`.
+
+    Notes
+    -----
+    NumPy is memory efficient, there shouldn't be performance issue.
+    """
+    # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
+    # the target the user is trying to overwrite. This
+    from .dataframe import DataFrame
+    from .series import Series
+
+    if isinstance(row_lookup, slice):
+        new_row_len = len(query_compiler.index[row_lookup])
+    else:
+        new_row_len = len(row_lookup)
+    if isinstance(col_lookup, slice):
+        new_col_len = len(query_compiler.columns[col_lookup])
+    else:
+        new_col_len = len(col_lookup)
+    to_shape = new_row_len, new_col_len
+
+    if need_reindex and isinstance(
+        item, (pandas.Series, pandas.DataFrame, Series, DataFrame)
+    ):
+        # convert indices in lookups to names, as Pandas reindex expects them to be so
+        kw = {}
+        index_values = query_compiler.index[row_lookup]
+        if len(index_values) < len(item.index) or not all(
+            idx in item.index for idx in index_values
+        ):
+            kw["index"] = index_values
+        if hasattr(item, "columns"):
+            column_values = query_compiler.columns[col_lookup]
+            if len(column_values) < len(item.columns) or not all(
+                col in item.columns for col in column_values
+            ):
+                kw["columns"] = column_values
+        # New value for columns/index make that reindex add NaN values
+        if kw:
+            item = item.reindex(**kw)
+    try:
+        item = np.array(item)
+        if np.prod(to_shape) == np.prod(item.shape):
+            return item.reshape(to_shape)
+        else:
+            return np.broadcast_to(item, to_shape)
+    except ValueError:
+        from_shape = np.array(item).shape
+        raise ValueError(
+            f"could not broadcast input array from shape {from_shape} into shape "
+            + f"{to_shape}"
+        )
 
 
 def _doc_binary_op(operation, bin_op, left="Series", right="right", returns="Series"):
