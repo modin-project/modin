@@ -14,7 +14,7 @@
 """
 Implement DataFrame/Series public API as pandas does.
 
-Methods docstrings contain tables with supported parameters information.
+Methods docstrings contain tables with information on supported parameters.
 These tables are structed as follows: The first column contains the parameter name,
 the second, third and fourth column - flags describing particular properties of
 method parameters for a concrete execution supported by Modin (`PandasOnRay`, `PandasOnDask`
@@ -23,20 +23,22 @@ or `OmniSci`), and the last one is for parameter notes. The flags stand for the 
 +-----------+-----------------------------------------------------------------------------------------------+
 | Flag      | Meaning                                                                                       |
 +===========+===============================================================================================+
-| Harmful   | Usage of this parameter can be harmful for performance of your application. Usually this      |
-|           | happens when parameter (full range of values and all types) is not supported and default      |
-|           | pandas implementation is used                                                                 |
+| Harmful   | Usage of this parameter can be harmful for performance of your application. This usually      |
+|           | happens when parameter (full range of values and all types) is not supported and Modin        |
+|           | defaulting to pandas (see more on defaulting to pandas mechanism on                           |
+|           | https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html)              |
 +-----------+-----------------------------------------------------------------------------------------------+
-| Non-lazy  | Usage of this parameter can trigger non-lazy execution (actual for OmniSci execution only)    |
+| Non-lazy  | Usage of this parameter can trigger non-lazy execution (applicable to OmniSci execution only) |
 +-----------+-----------------------------------------------------------------------------------------------+
 | Partial   | Parameter can be partly unsupported, it's usage can be harmful for performance of your        |
 |           | appcication. This can happen if some parameter values or types are not supported (for example |
 |           | boolean values are suported while integer are not) and default pandas implementation is used  |
+|           | in the same way as it was described for Harmful flag                                          |
 +-----------+-----------------------------------------------------------------------------------------------+
 
 Also, the first row (`All parameters` parameter name) shows summary support status for the
 whole method and only further rows describe exact parameters support status. Please note,
-that tables lists only unsupported/partially supported parameters, if parameter is supported,
+that the tables only list unsupported/partially supported parameters. If a parameter is supported,
 it won't be present or marked somehow in the table.
 """
 

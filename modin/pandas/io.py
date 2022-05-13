@@ -23,15 +23,17 @@ or `OmniSci`), and the last one is for parameter notes. The flags stand for the 
 +-----------+-----------------------------------------------------------------------------------------------+
 | Flag      | Meaning                                                                                       |
 +===========+===============================================================================================+
-| Harmful   | Usage of this parameter can be harmful for performance of your application. Usually this      |
-|           | happens when parameter (full range of values and all types) is not supported and default      |
-|           | pandas implementation is used                                                                 |
+| Harmful   | Usage of this parameter can be harmful for performance of your application. This usually      |
+|           | happens when parameter (full range of values and all types) is not supported and Modin        |
+|           | defaulting to pandas (see more on defaulting to pandas mechanism on                           |
+|           | https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html)              |
 +-----------+-----------------------------------------------------------------------------------------------+
-| Non-lazy  | Usage of this parameter can trigger non-lazy execution (actual for OmniSci execution only)    |
+| Non-lazy  | Usage of this parameter can trigger non-lazy execution (applicable to OmniSci execution only) |
 +-----------+-----------------------------------------------------------------------------------------------+
 | Partial   | Parameter can be partly unsupported, it's usage can be harmful for performance of your        |
 |           | appcication. This can happen if some parameter values or types are not supported (for example |
 |           | boolean values are suported while integer are not) and default pandas implementation is used  |
+|           | in the same way as it was described for Harmful flag                                          |
 +-----------+-----------------------------------------------------------------------------------------------+
 
 Also, the first row (`All parameters` parameter name) shows summary support status for the
