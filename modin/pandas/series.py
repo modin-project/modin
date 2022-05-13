@@ -41,7 +41,7 @@ from . import _update_engine
 @_inherit_docstrings(
     pandas.Series, excluded=[pandas.Series.__init__], apilink="pandas.Series"
 )
-class Series(BasePandasDataset, LoggerMetaClass):
+class Series(BasePandasDataset, metaclass=LoggerMetaClass):
     """
     Modin distributed representation of `pandas.Series`.
 
