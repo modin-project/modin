@@ -58,7 +58,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         self._length_cache = length
         self._width_cache = width
         self._ip_cache = ip
-        self._identity = uuid.uuid4().hex[8:]
+        self._identity = uuid.uuid4().hex
 
         logger = get_logger()
         logger.debug(
@@ -442,6 +442,7 @@ def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
         # we absolutely have to.
         except ValueError:
             partition = func(partition.copy(), *args, **kwargs)
+
     return (
         partition,
         len(partition) if hasattr(partition, "__len__") else 0,

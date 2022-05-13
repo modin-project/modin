@@ -18,6 +18,25 @@ from modin.config import LogMode
 
 
 def logger_class_wrapper(classname, name, method):
+    """
+    Helper method for Modin logging used by the LoggerMetaClass
+    to log internal Modin functions.
+
+    Parameters
+    ----------
+    classname: str
+        The name of the class the LoggerMetaClass is being applied to.
+    name: str
+        The name of the Modin function within the class.
+    method: str
+        The function to apply on the arguments.
+
+    Returns
+    -------
+    func
+        A decorator function.
+    """
+
     @wraps(method)
     def log_wrap(*args, **kwargs):
         if LogMode.get() != "disable":

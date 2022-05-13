@@ -44,6 +44,7 @@ class ModinFormatter(logging.Formatter):
         datetime
             datetime object containing microsecond timestamp.
         """
+
         ct = dt.datetime.fromtimestamp(record.created)
         if datefmt:
             s = ct.strftime(datefmt)
@@ -56,7 +57,7 @@ class ModinFormatter(logging.Formatter):
 
 def bytes_int_to_str(num_bytes, suffix="B"):
     """
-    Scale bytes to its human-readable format (e.g: 1253656678 => '1.17GiB').
+    Scale bytes to its human-readable format (e.g: 1253656678 => '1.17GB').
 
     Parameters
     ----------
@@ -70,23 +71,32 @@ def bytes_int_to_str(num_bytes, suffix="B"):
     str
         Human-readable string format.
     """
-    factor = 1024
+
+    factor = 1000
     if num_bytes > 1000000000000000000:
         raise ValueError("System memory exceeds expectations")
-    for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi"]:
+    for unit in ["", "K", "M", "G", "T", "P"]:
         if num_bytes < factor:
             return f"{num_bytes:.2f}{unit}{suffix}"
         num_bytes /= factor
 
 
 def configure_logging(level):
+    """
+    Configure Modin logging by setting up directory structure and formatting.
+
+    Parameters
+    ----------
+    level: str
+        The log level (logging.INFO, logging.DEBUG).
+    """
+
     global __LOGGER_CONFIGURED__
     logger = logging.getLogger("modin.logger")
     job_id = uuid.uuid4().hex
     log_filename = f".modin/logs/job_{job_id}.log"
 
-    if not os.path.isdir(".modin/logs"):
-        os.makedirs(os.path.dirname(log_filename), exist_ok=False)
+    os.makedirs(os.path.dirname(log_filename), exist_ok=True)
 
     logfile = logging.FileHandler(log_filename, "a")
     formatter = ModinFormatter(
@@ -101,6 +111,17 @@ def configure_logging(level):
 
 
 def memory_thread(logger, sleep_time):
+    """
+    Configure Modin logging system memory profiling thread.
+
+    Parameters
+    ----------
+    logger: logging.Logger
+        The logger object.
+    sleep_time: int
+        The interval at which to profile system memory.
+    """
+
     while True:
         svmem = psutil.virtual_memory()
         logger.info(f"Memory Percentage: {svmem.percent}%")
@@ -108,6 +129,15 @@ def memory_thread(logger, sleep_time):
 
 
 def get_logger():
+    """
+    Configures Modin logger based on Modin config and returns the logger.
+
+    Returns
+    -------
+    logging.Logger
+        The Modin logger.
+    """
+
     if not __LOGGER_CONFIGURED__ and LogMode.get() != "disable":
         if LogMode.get() == "enable_api_only":
             configure_logging(logging.INFO)
