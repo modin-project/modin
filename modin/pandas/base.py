@@ -47,6 +47,7 @@ import re
 from typing import Optional, Union, Sequence, Hashable
 import warnings
 import pickle as pkl
+import six
 
 from .utils import is_full_grab_slice, _doc_binary_op
 from modin.utils import try_cast_to_pandas, _inherit_docstrings
@@ -100,7 +101,8 @@ _doc_binary_op_kwargs = {"returns": "BasePandasDataset", "left": "BasePandasData
 
 
 @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
-class BasePandasDataset(object, metaclass=LoggerMetaClass):
+@six.add_metaclass(LoggerMetaClass)
+class BasePandasDataset(object):
     """
     Implement most of the common code that exists in DataFrame/Series.
 
