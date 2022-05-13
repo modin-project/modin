@@ -37,7 +37,6 @@ import warnings
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
-from modin.pandas.utils import is_scalar
 from modin.utils import (
     try_cast_to_pandas,
     wrap_udf_function,
@@ -2204,7 +2203,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         BaseQueryCompiler
             New QueryCompiler with updated `key` value.
         """
-        assert is_scalar(key)
 
         def setitem_builder(df, internal_indices=[]):
             """

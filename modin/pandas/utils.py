@@ -263,15 +263,19 @@ def broadcast_item(
 
     Parameters
     ----------
-
+    query_compiler : BaseQueryCompiler
+        Query compiler ontains the necessary information about the axes.
     row_lookup : slice or scalar
         The global row index to locate inside of `item`.
     col_lookup : range, array, list, slice or scalar
         The global col index to locate inside of `item`.
     item : DataFrame, Series, or query_compiler
         Value that should be broadcast to a new shape of `to_shape`.
-    to_shape : tuple of two int
+    to_shape : tuple of two int, optional
         Shape of dataset that `item` should be broadcasted to.
+    need_reindex : bool, default: True
+        In the case of assigning columns to a dataframe (broadcasting is
+        part of the flow), reindexing is not needed.
 
     Returns
     -------
