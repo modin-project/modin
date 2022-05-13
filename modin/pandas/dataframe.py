@@ -31,7 +31,7 @@ import itertools
 import functools
 import numpy as np
 import sys
-from typing import IO, Optional, Union, Iterator
+from typing import IO, Optional, Union, Iterator, Callable
 import warnings
 
 from modin.pandas import Categorical
@@ -2700,7 +2700,7 @@ class DataFrame(BasePandasDataset):
 
         return self._default_to_pandas(style)
 
-    def _build_batch_pipeline(self, func, axis, **kwargs):
+    def _build_batch_pipeline(self, func: Callable, axis: int, **kwargs):
         """
         Create a batched pipeline.
 
@@ -2741,7 +2741,7 @@ class DataFrame(BasePandasDataset):
         self._pipeline.add_query(func, **kwargs)
         return self
 
-    def _add_batch_query(self, func, **kwargs):
+    def _add_batch_query(self, func: Callable, **kwargs):
         """
         Add a query to the batched pipeline.
 
@@ -2768,10 +2768,10 @@ class DataFrame(BasePandasDataset):
 
     def _compute_batch(
         self,
-        postprocessor=None,
-        pass_partition_id=False,
-        pass_output_id=False,
-        final_result_func=None,
+        postprocessor: Optional[Callable] = None,
+        pass_partition_id: bool = False,
+        pass_output_id: bool = False,
+        final_result_func: Optional[Callable] = None,
     ):
         """
         Computes the batch pipeline.
@@ -2783,16 +2783,19 @@ class DataFrame(BasePandasDataset):
         pass_partition_id : bool
             Whether or not to pass the numerical partition id to the postprocessing function.
         pass_output_id : bool
-            Whether or not to pass the output ID associated with output queries to the postprocessing function.
+            Whether or not to pass the output ID associated with output queries to the
+            postprocessing function.
         final_result_func : Callable
-            A final result function that generates a final result for each output. It takes the first partition as input.
+            A final result function that generates a final result for each output. It takes the
+            first partition as input.
 
         Returns
         -------
         list or dict or DataFrame
-            If output ids are specified, a dictionary mapping output id to the result of `final_result_func` is returned,
-            otherwise, a list of the results of `final_result_func` is returned. If `final_result_func` is not specified,
-            the resulting dataframes are returned in the format specified above.
+            If output ids are specified, a dictionary mapping output id to the result of
+            `final_result_func` is returned, otherwise, a list of the results of `final_result_func`
+            is returned. If `final_result_func` is not specified, the resulting dataframes are
+            returned in the format specified above.
         """
         if not hasattr(self, "_pipeline"):
             ErrorMessage.single_warning(

@@ -32,16 +32,18 @@ class PandasQuery(object):
         Prints the kwargs that Query objects accept.
         """
         print(
-            """is_output : bool
-    Whether or not this query is an output query and should be passed both to the next query, and directly to postprocessing.
-repartition_after : bool
-    Whether or not to repartition after this query is computed. Currently, repartitioning is only supported if there is 1 partition prior to repartitioning.
-fan_out : bool
-    Whether or not to fan out this node. If True and only 1 partition is passed as input, the partition is replicated `num_partition` times, and the function is called on each. The `reduce_fn` must also be specified.
-pass_partition_id : bool
-    Whether or not to pass the numerical partition id to the query.
-reduce_fn : Calable
-    The reduce function to apply if `fan_out` is set to True. This takes the `num_partition` partitions that result from this query, and combines them into 1 partition."""
+            """is_output : bool, default: False
+    Whether this query is an output query and should be passed both to the next query, and directly to postprocessing.
+repartition_after : bool, default: False
+    Whether to repartition after this query is computed. Currently, repartitioning is only supported if there is 1 partition prior to repartitioning.
+fan_out : bool, default: False
+    Whether to fan out this node. If True and only 1 partition is passed as input, the partition is replicated `num_partition` times, and the function is called on each. The `reduce_fn` must also be specified.
+pass_partition_id : bool, default: False
+    Whether to pass the numerical partition id to the query.
+reduce_fn : Callable
+    The reduce function to apply if `fan_out` is set to True. This takes the `num_partition` partitions that result from this query, and combines them into 1 partition.
+output_id : int, default: None
+    An id to assign to this node if it is an output."""
         )
 
 
@@ -52,7 +54,6 @@ class PandasQueryPipeline(object):
         self.num_partitions = num_partitions
         NPartitions.put(self.num_partitions)
         NPartitions.get = lambda: self.num_partitions
-        self.unfinished = False
         self.outputs = []
         self.nodes_list = []
         self.node_to_id = None
@@ -88,6 +89,31 @@ class PandasQueryPipeline(object):
         reduce_fn: Optional[Callable] = None,
         output_id: Optional[int] = None,
     ):
+        """
+        Adds a query to the current pipeline.
+
+        Parameters
+        ----------
+        func : Callable
+            DataFrame query to perform.
+        is_output : bool, default: False
+            Whether this query should be designated as an output query. If `True`, the output of
+            this query is passed both to the next query and directly to postprocessing.
+        repartition_after : bool, default: False
+            Whether the dataframe should be repartitioned after this query. Currently,
+            repartitioning is only supported if there is 1 partition prior.
+        fan_out : bool, default: False
+            Whether to fan out this node. If True and only 1 partition is passed as input, the
+            partition is replicated `num_partition` times, and the function is called on each.
+            The `reduce_fn` must also be specified.
+        pass_partition_id : bool, default: False
+            Whether to pass the numerical partition id to the query.
+        reduce_fn : Callable
+            The reduce function to apply if `fan_out` is set to True. This takes the `num_partition`
+            partitions that result from this query, and combines them into 1 partition.
+        output_id : int, default None
+            An id to assign to this node if it is an output.
+        """
         self.nodes_list.append(
             PandasQuery(
                 func,
@@ -109,6 +135,16 @@ class PandasQueryPipeline(object):
             self.nodes_list = []
 
     def _complete_nodes(self, list_of_nodes, ptns):
+        """
+        Run a sub-query end to end.
+
+        Parameters
+        ----------
+        list_of_nodes: list of PandasQuery
+            The functions that compose this query.
+        ptns: list of PandasOnRayDataframeVirtualPartition
+            The ptns that compose the dataframe that is input to this sub-query.
+        """
         for node in list_of_nodes:
             if node.fan_out:
                 ptns[0] = ptns[0].force_materialization()
@@ -170,10 +206,34 @@ class PandasQueryPipeline(object):
         final_result_func: Optional[Callable] = None,
         pass_output_id: Optional[bool] = False,
     ):
+        """
+        Run the completed pipeline + any postprocessing steps end to end.
+
+        Parameters
+        ----------
+        postprocessor : Callable
+            A postprocessing function to be applied to each output partition.
+        pass_partition_id : bool
+            Whether or not to pass the numerical partition id to the postprocessing function.
+        final_result_func : Callable
+            A final result function that generates a final result for each output. It takes the
+            first partition as input.
+        pass_output_id : bool
+            Whether or not to pass the output ID associated with output queries to the
+            postprocessing function.
+
+        Returns
+        -------
+        list or dict or DataFrame
+            If output ids are specified, a dictionary mapping output id to the result of
+            `final_result_func` is returned, otherwise, a list of the results of `final_result_func`
+            is returned. If `final_result_func` is not specified, the resulting dataframes are
+            returned in the format specified above.
+        """
         if self.node_to_id is None and pass_output_id:
             ErrorMessage.single_warning(
                 "`pass_output_id` is set to True, but output ids have not been specified. "
-                + "To pass output ids, please specify them using the `output_id` kwarg with df._batch_api"
+                + "To pass output ids, please specify them using the `output_id` kwarg with df._add_batch_query"
             )
         if self.node_to_id:
             outs = {}
