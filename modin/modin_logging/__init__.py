@@ -11,6 +11,10 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .logger_metaclass import LoggerMetaClass, logger_class_wrapper, metaclass_resolver  # noqa: F401
+from .logger_metaclass import (  # noqa: F401
+    LoggerMetaClass,
+    logger_class_wrapper,
+    metaclass_resolver,
+)
 from .config import get_logger  # noqa: F401
 from .logger_function import logger_decorator  # noqa: F401
