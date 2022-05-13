@@ -429,15 +429,21 @@ class _LocationIndexerBase(object):
         # the target the user is trying to overwrite. This
         if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
             # convert indices in lookups to names, as Pandas reindex expects them to be so
+            kw = {}
             index_values = self.qc.index[row_lookup]
+            if len(index_values) < len(item.index) or not all(
+                idx in item.index for idx in index_values
+            ):
+                kw["index"] = index_values
             if hasattr(item, "columns"):
                 column_values = self.qc.columns[col_lookup]
-                if len(column_values) != len(item.columns):
-                    # New value for columns/index make that reindex add NaN values
-                    item = item.reindex(index=index_values, columns=column_values)
-            else:
-                if len(index_values) != len(item.index):
-                    item = item.reindex(index=index_values)
+                if len(column_values) < len(item.columns) or not all(
+                    col in item.columns for col in column_values
+                ):
+                    kw["columns"] = column_values
+            # New value for columns/index make that reindex add NaN values
+            if kw:
+                item = item.reindex(**kw)
         try:
             item = np.array(item)
             if np.prod(to_shape) == np.prod(item.shape):
