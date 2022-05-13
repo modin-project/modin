@@ -36,12 +36,13 @@ from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar, _doc_binary_op
 from .accessor import CachedAccessor, SparseAccessor
 from . import _update_engine
+from noconflict import makecls
 
 
 @_inherit_docstrings(
     pandas.Series, excluded=[pandas.Series.__init__], apilink="pandas.Series"
 )
-class Series(BasePandasDataset, metaclass=LoggerMetaClass):
+class Series(BasePandasDataset, metaclass=makecls()):
     """
     Modin distributed representation of `pandas.Series`.
 
