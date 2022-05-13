@@ -34,7 +34,7 @@ import sys
 from typing import IO, Optional, Union, Iterator
 import warnings
 
-from modin.modin_logging import LoggerMetaClass
+from modin.modin_logging import metaclass_resolver
 from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, to_pandas, hashable
@@ -54,7 +54,7 @@ from .accessor import CachedAccessor, SparseFrameAccessor
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame.__init__], apilink="pandas.DataFrame"
 )
-class DataFrame(BasePandasDataset, metaclass=LoggerMetaClass):
+class DataFrame(metaclass_resolver(BasePandasDataset)):
     """
     Modin distributed representation of ``pandas.DataFrame``.
 
