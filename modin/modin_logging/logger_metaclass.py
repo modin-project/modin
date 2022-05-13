@@ -85,7 +85,9 @@ class LoggerMetaClass(type):
                 and attribute_name != "__getattribute__"
             ):
                 if attribute not in seen_attributes:
-                    seen_attributes[attribute] = logger_class_wrapper(classname, attribute_name, attribute)
+                    seen_attributes[attribute] = logger_class_wrapper(
+                        classname, attribute_name, attribute
+                    )
                 attribute = seen_attributes[attribute]
             new_class_dict[attribute_name] = attribute
         return type.__new__(mcs, classname, bases, new_class_dict)
