@@ -2720,13 +2720,13 @@ class DataFrame(BasePandasDataset):
             A DataFrame with the pipeline.
         """
         from modin.experimental.batch.pipeline import PandasQueryPipeline
-
+        overwrite_existing = kwargs.pop("overwrite_existing", False)
         if Engine.get() != "Ray":
             ErrorMessage.not_implemented(
                 "Batch Pipeline API is only implemented for Ray Engine."
             )
         if hasattr(self, "_pipeline"):
-            if kwargs.get("overwrite_existing", False):
+            if not overwrite_existing:
                 ErrorMessage.single_warning(
                     "Existing pipeline discovered. Please call this function again with `overwrite_existing` set to True to overwrite this pipeline."
                 )
