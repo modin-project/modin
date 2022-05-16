@@ -25,7 +25,7 @@ or `OmniSci`), and the last one is for parameter notes. The flags stand for the 
 +===========+===============================================================================================+
 | Harmful   | Usage of this parameter can be harmful for performance of your application. This usually      |
 |           | happens when parameter (full range of values and all types) is not supported and Modin        |
-|           | defaulting to pandas (see more on defaulting to pandas mechanism on                           |
+|           | is defaulting to pandas (see more on defaulting to pandas mechanism on                        |
 |           | https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html)              |
 +-----------+-----------------------------------------------------------------------------------------------+
 | Non-lazy  | Usage of this parameter can trigger non-lazy execution (applicable to OmniSci execution only) |
