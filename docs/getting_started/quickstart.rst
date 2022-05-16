@@ -64,13 +64,13 @@ For the purpose of demonstration, we will load in modin as ``pd`` and pandas as
   ray.init()
   #############################################
 
-In this toy example, we look at the NYC taxi dataset, which is around 120MB in size. You can download `this dataset <https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv>`_ to run the example locally.
+In this toy example, we look at the NYC taxi dataset, which is around 200MB in size. You can download `this dataset <https://modin-test.s3.us-west-1.amazonaws.com/yellow_tripdata_2015-01.csv>`_ to run the example locally.
 
 .. code-block:: python
 
   # This may take a few minutes to download
   import urllib.request
-  s3_path = "https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv"
+  s3_path = "https://modin-test.s3.us-west-1.amazonaws.com/yellow_tripdata_2015-01.csv"
   urllib.request.urlretrieve(s3_path, "taxi.csv")  
 
 Faster Data Loading with ``read_csv``

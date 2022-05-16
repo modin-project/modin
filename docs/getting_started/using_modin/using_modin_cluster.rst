@@ -63,7 +63,7 @@ Using Modin on a Ray Cluster
 
 Now that we have a Ray cluster up and running, we can use Modin to perform pandas
 operation as if we were working with pandas on a single machine. We test Modin's
-performance on the 120GB `NYC Taxi dataset <https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2015-01.csv>`_ that was provided as part of our `cluster setup script <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/modin-cluster.yaml>`_. We can time the following operation
+performance on the 200MB `NYC Taxi dataset <https://modin-test.s3.us-west-1.amazonaws.com/yellow_tripdata_2015-01.csv>`_ that was provided as part of our `cluster setup script <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/modin-cluster.yaml>`_. We can time the following operation
 in a Jupyter notebook:
 
 .. code-block:: python
