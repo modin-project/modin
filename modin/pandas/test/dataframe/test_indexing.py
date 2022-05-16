@@ -409,7 +409,7 @@ def test_loc_4456():
     key = ["col1", "col2"]
 
     # len(key) == df_value.columns; different columns
-    value = [[1, 2]] * pandas_df.shape[0]
+    value = np.random.randint(0, 100, size=(pandas_df.shape[0], 2)).tolist()
     df_value = pandas.DataFrame(value, columns=["value_col1", "value_col2"])
     eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
 
@@ -424,7 +424,7 @@ def test_loc_4456():
     eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
 
     # len(key) > df_value.columns
-    value = [[1]] * pandas_df.shape[0]
+    value = np.random.randint(0, 100, size=(pandas_df.shape[0], 1)).tolist()
     df_value = pandas.DataFrame(value, columns=key[:1])
     eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
 
@@ -436,7 +436,7 @@ def test_loc_4456():
     )
 
     # len(key) < df_value.columns
-    value = [[1, 2, 3]] * pandas_df.shape[0]
+    value = np.random.randint(0, 100, size=(pandas_df.shape[0], 3)).tolist()
     df_value = pandas.DataFrame(value, columns=key + ["col3"])
     eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
 

@@ -426,15 +426,11 @@ class _LocationIndexerBase(object):
             # convert indices in lookups to names, as Pandas reindex expects them to be so
             kw = {}
             index_values = self.qc.index[row_lookup]
-            if len(index_values) < len(item.index) or not all(
-                idx in item.index for idx in index_values
-            ):
+            if not index_values.equals(item.index):
                 kw["index"] = index_values
             if hasattr(item, "columns"):
                 column_values = self.qc.columns[col_lookup]
-                if len(column_values) < len(item.columns) or not all(
-                    col in item.columns for col in column_values
-                ):
+                if not column_values.equals(item.columns):
                     kw["columns"] = column_values
             # New value for columns/index make that reindex add NaN values
             if kw:
