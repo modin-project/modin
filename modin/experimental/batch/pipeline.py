@@ -293,7 +293,9 @@ class PandasQueryPipeline(object):
                     d = df[0].to_pandas()
                     final_results.append(final_result_func(d))
                 else:
-                    final_results.append(from_partitions(np.array(df), self.axis))
+                    ptns = np.array(df).flatten()
+                    ptns = np.array([ptn.list_of_blocks for ptn in df]).flatten()
+                    final_results.append(from_partitions(ptns, self.axis.value))
                 for d in df:
                     wait_parts.extend(d.list_of_blocks)
 
@@ -304,7 +306,9 @@ class PandasQueryPipeline(object):
                     d = df[0].to_pandas()
                     final_results[id] = final_result_func(d)
                 else:
-                    final_results[id] = from_partitions(np.array(df), self.axis)
+                    ptns = np.array(df).flatten()
+                    ptns = np.array([ptn.list_of_blocks for ptn in df]).flatten()
+                    final_results[id] = from_partitions(ptns, self.axis.value)
                 for d in df:
                     wait_parts.extend(d.list_of_blocks)
         ray.wait(wait_parts, num_returns=len(wait_parts))

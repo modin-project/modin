@@ -2730,7 +2730,7 @@ class DataFrame(BasePandasDataset):
                 ErrorMessage.single_warning(
                     "Existing pipeline discovered. Please call this function again with `overwrite_existing` set to True to overwrite this pipeline."
                 )
-                return
+                return self
         ErrorMessage.single_warning(
             "The Batch Pipeline API is an experimental feature and still under development in Modin."
         )
@@ -2762,7 +2762,7 @@ class DataFrame(BasePandasDataset):
             ErrorMessage.single_warning(
                 "No pipeline exists. Please call `df._build_batch_pipeline` first to create a batch pipeline."
             )
-            return
+            return self
         self._pipeline.add_query(func, **kwargs)
         return self
 
@@ -2801,7 +2801,7 @@ class DataFrame(BasePandasDataset):
             ErrorMessage.single_warning(
                 "No pipeline exists. Please call `df._build_batch_pipeline` first to create a batch pipeline."
             )
-            return
+            return self
         results = self._pipeline.get_results(
             postprocessor=postprocessor,
             pass_partition_id=pass_partition_id,
