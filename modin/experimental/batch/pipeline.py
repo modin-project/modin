@@ -13,7 +13,9 @@
 
 from modin.error_message import ErrorMessage
 from modin.core.dataframe.base.dataframe.utils import Axis
-from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import PandasOnRayDataframe
+from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
+    PandasOnRayDataframe,
+)
 from typing import Union, Callable, Optional
 from modin.config import NPartitions, Engine
 import ray
@@ -63,7 +65,9 @@ output_id : int, default: None
 
 class PandasQueryPipeline(object):
     def __init__(self, df, axis: Union[int, Axis], num_partitions: int = 16):
-        if Engine.get() != "Ray" or (not isinstance(df._query_compiler._modin_frame, PandasOnRayDataframe)):
+        if Engine.get() != "Ray" or (
+            not isinstance(df._query_compiler._modin_frame, PandasOnRayDataframe)
+        ):
             ErrorMessage.not_implemented(
                 "Batch Pipeline API is only implemented for Ray Engine."
             )

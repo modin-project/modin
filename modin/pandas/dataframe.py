@@ -2720,6 +2720,7 @@ class DataFrame(BasePandasDataset):
             A DataFrame with the pipeline.
         """
         from modin.experimental.batch.pipeline import PandasQueryPipeline
+
         overwrite_existing = kwargs.pop("overwrite_existing", False)
         if Engine.get() != "Ray":
             ErrorMessage.not_implemented(
