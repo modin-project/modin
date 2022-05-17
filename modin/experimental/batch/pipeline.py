@@ -47,7 +47,7 @@ class PandasQuery(object):
         """
         Prints the kwargs that Query objects accept.
         """
-        print(
+        print( # noqa: T201
             """is_output : bool, default: False
     Whether this query is an output query and should be passed both to the next query, and directly to postprocessing.
 repartition_after : bool, default: False
@@ -289,7 +289,8 @@ class PandasQueryPipeline(object):
                     out_ptns = [
                         ptn.add_to_apply_calls(postprocessor, *args) for ptn in ptns
                     ]
-                [ptn.drain_call_queue() for ptn in out_ptns]
+                if final_result_func is None:
+                    [ptn.drain_call_queue() for ptn in out_ptns]
             if self.node_to_id is None:
                 outs.append(out_ptns)
             else:

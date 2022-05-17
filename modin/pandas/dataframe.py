@@ -2775,7 +2775,7 @@ class DataFrame(BasePandasDataset):
         final_result_func: Optional[Callable] = None,
     ):
         """
-        Computes the batch pipeline.
+        Compute the batch pipeline.
 
         Parameters
         ----------
