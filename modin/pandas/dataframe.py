@@ -32,8 +32,8 @@ or `OmniSci`), and the last one is for parameter notes. The flags stand for the 
 +-----------+-----------------------------------------------------------------------------------------------+
 | Partial   | Parameter can be partly unsupported, it's usage can be harmful for performance of your        |
 |           | appcication. This can happen if some parameter values or types are not supported (for example |
-|           | boolean values are suported while integer are not) and default pandas implementation is used  |
-|           | in the same way as it was described for Harmful flag                                          |
+|           | (see more on defaulting to pandas mechanism on                                                |
+|           | https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html)              |
 +-----------+-----------------------------------------------------------------------------------------------+
 
 Also, the first row (`All parameters` parameter name) shows summary support status for the
