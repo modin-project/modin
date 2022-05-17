@@ -1,12 +1,12 @@
 ``pd.DataFrame`` supported APIs
 ===================================
 
-The following table lists both implemented and not implemented methods. If you have need
-of an operation that is listed as not implemented, feel free to open an issue on the
-`GitHub repository`_, or give a thumbs up to already created issues. Contributions are
-also welcome!
+The ``pd.DataFrame`` supported APIs table lists both implemented and not implemented methods.
+If you have need of an operation that is listed as not implemented, feel free to open an
+issue on the `GitHub repository`_, or give a thumbs up to already created issues. Contributions
+are also welcome!
 
-The following table is structured as follows: The first column contains the method name,
+Supported APIs table is structured as follows: The first column contains the method name,
 the second column - the parameter name of this method, and other columns contain
 different flags describing particular properties of method parameters for a concrete
 execution.

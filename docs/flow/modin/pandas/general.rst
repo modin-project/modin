@@ -3,8 +3,11 @@ General Functions
 
 .. currentmodule:: modin.pandas
 
-This section lists general functions, that can be accessed directly from
-the `modin.pandas` module.
+Modin's general functions API is backed by a distributed object providing an identical
+API to pandas. After the user calls some general function, this call is internally
+rewritten into a representation that can be processed in parallel by the partitions. These
+results can be e.g., reduced to single output, identical to the single threaded
+pandas method output.
 
 .. autosummary::
     :toctree: api/

@@ -6,7 +6,7 @@ If you run ``import modin.pandas as pd``, the following operations are available
 would like to request it, feel free to `open an issue`_. Make sure you tell us your
 primary use-case so we can make it happen faster!
 
-The following table is structured as follows: The first column contains the method name,
+Utilities Supported APIs table is structured as follows: The first column contains the method name,
 the second column - the parameter name of this method, and other columns contain
 different flags describing particular properties of method parameters for a concrete
 execution.
