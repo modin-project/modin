@@ -458,6 +458,8 @@ jobs:
         if: matrix.engine == 'ray'
       - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
         if: matrix.engine == 'ray'
+      - run: python -m pytest modin/experimental/batch/test/test_pipeline.py
+        if: matrix.engine == 'ray'
       - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
