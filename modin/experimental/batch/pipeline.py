@@ -16,6 +16,9 @@ from modin.core.dataframe.base.dataframe.utils import Axis
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
     PandasOnRayDataframe,
 )
+from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.virtual_partition import (
+    PandasOnRayDataframeVirtualPartition,
+)
 from typing import Union, Callable, Optional
 from modin.config import NPartitions, Engine
 import ray
@@ -47,7 +50,7 @@ class PandasQuery(object):
         """
         Prints the kwargs that Query objects accept.
         """
-        print( # noqa: T201
+        print(  # noqa: T201
             """is_output : bool, default: False
     Whether this query is an output query and should be passed both to the next query, and directly to postprocessing.
 repartition_after : bool, default: False
@@ -64,6 +67,21 @@ output_id : int, default: None
 
 
 class PandasQueryPipeline(object):
+    """
+    Internal representation of a query pipeline.
+
+    This object keeps track of the functions that compose to form a query pipeline.
+
+    Parameters
+    ----------
+    df : modin.pandas.Dataframe
+        The dataframe to perform this pipeline on.
+    axis : int or modin.core.dataframe.base.dataframe.utils.Axis
+        The axis along which to partition the dataframe for this pipeline.
+    num_partitions : int, default: 16
+        The number of partitions to maintain for the batched dataframe.
+    """
+
     def __init__(self, df, axis: Union[int, Axis], num_partitions: int = 16):
         if Engine.get() != "Ray" or (
             not isinstance(df._query_compiler._modin_frame, PandasOnRayDataframe)
@@ -79,13 +97,10 @@ class PandasQueryPipeline(object):
         self.outputs = []
         self.nodes_list = []
         self.node_to_id = None
-        from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.virtual_partition import (
-            PandasOnRayDataframeVirtualPartition,
-        )
 
         self.dcq = PandasOnRayDataframeVirtualPartition.drain_call_queue
 
-        def dr(self):
+        def drain_call_queue_no_split_results(self):
             """Execute all operations stored in this partition's call queue."""
 
             def drain(df):
@@ -99,7 +114,9 @@ class PandasQueryPipeline(object):
             self.list_of_partitions_to_combine = drained
             self.call_queue = []
 
-        PandasOnRayDataframeVirtualPartition.drain_call_queue = dr
+        PandasOnRayDataframeVirtualPartition.drain_call_queue = (
+            drain_call_queue_no_split_results
+        )
 
     def add_query(
         self,
@@ -169,6 +186,10 @@ class PandasQueryPipeline(object):
         """
         for node in list_of_nodes:
             if node.fan_out:
+                if len(ptns) > 1:
+                    ErrorMessage.single_warning(
+                        "Fan out is only supported with DataFrames with 1 partition. Ignoring all partitions but the first."
+                    )
                 ptns[0] = ptns[0].force_materialization()
                 ptn_list = ptns[0].list_of_partitions_to_combine
                 ptns[0] = ptns[0].add_to_apply_calls(node.func, 0)
@@ -193,7 +214,11 @@ class PandasQueryPipeline(object):
                     return node.reduce_fn(df_inputs)
 
                 ptns = [ptns[0].add_to_apply_calls(reducer)]
-            elif node.reptn and len(ptns) == 1:
+            elif node.reptn:
+                if len(ptns) > 1:
+                    ErrorMessage.not_implemented(
+                        "Dynamic repartitioning is currently only supported for DataFrames with 1 partition."
+                    )
                 ptns[0] = ptns[0].add_to_apply_calls(node.func).force_materialization()
                 new_dfs = []
 

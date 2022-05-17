@@ -2709,10 +2709,10 @@ class DataFrame(BasePandasDataset):
         func : Callable
             The first function in the pipeline.
         axis : int
-            The axis over which this pipeline will operate
+            The axis over which this pipeline will operate.
         **kwargs
             Arguments to pass to the query object built for this function. For more information,
-            run `from modin.experimental.batch.pipeline import PandasQuery; PandasQuery.print_options()`
+            run `from modin.experimental.batch.pipeline import PandasQuery; PandasQuery.print_options()`.
 
         Returns
         -------
@@ -2752,7 +2752,7 @@ class DataFrame(BasePandasDataset):
             The function to append to the pipeline.
         **kwargs
             Arguments to pass to the query object built for this function. For more information,
-            run `from modin.experimental.batch.pipeline import PandasQuery; PandasQuery.print_options()`
+            run `from modin.experimental.batch.pipeline import PandasQuery; PandasQuery.print_options()`.
 
         Returns
         -------
@@ -2779,14 +2779,14 @@ class DataFrame(BasePandasDataset):
 
         Parameters
         ----------
-        postprocessor : Callable
+        postprocessor : Callable, default: None
             A postprocessing function to be applied to each output partition.
-        pass_partition_id : bool
+        pass_partition_id : bool, default: False
             Whether or not to pass the numerical partition id to the postprocessing function.
-        pass_output_id : bool
+        pass_output_id : bool, default: False
             Whether or not to pass the output ID associated with output queries to the
             postprocessing function.
-        final_result_func : Callable
+        final_result_func : Callable, default: None
             A final result function that generates a final result for each output. It takes the
             first partition as input.
 

@@ -169,11 +169,11 @@ def test_pipeline_multiple_outputs():
     new_dfs = df._compute_batch()
     assert len(new_dfs) == 3, "Pipeline did not return all outputs"
     corr_df = pd.DataFrame(arr) * -30
-    df_equals(corr_df, new_dfs[0])  # First output computed correctly
+    df_equals(corr_df, new_dfs[0]) # First output computed correctly
     corr_df = corr_df.rename(columns={i: f"col {i}" for i in range(1000)})
-    df_equals(corr_df, new_dfs[1])  # Second output computed correctly
+    df_equals(corr_df, new_dfs[1]) # Second output computed correctly
     corr_df += 30
-    df_equals(corr_df, new_dfs[2])  # Third output computed correctly
+    df_equals(corr_df, new_dfs[2]) # Third output computed correctly
     # Testing Output ID + Multiple Outputs now
     df = pd.DataFrame(arr)
     df = df._build_batch_pipeline(lambda df: df * -30, 0, is_output=True, output_id=20)
@@ -192,11 +192,11 @@ def test_pipeline_multiple_outputs():
     assert 22 in new_dfs, "Output ID 3 not cached correctly"
     assert len(new_dfs) == 3, "Pipeline did not return all outputs"
     corr_df = pd.DataFrame(arr) * -30
-    df_equals(corr_df, new_dfs[20])  # First output computed correctly
+    df_equals(corr_df, new_dfs[20]) # First output computed correctly
     corr_df = corr_df.rename(columns={i: f"col {i}" for i in range(1000)})
-    df_equals(corr_df, new_dfs[21])  # Second output computed correctly
+    df_equals(corr_df, new_dfs[21]) # Second output computed correctly
     corr_df += 30
-    df_equals(corr_df, new_dfs[22])  # Third output computed correctly
+    df_equals(corr_df, new_dfs[22]) # Third output computed correctly
 
 
 @pytest.mark.skipif(
@@ -420,7 +420,7 @@ def test_pipeline_final_result_func():
         .to_pandas()
         .iloc[-1]
     )
-    df_equals(ptn, new_dfs[0])  # First output computed correctly
+    df_equals(ptn, new_dfs[0]) # First output computed correctly
     corr_df = pd.DataFrame(
         corr_df.rename(columns={i: f"col {i}" for i in range(1000)})._to_pandas()
     )
@@ -430,7 +430,7 @@ def test_pipeline_final_result_func():
         .to_pandas()
         .iloc[-1]
     )
-    df_equals(ptn, new_dfs[1])  # Second output computed correctly
+    df_equals(ptn, new_dfs[1]) # Second output computed correctly
     corr_df += 30
     corr_df_md = corr_df._query_compiler._modin_frame
     ptn = (
@@ -438,7 +438,7 @@ def test_pipeline_final_result_func():
         .to_pandas()
         .iloc[-1]
     )
-    df_equals(ptn, new_dfs[2])  # Third output computed correctly
+    df_equals(ptn, new_dfs[2]) # Third output computed correctly
     df = pd.DataFrame(arr)
     df = df._build_batch_pipeline(lambda df: df * -30, 0, is_output=True, output_id=20)
     df = df._add_batch_query(
@@ -462,7 +462,7 @@ def test_pipeline_final_result_func():
         .to_pandas()
         .iloc[-1]
     )
-    df_equals(ptn, new_dfs[20])  # First output computed correctly
+    df_equals(ptn, new_dfs[20]) # First output computed correctly
     corr_df = pd.DataFrame(
         corr_df.rename(columns={i: f"col {i}" for i in range(1000)})._to_pandas()
     )
@@ -472,7 +472,7 @@ def test_pipeline_final_result_func():
         .to_pandas()
         .iloc[-1]
     )
-    df_equals(ptn, new_dfs[21])  # Second output computed correctly
+    df_equals(ptn, new_dfs[21]) # Second output computed correctly
     corr_df += 30
     corr_df_md = corr_df._query_compiler._modin_frame
     ptn = (
@@ -480,7 +480,7 @@ def test_pipeline_final_result_func():
         .to_pandas()
         .iloc[-1]
     )
-    df_equals(ptn, new_dfs[22])  # Third output computed correctly
+    df_equals(ptn, new_dfs[22]) # Third output computed correctly
 
 
 @pytest.mark.skipif(
@@ -566,6 +566,14 @@ def test_reptn_after():
     df = df._add_batch_query(new_col_adder, is_output=True, pass_partition_id=True)
     new_dfs = df._compute_batch()
     assert len(new_dfs[0]["new_col"].unique()) == NPartitions.get()
+    # Test that more than one partition causes an error
+    df = pd.DataFrame([list(range(1000))] * 1000)
+    df = df._build_batch_pipeline(lambda df: df, 0, repartition_after=True, is_output=True)
+    with pytest.raises(
+        NotImplementedError,
+        match="Dynamic repartitioning is currently only supported for DataFrames with 1 partition.",
+    ):
+        new_dfs = df._compute_batch()
 
 
 @pytest.mark.skipif(
@@ -577,6 +585,35 @@ def test_fan_out():
     This test checks that the fan_out argument is appropriately handled.
     """
     df = pd.DataFrame([[0, 1, 2]])
+
+    def new_col_adder(df, ptn_id):
+        df["new_col"] = ptn_id
+        return df
+
+    def reducer(dfs):
+        new_cols = "".join([str(df["new_col"].values[0]) for df in dfs])
+        dfs[0]["new_col1"] = new_cols
+        return dfs[0]
+
+    df = df._build_batch_pipeline(
+        new_col_adder,
+        0,
+        fan_out=True,
+        reduce_fn=reducer,
+        pass_partition_id=True,
+        is_output=True,
+    )
+    new_df = df._compute_batch()[0]
+    corr_df = pd.DataFrame([[0, 1, 2]])
+    corr_df["new_col"] = 0
+    corr_df["new_col1"] = "".join([str(i) for i in range(NPartitions.get())])
+    df_equals(corr_df, new_df)
+    # Test that if more than one partition, all but first are ignored
+    import pandas
+    import ray
+    ptn1 = ray.put(pandas.DataFrame([[0, 1, 2]]))
+    ptn2 = ray.put(pandas.DataFrame([[3, 4, 5]]))
+    df = from_partitions([ptn1, ptn2], 0)
 
     def new_col_adder(df, ptn_id):
         df["new_col"] = ptn_id
