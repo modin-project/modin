@@ -210,11 +210,7 @@ class PandasDataframe(object):
             )
         self._column_widths_cache = column_widths
         self._dtypes = dtypes
-        from time import time
-
-        start = time()
         self._filter_empties()
-        print(f"filter time: {time()-start}")
 
     @property
     def _row_lengths(self):
@@ -920,9 +916,6 @@ class PandasDataframe(object):
             A new PandasDataframe with reordered columns and/or rows.
         """
         # import pdb;pdb.set_trace()
-        from time import time
-
-        start = time()
         if row_positions is not None:
             ordered_rows = self._partition_mgr_cls.map_axis_partitions(
                 0, self._partitions, lambda df: df.iloc[row_positions]
@@ -952,7 +945,7 @@ class PandasDataframe(object):
             row_lengths=row_lengths,
             column_widths=column_widths,
         )
-        print(f"inside reoder: {time()-start}")
+        # print(f"inside reoder: {time()-start}")
         return res
 
     @lazy_metadata_decorator(apply_axis=None)
@@ -2362,6 +2355,10 @@ class PandasDataframe(object):
             None,
             dtypes,
         )
+        if new_index is not None:
+            result.synchronize_labels(axis=0)
+        if new_columns is not None:
+            result.synchronize_labels(axis=1)
         return result
 
     def _copartition(self, axis, other, how, sort, force_repartition=False):

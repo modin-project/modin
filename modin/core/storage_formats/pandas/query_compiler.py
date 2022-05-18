@@ -494,9 +494,29 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort = kwargs.get("sort", False)
 
         if how in ["left", "inner"]:
-            from time import time
+            # from time import time
 
             if how == "left":
+                if isinstance(right, type(self)):
+                    # import pdb;pdb.set_trace()
+                    # start = time()
+                    if self.has_multiindex(axis=0) and all(
+                        map(lambda name: name in self.index.names, on)
+                    ):
+                        new_index = self.index
+                        for name in new_index.names:
+                            if name not in on:
+                                new_index = new_index.droplevel(name)
+                        right = right.reindex(
+                            axis=0, labels=new_index, _reset_index=self.index
+                        )
+                    else:
+                        right = right.reindex(
+                            axis=0,
+                            labels=self.getitem_array(on),
+                            _reset_index=self.index,
+                        )
+                    # print(f"reindex in join: {time()-start}")
                 partitions = self._modin_frame._partitions
                 all(
                     map(
@@ -512,7 +532,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # import pdb;pdb.set_trace()
                 right._modin_frame._deferred_column = False
                 right._modin_frame._deferred_index = False
-                start = time()
+                # start = time()
                 if not all(map(lambda name: name in right.index.names, on)):
                     right = right.drop(columns=on)
                 right._modin_frame._deferred_column = False
@@ -524,7 +544,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         lambda partition: partition.wait() or True, partitions.flatten()
                     )
                 )
-                print(f"concat time: {time()-start}")
+                # print(f"concat time: {time()-start}")
                 return new_self.sort_rows_by_column_values(on) if sort else new_self
             else:
 
@@ -560,8 +580,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             _reindex,
-            new_index=new_index if axis == 1 else actual_index,
-            new_columns=new_columns,  # if axis == 0 else actual_index,
+            new_index=actual_index
+            if actual_index is not None and axis == 0
+            else new_index,
+            new_columns=new_columns,
         )
         return self.__constructor__(new_modin_frame)
 

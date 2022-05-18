@@ -733,25 +733,17 @@ def eval_general(
                 # repr to force materialization
                 repr(fn(modin_df, **md_kwargs))
             if check_exception_type:
-                # import pdb;pdb.set_trace()
                 assert isinstance(
                     md_e.value, type(pd_e)
                 ), "Got Modin Exception type {}, but pandas Exception type {} was expected".format(
                     type(md_e.value), type(pd_e)
                 )
-                assert str(md_e.value) == str(
-                    pd_e
-                ), "Got Modin exception message '{}', but pandas exception message '{}'".format(
-                    md_e.value, pd_e
-                )
-
                 if raising_exceptions:
                     assert not isinstance(
                         md_e.value, tuple(raising_exceptions)
                     ), f"not acceptable exception type: {md_e.value}"
         else:
             md_result = fn(modin_df, **md_kwargs)
-            # import pdb;pdb.set_trace()
             return (md_result, pd_result) if not inplace else (modin_df, pandas_df)
 
     for key, value in kwargs.items():
