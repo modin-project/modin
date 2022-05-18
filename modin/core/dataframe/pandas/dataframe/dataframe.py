@@ -915,7 +915,6 @@ class PandasDataframe(object):
         PandasDataframe
             A new PandasDataframe with reordered columns and/or rows.
         """
-        # import pdb;pdb.set_trace()
         if row_positions is not None:
             ordered_rows = self._partition_mgr_cls.map_axis_partitions(
                 0, self._partitions, lambda df: df.iloc[row_positions]
@@ -934,19 +933,17 @@ class PandasDataframe(object):
             col_idx = self.columns
         row_lengths = None
         column_widths = None
-        if len(self.index) == len(row_positions):
+        if row_positions is None or len(self.index) == len(row_positions):
             row_lengths = self._row_lengths
-        if col_positions is None:
+        if col_positions is None or len(self.columns) == len(col_positions):
             column_widths = self._column_widths
-        res = self.__constructor__(
+        return self.__constructor__(
             ordered_cols,
             row_idx,
             col_idx,
             row_lengths=row_lengths,
             column_widths=column_widths,
         )
-        # print(f"inside reoder: {time()-start}")
-        return res
 
     @lazy_metadata_decorator(apply_axis=None)
     def copy(self):
@@ -1879,6 +1876,7 @@ class PandasDataframe(object):
         new_index=None,
         new_columns=None,
         dtypes=None,
+        sync_axes=True,
     ):
         """
         Perform a function across an entire axis.
@@ -1916,6 +1914,7 @@ class PandasDataframe(object):
             new_columns=new_columns,
             dtypes=dtypes,
             other=None,
+            sync_axes=sync_axes,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -2282,6 +2281,7 @@ class PandasDataframe(object):
         apply_indices=None,
         enumerate_partitions=False,
         dtypes=None,
+        sync_axes=True,
     ):
         """
         Broadcast partitions of `other` Modin DataFrame and apply a function along full axis.
@@ -2355,9 +2355,10 @@ class PandasDataframe(object):
             None,
             dtypes,
         )
-        if new_index is not None:
+        # There is can be case where synchronization is not needed
+        if sync_axes and new_index is not None:
             result.synchronize_labels(axis=0)
-        if new_columns is not None:
+        if sync_axes and new_columns is not None:
             result.synchronize_labels(axis=1)
         return result
 

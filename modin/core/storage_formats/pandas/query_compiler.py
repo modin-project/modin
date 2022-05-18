@@ -494,12 +494,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort = kwargs.get("sort", False)
 
         if how in ["left", "inner"]:
-            # from time import time
-
             if how == "left":
                 if isinstance(right, type(self)):
-                    # import pdb;pdb.set_trace()
-                    # start = time()
                     if self.has_multiindex(axis=0) and all(
                         map(lambda name: name in self.index.names, on)
                     ):
@@ -516,35 +512,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                             labels=self.getitem_array(on),
                             _reset_index=self.index,
                         )
-                    # print(f"reindex in join: {time()-start}")
-                partitions = self._modin_frame._partitions
-                all(
-                    map(
-                        lambda partition: partition.wait() or True, partitions.flatten()
-                    )
-                )
-                partitions = right._modin_frame._partitions
-                all(
-                    map(
-                        lambda partition: partition.wait() or True, partitions.flatten()
-                    )
-                )
-                # import pdb;pdb.set_trace()
-                right._modin_frame._deferred_column = False
-                right._modin_frame._deferred_index = False
-                # start = time()
+
                 if not all(map(lambda name: name in right.index.names, on)):
                     right = right.drop(columns=on)
-                right._modin_frame._deferred_column = False
-                right._modin_frame._deferred_index = False
+                # right._modin_frame._deferred_column = False
+                # right._modin_frame._deferred_index = False
                 new_self = self.concat(1, right, join="left")
-                partitions = new_self._modin_frame._partitions
-                all(
-                    map(
-                        lambda partition: partition.wait() or True, partitions.flatten()
-                    )
-                )
-                # print(f"concat time: {time()-start}")
                 return new_self.sort_rows_by_column_values(on) if sort else new_self
             else:
 
@@ -564,17 +537,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def reindex(self, axis, labels, **kwargs):
         new_index = self.index if axis else labels
         new_columns = labels if axis else self.columns
-        # import pdb;pdb.set_trace()
         actual_index = None
         if "_reset_index" in kwargs:
             actual_index = kwargs.pop("_reset_index")
 
         def _reindex(df):
-            # print(df, labels, f"AXIS:{axis}")
             df = df.reindex(labels=labels, axis=axis, **kwargs)
             if actual_index is not None:
                 df.index = actual_index
-            # print(df.index)
             return df
 
         new_modin_frame = self._modin_frame.apply_full_axis(
@@ -584,6 +554,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             if actual_index is not None and axis == 0
             else new_index,
             new_columns=new_columns,
+            sync_axes=False,
         )
         return self.__constructor__(new_modin_frame)
 
