@@ -273,6 +273,9 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of `PandasOnRayDataframeVirtualPartition` objects.
         """
+        print(
+            f"applying function to {type(self)=} {func=} {num_splits=} {other_axis_partition=} {maintain_partitioning=} {kwargs=} {self.axis=}"
+        )
         # If this is not a full axis partition, it already contains a subset of
         # the full axis, so we shouldn't split the result further.
         if not self.full_axis:
@@ -280,7 +283,11 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         if len(self.call_queue) > 0:
             self.drain_call_queue()
         result = super(PandasOnRayDataframeVirtualPartition, self).apply(
-            func, num_splits, other_axis_partition, maintain_partitioning, **kwargs
+            func,
+            num_splits,
+            other_axis_partition,
+            maintain_partitioning,
+            **kwargs,
         )
         if self.full_axis:
             return result

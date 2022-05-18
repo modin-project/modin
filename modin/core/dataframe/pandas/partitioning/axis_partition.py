@@ -63,6 +63,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         list
             A list of `PandasDataframePartition` objects.
         """
+        print(
+            f"PandasDataframeAxisPartition.apply to {func=} {num_splits=} {other_axis_partition=} {maintain_partitioning=} {kwargs=}"
+        )
         if num_splits is None:
             num_splits = len(self.list_of_blocks)
 
@@ -157,6 +160,10 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         lengths = kwargs.pop("_lengths", None)
 
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
+
+        # print(
+        #     f"PandasDataframeAxisPartition.deploy_axis_func {func=} {num_splits=} {maintain_partitioning=} {kwargs=} {axis=} {dataframe=} {partitions=}"
+        # )
         result = func(dataframe, **kwargs)
 
         if manual_partition:
@@ -222,6 +229,6 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             for i in range(1, len(other_shape))
         ]
         rt_frame = pandas.concat(combined_axis, axis=axis ^ 1, copy=False)
-
+        print(f"{func=} {lt_frame=} {rt_frame=} {kwargs=}")
         result = func(lt_frame, rt_frame, **kwargs)
         return split_result_of_axis_func_pandas(axis, num_splits, result)
