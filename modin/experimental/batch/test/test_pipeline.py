@@ -567,11 +567,16 @@ def test_reptn_after():
     new_dfs = df._compute_batch()
     assert len(new_dfs[0]["new_col"].unique()) == NPartitions.get()
     # Test that more than one partition causes an error
-    df = pd.DataFrame([list(range(1000))] * 1000)
+    import pandas
+    import ray
+
+    ptn1 = ray.put(pandas.DataFrame([[0, 1, 2]]))
+    ptn2 = ray.put(pandas.DataFrame([[3, 4, 5]]))
+    df = from_partitions([ptn1, ptn2], 0)
     df = df._build_batch_pipeline(
         lambda df: df, 0, repartition_after=True, is_output=True
     )
-    print(df._query_compiler._modin_frame._partitions)
+
     with pytest.raises(
         NotImplementedError,
         match="Dynamic repartitioning is currently only supported for DataFrames with 1 partition.",
