@@ -571,6 +571,7 @@ def test_reptn_after():
     df = df._build_batch_pipeline(
         lambda df: df, 0, repartition_after=True, is_output=True
     )
+    print(df._query_compiler._modin_frame._partitions)
     with pytest.raises(
         NotImplementedError,
         match="Dynamic repartitioning is currently only supported for DataFrames with 1 partition.",
