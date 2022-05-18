@@ -1400,7 +1400,7 @@ class BasePandasDataset(object):
 
         result = self[-duplicates]
         if ignore_index:
-            result.index = list(range(len(result)))
+            result.index = pandas.RangeIndex(stop=len(result))
         if inplace:
             self._update_inplace(result)
             return None
