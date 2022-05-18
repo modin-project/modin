@@ -402,43 +402,43 @@ def test_loc(data):
         modin_df.loc["NO_EXIST"]
 
 
-def test_loc_4456():
+@pytest.mark.parametrize("equal_axes", [False, True])
+@pytest.mark.parametrize("axis", [0, 1])
+def test_loc_4456_1(axis, equal_axes):
+    if equal_axes and axis == 1:
+        # case equal to `equal_axes and axis == 0`
+        pass
+
     data = test_data["float_nan_data"]
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
-    key = ["col1", "col2"]
+    # prepare `loc` operands
+    key = pandas_df.columns[:2]
+    index, columns = pandas_df.index, key
+    value = np.random.randint(0, 100, size=(pandas_df.shape[0], len(columns)))
+    if not equal_axes:
+        if axis == 0:
+            index = list(reversed(index))
+        else:
+            columns = list(reversed(columns))
 
-    # len(key) == df_value.columns; different columns
-    value = np.random.randint(0, 100, size=(pandas_df.shape[0], 2))
-    df_value = pandas.DataFrame(value, columns=["value_col1", "value_col2"])
-    eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
+    loc_key = (slice(None), key)
 
-    # len(key) == df_value.columns; different columns; modin DataFrame
+    # pandas DataFrame
+    df_value = pandas.DataFrame(value, index=index, columns=columns)
+    eval_loc(modin_df, pandas_df, df_value, loc_key)
+
+    # modin DataFrame
     mdf_value = pd.DataFrame(df_value)
-    eval_loc(modin_df, pandas_df, (mdf_value, df_value), (slice(None), key))
+    eval_loc(modin_df, pandas_df, (mdf_value, df_value), loc_key)
 
-    # len(key) == df_value.columns; different index
-    df_value = pandas.DataFrame(
-        value, columns=key, index=list(reversed(pandas_df.index))
-    )
-    eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
-
-    # len(key) > df_value.columns
-    value = np.random.randint(0, 100, size=(pandas_df.shape[0], 1))
-    df_value = pandas.DataFrame(value, columns=key[:1])
-    eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
-
-    # len(key) == df_value.columns; different columns; modin Series
-    md_series_value = mdf_value[mdf_value.columns[0]]
-    pd_series_value = df_value[df_value.columns[0]]
-    eval_loc(
-        modin_df, pandas_df, (md_series_value, pd_series_value), (slice(None), key)
-    )
-
-    # len(key) < df_value.columns
-    value = np.random.randint(0, 100, size=(pandas_df.shape[0], 3))
-    df_value = pandas.DataFrame(value, columns=key + ["col3"])
-    eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
+    if axis == 0:
+        # pandas Series
+        pd_series_value = df_value[df_value.columns[0]]
+        eval_loc(modin_df, pandas_df, pd_series_value, loc_key)
+        # modin Series
+        md_series_value = mdf_value[mdf_value.columns[0]]
+        eval_loc(modin_df, pandas_df, (md_series_value, pd_series_value), loc_key)
 
 
 # This tests the bug from https://github.com/modin-project/modin/issues/3736
