@@ -36,7 +36,6 @@ def logger_class_wrapper(classname, name, method):
     func
         A decorator function.
     """
-
     @wraps(method)
     def log_wrap(*args, **kwargs):
         if LogMode.get() != "disable":
@@ -45,9 +44,7 @@ def logger_class_wrapper(classname, name, method):
             result = method(*args, **kwargs)
             logger.info(f"END::PANDAS-API::{classname}.{name}")
             return result
-        else:
-            return method(*args, **kwargs)
-
+        return method(*args, **kwargs)
     return log_wrap
 
 
@@ -79,10 +76,11 @@ class LoggerMetaClass(type):
     def __new__(mcs, classname, bases, class_dict):
         new_class_dict = {}
         seen_attributes = {}
+        exclude_attributes = {"__getattribute__", "query", "eval"}
         for attribute_name, attribute in class_dict.items():
             if (
                 isinstance(attribute, (FunctionType, MethodType))
-                and attribute_name != "__getattribute__"
+                and attribute_name not in exclude_attributes
             ):
                 if attribute not in seen_attributes:
                     seen_attributes[attribute] = logger_class_wrapper(
