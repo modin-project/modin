@@ -46,6 +46,8 @@ Key Features and Updates
   * FIX-#4327: Update min pin for xgboost version (#4328)
   * FIX-#4383: Remove `pathlib` from deps (#4384)
   * FIX-#4390: Add `redis` to Modin dependencies (#4396)
+* New Features
+  * FEAT-#4412: Add Batch Pipeline API to Modin (#4452)
 
 Contributors
 ------------
@@ -60,3 +62,4 @@ Contributors
 @anmyachev
 @dchigarev
 @devin-petersohn
+@RehanSD
