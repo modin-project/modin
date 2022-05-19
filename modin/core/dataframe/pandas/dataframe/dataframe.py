@@ -931,19 +931,7 @@ class PandasDataframe(object):
         else:
             ordered_cols = ordered_rows
             col_idx = self.columns
-        row_lengths = None
-        column_widths = None
-        if row_positions is None or len(self.index) == len(row_positions):
-            row_lengths = self._row_lengths
-        if col_positions is None or len(self.columns) == len(col_positions):
-            column_widths = self._column_widths
-        return self.__constructor__(
-            ordered_cols,
-            row_idx,
-            col_idx,
-            row_lengths=row_lengths,
-            column_widths=column_widths,
-        )
+        return self.__constructor__(ordered_cols, row_idx, col_idx)
 
     @lazy_metadata_decorator(apply_axis=None)
     def copy(self):
