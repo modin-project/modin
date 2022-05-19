@@ -513,7 +513,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 else:
                     if not isinstance(on, list):
                         on = [on]
-                    # import pdb;pdb.set_trace()
                     mframe = self.getitem_array(on)
                     frame = mframe.to_pandas()
                     if len(on) == 1:
@@ -526,11 +525,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         labels=labels,
                         _reset_index=self.index,
                     )
-
-                if not all(map(lambda name: name in right.index.names, on)):
-                    right = right.drop(columns=on)
-                # right._modin_frame._deferred_column = False
-                # right._modin_frame._deferred_index = False
                 new_self = self.concat(1, right, join="left")
                 return new_self.sort_rows_by_column_values(on) if sort else new_self
             else:
