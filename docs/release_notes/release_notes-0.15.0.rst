@@ -43,6 +43,7 @@ Key Features and Updates
 * Documentation improvements
   * DOCS-#4296: Fix docs warnings (#4297)
   * DOCS-#4388: Turn off fail_on_warning option for docs build (#4389)
+  * DOCS-#4466: Recommend GitHub issues over bug_reports@modin.org (#4474).
 * Dependencies
   * FIX-#4327: Update min pin for xgboost version (#4328)
   * FIX-#4383: Remove `pathlib` from deps (#4384)
