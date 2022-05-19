@@ -198,6 +198,7 @@ def test_pipeline_multiple_outputs():
     corr_df += 30
     df_equals(corr_df, new_dfs[22])  # Third output computed correctly
 
+
 @pytest.mark.skipif(
     Engine.get() != "Ray",
     reason="Only Ray supports the Batch Pipeline API",
