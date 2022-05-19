@@ -386,7 +386,6 @@ def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
     str
         The node IP address of the worker process.
     """
-
     for func, args, kwargs in funcs:
         func = deserialize(func)
         args = deserialize(args)

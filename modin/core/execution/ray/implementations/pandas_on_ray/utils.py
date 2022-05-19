@@ -24,6 +24,19 @@ if version.parse(ray.__version__) >= version.parse("1.2.0"):
 
 
 def deserialize(obj):
+    """
+    Deserialize Ray objects.
+
+    Parameters
+    ----------
+    obj : ObjectIDType, list of ObjectIDType, or dict mapping keys to ObjectIDTypes
+        Object(s) to deserialize.
+
+    Returns
+    -------
+    obj : deserialized obj, list of obj, or dict mapping keys to obj
+        The deserialized object(s).
+    """
     if isinstance(obj, ObjectIDType):
         return ray.get(obj)
     elif isinstance(obj, (tuple, list)) and any(
