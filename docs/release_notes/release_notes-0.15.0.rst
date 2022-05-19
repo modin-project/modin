@@ -18,6 +18,7 @@ Key Features and Updates
   * FIX-#4394: Fix issue with multiindex metadata desync (#4395)
   * FIX-#4425: Add parameters to groupby pct_change (#4429)
   * FIX-#4414: Add missing f prefix on f-strings found at https://codereview.doctor (#4415)
+  * FIX-#4461: Fix S3 CSV data path (#4462)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
 * Benchmarking enhancements
@@ -39,6 +40,7 @@ Key Features and Updates
   * FIX-#4422: get rid of case sensitivity for `warns_that_defaulting_to_pandas` (#4423)
   * TEST-#4426: Stop passing is_default kwarg to Modin and pandas (#4428)
   * FIX-#4439: Fix flake8 CI fail (#4440)
+  * FIX-#4409: Fix `eval_insert` utility that doesn't actually check results of `insert` function (#4410)
 * Documentation improvements
   * DOCS-#4296: Fix docs warnings (#4297)
   * DOCS-#4388: Turn off fail_on_warning option for docs build (#4389)
