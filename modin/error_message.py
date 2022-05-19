@@ -59,8 +59,12 @@ class ErrorMessage(object):
         if failure_condition:
             raise Exception(
                 "Internal Error. "
-                + "Please email bug_reports@modin.org with the traceback and command that"
-                + f" caused this error.\n{extra_log}"
+                + "Please use the Modin code that triggered this bug to search "
+                + "https://github.com/modin-project/modin/issues for a "
+                + "matching issue. If you don't find your issue there, please "
+                + "file a new issue at that link or, if that's not possible, "
+                + "email bug_reports@modin.org with the traceback and the "
+                + f"command that caused this error.\n{extra_log}"
             )
 
     @classmethod

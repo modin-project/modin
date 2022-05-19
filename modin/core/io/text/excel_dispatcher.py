@@ -73,8 +73,11 @@ class ExcelDispatcher(TextFileDispatcher):
             return cls.single_worker_read(io, **kwargs)
 
         warnings.warn(
-            "Parallel `read_excel` is a new feature! Please email "
-            + "bug_reports@modin.org if you run into any problems."
+            "Parallel `read_excel` is a new feature! If you run into any "
+            + "problems, please check https://github.com/modin-project/modin/issues "
+            + "for your issue. If you don't find your issue there, please "
+            + "file a new issue at that link or, if that's not possible, "
+            + "email bug_reports@modin.org."
         )
 
         # NOTE: ExcelReader() in read-only mode does not close file handle by itself
