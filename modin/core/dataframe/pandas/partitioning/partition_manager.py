@@ -61,7 +61,7 @@ def wait_computations_if_benchmark_mode(func):
             else:
                 partitions = result
             # When partitions have a deferred call queue, calling
-            # parittion.wait() on each partition serially will serially kick
+            # partition.wait() on each partition serially will serially kick
             # off each deferred computation and wait for each partition to
             # finish before kicking off the next one. Instead, we want to
             # serially kick off all the deferred computations so that they can
