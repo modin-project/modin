@@ -879,6 +879,13 @@ def test_drop_duplicates_after_sort():
     df_equals(modin_result, pandas_result)
 
 
+def test_drop_duplicates_with_repeated_index_values():
+    data = {"data": [[0], [1], [0]], "index": [0, 0, 0]}
+    pandas_df = pandas.DataFrame(data["data"], index=data["index"])
+    modin_df = pd.DataFrame(data["data"], index=data["index"])
+    df_equals(modin_df.drop_duplicates(), pandas_df.drop_duplicates())
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("how", ["any", "all"], ids=["any", "all"])
