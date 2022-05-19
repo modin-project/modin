@@ -1401,7 +1401,7 @@ class BasePandasDataset(object):
         if ignore_index:
             result.index = pandas.RangeIndex(stop=len(result))
         if inplace:
-            self._update_inplace(result)
+            self._update_inplace(result._query_compiler)
         else:
             return result
 
