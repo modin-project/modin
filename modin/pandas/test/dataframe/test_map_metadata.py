@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from re import I
 import pytest
 import numpy as np
 import pandas
@@ -747,15 +746,9 @@ def test_droplevel():
     [None, "col1", "name", ("col1", "col3"), ["col1", "col3", "col7"]],
     ids=["None", "string", "name", "tuple", "list"],
 )
-@pytest.mark.parametrize("all_rows_have_label_zero", [True, False])
-def test_drop_duplicates(data, keep, subset, all_rows_have_label_zero):
-
-    if all_rows_have_label_zero:
-        columns = [0] * len(data[next(iter(data))])
-    else:
-        columns = None
-    modin_df = pd.DataFrame(data, columns=columns)
-    pandas_df = pandas.DataFrame(data, columns=columns)
+def test_drop_duplicates(data, keep, subset):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
 
     try:
         pandas_df.drop_duplicates(keep=keep, inplace=False, subset=subset)
