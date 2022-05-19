@@ -383,7 +383,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
 
     def drain_call_queue(self, num_splits=None):
         """Execute all operations stored in this partition's call queue.
-        
+
         Parameters
         ----------
         num_splits : int, default: None
@@ -395,7 +395,9 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
                 df = func(df, *args, **kwargs)
             return df
 
-        drained = super(PandasOnRayDataframeVirtualPartition, self).apply(drain, num_splits=num_splits)
+        drained = super(PandasOnRayDataframeVirtualPartition, self).apply(
+            drain, num_splits=num_splits
+        )
         self.list_of_partitions_to_combine = drained
         self.call_queue = []
 
