@@ -137,7 +137,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+        cls, axis, func, args, num_splits, kwargs, maintain_partitioning, *partitions
     ):
         """
         Deploy a function along a full axis.
@@ -241,6 +241,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     def apply(
         self,
         func,
+        *args,
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
@@ -280,7 +281,12 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         if len(self.call_queue) > 0:
             self.drain_call_queue()
         result = super(PandasOnRayDataframeVirtualPartition, self).apply(
-            func, num_splits, other_axis_partition, maintain_partitioning, **kwargs
+            func,
+            *args,
+            num_splits=num_splits,
+            other_axis_partition=other_axis_partition,
+            maintain_partitioning=maintain_partitioning,
+            **kwargs,
         )
         if self.full_axis:
             return result

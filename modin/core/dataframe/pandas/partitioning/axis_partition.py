@@ -19,6 +19,7 @@ from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pa
 from modin.core.dataframe.base.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
 )
+import ray
 
 
 class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
@@ -31,6 +32,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
     def apply(
         self,
         func,
+        *args,
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
@@ -94,7 +96,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     ),
                 )
             )
-        args = [self.axis, func, num_splits, kwargs, maintain_partitioning]
+        kwargs["args"] = args
+        args = [self.axis, func, args, num_splits, kwargs, maintain_partitioning]
         args.extend(self.list_of_blocks)
         return self._wrap_partitions(self.deploy_axis_func(*args))
 
@@ -157,7 +160,11 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         lengths = kwargs.pop("_lengths", None)
 
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
-        result = func(dataframe, **kwargs)
+        args = ray.get(
+            list(kwargs.pop("args", []))
+        )  # this should be a helper deserialize(), as in
+        # https://github.com/modin-project/modin/blob/master/modin/core/execution/ray/implementations/pandas_on_ray/partitioning/partition.py#L393-L405
+        result = func(dataframe, *args, **kwargs)
 
         if manual_partition:
             # The split function is expecting a list
