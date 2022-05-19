@@ -18,6 +18,7 @@ Key Features and Updates
   * FIX-#4394: Fix issue with multiindex metadata desync (#4395)
   * FIX-#4425: Add parameters to groupby pct_change (#4429)
   * FIX-#4457: Fix `loc` in case when need reindex item (#4457)
+  * FIX-#4414: Add missing f prefix on f-strings found at https://codereview.doctor (#4415)
   * FIX-#4461: Fix S3 CSV data path (#4462)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
@@ -44,6 +45,7 @@ Key Features and Updates
 * Documentation improvements
   * DOCS-#4296: Fix docs warnings (#4297)
   * DOCS-#4388: Turn off fail_on_warning option for docs build (#4389)
+  * DOCS-#4469: Say that commit messages can start with PERF (#4470).
 * Dependencies
   * FIX-#4327: Update min pin for xgboost version (#4328)
   * FIX-#4383: Remove `pathlib` from deps (#4384)
