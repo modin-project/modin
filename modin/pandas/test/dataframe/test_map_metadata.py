@@ -880,6 +880,7 @@ def test_drop_duplicates_after_sort():
 
 
 def test_drop_duplicates_with_repeated_index_values():
+    # This tests for issue #4467: https://github.com/modin-project/modin/issues/4467
     data = [[0], [1], [0]]
     index = [0, 0, 0]
     modin_df, pandas_df = create_test_dfs(data, index=index)
