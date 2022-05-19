@@ -199,6 +199,26 @@ def test_pipeline_multiple_outputs():
     df_equals(corr_df, new_dfs[22])  # Third output computed correctly
 
 
+def test_pipeline_output_id():
+    arr = np.random.randint(0, 1000, (1000, 1000))
+    df = pd.DataFrame(arr)
+    df = df._build_batch_pipeline(lambda df: df * -30, 0, is_output=True, output_id=20)
+    with pytest.raises(ValueError, match="Output ID must be specified for all nodes."):
+        df = df._add_batch_query(
+            lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)}),
+            is_output=True,
+        )
+    df = df._build_batch_pipeline(
+        lambda df: df * -30, 0, is_output=True, overwrite_existing=True
+    )
+    with pytest.raises(ValueError, match="Output ID must be specified for all nodes."):
+        df = df._add_batch_query(
+            lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)}),
+            is_output=True,
+            output_id=20,
+        )
+
+
 @pytest.mark.skipif(
     Engine.get() != "Ray",
     reason="Only Ray supports the Batch Pipeline API",
@@ -567,7 +587,6 @@ def test_reptn_after():
     new_dfs = df._compute_batch()
     assert len(new_dfs[0]["new_col"].unique()) == NPartitions.get()
     # Test that more than one partition causes an error
-    import pandas
     import ray
 
     ptn1 = ray.put(pandas.DataFrame([[0, 1, 2]]))
@@ -624,6 +643,32 @@ def test_fan_out():
     ptn2 = ray.put(pandas.DataFrame([[3, 4, 5]]))
     df = from_partitions([ptn1, ptn2], 0)
 
+    df = df._build_batch_pipeline(
+        new_col_adder,
+        0,
+        fan_out=True,
+        reduce_fn=reducer,
+        pass_partition_id=True,
+        is_output=True,
+    )
+    with pytest.raises(
+        NotImplementedError,
+        match="Fan out is only supported with DataFrames with 1 partition.",
+    ):
+        new_df = df._compute_batch()[0]
+
+
+@pytest.mark.skipif(
+    Engine.get() != "Ray",
+    reason="Only Ray supports the Batch Pipeline API",
+)
+def test_pipeline_complex():
+    import pandas
+    from os.path import exists
+    from os import remove
+
+    df = pd.DataFrame([[0, 1, 2]])
+
     def new_col_adder(df, ptn_id):
         df["new_col"] = ptn_id
         return df
@@ -640,9 +685,45 @@ def test_fan_out():
         reduce_fn=reducer,
         pass_partition_id=True,
         is_output=True,
+        output_id=20,
+        num_partitions=24,
     )
-    new_df = df._compute_batch()[0]
+    df = df._add_batch_query(
+        lambda df: pandas.concat([df] * 1000), repartition_after=True
+    )
+    df = df._add_batch_query(
+        lambda df: df.drop(columns=["new_col"]), is_output=True, output_id=21
+    )
+
+    def to_csv(df, ptn_id):
+        df.to_csv(f"{ptn_id}.csv")
+        return df
+
+    df = df._add_batch_query(
+        to_csv, is_output=True, output_id=22, pass_partition_id=True
+    )
+
+    def post_proc(df, o_id, ptn_id):
+        df["new_col"] = f"{o_id} {ptn_id}"
+        return df
+
+    new_dfs = df._compute_batch(
+        postprocessor=post_proc,
+        pass_partition_id=True,
+        pass_output_id=True,
+        final_result_func=lambda df: df.iloc[-1],
+    )
     corr_df = pd.DataFrame([[0, 1, 2]])
-    corr_df["new_col"] = 0
+    corr_df["new_col"] = "20 0"
     corr_df["new_col1"] = "".join([str(i) for i in range(NPartitions.get())])
-    df_equals(corr_df, new_df)
+    df_equals(corr_df.iloc[-1], new_dfs[20])
+    corr_df = pd.concat([corr_df] * 1000)
+    corr_df = corr_df.drop(columns=["new_col"])
+    corr_df["new_col"] = "21 0"
+    df_equals(corr_df.iloc[0], new_dfs[21])
+    for i in range(24):
+        assert exists(
+            f"{i}.csv"
+        ), "CSV File for Partition {i} does not exist, even though dataframe should have been repartitioned."
+        remove(f"{i}.csv")
+    assert 22 in new_dfs, "Output for output id 22 not generated."

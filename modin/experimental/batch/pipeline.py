@@ -27,6 +27,27 @@ from modin.distributed.dataframe.pandas.partitions import from_partitions
 
 
 class PandasQuery(object):
+    """
+    Internal representation of a single query in a pipeline.
+
+    This object represents a single function to be pipelined in a batch pipeline.
+
+    Parameters
+    ----------
+    func : Callable
+        The function to apply to the dataframe.
+    is_output : bool, default: False
+        Whether this query is an output query and should be passed both to the next query, and directly to postprocessing.
+    repartition_after : bool, default: False
+        Whether to repartition after this query is computed. Currently, repartitioning is only supported if there is 1 partition prior to repartitioning.
+    fan_out : bool, default: False
+        Whether to fan out this node. If True and only 1 partition is passed as input, the partition is replicated `num_partition` times, and the function is called on each. The `reduce_fn` must also be specified.
+    pass_partition_id : bool, default: False
+        Whether to pass the numerical partition id to the query.
+    reduce_fn : Callable
+        The reduce function to apply if `fan_out` is set to True. This takes the `num_partition` partitions that result from this query, and combines them into 1 partition.
+    """
+
     def __init__(
         self,
         func: Callable,
@@ -85,7 +106,7 @@ class PandasQueryPipeline(object):
     def __init__(self, df, axis: Union[int, Axis], num_partitions: int = 16):
         if Engine.get() != "Ray" or (
             not isinstance(df._query_compiler._modin_frame, PandasOnRayDataframe)
-        ):
+        ):  # pragma: no cover
             ErrorMessage.not_implemented(
                 "Batch Pipeline API is only implemented for Ray Engine."
             )
@@ -167,8 +188,13 @@ class PandasQueryPipeline(object):
             self.outputs.append(self.nodes_list[-1])
             if output_id:
                 if self.node_to_id is None:
-                    self.node_to_id = {}
+                    if len(self.outputs) == 1:
+                        self.node_to_id = {}
+                    else:
+                        raise ValueError("Output ID must be specified for all nodes.")
                 self.node_to_id[self.outputs[-1]] = output_id
+            if output_id is None and self.node_to_id is not None:
+                raise ValueError("Output ID must be specified for all nodes.")
             curr_node = self.outputs[-1]
             curr_node.operators = self.nodes_list[:-1]
             self.nodes_list = []
@@ -187,8 +213,8 @@ class PandasQueryPipeline(object):
         for node in list_of_nodes:
             if node.fan_out:
                 if len(ptns) > 1:
-                    ErrorMessage.single_warning(
-                        "Fan out is only supported with DataFrames with 1 partition. Ignoring all partitions but the first."
+                    ErrorMessage.not_implemented(
+                        "Fan out is only supported with DataFrames with 1 partition."
                     )
                 ptns[0] = ptns[0].force_materialization()
                 ptn_list = ptns[0].list_of_partitions_to_combine
@@ -347,9 +373,5 @@ class PandasQueryPipeline(object):
                 for d in df:
                     wait_parts.extend(d.list_of_blocks)
         ray.wait(wait_parts, num_returns=len(wait_parts))
-        from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.virtual_partition import (
-            PandasOnRayDataframeVirtualPartition,
-        )
-
         PandasOnRayDataframeVirtualPartition.drain_call_queue = self.dcq
         return final_results

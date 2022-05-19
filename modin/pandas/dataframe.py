@@ -2722,7 +2722,7 @@ class DataFrame(BasePandasDataset):
         from modin.experimental.batch.pipeline import PandasQueryPipeline
 
         overwrite_existing = kwargs.pop("overwrite_existing", False)
-        if Engine.get() != "Ray":
+        if Engine.get() != "Ray":  # pragma: no cover
             ErrorMessage.not_implemented(
                 "Batch Pipeline API is only implemented for Ray Engine."
             )
