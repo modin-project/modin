@@ -67,7 +67,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         """
         if num_splits is None:
             num_splits = len(self.list_of_blocks)
-
+        func_call = (func, args, kwargs)
         if other_axis_partition is not None:
             if not isinstance(other_axis_partition, list):
                 other_axis_partition = [other_axis_partition]
@@ -81,11 +81,10 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             return self._wrap_partitions(
                 self.deploy_func_between_two_axis_partitions(
                     self.axis,
-                    func,
+                    func_call,
                     num_splits,
                     len(self.list_of_blocks),
                     other_shape,
-                    kwargs,
                     *tuple(
                         self.list_of_blocks
                         + [
@@ -96,12 +95,17 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     ),
                 )
             )
-        kwargs["args"] = args
-        args = [self.axis, func, args, num_splits, kwargs, maintain_partitioning]
-        args.extend(self.list_of_blocks)
-        return self._wrap_partitions(self.deploy_axis_func(*args))
+        return self._wrap_partitions(
+            self.deploy_axis_func(
+                self.axis,
+                func_call,
+                num_splits,
+                maintain_partitioning,
+                *self.list_of_blocks,
+            )
+        )
 
-    def shuffle(self, func, lengths, **kwargs):
+    def shuffle(self, func, *args, lengths, **kwargs):
         """
         Shuffle the order of the data in this axis partition based on the `lengths`.
 
@@ -123,13 +127,20 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         # We add these to kwargs and will pop them off before performing the operation.
         kwargs["manual_partition"] = True
         kwargs["_lengths"] = lengths
-        args = [self.axis, func, num_splits, kwargs, False]
-        args.extend(self.list_of_blocks)
-        return self._wrap_partitions(self.deploy_axis_func(*args))
+        func_call = (func, args, kwargs)
+        return self._wrap_partitions(
+            self.deploy_axis_func(
+                self.axis,
+                func_call,
+                num_splits,
+                False,
+                *self.list_of_blocks,
+            )
+        )
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+        cls, axis, func_call, num_splits, maintain_partitioning, *partitions
     ):
         """
         Deploy a function along a full axis.
@@ -156,14 +167,11 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             A list of pandas DataFrames.
         """
         # Pop these off first because they aren't expected by the function.
+        func, args, kwargs = func_call
         manual_partition = kwargs.pop("manual_partition", False)
         lengths = kwargs.pop("_lengths", None)
 
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
-        args = ray.get(
-            list(kwargs.pop("args", []))
-        )  # this should be a helper deserialize(), as in
-        # https://github.com/modin-project/modin/blob/master/modin/core/execution/ray/implementations/pandas_on_ray/partitioning/partition.py#L393-L405
         result = func(dataframe, *args, **kwargs)
 
         if manual_partition:
@@ -187,7 +195,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
-        cls, axis, func, num_splits, len_of_left, other_shape, kwargs, *partitions
+        cls, axis, func_call, num_splits, len_of_left, other_shape, *partitions
     ):
         """
         Deploy a function along a full axis between two data sets.
@@ -229,6 +237,6 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             for i in range(1, len(other_shape))
         ]
         rt_frame = pandas.concat(combined_axis, axis=axis ^ 1, copy=False)
-
-        result = func(lt_frame, rt_frame, **kwargs)
+        func, args, kwargs = func_call
+        result = func(lt_frame, rt_frame, *args, **kwargs)
         return split_result_of_axis_func_pandas(axis, num_splits, result)
