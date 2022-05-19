@@ -282,7 +282,7 @@ class DataFrame(BasePandasDataset):
         Return ``DataFrame`` with duplicate rows removed.
         """
         return super(DataFrame, self).drop_duplicates(
-            subset=subset, keep=keep, inplace=inplace
+            subset=subset, keep=keep, inplace=inplace, ignore_index=ignore_index
         )
 
     @property
