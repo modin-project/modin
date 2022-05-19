@@ -381,15 +381,21 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
                 self._width_cache = self.list_of_partitions_to_combine[0].width()
         return self._width_cache
 
-    def drain_call_queue(self):
-        """Execute all operations stored in this partition's call queue."""
+    def drain_call_queue(self, num_splits=None):
+        """Execute all operations stored in this partition's call queue.
+        
+        Parameters
+        ----------
+        num_splits : int, default: None
+            The number of times to split the result object.
+        """
 
         def drain(df):
             for func, args, kwargs in self.call_queue:
                 df = func(df, *args, **kwargs)
             return df
 
-        drained = super(PandasOnRayDataframeVirtualPartition, self).apply(drain)
+        drained = super(PandasOnRayDataframeVirtualPartition, self).apply(drain, num_splits=num_splits)
         self.list_of_partitions_to_combine = drained
         self.call_queue = []
 

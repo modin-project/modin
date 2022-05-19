@@ -16,9 +16,6 @@ from modin.core.dataframe.base.dataframe.utils import Axis
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
     PandasOnRayDataframe,
 )
-from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.virtual_partition import (
-    PandasOnRayDataframeVirtualPartition,
-)
 from typing import Union, Callable, Optional
 from modin.config import Engine, NPartitions
 import ray
@@ -109,26 +106,6 @@ class PandasQueryPipeline(object):
         self.nodes_list = []
         self.node_to_id = None
 
-        self.dcq = PandasOnRayDataframeVirtualPartition.drain_call_queue
-
-        def drain_call_queue_no_split_results(self):
-            """Execute all operations stored in this partition's call queue."""
-
-            def drain(df):
-                for func, args, kwargs in self.call_queue:
-                    df = func(df, *args, **kwargs)
-                return df
-
-            drained = super(PandasOnRayDataframeVirtualPartition, self).apply(
-                drain, num_splits=1
-            )
-            self.list_of_partitions_to_combine = drained
-            self.call_queue = []
-
-        PandasOnRayDataframeVirtualPartition.drain_call_queue = (
-            drain_call_queue_no_split_results
-        )
-
     def add_query(
         self,
         func: Callable,
@@ -209,7 +186,7 @@ class PandasQueryPipeline(object):
                 ptns[0] = ptns[0].force_materialization()
                 ptn_list = ptns[0].list_of_partitions_to_combine
                 ptns[0] = ptns[0].add_to_apply_calls(node.func, 0)
-                ptns[0].drain_call_queue()
+                ptns[0].drain_call_queue(num_splits=1)
                 oids = []
                 new_dfs = []
                 for i in range(1, self.num_partitions):
@@ -219,7 +196,7 @@ class PandasQueryPipeline(object):
                             full_axis=ptns[0].full_axis,
                         ).add_to_apply_calls(node.func, i)
                     )
-                    new_dfs[-1].drain_call_queue()
+                    new_dfs[-1].drain_call_queue(num_splits=1)
                     oids.extend(new_dfs[-1].list_of_blocks)
                 ray.wait(oids, num_returns=len(oids))
 
@@ -313,7 +290,7 @@ class PandasQueryPipeline(object):
         for i, node in enumerate(self.outputs):
             ptns = self._complete_nodes(node.operators + [node], ptns)
             for ptn in ptns:
-                ptn.drain_call_queue()
+                ptn.drain_call_queue(num_splits=1)
             out_ptns = ptns
             if postprocessor:
                 args = []
@@ -331,7 +308,7 @@ class PandasQueryPipeline(object):
                         ptn.add_to_apply_calls(postprocessor, *args) for ptn in ptns
                     ]
                 if final_result_func is None:
-                    [ptn.drain_call_queue() for ptn in out_ptns]
+                    [ptn.drain_call_queue(num_splits=1) for ptn in out_ptns]
             if self.node_to_id is None:
                 outs.append(out_ptns)
             else:
@@ -362,5 +339,4 @@ class PandasQueryPipeline(object):
                 for d in df:
                     wait_parts.extend(d.list_of_blocks)
         ray.wait(wait_parts, num_returns=len(wait_parts))
-        PandasOnRayDataframeVirtualPartition.drain_call_queue = self.dcq
         return final_results
