@@ -57,5 +57,4 @@ Public API
 ''''''''''
 
 .. automodule:: modin.core.execution.dispatching.factories.factories
-    :noindex:
     :members:
