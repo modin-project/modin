@@ -19,7 +19,6 @@ from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pa
 from modin.core.dataframe.base.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
 )
-import ray
 
 
 class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
