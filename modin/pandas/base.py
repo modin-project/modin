@@ -1402,7 +1402,6 @@ class BasePandasDataset(object):
             result.index = pandas.RangeIndex(stop=len(result))
         if inplace:
             self._update_inplace(result)
-            return None
         else:
             return result
 
