@@ -494,24 +494,38 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort = kwargs.get("sort", False)
 
         if how in ["left", "inner"]:
-            if how == "left":
-                if isinstance(right, type(self)):
-                    if self.has_multiindex(axis=0) and all(
-                        map(lambda name: name in self.index.names, on)
-                    ):
-                        new_index = self.index
-                        for name in new_index.names:
-                            if name not in on:
-                                new_index = new_index.droplevel(name)
-                        right = right.reindex(
-                            axis=0, labels=new_index, _reset_index=self.index
-                        )
+            if (
+                how == "left"
+                and isinstance(right, type(self))
+                and not kwargs.get("lsuffix")
+                and not kwargs.get("rsuffix")
+            ):
+                if self.has_multiindex(axis=0) and all(
+                    map(lambda name: name in self.index.names, on)
+                ):
+                    new_index = self.index
+                    for name in new_index.names:
+                        if name not in on:
+                            new_index = new_index.droplevel(name)
+                    right = right.reindex(
+                        axis=0, labels=new_index, _reset_index=self.index
+                    )
+                else:
+                    if not isinstance(on, list):
+                        on = [on]
+                    # import pdb;pdb.set_trace()
+                    mframe = self.getitem_array(on)
+                    frame = mframe.to_pandas()
+                    if len(on) == 1:
+                        frame = frame.squeeze(axis=1)
+                        labels = pandas.Index(frame)
                     else:
-                        right = right.reindex(
-                            axis=0,
-                            labels=self.getitem_array(on),
-                            _reset_index=self.index,
-                        )
+                        labels = pandas.MultiIndex.from_frame(frame)
+                    right = right.reindex(
+                        axis=0,
+                        labels=labels,
+                        _reset_index=self.index,
+                    )
 
                 if not all(map(lambda name: name in right.index.names, on)):
                     right = right.drop(columns=on)
@@ -520,8 +534,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 new_self = self.concat(1, right, join="left")
                 return new_self.sort_rows_by_column_values(on) if sort else new_self
             else:
+                right = right.to_pandas()
 
-                def map_func(left, right):
+                def map_func(left, right=right, kwargs=kwargs):
                     return pandas.DataFrame.join(left, right, **kwargs)
 
                 new_self = self.__constructor__(
