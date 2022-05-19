@@ -158,6 +158,57 @@ def test_join(test_data, test_data2):
         df_equals(modin_join, pandas_join)
 
 
+def test_join_4427():
+    count_cols = 16
+    data = np.random.uniform(0, 100, size=(1_000, count_cols))
+    left_columns = [f"lcol{x}" for x in range(count_cols)]
+    right_columns = [f"rcol{x}" for x in range(count_cols)]
+    modin_df1 = pd.DataFrame(data, columns=left_columns)
+    modin_df2 = pd.DataFrame(data, columns=right_columns)
+
+    pandas_df1 = pandas.DataFrame(data, columns=left_columns)
+    pandas_df2 = pandas.DataFrame(data, columns=right_columns)
+
+    for on in (left_columns[0], left_columns[:2]):
+        # check general `join` code branch
+        eval_general(
+            modin_df1,
+            pandas_df1,
+            lambda df: df.join(
+                modin_df2.set_index(right_columns[:2])
+                if isinstance(df, pd.DataFrame)
+                else pandas_df2.set_index(right_columns[:2]),
+                on=on,
+            ),
+        )
+
+        # check exception: 'len(left_on) must equal the number of levels in the index of "right"'
+        eval_general(
+            modin_df1,
+            pandas_df1,
+            lambda df: df.join(
+                modin_df2 if isinstance(df, pd.DataFrame) else pandas_df2,
+                on=on,
+            ),
+        )
+
+    # check exception when labels in index and columns intersect
+    new_index = pandas.MultiIndex.from_frame(pandas_df1[left_columns[:2]])
+    modin_df1.index = new_index
+    pandas_df1.index = new_index
+
+    eval_general(
+        modin_df1,
+        pandas_df1,
+        lambda df: df.join(
+            modin_df2.set_index(right_columns[:3])
+            if isinstance(df, pd.DataFrame)
+            else pandas_df2.set_index(right_columns[:3]),
+            on=left_columns[:3],
+        ),
+    )
+
+
 @pytest.mark.parametrize(
     "test_data, test_data2",
     [

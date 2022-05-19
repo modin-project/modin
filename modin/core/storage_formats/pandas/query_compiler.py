@@ -510,9 +510,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
                 # `on` can include index name and column name in the same time,
                 # but they shouldn't be equally
-                intersection = self.index.intersection(self.columns)
+                intersection = pandas.Index(self.index.names).intersection(self.columns)
                 if not intersection.empty:
-                    intersected = filter(lambda label: label in intersection, on)
+                    intersected = list(filter(lambda label: label in intersection, on))
                     raise ValueError(
                         f"'{intersected[0]}' is both an index level and a column label, which is ambiguous."
                     )
