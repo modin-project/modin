@@ -518,8 +518,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
 
                 def _create_index(query_compiler, on, index, columns):
-                    on_in_columns = columns.intersection(on)
-                    on_in_index = pandas.Index(index.names).intersection(on)
+                    on = pandas.Index(on)
+                    on_in_columns = on.intersection(columns)
+                    on_in_index = on.intersection(index.names)
                     frame1, frame2 = None, None
                     if len(on_in_index) == len(on):
                         index = index
