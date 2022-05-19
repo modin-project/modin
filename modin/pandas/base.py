@@ -1397,8 +1397,7 @@ class BasePandasDataset(object):
             duplicates = self.duplicated(keep=keep, subset=subset)
         else:
             duplicates = self.duplicated(keep=keep)
-
-        result = self[-duplicates]
+        result = self[~duplicates]
         if ignore_index:
             result.index = pandas.RangeIndex(stop=len(result))
         if inplace:
