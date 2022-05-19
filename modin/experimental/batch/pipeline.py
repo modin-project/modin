@@ -106,6 +106,22 @@ class PandasQueryPipeline(object):
         self.nodes_list = []
         self.node_to_id = None
 
+    def update_df(self, df):
+        """Updates the dataframe to perform this pipeline on.
+
+        Parameters
+        ----------
+        df : modin.pandas.DataFrame
+            The new dataframe to perform this pipeline on.
+        """
+        if Engine.get() != "Ray" or (
+            not isinstance(df._query_compiler._modin_frame, PandasOnRayDataframe)
+        ):  # pragma: no cover
+            ErrorMessage.not_implemented(
+                "Batch Pipeline API is only implemented for Ray Engine."
+            )
+        self.df = df
+
     def add_query(
         self,
         func: Callable,
@@ -270,6 +286,11 @@ class PandasQueryPipeline(object):
             is returned. If `final_result_func` is not specified, the resulting dataframes are
             returned in the format specified above.
         """
+        if len(self.outputs) == 0:
+            ErrorMessage.single_warning(
+                "No outputs to compute. Returning an empty list. Please specify outputs by calling `add_query` with `is_output=True`."
+            )
+            return []
         if self.node_to_id is None and pass_output_id:
             raise ValueError(
                 "`pass_output_id` is set to True, but output ids have not been specified. "

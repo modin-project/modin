@@ -25,7 +25,7 @@ from modin.pandas.test.utils import df_equals
     reason="Only Ray supports the Batch Pipeline API",
 )
 class TestPipelineRayEngine:
-    def test_pipeline_warnings(self):
+    def test_warnings(self):
         """
         This test ensures that creating a Pipeline object raises the correct warnings.
         """
@@ -36,7 +36,13 @@ class TestPipelineRayEngine:
             UserWarning,
             match="The Batch Pipeline API is an experimental feature and still under development in Modin.",
         ):
-            PandasQueryPipeline(df, 0)
+            pipeline = PandasQueryPipeline(df, 0)
+        with pytest.warns(
+            UserWarning,
+            match="No outputs to compute. Returning an empty list. Please specify outputs by calling `add_query` with `is_output=True`.",
+        ):
+            output = pipeline.compute_batch()
+        assert output == [], "Empty pipeline did not return an empty list."
 
     def test_pipeline_simple(self):
         """
@@ -85,7 +91,16 @@ class TestPipelineRayEngine:
             NPartitions.get() == num_ptns
         ), "Pipeline did not change NPartitions.get()"
 
-    def test_pipeline_multiple_outputs(self):
+    def test_update_df(self):
+        df = pd.DataFrame([[1, 2, 3], [4, 5, 6]])
+        pipeline = PandasQueryPipeline(df, 0)
+        pipeline.add_query(lambda df: df + 3, is_output=True)
+        new_df = df * -1
+        pipeline.update_df(new_df)
+        output_df = pipeline.compute_batch()[0]
+        df_equals((df * -1) + 3, output_df)
+
+    def test_multiple_outputs(self):
         """
         This test creates a pipeline with multiple outputs, and checks that all are computed correctly.
         """
@@ -107,7 +122,7 @@ class TestPipelineRayEngine:
         corr_df += 30
         df_equals(corr_df, new_dfs[2])  # Third output computed correctly
 
-    def test_pipeline_output_id(self):
+    def test_output_id(self):
         arr = np.random.randint(0, 1000, (1000, 1000))
         df = pd.DataFrame(arr)
         pipeline = PandasQueryPipeline(df, 0)
@@ -140,7 +155,7 @@ class TestPipelineRayEngine:
         ):
             pipeline.compute_batch(postprocessor=lambda df: df, pass_output_id=True)
 
-    def test_pipeline_output_id_multiple_outputs(self):
+    def test_output_id_multiple_outputs(self):
         arr = np.random.randint(0, 1000, (1000, 1000))
         df = pd.DataFrame(arr)
         pipeline = PandasQueryPipeline(df, 0)
@@ -166,7 +181,7 @@ class TestPipelineRayEngine:
         corr_df += 30
         df_equals(corr_df, new_dfs[22])  # Third output computed correctly
 
-    def test_pipeline_postprocessing(self):
+    def test_postprocessing(self):
         """
         This test checks that the `postprocessor` argument to `_compute_batch` is handled correctly.
         """
@@ -198,7 +213,7 @@ class TestPipelineRayEngine:
         corr_df["new_col"] = corr_df.iloc[:, -1]
         df_equals(corr_df, new_dfs[2])
 
-    def test_pipeline_postprocessing_w_output_id(self):
+    def test_postprocessing_w_output_id(self):
         """
         This test checks that the `postprocessor` argument is correctly handled when `output_id` is specified.
         """
@@ -249,7 +264,7 @@ class TestPipelineRayEngine:
         corr_df["new_col"] = 22
         df_equals(corr_df, new_dfs[22])
 
-    def test_pipeline_postprocessing_w_ptn_id(self):
+    def test_postprocessing_w_ptn_id(self):
         """
         This test checks that the postprocessing is correctly handled when `partition_id` is passed.
         """
@@ -300,7 +315,7 @@ class TestPipelineRayEngine:
         corr_df = from_partitions(ptns, axis=None)
         df_equals(corr_df, new_dfs[22])
 
-    def test_pipeline_postprocessing_w_all_metadata(self):
+    def test_postprocessing_w_all_metadata(self):
         """
         This test checks that postprocessing is correctly handled when `partition_id` and `output_id` are passed.
         """
@@ -357,7 +372,7 @@ class TestPipelineRayEngine:
         corr_df = from_partitions(ptns, axis=None)
         df_equals(corr_df, new_dfs[22])
 
-    def test_pipeline_final_result_func(self):
+    def test_final_result_func(self):
         """
         This test checks that when `final_result_func` is specified, outputs are computed correctly.
         """
@@ -442,7 +457,7 @@ class TestPipelineRayEngine:
         )
         df_equals(ptn, new_dfs[22])  # Third output computed correctly
 
-    def test_pipeline_postproc_and_final(self):
+    def test_postproc_and_final(self):
         """
         This test checks that when postprocessor and final_result_func are both present, outputs are computed correctly.
         """
@@ -672,4 +687,12 @@ def test_pipeline_unsupported_engine():
         match="Batch Pipeline API is only implemented for Ray Engine.",
     ):
         PandasQueryPipeline(df, 0)
+    new_df = pd.DataFrame([[1, 2, 3], [5, 6, 7]])
+    pipeline = PandasQueryPipeline(new_df, 0)
+    # Check that even if Engine is Ray, if the new df is not backed by Ray, the Pipeline does not allow an update.
+    with pytest.raises(
+        NotImplementedError,
+        match="Batch Pipeline API is only implemented for Ray Engine.",
+    ):
+        pipeline.update_df(df)
     Engine.put(eng)
