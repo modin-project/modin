@@ -31,7 +31,7 @@ import itertools
 import functools
 import numpy as np
 import sys
-from typing import IO, Optional, Union, Iterator, Callable
+from typing import IO, Optional, Union, Iterator
 import warnings
 
 from modin.pandas import Categorical

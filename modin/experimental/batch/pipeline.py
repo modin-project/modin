@@ -25,6 +25,7 @@ import ray
 import numpy as np
 from modin.distributed.dataframe.pandas.partitions import from_partitions
 
+
 class PandasQuery(object):
     """
     Internal representation of a single query in a pipeline.
@@ -45,7 +46,7 @@ class PandasQuery(object):
         Whether to pass the numerical partition id to the query.
     reduce_fn : Callable
         The reduce function to apply if `fan_out` is set to True. This takes the `num_partition` partitions that result from this query, and combines them into 1 partition.
-    
+
     Notes
     -----
     func must be a function that is applied along an axis of the dataframe.
@@ -68,6 +69,7 @@ class PandasQuery(object):
         self.pass_partition_id = pass_partition_id
         self.operators = None
         self.reduce_fn = reduce_fn
+
 
 class PandasQueryPipeline(object):
     """

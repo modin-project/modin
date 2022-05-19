@@ -24,7 +24,7 @@ from modin.pandas.test.utils import df_equals
     Engine.get() != "Ray",
     reason="Only Ray supports the Batch Pipeline API",
 )
-class TestPipelineRayEngine():
+class TestPipelineRayEngine:
     def test_pipeline_warnings(self):
         """
         This test ensures that creating a Pipeline object raises the correct warnings.
@@ -81,7 +81,9 @@ class TestPipelineRayEngine():
         # Ensure that setting `num_partitions` when creating a pipeline does not change `NPartitions`
         num_ptns = NPartitions.get()
         PandasQueryPipeline(df, 0, num_partitions=(num_ptns - 1))
-        assert NPartitions.get() == num_ptns, "Pipeline did not change NPartitions.get()"
+        assert (
+            NPartitions.get() == num_ptns
+        ), "Pipeline did not change NPartitions.get()"
 
     def test_pipeline_multiple_outputs(self):
         """
@@ -110,14 +112,18 @@ class TestPipelineRayEngine():
         df = pd.DataFrame(arr)
         pipeline = PandasQueryPipeline(df, 0)
         pipeline.add_query(lambda df: df * -30, is_output=True, output_id=20)
-        with pytest.raises(ValueError, match="Output ID must be specified for all nodes."):
+        with pytest.raises(
+            ValueError, match="Output ID must be specified for all nodes."
+        ):
             pipeline.add_query(
                 lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)}),
                 is_output=True,
             )
         pipeline = PandasQueryPipeline(df, 0)
         pipeline.add_query(lambda df: df * -30, is_output=True)
-        with pytest.raises(ValueError, match="Output ID must be specified for all nodes."):
+        with pytest.raises(
+            ValueError, match="Output ID must be specified for all nodes."
+        ):
             pipeline.add_query(
                 lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)}),
                 is_output=True,
@@ -125,10 +131,15 @@ class TestPipelineRayEngine():
             )
         pipeline = PandasQueryPipeline(df, 0)
         pipeline.add_query(lambda df: df, is_output=True)
-        with pytest.raises(ValueError, match=("`pass_output_id` is set to True, but output ids have not been specified. "
-            + "To pass output ids, please specify them using the `output_id` kwarg with pipeline.add_query")):
+        with pytest.raises(
+            ValueError,
+            match=(
+                "`pass_output_id` is set to True, but output ids have not been specified. "
+                + "To pass output ids, please specify them using the `output_id` kwarg with pipeline.add_query"
+            ),
+        ):
             pipeline.compute_batch(postprocessor=lambda df: df, pass_output_id=True)
-    
+
     def test_pipeline_output_id_multiple_outputs(self):
         arr = np.random.randint(0, 1000, (1000, 1000))
         df = pd.DataFrame(arr)
@@ -223,7 +234,9 @@ class TestPipelineRayEngine():
             output_id=21,
         )
         pipeline.add_query(lambda df: df + 30, is_output=True, output_id=22)
-        new_dfs = pipeline.compute_batch(postprocessor=new_col_adder, pass_output_id=True)
+        new_dfs = pipeline.compute_batch(
+            postprocessor=new_col_adder, pass_output_id=True
+        )
         corr_df = pd.DataFrame(arr) * -30
         corr_df["new_col"] = 20
         df_equals(corr_df, new_dfs[20])
@@ -255,7 +268,9 @@ class TestPipelineRayEngine():
             output_id=21,
         )
         pipeline.add_query(lambda df: df + 30, is_output=True, output_id=22)
-        new_dfs = pipeline.compute_batch(postprocessor=new_col_adder, pass_partition_id=True)
+        new_dfs = pipeline.compute_batch(
+            postprocessor=new_col_adder, pass_partition_id=True
+        )
         corr_df = pd.DataFrame(arr) * -30
         corr_df_md = corr_df._query_compiler._modin_frame
         ptns = corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)
@@ -310,7 +325,9 @@ class TestPipelineRayEngine():
         corr_df = pd.DataFrame(arr) * -30
         corr_df_md = corr_df._query_compiler._modin_frame
         ptns = corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)
-        ptns = [ptn.add_to_apply_calls(new_col_adder, 20, i) for i, ptn in enumerate(ptns)]
+        ptns = [
+            ptn.add_to_apply_calls(new_col_adder, 20, i) for i, ptn in enumerate(ptns)
+        ]
         [ptn.drain_call_queue() for ptn in ptns]
         ptns = [ptn.list_of_blocks for ptn in ptns]
         corr_df = from_partitions(ptns, axis=None)
@@ -321,7 +338,9 @@ class TestPipelineRayEngine():
         )
         corr_df_md = corr_df._query_compiler._modin_frame
         ptns = corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)
-        ptns = [ptn.add_to_apply_calls(new_col_adder, 21, i) for i, ptn in enumerate(ptns)]
+        ptns = [
+            ptn.add_to_apply_calls(new_col_adder, 21, i) for i, ptn in enumerate(ptns)
+        ]
         [ptn.drain_call_queue() for ptn in ptns]
         ptns = [ptn.list_of_blocks for ptn in ptns]
         corr_df = from_partitions(ptns, axis=None)
@@ -330,7 +349,9 @@ class TestPipelineRayEngine():
         corr_df += 30
         corr_df_md = corr_df._query_compiler._modin_frame
         ptns = corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)
-        ptns = [ptn.add_to_apply_calls(new_col_adder, 22, i) for i, ptn in enumerate(ptns)]
+        ptns = [
+            ptn.add_to_apply_calls(new_col_adder, 22, i) for i, ptn in enumerate(ptns)
+        ]
         [ptn.drain_call_queue() for ptn in ptns]
         ptns = [ptn.list_of_blocks for ptn in ptns]
         corr_df = from_partitions(ptns, axis=None)
@@ -504,9 +525,7 @@ class TestPipelineRayEngine():
         ptn2 = ray.put(pandas.DataFrame([[3, 4, 5]]))
         df = from_partitions([ptn1, ptn2], 0)
         pipeline = PandasQueryPipeline(df, 0)
-        pipeline.add_query(
-            lambda df: df, repartition_after=True, is_output=True
-        )
+        pipeline.add_query(lambda df: df, repartition_after=True, is_output=True)
 
         with pytest.raises(
             NotImplementedError,
@@ -599,9 +618,7 @@ class TestPipelineRayEngine():
             df.to_csv(f"{ptn_id}.csv")
             return df
 
-        pipeline.add_query(
-            to_csv, is_output=True, output_id=22, pass_partition_id=True
-        )
+        pipeline.add_query(to_csv, is_output=True, output_id=22, pass_partition_id=True)
 
         def post_proc(df, o_id, ptn_id):
             df["new_col"] = f"{o_id} {ptn_id}"
@@ -627,6 +644,7 @@ class TestPipelineRayEngine():
             ), "CSV File for Partition {i} does not exist, even though dataframe should have been repartitioned."
             remove(f"{i}.csv")
         assert 22 in new_dfs, "Output for output id 22 not generated."
+
 
 @pytest.mark.skipif(
     Engine.get() == "Ray",
