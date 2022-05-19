@@ -105,7 +105,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             )
         )
 
-    def shuffle(self, func, *args, lengths, **kwargs):
+    def shuffle(self, func, lengths, *args, **kwargs):
         """
         Shuffle the order of the data in this axis partition based on the `lengths`.
 

@@ -20,7 +20,8 @@ from ray.util import get_node_ip_address
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-from .partition import ObjectIDType, PandasOnRayDataframePartition
+from .partition import PandasOnRayDataframePartition
+from modin.core.execution.ray.implementations.pandas_on_ray.utils import deserialize
 
 
 class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
@@ -510,18 +511,3 @@ def deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
         return [i for r in result for i in [r, len(r), len(r.columns), ip]]
     else:
         return [i for r in result for i in [r, None, None, ip]]
-
-
-def deserialize(obj):
-    if isinstance(obj, ObjectIDType):
-        return ray.get(obj)
-    elif isinstance(obj, (tuple, list)) and any(
-        isinstance(o, ObjectIDType) for o in obj
-    ):
-        return ray.get(list(obj))
-    elif isinstance(obj, dict) and any(
-        isinstance(val, ObjectIDType) for val in obj.values()
-    ):
-        return dict(zip(obj.keys(), ray.get(list(obj.values()))))
-    else:
-        return obj
