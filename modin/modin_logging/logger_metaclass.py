@@ -36,6 +36,7 @@ def logger_class_wrapper(classname, name, method):
     func
         A decorator function.
     """
+
     @wraps(method)
     def log_wrap(*args, **kwargs):
         if LogMode.get() != "disable":
@@ -45,6 +46,7 @@ def logger_class_wrapper(classname, name, method):
             logger.info(f"END::PANDAS-API::{classname}.{name}")
             return result
         return method(*args, **kwargs)
+
     return log_wrap
 
 
