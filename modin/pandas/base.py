@@ -26,6 +26,7 @@ from pandas.core.dtypes.common import (
     is_dtype_equal,
     is_object_dtype,
 )
+from pandas.core.indexes.api import ensure_index
 import pandas.core.window.rolling
 import pandas.core.resample
 import pandas.core.generic
@@ -2213,6 +2214,34 @@ class BasePandasDataset(object):
             )
         )
 
+    def _copy_index_metadata(self, source, destination):  # noqa: PR01, RT01, D200
+        """
+        Copy Index metadata from `source` to `destination` inplace.
+        """
+        if hasattr(source, "name") and hasattr(destination, "name"):
+            destination.name = source.name
+        if hasattr(source, "names") and hasattr(destination, "names"):
+            destination.names = source.names
+        return destination
+
+    def _ensure_index(self, index_like, axis=0):  # noqa: PR01, RT01, D200
+        """
+        Ensure that we have an index from some index-like object.
+        """
+        if (
+            self._query_compiler.has_multiindex(axis=axis)
+            and not isinstance(index_like, pandas.Index)
+            and is_list_like(index_like)
+            and len(index_like) > 0
+            and isinstance(index_like[0], tuple)
+        ):
+            try:
+                return pandas.MultiIndex.from_tuples(index_like)
+            except TypeError:
+                # not all tuples
+                pass
+        return ensure_index(index_like)
+
     def reindex(
         self,
         index=None,
@@ -2232,7 +2261,9 @@ class BasePandasDataset(object):
         new_query_compiler = None
         if index is not None:
             if not isinstance(index, pandas.Index):
-                index = pandas.Index(index)
+                index = self._copy_index_metadata(
+                    source=self.index, destination=self._ensure_index(index, axis=0)
+                )
             if not index.equals(self.index):
                 new_query_compiler = self._query_compiler.reindex(
                     axis=0, labels=index, **kwargs
@@ -2242,7 +2273,9 @@ class BasePandasDataset(object):
         final_query_compiler = None
         if columns is not None:
             if not isinstance(columns, pandas.Index):
-                columns = pandas.Index(columns)
+                columns = self._copy_index_metadata(
+                    source=self.columns, destination=self._ensure_index(columns, axis=1)
+                )
             if not columns.equals(self.columns):
                 final_query_compiler = new_query_compiler.reindex(
                     axis=1, labels=columns, **kwargs
