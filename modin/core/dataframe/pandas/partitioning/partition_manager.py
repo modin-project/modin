@@ -60,6 +60,13 @@ def wait_computations_if_benchmark_mode(func):
                 partitions = result[0]
             else:
                 partitions = result
+            # When partitions have a deferred call queue, calling
+            # parittion.wait() on each partition serially will serially kick
+            # off each deferred computation and wait for each partition to
+            # finish before kicking off the next one. Instead, we want to
+            # serially kick off all the deferred computations so that they can
+            # all run aynschronously, then serially wait on all the results.
+            [part.drain_call_queue() for row in partitions for part in row]
             # need to go through all the values of the map iterator
             # since `wait` does not return anything, we need to explicitly add
             # the return `True` value from the lambda
