@@ -31,9 +31,9 @@ def _deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
     ----------
     func : callable
         A local function that we want to call remotely.
-    kwargs : dict
+    *args : dict
         Additional arguments to pass to `func` when calling remotely.
-    kwargs : dict
+    **kwargs : dict
         Keyword arguments to pass to `func` when calling remotely.
 
     Returns
