@@ -87,11 +87,13 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             PandasDataframeAxisPartition.deploy_axis_func,
             axis,
             func,
-            *args,
-            num_splits,
-            kwargs,
-            maintain_partitioning,
-            *partitions,
+            *[
+                *args,
+                num_splits,
+                kwargs,
+                maintain_partitioning,
+                *partitions,
+            ],
             num_returns=result_num_splits * 4,
             pure=False,
         )
@@ -116,8 +118,6 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         other_shape : np.ndarray
             The shape of right frame in terms of partitions, i.e.
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
-        kwargs : dict
-            Additional keywords arguments to be passed in `func`.
         *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
 
@@ -132,12 +132,14 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
             func,
-            *args,
-            num_splits,
-            len_of_left,
-            other_shape,
-            kwargs,
-            *partitions,
+            *[
+                *args,
+                num_splits,
+                len_of_left,
+                other_shape,
+                kwargs,
+                *partitions,
+            ],
             num_returns=num_splits * 4,
             pure=False,
         )
