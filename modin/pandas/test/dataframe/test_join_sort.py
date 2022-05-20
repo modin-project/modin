@@ -158,7 +158,8 @@ def test_join(test_data, test_data2):
         df_equals(modin_join, pandas_join)
 
 
-def test_join_4427():
+@pytest.mark.parametrize("how", ["left", "inner", "right"])
+def test_join_4427(how):
     count_cols = 16
     data = np.random.uniform(0, 100, size=(1_000, count_cols))
     left_columns = [f"lcol{x}" for x in range(count_cols)]
@@ -175,10 +176,15 @@ def test_join_4427():
             modin_df1,
             pandas_df1,
             lambda df: df.join(
-                modin_df2.set_index(right_columns[:2])
+                modin_df2.set_index(
+                    right_columns[: (len(on) if isinstance(on, list) else 1)]
+                )
                 if isinstance(df, pd.DataFrame)
-                else pandas_df2.set_index(right_columns[:2]),
+                else pandas_df2.set_index(
+                    right_columns[: (len(on) if isinstance(on, list) else 1)]
+                ),
                 on=on,
+                how=how,
             ),
         )
 
@@ -189,6 +195,7 @@ def test_join_4427():
             lambda df: df.join(
                 modin_df2 if isinstance(df, pd.DataFrame) else pandas_df2,
                 on=on,
+                how=how,
             ),
         )
 
@@ -205,6 +212,7 @@ def test_join_4427():
             if isinstance(df, pd.DataFrame)
             else pandas_df2.set_index(right_columns[:3]),
             on=left_columns[:3],
+            how=how,
         ),
     )
 
@@ -223,6 +231,7 @@ def test_join_4427():
             if isinstance(df, pd.DataFrame)
             else pandas_df2.set_index(right_columns[:2]),
             on=new_index.names,
+            how=how,
         ),
     )
 
@@ -236,6 +245,7 @@ def test_join_4427():
             if isinstance(df, pd.DataFrame)
             else pandas_df2.set_index(right_columns[:2]),
             on=new_index.names[:1] + left_columns[:1],
+            how=how,
         ),
     )
 
@@ -248,6 +258,7 @@ def test_join_4427():
             if isinstance(df, pd.DataFrame)
             else pandas_df2.set_index(right_columns[:1]),
             on=new_index.names[:1],
+            how=how,
         ),
     )
 

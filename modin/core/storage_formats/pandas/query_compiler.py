@@ -493,10 +493,33 @@ class PandasQueryCompiler(BaseQueryCompiler):
         how = kwargs.get("how", "left")
         sort = kwargs.get("sort", False)
 
-        if how in ["left", "inner"]:
+        if how in ["left", "inner", "right"]:
+
+            def _create_index(query_compiler, on, index, columns):
+                on = pandas.Index(on)
+                on_in_columns = on.intersection(columns)
+                on_in_index = on.intersection(index.names)
+                frame1, frame2 = None, None
+                if len(on_in_index) == len(on) == len(index.names):
+                    # fast path
+                    new_index = index
+                else:
+                    if not on_in_index.empty:
+                        frame1 = index.to_frame()[on_in_index]
+                    if not on_in_columns.empty:
+                        frame2 = query_compiler.getitem_array(on_in_columns).to_pandas()
+                    if frame1 is not None and frame2 is not None:
+                        frame = pandas.concat([frame1, frame2], axis=1)
+                    else:
+                        frame = frame2 if frame1 is None else frame1
+                    if len(frame.columns) > 1:
+                        new_index = pandas.MultiIndex.from_frame(frame)
+                    else:
+                        new_index = pandas.Index(frame.squeeze(axis=1))
+                return new_index
+
             if (
-                how == "left"
-                and isinstance(right, type(self))
+                isinstance(right, type(self))
                 and not kwargs.get("lsuffix")
                 and not kwargs.get("rsuffix")
             ):
@@ -504,7 +527,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # but not in two places at once
                 if not isinstance(on, list):
                     on = [on]
-                if len(on) > 1 and len(on) != len(right.index.names):
+                if len(on) != len(right.index.names):
                     raise ValueError(
                         'len(left_on) must equal the number of levels in the index of "right"'
                     )
@@ -517,34 +540,41 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         f"'{intersected[0]}' is both an index level and a column label, which is ambiguous."
                     )
 
-                def _create_index(query_compiler, on, index, columns):
-                    on = pandas.Index(on)
-                    on_in_columns = on.intersection(columns)
-                    on_in_index = on.intersection(index.names)
-                    frame1, frame2 = None, None
-                    if len(on_in_index) == len(on) == len(index.names):
-                        # fast path
-                        new_index = index
+                if how == "left":
+                    labels = _create_index(self, on, self.index, self.columns)
+                    right = right.reindex(
+                        axis=0, labels=labels, _reset_index=self.index
+                    )
+                    new_self = self.concat(1, right, join="left")
+                elif how == "inner":
+                    labels = _create_index(self, on, self.index, self.columns)
+                    inner_labels = labels.intersection(right.index)
+                    new_self = self
+                    if len(inner_labels) != len(labels):
+                        _, indexer = labels.reindex(inner_labels)
+                        if indexer is not None:
+                            new_index = new_self.index.take(indexer)
+                        else:
+                            new_index = new_self.index
+                        new_self = new_self.reindex(
+                            axis=0, labels=inner_labels, _reset_index=new_index
+                        )
+                    # we need always to reset index, but we may try to do it separately
+                    right = right.reindex(
+                        axis=0, labels=inner_labels, _reset_index=new_self.index
+                    )
+                    new_self = new_self.concat(1, right, join="left")
+                elif how == "right":
+                    labels = _create_index(self, on, self.index, self.columns)
+                    _, indexer = labels.reindex(right.index)
+                    if indexer is not None:
+                        # `take` doesn't work with indexer, where `-1` value can be
+                        new_index = self.index.take(indexer)
                     else:
-                        if not on_in_index.empty:
-                            frame1 = index.to_frame()[on_in_index]
-                        if not on_in_columns.empty:
-                            frame2 = query_compiler.getitem_array(
-                                on_in_columns
-                            ).to_pandas()
-                        if frame1 is not None and frame2 is not None:
-                            frame = pandas.concat([frame1, frame2], axis=1)
-                        else:
-                            frame = frame2 if frame1 is None else frame1
-                        if len(frame.columns) > 1:
-                            new_index = pandas.MultiIndex.from_frame(frame)
-                        else:
-                            new_index = pandas.Index(frame.squeeze(axis=1))
-                    return new_index
-
-                labels = _create_index(self, on, self.index, self.columns)
-                right = right.reindex(axis=0, labels=labels, _reset_index=self.index)
-                new_self = self.concat(1, right, join="left")
+                        new_index = self.index
+                    new_self = self.reindex(axis=0, labels=new_index)
+                    right.index = new_self.index
+                    new_self = new_self.concat(1, right, join="left")
             else:
                 right = right.to_pandas()
 
