@@ -20,7 +20,7 @@ class DaskWrapper:
     """The class responsible for execution of remote operations."""
 
     @classmethod
-    def deploy(cls, func, *args, num_returns=1, pure=None, **kwargs):
+    def deploy(cls, func_call, num_returns=1, pure=None):
         """
         Deploy a function in a worker process.
 
@@ -28,14 +28,10 @@ class DaskWrapper:
         ----------
         func : callable
             Function to be deployed in a worker process.
-        *args : list
-            Additional positional arguments to be passed in `func`.
         num_returns : int, default: 1
             The number of returned objects.
         pure : bool, optional
             Whether or not `func` is pure. See `Client.submit` for details.
-        **kwargs : dict
-            Additional keyword arguments to be passed in ``func``.
 
         Returns
         -------
@@ -43,6 +39,7 @@ class DaskWrapper:
             The result of ``func`` splitted into parts in accordance with ``num_returns``.
         """
         client = default_client()
+        func, args, kwargs = func_call
         remote_task_future = client.submit(func, *args, pure=pure, **kwargs)
         if num_returns != 1:
             return [

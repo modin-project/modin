@@ -79,21 +79,22 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         list
             A list of distributed.Future.
         """
-        func, args, kwargs = func_call
+        _, _, kwargs = func_call
         lengths = kwargs.get("_lengths", None)
         result_num_splits = len(lengths) if lengths else num_splits
         return DaskWrapper.deploy(
-            deploy_dask_func,
-            PandasDataframeAxisPartition.deploy_axis_func,
-            axis,
-            func,
-            *[
-                *args,
-                num_splits,
-                kwargs,
-                maintain_partitioning,
-                *partitions,
-            ],
+            (
+                deploy_dask_func,
+                (
+                    PandasDataframeAxisPartition.deploy_axis_func,
+                    axis,
+                    func_call,
+                    num_splits,
+                    maintain_partitioning,
+                    *partitions,
+                ),
+                {},
+            ),
             num_returns=result_num_splits * 4,
             pure=False,
         )
@@ -126,20 +127,20 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         list
             A list of distributed.Future.
         """
-        func, args, kwargs = func_call
         return DaskWrapper.deploy(
-            deploy_dask_func,
-            PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
-            axis,
-            func,
-            *[
-                *args,
-                num_splits,
-                len_of_left,
-                other_shape,
-                kwargs,
-                *partitions,
-            ],
+            (
+                deploy_dask_func,
+                (
+                    PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
+                    axis,
+                    func_call,
+                    num_splits,
+                    len_of_left,
+                    other_shape,
+                    *partitions,
+                ),
+                {},
+            ),
             num_returns=num_splits * 4,
             pure=False,
         )

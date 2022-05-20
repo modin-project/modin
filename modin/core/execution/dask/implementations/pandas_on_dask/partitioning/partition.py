@@ -87,20 +87,17 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         call_queue = self.call_queue + [[func, args, kwargs]]
         if len(call_queue) > 1:
             futures = DaskWrapper.deploy(
-                apply_list_of_funcs, call_queue, self.future, num_returns=2, pure=False
+                (apply_list_of_funcs, (call_queue, self.future), {}),
+                num_returns=2,
+                pure=False,
             )
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this improves performance a bit.
-            func, args, kwargs = call_queue[0]
             futures = DaskWrapper.deploy(
-                apply_func,
-                self.future,
-                func,
-                *args,
+                (apply_func, (self.future, call_queue[0]), {}),
                 num_returns=2,
                 pure=False,
-                **kwargs,
             )
         return PandasOnDaskDataframePartition(futures[0], ip=futures[1])
 
@@ -136,21 +133,15 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             return
         call_queue = self.call_queue
         if len(call_queue) > 1:
-            futures = DaskWrapper.deploy(
-                apply_list_of_funcs, call_queue, self.future, num_returns=2, pure=False
-            )
+            func_call = (apply_list_of_funcs, (call_queue, self.future), {})
+            futures = DaskWrapper.deploy(func_call, num_returns=2, pure=False)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this improves performance a bit.
-            func, args, kwargs = call_queue[0]
             futures = DaskWrapper.deploy(
-                apply_func,
-                self.future,
-                func,
-                *args,
+                (apply_func, (self.future, call_queue[0]), {}),
                 num_returns=2,
                 pure=False,
-                **kwargs,
             )
         self.future = futures[0]
         self._ip_cache = futures[1]
@@ -180,11 +171,11 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         new_obj = super().mask(row_labels, col_labels)
         if isinstance(row_labels, slice) and isinstance(self._length_cache, Future):
             new_obj._length_cache = DaskWrapper.deploy(
-                compute_sliced_len, row_labels, self._length_cache
+                (compute_sliced_len, (row_labels, self._length_cache), {})
             )
         if isinstance(col_labels, slice) and isinstance(self._width_cache, Future):
             new_obj._width_cache = DaskWrapper.deploy(
-                compute_sliced_len, col_labels, self._width_cache
+                (compute_sliced_len, (col_labels, self._width_cache), {})
             )
         return new_obj
 
@@ -285,7 +276,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         return self._ip_cache
 
 
-def apply_func(partition, func, *args, **kwargs):
+def apply_func(partition, func_call):
     """
     Execute a function on the partition in a worker process.
 
@@ -307,6 +298,7 @@ def apply_func(partition, func, *args, **kwargs):
     str
         The node IP address of the worker process.
     """
+    func, args, kwargs = func_call
     result = func(partition, *args, **kwargs)
     return result, get_ip()
 
