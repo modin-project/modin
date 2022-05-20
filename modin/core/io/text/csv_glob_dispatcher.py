@@ -186,7 +186,7 @@ class CSVGlobDispatcher(CSVDispatcher):
             # Launch tasks to read partitions
             column_widths, num_splits = cls._define_metadata(empty_pd_df, column_names)
 
-            args = {
+            new_kwargs = {
                 "num_splits": num_splits,
                 **partition_kwargs,
             }
@@ -205,9 +205,10 @@ class CSVGlobDispatcher(CSVDispatcher):
             index_ids = [None] * len(splits)
             dtypes_ids = [None] * len(splits)
             for idx, chunks in enumerate(splits):
-                args.update({"chunks": chunks})
+                new_kwargs.update({"chunks": chunks})
+                func_call = (cls.parse, (), new_kwargs)
                 *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
-                    cls.parse, num_returns=num_splits + 2, **args
+                    func_call, num_returns=num_splits + 2
                 )
 
         # Compute the index based on a sum of the lengths of each partition (by default)

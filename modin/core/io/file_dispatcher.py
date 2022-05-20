@@ -271,7 +271,7 @@ class FileDispatcher:
         return os.path.exists(file_path)
 
     @classmethod
-    def deploy(cls, func, *args, num_returns=1, **kwargs):  # noqa: PR01
+    def deploy(cls, func_call, num_returns=1):  # noqa: PR01
         """
         Deploy remote task.
 
@@ -279,7 +279,7 @@ class FileDispatcher:
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
-    def parse(self, func, args, num_returns):  # noqa: PR01
+    def parse(self, func_call, num_returns):  # noqa: PR01
         """
         Parse file's data in the worker process.
 

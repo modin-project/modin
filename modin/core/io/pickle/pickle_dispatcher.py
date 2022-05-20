@@ -69,11 +69,10 @@ class PickleExperimentalDispatcher(FileDispatcher):
             warnings.warn("can be inefficient partitioning")
 
         for idx, file_name in enumerate(filepath_or_buffer):
+            func_call = (cls.parse, (file_name,), kwargs)
             *partition_ids[idx], lengths_ids[idx], widths_ids[idx] = cls.deploy(
-                cls.parse,
+                func_call,
                 num_returns=3,
-                fname=file_name,
-                **kwargs,
             )
         lengths = cls.materialize(lengths_ids)
         widths = cls.materialize(widths_ids)

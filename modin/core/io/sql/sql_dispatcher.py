@@ -87,14 +87,20 @@ class SQLDispatcher(FileDispatcher):
             offset = part * limit
             query = con.partition_query(sql, limit, offset)
             *partition_ids[part], index_ids[part], dtypes_ids[part] = cls.deploy(
-                cls.parse,
+                (
+                    cls.parse,
+                    (
+                        query,
+                        con,
+                        index_col,
+                        ReadSqlEngine.get(),
+                    ),
+                    {
+                        "num_splits": num_partitions,
+                        **kwargs,
+                    },
+                ),
                 num_returns=num_partitions + 2,
-                num_splits=num_partitions,
-                sql=query,
-                con=con,
-                index_col=index_col,
-                read_sql_engine=ReadSqlEngine.get(),
-                **kwargs,
             )
             partition_ids[part] = [
                 cls.frame_partition_cls(obj) for obj in partition_ids[part]

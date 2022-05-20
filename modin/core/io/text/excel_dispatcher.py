@@ -168,9 +168,9 @@ class ExcelDispatcher(TextFileDispatcher):
             kwargs["num_splits"] = num_splits
 
             while f.tell() < total_bytes:
-                args = kwargs
-                args["skiprows"] = row_count + args["skiprows"]
-                args["start"] = f.tell()
+                kwargs_copy = kwargs
+                kwargs_copy["skiprows"] = row_count + kwargs_copy["skiprows"]
+                kwargs_copy["start"] = f.tell()
                 chunk = f.read(chunk_size)
                 # This edge case can happen when we have reached the end of the data
                 # but not the end of the file.
@@ -186,14 +186,13 @@ class ExcelDispatcher(TextFileDispatcher):
 
                 last_index = chunk.rindex(row_close_tag)
                 f.seek(-(len(chunk) - last_index) + len(row_close_tag), 1)
-                args["end"] = f.tell()
+                kwargs_copy["end"] = f.tell()
 
                 # If there is no data, exit before triggering computation.
                 if b"</row>" not in chunk and b"</sheetData>" in chunk:
                     break
-                remote_results_list = cls.deploy(
-                    cls.parse, num_returns=num_splits + 2, **args
-                )
+                func_call = (cls.parse, (), kwargs_copy)
+                remote_results_list = cls.deploy(func_call, num_returns=num_splits + 2)
                 data_ids.append(remote_results_list[:-2])
                 index_ids.append(remote_results_list[-2])
                 dtypes_ids.append(remote_results_list[-1])

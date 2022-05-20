@@ -57,12 +57,12 @@ class ColumnStoreDispatcher(FileDispatcher):
         return np.array(
             [
                 cls.deploy(
-                    cls.parse,
+                    (
+                        cls.parse,
+                        (fname,),
+                        {"columns": cols, "num_splits": NPartitions.get(), **kwargs},
+                    ),
                     num_returns=NPartitions.get() + 2,
-                    fname=fname,
-                    columns=cols,
-                    num_splits=NPartitions.get(),
-                    **kwargs,
                 )
                 for cols in col_partitions
             ]
