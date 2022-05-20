@@ -14,6 +14,7 @@
 """Module holds ``cuDFCSVDispatcher`` that is implemented using cuDF-entities."""
 
 import numpy as np
+from modin.core.base import FuncCall
 
 from modin.core.io import CSVDispatcher
 from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition_manager import (
@@ -93,7 +94,7 @@ class cuDFCSVDispatcher(CSVDispatcher):
         gpu_manager = 0
         for idx, (start, end) in enumerate(splits):
             partition_kwargs.update({"start": start, "end": end, "gpu": gpu_manager})
-            func_call = (cls.parse, (), partition_kwargs)
+            func_call = FuncCall(func=cls.parse, kwargs=partition_kwargs)
             *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
                 func_call,
                 num_returns=partition_kwargs.get("num_splits") + 2,

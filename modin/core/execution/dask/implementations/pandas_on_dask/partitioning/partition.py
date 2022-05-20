@@ -16,6 +16,7 @@
 from distributed import Future
 from distributed.utils import get_ip
 from dask.distributed import wait
+from modin.core.base import FuncCall
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
@@ -133,7 +134,9 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             return
         call_queue = self.call_queue
         if len(call_queue) > 1:
-            func_call = (apply_list_of_funcs, (call_queue, self.future), {})
+            func_call = FuncCall(
+                func=apply_list_of_funcs, args=(call_queue, self.future)
+            )
             futures = DaskWrapper.deploy(func_call, num_returns=2, pure=False)
         else:
             # We handle `len(call_queue) == 1` in a different way because
@@ -284,7 +287,7 @@ def apply_func(partition, func_call):
     ----------
     partition : pandas.DataFrame
         A pandas DataFrame the function needs to be executed on.
-    func_call : tuple of (func, args, kwargs)
+    func_call : FuncCall NamedTuple
         The function to perform with its args, and kwargs.
 
     Returns

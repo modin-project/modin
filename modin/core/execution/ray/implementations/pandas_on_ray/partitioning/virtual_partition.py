@@ -14,6 +14,7 @@
 """Module houses classes responsible for storing a virtual partition and applying a function to it."""
 
 import pandas
+from modin.core.base import FuncCall
 import ray
 from ray.util import get_node_ip_address
 
@@ -147,7 +148,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        func_call : tuple of (func, args, kwargs)
+        func_call : FuncCall NamedTuple
             The function to perform with its args, and kwargs.
         num_splits : int
             The number of splits to return (see ``split_result_of_axis_func_pandas``).
@@ -163,7 +164,9 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             A list of ``ray.ObjectRef``-s.
         """
         func, args, kwargs = func_call
-        func_call = (deserialize(func), deserialize(args), deserialize(kwargs))
+        func_call = FuncCall(
+            func=deserialize(func), args=deserialize(args), kwargs=deserialize(kwargs)
+        )
         lengths = kwargs.get("_lengths", None)
         max_retries = kwargs.pop("max_retries", None)
         return deploy_ray_func.options(
@@ -189,7 +192,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        func_call : tuple of (func, args, kwargs)
+        func_call : FuncCall NamedTuple
             The function to perform with its args, and kwargs.
         num_splits : int
             The number of splits to return (see ``split_result_of_axis_func_pandas``).
@@ -207,7 +210,9 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             A list of ``ray.ObjectRef``-s.
         """
         func, args, kwargs = func_call
-        func_call = (deserialize(func), deserialize(args), deserialize(kwargs))
+        func_call = FuncCall(
+            func=deserialize(func), args=deserialize(args), kwargs=deserialize(kwargs)
+        )
         return deploy_ray_func.options(num_returns=num_splits * 4).remote(
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             axis,

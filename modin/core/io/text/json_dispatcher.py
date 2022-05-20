@@ -13,6 +13,7 @@
 
 """Module houses `JSONDispatcher` class, that is used for reading `.json` files."""
 
+from modin.core.base import FuncCall
 from modin.core.io.file_dispatcher import OpenFile
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 from io import BytesIO
@@ -58,7 +59,7 @@ class JSONDispatcher(TextFileDispatcher):
 
         with OpenFile(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
             column_widths, num_splits = cls._define_metadata(empty_pd_df, columns)
-            kargs = {"fname": path_or_buf, "num_splits": num_splits, **kwargs}
+            kwargs = {"fname": path_or_buf, "num_splits": num_splits, **kwargs}
             splits = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
@@ -67,8 +68,8 @@ class JSONDispatcher(TextFileDispatcher):
             index_ids = [None] * len(splits)
             dtypes_ids = [None] * len(splits)
             for idx, (start, end) in enumerate(splits):
-                kargs.update({"start": start, "end": end})
-                func_call = (cls.parse, (), kargs)
+                kwargs.update({"start": start, "end": end})
+                func_call = FuncCall(func=cls.parse, kwargs=kwargs)
                 *partition_ids[idx], index_ids[idx], dtypes_ids[idx], _ = cls.deploy(
                     func_call, num_returns=num_splits + 3
                 )

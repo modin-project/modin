@@ -15,6 +15,7 @@
 
 import pandas
 import numpy as np
+from modin.core.base import FuncCall
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.core.dataframe.base.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
@@ -68,7 +69,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         """
         if num_splits is None:
             num_splits = len(self.list_of_blocks)
-        func_call = (func, args, kwargs)
+        func_call = FuncCall(func=func, args=args, kwargs=kwargs)
         if other_axis_partition is not None:
             if not isinstance(other_axis_partition, list):
                 other_axis_partition = [other_axis_partition]
@@ -130,7 +131,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         # We add these to kwargs and will pop them off before performing the operation.
         kwargs["manual_partition"] = True
         kwargs["_lengths"] = lengths
-        func_call = (func, args, kwargs)
+        func_call = FuncCall(func=func, args=args, kwargs=kwargs)
         return self._wrap_partitions(
             self.deploy_axis_func(
                 self.axis,
@@ -152,7 +153,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        func_call : tuple of (callable, args, kwargs)
+        func_call : FuncCall NamedTuple
             The function to perform with its args, and kwargs.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).
@@ -205,7 +206,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        func_call : tuple of (func, args, kwargs)
+        func_call : FuncCall NamedTuple
             The function to perform with its args, and kwargs.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).

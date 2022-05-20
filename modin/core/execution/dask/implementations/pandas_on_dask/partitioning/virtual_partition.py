@@ -64,7 +64,7 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        func_call : tuple of (func, args, kwargs)
+        func_call : FuncCall NamedTuple
             The function to perform with its args and kwargs.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).
@@ -79,7 +79,7 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         list
             A list of distributed.Future.
         """
-        _, _, kwargs = func_call
+        kwargs = func_call.kwargs
         lengths = kwargs.get("_lengths", None)
         result_num_splits = len(lengths) if lengths else num_splits
         return DaskWrapper.deploy(
@@ -110,7 +110,7 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        func_call : tuple of (func, args, kwargs)
+        func_call : FuncCall NamedTuple
             The function to perform with its args and kwargs.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).

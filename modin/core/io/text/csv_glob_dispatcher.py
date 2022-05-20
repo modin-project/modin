@@ -206,7 +206,7 @@ class CSVGlobDispatcher(CSVDispatcher):
             dtypes_ids = [None] * len(splits)
             for idx, chunks in enumerate(splits):
                 new_kwargs.update({"chunks": chunks})
-                func_call = (cls.parse, (), new_kwargs)
+                func_call = FuncCall(func=cls.parse, kwargs=new_kwargs)
                 *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
                     func_call, num_returns=num_splits + 2
                 )

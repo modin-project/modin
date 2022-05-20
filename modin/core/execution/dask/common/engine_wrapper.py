@@ -26,7 +26,7 @@ class DaskWrapper:
 
         Parameters
         ----------
-        func_call : tuple of (func, args, kwargs)
+        func_call : FuncCall NamedTuple
             The function to perform with its args, and kwargs.
         num_returns : int, default: 1
             The number of returned objects.
