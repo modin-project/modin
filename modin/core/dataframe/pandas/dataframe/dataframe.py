@@ -1885,6 +1885,12 @@ class PandasDataframe(object):
             The data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
+        sync_axes : bool, default: True
+            In some cases, synchronization of the external index with the internal
+            indexes of partitions is not required, since when performing certain
+            functions, we know in advance that it must match. A good example is the
+            `reindex` function. Although synchronization is performed asynchronously,
+            it is nevertheless a rather expensive operation.
 
         Returns
         -------
@@ -2297,6 +2303,12 @@ class PandasDataframe(object):
             Data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
+        sync_axes : bool, default: True
+            In some cases, synchronization of the external index with the internal
+            indexes of partitions is not required, since when performing certain
+            functions, we know in advance that it must match. A good example is the
+            `reindex` function. Although synchronization is performed asynchronously,
+            it is nevertheless a rather expensive operation.
 
         Returns
         -------
