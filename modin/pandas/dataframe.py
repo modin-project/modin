@@ -808,8 +808,8 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
             return
         frame = sys._getframe()
         try:
-            f_locals = frame.f_back.f_back.f_locals
-            f_globals = frame.f_back.f_back.f_globals
+            f_locals = frame.f_back.f_back.f_back.f_locals
+            f_globals = frame.f_back.f_back.f_back.f_globals
         finally:
             del frame
         local_names = set(re.findall(r"@([\w]+)", expr))
