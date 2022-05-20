@@ -382,7 +382,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         return self._width_cache
 
     def drain_call_queue(self, num_splits=None):
-        """Execute all operations stored in this partition's call queue.
+        """
+        Execute all operations stored in this partition's call queue.
 
         Parameters
         ----------

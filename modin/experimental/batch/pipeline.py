@@ -16,7 +16,7 @@ from modin.core.dataframe.base.dataframe.utils import Axis
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
     PandasOnRayDataframe,
 )
-from typing import Union, Callable, Optional
+from typing import Callable, Optional
 from modin.config import Engine, NPartitions
 import ray
 import numpy as np
@@ -78,17 +78,15 @@ class PandasQueryPipeline(object):
     ----------
     df : modin.pandas.Dataframe
         The dataframe to perform this pipeline on.
-    axis : int or modin.core.dataframe.base.dataframe.utils.Axis
-        The axis along which to partition the dataframe for this pipeline.
     num_partitions : int, default: `NPartitions.get()`
         The number of partitions to maintain for the batched dataframe.
 
     Notes
     -----
-    Only axis-wide pipelines are supported. All queries will be applied along the same axis.
+    Only row-parallel pipelines are supported. All queries will be applied along the row axis.
     """
 
-    def __init__(self, df, axis: Union[int, Axis], num_partitions: int = -1):
+    def __init__(self, df, num_partitions: int = -1):
         if Engine.get() != "Ray" or (
             not isinstance(df._query_compiler._modin_frame, PandasOnRayDataframe)
         ):  # pragma: no cover
@@ -100,7 +98,6 @@ class PandasQueryPipeline(object):
         )
         num_partitions = num_partitions if num_partitions > 0 else NPartitions.get()
         self.df = df
-        self.axis = Axis(axis)
         self.num_partitions = num_partitions
         self.outputs = []
         self.nodes_list = []
@@ -301,13 +298,7 @@ class PandasQueryPipeline(object):
         else:
             outs = []
         modin_frame = self.df._query_compiler._modin_frame
-        ptns = (
-            modin_frame._partition_mgr_cls.row_partitions(modin_frame._partitions)
-            if self.axis == Axis.ROW_WISE
-            else modin_frame._partition_mgr_cls.column_partitions(
-                modin_frame._partitions
-            )
-        )
+        ptns = modin_frame._partition_mgr_cls.row_partitions(modin_frame._partitions)
         for i, node in enumerate(self.outputs):
             ptns = self._complete_nodes(node.operators + [node], ptns)
             for ptn in ptns:
@@ -344,7 +335,7 @@ class PandasQueryPipeline(object):
                 else:
                     ptns = np.array(df).flatten()
                     ptns = np.array([ptn.list_of_blocks for ptn in df]).flatten()
-                    final_results.append(from_partitions(ptns, self.axis.value))
+                    final_results.append(from_partitions(ptns, Axis.ROW_WISE.value))
                 for d in df:
                     wait_parts.extend(d.list_of_blocks)
         else:
@@ -356,7 +347,7 @@ class PandasQueryPipeline(object):
                 else:
                     ptns = np.array(df).flatten()
                     ptns = np.array([ptn.list_of_blocks for ptn in df]).flatten()
-                    final_results[id] = from_partitions(ptns, self.axis.value)
+                    final_results[id] = from_partitions(ptns, Axis.ROW_WISE.value)
                 for d in df:
                     wait_parts.extend(d.list_of_blocks)
         ray.wait(wait_parts, num_returns=len(wait_parts))

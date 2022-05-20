@@ -36,7 +36,7 @@ class TestPipelineRayEngine:
             UserWarning,
             match="The Batch Pipeline API is an experimental feature and still under development in Modin.",
         ):
-            pipeline = PandasQueryPipeline(df, 0)
+            pipeline = PandasQueryPipeline(df)
         with pytest.warns(
             UserWarning,
             match="No outputs to compute. Returning an empty list. Please specify outputs by calling `add_query` with `is_output=True`.",
@@ -56,7 +56,7 @@ class TestPipelineRayEngine:
             return df
 
         # Build pipeline
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(add_col)
         pipeline.add_query(lambda df: df * -30)
         pipeline.add_query(
@@ -86,14 +86,14 @@ class TestPipelineRayEngine:
         df_equals(corr_df, new_df)
         # Ensure that setting `num_partitions` when creating a pipeline does not change `NPartitions`
         num_ptns = NPartitions.get()
-        PandasQueryPipeline(df, 0, num_partitions=(num_ptns - 1))
+        PandasQueryPipeline(df, num_partitions=(num_ptns - 1))
         assert (
             NPartitions.get() == num_ptns
         ), "Pipeline did not change NPartitions.get()"
 
     def test_update_df(self):
         df = pd.DataFrame([[1, 2, 3], [4, 5, 6]])
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df + 3, is_output=True)
         new_df = df * -1
         pipeline.update_df(new_df)
@@ -106,7 +106,7 @@ class TestPipelineRayEngine:
         """
         arr = np.random.randint(0, 1000, (1000, 1000))
         df = pd.DataFrame(arr)
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df * -30, is_output=True)
         pipeline.add_query(
             lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)}),
@@ -134,7 +134,7 @@ class TestPipelineRayEngine:
                 lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)}),
                 is_output=True,
             )
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df * -30, is_output=True)
         with pytest.raises(
             ValueError, match="Output ID must be specified for all nodes."
@@ -144,7 +144,7 @@ class TestPipelineRayEngine:
                 is_output=True,
                 output_id=20,
             )
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df, is_output=True)
         with pytest.raises(
             ValueError,
@@ -158,7 +158,7 @@ class TestPipelineRayEngine:
     def test_output_id_multiple_outputs(self):
         arr = np.random.randint(0, 1000, (1000, 1000))
         df = pd.DataFrame(arr)
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df * -30, is_output=True, output_id=20)
         pipeline.add_query(
             lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)}),
@@ -187,7 +187,7 @@ class TestPipelineRayEngine:
         """
         arr = np.random.randint(0, 1000, (1000, 1000))
         df = pd.DataFrame(arr)
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df * -30, is_output=True)
         pipeline.add_query(
             lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)}),
@@ -224,7 +224,7 @@ class TestPipelineRayEngine:
 
         arr = np.random.randint(0, 1000, (1000, 1000))
         df = pd.DataFrame(arr)
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df * -30, is_output=True, output_id=20)
         pipeline.add_query(
             lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)}),
@@ -241,7 +241,7 @@ class TestPipelineRayEngine:
             return df
 
         df = pd.DataFrame(arr)
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df * -30, is_output=True, output_id=20)
         pipeline.add_query(
             lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)}),
@@ -275,7 +275,7 @@ class TestPipelineRayEngine:
             return df
 
         df = pd.DataFrame(arr)
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df * -30, is_output=True, output_id=20)
         pipeline.add_query(
             lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)}),
@@ -326,7 +326,7 @@ class TestPipelineRayEngine:
             return df
 
         df = pd.DataFrame(arr)
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df * -30, is_output=True, output_id=20)
         pipeline.add_query(
             lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)}),
@@ -378,7 +378,7 @@ class TestPipelineRayEngine:
         """
         arr = np.random.randint(0, 1000, (1000, 1000))
         df = pd.DataFrame(arr)
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df * -30, is_output=True)
         pipeline.add_query(
             lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)}),
@@ -414,7 +414,7 @@ class TestPipelineRayEngine:
         )
         df_equals(ptn, new_dfs[2])  # Third output computed correctly
         df = pd.DataFrame(arr)
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df * -30, is_output=True, output_id=20)
         pipeline.add_query(
             lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)}),
@@ -468,7 +468,7 @@ class TestPipelineRayEngine:
             return df
 
         df = pd.DataFrame(arr)
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df * -30, is_output=True, output_id=20)
         pipeline.add_query(
             lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)}),
@@ -521,7 +521,7 @@ class TestPipelineRayEngine:
         import pandas
 
         df = pd.DataFrame([list(range(1000))])
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(
             lambda df: pandas.concat([df] * 1000), repartition_after=True
         )
@@ -563,7 +563,7 @@ class TestPipelineRayEngine:
             dfs[0]["new_col1"] = new_cols
             return dfs[0]
 
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(
             new_col_adder,
             fan_out=True,
@@ -583,7 +583,7 @@ class TestPipelineRayEngine:
         ptn1 = ray.put(pandas.DataFrame([[0, 1, 2]]))
         ptn2 = ray.put(pandas.DataFrame([[3, 4, 5]]))
         df = from_partitions([ptn1, ptn2], 0)
-        pipeline = PandasQueryPipeline(df, 0)
+        pipeline = PandasQueryPipeline(df)
         pipeline.add_query(
             new_col_adder,
             fan_out=True,
@@ -613,7 +613,7 @@ class TestPipelineRayEngine:
             dfs[0]["new_col1"] = new_cols
             return dfs[0]
 
-        pipeline = PandasQueryPipeline(df, 0, num_partitions=24)
+        pipeline = PandasQueryPipeline(df, num_partitions=24)
         pipeline.add_query(
             new_col_adder,
             fan_out=True,
@@ -669,15 +669,13 @@ def test_pipeline_unsupported_engine():
     """
     This test ensures that trying to use the Pipeline API with an unsupported Engine raises errors.
     """
-    from modin.experimental.batch.pipeline import PandasQueryPipeline
-
     # Check that pipeline does not allow `Engine` to not be Ray.
     df = pd.DataFrame([[1, 2, 3], [4, 5, 6]])
     with pytest.raises(
         NotImplementedError,
         match="Batch Pipeline API is only implemented for Ray Engine.",
     ):
-        PandasQueryPipeline(df, 0)
+        PandasQueryPipeline(df)
 
     eng = Engine.get()
     Engine.put("Ray")
@@ -688,7 +686,7 @@ def test_pipeline_unsupported_engine():
     ):
         PandasQueryPipeline(df, 0)
     new_df = pd.DataFrame([[1, 2, 3], [5, 6, 7]])
-    pipeline = PandasQueryPipeline(new_df, 0)
+    pipeline = PandasQueryPipeline(new_df)
     # Check that even if Engine is Ray, if the new df is not backed by Ray, the Pipeline does not allow an update.
     with pytest.raises(
         NotImplementedError,
@@ -696,3 +694,9 @@ def test_pipeline_unsupported_engine():
     ):
         pipeline.update_df(df)
     Engine.put(eng)
+    # Check that pipeline does not allow an update when `Engine` is not Ray.
+    with pytest.raises(
+        NotImplementedError,
+        match="Batch Pipeline API is only implemented for Ray Engine.",
+    ):
+        pipeline.update_df(df)
