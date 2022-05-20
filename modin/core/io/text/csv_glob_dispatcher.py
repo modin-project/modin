@@ -25,6 +25,7 @@ import pandas
 import pandas._libs.lib as lib
 
 from modin.config import NPartitions
+from modin.core.base import FuncCall
 from modin.core.io.file_dispatcher import OpenFile
 from modin.core.io.file_dispatcher import S3_ADDRESS_REGEX
 from modin.core.io.text.csv_dispatcher import CSVDispatcher

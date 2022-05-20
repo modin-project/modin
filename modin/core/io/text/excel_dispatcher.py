@@ -17,6 +17,7 @@ import pandas
 import re
 import sys
 import warnings
+from modin.core.base import FuncCall
 
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 from modin.config import NPartitions

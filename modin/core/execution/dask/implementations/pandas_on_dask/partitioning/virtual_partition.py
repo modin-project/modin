@@ -16,6 +16,7 @@
 from distributed import Future
 from distributed.utils import get_ip
 import pandas
+from modin.core.base import FuncCall
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
@@ -83,9 +84,9 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         lengths = kwargs.get("_lengths", None)
         result_num_splits = len(lengths) if lengths else num_splits
         return DaskWrapper.deploy(
-            (
-                deploy_dask_func,
-                (
+            FuncCall(
+                func=deploy_dask_func,
+                args=(
                     PandasDataframeAxisPartition.deploy_axis_func,
                     axis,
                     func_call,
@@ -93,7 +94,6 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
                     maintain_partitioning,
                     *partitions,
                 ),
-                {},
             ),
             num_returns=result_num_splits * 4,
             pure=False,
@@ -128,9 +128,9 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             A list of distributed.Future.
         """
         return DaskWrapper.deploy(
-            (
-                deploy_dask_func,
-                (
+            FuncCall(
+                func=deploy_dask_func,
+                args=(
                     PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
                     axis,
                     func_call,
@@ -139,7 +139,6 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
                     other_shape,
                     *partitions,
                 ),
-                {},
             ),
             num_returns=num_splits * 4,
             pure=False,

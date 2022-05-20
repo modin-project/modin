@@ -15,6 +15,7 @@
 
 import glob
 import warnings
+from modin.core.base import FuncCall
 
 from modin.core.io.file_dispatcher import FileDispatcher
 from modin.config import NPartitions
