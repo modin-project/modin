@@ -208,6 +208,49 @@ def test_join_4427():
         ),
     )
 
+    # check the case where all labels in `on` are just all names in MultiIndex (fast path)
+    new_index = pandas.MultiIndex.from_frame(
+        pandas_df1[left_columns[:2]], names=["name1", "name2"]
+    )
+    modin_df1.index = new_index
+    pandas_df1.index = new_index
+
+    eval_general(
+        modin_df1,
+        pandas_df1,
+        lambda df: df.join(
+            modin_df2.set_index(right_columns[:2])
+            if isinstance(df, pd.DataFrame)
+            else pandas_df2.set_index(right_columns[:2]),
+            on=new_index.names,
+        ),
+    )
+
+    # check the case where all labels in `on` are just part of names in MultiIndex
+    # and part of columns names
+    eval_general(
+        modin_df1,
+        pandas_df1,
+        lambda df: df.join(
+            modin_df2.set_index(right_columns[:2])
+            if isinstance(df, pd.DataFrame)
+            else pandas_df2.set_index(right_columns[:2]),
+            on=new_index.names[:1] + left_columns[:1],
+        ),
+    )
+
+    # check the case where all labels in `on` are just part of names in MultiIndex
+    eval_general(
+        modin_df1,
+        pandas_df1,
+        lambda df: df.join(
+            modin_df2.set_index(right_columns[:1])
+            if isinstance(df, pd.DataFrame)
+            else pandas_df2.set_index(right_columns[:1]),
+            on=new_index.names[:1],
+        ),
+    )
+
 
 @pytest.mark.parametrize(
     "test_data, test_data2",

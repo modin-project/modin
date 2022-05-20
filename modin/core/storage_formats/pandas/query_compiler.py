@@ -522,8 +522,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     on_in_columns = on.intersection(columns)
                     on_in_index = on.intersection(index.names)
                     frame1, frame2 = None, None
-                    if len(on_in_index) == len(on):
-                        index = index
+                    if len(on_in_index) == len(on) == len(index.names):
+                        # fast path
+                        new_index = index
                     else:
                         if not on_in_index.empty:
                             frame1 = index.to_frame()[on_in_index]
@@ -532,14 +533,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                                 on_in_columns
                             ).to_pandas()
                         if frame1 is not None and frame2 is not None:
-                            frame = pandas.concat([frame1, frame2])
+                            frame = pandas.concat([frame1, frame2], axis=1)
                         else:
                             frame = frame2 if frame1 is None else frame1
                         if len(frame.columns) > 1:
-                            index = pandas.MultiIndex.from_frame(frame)
+                            new_index = pandas.MultiIndex.from_frame(frame)
                         else:
-                            index = pandas.Index(frame.squeeze(axis=1))
-                    return index
+                            new_index = pandas.Index(frame.squeeze(axis=1))
+                    return new_index
 
                 labels = _create_index(self, on, self.index, self.columns)
                 right = right.reindex(axis=0, labels=labels, _reset_index=self.index)
