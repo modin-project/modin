@@ -8,7 +8,7 @@ DataFrame Module Overview
 Modin's ``pandas.DataFrame`` API
 ''''''''''''''''''''''''''''''''
 
-Modin's ``pandas.DataFrame`` API is backed by a distributed object providing an identical
+Modin's ``pandas.DataFrame`` API is backed by a distributed object(s) providing an identical
 API to pandas. After the user calls some ``DataFrame`` function, this call is internally
 rewritten into a representation that can be processed in parallel by the partitions. These
 results can be e.g., reduced to single output, identical to the single threaded

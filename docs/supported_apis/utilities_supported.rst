@@ -6,10 +6,12 @@ If you run ``import modin.pandas as pd``, the following operations are available
 would like to request it, feel free to `open an issue`_. Make sure you tell us your
 primary use-case so we can make it happen faster!
 
-Utilities Supported APIs table is structured as follows: The first column contains the method name,
-the second column - the parameter name of this method, and other columns contain
-different flags describing particular properties of method parameters for a concrete
-execution.
+Supported APIs table is structured as follows: The first column contains the method name,
+the second, third and fourth columns contain different flags which describes overall status for
+whole method for concrete execution, and the last column contains method supported APIs
+notes. In order to check method parameters supported status please follow method link. Please note,
+that the tables only list unsupported/partially supported parameters. If a parameter is supported,
+it won't be present or marked somehow in the table.
 
 The flags stand for the following:
 
@@ -19,24 +21,25 @@ The flags stand for the following:
    +-------------+-----------------------------------------------------------------------------------------------+
    | Flag        | Meaning                                                                                       |
    +=============+===============================================================================================+
-   | Supported   | Parameter is supported, it's usage brings performance improvement                             |
-   +-------------+-----------------------------------------------------------------------------------------------+
-   | Harmful     | Usage of this parameter can be harmful for performance of your application. Usually this      |
-   |             | happens when parameter (full range of values and all types) is not supported and default      |
-   |             | pandas implementation is used                                                                 |
+   | Harmful     | Usage of this parameter can be harmful for performance of your application. This usually      |
+   |             | happens when parameter (full range of values and all types) is not supported and Modin        |
+   |             | is defaulting to pandas (see more on defaulting to pandas mechanism on                        |
+   |             | :doc:`defaulting to pandas page </supported_apis/defaulting_to_pandas>`)                      |
    +-------------+-----------------------------------------------------------------------------------------------+
    | Non-lazy    | Usage of this parameter can trigger non-lazy execution (actual for OmniSci execution only)    |
    +-------------+-----------------------------------------------------------------------------------------------+
    | Partial     | Parameter can be partly unsupported, it's usage can be harmful for performance of your        |
    |             | appcication. This can happen if some parameter values or types are not supported (for example |
    |             | boolean values are suported while integer are not) and default pandas implementation is used  |
+   |             | (see more on defaulting to pandas mechanism on                                                |
+   |             | :doc:`defaulting to pandas page </supported_apis/defaulting_to_pandas>`)                      |
    +-------------+-----------------------------------------------------------------------------------------------+
    | pure pandas | Usage of this parameter, triggers usage of original pandas function as is, no performance     |
    |             | degradation/improvement should be observed                                                    |
    +-------------+-----------------------------------------------------------------------------------------------+
 
-Parameters Notes
-----------------
+Supported APIs table
+--------------------
 
 .. csv-table::
    :file: utilities_supported.csv

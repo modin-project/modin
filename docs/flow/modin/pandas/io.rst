@@ -4,10 +4,10 @@ Input/Output
 .. currentmodule:: modin.pandas
 
 Modin's I/O functions API is backed by a distributed object(s) providing an identical
-API to pandas. After the user calls some IO function, this call is internally
-rewritten into a representation that can be processed in parallel by the partitions. These
-results can be e.g., reduced to single output, identical to the single threaded
-pandas method output.
+API to pandas. After the user calls some I/O function, this call is internally
+rewritten into a representation that can be processed in parallel by the partitions.
+Once I/O function call is finished, each partition will contain chunk of data, and then
+these partitions can be processed in parallel using Modin API.
 
 .. autosummary::
     :toctree: api/
