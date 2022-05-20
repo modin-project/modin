@@ -35,8 +35,8 @@ The flags stand for the following:
    |             | degradation/improvement should be observed                                                    |
    +-------------+-----------------------------------------------------------------------------------------------+
 
-Parameters Notes
-----------------
+Supported APIs table
+--------------------
 
 .. csv-table::
    :file: dataframe_supported.csv
