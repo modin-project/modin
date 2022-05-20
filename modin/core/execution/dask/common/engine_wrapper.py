@@ -26,8 +26,8 @@ class DaskWrapper:
 
         Parameters
         ----------
-        func : callable
-            Function to be deployed in a worker process.
+        func_call : tuple of (func, args, kwargs)
+            The function to perform with its args, and kwargs.
         num_returns : int, default: 1
             The number of returned objects.
         pure : bool, optional

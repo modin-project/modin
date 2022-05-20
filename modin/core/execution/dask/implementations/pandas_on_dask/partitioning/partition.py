@@ -284,12 +284,8 @@ def apply_func(partition, func_call):
     ----------
     partition : pandas.DataFrame
         A pandas DataFrame the function needs to be executed on.
-    func : callable
-        Function that needs to be executed on `partition`.
-    *args
-        Additional positional arguments to be passed in `func`.
-    **kwargs
-        Additional keyword arguments to be passed in `func`.
+    func_call : tuple of (func, args, kwargs)
+        The function to perform with its args, and kwargs.
 
     Returns
     -------
