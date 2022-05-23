@@ -74,9 +74,8 @@ class ExcelDispatcher(TextFileDispatcher):
 
         warnings.warn(
             "Parallel `read_excel` is a new feature! If you run into any "
-            + "problems, please check https://github.com/modin-project/modin/issues "
-            + "for your issue. If you don't find your issue there, please "
-            + "file a new issue at that link or, if that's not possible, "
+            + "problems, please visit https://github.com/modin-project/modin/issues. "
+            + "If you find a new issue and can't file it on GitHub, please "
             + "email bug_reports@modin.org."
         )
 
