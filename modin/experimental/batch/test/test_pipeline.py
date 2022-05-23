@@ -64,32 +64,37 @@ class TestPipelineRayEngine:
             lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)})
         )
 
-        def add_row_to_ptn(df):
+        def add_row_to_partition(df):
             import pandas
 
             return pandas.concat([df, df.iloc[[-1]]])
 
-        pipeline.add_query(add_row_to_ptn, is_output=True)
+        pipeline.add_query(add_row_to_partition, is_output=True)
         new_df = pipeline.compute_batch()[0]
         # Build df without pipelining to ensure correctness
-        corr_df = add_col(pd.DataFrame(arr))
-        corr_df *= -30
-        corr_df = pd.DataFrame(
-            corr_df.rename(columns={i: f"col {i}" for i in range(1000)})._to_pandas()
+        correct_df = add_col(pd.DataFrame(arr))
+        correct_df *= -30
+        correct_df = pd.DataFrame(
+            correct_df.rename(columns={i: f"col {i}" for i in range(1000)})._to_pandas()
         )
-        corr_df_md = corr_df._query_compiler._modin_frame
-        ptns = corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)
-        ptns = [ptn.add_to_apply_calls(add_row_to_ptn) for ptn in ptns]
-        [ptn.drain_call_queue() for ptn in ptns]
-        ptns = [ptn.list_of_blocks for ptn in ptns]
-        corr_df = from_partitions(ptns, axis=None)
+        correct_df_md = correct_df._query_compiler._modin_frame
+        partitions = correct_df_md._partition_mgr_cls.row_partitions(
+            correct_df_md._partitions
+        )
+        partitions = [
+            partition.add_to_apply_calls(add_row_to_partition)
+            for partition in partitions
+        ]
+        [partition.drain_call_queue() for partition in partitions]
+        partitions = [partition.list_of_blocks for partition in partitions]
+        correct_df = from_partitions(partitions, axis=None)
         # Compare pipelined and non-pipelined df
-        df_equals(corr_df, new_df)
+        df_equals(correct_df, new_df)
         # Ensure that setting `num_partitions` when creating a pipeline does not change `NPartitions`
-        num_ptns = NPartitions.get()
-        PandasQueryPipeline(df, num_partitions=(num_ptns - 1))
+        num_partitions = NPartitions.get()
+        PandasQueryPipeline(df, num_partitions=(num_partitions - 1))
         assert (
-            NPartitions.get() == num_ptns
+            NPartitions.get() == num_partitions
         ), "Pipeline did not change NPartitions.get()"
 
     def test_update_df(self):
@@ -116,12 +121,12 @@ class TestPipelineRayEngine:
         pipeline.add_query(lambda df: df + 30, is_output=True)
         new_dfs = pipeline.compute_batch()
         assert len(new_dfs) == 3, "Pipeline did not return all outputs"
-        corr_df = pd.DataFrame(arr) * -30
-        df_equals(corr_df, new_dfs[0])  # First output computed correctly
-        corr_df = corr_df.rename(columns={i: f"col {i}" for i in range(1000)})
-        df_equals(corr_df, new_dfs[1])  # Second output computed correctly
-        corr_df += 30
-        df_equals(corr_df, new_dfs[2])  # Third output computed correctly
+        correct_df = pd.DataFrame(arr) * -30
+        df_equals(correct_df, new_dfs[0])  # First output computed correctly
+        correct_df = correct_df.rename(columns={i: f"col {i}" for i in range(1000)})
+        df_equals(correct_df, new_dfs[1])  # Second output computed correctly
+        correct_df += 30
+        df_equals(correct_df, new_dfs[2])  # Third output computed correctly
 
     def test_output_id(self):
         arr = np.random.randint(0, 1000, (1000, 1000))
@@ -175,12 +180,12 @@ class TestPipelineRayEngine:
         assert 21 in new_dfs, "Output ID 2 not cached correctly"
         assert 22 in new_dfs, "Output ID 3 not cached correctly"
         assert len(new_dfs) == 3, "Pipeline did not return all outputs"
-        corr_df = pd.DataFrame(arr) * -30
-        df_equals(corr_df, new_dfs[20])  # First output computed correctly
-        corr_df = corr_df.rename(columns={i: f"col {i}" for i in range(1000)})
-        df_equals(corr_df, new_dfs[21])  # Second output computed correctly
-        corr_df += 30
-        df_equals(corr_df, new_dfs[22])  # Third output computed correctly
+        correct_df = pd.DataFrame(arr) * -30
+        df_equals(correct_df, new_dfs[20])  # First output computed correctly
+        correct_df = correct_df.rename(columns={i: f"col {i}" for i in range(1000)})
+        df_equals(correct_df, new_dfs[21])  # Second output computed correctly
+        correct_df += 30
+        df_equals(correct_df, new_dfs[22])  # Third output computed correctly
 
     def test_postprocessing(self):
         """
@@ -202,17 +207,17 @@ class TestPipelineRayEngine:
 
         new_dfs = pipeline.compute_batch(postprocessor=new_col_adder)
         assert len(new_dfs) == 3, "Pipeline did not return all outputs"
-        corr_df = pd.DataFrame(arr) * -30
-        corr_df["new_col"] = corr_df.iloc[:, -1]
-        df_equals(corr_df, new_dfs[0])
-        corr_df = corr_df.drop(columns=["new_col"])
-        corr_df = corr_df.rename(columns={i: f"col {i}" for i in range(1000)})
-        corr_df["new_col"] = corr_df.iloc[:, -1]
-        df_equals(corr_df, new_dfs[1])
-        corr_df = corr_df.drop(columns=["new_col"])
-        corr_df += 30
-        corr_df["new_col"] = corr_df.iloc[:, -1]
-        df_equals(corr_df, new_dfs[2])
+        correct_df = pd.DataFrame(arr) * -30
+        correct_df["new_col"] = correct_df.iloc[:, -1]
+        df_equals(correct_df, new_dfs[0])
+        correct_df = correct_df.drop(columns=["new_col"])
+        correct_df = correct_df.rename(columns={i: f"col {i}" for i in range(1000)})
+        correct_df["new_col"] = correct_df.iloc[:, -1]
+        df_equals(correct_df, new_dfs[1])
+        correct_df = correct_df.drop(columns=["new_col"])
+        correct_df += 30
+        correct_df["new_col"] = correct_df.iloc[:, -1]
+        df_equals(correct_df, new_dfs[2])
 
     def test_postprocessing_w_output_id(self):
         """
@@ -253,26 +258,26 @@ class TestPipelineRayEngine:
         new_dfs = pipeline.compute_batch(
             postprocessor=new_col_adder, pass_output_id=True
         )
-        corr_df = pd.DataFrame(arr) * -30
-        corr_df["new_col"] = 20
-        df_equals(corr_df, new_dfs[20])
-        corr_df = corr_df.drop(columns=["new_col"])
-        corr_df = corr_df.rename(columns={i: f"col {i}" for i in range(1000)})
-        corr_df["new_col"] = 21
-        df_equals(corr_df, new_dfs[21])
-        corr_df = corr_df.drop(columns=["new_col"])
-        corr_df += 30
-        corr_df["new_col"] = 22
-        df_equals(corr_df, new_dfs[22])
+        correct_df = pd.DataFrame(arr) * -30
+        correct_df["new_col"] = 20
+        df_equals(correct_df, new_dfs[20])
+        correct_df = correct_df.drop(columns=["new_col"])
+        correct_df = correct_df.rename(columns={i: f"col {i}" for i in range(1000)})
+        correct_df["new_col"] = 21
+        df_equals(correct_df, new_dfs[21])
+        correct_df = correct_df.drop(columns=["new_col"])
+        correct_df += 30
+        correct_df["new_col"] = 22
+        df_equals(correct_df, new_dfs[22])
 
-    def test_postprocessing_w_ptn_id(self):
+    def test_postprocessing_w_partition_id(self):
         """
         This test checks that the postprocessing is correctly handled when `partition_id` is passed.
         """
         arr = np.random.randint(0, 1000, (1000, 1000))
 
-        def new_col_adder(df, ptn_id):
-            df["new_col"] = ptn_id
+        def new_col_adder(df, partition_id):
+            df["new_col"] = partition_id
             return df
 
         df = pd.DataFrame(arr)
@@ -287,34 +292,49 @@ class TestPipelineRayEngine:
         new_dfs = pipeline.compute_batch(
             postprocessor=new_col_adder, pass_partition_id=True
         )
-        corr_df = pd.DataFrame(arr) * -30
-        corr_df_md = corr_df._query_compiler._modin_frame
-        ptns = corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)
-        ptns = [ptn.add_to_apply_calls(new_col_adder, i) for i, ptn in enumerate(ptns)]
-        [ptn.drain_call_queue() for ptn in ptns]
-        ptns = [ptn.list_of_blocks for ptn in ptns]
-        corr_df = from_partitions(ptns, axis=None)
-        df_equals(corr_df, new_dfs[20])
-        corr_df = corr_df.drop(columns=["new_col"])
-        corr_df = pd.DataFrame(
-            corr_df.rename(columns={i: f"col {i}" for i in range(1000)})._to_pandas()
+        correct_df = pd.DataFrame(arr) * -30
+        correct_df_md = correct_df._query_compiler._modin_frame
+        partitions = correct_df_md._partition_mgr_cls.row_partitions(
+            correct_df_md._partitions
         )
-        corr_df_md = corr_df._query_compiler._modin_frame
-        ptns = corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)
-        ptns = [ptn.add_to_apply_calls(new_col_adder, i) for i, ptn in enumerate(ptns)]
-        [ptn.drain_call_queue() for ptn in ptns]
-        ptns = [ptn.list_of_blocks for ptn in ptns]
-        corr_df = from_partitions(ptns, axis=None)
-        df_equals(corr_df, new_dfs[21])
-        corr_df = corr_df.drop(columns=["new_col"])
-        corr_df += 30
-        corr_df_md = corr_df._query_compiler._modin_frame
-        ptns = corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)
-        ptns = [ptn.add_to_apply_calls(new_col_adder, i) for i, ptn in enumerate(ptns)]
-        [ptn.drain_call_queue() for ptn in ptns]
-        ptns = [ptn.list_of_blocks for ptn in ptns]
-        corr_df = from_partitions(ptns, axis=None)
-        df_equals(corr_df, new_dfs[22])
+        partitions = [
+            partition.add_to_apply_calls(new_col_adder, i)
+            for i, partition in enumerate(partitions)
+        ]
+        [partition.drain_call_queue() for partition in partitions]
+        partitions = [partition.list_of_blocks for partition in partitions]
+        correct_df = from_partitions(partitions, axis=None)
+        df_equals(correct_df, new_dfs[20])
+        correct_df = correct_df.drop(columns=["new_col"])
+        correct_df = pd.DataFrame(
+            correct_df.rename(columns={i: f"col {i}" for i in range(1000)})._to_pandas()
+        )
+        correct_df_md = correct_df._query_compiler._modin_frame
+        partitions = correct_df_md._partition_mgr_cls.row_partitions(
+            correct_df_md._partitions
+        )
+        partitions = [
+            partition.add_to_apply_calls(new_col_adder, i)
+            for i, partition in enumerate(partitions)
+        ]
+        [partition.drain_call_queue() for partition in partitions]
+        partitions = [partition.list_of_blocks for partition in partitions]
+        correct_df = from_partitions(partitions, axis=None)
+        df_equals(correct_df, new_dfs[21])
+        correct_df = correct_df.drop(columns=["new_col"])
+        correct_df += 30
+        correct_df_md = correct_df._query_compiler._modin_frame
+        partitions = correct_df_md._partition_mgr_cls.row_partitions(
+            correct_df_md._partitions
+        )
+        partitions = [
+            partition.add_to_apply_calls(new_col_adder, i)
+            for i, partition in enumerate(partitions)
+        ]
+        [partition.drain_call_queue() for partition in partitions]
+        partitions = [partition.list_of_blocks for partition in partitions]
+        correct_df = from_partitions(partitions, axis=None)
+        df_equals(correct_df, new_dfs[22])
 
     def test_postprocessing_w_all_metadata(self):
         """
@@ -322,8 +342,8 @@ class TestPipelineRayEngine:
         """
         arr = np.random.randint(0, 1000, (1000, 1000))
 
-        def new_col_adder(df, o_id, ptn_id):
-            df["new_col"] = f"{o_id} {ptn_id}"
+        def new_col_adder(df, o_id, partition_id):
+            df["new_col"] = f"{o_id} {partition_id}"
             return df
 
         df = pd.DataFrame(arr)
@@ -338,40 +358,49 @@ class TestPipelineRayEngine:
         new_dfs = pipeline.compute_batch(
             postprocessor=new_col_adder, pass_partition_id=True, pass_output_id=True
         )
-        corr_df = pd.DataFrame(arr) * -30
-        corr_df_md = corr_df._query_compiler._modin_frame
-        ptns = corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)
-        ptns = [
-            ptn.add_to_apply_calls(new_col_adder, 20, i) for i, ptn in enumerate(ptns)
-        ]
-        [ptn.drain_call_queue() for ptn in ptns]
-        ptns = [ptn.list_of_blocks for ptn in ptns]
-        corr_df = from_partitions(ptns, axis=None)
-        df_equals(corr_df, new_dfs[20])
-        corr_df = corr_df.drop(columns=["new_col"])
-        corr_df = pd.DataFrame(
-            corr_df.rename(columns={i: f"col {i}" for i in range(1000)})._to_pandas()
+        correct_df = pd.DataFrame(arr) * -30
+        correct_df_md = correct_df._query_compiler._modin_frame
+        partitions = correct_df_md._partition_mgr_cls.row_partitions(
+            correct_df_md._partitions
         )
-        corr_df_md = corr_df._query_compiler._modin_frame
-        ptns = corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)
-        ptns = [
-            ptn.add_to_apply_calls(new_col_adder, 21, i) for i, ptn in enumerate(ptns)
+        partitions = [
+            partition.add_to_apply_calls(new_col_adder, 20, i)
+            for i, partition in enumerate(partitions)
         ]
-        [ptn.drain_call_queue() for ptn in ptns]
-        ptns = [ptn.list_of_blocks for ptn in ptns]
-        corr_df = from_partitions(ptns, axis=None)
-        df_equals(corr_df, new_dfs[21])
-        corr_df = corr_df.drop(columns=["new_col"])
-        corr_df += 30
-        corr_df_md = corr_df._query_compiler._modin_frame
-        ptns = corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)
-        ptns = [
-            ptn.add_to_apply_calls(new_col_adder, 22, i) for i, ptn in enumerate(ptns)
+        [partition.drain_call_queue() for partition in partitions]
+        partitions = [partition.list_of_blocks for partition in partitions]
+        correct_df = from_partitions(partitions, axis=None)
+        df_equals(correct_df, new_dfs[20])
+        correct_df = correct_df.drop(columns=["new_col"])
+        correct_df = pd.DataFrame(
+            correct_df.rename(columns={i: f"col {i}" for i in range(1000)})._to_pandas()
+        )
+        correct_df_md = correct_df._query_compiler._modin_frame
+        partitions = correct_df_md._partition_mgr_cls.row_partitions(
+            correct_df_md._partitions
+        )
+        partitions = [
+            partition.add_to_apply_calls(new_col_adder, 21, i)
+            for i, partition in enumerate(partitions)
         ]
-        [ptn.drain_call_queue() for ptn in ptns]
-        ptns = [ptn.list_of_blocks for ptn in ptns]
-        corr_df = from_partitions(ptns, axis=None)
-        df_equals(corr_df, new_dfs[22])
+        [partition.drain_call_queue() for partition in partitions]
+        partitions = [partition.list_of_blocks for partition in partitions]
+        correct_df = from_partitions(partitions, axis=None)
+        df_equals(correct_df, new_dfs[21])
+        correct_df = correct_df.drop(columns=["new_col"])
+        correct_df += 30
+        correct_df_md = correct_df._query_compiler._modin_frame
+        partitions = correct_df_md._partition_mgr_cls.row_partitions(
+            correct_df_md._partitions
+        )
+        partitions = [
+            partition.add_to_apply_calls(new_col_adder, 22, i)
+            for i, partition in enumerate(partitions)
+        ]
+        [partition.drain_call_queue() for partition in partitions]
+        partitions = [partition.list_of_blocks for partition in partitions]
+        correct_df = from_partitions(partitions, axis=None)
+        df_equals(correct_df, new_dfs[22])
 
     def test_final_result_func(self):
         """
@@ -388,32 +417,38 @@ class TestPipelineRayEngine:
         pipeline.add_query(lambda df: df + 30, is_output=True)
         new_dfs = pipeline.compute_batch(final_result_func=lambda df: df.iloc[-1])
         assert len(new_dfs) == 3, "Pipeline did not return all outputs"
-        corr_df = pd.DataFrame(arr) * -30
-        corr_df_md = corr_df._query_compiler._modin_frame
-        ptn = (
-            corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)[0]
+        correct_df = pd.DataFrame(arr) * -30
+        correct_df_md = correct_df._query_compiler._modin_frame
+        partition = (
+            correct_df_md._partition_mgr_cls.row_partitions(correct_df_md._partitions)[
+                0
+            ]
             .to_pandas()
             .iloc[-1]
         )
-        df_equals(ptn, new_dfs[0])  # First output computed correctly
-        corr_df = pd.DataFrame(
-            corr_df.rename(columns={i: f"col {i}" for i in range(1000)})._to_pandas()
+        df_equals(partition, new_dfs[0])  # First output computed correctly
+        correct_df = pd.DataFrame(
+            correct_df.rename(columns={i: f"col {i}" for i in range(1000)})._to_pandas()
         )
-        corr_df_md = corr_df._query_compiler._modin_frame
-        ptn = (
-            corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)[0]
+        correct_df_md = correct_df._query_compiler._modin_frame
+        partition = (
+            correct_df_md._partition_mgr_cls.row_partitions(correct_df_md._partitions)[
+                0
+            ]
             .to_pandas()
             .iloc[-1]
         )
-        df_equals(ptn, new_dfs[1])  # Second output computed correctly
-        corr_df += 30
-        corr_df_md = corr_df._query_compiler._modin_frame
-        ptn = (
-            corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)[0]
+        df_equals(partition, new_dfs[1])  # Second output computed correctly
+        correct_df += 30
+        correct_df_md = correct_df._query_compiler._modin_frame
+        partition = (
+            correct_df_md._partition_mgr_cls.row_partitions(correct_df_md._partitions)[
+                0
+            ]
             .to_pandas()
             .iloc[-1]
         )
-        df_equals(ptn, new_dfs[2])  # Third output computed correctly
+        df_equals(partition, new_dfs[2])  # Third output computed correctly
         df = pd.DataFrame(arr)
         pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df * -30, is_output=True, output_id=20)
@@ -431,32 +466,38 @@ class TestPipelineRayEngine:
         assert 21 in new_dfs, "Output ID 2 not cached correctly"
         assert 22 in new_dfs, "Output ID 3 not cached correctly"
         assert len(new_dfs) == 3, "Pipeline did not return all outputs"
-        corr_df = pd.DataFrame(arr) * -30
-        corr_df_md = corr_df._query_compiler._modin_frame
-        ptn = (
-            corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)[0]
+        correct_df = pd.DataFrame(arr) * -30
+        correct_df_md = correct_df._query_compiler._modin_frame
+        partition = (
+            correct_df_md._partition_mgr_cls.row_partitions(correct_df_md._partitions)[
+                0
+            ]
             .to_pandas()
             .iloc[-1]
         )
-        df_equals(ptn, new_dfs[20])  # First output computed correctly
-        corr_df = pd.DataFrame(
-            corr_df.rename(columns={i: f"col {i}" for i in range(1000)})._to_pandas()
+        df_equals(partition, new_dfs[20])  # First output computed correctly
+        correct_df = pd.DataFrame(
+            correct_df.rename(columns={i: f"col {i}" for i in range(1000)})._to_pandas()
         )
-        corr_df_md = corr_df._query_compiler._modin_frame
-        ptn = (
-            corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)[0]
+        correct_df_md = correct_df._query_compiler._modin_frame
+        partition = (
+            correct_df_md._partition_mgr_cls.row_partitions(correct_df_md._partitions)[
+                0
+            ]
             .to_pandas()
             .iloc[-1]
         )
-        df_equals(ptn, new_dfs[21])  # Second output computed correctly
-        corr_df += 30
-        corr_df_md = corr_df._query_compiler._modin_frame
-        ptn = (
-            corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)[0]
+        df_equals(partition, new_dfs[21])  # Second output computed correctly
+        correct_df += 30
+        correct_df_md = correct_df._query_compiler._modin_frame
+        partition = (
+            correct_df_md._partition_mgr_cls.row_partitions(correct_df_md._partitions)[
+                0
+            ]
             .to_pandas()
             .iloc[-1]
         )
-        df_equals(ptn, new_dfs[22])  # Third output computed correctly
+        df_equals(partition, new_dfs[22])  # Third output computed correctly
 
     def test_postproc_and_final(self):
         """
@@ -464,8 +505,8 @@ class TestPipelineRayEngine:
         """
         arr = np.random.randint(0, 1000, (1000, 1000))
 
-        def new_col_adder(df, o_id, ptn_id):
-            df["new_col"] = f"{o_id} {ptn_id}"
+        def new_col_adder(df, o_id, partition_id):
+            df["new_col"] = f"{o_id} {partition_id}"
             return df
 
         df = pd.DataFrame(arr)
@@ -483,39 +524,45 @@ class TestPipelineRayEngine:
             pass_output_id=True,
             final_result_func=lambda df: df.iloc[-1],
         )
-        corr_df = pd.DataFrame(arr) * -30
-        corr_df = new_col_adder(corr_df, 20, 0)
-        corr_df_md = corr_df._query_compiler._modin_frame
-        ptn = (
-            corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)[0]
+        correct_df = pd.DataFrame(arr) * -30
+        correct_df = new_col_adder(correct_df, 20, 0)
+        correct_df_md = correct_df._query_compiler._modin_frame
+        partition = (
+            correct_df_md._partition_mgr_cls.row_partitions(correct_df_md._partitions)[
+                0
+            ]
             .to_pandas()
             .iloc[-1]
         )
-        df_equals(ptn, new_dfs[20])
-        corr_df = corr_df.drop(columns=["new_col"])
-        corr_df = pd.DataFrame(
-            corr_df.rename(columns={i: f"col {i}" for i in range(1000)})._to_pandas()
+        df_equals(partition, new_dfs[20])
+        correct_df = correct_df.drop(columns=["new_col"])
+        correct_df = pd.DataFrame(
+            correct_df.rename(columns={i: f"col {i}" for i in range(1000)})._to_pandas()
         )
-        corr_df = new_col_adder(corr_df, 21, 0)
-        corr_df_md = corr_df._query_compiler._modin_frame
-        ptn = (
-            corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)[0]
+        correct_df = new_col_adder(correct_df, 21, 0)
+        correct_df_md = correct_df._query_compiler._modin_frame
+        partition = (
+            correct_df_md._partition_mgr_cls.row_partitions(correct_df_md._partitions)[
+                0
+            ]
             .to_pandas()
             .iloc[-1]
         )
-        df_equals(ptn, new_dfs[21])
-        corr_df = corr_df.drop(columns=["new_col"])
-        corr_df += 30
-        corr_df = new_col_adder(corr_df, 22, 0)
-        corr_df_md = corr_df._query_compiler._modin_frame
-        ptn = (
-            corr_df_md._partition_mgr_cls.row_partitions(corr_df_md._partitions)[0]
+        df_equals(partition, new_dfs[21])
+        correct_df = correct_df.drop(columns=["new_col"])
+        correct_df += 30
+        correct_df = new_col_adder(correct_df, 22, 0)
+        correct_df_md = correct_df._query_compiler._modin_frame
+        partition = (
+            correct_df_md._partition_mgr_cls.row_partitions(correct_df_md._partitions)[
+                0
+            ]
             .to_pandas()
             .iloc[-1]
         )
-        df_equals(ptn, new_dfs[22])
+        df_equals(partition, new_dfs[22])
 
-    def test_reptn_after(self):
+    def test_repartition_after(self):
         """
         This test checks that the `repartition_after` argument is appropriately handled.
         """
@@ -527,8 +574,8 @@ class TestPipelineRayEngine:
             lambda df: pandas.concat([df] * 1000), repartition_after=True
         )
 
-        def new_col_adder(df, ptn_id):
-            df["new_col"] = ptn_id
+        def new_col_adder(df, partition_id):
+            df["new_col"] = partition_id
             return df
 
         pipeline.add_query(new_col_adder, is_output=True, pass_partition_id=True)
@@ -537,9 +584,9 @@ class TestPipelineRayEngine:
         # Test that more than one partition causes an error
         import ray
 
-        ptn1 = ray.put(pandas.DataFrame([[0, 1, 2]]))
-        ptn2 = ray.put(pandas.DataFrame([[3, 4, 5]]))
-        df = from_partitions([ptn1, ptn2], 0)
+        partition1 = ray.put(pandas.DataFrame([[0, 1, 2]]))
+        partition2 = ray.put(pandas.DataFrame([[3, 4, 5]]))
+        df = from_partitions([partition1, partition2], 0)
         pipeline = PandasQueryPipeline(df, 0)
         pipeline.add_query(lambda df: df, repartition_after=True, is_output=True)
 
@@ -555,8 +602,8 @@ class TestPipelineRayEngine:
         """
         df = pd.DataFrame([[0, 1, 2]])
 
-        def new_col_adder(df, ptn_id):
-            df["new_col"] = ptn_id
+        def new_col_adder(df, partition_id):
+            df["new_col"] = partition_id
             return df
 
         def reducer(dfs):
@@ -573,17 +620,17 @@ class TestPipelineRayEngine:
             is_output=True,
         )
         new_df = pipeline.compute_batch()[0]
-        corr_df = pd.DataFrame([[0, 1, 2]])
-        corr_df["new_col"] = 0
-        corr_df["new_col1"] = "".join([str(i) for i in range(NPartitions.get())])
-        df_equals(corr_df, new_df)
+        correct_df = pd.DataFrame([[0, 1, 2]])
+        correct_df["new_col"] = 0
+        correct_df["new_col1"] = "".join([str(i) for i in range(NPartitions.get())])
+        df_equals(correct_df, new_df)
         # Test that if more than one partition, all but first are ignored
         import pandas
         import ray
 
-        ptn1 = ray.put(pandas.DataFrame([[0, 1, 2]]))
-        ptn2 = ray.put(pandas.DataFrame([[3, 4, 5]]))
-        df = from_partitions([ptn1, ptn2], 0)
+        partition1 = ray.put(pandas.DataFrame([[0, 1, 2]]))
+        partition2 = ray.put(pandas.DataFrame([[3, 4, 5]]))
+        df = from_partitions([partition1, partition2], 0)
         pipeline = PandasQueryPipeline(df)
         pipeline.add_query(
             new_col_adder,
@@ -605,8 +652,8 @@ class TestPipelineRayEngine:
 
         df = pd.DataFrame([[0, 1, 2]])
 
-        def new_col_adder(df, ptn_id):
-            df["new_col"] = ptn_id
+        def new_col_adder(df, partition_id):
+            df["new_col"] = partition_id
             return df
 
         def reducer(dfs):
@@ -630,14 +677,14 @@ class TestPipelineRayEngine:
             lambda df: df.drop(columns=["new_col"]), is_output=True, output_id=21
         )
 
-        def to_csv(df, ptn_id):
-            df.to_csv(f"{ptn_id}.csv")
+        def to_csv(df, partition_id):
+            df.to_csv(f"{partition_id}.csv")
             return df
 
         pipeline.add_query(to_csv, is_output=True, output_id=22, pass_partition_id=True)
 
-        def post_proc(df, o_id, ptn_id):
-            df["new_col"] = f"{o_id} {ptn_id}"
+        def post_proc(df, o_id, partition_id):
+            df["new_col"] = f"{o_id} {partition_id}"
             return df
 
         new_dfs = pipeline.compute_batch(
@@ -646,14 +693,14 @@ class TestPipelineRayEngine:
             pass_output_id=True,
             final_result_func=lambda df: df.iloc[-1],
         )
-        corr_df = pd.DataFrame([[0, 1, 2]])
-        corr_df["new_col"] = "20 0"
-        corr_df["new_col1"] = "".join([str(i) for i in range(24)])
-        df_equals(corr_df.iloc[-1], new_dfs[20])
-        corr_df = pd.concat([corr_df] * 1000)
-        corr_df = corr_df.drop(columns=["new_col"])
-        corr_df["new_col"] = "21 0"
-        df_equals(corr_df.iloc[0], new_dfs[21])
+        correct_df = pd.DataFrame([[0, 1, 2]])
+        correct_df["new_col"] = "20 0"
+        correct_df["new_col1"] = "".join([str(i) for i in range(24)])
+        df_equals(correct_df.iloc[-1], new_dfs[20])
+        correct_df = pd.concat([correct_df] * 1000)
+        correct_df = correct_df.drop(columns=["new_col"])
+        correct_df["new_col"] = "21 0"
+        df_equals(correct_df.iloc[0], new_dfs[21])
         for i in range(24):
             assert exists(
                 f"{i}.csv"

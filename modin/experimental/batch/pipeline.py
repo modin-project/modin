@@ -35,15 +35,21 @@ class PandasQuery(object):
     func : Callable
         The function to apply to the dataframe.
     is_output : bool, default: False
-        Whether this query is an output query and should be passed both to the next query, and directly to postprocessing.
+        Whether this query is an output query and should be passed both to the next query, and
+        directly to postprocessing.
     repartition_after : bool, default: False
-        Whether to repartition after this query is computed. Currently, repartitioning is only supported if there is 1 partition prior to repartitioning.
+        Whether to repartition after this query is computed. Currently, repartitioning is only
+        supported if there is 1 partition prior to repartitioning.
     fan_out : bool, default: False
-        Whether to fan out this node. If True and only 1 partition is passed as input, the partition is replicated `PandasQueryPipeline.num_partitions` (default: `NPartitions.get`) times, and the function is called on each. The `reduce_fn` must also be specified.
+        Whether to fan out this node. If True and only 1 partition is passed as input, the partition
+        is replicated `PandasQueryPipeline.num_partitions` (default: `NPartitions.get`) times, and
+        the function is called on each. The `reduce_fn` must also be specified.
     pass_partition_id : bool, default: False
         Whether to pass the numerical partition id to the query.
     reduce_fn : Callable
-    The reduce function to apply if `fan_out` is set to True. This takes the `PandasQueryPipeline.num_partitions` (default: `NPartitions.get`) partitions that result from this query, and combines them into 1 partition.
+    The reduce function to apply if `fan_out` is set to True. This takes the
+    `PandasQueryPipeline.num_partitions` (default: `NPartitions.get`) partitions that result from
+    this query, and combines them into 1 partition.
 
     Notes
     -----
@@ -61,10 +67,10 @@ class PandasQuery(object):
     ):
         self.func = func
         self.is_output = is_output
-        self.oids = []
         self.fan_out = fan_out
         self.repartition_after = repartition_after
         self.pass_partition_id = pass_partition_id
+        # List of sub-queries to feed into this query, if this query is an output node.
         self.operators = None
         self.reduce_fn = reduce_fn
 
@@ -99,14 +105,18 @@ class PandasQueryPipeline(object):
             "The Batch Pipeline API is an experimental feature and still under development in Modin."
         )
         self.df = df
-        self.num_partitions = num_partitions if num_partitions > 0 else NPartitions.get()
-        self.outputs = []
-        self.nodes_list = []
-        self.node_to_id = None
+        self.num_partitions = (
+            num_partitions if num_partitions > 0 else NPartitions.get()
+        )
+        self.outputs = []  # List of output queries.
+        self.nodes_list = []  # List of all queries.
+        self.node_to_id = (
+            None  # Optional mapping of node to output ID (if specified in `add_query`).
+        )
 
     def update_df(self, df):
         """
-        Updates the dataframe to perform this pipeline on.
+        Update the dataframe to perform this pipeline on.
 
         Parameters
         ----------
@@ -132,7 +142,7 @@ class PandasQueryPipeline(object):
         output_id: Optional[int] = None,
     ):
         """
-        Adds a query to the current pipeline.
+        Add a query to the current pipeline.
 
         Parameters
         ----------
@@ -146,13 +156,14 @@ class PandasQueryPipeline(object):
             repartitioning is only supported if there is 1 partition prior.
         fan_out : bool, default: False
             Whether to fan out this node. If True and only 1 partition is passed as input, the
-            partition is replicated `num_partition` times, and the function is called on each.
-            The `reduce_fn` must also be specified.
+            partition is replicated `self.num_partitions` (default: `NPartitions.get`) times,
+            and the function is called on each. The `reduce_fn` must also be specified.
         pass_partition_id : bool, default: False
             Whether to pass the numerical partition id to the query.
         reduce_fn : Callable
-            The reduce function to apply if `fan_out` is set to True. This takes the `num_partition`
-            partitions that result from this query, and combines them into 1 partition.
+            The reduce function to apply if `fan_out` is set to True. This takes the
+            `self.num_partitions` (default: `NPartitions.get`) partitions that result from this
+            query, and combines them into 1 partition.
         output_id : int, default None
             An id to assign to this node if it is an output.
         """
@@ -227,7 +238,9 @@ class PandasQueryPipeline(object):
                     ErrorMessage.not_implemented(
                         "Dynamic repartitioning is currently only supported for DataFrames with 1 partition."
                     )
-                partitions[0] = partitions[0].add_to_apply_calls(node.func).force_materialization()
+                partitions[0] = (
+                    partitions[0].add_to_apply_calls(node.func).force_materialization()
+                )
                 new_dfs = []
 
                 def masker(df, i):
@@ -251,7 +264,9 @@ class PandasQueryPipeline(object):
                         for i, ptn in enumerate(partitions)
                     ]
                 else:
-                    partitions = [ptn.add_to_apply_calls(node.func) for ptn in partitions]
+                    partitions = [
+                        ptn.add_to_apply_calls(node.func) for ptn in partitions
+                    ]
         return partitions
 
     def compute_batch(
@@ -300,7 +315,9 @@ class PandasQueryPipeline(object):
         else:
             outs = []
         modin_frame = self.df._query_compiler._modin_frame
-        partitions = modin_frame._partition_mgr_cls.row_partitions(modin_frame._partitions)
+        partitions = modin_frame._partition_mgr_cls.row_partitions(
+            modin_frame._partitions
+        )
         for i, node in enumerate(self.outputs):
             partitions = self._complete_nodes(node.operators + [node], partitions)
             for ptn in partitions:
@@ -314,12 +331,15 @@ class PandasQueryPipeline(object):
                     args.append(0)
                     new_partitions = []
                     for i, p in enumerate(partitions):
-                        new_partitions.append(p.add_to_apply_calls(postprocessor, *args))
+                        new_partitions.append(
+                            p.add_to_apply_calls(postprocessor, *args)
+                        )
                         args[-1] = i + 1
                     out_partitions = new_partitions
                 else:
                     out_partitions = [
-                        ptn.add_to_apply_calls(postprocessor, *args) for ptn in partitions
+                        ptn.add_to_apply_calls(postprocessor, *args)
+                        for ptn in partitions
                     ]
                 if final_result_func is None:
                     [ptn.drain_call_queue(num_splits=1) for ptn in out_partitions]
@@ -337,7 +357,9 @@ class PandasQueryPipeline(object):
                 else:
                     partitions = np.array(df).flatten()
                     partitions = np.array([ptn.list_of_blocks for ptn in df]).flatten()
-                    final_results.append(from_partitions(partitions, Axis.ROW_WISE.value))
+                    final_results.append(
+                        from_partitions(partitions, Axis.ROW_WISE.value)
+                    )
                 for d in df:
                     wait_parts.extend(d.list_of_blocks)
         else:
