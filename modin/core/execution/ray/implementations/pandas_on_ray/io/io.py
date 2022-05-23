@@ -42,6 +42,7 @@ from modin.core.storage_formats.pandas.parsers import (
 from modin.core.execution.ray.common import RayTask, SignalActor
 from ..dataframe import PandasOnRayDataframe
 from ..partitioning import PandasOnRayDataframePartition
+from modin.core.execution.ray.implementations.utils import is_local_path
 
 
 class PandasOnRayIO(RayIO):
@@ -165,6 +166,12 @@ class PandasOnRayIO(RayIO):
         if not cls._to_csv_check_support(kwargs):
             return RayIO.to_csv(qc, **kwargs)
 
+        if len(ray.nodes()) > 1:
+            path = kwargs["path_or_buf"]
+            if is_local_path(path):
+                raise ValueError("`path_or_buf` must point to a networked file or buffer when in cluster mode.")
+
+
         signals = SignalActor.remote(len(qc._modin_frame._partitions) + 1)
 
         def func(df, **kw):
@@ -276,6 +283,11 @@ class PandasOnRayIO(RayIO):
         """
         if not cls._to_parquet_check_support(kwargs):
             return RayIO.to_parquet(qc, **kwargs)
+        
+        if len(ray.nodes()) > 1:
+            path = kwargs["path_or_buf"]
+            if is_local_path(path):
+                raise ValueError("`path_or_buf` must point to a networked file or buffer when in cluster mode.")
 
         def func(df, **kw):
             """

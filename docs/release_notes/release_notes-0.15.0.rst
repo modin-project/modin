@@ -35,6 +35,7 @@ Key Features and Updates
   *
 * Developer API enhancements
   * FEAT-#4359: Add __dataframe__ method to the protocol dataframe (#4360)
+  * FIX-#4479: Prevent users from using a local filepath when performing a distributed write (#4484)
 * Update testing suite
   * TEST-#4363: Use Ray from pypi in CI (#4364)
   * FIX-#4422: get rid of case sensitivity for `warns_that_defaulting_to_pandas` (#4423)
