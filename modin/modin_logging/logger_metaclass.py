@@ -12,8 +12,9 @@
 # governing permissions and limitations under the License.
 
 from functools import wraps
-from .config import get_logger
 from types import FunctionType, MethodType
+
+from .config import get_logger
 from modin.config import LogMode
 
 
@@ -24,7 +25,7 @@ def logger_class_wrapper(classname, name, method):
 
     Parameters
     ----------
-    classname: str
+    classname : str
         The name of the class the LoggerMetaClass is being applied to.
     name: str
         The name of the Modin function within the class.
