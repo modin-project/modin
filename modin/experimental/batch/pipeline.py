@@ -46,7 +46,7 @@ class PandasQuery(object):
 
     Notes
     -----
-    func must be a function that is applied along an axis of the dataframe.
+    `func` must be a function that is applied along an axis of the dataframe.
     """
 
     def __init__(
@@ -78,8 +78,9 @@ class PandasQueryPipeline(object):
     ----------
     df : modin.pandas.Dataframe
         The dataframe to perform this pipeline on.
-    num_partitions : int, default: `NPartitions.get()`
+    num_partitions : int, optional
         The number of partitions to maintain for the batched dataframe.
+        If not specified, the value is assumed equal to ``NPartitions.get()``.
 
     Notes
     -----
@@ -96,15 +97,15 @@ class PandasQueryPipeline(object):
         ErrorMessage.single_warning(
             "The Batch Pipeline API is an experimental feature and still under development in Modin."
         )
-        num_partitions = num_partitions if num_partitions > 0 else NPartitions.get()
         self.df = df
-        self.num_partitions = num_partitions
+        self.num_partitions = num_partitions if num_partitions > 0 else NPartitions.get()
         self.outputs = []
         self.nodes_list = []
         self.node_to_id = None
 
     def update_df(self, df):
-        """Updates the dataframe to perform this pipeline on.
+        """
+        Updates the dataframe to perform this pipeline on.
 
         Parameters
         ----------
@@ -179,7 +180,7 @@ class PandasQueryPipeline(object):
             curr_node.operators = self.nodes_list[:-1]
             self.nodes_list = []
 
-    def _complete_nodes(self, list_of_nodes, ptns):
+    def _complete_nodes(self, list_of_nodes, partitions):
         """
         Run a sub-query end to end.
 
