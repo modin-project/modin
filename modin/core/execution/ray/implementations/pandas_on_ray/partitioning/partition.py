@@ -63,7 +63,10 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         logger = get_logger()
         logger.debug(
             "Partition ID: {}, Height: {}, Width: {}, Node IP: {}".format(
-                self._identity, str(width), str(length), str(self._ip_cache)
+                self._identity,
+                str(self._length_cache),
+                str(self._width_cache),
+                str(self._ip_cache),
             )
         )
 

@@ -418,7 +418,7 @@ def make_proxy_cls(
                         namespace[name] = method
             return namespace
 
-    class Wrapper(metaclass_resolver(override, origin_cls, ProxyMeta)):
+    class Wrapper(metaclass_resolver(override, origin_cls)):
         """
         Subclass origin_cls replacing attributes with what is defined in override while
         relaying requests for all other attributes to remote_cls.

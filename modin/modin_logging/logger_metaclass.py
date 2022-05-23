@@ -27,9 +27,9 @@ def logger_class_wrapper(classname, name, method):
     ----------
     classname : str
         The name of the class the LoggerMetaClass is being applied to.
-    name: str
+    name : str
         The name of the Modin function within the class.
-    method: str
+    method : str
         The function to apply on the arguments.
 
     Returns
@@ -58,7 +58,7 @@ def metaclass_resolver(*classes):
 
     Parameters
     ----------
-    *classes: dict
+    *classes : dict
         Dictionary of parent classes to resolve metaclass conflicts for
 
     Returns

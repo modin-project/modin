@@ -34,9 +34,9 @@ class ModinFormatter(logging.Formatter):
 
         Parameters
         ----------
-        record: LogRecord
+        record : LogRecord
             The specified LogRecord object.
-        datefmt: str, default: None
+        datefmt : str, default : None
             Used with time.ststrftime() to format time record.
 
         Returns
@@ -61,9 +61,9 @@ def bytes_int_to_str(num_bytes, suffix="B"):
 
     Parameters
     ----------
-    num_bytes: int
+    num_bytes : int
         Number of bytes.
-    suffix: str, default: "B"
+    suffix : str, default : "B"
         Suffix to add to conversion of num_bytes.
 
     Returns
@@ -134,9 +134,9 @@ def memory_thread(logger, sleep_time):
 
     Parameters
     ----------
-    logger: logging.Logger
+    logger : logging.Logger
         The logger object.
-    sleep_time: int
+    sleep_time : int
         The interval at which to profile system memory.
     """
 

@@ -23,11 +23,11 @@ def logger_decorator(modin_layer: str, function_name: str, log_level: str):
 
     Parameters
     ----------
-    modin_layer: str
+    modin_layer : str
         Specified by the logger (PANDAS-API).
-    function_name: str
+    function_name : str
         The name of the function the decorator is being applied to.
-    log_level: str
+    log_level : str
         The log level (logging.INFO, logging.DEBUG, logging.WARNING, etc.)
 
     Returns

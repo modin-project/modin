@@ -382,7 +382,7 @@ class LogMode(EnvironmentVariable, type=ExactStr):
 
 
 class LogMemoryInterval(EnvironmentVariable, type=int):
-    """Interval to profile memory utilization for logging."""
+    """Interval (in seconds) to profile memory utilization for logging."""
 
     varname = "MODIN_LOG_MEMORY_INTERVAL"
     default = 5
