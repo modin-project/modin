@@ -54,6 +54,9 @@ class PandasQuery(object):
     Notes
     -----
     `func` must be a function that is applied along an axis of the dataframe.
+
+    Use `pandas` for any module level functions inside `func` since it operates directly on
+    partitions.
     """
 
     def __init__(
@@ -166,6 +169,11 @@ class PandasQueryPipeline(object):
             query, and combines them into 1 partition.
         output_id : int, default None
             An id to assign to this node if it is an output.
+
+        Notes
+        -----
+        Use `pandas` for any module level functions inside `func` since it operates directly on
+        partitions.
         """
         self.nodes_list.append(
             PandasQuery(
