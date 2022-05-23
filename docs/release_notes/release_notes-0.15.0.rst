@@ -19,6 +19,7 @@ Key Features and Updates
   * FIX-#4425: Add parameters to groupby pct_change (#4429)
   * FIX-#4414: Add missing f prefix on f-strings found at https://codereview.doctor (#4415)
   * FIX-#4461: Fix S3 CSV data path (#4462)
+  * FIX-#4481: Allow clipping with a Modin Series of bounds (#4486)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
 * Benchmarking enhancements
