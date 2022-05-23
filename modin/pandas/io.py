@@ -31,8 +31,9 @@ or `OmniSci`), and the last one is for parameter notes. The flags stand for the 
 | Non-lazy  | Usage of this parameter can trigger non-lazy execution (applicable to OmniSci execution only) |
 +-----------+-----------------------------------------------------------------------------------------------+
 | Partial   | Parameter can be partly unsupported, it's usage can be harmful for performance of your        |
-|           | appcication. This can happen if some parameter values or types are not supported (for example |
-|           | (see more on defaulting to pandas mechanism on                                                |
+|           | application. This can happen if some parameter values or types are not supported (for         |
+|           | example, boolean values are supported while integer are not) and Modin is defaulting to       |
+|           | pandas (see more on defaulting to pandas mechanism on                                         |
 |           | https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html)              |
 +-----------+-----------------------------------------------------------------------------------------------+
 
