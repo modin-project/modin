@@ -1055,11 +1055,6 @@ class BasePandasDataset(object):
         if axis is not None:
             axis = self._get_axis_number(axis)
         self._validate_dtypes(numeric_only=True)
-        if is_list_like(lower) or is_list_like(upper):
-            if axis is None:
-                raise ValueError("Must specify axis = 0 or 1")
-            self._validate_other(lower, axis)
-            self._validate_other(upper, axis)
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = numpy_compat.function.validate_clip_with_axis(axis, args, kwargs)
         # any np.nan bounds are treated as None
@@ -1067,6 +1062,11 @@ class BasePandasDataset(object):
             lower = None
         if upper is not None and np.any(np.isnan(upper)):
             upper = None
+        if is_list_like(lower) or is_list_like(upper):
+            if axis is None:
+                raise ValueError("Must specify axis = 0 or 1")
+            lower = self._validate_other(lower, axis)
+            upper = self._validate_other(upper, axis)
         # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
         # purpose and does not affect the result, we shouldn't pass them to the query compiler.
         new_query_compiler = self._query_compiler.clip(

@@ -564,7 +564,8 @@ def test_astype_category_large():
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-def test_clip(request, data, axis):
+@pytest.mark.parametrize("bound_type", ["list", "series"], ids=["list", "series"])
+def test_clip(request, data, axis, bound_type):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
@@ -576,8 +577,6 @@ def test_clip(request, data, axis):
         )
         # set bounds
         lower, upper = np.sort(random_state.random_integers(RAND_LOW, RAND_HIGH, 2))
-        lower_list = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
-        upper_list = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
 
         # test only upper scalar bound
         modin_result = modin_df.clip(None, upper, axis=axis)
@@ -589,14 +588,26 @@ def test_clip(request, data, axis):
         pandas_result = pandas_df.clip(lower, upper, axis=axis)
         df_equals(modin_result, pandas_result)
 
+        lower = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
+        upper = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
+
+        if bound_type == "series":
+            modin_lower = pd.Series(lower)
+            pandas_lower = pandas.Series(lower)
+            modin_upper = pd.Series(upper)
+            pandas_upper = pandas.Series(upper)
+        else:
+            modin_lower = pandas_lower = lower
+            modin_upper = pandas_upper = upper
+
         # test lower and upper list bound on each column
-        modin_result = modin_df.clip(lower_list, upper_list, axis=axis)
-        pandas_result = pandas_df.clip(lower_list, upper_list, axis=axis)
+        modin_result = modin_df.clip(modin_lower, modin_upper, axis=axis)
+        pandas_result = pandas_df.clip(pandas_lower, pandas_upper, axis=axis)
         df_equals(modin_result, pandas_result)
 
         # test only upper list bound on each column
-        modin_result = modin_df.clip(np.nan, upper_list, axis=axis)
-        pandas_result = pandas_df.clip(np.nan, upper_list, axis=axis)
+        modin_result = modin_df.clip(np.nan, modin_upper, axis=axis)
+        pandas_result = pandas_df.clip(np.nan, pandas_upper, axis=axis)
         df_equals(modin_result, pandas_result)
 
         with pytest.raises(ValueError):
