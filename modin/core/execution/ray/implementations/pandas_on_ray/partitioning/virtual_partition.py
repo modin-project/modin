@@ -20,7 +20,7 @@ from ray.util import get_node_ip_address
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-from .partition import PandasOnRayDataframePartition
+from .partition import ObjectIDType, PandasOnRayDataframePartition
 
 
 class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
@@ -241,6 +241,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     def apply(
         self,
         func,
+        *args,
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
@@ -273,11 +274,27 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of `PandasOnRayDataframeVirtualPartition` objects.
         """
+        # If this is not a full axis partition, it already contains a subset of
+        # the full axis, so we shouldn't split the result further.
+        def deserialize(obj):
+            if isinstance(obj, ObjectIDType):
+                return ray.get(obj)
+            elif isinstance(obj, (tuple, list)) and any(
+                isinstance(o, ObjectIDType) for o in obj
+            ):
+                return ray.get(list(obj))
+            elif isinstance(obj, dict) and any(
+                isinstance(val, ObjectIDType) for val in obj.values()
+            ):
+                return dict(zip(obj.keys(), ray.get(list(obj.values()))))
+            else:
+                return obj
+
+        kwargs["args"] = deserialize(args)
         print(
             f"applying function to {type(self)=} {func=} {num_splits=} {other_axis_partition=} {maintain_partitioning=} {kwargs=} {self.axis=}"
         )
-        # If this is not a full axis partition, it already contains a subset of
-        # the full axis, so we shouldn't split the result further.
+
         if not self.full_axis:
             num_splits = 1
         if len(self.call_queue) > 0:
@@ -490,7 +507,7 @@ class PandasOnRayDataframeRowPartition(PandasOnRayDataframeVirtualPartition):
 
 
 @ray.remote
-def deploy_ray_func(func, *args):  # pragma: no cover
+def deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
     """
     Execute a function on an axis partition in a worker process.
 
@@ -510,7 +527,7 @@ def deploy_ray_func(func, *args):  # pragma: no cover
     -----
     Ray functions are not detected by codecov (thus pragma: no cover).
     """
-    result = func(*args)
+    result = func(*args, **kwargs)
     ip = get_node_ip_address()
     if isinstance(result, pandas.DataFrame):
         return result, len(result), len(result.columns), ip

@@ -28,11 +28,6 @@ from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.core.dataframe.pandas.utils import concatenate
 from modin.config import NPartitions, ProgressBar, BenchmarkMode
-from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.virtual_partition import (
-    PandasOnRayDataframeColumnPartition,
-    PandasOnRayDataframeRowPartition,
-    PandasOnRayDataframeVirtualPartition,
-)
 import os
 
 
@@ -374,25 +369,18 @@ class PandasDataframePartitionManager(ABC):
 
         map_func = cls.preprocess_func(map_func)
         rt_axis_parts = cls.axis_partition(right, axis ^ 1)
-        print(f"{apply_func=}")
-        print(f"{left=}")
-        print(f"{right=}")
-        # print(f"{[vars(part) for part in rt_axis_parts]=}")
-        print(
-            f"{[type(part) == PandasOnRayDataframeColumnPartition for part in left[0]]}"
-        )
+        # print(f"{apply_func=}")
+        # print(f"{left=}")
+        # print(f"{right=}")
+        # # print(f"{[vars(part) for part in rt_axis_parts]=}")
+        # print(
+        #     f"{[type(part) == PandasOnRayDataframeColumnPartition for part in left[0]]}"
+        # )
 
         return np.array(
             [
                 [
                     part.apply(
-                        map_func,
-                        other_axis_partition=rt_axis_parts[col_idx]
-                        if axis
-                        else rt_axis_parts[row_idx],
-                    )
-                    if type(part) == PandasOnRayDataframeColumnPartition
-                    else part.apply(
                         map_func,
                         *(
                             rt_axis_parts[col_idx].list_of_blocks
