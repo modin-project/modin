@@ -12,8 +12,9 @@
 # governing permissions and limitations under the License.
 
 import pytest
-import modin.pandas as pd
 import numpy as np
+
+import modin.pandas as pd
 from modin.config import Engine, NPartitions
 from modin.distributed.dataframe.pandas.partitions import from_partitions
 from modin.experimental.batch.pipeline import PandasQueryPipeline
