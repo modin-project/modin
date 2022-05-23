@@ -169,8 +169,9 @@ class PandasOnRayIO(RayIO):
         if len(ray.nodes()) > 1:
             path = kwargs["path_or_buf"]
             if is_local_path(path):
-                raise ValueError("`path_or_buf` must point to a networked file or buffer when in cluster mode.")
-
+                raise ValueError(
+                    "`path_or_buf` must point to a networked file or buffer when in cluster mode."
+                )
 
         signals = SignalActor.remote(len(qc._modin_frame._partitions) + 1)
 
@@ -283,11 +284,13 @@ class PandasOnRayIO(RayIO):
         """
         if not cls._to_parquet_check_support(kwargs):
             return RayIO.to_parquet(qc, **kwargs)
-        
+
         if len(ray.nodes()) > 1:
             path = kwargs["path_or_buf"]
             if is_local_path(path):
-                raise ValueError("`path_or_buf` must point to a networked file or buffer when in cluster mode.")
+                raise ValueError(
+                    "`path_or_buf` must point to a networked file or buffer when in cluster mode."
+                )
 
         def func(df, **kw):
             """
