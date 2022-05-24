@@ -131,9 +131,6 @@ class PandasOnRayIOToMSSQL:
             column_index += 1
         create_statement = create_statement + ")"
 
-        with open("c:\\temp\\create.txt", "w") as f:
-            print(create_statement, file=f)
-
         with conn.cursor() as cursor:
             cursor.fast_executemany = True
             cursor.execute(create_statement)
