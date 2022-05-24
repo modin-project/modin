@@ -50,7 +50,7 @@ class ModinDatabaseConnection:
         Keyword arguments to pass when creating the connection.
     """
 
-    def __init__(self, lib, *args, **kwargs):
+    def __init__(self, lib, identity_insert: False, *args, **kwargs):
         lib = lib.lower()
         if lib not in (_PSYCOPG_LIB_NAME, _SQLALCHEMY_LIB_NAME):
             raise UnsupportedDatabaseException(f"Unsupported database library {lib}")
@@ -58,6 +58,7 @@ class ModinDatabaseConnection:
         self.args = args
         self.kwargs = kwargs
         self._dialect_is_microsoft_sql_cache = None
+        self.identity_insert = identity_insert
 
     def _dialect_is_microsoft_sql(self):
         """
