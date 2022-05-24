@@ -79,7 +79,7 @@ class LoggerMetaClass(type):
     def __new__(mcs, classname, bases, class_dict):
         new_class_dict = {}
         seen_attributes = {}
-        exclude_attributes = {"__getattribute__", "query", "eval"}
+        exclude_attributes = {"__getattribute__"}
         for attribute_name, attribute in class_dict.items():
             if (
                 isinstance(attribute, (FunctionType, MethodType))

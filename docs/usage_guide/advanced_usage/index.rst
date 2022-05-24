@@ -89,8 +89,8 @@ Logging with Modin
 ------------------
 
 Modin logging offers users greater insight into their queries by logging internal Modin API calls, partition metadata, 
-and profiling system memory. When Modin logging is enabled (default disabled), log files are written to a local `.modin` directory at the same
-directory level as the notebook/script used to run Modin. See our :doc:`Logging with Modin documentation <modin_logging>` 
+and system memory. Logging is disabled by default, but when it is enabled, log files are written to a local `.modin` directory 
+at the same directory level as the notebook/script used to run Modin. See our :doc:`Logging with Modin documentation <modin_logging>` 
 for usage information.
 
 .. _`blog post`: https://medium.com/riselab/why-every-data-scientist-using-pandas-needs-modin-bringing-sql-to-dataframes-3b216b29a7c0

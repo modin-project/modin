@@ -116,6 +116,7 @@ jobs:
             modin/experimental/core/execution/native/implementations/omnisci_on_native/omnisci_worker.py \
       - run: python scripts/doc_checker.py modin/experimental/core/storage_formats/omnisci
       - run: python scripts/doc_checker.py modin/experimental/core/execution/native/implementations/omnisci_on_native/exchange/dataframe_protocol
+      - run: python scripts/doc_checker.py modin/modin_logging
 
   lint-flake8:
     name: lint (flake8)

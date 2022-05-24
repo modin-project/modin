@@ -455,7 +455,7 @@ class StringMethods(object, metaclass=LoggerMetaClass):
 
 
 @_inherit_docstrings(pandas.core.indexes.accessors.CombinedDatetimelikeProperties)
-class DatetimeProperties(object):
+class DatetimeProperties(object, metaclass=LoggerMetaClass):
     def __init__(self, series):
         self._series = series
         self._query_compiler = series._query_compiler
