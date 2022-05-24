@@ -20,7 +20,7 @@ from modin.config import LogMode
 
 def logger_class_wrapper(classname, name, method):
     """
-    LoggerMetaClass helper method to log internal Modin functions.
+    Execute Modin functions with logging if enabled.
 
     Parameters
     ----------
@@ -39,6 +39,20 @@ def logger_class_wrapper(classname, name, method):
 
     @wraps(method)
     def log_wrap(*args, **kwargs):
+        """
+        Compute function with logging if Modin logging is enabled.
+
+        Parameters
+        ----------
+        *args : tuple
+            The function arguments.
+        **kwargs : dict
+            The function keyword arguments.
+
+        Returns
+        -------
+        Any
+        """
         if LogMode.get() != "disable":
             logger = get_logger()
             logger.info(f"START::PANDAS-API::{classname}.{name}")
@@ -73,7 +87,7 @@ def metaclass_resolver(*classes):
     return metaclass("_".join(cls.__name__ for cls in classes), classes, {})
 
 
-class LoggerMetaClass(type):
+class LoggerMetaClass(type):  # noqa: PR01
     """Log Metaclass to attach to class definitions."""
 
     def __new__(mcs, classname, bases, class_dict):

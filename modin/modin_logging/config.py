@@ -25,7 +25,7 @@ from modin.config import LogMemoryInterval, LogMode
 __LOGGER_CONFIGURED__: bool = False
 
 
-class ModinFormatter(logging.Formatter):
+class ModinFormatter(logging.Formatter):  # noqa: PR01
     """Implement custom formatter to log at microsecond granularity."""
 
     def formatTime(self, record, datefmt=None):
