@@ -42,6 +42,7 @@ from modin.core.storage_formats.pandas.parsers import (
 from modin.core.execution.ray.common import RayTask, SignalActor
 from ..dataframe import PandasOnRayDataframe
 from ..partitioning import PandasOnRayDataframePartition
+from .io_mssql import PandasOnRayIOToMSSQL
 
 
 class PandasOnRayIO(RayIO):
@@ -110,8 +111,12 @@ class PandasOnRayIO(RayIO):
         # Ensure that the metadata is syncrhonized
         qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame.apply_full_axis(1, func, new_index=[], new_columns=[])
-        # FIXME: we should be waiting for completion less expensievely, maybe use _modin_frame.materialize()?
+        # FIXME: we should be waiting for completion less expensively, maybe use _modin_frame.materialize()?
         result.to_pandas()  # blocking operation
+
+    @classmethod
+    def to_database(cls, **kwargs):
+        return PandasOnRayIOToMSSQL.to_database(**kwargs)
 
     @staticmethod
     def _to_csv_check_support(kwargs):

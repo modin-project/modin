@@ -277,6 +277,11 @@ class FactoryDispatcher(object):
         return cls.__factory._to_sql(*args, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._to_database)
+    def to_database(cls, **kwargs):
+        return cls.__factory._to_database(**kwargs)
+
+    @classmethod
     @_inherit_docstrings(factories.BaseFactory._to_pickle)
     def to_pickle(cls, *args, **kwargs):
         return cls.__factory._to_pickle(*args, **kwargs)

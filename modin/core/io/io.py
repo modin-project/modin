@@ -837,6 +837,32 @@ class BaseIO(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.DataFrame.to_sql, apilink="pandas.DataFrame.to_sql")
+    def to_database(cls, **kwargs):  # noqa: PR01
+        """
+        Write records stored in a DataFrame to a SQL database using pandas.
+
+        For parameters description please refer to pandas API.
+        """
+
+        with open("c:\\temp\\output.txt", "w") as f:
+            print("kwargs.size = ", len(kwargs), file=f)
+            print(kwargs, file=f)
+
+        qc = kwargs["qc"]
+
+        connection_params = kwargs["connection_params"]
+        qc._modin_frame.to_database(
+            name=kwargs["name"],
+            con=connection_params["connection_string"],
+            database_name=connection_params["database_name"],
+            schema_name=connection_params["schema_name"]
+            if connection_params.contains("schema_name")
+            else "",
+            if_exists=kwargs["if_exists"],
+        )
+
+    @classmethod
     @_inherit_docstrings(
         pandas.DataFrame.to_pickle, apilink="pandas.DataFrame.to_pickle"
     )

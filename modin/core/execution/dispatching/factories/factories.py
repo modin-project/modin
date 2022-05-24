@@ -381,6 +381,20 @@ class BaseFactory(object):
         return cls.io_cls.to_sql(*args, **kwargs)
 
     @classmethod
+    def _to_database(cls, **kwargs):
+        """
+        Write query compiler content to a SQL database.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to the writer method.
+        **kwargs : kwargs
+            Arguments to the writer method.
+        """
+        return cls.io_cls.to_database(**kwargs)
+
+    @classmethod
     def _to_pickle(cls, *args, **kwargs):
         """
         Pickle query compiler object.

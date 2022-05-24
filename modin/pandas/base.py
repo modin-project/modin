@@ -887,12 +887,7 @@ class BasePandasDataset(object):
                     stacklevel=2,
                 )
         query_compiler = self._query_compiler.apply(
-            func,
-            axis,
-            args=args,
-            raw=raw,
-            result_type=result_type,
-            **kwds,
+            func, axis, args=args, raw=raw, result_type=result_type, **kwds,
         )
         return query_compiler
 
@@ -1955,11 +1950,7 @@ class BasePandasDataset(object):
             else self
         )
         result_qc = getattr(data._query_compiler, op_name)(
-            axis=axis,
-            skipna=skipna,
-            level=level,
-            numeric_only=numeric_only,
-            **kwargs,
+            axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs,
         )
         return self._reduce_dimension(result_qc)
 
@@ -2214,11 +2205,7 @@ class BasePandasDataset(object):
         )
 
     def reindex(
-        self,
-        index=None,
-        columns=None,
-        copy=True,
-        **kwargs,
+        self, index=None, columns=None, copy=True, **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Conform `BasePandasDataset` to new index with optional filling logic.
@@ -2398,10 +2385,7 @@ class BasePandasDataset(object):
             raise ValueError("cannot insert level_0, already exists")
         else:
             new_query_compiler = self._query_compiler.reset_index(
-                drop=drop,
-                level=level,
-                col_level=col_level,
-                col_fill=col_fill,
+                drop=drop, level=level, col_level=col_level, col_fill=col_fill,
             )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
@@ -2637,13 +2621,7 @@ class BasePandasDataset(object):
             return self.__constructor__(query_compiler=query_compiler)
 
     def sem(
-        self,
-        axis=None,
-        skipna=True,
-        level=None,
-        ddof=1,
-        numeric_only=None,
-        **kwargs,
+        self, axis=None, skipna=True, level=None, ddof=1, numeric_only=None, **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return unbiased standard error of the mean over requested axis.
@@ -2866,13 +2844,7 @@ class BasePandasDataset(object):
         return self._create_or_update_from_compiler(result, inplace)
 
     def std(
-        self,
-        axis=None,
-        skipna=True,
-        level=None,
-        ddof=1,
-        numeric_only=None,
-        **kwargs,
+        self, axis=None, skipna=True, level=None, ddof=1, numeric_only=None, **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return sample standard deviation over requested axis.
@@ -3171,11 +3143,7 @@ class BasePandasDataset(object):
         """
         Convert the `BasePandasDataset` to a NumPy array.
         """
-        return self._query_compiler.to_numpy(
-            dtype=dtype,
-            copy=copy,
-            na_value=na_value,
-        )
+        return self._query_compiler.to_numpy(dtype=dtype, copy=copy, na_value=na_value,)
 
     # TODO(williamma12): When this gets implemented, have the series one call this.
     def to_period(
@@ -3293,6 +3261,26 @@ class BasePandasDataset(object):
             dtype=dtype,
             method=method,
         )
+
+    def to_database(self, **kwargs):  # noqa: PR01, D200
+        """
+        Write records stored in a `BasePandasDataset` to a SQL database.
+        """
+        new_query_compiler = self._query_compiler
+        # writing the index to the database by inserting it to the DF
+        # if index:
+        #    if not index_label:
+        #        index_label = "index"
+        #    new_query_compiler = new_query_compiler.insert(0, index_label, self.index)
+        #    # so pandas._to_sql will not write the index to the database as well
+        #    index = False
+
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
+        )
+
+        kwargs["qc"] = new_query_compiler
+        FactoryDispatcher.to_database(**kwargs)
 
     # TODO(williamma12): When this gets implemented, have the series one call this.
     def to_timestamp(
@@ -3753,19 +3741,13 @@ class BasePandasDataset(object):
     __bool__ = __nonzero__
 
     @_doc_binary_op(
-        operation="disjunction",
-        bin_op="or",
-        right="other",
-        **_doc_binary_op_kwargs,
+        operation="disjunction", bin_op="or", right="other", **_doc_binary_op_kwargs,
     )
     def __or__(self, other):
         return self._binary_op("__or__", other, axis=0)
 
     @_doc_binary_op(
-        operation="disjunction",
-        bin_op="ror",
-        right="other",
-        **_doc_binary_op_kwargs,
+        operation="disjunction", bin_op="ror", right="other", **_doc_binary_op_kwargs,
     )
     def __ror__(self, other):
         return self._binary_op("__ror__", other, axis=0)
