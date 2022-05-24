@@ -25,7 +25,7 @@ if version.parse(ray.__version__) >= version.parse("1.2.0"):
 
 def deserialize(obj):
     """
-    Deserializes a Ray object.
+    Deserialize a Ray object.
 
     Parameters
     ----------
