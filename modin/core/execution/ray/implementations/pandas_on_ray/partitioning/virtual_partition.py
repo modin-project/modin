@@ -20,7 +20,7 @@ from ray.util import get_node_ip_address
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-from ray.utils import deserialize
+from modin.core.execution.ray.utils import deserialize
 from .partition import PandasOnRayDataframePartition
 
 
@@ -255,6 +255,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         ----------
         func : callable
             The function to apply.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
         num_splits : int, default: None
             The number of times to split the result object.
         other_axis_partition : PandasDataframeAxisPartition, default: None
@@ -501,7 +503,8 @@ def deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
         Function to be executed on an axis partition.
     *args : iterable
         Additional arguments that need to passed in ``func``.
-
+    **kwargs : dict
+        Additional keyword arguments to be passed in `func`.
     Returns
     -------
     list
