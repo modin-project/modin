@@ -46,6 +46,11 @@ class RayIO(BaseIO):
             partition_con = con
             if isinstance(partition_con, ModinDatabaseConnection):
                 partition_con = con.get_connection()
+                if con.identity_insert:
+                    full_table_name = name
+                    if schema:
+                        full_table_name = f'{schema}.{full_table_name}'
+                    partition_con.execute(f'SET IDENTITY_INSERT {full_table_name} ON')                
             df.to_sql(name, con=partition_con, schema=schema, **kwargs)
             return pandas.DataFrame()
 
