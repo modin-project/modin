@@ -765,6 +765,10 @@ class BaseQueryCompiler(abc.ABC):
         BaseQueryCompiler
             QueryCompiler with values limited by the specified thresholds.
         """
+        if isinstance(lower, BaseQueryCompiler):
+            lower = lower.to_pandas().squeeze(1)
+        if isinstance(upper, BaseQueryCompiler):
+            upper = upper.to_pandas().squeeze(1)
         return DataFrameDefault.register(pandas.DataFrame.clip)(
             self, lower=lower, upper=upper, **kwargs
         )
