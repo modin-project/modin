@@ -15,18 +15,12 @@
 
 import ray
 from ray.util import get_node_ip_address
-from packaging import version
 import uuid
+from ray.utils import deserialize, ObjectIDType
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
 from modin.logging import get_logger
-
-ObjectIDType = ray.ObjectRef
-if version.parse(ray.__version__) >= version.parse("1.2.0"):
-    from ray.util.client.common import ClientObjectRef
-
-    ObjectIDType = (ray.ObjectRef, ClientObjectRef)
 
 compute_sliced_len = ray.remote(compute_sliced_len)
 
@@ -419,27 +413,11 @@ def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
     str
         The node IP address of the worker process.
     """
-
-    def deserialize(obj):
-        if isinstance(obj, ObjectIDType):
-            return ray.get(obj)
-        elif isinstance(obj, (tuple, list)) and any(
-            isinstance(o, ObjectIDType) for o in obj
-        ):
-            return ray.get(list(obj))
-        elif isinstance(obj, dict) and any(
-            isinstance(val, ObjectIDType) for val in obj.values()
-        ):
-            return dict(zip(obj.keys(), ray.get(list(obj.values()))))
-        else:
-            return obj
-
     for func, args, kwargs in funcs:
         func = deserialize(func)
         args = deserialize(args)
         kwargs = deserialize(kwargs)
         try:
-            print(f"{func=} {args=} {kwargs=}")
             partition = func(partition, *args, **kwargs)
         # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
         # don't want the error to propagate to the user, and we want to avoid copying unless

@@ -20,7 +20,8 @@ from ray.util import get_node_ip_address
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-from .partition import ObjectIDType, PandasOnRayDataframePartition
+from ray.utils import deserialize
+from .partition import PandasOnRayDataframePartition
 
 
 class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
@@ -276,24 +277,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         """
         # If this is not a full axis partition, it already contains a subset of
         # the full axis, so we shouldn't split the result further.
-        def deserialize(obj):
-            if isinstance(obj, ObjectIDType):
-                return ray.get(obj)
-            elif isinstance(obj, (tuple, list)) and any(
-                isinstance(o, ObjectIDType) for o in obj
-            ):
-                return ray.get(list(obj))
-            elif isinstance(obj, dict) and any(
-                isinstance(val, ObjectIDType) for val in obj.values()
-            ):
-                return dict(zip(obj.keys(), ray.get(list(obj.values()))))
-            else:
-                return obj
-
         kwargs["args"] = deserialize(args)
-        print(
-            f"applying function to {type(self)=} {func=} {num_splits=} {other_axis_partition=} {maintain_partitioning=} {kwargs=} {self.axis=}"
-        )
 
         if not self.full_axis:
             num_splits = 1

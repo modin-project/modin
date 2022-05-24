@@ -1968,6 +1968,21 @@ def test_validate_by():
     compare(reference_by, result_by)
 
 
+@pytest.mark.parametrize("width", [2**5, 2**10])
+@pytest.mark.parametrize("height", [2**5, 2**10])
+@pytest.mark.parametrize("concat_length", [5, 10])
+def test_concat_groupby(width, height, concat_length):
+    # from https://github.com/modin-project/modin/issues/4464
+    data = np.random.randint(0, 100, size=(width, height))
+    df = pd.DataFrame(data)
+    big_df = pd.concat([df for _ in range(concat_length)])
+    big_groupby = big_df.groupby(1)
+
+    big_groupby.count()
+    big_groupby.sum()
+    big_groupby.min()
+
+
 @pytest.mark.parametrize("sort", [True, False])
 @pytest.mark.parametrize("is_categorical_by", [True, False])
 def test_groupby_sort(sort, is_categorical_by):

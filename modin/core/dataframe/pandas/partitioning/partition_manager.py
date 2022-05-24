@@ -369,13 +369,6 @@ class PandasDataframePartitionManager(ABC):
 
         map_func = cls.preprocess_func(map_func)
         rt_axis_parts = cls.axis_partition(right, axis ^ 1)
-        # print(f"{apply_func=}")
-        # print(f"{left=}")
-        # print(f"{right=}")
-        # # print(f"{[vars(part) for part in rt_axis_parts]=}")
-        # print(
-        #     f"{[type(part) == PandasOnRayDataframeColumnPartition for part in left[0]]}"
-        # )
 
         return np.array(
             [
