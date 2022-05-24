@@ -14,10 +14,9 @@
 """Place to define the Modin iterator."""
 
 from collections.abc import Iterator
-from modin.modin_logging import LoggerMetaClass
 
 
-class PartitionIterator(Iterator, metaclass=LoggerMetaClass):
+class PartitionIterator(Iterator):
     """
     Iterator on partitioned data.
 
