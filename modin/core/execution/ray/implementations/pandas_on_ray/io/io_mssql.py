@@ -17,17 +17,8 @@ import random
 import string
 import time
 
-import io
-import os
 
-import pandas
-import ray
-
-from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
-from modin.core.execution.ray.generic.io import RayIO
-
-
-class PandasOnRayIOToMSSQL(RayIO):
+class PandasOnRayIOToMSSQL:
     """Factory providing methods for writing modin data frames to MSSQL on Ray as engine."""
 
     @classmethod
@@ -48,7 +39,7 @@ class PandasOnRayIOToMSSQL(RayIO):
         is_temp : boolean
             are we creating a temp table ?
         is_global_temp: boolean
-            if we're creating a temp table - is it a global temp table ?        
+            if we're creating a temp table - is it a global temp table ?
         """
 
         if is_temp:
@@ -101,8 +92,8 @@ class PandasOnRayIOToMSSQL(RayIO):
             try:
                 cursor.execute(drop_statement)
                 cursor.commit()
-            except:
-                return
+            except Exception:
+                pass
 
     @classmethod
     def table_exists(cls, qualified_table_name, conn):
@@ -111,8 +102,10 @@ class PandasOnRayIOToMSSQL(RayIO):
         with conn.cursor() as cursor:
             try:
                 cursor.execute(select_statement)
-            except:
-                return False
+            except Exception as e:
+                if isinstance(e, pyodbc.ProgrammingError):
+                    return False
+                raise e
         return True
 
     @classmethod
@@ -143,10 +136,7 @@ class PandasOnRayIOToMSSQL(RayIO):
 
         with conn.cursor() as cursor:
             cursor.fast_executemany = True
-            try:
-                cursor.execute(create_statement)
-            except:
-                raise
+            cursor.execute(create_statement)
 
     @classmethod
     def insert_records(cls, qc, qualified_table_name, connection_string):
@@ -245,34 +235,31 @@ class PandasOnRayIOToMSSQL(RayIO):
         if "if_exists" in kwargs:
             if_exists_option = kwargs["if_exists"]
         with pyodbc.connect(connection_string) as conn:
-            try:
-                if cls.table_exists(qualified_final_table_name, conn):
-                    if len(if_exists_option) == 0:
-                        raise ValueError(
-                            "Table ",
-                            destination_table_name,
-                            " already exists and no if_exists argument was specified",
-                        )
-                    if if_exists_option == "fail":
-                        raise ValueError(
-                            "Table ", destination_table_name, " already exists"
-                        )
-                cls.create_table(df, qualified_temp_table_name, conn)
-            except:
-                raise
+            if cls.table_exists(qualified_final_table_name, conn):
+                if len(if_exists_option) == 0:
+                    raise ValueError(
+                        "Table ",
+                        destination_table_name,
+                        " already exists and no if_exists argument was specified",
+                    )
+                if if_exists_option == "fail":
+                    raise ValueError(
+                        "Table ", destination_table_name, " already exists"
+                    )
+            cls.create_table(df, qualified_temp_table_name, conn)
 
             try:
                 cls.insert_records(df, qualified_temp_table_name, connection_string)
-            except:
+            except Exception as e:
                 cls.clean_up(qualified_temp_table_name, conn)
-                raise
+                raise e
 
             try:
                 move_start_time = time.time()
                 if if_exists_option == "replace":
                     cls.drop_table_if_exists(qualified_final_table_name, conn)
                     cls.create_table(df, qualified_final_table_name, conn)
-                elif cls.table_exists(qualified_final_table_name) == False:
+                elif cls.table_exists(qualified_final_table_name) is False:
                     cls.create_table(df, qualified_final_table_name, conn)
                 cls.move_records_from_temp_table_to_final(
                     qualified_temp_table_name,
@@ -285,9 +272,9 @@ class PandasOnRayIOToMSSQL(RayIO):
                     time.time() - move_start_time,
                 )
                 return
-            except:
+            except Exception as e:
                 cls.clean_up(qualified_temp_table_name, conn)
-                raise
+                raise e
 
     @classmethod
     def clean_up(cls, qualified_table_name, conn):
@@ -318,8 +305,8 @@ class PandasOnRayIOToMSSQL(RayIO):
         qc,
     ):
         data_movement_command = "INSERT INTO " + qualified_target_table_name
-        column_list_as_string = " (" + cls.get_column_list_as_string(qc)
-        data_movement_command += column_list_as_string
+        column_list_as_string = cls.get_column_list_as_string(qc)
+        data_movement_command += " (" + column_list_as_string
         data_movement_command += (
             ") SELECT " + column_list_as_string + " FROM " + qualified_source_table_name
         )
@@ -329,7 +316,6 @@ class PandasOnRayIOToMSSQL(RayIO):
                 try:
                     cursor.execute(data_movement_command)
                     cursor.commit()
-                except:
-                    print(data_movement_command)
-                    raise
-
+                except Exception as e:
+                    cls.clean_up(qualified_source_table_name, conn)
+                    raise e
