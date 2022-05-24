@@ -12,8 +12,8 @@
 # governing permissions and limitations under the License.
 
 import pandas
-import pyodbc
 import time
+
 
 from modin.engines.base.io import BaseIO
 
@@ -42,10 +42,19 @@ class RayIO(BaseIO):
             df.columns = columns
             try:
                 df.to_sql(**kwargs)
-            except pyodbc.ProgrammingError as ex:
-                # retry once after 1/2 second
-                time.sleep(0.5)
-                df.to_sql(**kwargs)
+            except Exception as ex:
+                try:
+                    import pyodbc
+
+                    # retry once after 1/2 second
+
+                    if isinstance(ex, pyodbc.ProgrammingError):
+                        time.sleep(0.5)
+                        df.to_sql(**kwargs)
+
+                except ImportError as err:
+                    # throw the original exception if we weren't able to verify that it was a deadlock exception
+                    raise ex
 
             return pandas.DataFrame()
 
