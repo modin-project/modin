@@ -27,6 +27,7 @@ __LOGGER_CONFIGURED__: bool = False
 
 class ModinFormatter(logging.Formatter):
     """Implement custom formatter to log at microsecond granularity."""
+
     def formatTime(self, record, datefmt=None):
         """
         Return the creation time of the specified LogRecord as formatted text.

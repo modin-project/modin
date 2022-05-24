@@ -36,6 +36,7 @@ def logger_class_wrapper(classname, name, method):
     func
         A decorator function.
     """
+
     @wraps(method)
     def log_wrap(*args, **kwargs):
         if LogMode.get() != "disable":
@@ -74,6 +75,7 @@ def metaclass_resolver(*classes):
 
 class LoggerMetaClass(type):
     """LoggerMetaClass to attach to class definitions."""
+
     def __new__(mcs, classname, bases, class_dict):
         """
         Method to let Python complete its class instance creation.
