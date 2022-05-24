@@ -65,7 +65,7 @@ def wait_computations_if_benchmark_mode(func):
             # off each deferred computation and wait for each partition to
             # finish before kicking off the next one. Instead, we want to
             # serially kick off all the deferred computations so that they can
-            # all run aynschronously, then serially wait on all the results.
+            # all run asynchronously, then wait on all the results.
             [part.drain_call_queue() for part in partitions.flatten()]
             # need to go through all the values of the map iterator
             # since `wait` does not return anything, we need to explicitly add
