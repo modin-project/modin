@@ -20,8 +20,7 @@ from modin.config import LogMode
 
 def logger_class_wrapper(classname, name, method):
     """
-    Helper method for Modin logging used by the LoggerMetaClass
-    to log internal Modin functions.
+    LoggerMetaClass helper method to log internal Modin functions.
 
     Parameters
     ----------
@@ -37,7 +36,6 @@ def logger_class_wrapper(classname, name, method):
     func
         A decorator function.
     """
-
     @wraps(method)
     def log_wrap(*args, **kwargs):
         if LogMode.get() != "disable":
@@ -53,13 +51,12 @@ def logger_class_wrapper(classname, name, method):
 
 def metaclass_resolver(*classes):
     """
-    Metaclass resolver helper function that resolves metaclass typing issues
-    resulting from class inheritance.
+    Resolve metaclass typing issues resulting from class inheritance.
 
     Parameters
     ----------
     *classes : dict
-        Dictionary of parent classes to resolve metaclass conflicts for
+        Dictionary of parent classes to resolve metaclass conflicts for.
 
     Returns
     -------
@@ -76,7 +73,27 @@ def metaclass_resolver(*classes):
 
 
 class LoggerMetaClass(type):
+    """LoggerMetaClass to attach to class definitions."""
     def __new__(mcs, classname, bases, class_dict):
+        """
+        Method to let Python complete its class instance creation.
+
+        Parameters
+        ----------
+        mcs : class
+            The class to create a new instance of.
+        classname : str
+            Name of the future class.
+        bases : dict
+            The parent classes.
+        class_dict : dict
+            Dictionary of attributes for the class.
+
+        Returns
+        -------
+        class
+            The new class instance to be created.
+        """
         new_class_dict = {}
         seen_attributes = {}
         exclude_attributes = {"__getattribute__"}

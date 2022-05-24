@@ -18,8 +18,7 @@ from modin.config import LogMode
 
 def logger_decorator(modin_layer: str, function_name: str, log_level: str):
     """
-    Logging Decorator that is used on specific internal Modin functions
-    outside of classes that we use the LoggerMetaClass for.
+    Log Decorator used on specific internal Modin functions.
 
     Parameters
     ----------
@@ -28,7 +27,7 @@ def logger_decorator(modin_layer: str, function_name: str, log_level: str):
     function_name : str
         The name of the function the decorator is being applied to.
     log_level : str
-        The log level (logging.INFO, logging.DEBUG, logging.WARNING, etc.)
+        The log level (logging.INFO, logging.DEBUG, logging.WARNING, etc.).
 
     Returns
     -------
