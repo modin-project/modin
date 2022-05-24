@@ -25,8 +25,9 @@ class ErrorMessage(object):
             message = "This functionality is not yet available in Modin."
         raise NotImplementedError(
             f"{message}\n"
-            + "To request implementation, send an email to "
-            + "feature_requests@modin.org"
+            + "To request implementation, file an issue at "
+            + "https://github.com/modin-project/modin/issues or, if that's "
+            + "not possible, send an email to feature_requests@modin.org."
         )
 
     @classmethod
