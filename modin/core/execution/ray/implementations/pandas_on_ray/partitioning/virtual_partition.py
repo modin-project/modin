@@ -505,9 +505,10 @@ def deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
         Additional arguments that need to passed in ``func``.
     **kwargs : dict
         Additional keyword arguments to be passed in `func`.
+
     Returns
     -------
-    list
+    list : Union[tuple, list]
         The result of the function ``func`` and metadata for it.
 
     Notes
