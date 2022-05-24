@@ -17,6 +17,7 @@ import pandas
 import warnings
 
 from modin.engines.base.io.file_dispatcher import FileDispatcher
+from modin.db_conn import ModinDatabaseConnection
 
 
 class SQLDispatcher(FileDispatcher):
@@ -47,19 +48,20 @@ class SQLDispatcher(FileDispatcher):
                 )
         except ImportError:
             pass
-        # In the case that we are given a SQLAlchemy Connection or Engine, the objects
-        # are not pickleable. We have to convert it to the URL string and connect from
-        # each of the workers.
-        if not isinstance(con, str):
+        if isinstance(con, str):
+            con = ModinDatabaseConnection("sqlalchemy", con)
+        if not isinstance(con, ModinDatabaseConnection):
             warnings.warn(
                 "To use parallel implementation of `read_sql`, pass the sqlalchemy"
                 "connection string instead of {}.".format(type(con))
             )
             return cls.single_worker_read(sql, con=con, index_col=index_col, **kwargs)
-        row_cnt_query = "SELECT COUNT(*) FROM ({}) as foo".format(sql)
-        row_cnt = pandas.read_sql(row_cnt_query, con).squeeze()
+        row_count_query = con.row_count_query(sql)
+        connection_for_pandas = con.get_connection()
+        colum_names_query = con.column_names_query(sql)
+        row_cnt = pandas.read_sql(row_count_query, connection_for_pandas).squeeze()
         cols_names_df = pandas.read_sql(
-            "SELECT * FROM ({}) as foo LIMIT 0".format(sql), con, index_col=index_col
+            colum_names_query, connection_for_pandas, index_col=index_col
         )
         cols_names = cols_names_df.columns
         from modin.pandas import DEFAULT_NPARTITIONS
@@ -71,9 +73,7 @@ class SQLDispatcher(FileDispatcher):
         limit = math.ceil(row_cnt / num_partitions)
         for part in range(num_partitions):
             offset = part * limit
-            query = "SELECT * FROM ({}) as foo LIMIT {} OFFSET {}".format(
-                sql, limit, offset
-            )
+            query = con.partition_query(sql, limit, offset)
             partition_id = cls.deploy(
                 cls.parse,
                 num_partitions + 2,

@@ -15,6 +15,7 @@ from collections import OrderedDict
 from io import BytesIO
 import numpy as np
 import pandas
+from modin.db_conn import ModinDatabaseConnection
 from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
@@ -414,7 +415,9 @@ class PandasFeatherParser(PandasParser):
 
 class PandasSQLParser(PandasParser):
     @staticmethod
-    def parse(sql, con, index_col, **kwargs):
+    def parse(sql, con, index_col, **kwargs):        
+        if isinstance(con, ModinDatabaseConnection):
+            con = con.get_connection()        
         num_splits = kwargs.pop("num_splits", None)
         if num_splits is None:
             return pandas.read_sql(sql, con, index_col=index_col, **kwargs)

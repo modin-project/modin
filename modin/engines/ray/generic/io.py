@@ -11,14 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from numpy import full
 import pandas
 
 from modin.engines.base.io import BaseIO
+from modin.db_conn import ModinDatabaseConnection
 
 
 class RayIO(BaseIO):
     @classmethod
-    def to_sql(cls, qc, **kwargs):
+    def to_sql(cls, qc, name, con, schema=None, **kwargs):
         """Write records stored in a DataFrame to a SQL database.
         Args:
             qc: the query compiler of the DF that we want to run to_sql on
@@ -31,14 +33,20 @@ class RayIO(BaseIO):
         # so at the end, the blocking operation will be this empty DF to_pandas
 
         empty_df = qc.getitem_row_array([0]).to_pandas().head(0)
-        empty_df.to_sql(**kwargs)
+        empty_df_con = con
+        if isinstance(empty_df_con, ModinDatabaseConnection):
+            empty_df_con = con.get_connection()
+        empty_df.to_sql(name, con=empty_df_con, schema=schema, **kwargs)
         # so each partition will append its respective DF
         kwargs["if_exists"] = "append"
         columns = qc.columns
 
         def func(df):
             df.columns = columns
-            df.to_sql(**kwargs)
+            partition_con = con
+            if isinstance(partition_con, ModinDatabaseConnection):
+                partition_con = con.get_connection()
+            df.to_sql(name, con=partition_con, schema=schema, **kwargs)
             return pandas.DataFrame()
 
         result = qc._modin_frame._apply_full_axis(1, func, new_index=[], new_columns=[])

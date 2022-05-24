@@ -13,6 +13,7 @@
 
 import pandas
 from collections import OrderedDict
+from modin.db_conn import ModinDatabaseConnection
 from modin.error_message import ErrorMessage
 from modin.backends.base.query_compiler import BaseQueryCompiler
 from typing import Optional
@@ -484,6 +485,8 @@ class BaseIO(object):
         chunksize=None,
     ):
         ErrorMessage.default_to_pandas("`read_sql`")
+        if isinstance(con, ModinDatabaseConnection):
+            con = con.get_connection()
         return cls.from_pandas(
             pandas.read_sql(
                 sql,
