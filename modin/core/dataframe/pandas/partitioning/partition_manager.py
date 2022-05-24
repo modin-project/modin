@@ -70,6 +70,8 @@ def wait_computations_if_benchmark_mode(func):
             # need to go through all the values of the map iterator
             # since `wait` does not return anything, we need to explicitly add
             # the return `True` value from the lambda
+            # TODO(https://github.com/modin-project/modin/issues/4491): Wait
+            # for all the partitions in parallel.
             all(map(lambda partition: partition.wait() or True, partitions.flatten()))
             return result
 
