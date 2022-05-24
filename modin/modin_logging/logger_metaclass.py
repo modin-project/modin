@@ -11,6 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Module contains ``LoggerMetaClass`` class.
+
+``LoggerMetaClass`` is used for adding logging to Modin classes.
+"""
+
 from functools import wraps
 from types import FunctionType, MethodType
 

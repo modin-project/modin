@@ -11,6 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Module contains ``ModinFormatter`` class.
+
+``ModinFormatter`` and the associated functions are used for logging configuration.
+"""
+
 import logging
 import datetime as dt
 import os

@@ -11,6 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""
+Module contains ``logger_decorator`` function.
+
+``logger_decorator`` is used for decorating individual Modin functions.
+"""
+
 from .config import get_logger
 from functools import wraps
 from modin.config import LogMode
