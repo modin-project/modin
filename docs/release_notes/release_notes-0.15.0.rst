@@ -17,6 +17,7 @@ Key Features and Updates
   * FIX-#4373: Fix invalid file path when trying `read_csv_glob` with `usecols` parameter (#4405)
   * FIX-#4394: Fix issue with multiindex metadata desync (#4395)
   * FIX-#4425: Add parameters to groupby pct_change (#4429)
+  * FIX-#4414: Add missing f prefix on f-strings found at https://codereview.doctor (#4415)
   * FIX-#4461: Fix S3 CSV data path (#4462)
   * FIX-#4467: `drop_duplicates` no longer removes items based on index values (#4468)
 * Performance enhancements
@@ -41,9 +42,12 @@ Key Features and Updates
   * TEST-#4426: Stop passing is_default kwarg to Modin and pandas (#4428)
   * FIX-#4439: Fix flake8 CI fail (#4440)
   * FIX-#4409: Fix `eval_insert` utility that doesn't actually check results of `insert` function (#4410)
+  * TEST-#4482: Fix getitem and loc with series of bools (#4483).
 * Documentation improvements
   * DOCS-#4296: Fix docs warnings (#4297)
   * DOCS-#4388: Turn off fail_on_warning option for docs build (#4389)
+  * DOCS-#4469: Say that commit messages can start with PERF (#4470).
+  * DOCS-#4487: Recommend GitHub issues over feature_requests@modin.org (#4489).
 * Dependencies
   * FIX-#4327: Update min pin for xgboost version (#4328)
   * FIX-#4383: Remove `pathlib` from deps (#4384)
