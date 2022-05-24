@@ -74,11 +74,11 @@ def metaclass_resolver(*classes):
 
 
 class LoggerMetaClass(type):
-    """LoggerMetaClass to attach to class definitions."""
+    """Log Metaclass to attach to class definitions."""
 
     def __new__(mcs, classname, bases, class_dict):
         """
-        Method to let Python complete its class instance creation.
+        Complete class instance creation with metaclass.
 
         Parameters
         ----------

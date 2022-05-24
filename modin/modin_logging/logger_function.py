@@ -38,6 +38,20 @@ def logger_decorator(modin_layer: str, function_name: str, log_level: str):
     def decorator(f):
         @wraps(f)
         def run_and_log(*args, **kwargs):
+            """
+            Compute function with logging if Modin logging is enabled.
+
+            Parameters
+            ----------
+            *args : tuple
+                The function arguments.
+            **kwargs : dict
+                The function keyword arguments.
+
+            Returns
+            -------
+            Any
+            """
             if LogMode.get() == "disable":
                 return f(*args, **kwargs)
 
