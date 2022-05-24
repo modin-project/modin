@@ -12,6 +12,8 @@
 # governing permissions and limitations under the License.
 
 import pandas
+import pyodbc
+import time
 
 from modin.engines.base.io import BaseIO
 
@@ -38,7 +40,13 @@ class RayIO(BaseIO):
 
         def func(df):
             df.columns = columns
-            df.to_sql(**kwargs)
+            try:
+                df.to_sql(**kwargs)
+            except pyodbc.ProgrammingError as ex:
+                # retry once after 1/2 second
+                time.sleep(0.5)
+                df.to_sql(**kwargs)
+
             return pandas.DataFrame()
 
         result = qc._modin_frame._apply_full_axis(1, func, new_index=[], new_columns=[])
