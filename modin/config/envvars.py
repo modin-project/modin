@@ -93,7 +93,7 @@ class Engine(EnvironmentVariable, type=str):
         else:
             if version.parse(ray.__version__) < MIN_RAY_VERSION:
                 raise ImportError(
-                    "Please `pip install modin[ray]` to install compatible Ray version (>={MIN_RAY_VERSION})."
+                    f"Please `pip install modin[ray]` to install compatible Ray version (>={MIN_RAY_VERSION})."
                 )
             return "Ray"
         try:
@@ -108,7 +108,7 @@ class Engine(EnvironmentVariable, type=str):
                 or version.parse(distributed.__version__) < MIN_DASK_VERSION
             ):
                 raise ImportError(
-                    "Please `pip install modin[dask]` to install compatible Dask version (>={MIN_DASK_VERSION})."
+                    f"Please `pip install modin[dask]` to install compatible Dask version (>={MIN_DASK_VERSION})."
                 )
             return "Dask"
         try:
