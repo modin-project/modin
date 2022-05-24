@@ -75,11 +75,11 @@ class PandasOnRayIOToMSSQL:
             dataframe_column_names, dataframe_column_types
         ):
             if column_type == "int64":
-                column_name_type_map[column_name] = "bigint"
+                column_name_type_map[column_name] = "BIGINT"
             elif column_type == "float64":
-                column_name_type_map[column_name] = "float"
+                column_name_type_map[column_name] = "FLOAT"
             elif column_type == "object":
-                column_name_type_map[column_name] = "nvarchar(1024)"
+                column_name_type_map[column_name] = "VARCHAR(MAX)"
             elif column_type == "datetime64" or column_type == "datetime":
                 column_name_type_map[column_name] = "DATETIME2"
         return column_name_type_map
