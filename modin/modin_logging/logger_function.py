@@ -36,7 +36,7 @@ def logger_decorator(modin_layer: str, function_name: str, log_level: str):
     """
 
     def decorator(f):
-        "Decorator definition to add logs to Modin API function."
+        """Decorate function to add logs to Modin API function."""
 
         @wraps(f)
         def run_and_log(*args, **kwargs):
