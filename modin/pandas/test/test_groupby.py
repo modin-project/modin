@@ -1988,7 +1988,7 @@ def test_groupby_with_virtual_partitions():
         PandasDataframeAxisPartition,
     )
 
-    eval_general(big_md_df, big_pd_df, lambda df: df.groupby(df.columns[0].count()))
+    eval_general(big_md_df, big_pd_df, lambda df: df.groupby(df.columns[0]).count())
 
 
 @pytest.mark.parametrize("sort", [True, False])

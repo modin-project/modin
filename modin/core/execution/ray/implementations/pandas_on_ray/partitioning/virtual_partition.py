@@ -283,6 +283,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             num_splits = 1
         if len(self.call_queue) > 0:
             self.drain_call_queue()
+        # Deserialize because it's possible for Ray remote objects to be passed as args.
         kwargs["args"] = deserialize(args)
         result = super(PandasOnRayDataframeVirtualPartition, self).apply(
             func,
