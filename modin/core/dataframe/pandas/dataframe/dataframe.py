@@ -1891,55 +1891,60 @@ class PandasDataframe(ClassLogger):
 
         def window_function_complete(virtual_partition):
             virtual_partition_copy = virtual_partition.copy()
-            #n = len(virtual_partition_copy.columns) if axis == Axis.COL_WISE else len(virtual_partition_copy.index)
             window_result = virtual_partition_copy.rolling(window=window_size, axis=axis.value).sum() # hardcode a reduction function for now
             return window_result
 
         def window_function_partition(virtual_partition):
             virtual_partition_copy = virtual_partition.copy()
-            #n = len(virtual_partition_copy.columns) if axis == Axis.COL_WISE else len(virtual_partition_copy.index)
             window_result = virtual_partition_copy.rolling(window=window_size, axis=axis.value).sum() # hardcode a reduction function for now
             return window_result.iloc[:, window_size - 1 : ] if axis == Axis.COL_WISE else window_result.iloc[window_size - 1: , :]
 
         num_parts = len(self._partitions[0]) if axis == Axis.COL_WISE else len(self._partitions)
         results = []
 
-        for i in range(num_parts):
-            # partitions to join in virtual partition
-            parts_to_join = []
-            # get the ith partition 
-            starting_part =  self._partitions[:, [i]] if axis == Axis.COL_WISE else self._partitions[i]
 
-            parts_to_join.append(starting_part)
+        for i in range(num_parts):
+            # get the ith partition 
+            starting_part = self._partitions[:, [i]] if axis == Axis.COL_WISE else self._partitions[i]
+
+            # partitions to join in virtual partition
+            parts_to_join = [starting_part] if (axis == Axis.ROW_WISE) else [[partition[0]] for partition in starting_part] 
 
             last_window_span = window_size - 1
 
             k = i + 1
 
             while (last_window_span > 0 and k < num_parts):
+                # new partition
                 new_parts = self._partitions[:, [k]] if axis == Axis.COL_WISE else self._partitions[k] 
                 part_len = new_parts[0][0].width() if axis == Axis.COL_WISE else new_parts[0].length()
 
                 if (last_window_span <= part_len):
                     if axis == Axis.COL_WISE:
                         masked_new_parts = [[part[0].mask(row_labels = slice(None), col_labels = slice(0, last_window_span))] for part in new_parts]
+                        for x, r in enumerate(parts_to_join):
+                            r.append(masked_new_parts[x][0])
                     else:
                         masked_new_parts = np.array([part.mask(row_labels = slice(0, last_window_span), col_labels=slice(None)) for part in new_parts])
-                    parts_to_join.append(masked_new_parts)
+                        parts_to_join.append(masked_new_parts)
                     break
                 else:
                     # window continues into next part, so just add this part to parts_to_join
-                    parts_to_join.append(new_parts)
+                    if axis == Axis.COL_WISE:
+                        for x, r in enumerate(parts_to_join):
+                            r.append(new_parts[x][0])
+                    else:
+                        parts_to_join.append(new_parts)
                     last_window_span -= part_len
                     k += 1
 
             # create virtual partition and perform window operation
-            virtual_partitions = self._partition_mgr_cls.row_partitions(parts_to_join, full_axis = False) if axis == Axis.COL_WISE else self._partition_mgr_cls.column_partitions(np.array(parts_to_join), full_axis=False)
+            virtual_partitions = self._partition_mgr_cls.row_partitions(np.array(parts_to_join), full_axis = False) if axis == Axis.COL_WISE else self._partition_mgr_cls.column_partitions(np.array(parts_to_join), full_axis=False)
 
             if i == 0:
                 reduce_result = [virtual_partition.apply(window_function_complete) for virtual_partition in virtual_partitions]
             else:
-                reduce_result = [virtual_partition.apply(window_function_partition) for virtual_partition in virtual_partitions]  
+                reduce_result = [virtual_partition.apply(window_function_partition) for virtual_partition in virtual_partitions]   
 
             if axis == Axis.ROW_WISE:
                 results.append(reduce_result)
@@ -1960,6 +1965,7 @@ class PandasDataframe(ClassLogger):
         )                    
 
         """
+        # NAIVE VERSION
         # axis could also be passed in as an integer, so convert to Axis enum so that axis var
         # is always an enum in our code
         axis = Axis(axis)
@@ -1981,6 +1987,7 @@ class PandasDataframe(ClassLogger):
             result_schema
         )
         """
+    
 
     @lazy_metadata_decorator(apply_axis="both")
     def fold(self, axis, func, new_columns=None):
