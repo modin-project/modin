@@ -15,6 +15,9 @@ import pytest
 import itertools
 import pandas
 import numpy as np
+from modin.core.dataframe.pandas.partitioning.axis_partition import (
+    PandasDataframeAxisPartition,
+)
 import modin.pandas as pd
 from modin.utils import try_cast_to_pandas, get_current_execution, hashable
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
@@ -1968,19 +1971,24 @@ def test_validate_by():
     compare(reference_by, result_by)
 
 
-@pytest.mark.parametrize("width", [2**5, 2**10])
-@pytest.mark.parametrize("height", [2**5, 2**10])
-@pytest.mark.parametrize("concat_length", [5, 10])
-def test_concat_groupby(width, height, concat_length):
+def test_groupby_with_virtual_partitions():
     # from https://github.com/modin-project/modin/issues/4464
-    data = np.random.randint(0, 100, size=(width, height))
-    df = pd.DataFrame(data)
-    big_df = pd.concat([df for _ in range(concat_length)])
-    big_groupby = big_df.groupby(1)
+    md_df = pd.DataFrame(test_data["int_data"])
+    pd_df = pandas.DataFrame(test_data["int_data"])
 
-    big_groupby.count()
-    big_groupby.sum()
-    big_groupby.min()
+    # Concatenate DataFrames here to make virtual partitions.
+    big_md_df = pd.concat([md_df for _ in range(5)])
+    big_pd_df = pandas.concat([pd_df for _ in range(5)])
+
+    # Check that the constructed Modin DataFrame has virtual partitions.
+    # If Modin partitioning behavior changes so that this test doesn't generate
+    # virtual partitions, it should be rewritten to test virtual partitions.
+    assert issubclass(
+        type(big_md_df._query_compiler._modin_frame._partitions[0][0]),
+        PandasDataframeAxisPartition,
+    )
+
+    eval_general(big_md_df, big_pd_df, lambda df: df.groupby(df.columns[0].count()))
 
 
 @pytest.mark.parametrize("sort", [True, False])

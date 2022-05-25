@@ -28,6 +28,7 @@ from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.core.dataframe.pandas.utils import concatenate
 from modin.config import NPartitions, ProgressBar, BenchmarkMode
+
 import os
 
 
@@ -369,7 +370,6 @@ class PandasDataframePartitionManager(ABC):
 
         map_func = cls.preprocess_func(map_func)
         rt_axis_parts = cls.axis_partition(right, axis ^ 1)
-
         return np.array(
             [
                 [

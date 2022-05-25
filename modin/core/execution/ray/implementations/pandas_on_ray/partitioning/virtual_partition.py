@@ -277,14 +277,13 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of `PandasOnRayDataframeVirtualPartition` objects.
         """
-        # If this is not a full axis partition, it already contains a subset of
-        # the full axis, so we shouldn't split the result further.
-        kwargs["args"] = deserialize(args)
-
         if not self.full_axis:
+            # If this is not a full axis partition, it already contains a subset of
+            # the full axis, so we shouldn't split the result further.
             num_splits = 1
         if len(self.call_queue) > 0:
             self.drain_call_queue()
+        kwargs["args"] = deserialize(args)
         result = super(PandasOnRayDataframeVirtualPartition, self).apply(
             func,
             num_splits,

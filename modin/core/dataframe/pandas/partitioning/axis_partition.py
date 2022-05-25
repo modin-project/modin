@@ -158,8 +158,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
 
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
 
-        args = kwargs.pop("args", ())
-        result = func(dataframe, *args, **kwargs)
+        result = func(dataframe, *kwargs.pop("args", ()), **kwargs)
 
         if manual_partition:
             # The split function is expecting a list
@@ -224,6 +223,5 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             for i in range(1, len(other_shape))
         ]
         rt_frame = pandas.concat(combined_axis, axis=axis ^ 1, copy=False)
-        args = kwargs.pop("args", ())
-        result = func(lt_frame, rt_frame, *args, **kwargs)
+        result = func(lt_frame, rt_frame, *kwargs.pop("args", ()), **kwargs)
         return split_result_of_axis_func_pandas(axis, num_splits, result)
