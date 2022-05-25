@@ -27,7 +27,7 @@ from pandas.core.arrays.sparse.dtype import SparseDtype
 import modin.pandas as pd
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings
-from modin.modin_logging import LoggerMetaClass, metaclass_resolver
+from modin.logging import LoggerMetaClass, metaclass_resolver
 
 
 class BaseSparseAccessor(object, metaclass=LoggerMetaClass):

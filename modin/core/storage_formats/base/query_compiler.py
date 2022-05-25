@@ -32,7 +32,7 @@ from modin.core.dataframe.algebra.default2pandas import (
 )
 from modin.error_message import ErrorMessage
 import modin.core.storage_formats.base.doc_utils as doc_utils
-from modin.modin_logging import LoggerMetaClass
+from modin.logging import LoggerMetaClass
 
 from pandas.core.dtypes.common import is_scalar
 import pandas.core.resample

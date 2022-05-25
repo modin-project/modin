@@ -23,7 +23,7 @@ from pandas._typing import (
 from pandas.core.dtypes.common import is_list_like
 from typing import Optional, Union
 from modin.utils import _inherit_docstrings
-from modin.modin_logging import LoggerMetaClass
+from modin.logging import LoggerMetaClass
 
 
 @_inherit_docstrings(pandas.core.resample.Resampler)

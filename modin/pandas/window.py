@@ -16,7 +16,7 @@
 from typing import Optional
 import pandas.core.window.rolling
 from modin.utils import _inherit_docstrings
-from modin.modin_logging import LoggerMetaClass
+from modin.logging import LoggerMetaClass
 
 from pandas.core.dtypes.common import is_list_like
 

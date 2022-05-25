@@ -53,7 +53,7 @@ from modin.core.io.file_dispatcher import OpenFile
 from modin.db_conn import ModinDatabaseConnection
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
-from modin.modin_logging import LoggerMetaClass
+from modin.logging import LoggerMetaClass
 
 _doc_pandas_parser_class = """
 Class for handling {data_type} on the workers using pandas storage format.

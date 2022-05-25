@@ -30,7 +30,7 @@ import warnings
 
 from modin.utils import _inherit_docstrings, to_pandas, Engine
 from modin.config import IsExperimental, PersistentPickle
-from modin.modin_logging import metaclass_resolver
+from modin.logging import metaclass_resolver
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar, _doc_binary_op

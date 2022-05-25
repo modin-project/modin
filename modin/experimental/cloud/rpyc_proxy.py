@@ -23,7 +23,7 @@ from rpyc.core import netref, AsyncResult, consts
 from . import get_connection
 from .meta_magic import _LOCAL_ATTRS, RemoteMeta, _KNOWN_DUALS
 from modin.config import DoTraceRpyc
-from modin.modin_logging.logger_metaclass import LoggerMetaClass
+from modin.logging import LoggerMetaClass
 
 from .rpyc_patches import apply_pathes
 

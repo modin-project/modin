@@ -16,7 +16,7 @@
 from pandas import plotting as pdplot
 
 from modin.utils import instancer, to_pandas
-from modin.modin_logging import LoggerMetaClass
+from modin.logging import LoggerMetaClass
 from .dataframe import DataFrame
 
 

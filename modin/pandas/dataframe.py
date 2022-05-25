@@ -34,7 +34,7 @@ import sys
 from typing import IO, Optional, Union, Iterator
 import warnings
 
-from modin.modin_logging import metaclass_resolver
+from modin.logging import metaclass_resolver
 from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, to_pandas, hashable

@@ -26,7 +26,7 @@ from .series import Series
 from modin.utils import to_pandas
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
-from modin.modin_logging import logger_decorator
+from modin.logging import logger_decorator
 
 
 @_inherit_docstrings(pandas.isna, apilink="pandas.isna")

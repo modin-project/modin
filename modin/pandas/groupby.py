@@ -34,7 +34,7 @@ from modin.utils import (
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.config import IsExperimental
-from modin.modin_logging import LoggerMetaClass, metaclass_resolver
+from modin.logging import LoggerMetaClass, metaclass_resolver
 from .series import Series
 from .utils import is_label
 

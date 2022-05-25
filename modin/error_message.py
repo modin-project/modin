@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 import warnings
-from modin.modin_logging.logger_function import logger_decorator
+from modin.logging import logger_decorator
 
 
 class ErrorMessage(object):
