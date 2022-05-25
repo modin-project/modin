@@ -54,7 +54,7 @@ class RayIO(BaseIO):
                     else:
                         raise ex
 
-                except ImportError as _:
+                except ImportError as _:  # noqa: F841
                     # throw the original exception if we weren't able to verify that it was a deadlock exception
                     raise ex
 
