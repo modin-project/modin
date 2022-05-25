@@ -47,6 +47,7 @@ Key Features and Updates
   * DOCS-#4296: Fix docs warnings (#4297)
   * DOCS-#4388: Turn off fail_on_warning option for docs build (#4389)
   * DOCS-#4469: Say that commit messages can start with PERF (#4470).
+  * DOCS-#4466: Recommend GitHub issues over bug_reports@modin.org (#4474).  
   * DOCS-#4487: Recommend GitHub issues over feature_requests@modin.org (#4489).
 * Dependencies
   * FIX-#4327: Update min pin for xgboost version (#4328)
