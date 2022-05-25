@@ -2015,6 +2015,8 @@ class BaseQueryCompiler(abc.ABC):
         BaseQueryCompiler
             New masked QueryCompiler.
         """
+        if isinstance(key, type(self)):
+            key = key.to_pandas().squeeze(axis=1)
 
         def getitem_array(df, key):
             return df[key]
