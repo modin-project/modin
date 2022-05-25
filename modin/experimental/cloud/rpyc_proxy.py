@@ -419,7 +419,7 @@ def make_proxy_cls(
             return namespace
 
     class Wrapper(
-        override, origin_cls, metaclass=type("", (ProxyMeta, LoggerMetaClass))
+        override, origin_cls, metaclass=type("", (ProxyMeta, LoggerMetaClass), {})
     ):
         """
         Subclass origin_cls replacing attributes with what is defined in override while
