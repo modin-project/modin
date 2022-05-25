@@ -46,13 +46,15 @@ class RayIO(BaseIO):
                 try:
                     import pyodbc
 
-                    # retry once after 1/2 second
-
-                    if isinstance(ex, pyodbc.ProgrammingError):
+                    # if we can identify the error as being a pyodbc error, we retry
+                    if isinstance(ex, pyodbc.Error):
+                        # retry once after 1/2 second
                         time.sleep(0.5)
                         df.to_sql(**kwargs)
+                    else:
+                        raise ex
 
-                except ImportError as err:
+                except ImportError as _:
                     # throw the original exception if we weren't able to verify that it was a deadlock exception
                     raise ex
 
