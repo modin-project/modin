@@ -19,5 +19,6 @@ dependencies:
   - xlrd
   - sqlalchemy
   - scipy
-  - black
-  - flake8
+  - pip:
+      - black
+      - flake8
