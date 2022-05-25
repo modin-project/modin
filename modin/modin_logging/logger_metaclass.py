@@ -24,17 +24,17 @@ from .config import get_logger
 from modin.config import LogMode
 
 
-def logger_class_wrapper(classname, name, method):
+def logger_class_wrapper(class_name, method_name, method):
     """
     Execute Modin functions with logging if enabled.
 
     Parameters
     ----------
-    classname : str
+    class_name : str
         The name of the class the LoggerMetaClass is being applied to.
-    name : str
+    method_name : str
         The name of the Modin function within the class.
-    method : str
+    method : callable
         The function to apply on the arguments.
 
     Returns
@@ -61,9 +61,9 @@ def logger_class_wrapper(classname, name, method):
         """
         if LogMode.get() != "disable":
             logger = get_logger()
-            logger.info(f"START::PANDAS-API::{classname}.{name}")
+            logger.info(f"START::PANDAS-API::{class_name}.{method_name}")
             result = method(*args, **kwargs)
-            logger.info(f"END::PANDAS-API::{classname}.{name}")
+            logger.info(f"END::PANDAS-API::{class_name}.{method_name}")
             return result
         return method(*args, **kwargs)
 
@@ -96,15 +96,15 @@ def metaclass_resolver(*classes):
 class LoggerMetaClass(type):  # noqa: PR01
     """Log Metaclass to attach to class definitions."""
 
-    def __new__(mcs, classname, bases, class_dict):
+    def __new__(mcls, class_name, bases, class_dict):
         """
         Complete class instance creation with metaclass.
 
         Parameters
         ----------
-        mcs : class
+        mcls : class
             The class to create a new instance of.
-        classname : str
+        class_name : str
             Name of the future class.
         bases : dict
             The parent classes.
@@ -126,8 +126,8 @@ class LoggerMetaClass(type):  # noqa: PR01
             ):
                 if attribute not in seen_attributes:
                     seen_attributes[attribute] = logger_class_wrapper(
-                        classname, attribute_name, attribute
+                        class_name, attribute_name, attribute
                     )
                 attribute = seen_attributes[attribute]
             new_class_dict[attribute_name] = attribute
-        return type.__new__(mcs, classname, bases, new_class_dict)
+        return type.__new__(mcls, class_name, bases, new_class_dict)
