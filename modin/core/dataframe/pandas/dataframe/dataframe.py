@@ -2149,7 +2149,7 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
         broadcast [self[key1], self[key2]] partitions and internal indices for `self` must be [[0, 1], [5]]
         """
         if broadcast_all:
-            sizes = self._column_widths if axis else self._row_lengths
+            sizes = self._row_lengths if axis else self._column_widths
             return {key: dict(enumerate(sizes)) for key in indices.keys()}
         passed_len = 0
         result_dict = {}
