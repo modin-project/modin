@@ -17,9 +17,10 @@ Module contains ``logger_decorator`` function.
 ``logger_decorator`` is used for decorating individual Modin functions.
 """
 
-from .config import get_logger
 from functools import wraps
+
 from modin.config import LogMode
+from .config import get_logger
 
 
 def logger_decorator(modin_layer: str, function_name: str, log_level: str):
