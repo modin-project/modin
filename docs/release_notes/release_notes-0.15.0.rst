@@ -20,6 +20,7 @@ Key Features and Updates
   * FIX-#4414: Add missing f prefix on f-strings found at https://codereview.doctor (#4415)
   * FIX-#4461: Fix S3 CSV data path (#4462)
   * FIX-#4467: `drop_duplicates` no longer removes items based on index values (#4468)
+  * FIX-#4449: Drain the call queue before waiting on result in benchmark mode (#4472)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
 * Benchmarking enhancements
@@ -47,11 +48,13 @@ Key Features and Updates
   * DOCS-#4296: Fix docs warnings (#4297)
   * DOCS-#4388: Turn off fail_on_warning option for docs build (#4389)
   * DOCS-#4469: Say that commit messages can start with PERF (#4470).
+  * DOCS-#4466: Recommend GitHub issues over bug_reports@modin.org (#4474).  
   * DOCS-#4487: Recommend GitHub issues over feature_requests@modin.org (#4489).
 * Dependencies
   * FIX-#4327: Update min pin for xgboost version (#4328)
   * FIX-#4383: Remove `pathlib` from deps (#4384)
   * FIX-#4390: Add `redis` to Modin dependencies (#4396)
+  * FIX-#3689: Add black and flake8 into development environment files (#4480)
 
 Contributors
 ------------
@@ -67,3 +70,4 @@ Contributors
 @dchigarev
 @devin-petersohn
 @jrsacher
+@orcahmlee

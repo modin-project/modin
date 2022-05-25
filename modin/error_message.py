@@ -60,8 +60,10 @@ class ErrorMessage(object):
         if failure_condition:
             raise Exception(
                 "Internal Error. "
-                + "Please email bug_reports@modin.org with the traceback and command that"
-                + f" caused this error.\n{extra_log}"
+                + "Please visit https://github.com/modin-project/modin/issues "
+                + "to file an issue with the traceback and the command that "
+                + "caused this error. If you can't file a GitHub issue, "
+                + f"please email bug_reports@modin.org.\n{extra_log}"
             )
 
     @classmethod
