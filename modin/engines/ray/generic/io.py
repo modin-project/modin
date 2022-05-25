@@ -13,6 +13,8 @@
 
 from numpy import full
 import pandas
+import time
+
 
 from modin.engines.base.io import BaseIO
 from modin.db_conn import ModinDatabaseConnection
@@ -49,9 +51,25 @@ class RayIO(BaseIO):
                 if con.identity_insert:
                     full_table_name = name
                     if schema:
-                        full_table_name = f'{schema}.{full_table_name}'
-                    partition_con.execute(f'SET IDENTITY_INSERT {full_table_name} ON')                
-            df.to_sql(name, con=partition_con, schema=schema, **kwargs)
+                        full_table_name = f"{schema}.{full_table_name}"
+                    partition_con.execute(f"SET IDENTITY_INSERT {full_table_name} ON")
+            try:
+                df.to_sql(name, con=partition_con, schema=schema, **kwargs)
+            except Exception as ex:
+                try:
+                    import pyodbc
+
+                    # if we can identify the error as being a pyodbc error, we retry
+                    if isinstance(ex, pyodbc.Error):
+                        # retry once after 1/2 second
+                        time.sleep(0.5)
+                        df.to_sql(name, con=partition_con, schema=schema, **kwargs)
+                    else:
+                        raise ex
+
+                except ImportError as _:  # noqa: F841
+                    # throw the original exception if we weren't able to verify that it was a deadlock exception
+                    raise ex
             return pandas.DataFrame()
 
         result = qc._modin_frame._apply_full_axis(1, func, new_index=[], new_columns=[])
