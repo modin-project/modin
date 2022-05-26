@@ -1388,6 +1388,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
         subset = kwargs.get("subset", None)
+        ignore_index = kwargs.get("ignore_index", False)
         if subset is not None:
             if is_list_like(subset):
                 if not isinstance(subset, list):
@@ -1397,8 +1398,13 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
             duplicates = self.duplicated(keep=keep, subset=subset)
         else:
             duplicates = self.duplicated(keep=keep)
-        indices = duplicates.values.nonzero()[0]
-        return self.drop(index=self.index[indices], inplace=inplace)
+        result = self[~duplicates]
+        if ignore_index:
+            result.index = pandas.RangeIndex(stop=len(result))
+        if inplace:
+            self._update_inplace(result._query_compiler)
+        else:
+            return result
 
     def eq(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """

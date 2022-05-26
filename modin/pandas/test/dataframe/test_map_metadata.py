@@ -746,30 +746,43 @@ def test_droplevel():
     [None, "col1", "name", ("col1", "col3"), ["col1", "col3", "col7"]],
     ids=["None", "string", "name", "tuple", "list"],
 )
-def test_drop_duplicates(data, keep, subset):
+@pytest.mark.parametrize("ignore_index", [True, False], ids=["True", "False"])
+def test_drop_duplicates(data, keep, subset, ignore_index):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
     try:
-        pandas_df.drop_duplicates(keep=keep, inplace=False, subset=subset)
+        pandas_df.drop_duplicates(
+            keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
+        )
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_df.drop_duplicates(keep=keep, inplace=False, subset=subset)
+            modin_df.drop_duplicates(
+                keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
+            )
     else:
         df_equals(
-            pandas_df.drop_duplicates(keep=keep, inplace=False, subset=subset),
-            modin_df.drop_duplicates(keep=keep, inplace=False, subset=subset),
+            pandas_df.drop_duplicates(
+                keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
+            ),
+            modin_df.drop_duplicates(
+                keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
+            ),
         )
 
     try:
         pandas_results = pandas_df.drop_duplicates(
-            keep=keep, inplace=True, subset=subset
+            keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
         )
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_df.drop_duplicates(keep=keep, inplace=True, subset=subset)
+            modin_df.drop_duplicates(
+                keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
+            )
     else:
-        modin_results = modin_df.drop_duplicates(keep=keep, inplace=True, subset=subset)
+        modin_results = modin_df.drop_duplicates(
+            keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
+        )
         df_equals(modin_results, pandas_results)
 
 
@@ -864,6 +877,14 @@ def test_drop_duplicates_after_sort():
     modin_result = modin_df.sort_values(["value", "time"]).drop_duplicates(["value"])
     pandas_result = pandas_df.sort_values(["value", "time"]).drop_duplicates(["value"])
     df_equals(modin_result, pandas_result)
+
+
+def test_drop_duplicates_with_repeated_index_values():
+    # This tests for issue #4467: https://github.com/modin-project/modin/issues/4467
+    data = [[0], [1], [0]]
+    index = [0, 0, 0]
+    modin_df, pandas_df = create_test_dfs(data, index=index)
+    eval_general(modin_df, pandas_df, lambda df: df.drop_duplicates())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
