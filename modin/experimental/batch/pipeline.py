@@ -51,6 +51,8 @@ class PandasQuery(object):
         The reduce function to apply if `fan_out` is set to True. This takes the
         `PandasQueryPipeline.num_partitions` (default: `NPartitions.get`) partitions that result from
         this query, and combines them into 1 partition.
+    output_id : int, default: None
+            An id to assign to this node if it is an output.
 
     Notes
     -----
@@ -68,6 +70,7 @@ class PandasQuery(object):
         fan_out: bool = False,
         pass_partition_id: bool = False,
         reduce_fn: Optional[Callable] = None,
+        output_id: Optional[int] = None,
     ):
         self.func = func
         self.is_output = is_output
@@ -77,6 +80,7 @@ class PandasQuery(object):
         # List of sub-queries to feed into this query, if this query is an output node.
         self.operators = None
         self.reduce_fn = reduce_fn
+        self.output_id = output_id
 
 
 class PandasQueryPipeline(object):
@@ -98,7 +102,7 @@ class PandasQueryPipeline(object):
     Only row-parallel pipelines are supported. All queries will be applied along the row axis.
     """
 
-    def __init__(self, df, num_partitions: int = -1):
+    def __init__(self, df, num_partitions: Optional[int] = None):
         if Engine.get() != "Ray" or (
             not isinstance(df._query_compiler._modin_frame, PandasOnRayDataframe)
         ):  # pragma: no cover
@@ -109,13 +113,11 @@ class PandasQueryPipeline(object):
             "The Batch Pipeline API is an experimental feature and still under development in Modin."
         )
         self.df = df
-        self.num_partitions = (
-            num_partitions if num_partitions > 0 else NPartitions.get()
-        )
+        self.num_partitions = num_partitions if num_partitions else NPartitions.get()
         self.outputs = []  # List of output queries.
-        self.nodes_list = []  # List of all queries.
-        self.node_to_id = (
-            None  # Optional mapping of node to output ID (if specified in `add_query`).
+        self.query_list = []  # List of all queries.
+        self.output_id_specified = (
+            False  # Flag to indicate that `output_id` has been specified for a node.
         )
 
     def update_df(self, df):
@@ -176,7 +178,15 @@ class PandasQueryPipeline(object):
         Use `pandas` for any module level functions inside `func` since it operates directly on
         partitions.
         """
-        self.nodes_list.append(
+        if not is_output and output_id is None:
+            raise ValueError("Output ID cannot be specified for non-output node.")
+        if is_output:
+            if not self.output_id_specified:
+                if len(self.outputs) != 1:
+                    raise ValueError("Output ID must be specified for all nodes.")
+            if output_id is None and self.output_id_specified:
+                raise ValueError("Output ID must be specified for all nodes.")
+        self.query_list.append(
             PandasQuery(
                 func,
                 is_output,
@@ -184,22 +194,15 @@ class PandasQueryPipeline(object):
                 fan_out,
                 pass_partition_id,
                 reduce_fn,
+                output_id,
             )
         )
         if is_output:
-            self.outputs.append(self.nodes_list[-1])
-            if output_id:
-                if self.node_to_id is None:
-                    if len(self.outputs) == 1:
-                        self.node_to_id = {}
-                    else:
-                        raise ValueError("Output ID must be specified for all nodes.")
-                self.node_to_id[self.outputs[-1]] = output_id
-            if output_id is None and self.node_to_id is not None:
-                raise ValueError("Output ID must be specified for all nodes.")
+            if output_id is not None:
+                self.output_id_specified = True
             curr_node = self.outputs[-1]
-            curr_node.operators = self.nodes_list[:-1]
-            self.nodes_list = []
+            curr_node.operators = self.query_list[:-1]
+            self.query_list = []
 
     def _complete_nodes(self, list_of_nodes, partitions):
         """
@@ -293,6 +296,8 @@ class PandasQueryPipeline(object):
         ----------
         postprocessor : Callable, default: None
             A postprocessing function to be applied to each output partition.
+            The order of arguments passed is `df` (the partition), `partition_id`
+            (if `pass_partition_id=True`), and `output_id` (if `pass_output_id=True`).
         pass_partition_id : bool, default: False
             Whether or not to pass the numerical partition id to the postprocessing function.
         pass_output_id : bool, default: False
@@ -310,12 +315,12 @@ class PandasQueryPipeline(object):
                 "No outputs to compute. Returning an empty list. Please specify outputs by calling `add_query` with `is_output=True`."
             )
             return []
-        if self.node_to_id is None and pass_output_id:
+        if not self.output_id_specified and pass_output_id:
             raise ValueError(
                 "`pass_output_id` is set to True, but output ids have not been specified. "
                 + "To pass output ids, please specify them using the `output_id` kwarg with pipeline.add_query"
             )
-        if self.node_to_id:
+        if self.output_id_specified:
             outs = {}
         else:
             outs = []
@@ -331,7 +336,7 @@ class PandasQueryPipeline(object):
             if postprocessor:
                 args = []
                 if pass_output_id:
-                    args.append(self.node_to_id[node])
+                    args.append(node.output_id)
                 if pass_partition_id:
                     args.append(0)
                     new_partitions = []
@@ -354,11 +359,11 @@ class PandasQueryPipeline(object):
                 part.drain_call_queue(num_splits=self.num_partitions)
                 for part in output_partitions
             ]  # Ensures our result df is block partitioned.
-            if self.node_to_id is None:
+            if not self.output_id_specified:
                 outs.append(output_partitions)
             else:
-                outs[self.node_to_id[node]] = output_partitions
-        if self.node_to_id is None:
+                outs[node.output_id] = output_partitions
+        if not self.output_id_specified:
             final_results = []
             for df in outs:
                 partitions = []

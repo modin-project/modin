@@ -136,6 +136,9 @@ class TestPipelineRayEngine:
                 lambda df: df.rename(columns={i: f"col {i}" for i in range(1000)}),
                 is_output=True,
             )
+        assert (
+            len(pipeline.query_list) == 1
+        ), "Invalid `add_query` incorrectly added a node to the pipeline."
         pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df * -30, is_output=True)
         with pytest.raises(
@@ -146,6 +149,9 @@ class TestPipelineRayEngine:
                 is_output=True,
                 output_id=20,
             )
+        assert (
+            len(pipeline.query_list) == 1
+        ), "Invalid `add_query` incorrectly added a node to the pipeline."
         pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df, is_output=True)
         with pytest.raises(
@@ -156,6 +162,14 @@ class TestPipelineRayEngine:
             ),
         ):
             pipeline.compute_batch(postprocessor=lambda df: df, pass_output_id=True)
+        with pytest.raises(
+            ValueError,
+            match="Output ID cannot be specified for non-output node.",
+        ):
+            pipeline.add_query(lambda df: df, output_id=22)
+        assert (
+            len(pipeline.query_list) == 1
+        ), "Invalid `add_query` incorrectly added a node to the pipeline."
 
     def test_output_id_multiple_outputs(self):
         """Ensure `output_id` is handled correctly when multiple outputs are computed."""
