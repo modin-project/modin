@@ -137,7 +137,7 @@ class TestPipelineRayEngine:
                 is_output=True,
             )
         assert (
-            len(pipeline.query_list) == 1
+            len(pipeline.query_list) == 0 and len(pipeline.outputs) == 1
         ), "Invalid `add_query` incorrectly added a node to the pipeline."
         pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df * -30, is_output=True)
@@ -150,7 +150,7 @@ class TestPipelineRayEngine:
                 output_id=20,
             )
         assert (
-            len(pipeline.query_list) == 1
+            len(pipeline.query_list) == 0 and len(pipeline.outputs) == 1
         ), "Invalid `add_query` incorrectly added a node to the pipeline."
         pipeline = PandasQueryPipeline(df)
         pipeline.add_query(lambda df: df, is_output=True)
@@ -168,7 +168,7 @@ class TestPipelineRayEngine:
         ):
             pipeline.add_query(lambda df: df, output_id=22)
         assert (
-            len(pipeline.query_list) == 1
+            len(pipeline.query_list) == 0 and len(pipeline.outputs) == 1
         ), "Invalid `add_query` incorrectly added a node to the pipeline."
 
     def test_output_id_multiple_outputs(self):

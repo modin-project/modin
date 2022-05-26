@@ -178,11 +178,11 @@ class PandasQueryPipeline(object):
         Use `pandas` for any module level functions inside `func` since it operates directly on
         partitions.
         """
-        if not is_output and output_id is None:
+        if not is_output and output_id is not None:
             raise ValueError("Output ID cannot be specified for non-output node.")
         if is_output:
-            if not self.output_id_specified:
-                if len(self.outputs) != 1:
+            if not self.output_id_specified and output_id is not None:
+                if len(self.outputs) != 0:
                     raise ValueError("Output ID must be specified for all nodes.")
             if output_id is None and self.output_id_specified:
                 raise ValueError("Output ID must be specified for all nodes.")
@@ -198,6 +198,7 @@ class PandasQueryPipeline(object):
             )
         )
         if is_output:
+            self.outputs.append(self.query_list[-1])
             if output_id is not None:
                 self.output_id_specified = True
             curr_node = self.outputs[-1]
