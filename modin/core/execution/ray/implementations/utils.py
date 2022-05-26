@@ -22,7 +22,7 @@ S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
 
 def is_local_path(path_or_buf) -> bool:
     """
-    Return True if the specified path_or_buf is a local path, False otherwise.
+    Return ``True`` if the specified `path_or_buf` is a local path, ``False`` otherwise.
 
     Parameters
     ----------
