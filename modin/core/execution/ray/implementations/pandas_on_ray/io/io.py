@@ -42,7 +42,7 @@ from modin.core.storage_formats.pandas.parsers import (
 from modin.core.execution.ray.common import RayTask, SignalActor
 from ..dataframe import PandasOnRayDataframe
 from ..partitioning import PandasOnRayDataframePartition
-from modin.core.execution.ray.implementations.utils import is_local_path
+from modin.core.io.utils import is_local_path
 
 
 class PandasOnRayIO(RayIO):
