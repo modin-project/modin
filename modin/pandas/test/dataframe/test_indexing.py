@@ -315,12 +315,21 @@ def test_loc(data):
     # DataFrame
     df_equals(modin_df.loc[[1, 2]], pandas_df.loc[[1, 2]])
 
-    # List-like of booleans
     indices = [i % 3 == 0 for i in range(len(modin_df.index))]
     columns = [i % 5 == 0 for i in range(len(modin_df.columns))]
+
+    # Key is a list of booleans
     modin_result = modin_df.loc[indices, columns]
     pandas_result = pandas_df.loc[indices, columns]
     df_equals(modin_result, pandas_result)
+
+    # Key is a Modin or pandas series of booleans
+    df_equals(
+        modin_df.loc[pd.Series(indices), pd.Series(columns, index=modin_df.columns)],
+        pandas_df.loc[
+            pandas.Series(indices), pandas.Series(columns, index=modin_df.columns)
+        ],
+    )
 
     modin_result = modin_df.loc[:, columns]
     pandas_result = pandas_df.loc[:, columns]
@@ -1502,6 +1511,28 @@ def test___getitem__(data):
 
     # Test empty
     df_equals(pd.DataFrame([])[:10], pandas.DataFrame([])[:10])
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___getitem_bool_indexers(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    indices = [i % 3 == 0 for i in range(len(modin_df.index))]
+    columns = [i % 5 == 0 for i in range(len(modin_df.columns))]
+
+    # Key is a list of booleans
+    modin_result = modin_df.loc[indices, columns]
+    pandas_result = pandas_df.loc[indices, columns]
+    df_equals(modin_result, pandas_result)
+
+    # Key is a Modin or pandas series of booleans
+    df_equals(
+        modin_df.loc[pd.Series(indices), pd.Series(columns, index=modin_df.columns)],
+        pandas_df.loc[
+            pandas.Series(indices), pandas.Series(columns, index=modin_df.columns)
+        ],
+    )
 
 
 def test_getitem_empty_mask():
