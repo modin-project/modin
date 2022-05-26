@@ -2400,18 +2400,23 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
         do_reindex_base = not base_index.equals(joined_index)
         do_repartition_base = force_repartition or do_reindex_base
 
-        # perform repartitioning and reindexing for `base_frame` if needed
+        # perform repartitioning and reindexing for `base_frame` if needed.
+        # also define length of base and frames. we will need to know the
+        # lengths for alignment.
         if do_repartition_base:
             reindexed_base = base_frame._partition_mgr_cls.map_axis_partitions(
                 axis,
                 base_frame._partitions,
                 make_reindexer(do_reindex_base, base_frame_idx),
             )
+            if axis:
+                base_lengths = [obj.width() for obj in reindexed_base[0]]
+            else:
+                base_lengths = [obj.length() for obj in reindexed_base.T[0]]
         else:
             reindexed_base = base_frame._partitions
+            base_lengths = self._column_widths if axis else self._row_lengths
 
-        # define length of base and `other` frames to aligning purpose
-        base_lengths = get_axis_lengths(reindexed_base, axis)
         others_lengths = [o._axes_lengths[axis] for o in other_frames]
 
         # define conditions for reindexing and repartitioning `other` frames
