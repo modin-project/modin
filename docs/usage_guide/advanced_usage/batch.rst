@@ -129,7 +129,7 @@ an example of a function that would benefit from this computation pattern:
         'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush'
     ]
 
-    def contains_cat(image):
+    def contains_cat(image, model):
         image = transforms(image)
         labels = [COCO_INSTANCE_CATEGORY_NAMES[i] for i in model([image])[0]['labels']]
         return 'cat' in labels
@@ -149,11 +149,13 @@ an example of a function that would benefit from this computation pattern:
         -------
         The same dataframe as before, with an additional column containing the count of images containing cats.
         """
+        model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+        model.eval()
         img_folder = df['images'][0]
         images = sorted(glob.glob(f"{img_folder}/*.jpg"))
         cats = 0
         for img in images:
-            cats = cats + 1 if contains_cat(Image.open(img)) else cats
+            cats = cats + 1 if contains_cat(Image.open(img), model) else cats
         df['cat_count'] = cats
         return df
     
@@ -175,14 +177,14 @@ We can pipeline that code like so:
     df_with_cat_count = pipeline.compute_batch()[0]
     print(f"Result of pipeline:\n{df_with_cat_count}")
 
-We can induce `4x` parallelism into the pipeline above by combining the ``fan_out`` and ``num_partitions`` parameters like so:
+We can induce `20x` parallelism into the pipeline above by combining the ``fan_out`` and ``num_partitions`` parameters like so:
 
 .. code-block:: python
     import modin.pandas as pd
     from modin.experimental.batch import PandasQueryPipeline
     import shutil
     df = pd.DataFrame([['images']], columns=['images'])
-    desired_num_partitions = 4
+    desired_num_partitions = 20
     def parallel_query(df, partition_id):
         """
         This function takes as input a dataframe with a single row corresponding to a folder containing images to parse.
@@ -200,18 +202,20 @@ We can induce `4x` parallelism into the pipeline above by combining the ``fan_ou
         -------
         The same dataframe as before, with an additional column containing the count of images containing cats.
         """
+        model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+        model.eval()
         img_folder = df['images'][0]
         images = sorted(glob.glob(f"{img_folder}/*.jpg"))
         total_images = len(images)
         cats = 0
-        start_index = partition_id * (total_images / desired_num_partitions)
+        start_index = partition_id * (total_images // desired_num_partitions)
         if partition_id == desired_num_partitions - 1: # Last partition must parse to end of list
             images = images[start_index:]
         else:
-            end_index = (partition_id + 1) * (total_images / desired_num_partitions)
+            end_index = (partition_id + 1) * (total_images // desired_num_partitions)
             images = images[start_index:end_index]
         for img in images:
-            cats = cats + 1 if contains_cat(Image.open(img)) else cats
+            cats = cats + 1 if contains_cat(Image.open(img), model) else cats
         df['cat_count'] = cats
         return df
 
@@ -233,7 +237,7 @@ We can induce `4x` parallelism into the pipeline above by combining the ``fan_ou
             df['cat_count'] += dataframe['cat_count']
         return df
     pipeline = PandasQueryPipeline(df, desired_num_partitions)
-    pipeline.add_query(serial_query, is_output=True)
+    pipeline.add_query(parallel_query, fan_out=True, reduce_fn=reduce_fn, is_output=True, pass_partition_id=True)
     df_with_cat_count = pipeline.compute_batch()[0]
     print(f"Result of pipeline:\n{df_with_cat_count}")
     shutil.rmtree("images/") # Clean up
