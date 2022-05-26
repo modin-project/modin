@@ -37,3 +37,4 @@ psycopg2
 connectorx>=0.2.6a4
 black
 flake8
+protobuf<4.0
