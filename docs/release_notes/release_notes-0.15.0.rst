@@ -22,6 +22,7 @@ Key Features and Updates
   * FIX-#4461: Fix S3 CSV data path (#4462)
   * FIX-#4467: `drop_duplicates` no longer removes items based on index values (#4468)
   * FIX-#4449: Drain the call queue before waiting on result in benchmark mode (#4472)
+  * FIX-#4481: Allow clipping with a Modin Series of bounds (#4486)  
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
 * Benchmarking enhancements
