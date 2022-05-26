@@ -74,13 +74,13 @@ class PandasQuery(object):
     ):
         self.func = func
         self.is_output = is_output
-        self.fan_out = fan_out
         self.repartition_after = repartition_after
+        self.fan_out = fan_out
         self.pass_partition_id = pass_partition_id
-        # List of sub-queries to feed into this query, if this query is an output node.
-        self.operators = None
         self.reduce_fn = reduce_fn
         self.output_id = output_id
+        # List of sub-queries to feed into this query, if this query is an output node.
+        self.operators = None
 
 
 class PandasQueryPipeline(object):
@@ -258,7 +258,7 @@ class PandasQueryPipeline(object):
                 )
                 new_dfs = []
 
-                def masker(df, i):
+                def mask_partition(df, i):
                     new_length = len(df.index) // self.num_partitions
                     if i == (self.num_partitions - 1):
                         return df.iloc[i * new_length :]
@@ -269,7 +269,7 @@ class PandasQueryPipeline(object):
                         type(partitions[0])(
                             partitions[0].list_of_partitions_to_combine,
                             full_axis=partitions[0].full_axis,
-                        ).add_to_apply_calls(masker, i)
+                        ).add_to_apply_calls(mask_partition, i)
                     )
                 partitions = new_dfs
             else:
@@ -335,23 +335,16 @@ class PandasQueryPipeline(object):
                 part.drain_call_queue(num_splits=1)
             output_partitions = partitions
             if postprocessor:
-                args = []
-                if pass_output_id:
-                    args.append(node.output_id)
-                if pass_partition_id:
-                    args.append(0)
-                    new_partitions = []
-                    for i, p in enumerate(partitions):
-                        new_partitions.append(
-                            p.add_to_apply_calls(postprocessor, *args)
-                        )
-                        args[-1] = i + 1
-                    output_partitions = new_partitions
-                else:
-                    output_partitions = [
-                        part.add_to_apply_calls(postprocessor, *args)
-                        for part in partitions
-                    ]
+                output_partitions = []
+                for partition_id, partition in enumerate(partitions):
+                    args = []
+                    if pass_output_id:
+                        args.append(node.output_id)
+                    if pass_partition_id:
+                        args.append(partition_id)
+                    output_partitions.append(
+                        partition.add_to_apply_calls(postprocessor, *args)
+                    )
             else:
                 output_partitions = [
                     part.add_to_apply_calls(lambda df: df) for part in partitions

@@ -564,8 +564,8 @@ def test_pipeline_unsupported_engine():
         match="Batch Pipeline API is only implemented for Ray Engine.",
     ):
         PandasQueryPipeline(df, 0)
-    ray_df = pd.DataFrame([[1]])
-    pipeline = PandasQueryPipeline(ray_df)
+    df_on_ray_engine = pd.DataFrame([[1]])
+    pipeline = PandasQueryPipeline(df_on_ray_engine)
     # Check that even if Engine is Ray, if the new df is not backed by Ray, the Pipeline does not allow an update.
     with pytest.raises(
         NotImplementedError,
