@@ -37,3 +37,5 @@ psycopg2
 connectorx>=0.2.6a4
 black
 flake8
+# TODO: Remove when ray-project resolves GH#25205
+protobuf<4.0
