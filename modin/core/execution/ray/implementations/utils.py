@@ -36,6 +36,6 @@ def is_local_path(path_or_buf) -> bool:
     if isinstance(path_or_buf, str):
         if S3_ADDRESS_REGEX.match(path_or_buf) is not None or "://" in path_or_buf:
             return False  # S3 or network path.
-    if isinstance(path_or_buf, str) or isinstance(path_or_buf, pathlib.PurePath):
+    if isinstance(path_or_buf, (str, pathlib.PurePath)):
         return os.path.exists(path_or_buf)
     return False
