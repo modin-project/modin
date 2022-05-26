@@ -11,17 +11,18 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module houses ``PandasQueryPipeline`` and ``PandasQuery`` classes, that implement a batch pipeline protocol for Modin Dataframes."""
+
 from typing import Callable, Optional
-import ray
 import numpy as np
 
+import modin.pandas as pd
+from modin.core.storage_formats.pandas import PandasQueryCompiler
 from modin.error_message import ErrorMessage
-from modin.core.dataframe.base.dataframe.utils import Axis
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
     PandasOnRayDataframe,
 )
 from modin.config import Engine, NPartitions
-from modin.distributed.dataframe.pandas.partitions import from_partitions
 
 
 class PandasQuery(object):
@@ -46,10 +47,10 @@ class PandasQuery(object):
         the function is called on each. The `reduce_fn` must also be specified.
     pass_partition_id : bool, default: False
         Whether to pass the numerical partition id to the query.
-    reduce_fn : Callable
-    The reduce function to apply if `fan_out` is set to True. This takes the
-    `PandasQueryPipeline.num_partitions` (default: `NPartitions.get`) partitions that result from
-    this query, and combines them into 1 partition.
+    reduce_fn : Callable, default: None
+        The reduce function to apply if `fan_out` is set to True. This takes the
+        `PandasQueryPipeline.num_partitions` (default: `NPartitions.get`) partitions that result from
+        this query, and combines them into 1 partition.
 
     Notes
     -----
@@ -163,11 +164,11 @@ class PandasQueryPipeline(object):
             and the function is called on each. The `reduce_fn` must also be specified.
         pass_partition_id : bool, default: False
             Whether to pass the numerical partition id to the query.
-        reduce_fn : Callable
+        reduce_fn : Callable, default: None
             The reduce function to apply if `fan_out` is set to True. This takes the
             `self.num_partitions` (default: `NPartitions.get`) partitions that result from this
             query, and combines them into 1 partition.
-        output_id : int, default None
+        output_id : int, default: None
             An id to assign to this node if it is an output.
 
         Notes
@@ -206,10 +207,15 @@ class PandasQueryPipeline(object):
 
         Parameters
         ----------
-        list_of_nodes: list of PandasQuery
+        list_of_nodes : list of PandasQuery
             The functions that compose this query.
-        partitions: list of PandasOnRayDataframeVirtualPartition
+        partitions : list of PandasOnRayDataframeVirtualPartition
             The partitions that compose the dataframe that is input to this sub-query.
+
+        Returns
+        -------
+        list of PandasOnRayDataframeVirtualPartition
+            The partitions that result from computing the functions represented by `list_of_nodes`.
         """
         for node in list_of_nodes:
             if node.fan_out:
@@ -218,21 +224,18 @@ class PandasQueryPipeline(object):
                         "Fan out is only supported with DataFrames with 1 partition."
                     )
                 partitions[0] = partitions[0].force_materialization()
-                ptn_list = partitions[0].list_of_partitions_to_combine
+                partition_list = partitions[0].list_of_partitions_to_combine
                 partitions[0] = partitions[0].add_to_apply_calls(node.func, 0)
                 partitions[0].drain_call_queue(num_splits=1)
-                oids = []
                 new_dfs = []
                 for i in range(1, self.num_partitions):
                     new_dfs.append(
                         type(partitions[0])(
-                            ptn_list,
+                            partition_list,
                             full_axis=partitions[0].full_axis,
                         ).add_to_apply_calls(node.func, i)
                     )
                     new_dfs[-1].drain_call_queue(num_splits=1)
-                    oids.extend(new_dfs[-1].list_of_blocks)
-                ray.wait(oids, num_returns=len(oids))
 
                 def reducer(df):
                     df_inputs = [df]
@@ -268,12 +271,12 @@ class PandasQueryPipeline(object):
             else:
                 if node.pass_partition_id:
                     partitions = [
-                        ptn.add_to_apply_calls(node.func, i)
-                        for i, ptn in enumerate(partitions)
+                        part.add_to_apply_calls(node.func, i)
+                        for i, part in enumerate(partitions)
                     ]
                 else:
                     partitions = [
-                        ptn.add_to_apply_calls(node.func) for ptn in partitions
+                        part.add_to_apply_calls(node.func) for part in partitions
                     ]
         return partitions
 
@@ -281,7 +284,6 @@ class PandasQueryPipeline(object):
         self,
         postprocessor: Optional[Callable] = None,
         pass_partition_id: Optional[bool] = False,
-        final_result_func: Optional[Callable] = None,
         pass_output_id: Optional[bool] = False,
     ):
         """
@@ -289,24 +291,19 @@ class PandasQueryPipeline(object):
 
         Parameters
         ----------
-        postprocessor : Callable
+        postprocessor : Callable, default: None
             A postprocessing function to be applied to each output partition.
-        pass_partition_id : bool
+        pass_partition_id : bool, default: False
             Whether or not to pass the numerical partition id to the postprocessing function.
-        final_result_func : Callable
-            A final result function that generates a final result for each output. It takes the
-            first partition as input.
-        pass_output_id : bool
+        pass_output_id : bool, default: False
             Whether or not to pass the output ID associated with output queries to the
             postprocessing function.
 
         Returns
         -------
         list or dict or DataFrame
-            If output ids are specified, a dictionary mapping output id to the result of
-            `final_result_func` is returned, otherwise, a list of the results of `final_result_func`
-            is returned. If `final_result_func` is not specified, the resulting dataframes are
-            returned in the format specified above.
+            If output ids are specified, a dictionary mapping output id to the resulting dataframe
+            is returned, otherwise, a list of the resulting dataframes is returned.
         """
         if len(self.outputs) == 0:
             ErrorMessage.single_warning(
@@ -328,9 +325,9 @@ class PandasQueryPipeline(object):
         )
         for i, node in enumerate(self.outputs):
             partitions = self._complete_nodes(node.operators + [node], partitions)
-            for ptn in partitions:
-                ptn.drain_call_queue(num_splits=1)
-            out_partitions = partitions
+            for part in partitions:
+                part.drain_call_queue(num_splits=1)
+            output_partitions = partitions
             if postprocessor:
                 args = []
                 if pass_output_id:
@@ -343,44 +340,58 @@ class PandasQueryPipeline(object):
                             p.add_to_apply_calls(postprocessor, *args)
                         )
                         args[-1] = i + 1
-                    out_partitions = new_partitions
+                    output_partitions = new_partitions
                 else:
-                    out_partitions = [
-                        ptn.add_to_apply_calls(postprocessor, *args)
-                        for ptn in partitions
+                    output_partitions = [
+                        part.add_to_apply_calls(postprocessor, *args)
+                        for part in partitions
                     ]
-                if final_result_func is None:
-                    [ptn.drain_call_queue(num_splits=1) for ptn in out_partitions]
-            if self.node_to_id is None:
-                outs.append(out_partitions)
             else:
-                outs[self.node_to_id[node]] = out_partitions
-        wait_parts = []
+                output_partitions = [
+                    part.add_to_apply_calls(lambda df: df) for part in partitions
+                ]
+            [
+                part.drain_call_queue(num_splits=self.num_partitions)
+                for part in output_partitions
+            ]  # Ensures our result df is block partitioned.
+            if self.node_to_id is None:
+                outs.append(output_partitions)
+            else:
+                outs[self.node_to_id[node]] = output_partitions
         if self.node_to_id is None:
             final_results = []
             for df in outs:
-                if final_result_func:
-                    d = df[0].to_pandas()
-                    final_results.append(final_result_func(d))
-                else:
-                    partitions = np.array(df).flatten()
-                    partitions = np.array([ptn.list_of_blocks for ptn in df]).flatten()
-                    final_results.append(
-                        from_partitions(partitions, Axis.ROW_WISE.value)
-                    )
-                for d in df:
-                    wait_parts.extend(d.list_of_blocks)
+                partitions = []
+                for row_partition in df:
+                    partitions.append(row_partition.list_of_partitions_to_combine)
+                partitions = np.array(partitions)
+                partition_mgr_class = PandasOnRayDataframe._partition_mgr_cls
+                index = partition_mgr_class.get_indices(
+                    0, partitions, lambda df: df.axes[0]
+                )
+                columns = partition_mgr_class.get_indices(
+                    1, partitions, lambda df: df.axes[1]
+                )
+                result_modin_frame = PandasOnRayDataframe(partitions, index, columns)
+                query_compiler = PandasQueryCompiler(result_modin_frame)
+                result_df = pd.DataFrame(query_compiler=query_compiler)
+                final_results.append(result_df)
         else:
             final_results = {}
             for id, df in outs.items():
-                if final_result_func:
-                    d = df[0].to_pandas()
-                    final_results[id] = final_result_func(d)
-                else:
-                    partitions = np.array(df).flatten()
-                    partitions = np.array([ptn.list_of_blocks for ptn in df]).flatten()
-                    final_results[id] = from_partitions(partitions, Axis.ROW_WISE.value)
-                for d in df:
-                    wait_parts.extend(d.list_of_blocks)
-        ray.wait(wait_parts, num_returns=len(wait_parts))
+                partitions = []
+                for row_partition in df:
+                    partitions.append(row_partition.list_of_partitions_to_combine)
+                partitions = np.array(partitions)
+                partition_mgr_class = PandasOnRayDataframe._partition_mgr_cls
+                index = partition_mgr_class.get_indices(
+                    0, partitions, lambda df: df.axes[0]
+                )
+                columns = partition_mgr_class.get_indices(
+                    1, partitions, lambda df: df.axes[1]
+                )
+                result_modin_frame = PandasOnRayDataframe(partitions, index, columns)
+                query_compiler = PandasQueryCompiler(result_modin_frame)
+                result_df = pd.DataFrame(query_compiler=query_compiler)
+                final_results[id] = result_df
         return final_results
