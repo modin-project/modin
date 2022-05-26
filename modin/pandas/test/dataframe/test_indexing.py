@@ -42,6 +42,7 @@ from modin.pandas.test.utils import (
 from modin.config import NPartitions
 from modin.utils import get_current_execution
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.pandas.indexing import is_range_like
 
 NPartitions.put(4)
 
@@ -346,12 +347,21 @@ def test_loc(data):
     # DataFrame
     df_equals(modin_df.loc[[1, 2]], pandas_df.loc[[1, 2]])
 
-    # List-like of booleans
     indices = [i % 3 == 0 for i in range(len(modin_df.index))]
     columns = [i % 5 == 0 for i in range(len(modin_df.columns))]
+
+    # Key is a list of booleans
     modin_result = modin_df.loc[indices, columns]
     pandas_result = pandas_df.loc[indices, columns]
     df_equals(modin_result, pandas_result)
+
+    # Key is a Modin or pandas series of booleans
+    df_equals(
+        modin_df.loc[pd.Series(indices), pd.Series(columns, index=modin_df.columns)],
+        pandas_df.loc[
+            pandas.Series(indices), pandas.Series(columns, index=modin_df.columns)
+        ],
+    )
 
     modin_result = modin_df.loc[:, columns]
     pandas_result = pandas_df.loc[:, columns]
@@ -415,45 +425,6 @@ def test_loc(data):
         modin_df.loc["NO_EXIST"]
 
 
-def test_loc_4456():
-    data = test_data["float_nan_data"]
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-
-    key = ["col1", "col2"]
-
-    # len(key) == df_value.columns; different columns
-    value = [[1, 2]] * pandas_df.shape[0]
-    df_value = pandas.DataFrame(value, columns=["value_col1", "value_col2"])
-    eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
-
-    # len(key) == df_value.columns; different columns; modin DataFrame
-    mdf_value = pd.DataFrame(df_value)
-    eval_loc(modin_df, pandas_df, (mdf_value, df_value), (slice(None), key))
-
-    # len(key) == df_value.columns; different index
-    df_value = pandas.DataFrame(
-        value, columns=key, index=list(reversed(pandas_df.index))
-    )
-    eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
-
-    # len(key) > df_value.columns
-    value = [[1]] * pandas_df.shape[0]
-    df_value = pandas.DataFrame(value, columns=key[:1])
-    eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
-
-    # len(key) == df_value.columns; different columns; modin Series
-    md_series_value = mdf_value[mdf_value.columns[0]]
-    pd_series_value = df_value[df_value.columns[0]]
-    eval_loc(
-        modin_df, pandas_df, (md_series_value, pd_series_value), (slice(None), key)
-    )
-
-    # len(key) < df_value.columns
-    value = [[1, 2, 3]] * pandas_df.shape[0]
-    df_value = pandas.DataFrame(value, columns=key + ["col3"])
-    eval_loc(modin_df, pandas_df, df_value, (slice(None), key))
-
-
 def test_setitem_4325():
     data = test_data["float_nan_data"]
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
@@ -489,6 +460,75 @@ def test_setitem_4325():
     value = [[1, 2, 3]] * pandas_df.shape[0]
     df_value = pandas.DataFrame(value, columns=key + ["col3"])
     eval_setitem(modin_df, pandas_df, df_value, col=key)
+
+
+@pytest.mark.parametrize(
+    "key_getter, value_getter",
+    [
+        pytest.param(
+            lambda df, axis: (
+                (slice(None), df.axes[axis][:2])
+                if axis
+                else (df.axes[axis][:2], slice(None))
+            ),
+            lambda df, axis: df.iloc[:, :1] if axis else df.iloc[:1, :],
+            id="len(key)_>_len(value)",
+        ),
+        pytest.param(
+            lambda df, axis: (
+                (slice(None), df.axes[axis][:2])
+                if axis
+                else (df.axes[axis][:2], slice(None))
+            ),
+            lambda df, axis: df.iloc[:, :3] if axis else df.iloc[:3, :],
+            id="len(key)_<_len(value)",
+        ),
+        pytest.param(
+            lambda df, axis: (
+                (slice(None), df.axes[axis][:2])
+                if axis
+                else (df.axes[axis][:2], slice(None))
+            ),
+            lambda df, axis: df.iloc[:, :2] if axis else df.iloc[:2, :],
+            id="len(key)_==_len(value)",
+        ),
+    ],
+)
+@pytest.mark.parametrize("key_axis", [0, 1])
+@pytest.mark.parametrize("reverse_value_index", [True, False])
+@pytest.mark.parametrize("reverse_value_columns", [True, False])
+def test_loc_4456(
+    key_getter, value_getter, key_axis, reverse_value_index, reverse_value_columns
+):
+    data = test_data["float_nan_data"]
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+
+    key = key_getter(pandas_df, key_axis)
+
+    # `df.loc` doesn't work right for range-like indexers. Converting them to a list.
+    # https://github.com/modin-project/modin/issues/4497
+    if is_range_like(key[0]):
+        key = (list(key[0]), key[1])
+    if is_range_like(key[1]):
+        key = (key[0], list(key[1]))
+
+    value = pandas.DataFrame(
+        np.random.randint(0, 100, size=pandas_df.shape),
+        index=pandas_df.index,
+        columns=pandas_df.columns,
+    )
+    pdf_value = value_getter(value, key_axis)
+    mdf_value = value_getter(pd.DataFrame(value), key_axis)
+
+    if reverse_value_index:
+        pdf_value = pdf_value.reindex(index=pdf_value.index[::-1])
+        mdf_value = mdf_value.reindex(index=mdf_value.index[::-1])
+    if reverse_value_columns:
+        pdf_value = pdf_value.reindex(columns=pdf_value.columns[::-1])
+        mdf_value = mdf_value.reindex(columns=mdf_value.columns[::-1])
+
+    eval_loc(modin_df, pandas_df, pdf_value, key)
+    eval_loc(modin_df, pandas_df, (mdf_value, pdf_value), key)
 
 
 # This tests the bug from https://github.com/modin-project/modin/issues/3736
@@ -1609,6 +1649,28 @@ def test___getitem__(data):
 
     # Test empty
     df_equals(pd.DataFrame([])[:10], pandas.DataFrame([])[:10])
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test___getitem_bool_indexers(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    indices = [i % 3 == 0 for i in range(len(modin_df.index))]
+    columns = [i % 5 == 0 for i in range(len(modin_df.columns))]
+
+    # Key is a list of booleans
+    modin_result = modin_df.loc[indices, columns]
+    pandas_result = pandas_df.loc[indices, columns]
+    df_equals(modin_result, pandas_result)
+
+    # Key is a Modin or pandas series of booleans
+    df_equals(
+        modin_df.loc[pd.Series(indices), pd.Series(columns, index=modin_df.columns)],
+        pandas_df.loc[
+            pandas.Series(indices), pandas.Series(columns, index=modin_df.columns)
+        ],
+    )
 
 
 def test_getitem_empty_mask():

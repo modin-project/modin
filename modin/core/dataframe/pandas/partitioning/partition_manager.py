@@ -60,9 +60,18 @@ def wait_computations_if_benchmark_mode(func):
                 partitions = result[0]
             else:
                 partitions = result
+            # When partitions have a deferred call queue, calling
+            # partition.wait() on each partition serially will serially kick
+            # off each deferred computation and wait for each partition to
+            # finish before kicking off the next one. Instead, we want to
+            # serially kick off all the deferred computations so that they can
+            # all run asynchronously, then wait on all the results.
+            [part.drain_call_queue() for part in partitions.flatten()]
             # need to go through all the values of the map iterator
             # since `wait` does not return anything, we need to explicitly add
             # the return `True` value from the lambda
+            # TODO(https://github.com/modin-project/modin/issues/4491): Wait
+            # for all the partitions in parallel.
             all(map(lambda partition: partition.wait() or True, partitions.flatten()))
             return result
 
