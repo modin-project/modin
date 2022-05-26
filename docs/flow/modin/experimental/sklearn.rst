@@ -7,4 +7,3 @@ API
 '''
 .. automodule:: modin.experimental.sklearn.model_selection
     :members:
-
