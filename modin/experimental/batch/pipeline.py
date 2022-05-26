@@ -297,8 +297,8 @@ class PandasQueryPipeline(object):
         ----------
         postprocessor : Callable, default: None
             A postprocessing function to be applied to each output partition.
-            The order of arguments passed is `df` (the partition), `partition_id`
-            (if `pass_partition_id=True`), and `output_id` (if `pass_output_id=True`).
+            The order of arguments passed is `df` (the partition), `output_id`
+            (if `pass_output_id=True`), and `partition_id` (if `pass_partition_id=True`).
         pass_partition_id : bool, default: False
             Whether or not to pass the numerical partition id to the postprocessing function.
         pass_output_id : bool, default: False

@@ -11,6 +11,7 @@ Advanced Usage
    modin_sql
    modin_xgboost
    modin_in_the_cloud
+   batch
 
 .. meta::
     :description lang=en:
@@ -83,6 +84,12 @@ Modin provides an implementation of `distributed XGBoost`_ machine learning algo
 :doc:`Distributed XGBoost on Modin documentation <modin_xgboost>` for details about installation and usage, as well as
 :doc:`Modin XGBoost architecture documentation </flow/modin/experimental/xgboost>` for information about implementation and
 internal execution flow.
+
+Batch Pipeline API
+------------------
+Modin provides an experimental batched API that pipelines row parallel queries. See our :doc:`Batch Pipline API Usage Guide <batch>`
+for a walkthrough on how to use this feature, as well as :doc:`Batch Pipeline API documentation </flow/modin/experimental/batch>`
+for more information about the API.
 
 .. _`blog post`: https://medium.com/riselab/why-every-data-scientist-using-pandas-needs-modin-bringing-sql-to-dataframes-3b216b29a7c0
 .. _`Modin SQL documentation`: modin_sql.html
