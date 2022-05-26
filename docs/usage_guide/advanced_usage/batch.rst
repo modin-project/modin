@@ -171,20 +171,24 @@ We can pipeline that code like so:
 .. code-block:: python
     import modin.pandas as pd
     from modin.experimental.batch import PandasQueryPipeline
+    from time import time
     df = pd.DataFrame([['images']], columns=['images'])
     pipeline = PandasQueryPipeline(df)
     pipeline.add_query(serial_query, is_output=True)
+    serial_start = time()
     df_with_cat_count = pipeline.compute_batch()[0]
+    serial_end = time()
     print(f"Result of pipeline:\n{df_with_cat_count}")
 
-We can induce `20x` parallelism into the pipeline above by combining the ``fan_out`` and ``num_partitions`` parameters like so:
+We can induce `8x` parallelism into the pipeline above by combining the ``fan_out`` and ``num_partitions`` parameters like so:
 
 .. code-block:: python
     import modin.pandas as pd
     from modin.experimental.batch import PandasQueryPipeline
     import shutil
+    from time import time
     df = pd.DataFrame([['images']], columns=['images'])
-    desired_num_partitions = 20
+    desired_num_partitions = 8
     def parallel_query(df, partition_id):
         """
         This function takes as input a dataframe with a single row corresponding to a folder containing images to parse.
@@ -233,13 +237,18 @@ We can induce `20x` parallelism into the pipeline above by combining the ``fan_o
         A new dataframe whose `cat_count` column is the sum of the `cat_count` column of all dataframes in `dfs`
         """
         df = dfs[0]
+        cat_count = df['cat_count'][0]
         for dataframe in dfs[1:]:
-            df['cat_count'] += dataframe['cat_count']
+            cat_count += dataframe['cat_count'][0]
+        df['cat_count'] = cat_count
         return df
     pipeline = PandasQueryPipeline(df, desired_num_partitions)
     pipeline.add_query(parallel_query, fan_out=True, reduce_fn=reduce_fn, is_output=True, pass_partition_id=True)
+    parallel_start = time()
     df_with_cat_count = pipeline.compute_batch()[0]
+    parallel_end = time()
     print(f"Result of pipeline:\n{df_with_cat_count}")
+    print(f"Total Time in Serial: {serial_end - serial_start}\nTotal time with induced parallelism: {parallel_end - parallel_start}")
     shutil.rmtree("images/") # Clean up
 
 Batch Pipelining with Dynamic Repartitioning
