@@ -45,5 +45,7 @@ dependencies:
       - connectorx>=0.2.6a4
       # TODO: remove when resolving GH#4398
       - redis>=3.5.0,<4.0.0
+      # TODO: remove when ray-project resolves GH#25205
+      - protobuf<4.0
       - black
       - flake8
