@@ -23,6 +23,7 @@ from rpyc.core import netref, AsyncResult, consts
 from . import get_connection
 from .meta_magic import _LOCAL_ATTRS, RemoteMeta, _KNOWN_DUALS
 from modin.config import DoTraceRpyc
+from modin.logging import LoggerMetaClass
 
 from .rpyc_patches import apply_pathes
 
@@ -417,7 +418,9 @@ def make_proxy_cls(
                         namespace[name] = method
             return namespace
 
-    class Wrapper(override, origin_cls, metaclass=ProxyMeta):
+    class Wrapper(
+        override, origin_cls, metaclass=type("", (ProxyMeta, LoggerMetaClass), {})
+    ):
         """
         Subclass origin_cls replacing attributes with what is defined in override while
         relaying requests for all other attributes to remote_cls.

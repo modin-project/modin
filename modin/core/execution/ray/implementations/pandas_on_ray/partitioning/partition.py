@@ -16,9 +16,11 @@
 import ray
 from ray.util import get_node_ip_address
 from packaging import version
+import uuid
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
+from modin.logging import get_logger
 
 ObjectIDType = ray.ObjectRef
 if version.parse(ray.__version__) >= version.parse("1.2.0"):
@@ -56,6 +58,17 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         self._length_cache = length
         self._width_cache = width
         self._ip_cache = ip
+        self._identity = uuid.uuid4().hex
+
+        logger = get_logger()
+        logger.debug(
+            "Partition ID: {}, Height: {}, Width: {}, Node IP: {}".format(
+                self._identity,
+                str(self._length_cache),
+                str(self._width_cache),
+                str(self._ip_cache),
+            )
+        )
 
     def get(self):
         """
@@ -66,9 +79,13 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         pandas.DataFrame
             The object from the Plasma store.
         """
+        logger = get_logger()
+        logger.debug(f"ENTER::Partition.get::{self._identity}")
         if len(self.call_queue):
             self.drain_call_queue()
-        return ray.get(self.oid)
+        result = ray.get(self.oid)
+        logger.debug(f"EXIT::Partition.get::{self._identity}")
+        return result
 
     def apply(self, func, *args, **kwargs):
         """
@@ -93,15 +110,20 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
+        logger = get_logger()
+        logger.debug(f"ENTER::Partition.apply::{self._identity}")
         oid = self.oid
         call_queue = self.call_queue + [(func, args, kwargs)]
         if len(call_queue) > 1:
+            logger.debug(f"SUBMIT::_apply_list_of_funcs::{self._identity}")
             result, length, width, ip = _apply_list_of_funcs.remote(call_queue, oid)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
             result, length, width, ip = _apply_func.remote(oid, func, *args, **kwargs)
+            logger.debug(f"SUBMIT::_apply_func::{self._identity}")
+        logger.debug(f"EXIT::Partition.apply::{self._identity}")
         return PandasOnRayDataframePartition(result, length, width, ip)
 
     def add_to_apply_calls(self, func, *args, **kwargs):
@@ -133,11 +155,14 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
+        logger = get_logger()
+        logger.debug(f"ENTER::Partition.drain_call_queue::{self._identity}")
         if len(self.call_queue) == 0:
             return
         oid = self.oid
         call_queue = self.call_queue
         if len(call_queue) > 1:
+            logger.debug(f"SUBMIT::_apply_list_of_funcs::{self._identity}")
             (
                 self.oid,
                 self._length_cache,
@@ -148,12 +173,14 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
+            logger.debug(f"SUBMIT::_apply_func::{self._identity}")
             (
                 self.oid,
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
             ) = _apply_func.remote(oid, func, *args, **kwargs)
+        logger.debug(f"EXIT::Partition.drain_call_queue::{self._identity}")
         self.call_queue = []
 
     def wait(self):
@@ -194,6 +221,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         PandasOnRayDataframePartition
             A new ``PandasOnRayDataframePartition`` object.
         """
+        logger = get_logger()
+        logger.debug(f"ENTER::Partition.mask::{self._identity}")
         new_obj = super().mask(row_labels, col_labels)
         if isinstance(row_labels, slice) and isinstance(
             self._length_cache, ObjectIDType
@@ -207,6 +236,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             new_obj._width_cache = compute_sliced_len.remote(
                 col_labels, self._width_cache
             )
+        logger.debug(f"EXIT::Partition.mask::{self._identity}")
         return new_obj
 
     @classmethod
