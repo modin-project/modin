@@ -17,13 +17,14 @@ Key Features and Updates
   * FIX-#4373: Fix invalid file path when trying `read_csv_glob` with `usecols` parameter (#4405)
   * FIX-#4394: Fix issue with multiindex metadata desync (#4395)
   * FIX-#4425: Add parameters to groupby pct_change (#4429)
+  * FIX-#4457: Fix `loc` in case when need reindex item (#4457)
   * FIX-#4414: Add missing f prefix on f-strings found at https://codereview.doctor (#4415)
   * FIX-#4461: Fix S3 CSV data path (#4462)
   * FIX-#4449: Drain the call queue before waiting on result in benchmark mode (#4472)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
 * Benchmarking enhancements
-  *
+  * FEAT-#4371: Add logging to Modin (#4372)
 * Refactor Codebase
   * REFACTOR-#4284: use variable length unpacking when getting results from `deploy` function (#4285)
   * REFACTOR-#3642: Move PyArrow storage format usage from main feature to experimental ones (#4374)
@@ -71,4 +72,5 @@ Contributors
 @dchigarev
 @devin-petersohn
 @orcahmlee
+@naren-ponder
 @RehanSD
