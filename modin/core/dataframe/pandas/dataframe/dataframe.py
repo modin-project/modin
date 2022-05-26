@@ -2368,12 +2368,6 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
         if isinstance(other, type(self)):
             other = [other]
 
-        # define helper functions
-        def get_axis_lengths(partitions, axis):
-            if axis:
-                return [obj.width() for obj in partitions[0]]
-            return [obj.length() for obj in partitions.T[0]]
-
         self_index = self.axes[axis]
         others_index = [o.axes[axis] for o in other]
         joined_index, make_reindexer = self._join_index_objects(
