@@ -13,3 +13,5 @@ git+https://github.com/modin-project/modin.git@master#egg=modin[all]
 sphinxcontrib_plantuml
 sphinx-issues
 xgboost
+# TODO: remove protobuf dependency when ray-project resolves GH#25205
+protobuf<4.0
