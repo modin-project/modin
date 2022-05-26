@@ -424,23 +424,17 @@ class _LocationIndexerBase(object):
         # the target the user is trying to overwrite. This
         if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
             # convert indices in lookups to names, as Pandas reindex expects them to be so
+            axes_to_reindex = {}
             index_values = self.qc.index[row_lookup]
-            if not all(idx in item.index for idx in index_values):
-                raise ValueError(
-                    "Must have equal len keys and value when setting with "
-                    + "an iterable"
-                )
+            if not index_values.equals(item.index):
+                axes_to_reindex["index"] = index_values
             if hasattr(item, "columns"):
                 column_values = self.qc.columns[col_lookup]
-                if not all(col in item.columns for col in column_values):
-                    # TODO: think if it is needed to handle cases when columns have duplicate names
-                    raise ValueError(
-                        "Must have equal len keys and value when setting "
-                        + "with an iterable"
-                    )
-                item = item.reindex(index=index_values, columns=column_values)
-            else:
-                item = item.reindex(index=index_values)
+                if not column_values.equals(item.columns):
+                    axes_to_reindex["columns"] = column_values
+            # New value for columns/index make that reindex add NaN values
+            if axes_to_reindex:
+                item = item.reindex(**axes_to_reindex)
         try:
             item = np.array(item)
             if np.prod(to_shape) == np.prod(item.shape):
