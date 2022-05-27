@@ -19,57 +19,57 @@ This example walks through a simple batch pipeline in order to familiarize the u
 
 .. code-block:: python
 
-  from modin.experimental.batch import PandasQueryPipeline
-  import modin.pandas as pd
-  import numpy as np
+    from modin.experimental.batch import PandasQueryPipeline
+    import modin.pandas as pd
+    import numpy as np
 
-  df = pd.DataFrame(
-    np.random.randint(0, 100, (100, 100)),
-    columns=[f"col {i}" for i in range(1, 101)],
-  ) # Build the dataframe we will pipeline.
-  pipeline = PandasQueryPipeline(df) # Build the pipeline.
-  pipeline.add_query(lambda df: df + 1, is_output=True) # Add the first query and specify that
-                                                        # it is an output query.
-  pipeline.add_query(
-    lambda df: df.rename(columns={f"col {i}":f"col {i-1}" for i in range(1, 101)})
-  ) # Add a second query.
-  pipeline.add_query(
-    lambda df: df.drop(columns=['col 99']),
-    is_output=True,
-  ) # Add a third query and specify that it is an output query.
-  new_df = pd.DataFrame(
-    np.ones((100, 100)),
-    columns=[f"col {i}" for i in range(1, 101)],
-  ) # Build a second dataframe that we will pipeline now instead.
-  pipeline.update_df(new_df) # Update the dataframe that we will pipeline to be `new_df`
-                             # instead of `df`.
-  result_dfs = pipeline.compute_batch() # Begin batch processing.
+    df = pd.DataFrame(
+        np.random.randint(0, 100, (100, 100)),
+        columns=[f"col {i}" for i in range(1, 101)],
+    ) # Build the dataframe we will pipeline.
+    pipeline = PandasQueryPipeline(df) # Build the pipeline.
+    pipeline.add_query(lambda df: df + 1, is_output=True) # Add the first query and specify that
+                                                          # it is an output query.
+    pipeline.add_query(
+        lambda df: df.rename(columns={f"col {i}":f"col {i-1}" for i in range(1, 101)})
+    ) # Add a second query.
+    pipeline.add_query(
+        lambda df: df.drop(columns=['col 99']),
+        is_output=True,
+    ) # Add a third query and specify that it is an output query.
+    new_df = pd.DataFrame(
+        np.ones((100, 100)),
+        columns=[f"col {i}" for i in range(1, 101)],
+    ) # Build a second dataframe that we will pipeline now instead.
+    pipeline.update_df(new_df) # Update the dataframe that we will pipeline to be `new_df`
+                               # instead of `df`.
+    result_dfs = pipeline.compute_batch() # Begin batch processing.
 
-  # Print pipeline results
-  print(f"Result of Query 1:\n{result_dfs[0]}")
-  print(f"Result of Query 2:\n{result_dfs[1]}")
-  # Output IDs can also be specified
-  pipeline = PandasQueryPipeline(df) # Build the pipeline.
-  pipeline.add_query(
-    lambda df: df + 1,
-    is_output=True,
-    output_id=1,
-  ) # Add the first query, specify that it is an output query, as well as specify an output id.
-  pipeline.add_query(
-    lambda df: df.rename(columns={f"col {i}":f"col {i-1}" for i in range(1, 101)})
-  ) # Add a second query.
-  pipeline.add_query(
-    lambda df: df.drop(columns=['col 99']),
-    is_output=True,
-    output_id=2,
-  ) # Add a third query, specify that it is an output query, and specify an output_id.
-  result_dfs = pipeline.compute_batch() # Begin batch processing.
+    # Print pipeline results
+    print(f"Result of Query 1:\n{result_dfs[0]}")
+    print(f"Result of Query 2:\n{result_dfs[1]}")
+    # Output IDs can also be specified
+    pipeline = PandasQueryPipeline(df) # Build the pipeline.
+    pipeline.add_query(
+        lambda df: df + 1,
+        is_output=True,
+        output_id=1,
+    ) # Add the first query, specify that it is an output query, as well as specify an output id.
+    pipeline.add_query(
+        lambda df: df.rename(columns={f"col {i}":f"col {i-1}" for i in range(1, 101)})
+    ) # Add a second query.
+    pipeline.add_query(
+        lambda df: df.drop(columns=['col 99']),
+        is_output=True,
+        output_id=2,
+    ) # Add a third query, specify that it is an output query, and specify an output_id.
+    result_dfs = pipeline.compute_batch() # Begin batch processing.
 
-  # Print pipeline results - should be a dictionary mapping Output IDs to resulting dataframes:
-  print(f"Mapping of Output ID to dataframe:\n{result_dfs}")
-  # Print results
-  for query_id, res_df in result_dfs.items():
-    print(f"Query {query_id} resulted in\n{res_df}")
+    # Print pipeline results - should be a dictionary mapping Output IDs to resulting dataframes:
+    print(f"Mapping of Output ID to dataframe:\n{result_dfs}")
+    # Print results
+    for query_id, res_df in result_dfs.items():
+        print(f"Query {query_id} resulted in\n{res_df}")
 
 Batch Pipelining with Postprocessing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
