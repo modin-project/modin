@@ -16,7 +16,7 @@
 import os
 import pathlib
 import re
-from typing import Union
+from typing import Optional, Union
 
 S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
 
