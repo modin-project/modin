@@ -187,24 +187,32 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
         self._index_cache = ensure_index(index)
         self._columns_cache = ensure_index(columns)
         if row_lengths is not None and len(self.index) > 0:
-            ErrorMessage.catch_bugs_and_request_email(
-                sum(row_lengths) != len(self._index_cache),
-                "Row lengths: {} != {}".format(
-                    sum(row_lengths), len(self._index_cache)
-                ),
-            )
+            # An empty frame can have 0 rows but a nonempty index. If the frame
+            # does have rows, the number of rows must equal the size of the
+            # index.
+            num_rows = sum(row_lengths)
+            if num_rows > 0:
+                ErrorMessage.catch_bugs_and_request_email(
+                    num_rows != len(self._index_cache),
+                    "Row lengths: {} != {}".format(num_rows, len(self._index_cache)),
+                )
             ErrorMessage.catch_bugs_and_request_email(
                 any(val < 0 for val in row_lengths),
                 "Row lengths cannot be negative: {}".format(row_lengths),
             )
         self._row_lengths_cache = row_lengths
         if column_widths is not None and len(self.columns) > 0:
-            ErrorMessage.catch_bugs_and_request_email(
-                sum(column_widths) != len(self._columns_cache),
-                "Column widths: {} != {}".format(
-                    sum(column_widths), len(self._columns_cache)
-                ),
-            )
+            # An empty frame can have 0 column but a nonempty column index. If
+            # the frame does have columns, the number of columns must equal the
+            # size of the columns.
+            num_columns = sum(column_widths)
+            if num_columns > 0:
+                ErrorMessage.catch_bugs_and_request_email(
+                    num_columns != len(self._columns_cache),
+                    "Column widths: {} != {}".format(
+                        num_columns, len(self._columns_cache)
+                    ),
+                )
             ErrorMessage.catch_bugs_and_request_email(
                 any(val < 0 for val in column_widths),
                 "Column widths cannot be negative: {}".format(column_widths),
@@ -2101,7 +2109,12 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
             New Modin DataFrame.
         """
         # Only sort the indices if they do not match
-        left_parts, right_parts, joined_index = self._copartition(
+        (
+            left_parts,
+            right_parts,
+            joined_index,
+            partition_sizes_along_axis,
+        ) = self._copartition(
             axis, other, join_type, sort=not self.axes[axis].equals(other.axes[axis])
         )
         # unwrap list returned by `copartition`.
@@ -2113,13 +2126,24 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
             dtypes = self._dtypes
         new_index = self.index
         new_columns = self.columns
+        # Pass shape caches instead of values in order to not trigger shape
+        # computation.
+        new_row_lengths = self._row_lengths_cache
+        new_column_widths = self._column_widths_cache
         if not preserve_labels:
             if axis == 1:
                 new_columns = joined_index
+                new_column_widths = partition_sizes_along_axis
             else:
                 new_index = joined_index
+                new_row_lengths = partition_sizes_along_axis
         return self.__constructor__(
-            new_frame, new_index, new_columns, None, None, dtypes=dtypes
+            new_frame,
+            new_index,
+            new_columns,
+            new_row_lengths,
+            new_column_widths,
+            dtypes=dtypes,
         )
 
     def _prepare_frame_to_broadcast(self, axis, indices, broadcast_all):
@@ -2363,7 +2387,11 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
         Returns
         -------
         tuple
-            Tuple of (left data, right data list, joined index).
+            Tuple containing:
+                1) 2-d numpy array of aligned left partitions
+                2) list of 2-d numpy arrays of aligned right partitions
+                3) joined index along ``axis``
+                4) (optional) sizes of partitions along axis that partitioning was done on
         """
         if isinstance(other, type(self)):
             other = [other]
@@ -2381,7 +2409,14 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
 
         # If all frames are empty
         if len(non_empty_frames_idx) == 0:
-            return self._partitions, [o._partitions for o in other], joined_index
+            return (
+                self._partitions,
+                [o._partitions for o in other],
+                joined_index,
+                # There are no partition sizes because the resulting dataframe
+                # has no partitions.
+                [],
+            )
 
         base_frame_idx = non_empty_frames_idx[0]
         other_frames = frames[base_frame_idx + 1 :]
@@ -2446,7 +2481,7 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
             + [reindexed_base]
             + reindexed_other_list
         )
-        return reindexed_frames[0], reindexed_frames[1:], joined_index
+        return (reindexed_frames[0], reindexed_frames[1:], joined_index, base_lengths)
 
     @lazy_metadata_decorator(apply_axis="both")
     def binary_op(self, op, right_frame, join_type="outer"):
@@ -2467,7 +2502,7 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
         PandasDataframe
             New Modin DataFrame.
         """
-        left_parts, right_parts, joined_index = self._copartition(
+        left_parts, right_parts, joined_index, row_lengths = self._copartition(
             0, right_frame, join_type, sort=True
         )
         # unwrap list returned by `copartition`.
@@ -2476,7 +2511,13 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
             1, left_parts, lambda l, r: op(l, r), right_parts
         )
         new_columns = self.columns.join(right_frame.columns, how=join_type)
-        return self.__constructor__(new_frame, joined_index, new_columns, None, None)
+        return self.__constructor__(
+            new_frame,
+            joined_index,
+            new_columns,
+            row_lengths,
+            column_widths=self._column_widths_cache,
+        )
 
     @lazy_metadata_decorator(apply_axis="both")
     def concat(
@@ -2515,8 +2556,7 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
             joined_index = self.columns
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
-            new_lengths = None
-            new_widths = self._column_widths
+            new_widths = self._column_widths_cache
         elif (
             axis == Axis.COL_WISE
             and all(o.index.equals(self.index) for o in others)
@@ -2525,24 +2565,44 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
             joined_index = self.index
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
-            new_lengths = self._row_lengths
-            new_widths = self._column_widths + [
-                length for o in others for length in o._column_widths
-            ]
+            new_lengths = self._row_lengths_cache
         else:
-            left_parts, right_parts, joined_index = self._copartition(
+            (
+                left_parts,
+                right_parts,
+                joined_index,
+                partition_sizes_along_axis,
+            ) = self._copartition(
                 axis.value ^ 1, others, how, sort, force_repartition=False
             )
-            new_lengths = None
-            new_widths = None
+            if axis == Axis.COL_WISE:
+                new_lengths = partition_sizes_along_axis
+            else:
+                new_widths = partition_sizes_along_axis
+
         new_partitions = self._partition_mgr_cls.concat(
             axis.value, left_parts, right_parts
         )
+
         if axis == Axis.ROW_WISE:
             new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
             # TODO: Can optimize by combining if all dtypes are materialized
             new_dtypes = None
+            # If we have already cached the length of each row in at least one
+            # of the row's partitions, we can build new_lengths for the new
+            # frame.
+            new_lengths = []
+            for row in new_partitions:
+                found_row_length = False
+                for partition in row:
+                    if partition._length_cache is not None:
+                        new_lengths.append(partition.length())
+                        found_row_length = True
+                        break
+                if not found_row_length:
+                    new_lengths = None
+                    break
         else:
             new_columns = self.columns.append([other.columns for other in others])
             new_index = joined_index
@@ -2550,6 +2610,21 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
                 new_dtypes = self.dtypes.append([o.dtypes for o in others])
             else:
                 new_dtypes = None
+            # If we have already cached the width of each column in at least
+            # one of the column's partitions, we can build new_widths for the
+            # new frame.
+            new_widths = []
+            for column in new_partitions.T:
+                found_column_width = False
+                for partition in column:
+                    if partition._width_cache is not None:
+                        new_widths.append(partition.width())
+                        found_column_width = True
+                        break
+                if not found_column_width:
+                    new_widths = None
+                    break
+
         return self.__constructor__(
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
