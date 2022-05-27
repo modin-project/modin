@@ -225,8 +225,6 @@ def initialize_ray(
             + " number of CPUs on head node. To update, run the following python code:\n\tfrom "
             + "modin.config import NPartitions\n\tNPartitions.put(desired_num_cpus)"
         )
-        from modin.config import CpuCount
-
         num_cpus = CpuCount.get()
     else:
         num_cpus = int(num_cpus)
