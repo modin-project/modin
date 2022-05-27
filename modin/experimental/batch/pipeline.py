@@ -22,7 +22,8 @@ from modin.error_message import ErrorMessage
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
     PandasOnRayDataframe,
 )
-from modin.config import Engine, NPartitions
+from modin.config import NPartitions
+from modin.utils import get_current_execution
 
 
 class PandasQuery(object):
@@ -103,11 +104,11 @@ class PandasQueryPipeline(object):
     """
 
     def __init__(self, df, num_partitions: Optional[int] = None):
-        if Engine.get() != "Ray" or (
+        if get_current_execution() != "PandasOnRay" or (
             not isinstance(df._query_compiler._modin_frame, PandasOnRayDataframe)
         ):  # pragma: no cover
             ErrorMessage.not_implemented(
-                "Batch Pipeline API is only implemented for Ray Engine."
+                "Batch Pipeline API is only implemented for `PandasOnRay` execution."
             )
         ErrorMessage.single_warning(
             "The Batch Pipeline API is an experimental feature and still under development in Modin."
@@ -116,7 +117,7 @@ class PandasQueryPipeline(object):
         self.num_partitions = num_partitions if num_partitions else NPartitions.get()
         self.outputs = []  # List of output queries.
         self.query_list = []  # List of all queries.
-        self.output_id_specified = (
+        self.is_output_id_specified = (
             False  # Flag to indicate that `output_id` has been specified for a node.
         )
 
@@ -129,11 +130,11 @@ class PandasQueryPipeline(object):
         df : modin.pandas.DataFrame
             The new dataframe to perform this pipeline on.
         """
-        if Engine.get() != "Ray" or (
+        if get_current_execution() != "PandasOnRay" or (
             not isinstance(df._query_compiler._modin_frame, PandasOnRayDataframe)
         ):  # pragma: no cover
             ErrorMessage.not_implemented(
-                "Batch Pipeline API is only implemented for Ray Engine."
+                "Batch Pipeline API is only implemented for `PandasOnRay` execution."
             )
         self.df = df
 
@@ -181,10 +182,10 @@ class PandasQueryPipeline(object):
         if not is_output and output_id is not None:
             raise ValueError("Output ID cannot be specified for non-output node.")
         if is_output:
-            if not self.output_id_specified and output_id is not None:
+            if not self.is_output_id_specified and output_id is not None:
                 if len(self.outputs) != 0:
                     raise ValueError("Output ID must be specified for all nodes.")
-            if output_id is None and self.output_id_specified:
+            if output_id is None and self.is_output_id_specified:
                 raise ValueError("Output ID must be specified for all nodes.")
         self.query_list.append(
             PandasQuery(
@@ -200,9 +201,8 @@ class PandasQueryPipeline(object):
         if is_output:
             self.outputs.append(self.query_list[-1])
             if output_id is not None:
-                self.output_id_specified = True
-            curr_node = self.outputs[-1]
-            curr_node.operators = self.query_list[:-1]
+                self.is_output_id_specified = True
+            self.outputs[-1].operators = self.query_list[:-1]
             self.query_list = []
 
     def _complete_nodes(self, list_of_nodes, partitions):
@@ -316,12 +316,12 @@ class PandasQueryPipeline(object):
                 "No outputs to compute. Returning an empty list. Please specify outputs by calling `add_query` with `is_output=True`."
             )
             return []
-        if not self.output_id_specified and pass_output_id:
+        if not self.is_output_id_specified and pass_output_id:
             raise ValueError(
                 "`pass_output_id` is set to True, but output ids have not been specified. "
                 + "To pass output ids, please specify them using the `output_id` kwarg with pipeline.add_query"
             )
-        if self.output_id_specified:
+        if self.is_output_id_specified:
             outs = {}
         else:
             outs = []
@@ -353,11 +353,11 @@ class PandasQueryPipeline(object):
                 part.drain_call_queue(num_splits=self.num_partitions)
                 for part in output_partitions
             ]  # Ensures our result df is block partitioned.
-            if not self.output_id_specified:
+            if not self.is_output_id_specified:
                 outs.append(output_partitions)
             else:
                 outs[node.output_id] = output_partitions
-        if not self.output_id_specified:
+        if not self.is_output_id_specified:
             final_results = []
             for df in outs:
                 partitions = []

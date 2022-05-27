@@ -2,7 +2,7 @@ Batch Pipline API Usage Guide
 =============================
 
 Modin provides an experimental batching feature that pipelines row-parallel queries. This feature 
-is currently only supported for the ``ray`` engine. Please note that this feature is experimental
+is currently only supported for the ``PandasOnRay`` engine. Please note that this feature is experimental
 and behavior or interfaces could be changed.
 
 Usage examples
