@@ -23,13 +23,26 @@ This example walks through a simple batch pipeline in order to familiarize the u
   import modin.pandas as pd
   import numpy as np
 
-  df = pd.DataFrame(np.random.randint(0, 100, (100, 100)), columns=[f"col {i}" for i in range(1, 101)]) # Build the dataframe we will pipeline.
+  df = pd.DataFrame(
+    np.random.randint(0, 100, (100, 100)),
+    columns=[f"col {i}" for i in range(1, 101)],
+  ) # Build the dataframe we will pipeline.
   pipeline = PandasQueryPipeline(df) # Build the pipeline.
-  pipeline.add_query(lambda df: df + 1, is_output=True) # Add the first query and specify that it is an output query.
-  pipeline.add_query(lambda df: df.rename(columns={f"col {i}":f"col {i-1}" for i in range(1, 101)})) # Add a second query.
-  pipeline.add_query(lambda df: df.drop(columns=['col 99']), is_output=True) # Add a third query and specify that it is an output query.
-  new_df = pd.DataFrame(np.ones((100, 100)), columns=[f"col {i}" for i in range(1, 101)]) # Build a second dataframe that we will pipeline now instead.
-  pipeline.update_df(new_df) # Update the dataframe that we will pipeline to be `new_df` instead of `df`.
+  pipeline.add_query(lambda df: df + 1, is_output=True) # Add the first query and specify that
+                                                        # it is an output query.
+  pipeline.add_query(
+    lambda df: df.rename(columns={f"col {i}":f"col {i-1}" for i in range(1, 101)})
+  ) # Add a second query.
+  pipeline.add_query(
+    lambda df: df.drop(columns=['col 99']),
+    is_output=True,
+  ) # Add a third query and specify that it is an output query.
+  new_df = pd.DataFrame(
+    np.ones((100, 100)),
+    columns=[f"col {i}" for i in range(1, 101)],
+  ) # Build a second dataframe that we will pipeline now instead.
+  pipeline.update_df(new_df) # Update the dataframe that we will pipeline to be `new_df`
+                             # instead of `df`.
   result_dfs = pipeline.compute_batch() # Begin batch processing.
 
   # Print pipeline results
@@ -37,9 +50,19 @@ This example walks through a simple batch pipeline in order to familiarize the u
   print(f"Result of Query 2:\n{result_dfs[1]}")
   # Output IDs can also be specified
   pipeline = PandasQueryPipeline(df) # Build the pipeline.
-  pipeline.add_query(lambda df: df + 1, is_output=True, output_id=1) # Add the first query, specify that it is an output query, as well as specify an output id.
-  pipeline.add_query(lambda df: df.rename(columns={f"col {i}":f"col {i-1}" for i in range(1, 101)})) # Add a second query.
-  pipeline.add_query(lambda df: df.drop(columns=['col 99']), is_output=True, output_id=2) # Add a third query, specify that it is an output query, and specify an output_id.
+  pipeline.add_query(
+    lambda df: df + 1,
+    is_output=True,
+    output_id=1,
+  ) # Add the first query, specify that it is an output query, as well as specify an output id.
+  pipeline.add_query(
+    lambda df: df.rename(columns={f"col {i}":f"col {i-1}" for i in range(1, 101)})
+  ) # Add a second query.
+  pipeline.add_query(
+    lambda df: df.drop(columns=['col 99']),
+    is_output=True,
+    output_id=2,
+  ) # Add a third query, specify that it is an output query, and specify an output_id.
   result_dfs = pipeline.compute_batch() # Begin batch processing.
 
   # Print pipeline results - should be a dictionary mapping Output IDs to resulting dataframes:
@@ -63,11 +86,24 @@ a parquet file.
     import os
     import shutil
 
-    df = pd.DataFrame(np.random.randint(0, 100, (100, 100)), columns=[f"col {i}" for i in range(1, 101)]) # Build the dataframe we will pipeline.
+    df = pd.DataFrame(
+        np.random.randint(0, 100, (100, 100)),
+        columns=[f"col {i}" for i in range(1, 101)],
+    ) # Build the dataframe we will pipeline.
     pipeline = PandasQueryPipeline(df) # Build the pipeline.
-    pipeline.add_query(lambda df: df + 1, is_output=True, output_id=1) # Add the first query, specify that it is an output query, as well as specify an output id.
-    pipeline.add_query(lambda df: df.rename(columns={f"col {i}":f"col {i-1}" for i in range(1, 101)})) # Add a second query.
-    pipeline.add_query(lambda df: df.drop(columns=['col 99']), is_output=True, output_id=2) # Add a third query, specify that it is an output query, and specify an output_id.
+    pipeline.add_query(
+        lambda df: df + 1,
+        is_output=True,
+        output_id=1,
+    ) # Add the first query, specify that it is an output query, as well as specify an output id.
+    pipeline.add_query(
+        lambda df: df.rename(columns={f"col {i}":f"col {i-1}" for i in range(1, 101)})
+    ) # Add a second query.
+    pipeline.add_query(
+        lambda df: df.drop(columns=['col 99']),
+        is_output=True,
+        output_id=2,
+    ) # Add a third query, specify that it is an output query, and specify an output_id.
     def postprocessing_func(df, output_id, partition_id):
         filepath = f"query_{output_id}/"
         os.makedirs(filepath, exist_ok=True)
@@ -78,15 +114,19 @@ a parquet file.
         postprocessor=postprocessing_func,
         pass_partition_id=True,
         pass_output_id=True,
-    ) # Begin computation, pass in a postprocessing function, and specify that partition ID and output ID should be passed to that postprocessing function.
+    ) # Begin computation, pass in a postprocessing function, and specify that partition ID and 
+      # output ID should be passed to that postprocessing function.
 
-    print(os.system("ls query_1/")) # Should show `NPartitions.get()` parquet files - which correspond to partitions of the output of query 1.
-    print(os.system("ls query_2/")) # Should show `NPartitions.get()` parquet files - which correspond to partitions of the output of query 2.
+    print(os.system("ls query_1/")) # Should show `NPartitions.get()` parquet files - which
+                                    # correspond to partitions of the output of query 1.
+    print(os.system("ls query_2/")) # Should show `NPartitions.get()` parquet files - which
+                                    # correspond to partitions of the output of query 2.
 
     for query_id, res_df in result_dfs.items():
         written_df = pd.read_parquet(f"query_{query_id}/")
         shutil.rmtree(f"query_{query_id}/") # Clean up
-        print(f"Written and Computed DF are {'equal' if res_df.equals(written_df) else 'not equal'} for query {query_id}")
+        print(f"Written and Computed DF are " +
+              f"{'equal' if res_df.equals(written_df) else 'not equal'} for query {query_id}")
 
 Batch Pipelining with Fan Out
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -106,6 +146,7 @@ The example below demonstrates the usage of ``fan_out`` and ``num_partitions``. 
 an example of a function that would benefit from this computation pattern:
 
 .. code-block:: python
+
     import glob
     from PIL import Image
     import torchvision.transforms as T
@@ -136,9 +177,10 @@ an example of a function that would benefit from this computation pattern:
 
     def serial_query(df):
         """
-        This function takes as input a dataframe with a single row corresponding to a folder containing images to parse.
-        Each image in the folder is passed through a neural network that detects whether it contains a cat, in serial,
-        and a new column is computed for the dataframe that counts the number of images containing cats.
+        This function takes as input a dataframe with a single row corresponding to a folder
+        containing images to parse. Each image in the folder is passed through a neural network
+        that detects whether it contains a cat, in serial, and a new column is computed for the
+        dataframe that counts the number of images containing cats.
 
         Parameters
         ----------
@@ -147,7 +189,8 @@ an example of a function that would benefit from this computation pattern:
         
         Returns
         -------
-        The same dataframe as before, with an additional column containing the count of images containing cats.
+        The same dataframe as before, with an additional column containing the count of images 
+        containing cats.
         """
         model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
         model.eval()
@@ -164,11 +207,14 @@ the images from the fast-ai-coco S3 bucket to a folder called ``images`` in your
 directory:
 
 .. code-block:: shell
-    aws s3 cp s3://fast-ai-coco/coco_tiny.tgz . --no-sign-request; tar -xf coco_tiny.tgz; mkdir images; mv coco_tiny/train/* images/; rm -rf coco_tiny; rm -rf coco_tiny.tgz
+
+    aws s3 cp s3://fast-ai-coco/coco_tiny.tgz . --no-sign-request; tar -xf coco_tiny.tgz; mkdir \
+        images; mv coco_tiny/train/* images/; rm -rf coco_tiny; rm -rf coco_tiny.tgz
 
 We can pipeline that code like so:
 
 .. code-block:: python
+
     import modin.pandas as pd
     from modin.experimental.batch import PandasQueryPipeline
     from time import time
@@ -183,6 +229,7 @@ We can pipeline that code like so:
 We can induce `8x` parallelism into the pipeline above by combining the ``fan_out`` and ``num_partitions`` parameters like so:
 
 .. code-block:: python
+
     import modin.pandas as pd
     from modin.experimental.batch import PandasQueryPipeline
     import shutil
@@ -191,9 +238,10 @@ We can induce `8x` parallelism into the pipeline above by combining the ``fan_ou
     desired_num_partitions = 8
     def parallel_query(df, partition_id):
         """
-        This function takes as input a dataframe with a single row corresponding to a folder containing images to parse.
-        It parses `total_images/desired_num_partitions` images every time it is called. A new column is computed for 
-        the dataframe that counts the number of images containing cats.
+        This function takes as input a dataframe with a single row corresponding to a folder
+        containing images to parse. It parses `total_images/desired_num_partitions` images every
+        time it is called. A new column is computed for the dataframe that counts the number of
+        images containing cats.
 
         Parameters
         ----------
@@ -204,7 +252,8 @@ We can induce `8x` parallelism into the pipeline above by combining the ``fan_ou
         
         Returns
         -------
-        The same dataframe as before, with an additional column containing the count of images containing cats.
+        The same dataframe as before, with an additional column containing the count of images
+        containing cats.
         """
         model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
         model.eval()
@@ -234,7 +283,8 @@ We can induce `8x` parallelism into the pipeline above by combining the ``fan_ou
         
         Returns
         -------
-        A new dataframe whose `cat_count` column is the sum of the `cat_count` column of all dataframes in `dfs`
+        A new dataframe whose `cat_count` column is the sum of the `cat_count` column of all
+        dataframes in `dfs`
         """
         df = dfs[0]
         cat_count = df['cat_count'][0]
@@ -243,12 +293,19 @@ We can induce `8x` parallelism into the pipeline above by combining the ``fan_ou
         df['cat_count'] = cat_count
         return df
     pipeline = PandasQueryPipeline(df, desired_num_partitions)
-    pipeline.add_query(parallel_query, fan_out=True, reduce_fn=reduce_fn, is_output=True, pass_partition_id=True)
+    pipeline.add_query(
+        parallel_query,
+        fan_out=True,
+        reduce_fn=reduce_fn,
+        is_output=True,
+        pass_partition_id=True
+    )
     parallel_start = time()
     df_with_cat_count = pipeline.compute_batch()[0]
     parallel_end = time()
     print(f"Result of pipeline:\n{df_with_cat_count}")
-    print(f"Total Time in Serial: {serial_end - serial_start}\nTotal time with induced parallelism: {parallel_end - parallel_start}")
+    print(f"Total Time in Serial: {serial_end - serial_start}")
+    print(f"Total time with induced parallelism: {parallel_end - parallel_start}")
     shutil.rmtree("images/") # Clean up
 
 Batch Pipelining with Dynamic Repartitioning
@@ -262,6 +319,7 @@ passed to the constructor of the ``PandasQueryPipeline``.
 The following example demonstrates how to use the ``repartition_after`` parameter.
 
 .. code-block:: python
+
     import modin.pandas as pd
     from modin.experimental.batch import PandasQueryPipeline
     import numpy as np
@@ -285,5 +343,6 @@ The following example demonstrates how to use the ``repartition_after`` paramete
     pipeline.add_query(increase_dataframe_size, repartition_after=True)
     pipeline.add_query(add_partition_id_to_df, pass_partition_id=True, is_output=True)
     result_df = pipeline.compute_batch()[0]
-    print(f"Number of partitions passed to second query: {len(np.unique(result_df['partition_id'].values))}")
+    print(f"Number of partitions passed to second query: " + 
+          f"{len(np.unique(result_df['partition_id'].values))}")
     print(f"Result of pipeline:\n{result_df}")
