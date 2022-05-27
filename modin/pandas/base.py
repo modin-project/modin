@@ -54,6 +54,7 @@ from modin.error_message import ErrorMessage
 import modin.pandas as pd
 from modin.pandas.utils import is_scalar
 from modin.config import IsExperimental
+from modin.logging import LoggerMetaClass
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -99,7 +100,7 @@ _doc_binary_op_kwargs = {"returns": "BasePandasDataset", "left": "BasePandasData
 
 
 @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
-class BasePandasDataset(object):
+class BasePandasDataset(object, metaclass=LoggerMetaClass):
     """
     Implement most of the common code that exists in DataFrame/Series.
 
@@ -1055,11 +1056,6 @@ class BasePandasDataset(object):
         if axis is not None:
             axis = self._get_axis_number(axis)
         self._validate_dtypes(numeric_only=True)
-        if is_list_like(lower) or is_list_like(upper):
-            if axis is None:
-                raise ValueError("Must specify axis = 0 or 1")
-            self._validate_other(lower, axis)
-            self._validate_other(upper, axis)
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = numpy_compat.function.validate_clip_with_axis(axis, args, kwargs)
         # any np.nan bounds are treated as None
@@ -1067,6 +1063,11 @@ class BasePandasDataset(object):
             lower = None
         if upper is not None and np.any(np.isnan(upper)):
             upper = None
+        if is_list_like(lower) or is_list_like(upper):
+            if axis is None:
+                raise ValueError("Must specify axis = 0 or 1")
+            lower = self._validate_other(lower, axis)
+            upper = self._validate_other(upper, axis)
         # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
         # purpose and does not affect the result, we shouldn't pass them to the query compiler.
         new_query_compiler = self._query_compiler.clip(
@@ -1387,6 +1388,7 @@ class BasePandasDataset(object):
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
         subset = kwargs.get("subset", None)
+        ignore_index = kwargs.get("ignore_index", False)
         if subset is not None:
             if is_list_like(subset):
                 if not isinstance(subset, list):
@@ -1396,8 +1398,13 @@ class BasePandasDataset(object):
             duplicates = self.duplicated(keep=keep, subset=subset)
         else:
             duplicates = self.duplicated(keep=keep)
-        indices = duplicates.values.nonzero()[0]
-        return self.drop(index=self.index[indices], inplace=inplace)
+        result = self[~duplicates]
+        if ignore_index:
+            result.index = pandas.RangeIndex(stop=len(result))
+        if inplace:
+            self._update_inplace(result._query_compiler)
+        else:
+            return result
 
     def eq(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """

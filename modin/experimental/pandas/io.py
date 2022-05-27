@@ -246,7 +246,7 @@ def _read(**kwargs) -> DataFrame:
     Examples
     --------
     >>> import modin.experimental.pandas as pd
-    >>> df = pd.read_csv_glob("s3://nyc-tlc/trip data/yellow_tripdata_2020-1*")
+    >>> df = pd.read_csv_glob("s3://dask-data/nyc-taxi/2015/yellow_tripdata_2015-1*")
     UserWarning: `read_*` implementation has mismatches with pandas:
     Data types of partitions are different! Please refer to the troubleshooting section of the Modin documentation to fix this issue.
             VendorID tpep_pickup_datetime  ... total_amount  congestion_surcharge

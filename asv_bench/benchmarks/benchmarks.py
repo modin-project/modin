@@ -689,7 +689,7 @@ class TimeAstype:
         elif astype_ncolumns == "one":
             self.astype_arg = {"col1": dtype}
         else:
-            raise ValueError("astype_ncolumns: {astype_ncolumns} isn't supported")
+            raise ValueError(f"astype_ncolumns: {astype_ncolumns} isn't supported")
 
     def time_astype(self, shape, dtype, astype_ncolumns):
         execute(self.df.astype(self.astype_arg))

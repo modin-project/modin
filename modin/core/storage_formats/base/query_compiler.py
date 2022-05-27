@@ -32,6 +32,7 @@ from modin.core.dataframe.algebra.default2pandas import (
 )
 from modin.error_message import ErrorMessage
 import modin.core.storage_formats.base.doc_utils as doc_utils
+from modin.logging import LoggerMetaClass
 
 from pandas.core.dtypes.common import is_scalar
 import pandas.core.resample
@@ -89,7 +90,9 @@ def _set_axis(axis):
 # Currently actual arguments are placed in the methods docstrings, but since they're
 # not presented in the function's signature it makes linter to raise `PR02: unknown parameters`
 # warning. For now, they're silenced by using `noqa` (Modin issue #3108).
-class BaseQueryCompiler(abc.ABC):
+class BaseQueryCompiler(
+    abc.ABC, metaclass=type("", (abc.ABCMeta, LoggerMetaClass), {})
+):
     """
     Abstract class that handles the queries to Modin dataframes.
 
@@ -765,6 +768,10 @@ class BaseQueryCompiler(abc.ABC):
         BaseQueryCompiler
             QueryCompiler with values limited by the specified thresholds.
         """
+        if isinstance(lower, BaseQueryCompiler):
+            lower = lower.to_pandas().squeeze(1)
+        if isinstance(upper, BaseQueryCompiler):
+            upper = upper.to_pandas().squeeze(1)
         return DataFrameDefault.register(pandas.DataFrame.clip)(
             self, lower=lower, upper=upper, **kwargs
         )
@@ -2011,6 +2018,8 @@ class BaseQueryCompiler(abc.ABC):
         BaseQueryCompiler
             New masked QueryCompiler.
         """
+        if isinstance(key, type(self)):
+            key = key.to_pandas().squeeze(axis=1)
 
         def getitem_array(df, key):
             return df[key]
