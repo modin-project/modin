@@ -222,10 +222,12 @@ def initialize_ray(
         warnings.warn(
             "The current Ray cluster does not have any CPU Resources.\nModin uses the number of "
             + "CPUs to determine how many partitions to create.\nNumber of partitions defaulting to"
-            + " 4. To update, run the following python code:\n\tfrom modin.config import "
-            + "NPartitions\n\tNPartitions.put(desired_num_cpus)"
+            + " number of CPUs on head node. To update, run the following python code:\n\tfrom "
+            + "modin.config import NPartitions\n\tNPartitions.put(desired_num_cpus)"
         )
-        num_cpus = 4
+        from modin.config import CpuCount
+
+        num_cpus = CpuCount.get()
     else:
         num_cpus = int(num_cpus)
     num_gpus = int(ray.cluster_resources().get("GPU", 0))
