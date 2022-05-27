@@ -207,22 +207,17 @@ def test_add_prefix(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("testfunc", test_func_values, ids=test_func_keys)
-def test_applymap(request, data, testfunc):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
+@pytest.mark.parametrize(
+    "na_action", [None, "ignore"], ids=["no_na_action", "ignore_na"]
+)
+def test_applymap(data, testfunc, na_action):
+    modin_df, pandas_df = create_test_dfs(data)
 
     with pytest.raises(ValueError):
         x = 2
         modin_df.applymap(x)
 
-    try:
-        pandas_result = pandas_df.applymap(testfunc)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_df.applymap(testfunc)
-    else:
-        modin_result = modin_df.applymap(testfunc)
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_df, pandas_df, lambda df: df.applymap(testfunc, na_action))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
