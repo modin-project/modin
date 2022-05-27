@@ -47,7 +47,7 @@ def is_local_path(path_or_buf) -> bool:
     return False
 
 
-def get_device_id(path: Union[str, pathlib.PurePath]) -> Union[int, None]:
+def get_device_id(path: Union[str, pathlib.PurePath]) -> Optional[int]:
     """
     Return the result of `os.stat(path).st_dev` for the portion of `path` that exists locally.
 
