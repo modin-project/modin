@@ -2388,8 +2388,8 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
         -------
         tuple
             Tuple containing:
-                1) 2-d numpy array of aligned left partitions
-                2) list of 2-d numpy arrays of aligned right partitions
+                1) 2-d NumPy array of aligned left partitions
+                2) list of 2-d NumPy arrays of aligned right partitions
                 3) joined index along ``axis``
                 4) (optional) sizes of partitions along axis that partitioning was done on
         """
