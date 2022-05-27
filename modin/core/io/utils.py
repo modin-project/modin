@@ -67,9 +67,9 @@ def get_device_id(path: Union[str, pathlib.PurePath]) -> Optional[int]:
         index += 1
     try:
         os.stat(os.path.join(*path_list[:index]))
-    except:
+    except Exception:
         return None
-    while os.path.exists(os.path.join(*path_list[:index])):
+    while os.path.exists(os.path.join(*path_list[:index])) and index <= len(path_list):
         index += 1
     index -= 1
     return os.stat(os.path.join(*path_list[:index])).st_dev

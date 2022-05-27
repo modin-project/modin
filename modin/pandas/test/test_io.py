@@ -36,6 +36,7 @@ from modin.config import (
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.core.io.utils import is_local_path
 import pyarrow as pa
 import os
 from scipy import sparse
@@ -2378,3 +2379,21 @@ def test_to_period():
     )
     modin_df, pandas_df = create_test_dfs(TEST_DATA, index=index)
     df_equals(modin_df.to_period(), pandas_df.to_period())
+
+
+def test_is_local_path():
+    s3_path = "s3://modin-example-bucket/modin-example-file"
+    assert not is_local_path(s3_path), "S3 Path incorrectly flagged as local!"
+    azure_blob_path = "https://modin-example-storage-account.blob.core.windows.net/modin-example-container/modin-example-file"
+    assert not is_local_path(
+        azure_blob_path
+    ), "Azure Blob Storage Path incorrectly flagged as local!"
+    gcs_path = "gs://modin-example-bucket/modin-example-file"
+    assert not is_local_path(gcs_path), "GCS Path incorrectly flagged as local!"
+    assert is_local_path(
+        os.getcwd()
+    ), "Current Working Directory incorrectly flagged as not local!"
+    new_file = os.getcwd() + "/modin-example-file"
+    assert is_local_path(
+        new_file
+    ), "Non-existent file under current working directory incorrectly flagged as not local!"
