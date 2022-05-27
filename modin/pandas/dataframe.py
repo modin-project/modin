@@ -34,6 +34,7 @@ import sys
 from typing import IO, Optional, Union, Iterator
 import warnings
 
+from modin.logging import metaclass_resolver
 from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, to_pandas, hashable
@@ -53,7 +54,7 @@ from .accessor import CachedAccessor, SparseFrameAccessor
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame.__init__], apilink="pandas.DataFrame"
 )
-class DataFrame(BasePandasDataset):
+class DataFrame(metaclass_resolver(BasePandasDataset)):
     """
     Modin distributed representation of ``pandas.DataFrame``.
 
@@ -282,7 +283,7 @@ class DataFrame(BasePandasDataset):
         Return ``DataFrame`` with duplicate rows removed.
         """
         return super(DataFrame, self).drop_duplicates(
-            subset=subset, keep=keep, inplace=inplace
+            subset=subset, keep=keep, inplace=inplace, ignore_index=ignore_index
         )
 
     @property
@@ -807,8 +808,8 @@ class DataFrame(BasePandasDataset):
             return
         frame = sys._getframe()
         try:
-            f_locals = frame.f_back.f_back.f_locals
-            f_globals = frame.f_back.f_back.f_globals
+            f_locals = frame.f_back.f_back.f_back.f_back.f_locals
+            f_globals = frame.f_back.f_back.f_back.f_back.f_globals
         finally:
             del frame
         local_names = set(re.findall(r"@([\w]+)", expr))
