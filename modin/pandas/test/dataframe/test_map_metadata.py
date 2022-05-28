@@ -1289,7 +1289,16 @@ def test_update(data, other_data):
     df_equals(modin_df, pandas_df)
 
     with pytest.raises(ValueError):
-        modin_df.update(other_modin_df, errors="raise")
+        pandas_df.update(other_pandas_df, errors="raise")
+
+    # We expect a ValueError because other_modin_df and modin_df have non-null
+    # values at some of the same locations. The exception occurs in ray tasks,
+    # but the main thread doesn't get the exception until it tries to
+    # materialize the remote functions' results. We use ._to_pandas() to
+    # materialize the remote functions' results.
+    modin_df.update(other_modin_df, errors="raise")
+    with pytest.raises(ValueError):
+        modin_df._to_pandas()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
