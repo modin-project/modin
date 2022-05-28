@@ -1296,6 +1296,8 @@ def test_update(data, other_data):
     # but the main thread doesn't get the exception until it tries to
     # materialize the remote functions' results. We use ._to_pandas() to
     # materialize the remote functions' results.
+    # TODO(https://github.com/modin-project/modin/issues/3966): Use a more
+    # sophisticated way to check for the ValueError.
     modin_df.update(other_modin_df, errors="raise")
     with pytest.raises(ValueError):
         modin_df._to_pandas()
