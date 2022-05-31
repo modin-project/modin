@@ -86,7 +86,11 @@ class ErrorMessage(object):
     @classmethod
     def missmatch_with_pandas(cls, operation, message):
         logger = get_logger()
-        logger.debug("Modin Warning: {} mismatch with pandas, Message: {}".format(operation, message))
+        logger.debug(
+            "Modin Warning: {} mismatch with pandas, Message: {}".format(
+                operation, message
+            )
+        )
         cls.single_warning(
             f"`{operation}` implementation has mismatches with pandas:\n{message}."
         )
