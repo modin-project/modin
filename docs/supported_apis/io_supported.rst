@@ -26,7 +26,7 @@ default to pandas.
 |                    |                                 | ``names``, ``usecols``, ``dtype``,                 |
 |                    |                                 | ``true/false_values``, ``skiprows`` (partly)       |
 |                    |                                 | ``skip_blank_lines`` (partly), ``parse_dates``     |
-|                    |                                 | (partly), ``compression`` (inferred automatically,  |
+|                    |                                 | (partly), ``compression`` (inferred automatically, |
 |                    |                                 | should not be specified), ``quotechar``,           |
 |                    |                                 | ``escapechar``, ``doublequote``,                   |
 |                    |                                 | ``delim_whitespace``                               |
