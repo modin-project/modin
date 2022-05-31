@@ -246,7 +246,6 @@ def test_iloc(request, data):
 
         modin_df = pd.DataFrame(data)
         pandas_df = pandas.DataFrame(data)
-        # import pdb;pdb.set_trace()
         modin_df.iloc[0] = modin_df.iloc[1]
         pandas_df.iloc[0] = pandas_df.iloc[1]
         df_equals(modin_df, pandas_df)
@@ -425,43 +424,6 @@ def test_loc(data):
         modin_df.loc["NO_EXIST"]
 
 
-def test_setitem_4325():
-    data = test_data["float_nan_data"]
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-
-    key = ["col1", "col2"]
-
-    # len(key) == value.columns; different columns
-    value = [[1, 2]] * pandas_df.shape[0]
-    df_value = pandas.DataFrame(value, columns=["value_col1", "value_col2"])
-    eval_setitem(modin_df, pandas_df, df_value, col=key)
-
-    # len(key) == value.columns; different columns; modin DataFrame
-    mdf_value = pd.DataFrame(df_value)
-    eval_setitem(modin_df, pandas_df, (mdf_value, df_value), col=key)
-
-    # len(key) == value.columns; different index
-    df_value = pandas.DataFrame(
-        value, columns=key, index=list(reversed(pandas_df.index))
-    )
-    eval_setitem(modin_df, pandas_df, df_value, col=key)
-
-    # len(key) > value.columns
-    value = [[1]] * pandas_df.shape[0]
-    df_value = pandas.DataFrame(value, columns=key[:1])
-    eval_setitem(modin_df, pandas_df, df_value, col=key)
-
-    # len(key) == value.columns; different columns; modin Series
-    md_series_value = mdf_value[mdf_value.columns[0]]
-    pd_series_value = df_value[df_value.columns[0]]
-    eval_setitem(modin_df, pandas_df, (md_series_value, pd_series_value), col=key)
-
-    # len(key) < value.columns
-    value = [[1, 2, 3]] * pandas_df.shape[0]
-    df_value = pandas.DataFrame(value, columns=key + ["col3"])
-    eval_setitem(modin_df, pandas_df, df_value, col=key)
-
-
 @pytest.mark.parametrize(
     "key_getter, value_getter",
     [
@@ -497,8 +459,14 @@ def test_setitem_4325():
 @pytest.mark.parametrize("key_axis", [0, 1])
 @pytest.mark.parametrize("reverse_value_index", [True, False])
 @pytest.mark.parametrize("reverse_value_columns", [True, False])
-def test_loc_4456(
-    key_getter, value_getter, key_axis, reverse_value_index, reverse_value_columns
+@pytest.mark.parametrize("setitem", [True, False])
+def test_loc_setitem_4456(
+    key_getter,
+    value_getter,
+    key_axis,
+    reverse_value_index,
+    reverse_value_columns,
+    setitem,
 ):
     data = test_data["float_nan_data"]
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
@@ -527,8 +495,12 @@ def test_loc_4456(
         pdf_value = pdf_value.reindex(columns=pdf_value.columns[::-1])
         mdf_value = mdf_value.reindex(columns=mdf_value.columns[::-1])
 
-    eval_loc(modin_df, pandas_df, pdf_value, key)
-    eval_loc(modin_df, pandas_df, (mdf_value, pdf_value), key)
+    if setitem:
+        eval_setitem(modin_df, pandas_df, pdf_value, col=key)
+        eval_setitem(modin_df, pandas_df, (mdf_value, pdf_value), col=key)
+    else:
+        eval_loc(modin_df, pandas_df, pdf_value, key)
+        eval_loc(modin_df, pandas_df, (mdf_value, pdf_value), key)
 
 
 # This tests the bug from https://github.com/modin-project/modin/issues/3736
