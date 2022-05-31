@@ -2239,7 +2239,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return df
 
         if isinstance(value, type(self)):
-            # import pdb;pdb.set_trace()
             value.columns = [key]
             if axis == 1:
                 value = value.transpose()

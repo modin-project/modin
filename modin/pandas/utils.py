@@ -286,7 +286,7 @@ def broadcast_item(
     ------
     ValueError
         If `row_lookup` or `col_lookup` contain values missing in
-        `self` index or columns correspondingly.
+        `query_compiler` index or columns correspondingly.
         If `item` cannot be broadcast from its own shape to `to_shape`.
 
     Notes
@@ -312,17 +312,17 @@ def broadcast_item(
         item, (pandas.Series, pandas.DataFrame, Series, DataFrame)
     ):
         # convert indices in lookups to names, as Pandas reindex expects them to be so
-        kw = {}
+        axes_to_reindex = {}
         index_values = query_compiler.index[row_lookup]
         if not index_values.equals(item.index):
-            kw["index"] = index_values
+            axes_to_reindex["index"] = index_values
         if hasattr(item, "columns"):
             column_values = query_compiler.columns[col_lookup]
             if not column_values.equals(item.columns):
-                kw["columns"] = column_values
+                axes_to_reindex["columns"] = column_values
         # New value for columns/index make that reindex add NaN values
-        if kw:
-            item = item.reindex(**kw)
+        if axes_to_reindex:
+            item = item.reindex(**axes_to_reindex)
     try:
         item = np.array(item)
         if np.prod(to_shape) == np.prod(item.shape):

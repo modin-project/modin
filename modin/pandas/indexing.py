@@ -360,7 +360,6 @@ class _LocationIndexerBase(object, metaclass=LoggerMetaClass):
         """
         # Convert slices to indices for the purposes of application.
         # TODO (devin-petersohn): Apply to slice without conversion to list
-        # import pdb;pdb.set_trace()
         if isinstance(row_lookup, slice):
             row_lookup = range(len(self.qc.index))[row_lookup]
         if isinstance(col_lookup, slice):
@@ -369,7 +368,7 @@ class _LocationIndexerBase(object, metaclass=LoggerMetaClass):
         # should be handled in a fastpath with `df[col] = item`.
         if axis == 0:
             assert len(col_lookup) == 1
-            self.df[self.df.columns[col_lookup[0]]] = item
+            self.df[self.df.columns[col_lookup][0]] = item
         # This is True when we are assigning to a full row. We want to reuse the setitem
         # mechanism to operate along only one axis for performance reasons.
         elif axis == 1:
@@ -445,14 +444,11 @@ class _LocationIndexerBase(object, metaclass=LoggerMetaClass):
             axis = None
         elif (
             row_lookup_len == len(self.qc.index)
-            # and not is_list_like(row_lookup)
             and col_lookup_len == 1
             and isinstance(self.df, DataFrame)
         ):
             axis = 0
-        elif (
-            col_lookup_len == len(self.qc.columns) and row_lookup_len == 1
-        ):  # and not is_list_like(col_lookup):
+        elif col_lookup_len == len(self.qc.columns) and row_lookup_len == 1:
             axis = 1
         else:
             axis = None
