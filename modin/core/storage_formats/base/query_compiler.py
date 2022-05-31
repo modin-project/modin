@@ -1103,7 +1103,7 @@ class BaseQueryCompiler(
         """
         return DataFrameDefault.register(pandas.DataFrame.abs)(self)
 
-    def applymap(self, func):
+    def applymap(self, func, *args, **kwargs):
         """
         Apply passed function elementwise.
 
@@ -1111,13 +1111,17 @@ class BaseQueryCompiler(
         ----------
         func : callable(scalar) -> scalar
             Function to apply to each element of the QueryCompiler.
+        *args : iterable
+        **kwargs : dict
 
         Returns
         -------
         BaseQueryCompiler
             Transformed QueryCompiler.
         """
-        return DataFrameDefault.register(pandas.DataFrame.applymap)(self, func=func)
+        return DataFrameDefault.register(pandas.DataFrame.applymap)(
+            self, func, *args, **kwargs
+        )
 
     # FIXME: `**kwargs` which follows `numpy.conj` signature was inherited
     # from ``PandasQueryCompiler``, we should get rid of this dependency.
