@@ -282,7 +282,7 @@ def doc_reduce_agg(method, refer_to, params=None, extra_params=None):
 doc_cum_agg = partial(
     doc_qc_method,
     template="""
-Get cumulative {method} for every row or column.
+    Get cumulative {method} for every row or column.
 
     Parameters
     ----------
