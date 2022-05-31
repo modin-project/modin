@@ -33,9 +33,8 @@ from modin.config import LogMemoryInterval, LogMode
 __LOGGER_CONFIGURED__: bool = False
 
 
-# Turn off __LOGGER_CONFIGURED__ on interpreter termination. The memory thread
-# will stop logging and terminate once __LOGGER_CONFIGURED__ is off.
 def _turn_off_logging():
+    """Turn off __LOGGER_CONFIGURED__."""
     global __LOGGER_CONFIGURED__
     __LOGGER_CONFIGURED__ = False
 
@@ -156,6 +155,8 @@ def memory_thread(logger, sleep_time):
         The interval at which to profile system memory.
     """
     while True:
+        # Stop logging once __LOGGER_CONFIGURED__ is off, presumably because
+        # the interpreter has exited.
         if not __LOGGER_CONFIGURED__:
             break
         svmem = psutil.virtual_memory()
