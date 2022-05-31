@@ -58,6 +58,7 @@ Key Features and Updates
   * FIX-#4383: Remove `pathlib` from deps (#4384)
   * FIX-#4390: Add `redis` to Modin dependencies (#4396)
   * FIX-#3689: Add black and flake8 into development environment files (#4480)
+  * TEST-#4516: Add numpydoc to developer requirements (#4517)
 
 Contributors
 ------------
