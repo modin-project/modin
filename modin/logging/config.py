@@ -21,6 +21,8 @@ import logging
 import datetime as dt
 import os
 import uuid
+import atexit
+
 import platform
 import psutil
 import pkg_resources
@@ -29,6 +31,16 @@ import time
 from modin.config import LogMemoryInterval, LogMode
 
 __LOGGER_CONFIGURED__: bool = False
+
+
+# Turn off __LOGGER_CONFIGURED__ on interpreter termination. The memory thread
+# will stop logging and terminate once __LOGGER_CONFIGURED__ is off.
+def _turn_off_logging():
+    global __LOGGER_CONFIGURED__
+    __LOGGER_CONFIGURED__ = False
+
+
+atexit.register(_turn_off_logging)
 
 
 class ModinFormatter(logging.Formatter):  # noqa: PR01
@@ -144,6 +156,8 @@ def memory_thread(logger, sleep_time):
         The interval at which to profile system memory.
     """
     while True:
+        if not __LOGGER_CONFIGURED__:
+            break
         svmem = psutil.virtual_memory()
         logger.info(f"Memory Percentage: {svmem.percent}%")
         time.sleep(sleep_time)
