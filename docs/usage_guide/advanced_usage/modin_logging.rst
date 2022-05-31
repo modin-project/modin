@@ -10,6 +10,9 @@ repository or in the `modin/modin` directory may result in circular dependency i
 `modin/logging` directory and the Python `logging` module, which may be used as a default in such environments. As a resolution, one can simply
 run Modin logging from a different directory or manually manage the name conflicts.
 
+**User Warning:** In the interactive case (using modin logging inside of an ipython process), it may require quitting ipython several times
+(cntl-c) if you want to exit ipython when the memory profiling is enabled. 
+
 Usage example
 -------------
 
