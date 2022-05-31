@@ -78,8 +78,17 @@ extensions = [
     "sphinx.ext.graphviz",
     "sphinxcontrib.plantuml",
     "sphinx_issues",
+    "sphinxcontrib.spelling",
 ]
 
+# Spelling configuration
+spelling_lang = "en_US"
+spelling_ignore_pypi_package_names = True
+spelling_word_list_filename = "spelling_word_list.txt"
+spelling_exclude_patterns = ["*/release_notes*"]
+spelling_show_whole_line = False
+spelling_show_suggestions = True
+spelling_suggestion_limit = 3
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
