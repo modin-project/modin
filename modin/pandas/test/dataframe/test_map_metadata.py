@@ -47,7 +47,7 @@ from modin.pandas.test.utils import (
     create_test_dfs,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import Engine, NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -1291,16 +1291,21 @@ def test_update(data, other_data):
     with pytest.raises(ValueError):
         pandas_df.update(other_pandas_df, errors="raise")
 
-    # We expect a ValueError because other_modin_df and modin_df have non-null
-    # values at some of the same locations. The exception occurs in ray tasks,
-    # but the main thread doesn't get the exception until it tries to
-    # materialize the remote functions' results. We use ._to_pandas() to
-    # materialize the remote functions' results.
-    # TODO(https://github.com/modin-project/modin/issues/3966): Use a more
-    # sophisticated way to check for the ValueError.
-    modin_df.update(other_modin_df, errors="raise")
-    with pytest.raises(ValueError):
-        modin_df._to_pandas()
+    if Engine.get() == "Python":
+        with pytest.raises(ValueError):
+            modin_df.update(other_modin_df, errors="raise")
+    else:
+        # We expect a ValueError because other_modin_df and modin_df have
+        # non-null values at some of the same locations. When using engines
+        # other than python, exception occurs in remot tasks, but the main
+        # thread doesn't get the exception until it tries to materialize the
+        # remote functions' results. We use ._to_pandas() to materialize the
+        # remote functions' results.
+        # TODO(https://github.com/modin-project/modin/issues/3966): Use a more
+        # sophisticated way to check for the ValueError.
+        modin_df.update(other_modin_df, errors="raise")
+        with pytest.raises(ValueError):
+            modin_df._to_pandas()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
