@@ -24,7 +24,6 @@ from pandas._typing import CompressionOptions, StorageOptions
 
 from . import DataFrame
 from modin.config import IsExperimental, Engine
-from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 from ...pandas import _update_engine
 
 
@@ -97,6 +96,8 @@ def read_sql(
     modin.DataFrame
     """
     Engine.subscribe(_update_engine)
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
     assert IsExperimental.get(), "This only works in experimental mode"
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=FactoryDispatcher.read_sql(**kwargs))
@@ -138,6 +139,8 @@ def read_custom_text(
     modin.DataFrame
     """
     Engine.subscribe(_update_engine)
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
     assert IsExperimental.get(), "This only works in experimental mode"
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=FactoryDispatcher.read_custom_text(**kwargs))
@@ -265,6 +268,7 @@ def _read(**kwargs) -> DataFrame:
     [4652013 rows x 18 columns]
     """
     Engine.subscribe(_update_engine)
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     try:
         pd_obj = FactoryDispatcher.read_csv_glob(**kwargs)
@@ -323,6 +327,8 @@ def read_pickle_distributed(
     The number of partitions is equal to the number of input files.
     """
     Engine.subscribe(_update_engine)
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
     assert IsExperimental.get(), "This only works in experimental mode"
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=FactoryDispatcher.read_pickle_distributed(**kwargs))
@@ -369,6 +375,8 @@ def to_pickle_distributed(
     """
     obj = self
     Engine.subscribe(_update_engine)
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
     if isinstance(self, DataFrame):
         obj = self._query_compiler
     FactoryDispatcher.to_pickle_distributed(
