@@ -40,7 +40,7 @@ DataFrame constructor is identical.
 To use Modin, you do not need to know how many cores your system has and you do not need
 to specify how to distribute the data. In fact, you can continue using your previous
 pandas notebooks while experiencing a considerable speedup from Modin, even on a single
-machine. Once you’ve changed your import statement, you’re ready to use Modin just like
+machine. Once you've changed your import statement, you’re ready to use Modin just like
 you would pandas.
 
 Installation and choosing your compute engine

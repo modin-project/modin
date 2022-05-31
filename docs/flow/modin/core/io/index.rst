@@ -10,7 +10,7 @@ Call from ``read_*`` function of execution-specific IO class (for example, ``Pan
 Ray engine and pandas storage format) is forwarded to the ``_read`` function of file
 format-specific class (for example ``CSVDispatcher`` for CSV files), where function parameters are
 preprocessed to check if they are supported (otherwise default pandas implementation
-is used) and compute some metadata common for all partitions. Then file is splitted
+is used) and compute some metadata common for all partitions. Then file is split
 into chunks (mechanism of splitting is described below) and using this data, tasks
 are launched on the remote workers. After remote tasks are finished, additional
 results postprocessing is performed, and new query compiler with imported data will
@@ -21,7 +21,7 @@ Data File Splitting Mechanism
 
 Modin file splitting mechanism differs depending on the data format type:
 
-* text format type - file is splitted into bytes according user specified needs.
+* text format type - file is split into bytes according user specified needs.
   In the simplest case, when no row related parameters (such as ``nrows`` or
   ``skiprows``) are passed, data chunks limits (start and end bytes) are derived
   by just roughly dividing the file size by the number of partitions (chunks can
@@ -30,7 +30,7 @@ Modin file splitting mechanism differs depending on the data format type:
   value). In other cases the same splitting into bytes is used, but chunks sizes are
   defined according to the number of lines that each partition should contain.
 
-* columnar store type - file is splitted by even distribution of columns that should
+* columnar store type - file is split by even distribution of columns that should
   be read between chunks.
 
 * SQL type - chunking is obtained by wrapping initial SQL query into query that
@@ -122,7 +122,7 @@ of ``header`` and ``skiprows`` parameters:
 
 In the examples above list-like ``skiprows`` values are fixed and ``header`` is varied. In the first
 example with no ``header`` provided, rows 2, 3, 4 are skipped and row 0 is considered as a header.
-In the second example ``header == 1``, so 0th row is skipped and the next available row is
+In the second example ``header == 1``, so zeroth row is skipped and the next available row is
 considered as a header. The third example shows the case when ``header`` and ``skiprows`` parameters
 values are intersected - in this case skipped rows are dropped first and only then ``header`` is got
 from the remaining rows (rows before header are skipped too).

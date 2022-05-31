@@ -49,7 +49,7 @@ Importing heterogeneous data by ``read_csv``
 Since Modin ``read_csv`` imports data in parallel, it can occur that data read by
 different partitions can have different type (this happens when columns contains
 heterogeneous data, i.e. column values are of different types), which are handled
-differntly. Example of such behaviour is shown below.
+differently. Example of such behavior is shown below.
 
 .. code-block:: python
 
@@ -112,12 +112,12 @@ differntly. Example of such behaviour is shown below.
 
 In this case `DataFrame` read by pandas in the column ``col1`` contain only ``str`` data
 because of the first string value ("one"), that forced pandas to handle full column
-data as strings. Modin the fisrt partition (the first three rows) read data similary
+data as strings. Modin the first partition (the first three rows) read data similarly
 to pandas, but the second partition (the last two rows) doesn't contain any strings
 in the first column and it's data is read as floats because of the last column
 value and as a result `7` value was read as `7.0`, that differs from pandas output.
 
-The above example showed the mechanism of occurence of pandas and Modin ``read_csv``
+The above example showed the mechanism of occurrence of pandas and Modin ``read_csv``
 outputs discrepancy during heterogeneous data import. Please note, that similar
 situations can occur during different data/parameters combinations.
 
@@ -131,7 +131,7 @@ partitions. Note, that to avoid excessive performance degradation, ``dtype`` val
 be set fine-grained as it possible (specify ``dtype`` parameter only for columns with
 heterogeneous data).
 
-Setting of ``dtype`` parameter works well for most of the cases, but, unfortunetely, it is
+Setting of ``dtype`` parameter works well for most of the cases, but, unfortunately, it is
 ineffective if data file contain column which should be interpreted as index
 (``index_col`` parameter is used) since ``dtype`` parameter is responsible only for data
 fields. For example, if in the above example, ``kwargs`` will be set in the next way:
@@ -158,7 +158,7 @@ is not set:
 
 In this case data should be imported without setting of ``index_col`` parameter
 and only then index column should be set as index (by using ``DataFrame.set_index``
-funcion for example) as it is shown in the example below:
+function for example) as it is shown in the example below:
 
 .. code-block:: python
 

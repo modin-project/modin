@@ -137,7 +137,7 @@ create the large dataframe, while pandas took close to a minute.
 Faster ``apply`` over a single column
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The performance benefits of Modin becomes aparent when we operate on large 
+The performance benefits of Modin becomes apparent when we operate on large 
 gigabyte-scale datasets. For example, let's say that we want to round up the number 
 across a single column via the ``apply`` operation. 
 

@@ -50,7 +50,7 @@ Training
 
 1. The data is passed to :py:func:`~modin.experimental.xgboost.xgboost_ray._train`
    function as a :py:class:`~modin.experimental.xgboost.DMatrix` object. Using an iterator of
-   :py:class:`~modin.experimental.xgboost.DMatrix`, lists of ``ray.ObjectRef`` with row partitions of Modin DataFrame are exctracted. Example:
+   :py:class:`~modin.experimental.xgboost.DMatrix`, lists of ``ray.ObjectRef`` with row partitions of Modin DataFrame are extracted. Example:
 
    .. code-block:: python
 

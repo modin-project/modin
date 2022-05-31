@@ -108,12 +108,12 @@ e.g. validating a parameter from the query and defining specific intermediate va
 to provide more context to the query compiler.
 
 The :py:class:`~modin.experimental.core.storage_formats.omnisci.query_compiler.DFAlgQueryCompiler`
-is responsible for reducing the recieved query to the pre-defined Dataframe algebra operators
+is responsible for reducing the received query to the pre-defined Dataframe algebra operators
 and pass their execution to the
 :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe.OmnisciOnNativeDataframe`.
 
 When :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe.OmnisciOnNativeDataframe`
-recieves a query it determines whether the operation requires data materialization
+receives a query it determines whether the operation requires data materialization
 or can be performed lazily. Depending on that the operation is either appended to a
 lazy computation tree or executed.
 

@@ -66,7 +66,7 @@ class OmnisciOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         df : pandas.DataFrame
             Source frame.
         return_dims : bool, default: False
-            Include reulsintg dimensions into the returned value.
+            Include resulting dimensions into the returned value.
 
         Returns
         -------

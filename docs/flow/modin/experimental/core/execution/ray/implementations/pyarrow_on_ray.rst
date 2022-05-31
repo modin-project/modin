@@ -21,7 +21,7 @@ dataset`). In order to fix this issue (or at least to reduce needed memory amoun
 needed data copying), ``PyArrow-on-Ray`` module was added. Due to optimized architecture
 of PyArrow Tables, number of needed copies can be decreased `down to zero
 <https://arrow.apache.org/docs/python/pandas.html#zero-copy-series-conversions>`_ in some
-corner cases, that can signifficantly improve Modin performance. The downside of this approach
+corner cases, that can significantly improve Modin performance. The downside of this approach
 is that PyArrow and pandas do not support the same APIs and some functions/parameters can have
 incompatibilities or output different results, so for now ``PyArrow-on-Ray`` engine is
 under development and marked as experimental.

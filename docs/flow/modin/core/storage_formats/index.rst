@@ -13,8 +13,8 @@ limited to the objects that conform to pandas API. There are formats that are ab
 SQL-like databases (:doc:`OmniSci storage format </flow/modin/experimental/core/storage_formats/omnisci/index>`)
 inside Modin Dataframe's partitions.
 
-An honor of converting high-level pandas API calls to the ones that are understandable
-by the corresponding execution implementation belongs to the Query Compiler (QC) object.
+The storage format + execution engine (Ray, Dask, etc.) form the execution backend. Converting high-level pandas API calls
+to queries that are understandable by the execution backend is done by the Query Compiler (QC).
 
 .. _query_compiler_def:
 

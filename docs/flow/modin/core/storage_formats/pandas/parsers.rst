@@ -8,7 +8,7 @@ and util functions for handling parsing results. ``PandasParser`` is base class 
 classes with pandas storage format, that contains methods common for all child classes. Other
 module classes implement ``parse`` function that performs parsing of specific format data
 basing on the chunk information computed in the ``modin.core.io`` module. After
-chunk data parsing is completed, resulting ``DataFrame``-s will be splitted into smaller
+chunk data parsing is completed, resulting ``DataFrame``-s will be split into smaller
 ``DataFrame``-s according to ``num_splits`` parameter, data type and number or
 rows/columns in the parsed chunk, and then these frames and some additional metadata will
 be returned.
