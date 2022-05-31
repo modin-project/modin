@@ -146,7 +146,7 @@ def memory_thread(logger, sleep_time):
     while True:
         rss_mem = bytes_int_to_str(psutil.Process().memory_info().rss)
         svmem = psutil.virtual_memory()
-        logger.info(f"CPU Utilization: {svmem.percent}%")
+        logger.info(f"Memory Percentage: {svmem.percent}%")
         logger.info(f"RSS Memory: {rss_mem}")
         time.sleep(sleep_time)
 
