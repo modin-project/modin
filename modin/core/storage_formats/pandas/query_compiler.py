@@ -1601,6 +1601,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     diff = Fold.register(pandas.DataFrame.diff)
 
     def clip(self, lower, upper, **kwargs):
+        if isinstance(lower, BaseQueryCompiler):
+            lower = lower.to_pandas().squeeze(1)
+        if isinstance(upper, BaseQueryCompiler):
+            upper = upper.to_pandas().squeeze(1)
         kwargs["upper"] = upper
         kwargs["lower"] = lower
         axis = kwargs.get("axis", 0)
