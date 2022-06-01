@@ -73,6 +73,7 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
             A NumPy array with new partitions.
         """
         func = cls.preprocess_func(func)
+        [part.drain_call_queue() for row in right for part in row]
         return np.array(
             [
                 [
