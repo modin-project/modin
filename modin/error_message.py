@@ -35,14 +35,14 @@ class ErrorMessage(object):
     @classmethod
     def single_warning(cls, message):
         message_hash = hash(message)
-        logger = get_logger()
-        logger.debug(f"Modin Warning: Single Warning: {message} was raised.")
         if message_hash in cls.printed_warnings:
             logger.debug(
                 f"Modin Warning: Single Warning: {message} was raised and suppressed."
             )
             return
 
+        logger = get_logger()
+        logger.debug(f"Modin Warning: Single Warning: {message} was raised.")
         warnings.warn(message)
         cls.printed_warnings.add(message_hash)
 
