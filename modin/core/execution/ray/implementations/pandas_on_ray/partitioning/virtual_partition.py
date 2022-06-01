@@ -527,9 +527,6 @@ def deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
     -----
     Ray functions are not detected by codecov (thus pragma: no cover).
     """
-    func = deserialize(func)
-    args = deserialize(args)
-    kwargs = deserialize(kwargs)
     if "args" in kwargs:
         kwargs["args"] = deserialize(kwargs["args"])
     result = func(*args, **kwargs)
