@@ -38,7 +38,9 @@ class ErrorMessage(object):
         logger = get_logger()
         logger.debug(f"Modin Warning: Single Warning: {message} was raised.")
         if message_hash in cls.printed_warnings:
-            logger.debug(f"Modin Warning: Single Warning: {message} was raised and suppressed.")
+            logger.debug(
+                f"Modin Warning: Single Warning: {message} was raised and suppressed."
+            )
             return
 
         warnings.warn(message)
