@@ -2391,7 +2391,9 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
                 1) 2-d NumPy array of aligned left partitions
                 2) list of 2-d NumPy arrays of aligned right partitions
                 3) joined index along ``axis``
-                4) (optional) sizes of partitions along axis that partitioning was done on
+                4) List with sizes of partitions along axis that partitioning
+                   was done on. This list will be empty if and only if all
+                   the frames are empty.
         """
         if isinstance(other, type(self)):
             other = [other]
@@ -2429,8 +2431,8 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
         do_reindex_base = not base_index.equals(joined_index)
         do_repartition_base = force_repartition or do_reindex_base
 
-        # perform repartitioning and reindexing for `base_frame` if needed.
-        # also define length of base and frames. we will need to know the
+        # Perform repartitioning and reindexing for `base_frame` if needed.
+        # Also define length of base and frames. We will need to know the
         # lengths for alignment.
         if do_repartition_base:
             reindexed_base = base_frame._partition_mgr_cls.map_axis_partitions(
@@ -2591,18 +2593,17 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
             new_dtypes = None
             # If we have already cached the length of each row in at least one
             # of the row's partitions, we can build new_lengths for the new
-            # frame.
+            # frame. Typically, if we know the length for any partition in a
+            # row, we know the length for the first partition in the row. So
+            # just check the lengths of the first column of partitions.
             new_lengths = []
-            for row in new_partitions:
-                found_row_length = False
-                for partition in row:
-                    if partition._length_cache is not None:
-                        new_lengths.append(partition.length())
-                        found_row_length = True
+            if new_partitions.size > 0:
+                for part in new_partitions.T[0]:
+                    if part._length_cache is not None:
+                        new_lengths.append(part.length())
+                    else:
+                        new_lengths = None
                         break
-                if not found_row_length:
-                    new_lengths = None
-                    break
         else:
             new_columns = self.columns.append([other.columns for other in others])
             new_index = joined_index
@@ -2610,20 +2611,19 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
                 new_dtypes = self.dtypes.append([o.dtypes for o in others])
             else:
                 new_dtypes = None
-            # If we have already cached the width of each column in at least
-            # one of the column's partitions, we can build new_widths for the
-            # new frame.
+            # If we have already cached the width of each column in at least one
+            # of the column's partitions, we can build new_widths for the new
+            # frame. Typically, if we know the width for any partition in a
+            # column, we know the width for the first partition in the column.
+            # So just check the widths of the first row of partitions.
             new_widths = []
-            for column in new_partitions.T:
-                found_column_width = False
-                for partition in column:
-                    if partition._width_cache is not None:
-                        new_widths.append(partition.width())
-                        found_column_width = True
+            if new_partitions.size > 0:
+                for part in new_partitions[0]:
+                    if part._width_cache is not None:
+                        new_widths.append(part.width())
+                    else:
+                        new_widths = None
                         break
-                if not found_column_width:
-                    new_widths = None
-                    break
 
         return self.__constructor__(
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
