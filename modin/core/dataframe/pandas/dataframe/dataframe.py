@@ -2581,11 +2581,9 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
                 new_lengths = partition_sizes_along_axis
             else:
                 new_widths = partition_sizes_along_axis
-
         new_partitions = self._partition_mgr_cls.concat(
             axis.value, left_parts, right_parts
         )
-
         if axis == Axis.ROW_WISE:
             new_index = self.index.append([other.index for other in others])
             new_columns = joined_index

@@ -1297,7 +1297,7 @@ def test_update(data, other_data):
     else:
         # We expect a ValueError because other_modin_df and modin_df have
         # non-null values at some of the same locations. When using engines
-        # other than python, exception occurs in remot tasks, but the main
+        # other than python, exception occurs in remote tasks, but the main
         # thread doesn't get the exception until it tries to materialize the
         # remote functions' results. We use ._to_pandas() to materialize the
         # remote functions' results.
