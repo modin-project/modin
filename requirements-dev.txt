@@ -37,7 +37,5 @@ psycopg2
 connectorx>=0.2.6a4
 black
 flake8
-# This should match the version in the CI. permalink from the time of this
-# commit:
-# https://github.com/modin-project/modin/blob/da6c9eb50f244f70f5e9be788d367103f567a6e5/.github/workflows/ci.yml#L55
+# The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
 numpydoc==1.1.0

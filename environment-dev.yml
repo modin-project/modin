@@ -47,3 +47,5 @@ dependencies:
       - redis>=3.5.0,<4.0.0
       - black
       - flake8
+      # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
+      - numpydoc==1.1.0
