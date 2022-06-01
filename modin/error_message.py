@@ -25,7 +25,7 @@ class ErrorMessage(object):
         if message == "":
             message = "This functionality is not yet available in Modin."
         logger = get_logger()
-        logger.debug("Modin Error: NotImplementedError {}".format(message))
+        logger.debug("Modin Error: NotImplementedError: {}".format(message))
         raise NotImplementedError(
             f"{message}\n"
             + "To request implementation, file an issue at "
@@ -37,7 +37,7 @@ class ErrorMessage(object):
     def single_warning(cls, message):
         message_hash = hash(message)
         logger = get_logger()
-        logger.debug("Modin Warning: Single Warning {}".format(message))
+        logger.debug("Modin Warning: Single Warning: {}".format(message))
         if message_hash in cls.printed_warnings:
             return
 
@@ -59,14 +59,14 @@ class ErrorMessage(object):
             )
             cls.printed_default_to_pandas = True
         logger = get_logger()
-        logger.debug("Modin Warning: Default to pandas {}".format(message))
+        logger.debug("Modin Warning: Default to pandas: {}".format(message))
         warnings.warn(message)
 
     @classmethod
     def catch_bugs_and_request_email(cls, failure_condition, extra_log=""):
         if failure_condition:
             logger = get_logger()
-            logger.debug("Modin Error: Internal Error {}".format(extra_log))
+            logger.debug("Modin Error: Internal Error: {}".format(extra_log))
             raise Exception(
                 "Internal Error. "
                 + "Please visit https://github.com/modin-project/modin/issues "
@@ -88,7 +88,7 @@ class ErrorMessage(object):
     def missmatch_with_pandas(cls, operation, message):
         logger = get_logger()
         logger.debug(
-            "Modin Warning: {} mismatch with pandas, Message: {}".format(
+            "Modin Warning: {} mismatch with pandas: {}".format(
                 operation, message
             )
         )
@@ -99,7 +99,7 @@ class ErrorMessage(object):
     @classmethod
     def not_initialized(cls, engine, code):
         logger = get_logger()
-        logger.debug("Modin Warning: {} not initialized".format(engine))
+        logger.debug("Modin Warning: Not Initialized: {}".format(engine))
         warnings.warn(
             f"{engine} execution environment not yet initialized. Initializing...\n"
             + "To remove this warning, run the following python code before doing dataframe operations:\n"
