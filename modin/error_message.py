@@ -35,6 +35,7 @@ class ErrorMessage(object):
     @classmethod
     def single_warning(cls, message):
         message_hash = hash(message)
+        get_logger().debug(f"Modin Warning: Single Warning: {message}")
         if message_hash in cls.printed_warnings:
             return
 
