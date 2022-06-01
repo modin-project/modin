@@ -24,7 +24,7 @@ class ErrorMessage(object):
     def not_implemented(cls, message=""):
         if message == "":
             message = "This functionality is not yet available in Modin."
-        get_logger().debug(f"Modin Error: NotImplementedError: {message}")
+        get_logger().info(f"Modin Error: NotImplementedError: {message}")
         raise NotImplementedError(
             f"{message}\n"
             + "To request implementation, file an issue at "
@@ -62,7 +62,7 @@ class ErrorMessage(object):
     @classmethod
     def catch_bugs_and_request_email(cls, failure_condition, extra_log=""):
         if failure_condition:
-            get_logger().debug(f"Modin Error: Internal Error: {extra_log}")
+            get_logger().info(f"Modin Error: Internal Error: {extra_log}")
             raise Exception(
                 "Internal Error. "
                 + "Please visit https://github.com/modin-project/modin/issues "
