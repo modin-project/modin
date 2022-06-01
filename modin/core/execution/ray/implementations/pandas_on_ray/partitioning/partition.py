@@ -15,7 +15,6 @@
 
 import ray
 from ray.util import get_node_ip_address
-from packaging import version
 import uuid
 from modin.core.execution.ray.utils import deserialize, ObjectIDType
 
