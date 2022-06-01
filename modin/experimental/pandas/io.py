@@ -95,11 +95,13 @@ def read_sql(
     -------
     modin.DataFrame
     """
+    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     assert IsExperimental.get(), "This only works in experimental mode"
-    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
     return DataFrame(query_compiler=FactoryDispatcher.read_sql(**kwargs))
 
 
@@ -138,11 +140,13 @@ def read_custom_text(
     -------
     modin.DataFrame
     """
+    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     assert IsExperimental.get(), "This only works in experimental mode"
-    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
     return DataFrame(query_compiler=FactoryDispatcher.read_custom_text(**kwargs))
 
 
@@ -326,11 +330,13 @@ def read_pickle_distributed(
     -----
     The number of partitions is equal to the number of input files.
     """
+    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     assert IsExperimental.get(), "This only works in experimental mode"
-    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
     return DataFrame(query_compiler=FactoryDispatcher.read_pickle_distributed(**kwargs))
 
 
