@@ -329,11 +329,10 @@ class PandasQueryPipeline(object):
         partitions = modin_frame._partition_mgr_cls.row_partitions(
             modin_frame._partitions
         )
-        for i, node in enumerate(self.outputs):
+        for node in self.outputs:
             partitions = self._complete_nodes(node.operators + [node], partitions)
             for part in partitions:
                 part.drain_call_queue(num_splits=1)
-            output_partitions = partitions
             if postprocessor:
                 output_partitions = []
                 for partition_id, partition in enumerate(partitions):
