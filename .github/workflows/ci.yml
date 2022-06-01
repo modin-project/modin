@@ -119,6 +119,7 @@ jobs:
             modin/experimental/core/execution/native/implementations/omnisci_on_native/omnisci_worker.py \
       - run: python scripts/doc_checker.py modin/experimental/core/storage_formats/omnisci
       - run: python scripts/doc_checker.py modin/experimental/core/execution/native/implementations/omnisci_on_native/exchange/dataframe_protocol
+      - run: python scripts/doc_checker.py modin/experimental/batch/pipeline.py
       - run: python scripts/doc_checker.py modin/logging
 
   lint-flake8:
@@ -462,6 +463,7 @@ jobs:
         if: matrix.engine == 'ray'
       - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
         if: matrix.engine == 'ray'
+      - run: pytest -n 2 modin/experimental/batch/test/test_pipeline.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
