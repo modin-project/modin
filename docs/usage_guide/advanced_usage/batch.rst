@@ -346,3 +346,4 @@ The following example demonstrates how to use the ``repartition_after`` paramete
     print(f"Number of partitions passed to second query: " + 
           f"{len(np.unique(result_df['partition_id'].values))}")
     print(f"Result of pipeline:\n{result_df}")
+
