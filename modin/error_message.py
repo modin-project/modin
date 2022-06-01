@@ -24,8 +24,7 @@ class ErrorMessage(object):
     def not_implemented(cls, message=""):
         if message == "":
             message = "This functionality is not yet available in Modin."
-        logger = get_logger()
-        logger.debug("Modin Error: NotImplementedError: {}".format(message))
+        get_logger().debug(f"Modin Error: NotImplementedError: {message}")
         raise NotImplementedError(
             f"{message}\n"
             + "To request implementation, file an issue at "
@@ -36,8 +35,7 @@ class ErrorMessage(object):
     @classmethod
     def single_warning(cls, message):
         message_hash = hash(message)
-        logger = get_logger()
-        logger.debug("Modin Warning: Single Warning: {}".format(message))
+        get_logger().debug(f"Modin Warning: Single Warning: {message}")
         if message_hash in cls.printed_warnings:
             return
 
@@ -58,15 +56,13 @@ class ErrorMessage(object):
                 + "https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html for explanation."
             )
             cls.printed_default_to_pandas = True
-        logger = get_logger()
-        logger.debug("Modin Warning: Default to pandas: {}".format(message))
+        get_logger().debug(f"Modin Warning: Default to pandas: {message}")
         warnings.warn(message)
 
     @classmethod
     def catch_bugs_and_request_email(cls, failure_condition, extra_log=""):
         if failure_condition:
-            logger = get_logger()
-            logger.debug("Modin Error: Internal Error: {}".format(extra_log))
+            get_logger().debug(f"Modin Error: Internal Error: {extra_log}")
             raise Exception(
                 "Internal Error. "
                 + "Please visit https://github.com/modin-project/modin/issues "
@@ -77,8 +73,7 @@ class ErrorMessage(object):
 
     @classmethod
     def non_verified_udf(cls):
-        logger = get_logger()
-        logger.debug("Modin Warning: Non Verified UDF")
+        get_logger().debug("Modin Warning: Non Verified UDF")
         warnings.warn(
             "User-defined function verification is still under development in Modin. "
             + "The function provided is not verified."
@@ -86,9 +81,8 @@ class ErrorMessage(object):
 
     @classmethod
     def missmatch_with_pandas(cls, operation, message):
-        logger = get_logger()
-        logger.debug(
-            "Modin Warning: {} mismatch with pandas: {}".format(operation, message)
+        get_logger().debug(
+            f"Modin Warning: {operation} mismatch with pandas: {message}"
         )
         cls.single_warning(
             f"`{operation}` implementation has mismatches with pandas:\n{message}."
@@ -96,8 +90,7 @@ class ErrorMessage(object):
 
     @classmethod
     def not_initialized(cls, engine, code):
-        logger = get_logger()
-        logger.debug("Modin Warning: Not Initialized: {}".format(engine))
+        get_logger().debug(f"Modin Warning: Not Initialized: {engine}")
         warnings.warn(
             f"{engine} execution environment not yet initialized. Initializing...\n"
             + "To remove this warning, run the following python code before doing dataframe operations:\n"
