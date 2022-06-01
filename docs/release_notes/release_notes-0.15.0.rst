@@ -20,7 +20,10 @@ Key Features and Updates
   * FIX-#4457: Fix `loc` in case when need reindex item (#4457)
   * FIX-#4414: Add missing f prefix on f-strings found at https://codereview.doctor (#4415)
   * FIX-#4461: Fix S3 CSV data path (#4462)
+  * FIX-#4467: `drop_duplicates` no longer removes items based on index values (#4468)
   * FIX-#4449: Drain the call queue before waiting on result in benchmark mode (#4472)
+  * FIX-#4481: Allow clipping with a Modin Series of bounds (#4486)  
+  * FIX-#4504: Support na_action in applymap (#4505)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
 * Benchmarking enhancements
@@ -55,6 +58,7 @@ Key Features and Updates
   * FIX-#4383: Remove `pathlib` from deps (#4384)
   * FIX-#4390: Add `redis` to Modin dependencies (#4396)
   * FIX-#3689: Add black and flake8 into development environment files (#4480)
+  * TEST-#4516: Add numpydoc to developer requirements (#4517)
 * New Features
   * FEAT-#4412: Add Batch Pipeline API to Modin (#4452)
 
@@ -71,6 +75,7 @@ Contributors
 @anmyachev
 @dchigarev
 @devin-petersohn
+@jrsacher
 @orcahmlee
 @naren-ponder
 @RehanSD
