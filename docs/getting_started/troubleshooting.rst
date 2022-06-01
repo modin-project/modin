@@ -46,10 +46,10 @@ seconds before starting the next one.
 Importing heterogeneous data by ``read_csv``
 """"""""""""""""""""""""""""""""""""""""""""
 
-Since Modin ``read_csv`` imports data in parallel, it can occur that data read by
-different partitions can have different type (this happens when columns contains
-heterogeneous data, i.e. column values are of different types), which are handled
-differently. Example of such behavior is shown below.
+Since Modin ``read_csv`` imports data in parallel, it is possible for data read by
+different partitions to have different types (this happens when columns contain
+heterogeneous data, i.e. values in a column are of different types). An example
+of this behavior is shown below.
 
 .. code-block:: python
 
@@ -110,31 +110,30 @@ differently. Example of such behavior is shown below.
   4  9.0    10
 
 
-In this case `DataFrame` read by pandas in the column ``col1`` contain only ``str`` data
-because of the first string value ("one"), that forced pandas to handle full column
-data as strings. Modin the first partition (the first three rows) read data similarly
-to pandas, but the second partition (the last two rows) doesn't contain any strings
-in the first column and it's data is read as floats because of the last column
-value and as a result `7` value was read as `7.0`, that differs from pandas output.
+In this case, the `DataFrame` read by pandas in the column ``col1`` contain only ``str`` data
+because of the first string value ("one"), which forces pandas to handle the full column
+data as strings. The first Modin partition (the first three rows) handles the data as pandas does,
+but the second partition (the last two rows) reads the data as floats. This is because the
+second column contains an int and float, and thus the column type is interpreted as float. As a
+result, `7` is interpreted as `7.0`, which differs from the pandas output.
 
-The above example showed the mechanism of occurrence of pandas and Modin ``read_csv``
-outputs discrepancy during heterogeneous data import. Please note, that similar
-situations can occur during different data/parameters combinations.
+The above example demonstrated heterogenous data import mismatch with str, int, and float types,
+but heterogeneous data import with other data/parameters combinations can also result in 
+data type mismatches with pandas.
 
 **Solution**
 
-In the case if heterogeneous data is detected, corresponding warning will be showed in
-the user's console. Currently, the discrepancies of such type doesn't properly handled
-by Modin, and to avoid this issue, it is needed to set ``dtype`` parameter of ``read_csv``
-function manually to force correct data type definition during data import by
-partitions. Note, that to avoid excessive performance degradation, ``dtype`` value should
-be set fine-grained as it possible (specify ``dtype`` parameter only for columns with
-heterogeneous data).
+In the case where heterogeneous data is detected, a corresponding warning will be shown in
+the user's console. Currently, the discrepancies of such type aren't properly handled
+by Modin, and to avoid this issue, you need to set the ``dtype`` parameter of ``read_csv``
+manually to force the correct data type definition during data import. Note that 
+to avoid excessive performance degradation, ``dtype`` value should be set as minimally
+as possible (specify ``dtype`` parameter only for columns with heterogeneous data).
 
-Setting of ``dtype`` parameter works well for most of the cases, but, unfortunately, it is
-ineffective if data file contain column which should be interpreted as index
-(``index_col`` parameter is used) since ``dtype`` parameter is responsible only for data
-fields. For example, if in the above example, ``kwargs`` will be set in the next way:
+Specifying the ``dtype`` parameter will work well in most cases. Unfortunately, it is
+ineffective if the data file contains a column which should be interpreted as the index
+(``index_col`` parameter is used) since the ``dtype`` parameter is responsible only for data
+fields. For example, if in the above example, ``kwargs`` was set like this:
 
 .. code-block:: python
 
@@ -144,7 +143,7 @@ fields. For example, if in the above example, ``kwargs`` will be set in the next
       "index_col": "col1",
   }
 
-Resulting Modin DataFrame will contain incorrect value as in the case if ``dtype``
+The resulting Modin DataFrame will contain incorrect values as in the case if ``dtype``
 is not set:
 
 .. code-block:: python
@@ -156,9 +155,9 @@ is not set:
   7.0      8
   9.0     10
 
-In this case data should be imported without setting of ``index_col`` parameter
-and only then index column should be set as index (by using ``DataFrame.set_index``
-function for example) as it is shown in the example below:
+A workaround is to import the data without setting the ``index_col`` parameter, then 
+setting the index column by using the ``DataFrame.set_index`` function as shown in
+the example below:
 
 .. code-block:: python
 
@@ -171,8 +170,8 @@ Using Modin with python multiprocessing
 """""""""""""""""""""""""""""""""""""""
 
 We strongly recommend not to mix the use of Modin with Ray or Dask engine selected
-in conjunction with python multiprocessing because that can lead to undefined behavior.
-One of such examples is shown below:
+in conjunction with Python multiprocessing because that can lead to undefined behavior.
+One such example is shown below:
 
 .. code-block:: python
 
@@ -190,8 +189,8 @@ One of such examples is shown below:
     with Pool(5) as p:
         print(p.map(f, [1]))
 
-Even if this example may work on your machine, we do not recommend similar scenarios.
-The python multiprocessing will cause conflicts with excessive resource use
+Even if this example may work on your machine, we do not recommend it.
+The Python multiprocessing will cause conflicts with excessive resource use
 by launching duplicated Ray clusters on the same machine.
 
 Common errors
@@ -260,7 +259,7 @@ to start processes.
 
 **Solution**
 
-To avoid the problem Dask Client creation needs to be moved into ``__main__`` scope of the module.
+To avoid the problem Dask Client creation needs to be moved into the ``__main__`` scope of the module.
 
 The corrected `script.py` would look like:
 
