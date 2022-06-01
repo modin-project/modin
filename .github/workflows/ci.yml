@@ -52,9 +52,12 @@ jobs:
         with:
           python-version: "3.8.x"
           architecture: "x64"
-      # The numpydoc version here MUST match the version in the dev
-      # requirements. Permalink at the time of this commit:
-      # https://github.com/modin-project/modin/blob/da6c9eb50f244f70f5e9be788d367103f567a6e5/requirements-dev.txt
+      # The numpydoc version here MUST match the versions in the dev
+      # requirements. Permalinks at the time of this commit:
+      # - https://github.com/modin-project/modin/blob/da6c9eb50f244f70f5e9be788d367103f567a6e5/requirements-dev.txt
+      # - https://github.com/modin-project/modin/blob/3d4404e9d9a9b2a3327f8aee664a8e71ac1f18b8/environment-dev.yml
+      # - https://github.com/modin-project/modin/blob/3d4404e9d9a9b2a3327f8aee664a8e71ac1f18b8/requirements/env_omnisci.yml
+      # - https://github.com/modin-project/modin/blob/3d4404e9d9a9b2a3327f8aee664a8e71ac1f18b8/requirements/requirements-no-engine.yml
       - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0 xgboost
       - run: pytest scripts/test
       - run: pip install -e .[all]
