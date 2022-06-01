@@ -75,6 +75,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             other_shape = np.cumsum(
                 [0] + [len(o.list_of_blocks) for o in other_axis_partition]
             )
+
             return self._wrap_partitions(
                 self.deploy_func_between_two_axis_partitions(
                     self.axis,
