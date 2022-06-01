@@ -21,6 +21,7 @@ Key Features and Updates
   * FIX-#4414: Add missing f prefix on f-strings found at https://codereview.doctor (#4415)
   * FIX-#4461: Fix S3 CSV data path (#4462)
   * FIX-#4449: Drain the call queue before waiting on result in benchmark mode (#4472)
+  * FIX-#4518: Fix Modin Logging to report specific Modin warnings/errors (#4519)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
 * Benchmarking enhancements
