@@ -283,7 +283,7 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         Return ``DataFrame`` with duplicate rows removed.
         """
         return super(DataFrame, self).drop_duplicates(
-            subset=subset, keep=keep, inplace=inplace
+            subset=subset, keep=keep, inplace=inplace, ignore_index=ignore_index
         )
 
     @property
@@ -354,7 +354,9 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         """
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
-        return DataFrame(query_compiler=self._query_compiler.applymap(func))
+        return DataFrame(
+            query_compiler=self._query_compiler.applymap(func, na_action, **kwargs)
+        )
 
     def apply(
         self, func, axis=0, raw=False, result_type=None, args=(), **kwargs
