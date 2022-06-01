@@ -97,7 +97,12 @@ def configure_logging():
 
     os.makedirs(os.path.dirname(log_filename), exist_ok=True)
 
-    logfile = RotatingFileHandler(log_filename, "a")
+    logfile = RotatingFileHandler(
+        filename=log_filename,
+        mode="a",
+        maxBytes=100000000,
+        backupCount=100,
+    )
     formatter = ModinFormatter(
         fmt="%(process)d, %(thread)d, %(asctime)s, %(message)s",
         datefmt="%Y-%m-%d,%H:%M:%S.%f",
