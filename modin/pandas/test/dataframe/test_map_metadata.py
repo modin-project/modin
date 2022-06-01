@@ -207,22 +207,17 @@ def test_add_prefix(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("testfunc", test_func_values, ids=test_func_keys)
-def test_applymap(request, data, testfunc):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
+@pytest.mark.parametrize(
+    "na_action", [None, "ignore"], ids=["no_na_action", "ignore_na"]
+)
+def test_applymap(data, testfunc, na_action):
+    modin_df, pandas_df = create_test_dfs(data)
 
     with pytest.raises(ValueError):
         x = 2
         modin_df.applymap(x)
 
-    try:
-        pandas_result = pandas_df.applymap(testfunc)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_df.applymap(testfunc)
-    else:
-        modin_result = modin_df.applymap(testfunc)
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_df, pandas_df, lambda df: df.applymap(testfunc, na_action))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -564,7 +559,8 @@ def test_astype_category_large():
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-def test_clip(request, data, axis):
+@pytest.mark.parametrize("bound_type", ["list", "series"], ids=["list", "series"])
+def test_clip(request, data, axis, bound_type):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
@@ -576,8 +572,6 @@ def test_clip(request, data, axis):
         )
         # set bounds
         lower, upper = np.sort(random_state.random_integers(RAND_LOW, RAND_HIGH, 2))
-        lower_list = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
-        upper_list = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
 
         # test only upper scalar bound
         modin_result = modin_df.clip(None, upper, axis=axis)
@@ -589,14 +583,26 @@ def test_clip(request, data, axis):
         pandas_result = pandas_df.clip(lower, upper, axis=axis)
         df_equals(modin_result, pandas_result)
 
+        lower = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
+        upper = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
+
+        if bound_type == "series":
+            modin_lower = pd.Series(lower)
+            pandas_lower = pandas.Series(lower)
+            modin_upper = pd.Series(upper)
+            pandas_upper = pandas.Series(upper)
+        else:
+            modin_lower = pandas_lower = lower
+            modin_upper = pandas_upper = upper
+
         # test lower and upper list bound on each column
-        modin_result = modin_df.clip(lower_list, upper_list, axis=axis)
-        pandas_result = pandas_df.clip(lower_list, upper_list, axis=axis)
+        modin_result = modin_df.clip(modin_lower, modin_upper, axis=axis)
+        pandas_result = pandas_df.clip(pandas_lower, pandas_upper, axis=axis)
         df_equals(modin_result, pandas_result)
 
         # test only upper list bound on each column
-        modin_result = modin_df.clip(np.nan, upper_list, axis=axis)
-        pandas_result = pandas_df.clip(np.nan, upper_list, axis=axis)
+        modin_result = modin_df.clip(np.nan, modin_upper, axis=axis)
+        pandas_result = pandas_df.clip(np.nan, pandas_upper, axis=axis)
         df_equals(modin_result, pandas_result)
 
         with pytest.raises(ValueError):
@@ -746,30 +752,43 @@ def test_droplevel():
     [None, "col1", "name", ("col1", "col3"), ["col1", "col3", "col7"]],
     ids=["None", "string", "name", "tuple", "list"],
 )
-def test_drop_duplicates(data, keep, subset):
+@pytest.mark.parametrize("ignore_index", [True, False], ids=["True", "False"])
+def test_drop_duplicates(data, keep, subset, ignore_index):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
     try:
-        pandas_df.drop_duplicates(keep=keep, inplace=False, subset=subset)
+        pandas_df.drop_duplicates(
+            keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
+        )
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_df.drop_duplicates(keep=keep, inplace=False, subset=subset)
+            modin_df.drop_duplicates(
+                keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
+            )
     else:
         df_equals(
-            pandas_df.drop_duplicates(keep=keep, inplace=False, subset=subset),
-            modin_df.drop_duplicates(keep=keep, inplace=False, subset=subset),
+            pandas_df.drop_duplicates(
+                keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
+            ),
+            modin_df.drop_duplicates(
+                keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
+            ),
         )
 
     try:
         pandas_results = pandas_df.drop_duplicates(
-            keep=keep, inplace=True, subset=subset
+            keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
         )
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_df.drop_duplicates(keep=keep, inplace=True, subset=subset)
+            modin_df.drop_duplicates(
+                keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
+            )
     else:
-        modin_results = modin_df.drop_duplicates(keep=keep, inplace=True, subset=subset)
+        modin_results = modin_df.drop_duplicates(
+            keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
+        )
         df_equals(modin_results, pandas_results)
 
 
@@ -864,6 +883,14 @@ def test_drop_duplicates_after_sort():
     modin_result = modin_df.sort_values(["value", "time"]).drop_duplicates(["value"])
     pandas_result = pandas_df.sort_values(["value", "time"]).drop_duplicates(["value"])
     df_equals(modin_result, pandas_result)
+
+
+def test_drop_duplicates_with_repeated_index_values():
+    # This tests for issue #4467: https://github.com/modin-project/modin/issues/4467
+    data = [[0], [1], [0]]
+    index = [0, 0, 0]
+    modin_df, pandas_df = create_test_dfs(data, index=index)
+    eval_general(modin_df, pandas_df, lambda df: df.drop_duplicates())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
