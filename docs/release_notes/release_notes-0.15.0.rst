@@ -22,6 +22,7 @@ Key Features and Updates
   * FIX-#4461: Fix S3 CSV data path (#4462)
   * FIX-#4467: `drop_duplicates` no longer removes items based on index values (#4468)
   * FIX-#4449: Drain the call queue before waiting on result in benchmark mode (#4472)
+  * FIX-#4518: Fix Modin Logging to report specific Modin warnings/errors (#4519)
   * FIX-#4481: Allow clipping with a Modin Series of bounds (#4486)  
   * FIX-#4504: Support na_action in applymap (#4505)
   * FIX-#4503: Stop the memory logging thread after session exit (#4515)
