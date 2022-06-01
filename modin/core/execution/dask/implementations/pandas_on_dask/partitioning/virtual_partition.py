@@ -55,7 +55,13 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+        cls,
+        axis,
+        func,
+        num_splits,
+        maintain_partitioning,
+        *partitions,
+        **kwargs,
     ):
         """
         Deploy a function along a full axis.
@@ -89,16 +95,16 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             axis,
             func,
             num_splits,
-            kwargs,
             maintain_partitioning,
             *partitions,
             num_returns=result_num_splits * 4,
             pure=False,
+            **kwargs,
         )
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
-        cls, axis, func, num_splits, len_of_left, other_shape, kwargs, *partitions
+        cls, axis, func, num_splits, len_of_left, other_shape, *partitions, **kwargs
     ):
         """
         Deploy a function along a full axis between two data sets.
@@ -134,10 +140,10 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             num_splits,
             len_of_left,
             other_shape,
-            kwargs,
             *partitions,
             num_returns=num_splits * 4,
             pure=False,
+            **kwargs,
         )
 
     def _wrap_partitions(self, partitions):

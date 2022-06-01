@@ -1973,20 +1973,11 @@ def test_validate_by():
 
 def test_groupby_with_virtual_partitions():
     # from https://github.com/modin-project/modin/issues/4464
-    md_df = pd.DataFrame(test_data["int_data"])
-    pd_df = pandas.DataFrame(test_data["int_data"])
+    md_df, pd_df = create_test_dfs(test_data["int_data"])
 
     # Concatenate DataFrames here to make virtual partitions.
     big_md_df = pd.concat([md_df for _ in range(5)])
     big_pd_df = pandas.concat([pd_df for _ in range(5)])
-
-    # Check that the constructed Modin DataFrame has virtual partitions.
-    # If Modin partitioning behavior changes so that this test doesn't generate
-    # virtual partitions, it should be rewritten to test virtual partitions.
-    assert issubclass(
-        type(big_md_df._query_compiler._modin_frame._partitions[0][0]),
-        PandasDataframeAxisPartition,
-    )
 
     eval_general(big_md_df, big_pd_df, lambda df: df.groupby(df.columns[0]).count())
 

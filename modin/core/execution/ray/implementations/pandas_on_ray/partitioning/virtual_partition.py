@@ -138,7 +138,13 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+        cls,
+        axis,
+        func,
+        num_splits,
+        maintain_partitioning,
+        *partitions,
+        **kwargs,
     ):
         """
         Deploy a function along a full axis.
@@ -174,14 +180,21 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             axis,
             func,
             num_splits,
-            kwargs,
             maintain_partitioning,
             *partitions,
+            **kwargs,
         )
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
-        cls, axis, func, num_splits, len_of_left, other_shape, kwargs, *partitions
+        cls,
+        axis,
+        func,
+        num_splits,
+        len_of_left,
+        other_shape,
+        *partitions,
+        **kwargs,
     ):
         """
         Deploy a function along a full axis between two data sets.
@@ -216,8 +229,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             num_splits,
             len_of_left,
             other_shape,
-            kwargs,
             *partitions,
+            **kwargs,
         )
 
     def _wrap_partitions(self, partitions):
@@ -284,7 +297,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         if len(self.call_queue) > 0:
             self.drain_call_queue()
         # Deserialize because it's possible for Ray remote objects to be passed as args.
-        kwargs["args"] = deserialize(args)
+        kwargs["args"] = args
         result = super(PandasOnRayDataframeVirtualPartition, self).apply(
             func,
             num_splits,
@@ -515,6 +528,11 @@ def deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
     -----
     Ray functions are not detected by codecov (thus pragma: no cover).
     """
+    func = deserialize(func)
+    args = deserialize(args)
+    kwargs = deserialize(kwargs)
+    if "args" in kwargs:
+        kwargs["args"] = deserialize(kwargs["args"])
     result = func(*args, **kwargs)
     ip = get_node_ip_address()
     if isinstance(result, pandas.DataFrame):

@@ -25,6 +25,7 @@ Key Features and Updates
   * FIX-#4481: Allow clipping with a Modin Series of bounds (#4486)  
   * FIX-#4504: Support na_action in applymap (#4505)
   * FIX-#4503: Stop the memory logging thread after session exit (#4515)
+  * FIX-#4464: Quick fix groupby.count failing on virtual partitions (#4490)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
 * Benchmarking enhancements
