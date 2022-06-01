@@ -629,6 +629,10 @@ class _LocIndexer(metaclass_resolver(_LocationIndexerBase)):
 
         if isinstance(row_loc, Series) and is_boolean_array(row_loc):
             return self._handle_boolean_masking(row_loc, col_loc)
+        if isinstance(key, tuple) and key[1] not in self.df.columns:
+            loc_series = _LocIndexer(self.__getitem__(key[0])).__getitem__(key[1])
+            loc_series.name = (key[0], key[1])
+            return loc_series
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
         result = super(_LocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
