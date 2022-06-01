@@ -38,6 +38,7 @@ class ErrorMessage(object):
         message_hash = hash(message)
         if message_hash in cls.printed_warnings:
             return
+
         warnings.warn(message)
         cls.printed_warnings.add(message_hash)
 
