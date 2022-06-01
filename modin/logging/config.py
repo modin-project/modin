@@ -18,6 +18,7 @@ Module contains ``ModinFormatter`` class.
 """
 
 import logging
+from logging.handlers import RotatingFileHandler
 import datetime as dt
 import os
 import uuid
@@ -96,7 +97,7 @@ def configure_logging():
 
     os.makedirs(os.path.dirname(log_filename), exist_ok=True)
 
-    logfile = logging.FileHandler(log_filename, "a")
+    logfile = RotatingFileHandler(log_filename, "a")
     formatter = ModinFormatter(
         fmt="%(process)d, %(thread)d, %(asctime)s, %(message)s",
         datefmt="%Y-%m-%d,%H:%M:%S.%f",
@@ -108,7 +109,6 @@ def configure_logging():
         logger.setLevel(logging.INFO)
     logger.setLevel(logging.DEBUG)
 
-    logger = logging.getLogger("modin.logger")
     logger.info(f"OS Version: {platform.platform()}")
     logger.info(f"Python Version: {platform.python_version()}")
     modin_version = pkg_resources.get_distribution("modin").version
