@@ -157,13 +157,13 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             The function to perform.
         num_splits : int
             The number of splits to return (see ``split_result_of_axis_func_pandas``).
-        kwargs : dict
-            Additional keywords arguments to be passed in `func`.
         maintain_partitioning : bool
             If True, keep the old partitioning if possible.
             If False, create a new partition layout.
         *partitions : iterable
             All partitions that make up the full axis (row or column).
+        **kwargs : dict
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -212,10 +212,10 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         other_shape : np.ndarray
             The shape of right frame in terms of partitions, i.e.
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
-        kwargs : dict
-            Additional keywords arguments to be passed in `func`.
         *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
+        **kwargs : dict
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
