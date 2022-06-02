@@ -29,6 +29,7 @@ Key Features and Updates
   * FIX-#4503: Stop the memory logging thread after session exit (#4515)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
+  * FEAT-#4445: Stop recomputing both indices for axis-wide applies (#4460).
 * Benchmarking enhancements
   * FEAT-#4371: Add logging to Modin (#4372)
 * Refactor Codebase
