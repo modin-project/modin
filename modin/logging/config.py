@@ -27,7 +27,7 @@ import psutil
 import pkg_resources
 import threading
 import time
-from modin.config import LogMemoryInterval, LogMode
+from modin.config import LogMemoryInterval, LogMemorySize, LogMode
 
 __LOGGER_CONFIGURED__: bool = False
 
@@ -100,8 +100,8 @@ def configure_logging():
     logfile = RotatingFileHandler(
         filename=log_filename,
         mode="a",
-        maxBytes=100000000,
-        backupCount=100,
+        maxBytes=LogMemorySize.get() * int(1e5),
+        backupCount=10,
     )
     formatter = ModinFormatter(
         fmt="%(process)d, %(thread)d, %(asctime)s, %(message)s",
