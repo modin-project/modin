@@ -44,7 +44,7 @@ Avoid starting many Modin notebooks or interpreters in quick succession. Wait 2-
 seconds before starting the next one.
 
 Importing heterogeneous data using ``read_csv``
-""""""""""""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""""""""""""
 
 Since Modin's ``read_csv`` imports data in parallel, it is possible for data across
 partitions to be heterogeneously typed (this can happen when columns contain
