@@ -3698,12 +3698,12 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
 
     def __invert__(self):
         """
-        Apply bitwise inversion for each element of the `BasePandasDataset`.
+        Apply bitwise inverse to each element of the `BasePandasDataset`.
 
         Returns
         -------
         BasePandasDataset
-            New BasePandasDataset containing bitwise inversion for each value.
+            New BasePandasDataset containing bitwise inverse to each value.
         """
         if not all(is_numeric_dtype(d) for d in self._get_dtypes()):
             raise TypeError(

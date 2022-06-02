@@ -25,8 +25,8 @@ statement as follows:
 Submodules Description
 ''''''''''''''''''''''
 
-``modin.experimental.core.execution.ray.implementations.pandas_on_ray`` module is used mostly for storing utils and 
-functions for experimental IO class:
+The ``modin.experimental.core.execution.ray.implementations.pandas_on_ray`` module primarily houses utils and 
+functions for the experimental IO class:
 
 * ``io.py`` - submodule containing IO class and parse functions, which are responsible
   for data processing on the workers.

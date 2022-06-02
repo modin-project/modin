@@ -13,8 +13,9 @@ limited to the objects that conform to pandas API. There are formats that are ab
 SQL-like databases (:doc:`OmniSci storage format </flow/modin/experimental/core/storage_formats/omnisci/index>`)
 inside Modin Dataframe's partitions.
 
-The storage format + execution engine (Ray, Dask, etc.) form the execution backend. Converting high-level pandas API calls
-to queries that are understandable by the execution backend is done by the Query Compiler (QC).
+The storage format + execution engine (Ray, Dask, etc.) form the execution backend. 
+The Query Compiler (QC) converts high-level pandas API calls to queries that are understood 
+by the execution backend.
 
 .. _query_compiler_def:
 
