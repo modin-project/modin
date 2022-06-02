@@ -32,7 +32,7 @@ Modin's file splitting mechanism differs depending on the data format type:
 
 * columnar store type - the file is split so that each chunk contains approximately the same number of columns.
 
-* * SQL type - chunking is obtained by wrapping initial SQL query with a query that
+* SQL type - chunking is obtained by wrapping initial SQL query with a query that
   specifies initial row offset and number of rows in the chunk.
 
 After file splitting is complete, chunks data is passed to the parser functions
