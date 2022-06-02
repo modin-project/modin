@@ -20,7 +20,7 @@ from ray.util import get_node_ip_address
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-from modin.core.execution.ray.utils import deserialize
+from modin.core.execution.ray.common.utils import deserialize
 from .partition import PandasOnRayDataframePartition
 
 

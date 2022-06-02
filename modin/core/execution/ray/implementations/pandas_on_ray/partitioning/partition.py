@@ -16,7 +16,7 @@
 import ray
 from ray.util import get_node_ip_address
 import uuid
-from modin.core.execution.ray.utils import deserialize, ObjectIDType
+from modin.core.execution.ray.common.utils import deserialize, ObjectIDType
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
