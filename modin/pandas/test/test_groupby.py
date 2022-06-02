@@ -2003,3 +2003,25 @@ def test_sum_with_level():
     }
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
     eval_general(modin_df, pandas_df, lambda df: df.set_index("C").groupby("C").sum())
+
+
+def test_reset_index_groupby():
+    frame_data = np.random.randint(97, 198, size=(2**6, 2**4))
+    pandas_df = pandas.DataFrame(
+        frame_data,
+        index=pandas.MultiIndex.from_tuples(
+            [(i // 4, i // 2, i) for i in range(2**6)]
+        ),
+    ).add_prefix("col")
+    pandas_df.index.names = [f"index_{i}" for i in range(len(pandas_df.index.names))]
+    # Convert every other column to string
+    for col in pandas_df.iloc[
+        :, [i for i in range(len(pandas_df.columns)) if i % 2 == 0]
+    ]:
+        pandas_df[col] = [str(chr(i)) for i in pandas_df[col]]
+    modin_df = from_pandas(pandas_df)
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.reset_index().groupby(["index_0", "index_1"]).count(),
+    )
