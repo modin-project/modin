@@ -126,7 +126,9 @@ def configure_logging():
 
     if LogMode.get() != "enable_api_only":
         mem_sleep = LogMemoryInterval.get()
-        mem = threading.Thread(target=memory_thread, args=[logger, mem_sleep])
+        mem = threading.Thread(
+            target=memory_thread, args=[logger, mem_sleep], daemon=True
+        )
         mem.start()
 
     __LOGGER_CONFIGURED__ = True

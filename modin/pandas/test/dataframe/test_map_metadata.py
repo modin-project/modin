@@ -1273,18 +1273,27 @@ def test_transpose(data):
         ({"A": [1, 2, 3], "B": [400, 500, 600]}, {"B": [4, np.nan, 6]}),
     ],
 )
-def test_update(data, other_data):
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    other_modin_df, other_pandas_df = (
-        pd.DataFrame(other_data),
-        pandas.DataFrame(other_data),
-    )
-    modin_df.update(other_modin_df)
-    pandas_df.update(other_pandas_df)
-    df_equals(modin_df, pandas_df)
+@pytest.mark.parametrize(
+    "raise_errors", bool_arg_values, ids=arg_keys("raise_errors", bool_arg_keys)
+)
+def test_update(data, other_data, raise_errors):
+    modin_df, pandas_df = create_test_dfs(data)
+    other_modin_df, other_pandas_df = create_test_dfs(other_data)
 
-    with pytest.raises(ValueError):
-        modin_df.update(other_modin_df, errors="raise")
+    if raise_errors:
+        kwargs = {"errors": "raise"}
+    else:
+        kwargs = {}
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.update(other_modin_df)
+        if isinstance(df, pd.DataFrame)
+        else df.update(other_pandas_df),
+        __inplace__=True,
+        **kwargs,
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

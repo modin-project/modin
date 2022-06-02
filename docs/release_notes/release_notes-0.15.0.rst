@@ -16,16 +16,20 @@ Key Features and Updates
   * FIX-#4407: Align `insert` function with pandas in case of numpy array with several columns (#4408)
   * FIX-#4373: Fix invalid file path when trying `read_csv_glob` with `usecols` parameter (#4405)
   * FIX-#4394: Fix issue with multiindex metadata desync (#4395)
+  * FIX-#4438: Fix `reindex` function that doesn't preserve initial index metadata (#4442)
   * FIX-#4425: Add parameters to groupby pct_change (#4429)
   * FIX-#4457: Fix `loc` in case when need reindex item (#4457)
   * FIX-#4414: Add missing f prefix on f-strings found at https://codereview.doctor (#4415)
   * FIX-#4461: Fix S3 CSV data path (#4462)
   * FIX-#4467: `drop_duplicates` no longer removes items based on index values (#4468)
   * FIX-#4449: Drain the call queue before waiting on result in benchmark mode (#4472)
+  * FIX-#4518: Fix Modin Logging to report specific Modin warnings/errors (#4519)
   * FIX-#4481: Allow clipping with a Modin Series of bounds (#4486)  
   * FIX-#4504: Support na_action in applymap (#4505)
+  * FIX-#4503: Stop the memory logging thread after session exit (#4515)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
+  * PERF-#4493: Use partition size caches more in Modin dataframe (#4495)
 * Benchmarking enhancements
   * FEAT-#4371: Add logging to Modin (#4372)
 * Refactor Codebase
@@ -59,6 +63,9 @@ Key Features and Updates
   * FIX-#4383: Remove `pathlib` from deps (#4384)
   * FIX-#4390: Add `redis` to Modin dependencies (#4396)
   * FIX-#3689: Add black and flake8 into development environment files (#4480)
+  * TEST-#4516: Add numpydoc to developer requirements (#4517)
+* New Features
+  * FEAT-#4412: Add Batch Pipeline API to Modin (#4452)
 
 Contributors
 ------------
@@ -76,3 +83,4 @@ Contributors
 @jrsacher
 @orcahmlee
 @naren-ponder
+@RehanSD

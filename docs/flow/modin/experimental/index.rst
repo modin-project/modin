@@ -8,6 +8,7 @@ and provides a limited set of functionality:
 
 * :doc:`xgboost <xgboost>`
 * :doc:`sklearn <sklearn>`
+* :doc:`batch <batch>`
 
 
 .. toctree::
@@ -15,3 +16,4 @@ and provides a limited set of functionality:
 
     sklearn
     xgboost
+    batch
