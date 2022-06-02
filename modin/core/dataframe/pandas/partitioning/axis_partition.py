@@ -157,7 +157,6 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         lengths = kwargs.pop("_lengths", None)
 
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
-
         # To not mix the args for deploy_axis_func and args for func, we fold
         # args into kwargs. This is a bit of a hack, but it works.
         result = func(dataframe, *kwargs.pop("args", ()), **kwargs)
