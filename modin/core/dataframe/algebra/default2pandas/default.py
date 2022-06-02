@@ -78,6 +78,7 @@ class DefaultMethod(Operator):
             """
             df = cls.frame_wrapper(df)
             result = fn(df, *args, **kwargs)
+
             if (
                 not isinstance(result, pandas.Series)
                 and not isinstance(result, pandas.DataFrame)
