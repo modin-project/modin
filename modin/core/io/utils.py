@@ -17,34 +17,33 @@ import os
 import pathlib
 import re
 from typing import Optional, Union
+import fsspec
 
 S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
 
 
-def is_local_path(path_or_buf) -> bool:
+def is_local_path(path) -> bool:
     """
-    Return ``True`` if the specified `path_or_buf` is a local path, ``False`` otherwise.
+    Return ``True`` if the specified `path` is a local path, ``False`` otherwise.
 
     Parameters
     ----------
-    path_or_buf : str, path object or file-like object
-        The path or buffer to check.
+    path : str, path object or file-like object
+        The path to check.
 
     Returns
     -------
-    Whether the `path_or_buf` points to a local file.
+    Whether the `path` points to a local file.
     """
-    if isinstance(path_or_buf, str):
-        if S3_ADDRESS_REGEX.match(path_or_buf) is not None or "://" in path_or_buf:
-            return False  # S3 or network path.
-    if isinstance(path_or_buf, (str, pathlib.PurePath)):
-        if os.path.exists(path_or_buf):
-            return True
+    try:
+        fsspec.open_local(
+            "/".join(path.split("/")[:-1])
+        )  # Remove file name since that may not exist
         local_device_id = os.stat(os.getcwd()).st_dev
-        path_device_id = get_device_id(path_or_buf)
-        if path_device_id == local_device_id:
-            return True
-    return False
+        path_device_id = get_device_id(path)
+        return path_device_id == local_device_id
+    except Exception:
+        return False
 
 
 def get_device_id(path: Union[str, pathlib.PurePath]) -> Optional[int]:

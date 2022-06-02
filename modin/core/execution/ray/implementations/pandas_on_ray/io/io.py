@@ -166,10 +166,17 @@ class PandasOnRayIO(RayIO):
         if not cls._to_csv_check_support(kwargs):
             return RayIO.to_csv(qc, **kwargs)
 
-        if len(ray.nodes()) > 1 and is_local_path(kwargs["path_or_buf"]):
-            raise ValueError(
-                "`path_or_buf` must point to a networked file or buffer when in cluster mode."
+        if len(ray.nodes()) > 1 and (
+            not isinstance(kwargs["path_or_buf"], str)
+            or is_local_path(kwargs["path_or_buf"])
+        ):
+            from modin.error_message import ErrorMessage
+
+            ErrorMessage.single_warning(
+                "`path_or_buf` must point to a networked file or distributed filesystem (e.g. S3) "
+                + "when in cluster mode. Defaulting to pandas for `to_csv`"
             )
+            return RayIO.to_csv(qc, **kwargs)
 
         signals = SignalActor.remote(len(qc._modin_frame._partitions) + 1)
 
@@ -283,10 +290,17 @@ class PandasOnRayIO(RayIO):
         if not cls._to_parquet_check_support(kwargs):
             return RayIO.to_parquet(qc, **kwargs)
 
-        if len(ray.nodes()) > 1 and is_local_path(kwargs["path_or_buf"]):
-            raise ValueError(
-                "`path_or_buf` must point to a networked file or buffer when in cluster mode."
+        if len(ray.nodes()) > 1 and (
+            not isinstance(kwargs["path_or_buf"], str)
+            or is_local_path(kwargs["path_or_buf"])
+        ):
+            from modin.error_message import ErrorMessage
+
+            ErrorMessage.single_warning(
+                "`path_or_buf` must point to a networked file or distributed filesystem (e.g. S3) "
+                + "when in cluster mode. Defaulting to pandas for `to_parquet`"
             )
+            return RayIO.to_parquet(qc, **kwargs)
 
         def func(df, **kw):
             """
