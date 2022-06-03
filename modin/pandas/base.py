@@ -14,33 +14,34 @@
 """
 Implement DataFrame/Series public API as pandas does.
 
-Methods docstrings contain tables with information on supported parameters.
-These tables are structed as follows: The first column contains the parameter name,
-the second, third and fourth column - flags describing particular properties of
-method parameters for a concrete execution supported by Modin (`PandasOnRay`, `PandasOnDask`
-or `OmniSci`), and the last one is for parameter notes. The flags stand for the following:
+Method docstrings contain tables with information on supported parameters.
+These tables are structured as follows: The first column contains the parameter name,
+the second, third and fourth column contain flags describing particular properties of
+method parameters - each column corresponding to a concrete execution supported by Modin
+(`PandasOnRay`, `PandasOnDask` or `OmniSci`), and the last column contains parameter notes.
+The flags are defined as follows:
 
 +-----------+-----------------------------------------------------------------------------------------------+
 | Flag      | Meaning                                                                                       |
 +===========+===============================================================================================+
-| Harmful   | Usage of this parameter can be harmful for performance of your application. This usually      |
-|           | happens when parameter (full range of values and all types) is not supported and Modin        |
-|           | is defaulting to pandas (see more on defaulting to pandas mechanism on                        |
+| Harmful   | Usage of this parameter can be harmful to performance of your application. This usually       |
+|           | happens when a parameter (full range of values and all types) is not supported and Modin      |
+|           | defaults to pandas (see more on defaulting to pandas at                                       |
 |           | https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html)              |
 +-----------+-----------------------------------------------------------------------------------------------+
 | Non-lazy  | Usage of this parameter can trigger non-lazy execution (applicable to OmniSci execution only) |
 +-----------+-----------------------------------------------------------------------------------------------+
-| Partial   | Parameter can be partly unsupported, it's usage can be harmful for performance of your        |
+| Partial   | Parameter is partially unsupported - it's usage can be harmful to performance of your         |
 |           | application. This can happen if some parameter values or types are not supported (for         |
-|           | example, boolean values are supported while integer are not) and Modin is defaulting to       |
-|           | pandas (see more on defaulting to pandas mechanism on                                         |
+|           | example, boolean values are supported while integer values are not) so Modin may default to   |
+|           | pandas (see more on defaulting to pandas at                                                   |
 |           | https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html)              |
 +-----------+-----------------------------------------------------------------------------------------------+
 
-Also, the first row (`All parameters` parameter name) shows summary support status for the
-whole method and only further rows describe exact parameters support status. Please note,
-that the tables only list unsupported/partially supported parameters. If a parameter is supported,
-it won't be present or marked somehow in the table.
+The first row (`All parameters` parameter name) shows a summary of support for the whole
+method while further rows break down support status by parameter. Please note, that the
+tables only list unsupported/partially supported parameters. If a parameter is supported,
+it won't be present in the table.
 """
 
 import numpy as np
@@ -3345,8 +3346,9 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        | **Ray**                          |
-        |                 |                 |                | Non-lazy       | Experimental implementation:     |
-        |                 |                 |                |                | to_pickle_distributed            |
+        |                 |                 |                | Non-lazy       | `to_pickle_distributed` is an    |
+        |                 |                 |                |                | experimental distributed         |
+        |                 |                 |                |                | implementation.                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         from modin.pandas.io import to_pickle
