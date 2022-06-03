@@ -55,8 +55,9 @@ def is_local_path(path) -> bool:
             if os.name == "nt" and parent_dir[:3] == "D:\\":
                 # In Windows, os.path.abspath(os.sep) will give us the C Drive, but we want the
                 # D drive to also be marked as local.
-                return True
-            local_device_id = os.stat(os.path.abspath(os.sep)).st_dev
+                local_device_id = os.stat("D:\\")
+            else:
+                local_device_id = os.stat(os.path.abspath(os.sep)).st_dev
             path_device_id = os.stat(parent_dir).st_dev
             return path_device_id == local_device_id
         return False
