@@ -14,12 +14,10 @@
 """Collection of utility functions for distributed io."""
 
 import os
-import pathlib
 import re
-from typing import Optional, Union
 import fsspec
 
-S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
+IS_FILE_ONLY_REGEX = re.compile("[^\/]*\.\w+")  # noqa: W605
 
 
 def is_local_path(path) -> bool:
@@ -34,41 +32,32 @@ def is_local_path(path) -> bool:
     Returns
     -------
     Whether the `path` points to a local file.
+
+    Notes
+    -----
+    If the filesystem corresponds to a `ZipFileSystem`, `TarFileSystem` or `CachingFileSystem`,
+    this code will return `False` even if it is local.
     """
     try:
-        fsspec.open_local(
-            "/".join(path.split("/")[:-1])
-        )  # Remove file name since that may not exist
-        local_device_id = os.stat(os.getcwd()).st_dev
-        path_device_id = get_device_id(path)
-        return path_device_id == local_device_id
-    except Exception:
+        if IS_FILE_ONLY_REGEX.match(path) is not None:
+            # If we are passed just a filename, we will perform our check on the current working
+            # directory.
+            parent_dir = os.getcwd()
+        else:
+            # If we are passed a full path, we want to remove the filename from it.
+            parent_dir = "/".join(path.split("/")[:-1])
+        fs = fsspec.core.url_to_fs(parent_dir)[0]  # Grab just the FileSystem object
+        if hasattr(
+            fs, "local_file"
+        ):  # If the FS does not have the `local_file` attr, it is not local.
+            # We still need to check that it is not a mounted file - as fsspec treats mounted
+            # files the same as local ones, but we want to distinguish between local and mounted.
+            local_device_id = os.stat(os.path.abspath(os.sep)).st_dev
+            path_device_id = os.stat(parent_dir).st_dev
+            return path_device_id == local_device_id
         return False
-
-
-def get_device_id(path: Union[str, pathlib.PurePath]) -> Optional[int]:
-    """
-    Return the result of `os.stat(path).st_dev` for the portion of `path` that exists locally.
-
-    Parameters
-    ----------
-    path : str, path object
-        The path to check.
-
-    Returns
-    -------
-    The `st_dev` field of `os.stat` of the portion of the `path` that exists locally, None if no
-    part of the path exists locally.
-    """
-    index = 1
-    path_list = list(pathlib.Path(path).parts)
-    if path_list[0] == "/":
-        index += 1
-    try:
-        os.stat(os.path.join(*path_list[:index]))
     except Exception:
-        return None
-    while os.path.exists(os.path.join(*path_list[:index])) and index <= len(path_list):
-        index += 1
-    index -= 1
-    return os.stat(os.path.join(*path_list[:index])).st_dev
+        # If an exception is raised, it means we tried to open a filesystem that requires additional
+        # dependencies. This means that it is definitely not a local filesystem, so we can return
+        # `False` here.
+        return False
