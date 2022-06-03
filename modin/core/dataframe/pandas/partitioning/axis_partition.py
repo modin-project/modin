@@ -231,5 +231,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             for i in range(1, len(other_shape))
         ]
         rt_frame = pandas.concat(combined_axis, axis=axis ^ 1, copy=False)
+        # To not mix the args for deploy_func_between_two_axis_partitions and args
+        # for func, we fold args into kwargs. This is a bit of a hack, but it works.
         result = func(lt_frame, rt_frame, *kwargs.pop("args", ()), **kwargs)
         return split_result_of_axis_func_pandas(axis, num_splits, result)
