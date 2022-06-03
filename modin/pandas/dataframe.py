@@ -415,7 +415,6 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
             )
         else:
             squeeze = False
-
         axis = self._get_axis_number(axis)
         idx_name = None
         # Drop here indicates whether or not to drop the data column before doing the
@@ -448,6 +447,14 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
             idx_name = by.name
             by = by._query_compiler
         elif is_list_like(by):
+            for k in by:
+                if k in self.index.names and k in self.axes[axis]:
+                    level_name, index_name = "an index", "a column"
+                    if axis == 1:
+                        level_name, index_name = index_name, level_name
+                    raise ValueError(
+                        f"{k} is both {level_name} level and {index_name} label, which is ambiguous."
+                    )
             # fastpath for multi column groupby
             if axis == 0 and all(
                 (
