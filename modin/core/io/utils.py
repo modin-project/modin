@@ -17,7 +17,7 @@ import os
 import re
 import fsspec
 
-IS_FILE_ONLY_REGEX = re.compile("[^\/]*\.\w+")  # noqa: W605
+IS_FILE_ONLY_REGEX = re.compile(f"[^\\{os.sep}]*\.\w+")  # noqa: W605
 
 
 def is_local_path(path) -> bool:
@@ -45,13 +45,17 @@ def is_local_path(path) -> bool:
             parent_dir = os.getcwd()
         else:
             # If we are passed a full path, we want to remove the filename from it.
-            parent_dir = "/".join(path.split("/")[:-1])
+            parent_dir = os.sep.join(path.split(os.sep)[:-1])
         fs = fsspec.core.url_to_fs(parent_dir)[0]  # Grab just the FileSystem object
         if hasattr(
             fs, "local_file"
         ):  # If the FS does not have the `local_file` attr, it is not local.
             # We still need to check that it is not a mounted file - as fsspec treats mounted
             # files the same as local ones, but we want to distinguish between local and mounted.
+            if os.name == "nt" and parent_dir[:3] == "D:\\":
+                # In Windows, os.path.abspath(os.sep) will give us the C Drive, but we want the
+                # D drive to also be marked as local.
+                return True
             local_device_id = os.stat(os.path.abspath(os.sep)).st_dev
             path_device_id = os.stat(parent_dir).st_dev
             return path_device_id == local_device_id

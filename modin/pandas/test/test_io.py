@@ -2393,7 +2393,11 @@ def test_is_local_path():
     assert is_local_path(
         os.getcwd()
     ), "Current Working Directory incorrectly flagged as not local!"
-    new_file = os.getcwd() + "/modin-example-file"
+    new_file = os.getcwd() + "/modin-example-file.extension"
     assert is_local_path(
         new_file
     ), "Non-existent file under current working directory incorrectly flagged as not local!"
+    new_file_in_curr_dir = "modin-example-file.extension"
+    assert is_local_path(
+        new_file_in_curr_dir,
+    ), "Non-existent file without absolute path incorrectly flagged as not local!"
