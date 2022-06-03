@@ -6,11 +6,11 @@ IO Module Description
 Dispatcher Classes Workflow Overview
 ''''''''''''''''''''''''''''''''''''
 
-Call from ``read_*`` function of execution-specific IO class (for example, ``PandasOnRayIO`` for
+Calls from ``read_*`` functions of execution-specific IO classes (for example, ``PandasOnRayIO`` for
 Ray engine and pandas storage format) are forwarded to the ``_read`` function of the file
 format-specific class (for example ``CSVDispatcher`` for CSV files), where function parameters are
-preprocessed to check if they are supported (defaulting to pandas if not
-is used) and common metadata is computed for all partitions. The file is then split
+preprocessed to check if they are supported (defaulting to pandas if not)
+and common metadata is computed for all partitions. The file is then split
 into chunks (splitting mechanism described below) and the data is used to launch tasks
 on the remote workers. After the remote tasks finish, additional
 postprocessing is performed on the results, and a new query compiler with the imported data will

@@ -113,7 +113,7 @@ and triggering execution on the
 :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe.OmnisciOnNativeDataframe`.
 
 When the :py:class:`~modin.experimental.core.execution.native.implementations.omnisci_on_native.dataframe.dataframe.OmnisciOnNativeDataframe`
-receives a query it determines whether the operation requires data materialization
+receives a query, it determines whether the operation requires data materialization
 or whether it can be performed lazily. The operation is then either appended to a
 lazy computation tree or executed immediately.
 

@@ -9,7 +9,7 @@ classes with pandas storage format, that contains methods common for all child c
 module classes implement ``parse`` function that performs parsing of specific format data
 basing on the chunk information computed in the ``modin.core.io`` module. After
 the chunk is parsed, the resulting ``DataFrame``-s will be split into smaller
-``DataFrame``-s according to the ``num_splits`` parameter, data type or(?) number of
+``DataFrame``-s according to the ``num_splits`` parameter, data type, or number of
 rows/columns in the parsed chunk. These frames, along with some additional metadata, are then returned.
 
 .. note:: 
