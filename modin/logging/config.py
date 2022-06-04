@@ -100,7 +100,7 @@ def configure_logging():
     logfile = RotatingFileHandler(
         filename=log_filename,
         mode="a",
-        maxBytes=LogMemorySize.get() * int(1e5),
+        maxBytes=int(1e7),
         backupCount=10,
     )
     formatter = ModinFormatter(
@@ -120,23 +120,56 @@ def configure_logging():
     pandas_version = pkg_resources.get_distribution("pandas").version
     num_physical_cores = str(psutil.cpu_count(logical=False))
     num_total_cores = str(psutil.cpu_count(logical=True))
-    svmem = psutil.virtual_memory()
     logger.info(f"Modin Version: {modin_version}")
     logger.info(f"Pandas Version: {pandas_version}")
     logger.info(f"Physical Cores: {num_physical_cores}")
     logger.info(f"Total Cores: {num_total_cores}")
-    logger.info(f"Memory Total: {bytes_int_to_str(svmem.total)}")
-    logger.info(f"Memory Available: {bytes_int_to_str(svmem.available)}")
-    logger.info(f"Memory Used: {bytes_int_to_str(svmem.used)}")
 
     if LogMode.get() != "enable_api_only":
         mem_sleep = LogMemoryInterval.get()
+        mem_logger = configure_memory_logging(job_id, formatter)
         mem = threading.Thread(
-            target=memory_thread, args=[logger, mem_sleep], daemon=True
+            target=memory_thread, args=[mem_logger, mem_sleep], daemon=True
         )
         mem.start()
 
     __LOGGER_CONFIGURED__ = True
+
+
+def configure_memory_logging(job_id, formatter):
+    """
+    Configure Modin memory logger.
+
+    Parameters
+    ----------
+    job_id : str
+        A hex string that is the Modin job ID.
+    formatter: ModinFormatter
+        ModinFormatter to log at microsecond timestamp granularity.
+
+    Returns
+    -------
+    logging.Logger
+        The Modin memory logger.
+    """
+    mem_logger = logging.getLogger("modin_memory.logger")
+    mem_log_filename = f".modin/logs/memory_{job_id}.log"
+    logfile = RotatingFileHandler(
+        filename=mem_log_filename,
+        mode="a",
+        maxBytes=LogMemorySize.get() * int(1e5),
+        backupCount=10,
+    )
+    logfile.setFormatter(formatter)
+    mem_logger.addHandler(logfile)
+    mem_logger.setLevel(logging.DEBUG)
+
+    svmem = psutil.virtual_memory()
+    mem_logger.info(f"Memory Total: {bytes_int_to_str(svmem.total)}")
+    mem_logger.info(f"Memory Available: {bytes_int_to_str(svmem.available)}")
+    mem_logger.info(f"Memory Used: {bytes_int_to_str(svmem.used)}")
+
+    return mem_logger
 
 
 def memory_thread(logger, sleep_time):
