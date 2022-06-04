@@ -3,8 +3,8 @@ Modin Logging
 
 Modin logging offers users greater insight into their queries by logging internal Modin API calls, partition metadata, 
 and profiling system memory. When Modin logging is enabled (default disabled), log files are written to a local `.modin` directory at the same
-directory level as the notebook/script used to run Modin. It is possible to configure whether to log Modin API calls only or whether to log
-system memory and additional metadata (see the usage examples below).
+directory level as the notebook/script used to run Modin. It is possible to configure whether to log system memory and additional metadata 
+in addition to Modin API calls (see the usage examples below).
 
 The logs that contain the Modin API stack traces are named `job_<job_uuid>.log`. The logs that contain the memory utilization metrics are 
 named `memory_<job_uuid>.log`. If any log file exceeds 10MB, the logger will append an integer to the log name. For instance if you have 
