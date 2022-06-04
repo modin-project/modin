@@ -144,8 +144,8 @@ def configure_memory_logging(job_id, formatter):
     ----------
     job_id : str
         A hex string that is the Modin job ID.
-    formatter: ModinFormatter
-        ModinFormatter to log at microsecond timestamp granularity.
+    formatter : ModinFormatter
+        Log at microsecond timestamp granularity.
 
     Returns
     -------
