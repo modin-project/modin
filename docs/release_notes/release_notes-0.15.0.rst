@@ -27,6 +27,7 @@ Key Features and Updates
   * FIX-#4481: Allow clipping with a Modin Series of bounds (#4486)  
   * FIX-#4504: Support na_action in applymap (#4505)
   * FIX-#4503: Stop the memory logging thread after session exit (#4515)
+  * FIX-#4478: Support level param in query and eval (#4529)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
   * PERF-#4493: Use partition size caches more in Modin dataframe (#4495)

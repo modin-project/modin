@@ -795,25 +795,40 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
             and self.eq(other).all().all()
         )
 
-    def _update_var_dicts_in_kwargs(self, expr, kwargs):
+    def _update_var_dicts_in_kwargs(self, expr, level: int, kwargs):
         """
         Copy variables with "@" prefix in `local_dict` and `global_dict` keys of kwargs.
+
+        This function exists because we neeed to infer local and variables
+        ourselves here in the main node instead of having the remote functions
+        infer them on their own. The remote functions take place in a different
+        thread with their own stacks that normally do not match the stack that
+        leads to the Modin eval or query call.
 
         Parameters
         ----------
         expr : str
             The expression string to search variables with "@" prefix.
+        level : int
+            The number of prior stack frames back to look for local variables.
+            level=0 means look just one frame back.
         kwargs : dict
             See the documentation for eval() for complete details on the keyword arguments accepted by query().
         """
         if "@" not in expr:
             return
-        frame = sys._getframe()
-        try:
-            f_locals = frame.f_back.f_back.f_back.f_back.f_locals
-            f_globals = frame.f_back.f_back.f_back.f_back.f_globals
-        finally:
-            del frame
+
+        # Bump level up one because this function is wrapped in the Modin
+        # logging function wrapper. The alternative is for the wrapper to
+        # give the Modin functions that deal with `level` the special
+        # treatment of bumping `level` up by one, but that's not so nice
+        # either.
+        level += 1
+
+        frame = sys._getframe(level + 1)
+        f_locals = frame.f_locals
+        f_globals = frame.f_globals
+        del frame
         local_names = set(re.findall(r"@([\w]+)", expr))
         local_dict = {}
         global_dict = {}
@@ -836,14 +851,27 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         """
         Evaluate a string describing operations on ``DataFrame`` columns.
         """
+        # Remove `level` from the kwargs if it's already there. "level" doesn't
+        # make sense within the remote execution context, where the remote
+        # functions have a stack which is different from the stack on the
+        # driver node that ends in the modin eval call.
+        level = kwargs.pop("level", 0)
+
+        # Bump level up one because this function is wrapped in the Modin
+        # logging function wrapper. The alternative is for the wrapper to
+        # give the Modin functions that deal with `level` the special
+        # treatment of bumping `level` up by one, but that's not so nice
+        # either.
+        level += 1
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
-        self._update_var_dicts_in_kwargs(expr, kwargs)
+        self._update_var_dicts_in_kwargs(expr, level + 1, kwargs)
+        # Make sure to not pass level to query compiler
         new_query_compiler = self._query_compiler.eval(expr, **kwargs)
         return_type = type(
             pandas.DataFrame(columns=self.columns)
             .astype(self.dtypes)
-            .eval(expr, **kwargs)
+            .eval(expr, level=level + 1, **kwargs)
         ).__name__
         if return_type == type(self).__name__:
             return self._create_or_update_from_compiler(new_query_compiler, inplace)
@@ -1692,9 +1720,22 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         """
         Query the columns of a ``DataFrame`` with a boolean expression.
         """
-        self._update_var_dicts_in_kwargs(expr, kwargs)
+        # Remove `level` from the kwargs if it's already there. "level" doesn't
+        # make sense within the remote execution context, where the remote
+        # functions have a stack which is different from the stack on the
+        # driver node that ends in the modin eval call.
+        level = kwargs.pop("level", 0)
+
+        # Bump level up one because this function is wrapped in the Modin
+        # logging function wrapper. The alternative is for the wrapper to
+        # give the Modin functions that deal with `level` the special
+        # treatment of bumping `level` up by one, but that's not so nice
+        # eitiher.
+        level += 1
+        self._update_var_dicts_in_kwargs(expr, level + 1, kwargs)
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
+        # Make sure to not pass level to query compiler.
         new_query_compiler = self._query_compiler.query(expr, **kwargs)
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
