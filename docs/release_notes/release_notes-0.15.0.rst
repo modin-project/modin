@@ -38,6 +38,7 @@ Key Features and Updates
   * REFACTOR-#3642: Move PyArrow storage format usage from main feature to experimental ones (#4374)
   * REFACTOR-#4003: Delete the deprecated cloud mortgage example (#4406)
   * REFACTOR-#4513: Fix spelling mistakes in docs and docstrings (#4514)
+  * REFACTOR-#4510: Align experimental and regular IO modules initializations (#4511)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
