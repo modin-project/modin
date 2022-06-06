@@ -48,9 +48,10 @@ Internal functions :py:func:`~modin.experimental.xgboost.xgboost_ray._train` and
 Training
 ********
 
-1. The data is passed to :py:func:`~modin.experimental.xgboost.xgboost_ray._train`
-   function as a :py:class:`~modin.experimental.xgboost.DMatrix` object. Using an iterator of
-   :py:class:`~modin.experimental.xgboost.DMatrix`, lists of ``ray.ObjectRef`` with row partitions of Modin DataFrame are exctracted. Example:
+1. The data is passed to the :py:func:`~modin.experimental.xgboost.xgboost_ray._train`
+   function as a :py:class:`~modin.experimental.xgboost.DMatrix` object. Lists of ``ray.ObjectRef``
+   corresponding to row partitions of Modin DataFrames are extracted by iterating over the 
+   :py:class:`~modin.experimental.xgboost.DMatrix`. Example:
 
    .. code-block:: python
 

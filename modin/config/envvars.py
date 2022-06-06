@@ -450,7 +450,7 @@ class LogMemorySize(EnvironmentVariable, type=int):
 
 
 class PersistentPickle(EnvironmentVariable, type=bool):
-    """Wheather serialization should be persistent."""
+    """Whether serialization should be persistent."""
 
     varname = "MODIN_PERSISTENT_PICKLE"
     # When set to off, it allows faster serialization which is only

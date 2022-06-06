@@ -6,34 +6,33 @@ IO Module Description
 Dispatcher Classes Workflow Overview
 ''''''''''''''''''''''''''''''''''''
 
-Call from ``read_*`` function of execution-specific IO class (for example, ``PandasOnRayIO`` for
-Ray engine and pandas storage format) is forwarded to the ``_read`` function of file
+Calls from ``read_*`` functions of execution-specific IO classes (for example, ``PandasOnRayIO`` for
+Ray engine and pandas storage format) are forwarded to the ``_read`` function of the file
 format-specific class (for example ``CSVDispatcher`` for CSV files), where function parameters are
-preprocessed to check if they are supported (otherwise default pandas implementation
-is used) and compute some metadata common for all partitions. Then file is splitted
-into chunks (mechanism of splitting is described below) and using this data, tasks
-are launched on the remote workers. After remote tasks are finished, additional
-results postprocessing is performed, and new query compiler with imported data will
+preprocessed to check if they are supported (defaulting to pandas if not)
+and common metadata is computed for all partitions. The file is then split
+into chunks (splitting mechanism described below) and the data is used to launch tasks
+on the remote workers. After the remote tasks finish, additional
+postprocessing is performed on the results, and a new query compiler with the imported data will
 be returned.
 
 Data File Splitting Mechanism
 '''''''''''''''''''''''''''''
 
-Modin file splitting mechanism differs depending on the data format type:
+Modin's file splitting mechanism differs depending on the data format type:
 
-* text format type - file is splitted into bytes according user specified needs.
+* text format type - the file is split into bytes according to user specified arguments(?).
   In the simplest case, when no row related parameters (such as ``nrows`` or
-  ``skiprows``) are passed, data chunks limits (start and end bytes) are derived
-  by just roughly dividing the file size by the number of partitions (chunks can
+  ``skiprows``) are passed, data chunk limits (start and end bytes) are derived
+  by dividing the file size by the number of partitions (chunks can
   slightly differ between each other because usually end byte may occurs inside a
   line and in that case the last byte of the line should be used instead of initial
-  value). In other cases the same splitting into bytes is used, but chunks sizes are
+  value). In other cases the same splitting mechanism is used, but chunks sizes are
   defined according to the number of lines that each partition should contain.
 
-* columnar store type - file is splitted by even distribution of columns that should
-  be read between chunks.
+* columnar store type - the file is split so that each chunk contains approximately the same number of columns.
 
-* SQL type - chunking is obtained by wrapping initial SQL query into query that
+* SQL type - chunking is obtained by wrapping initial SQL query with a query that
   specifies initial row offset and number of rows in the chunk.
 
 After file splitting is complete, chunks data is passed to the parser functions
@@ -121,10 +120,10 @@ of ``header`` and ``skiprows`` parameters:
   df = pandas.read_csv(StringIO(data), skiprows=[2, 3, 4], header=2)
 
 In the examples above list-like ``skiprows`` values are fixed and ``header`` is varied. In the first
-example with no ``header`` provided, rows 2, 3, 4 are skipped and row 0 is considered as a header.
-In the second example ``header == 1``, so 0th row is skipped and the next available row is
-considered as a header. The third example shows the case when ``header`` and ``skiprows`` parameters
-values are intersected - in this case skipped rows are dropped first and only then ``header`` is got
+example with no ``header`` provided, rows 2, 3, 4 are skipped and row 0 is considered as the header.
+In the second example ``header == 1``, so the zeroth row is skipped and the next available row is
+considered the header. The third example illustrates when the ``header`` and ``skiprows`` parameters
+values are both present - in this case ``skiprows`` rows are dropped first and then the ``header`` is derived
 from the remaining rows (rows before header are skipped too).
 
 In the examples above only list-like ``skiprows`` and integer ``header`` parameters are considered,
