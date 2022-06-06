@@ -29,8 +29,6 @@ The flags are defined as follows:
 |           | defaults to pandas (see more on defaulting to pandas at                                       |
 |           | https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html)              |
 +-----------+-----------------------------------------------------------------------------------------------+
-| Non-lazy  | Usage of this parameter can trigger non-lazy execution (applicable to OmniSci execution only) |
-+-----------+-----------------------------------------------------------------------------------------------+
 | Partial   | Parameter is partially unsupported - it's usage can be harmful to performance of your         |
 |           | application. This can happen if some parameter values or types are not supported (for         |
 |           | example, boolean values are supported while integer values are not) so Modin may default to   |
@@ -162,30 +160,30 @@ def read_csv(
     | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=========================+=================+================+================+==================================+
     | All parameters          | Partial         | Partial        | Partial        | **Ray**:                         |
-    |                         |                 |                | Non-lazy       | See also experimental            |
+    |                         |                 |                |                | See also experimental            |
     |                         |                 |                |                | implementation that can read     |
     |                         |                 |                |                | multiple data files using a file |
     |                         |                 |                |                | pattern: read_csv_glob           |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | filepath_or_buffer      |                 |                | Partial        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | Some buffer formats can be       |
+    |                         |                 |                |                | Some buffer formats can be       |
     |                         |                 |                |                | unsupported                      |
     |                         |                 |                |                | **OmniSci**:                     |
     |                         |                 |                |                | Only local non-buffered files    |
     |                         |                 |                |                | are supported                    |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | header                  |                 |                | Partial        | **OmniSci**:                     |
-    |                         |                 |                | Non-lazy       | If `names` is defined, `header`  |
+    |                         |                 |                |                | If `names` is defined, `header`  |
     |                         |                 |                |                | can be only 0, None or "infer"   |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | names                   |                 |                | Partial        | **OmniSci**:                     |
-    |                         |                 |                | Non-lazy       | Parameter is unsupported if      |
+    |                         |                 |                |                | Parameter is unsupported if      |
     |                         |                 |                |                | the number of provided names     |
     |                         |                 |                |                | doesn't correpond to the actual  |
     |                         |                 |                |                | number of columns                |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | skiprows                | Partial         | Partial        | Partial        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | Parameter is unsupported         |
+    |                         |                 |                |                | Parameter is unsupported         |
     |                         |                 |                |                | if `skiprows` and `header`       |
     |                         |                 |                |                | values have intersections        |
     |                         |                 |                |                | **OmniSci**:                     |
@@ -193,23 +191,23 @@ def read_csv(
     |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | skip_blank_lines        |                 |                | Partial        | **OmniSci**:                     |
-    |                         |                 |                | Non-lazy       | Must be True if specified        |
+    |                         |                 |                |                | Must be True if specified        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | parse_dates             |                 |                | Partial        | **OmniSci**:                     |
-    |                         |                 |                | Non-lazy       | Only bool and flattened list of  |
+    |                         |                 |                |                | Only bool and flattened list of  |
     |                         |                 |                |                | string column names are          |
     |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | chunksize               | Harmful         | Harmful        | Harmful        |                                  |
-    |                         |                 |                | Non-lazy       |                                  |
+    |                         |                 |                |                |                                  |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
-    | compression             |                 |                | Non-lazy       | **OmniSci**:                     |
+    | compression             |                 |                |                | **OmniSci**:                     |
     |                         |                 |                |                | `compression` is inferred        |
     |                         |                 |                |                | automatically and shouldn't be   |
     |                         |                 |                |                | specified                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | index_col               |                 |                | Harmful        | This parameter and the ones that |
-    | squeeze                 |                 |                | Non-lazy       | follow are not supported by      |
+    | squeeze                 |                 |                |                | follow are not supported by      |
     | prefix                  |                 |                |                | OmniSci execution                |
     | mangle_dupe_cols        |                 |                |                |                                  |
     | converters              |                 |                |                |                                  |
@@ -318,19 +316,18 @@ def read_table(
     | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=========================+=================+================+================+==================================+
     | All parameters          | Partial         | Partial        | Harmful        | OmniSci execution is not         |
-    |                         |                 |                | Non-lazy       | supported                        |
+    |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | filepath_or_buffer      |                 |                | Partial        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | Some buffer formats can be       |
+    |                         |                 |                |                | Some buffer formats can be       |
     |                         |                 |                |                | unsupported                      |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | skiprows                | Partial         | Partial        | Partial        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | Parameter is unsupported only    |
+    |                         |                 |                |                | Parameter is unsupported only    |
     |                         |                 |                |                | if `skiprows` and `header`       |
     |                         |                 |                |                | values have intersections        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | chunksize               | Harmful         | Harmful        | Harmful        |                                  |
-    |                         |                 |                | Non-lazy       |                                  |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     """
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
@@ -363,7 +360,7 @@ def read_parquet(
     | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=========================+=================+================+================+==================================+
     | All parameters          |                 |                | Harmful        | OmniSci execution is not         |
-    |                         |                 |                | Non-lazy       | supported                        |
+    |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     """
     Engine.subscribe(_update_engine)
@@ -411,14 +408,14 @@ def read_json(
     | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=========================+=================+================+================+==================================+
     | All parameters          | Partial         | Partial        | Harmful        | OmniSci execution is not         |
-    |                         |                 |                | Non-lazy       | supported                        |
+    |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | path_or_buf             | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | String parameters and some       |
+    |                         |                 |                |                | String parameters and some       |
     |                         |                 |                |                | buffer formats are not supported |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | lines                   | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | Must be True if specified        |
+    |                         |                 |                |                | Must be True if specified        |
     |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     """
@@ -456,7 +453,6 @@ def read_gbq(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -496,7 +492,6 @@ def read_html(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -519,7 +514,6 @@ def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover  # noqa: PR01, RT0
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -571,19 +565,19 @@ def read_excel(
     | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=========================+=================+================+================+==================================+
     | All parameters          | Partial         | Partial        | Harmful        | OmniSci execution is not         |
-    |                         |                 |                | Non-lazy       | supported                        |
+    |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | io                      | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | Only newer Excel file formats    |
+    |                         |                 |                |                | Only newer Excel file formats    |
     |                         |                 |                |                | are supported                    |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | sheet_name              | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | Only single sheets imports are   |
+    |                         |                 |                |                | Only single sheets imports are   |
     |                         |                 |                |                | supported (str and int parameter |
     |                         |                 |                |                | values)                          |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | engine                  | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | Only "openpyxl" engine is        |
+    |                         |                 |                |                | Only "openpyxl" engine is        |
     |                         |                 |                |                | supported (None and "openpyxl"   |
     |                         |                 |                |                | parameter values)                |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
@@ -627,7 +621,6 @@ def read_hdf(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -656,10 +649,10 @@ def read_feather(
     | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=========================+=================+================+================+==================================+
     | All parameters          | Partial         | Partial        | Harmful        | OmniSci execution is not         |
-    |                         |                 |                | Non-lazy       | supported                        |
+    |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | path                    | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | Buffers are not supported        |
+    |                         |                 |                |                | Buffers are not supported        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -695,7 +688,6 @@ def read_stata(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -725,7 +717,6 @@ def read_sas(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -752,7 +743,7 @@ def read_pickle(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        | **Ray**:                         |
-    |                 |                 |                | Non-lazy       | read_pickle_distributed is an    |
+    |                 |                 |                |                | read_pickle_distributed is an    |
     |                 |                 |                |                | experimental, distributed        |
     |                 |                 |                |                | implementation                   |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
@@ -786,10 +777,10 @@ def read_sql(
     | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=========================+=================+================+================+==================================+
     | All parameters          |                 |                | Harmful        | OmniSci execution is not         |
-    |                         |                 |                | Non-lazy       | supported                        |
+    |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | con                     |                 |                | Harmful        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | Please use                       |
+    |                         |                 |                |                | Please use                       |
     |                         |                 |                |                | `ModinDatabaseConnection`        |
     |                         |                 |                |                | instead of sqlalchemy            |
     |                         |                 |                |                | connections to avoid performance |
@@ -828,23 +819,22 @@ def read_fwf(
     | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=========================+=================+================+================+==================================+
     | All parameters          | Partial         | Partial        | Harmful        | OmniSci execution is not         |
-    |                         |                 |                | Non-lazy       | supported                        |
+    |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | filepath_or_buffer      |                 |                | Partial        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | Some buffer formats are          |
+    |                         |                 |                |                | Some buffer formats are          |
     |                         |                 |                |                | unsupported                      |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | infer_nrows             | Partial         | Partial        | Partial        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | Parameter values > 100 are not   |
+    |                         |                 |                |                | Parameter values > 100 are not   |
     |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | skiprows                | Partial         | Partial        | Partial        | **Ray/Dask**:                    |
-    |                         |                 |                | Non-lazy       | Parameter is unsupported         |
+    |                         |                 |                |                | Parameter is unsupported         |
     |                         |                 |                |                | if `skiprows` and `header`       |
     |                         |                 |                |                | values have intersections        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | chunksize               | Harmful         | Harmful        | Harmful        |                                  |
-    |                         |                 |                | Non-lazy       |                                  |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     """
     Engine.subscribe(_update_engine)
@@ -887,7 +877,6 @@ def read_sql_table(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        | Please use `pd.read_sql` instead |
-    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -919,7 +908,6 @@ def read_sql_query(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        | Please use `pd.read_sql` instead |
-    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
@@ -946,7 +934,6 @@ def read_spss(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     Engine.subscribe(_update_engine)
@@ -975,7 +962,7 @@ def to_pickle(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        | **Ray**                          |
-    |                 |                 |                | Non-lazy       | to_pickle_distributed is an      |
+    |                 |                 |                |                | to_pickle_distributed is an      |
     |                 |                 |                |                | experimental, distributed        |
     |                 |                 |                |                | implementation                   |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
@@ -1047,7 +1034,6 @@ def json_normalize(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     ErrorMessage.default_to_pandas("json_normalize")
@@ -1073,7 +1059,6 @@ def read_orc(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     ErrorMessage.default_to_pandas("read_orc")
@@ -1105,7 +1090,6 @@ def read_xml(
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     ErrorMessage.default_to_pandas("read_xml")
@@ -1138,7 +1122,6 @@ class HDFStore(pandas.HDFStore, metaclass=LoggerMetaClass):  # noqa: PR01, D200
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-    |                 |                 |                | Non-lazy       |                                  |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
 
@@ -1204,7 +1187,7 @@ class ExcelFile(pandas.ExcelFile, metaclass=LoggerMetaClass):  # noqa: PR01, D20
     | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
     +=================+=================+================+================+==================================+
     | All parameters  | Harmful         | Harmful        | Harmful        | Please use `pd.read_excel`       |
-    |                 |                 |                | Non-lazy       | instead                          |
+    |                 |                 |                |                | instead                          |
     +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
 

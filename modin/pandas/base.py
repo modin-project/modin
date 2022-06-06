@@ -29,8 +29,6 @@ The flags are defined as follows:
 |           | defaults to pandas (see more on defaulting to pandas at                                       |
 |           | https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html)              |
 +-----------+-----------------------------------------------------------------------------------------------+
-| Non-lazy  | Usage of this parameter can trigger non-lazy execution (applicable to OmniSci execution only) |
-+-----------+-----------------------------------------------------------------------------------------------+
 | Partial   | Parameter is partially unsupported - it's usage can be harmful to performance of your         |
 |           | application. This can happen if some parameter values or types are not supported (for         |
 |           | example, boolean values are supported while integer values are not) so Modin may default to   |
@@ -3013,7 +3011,6 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas("to_clipboard", excel=excel, sep=sep, **kwargs)
@@ -3051,24 +3048,24 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=========================+=================+================+================+==================================+
         | All parameters          | Partial         | Harmful        | Harmful        | OmniSci and PandasOnDask         |
-        |                         |                 |                | Non-lazy       | executions are not supported     |
+        |                         |                 |                |                | executions are not supported     |
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
         | path_or_buf             | Partial         | Harmful        | Harmful        | **Ray**:                         |
-        |                         |                 |                | Non-lazy       | Only str parameter type is       |
+        |                         |                 |                |                | Only str parameter type is       |
         |                         |                 |                |                | supported. File path shouldn't   |
         |                         |                 |                |                | contain compression extensions   |
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
         | mode                    | Partial         | Harmful        | Harmful        | **Ray**:                         |
-        |                         |                 |                | Non-lazy       | Modes with "r+" components are   |
+        |                         |                 |                |                | Modes with "r+" components are   |
         |                         |                 |                |                | not supported                    |
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
         | encoding                | Partial         | Harmful        | Harmful        | **Ray**:                         |
-        |                         |                 |                | Non-lazy       | Encodings with BOMs (utf-16 and  |
+        |                         |                 |                |                | Encodings with BOMs (utf-16 and  |
         |                         |                 |                |                | utf-16 with all aliases) are not |
         |                         |                 |                |                | supported                        |
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
         | compression             | Partial         | Harmful        | Harmful        | **Ray**:                         |
-        |                         |                 |                | Non-lazy       | Compressions are not supported   |
+        |                         |                 |                |                | Compressions are not supported   |
         |                         |                 |                |                | (only "infer" and None parameter |
         |                         |                 |                |                | values are supported)            |
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
@@ -3141,7 +3138,6 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
@@ -3177,7 +3173,6 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
@@ -3208,7 +3203,6 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
@@ -3261,7 +3255,6 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
@@ -3346,7 +3339,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        | **Ray**                          |
-        |                 |                 |                | Non-lazy       | `to_pickle_distributed` is an    |
+        |                 |                 |                |                | `to_pickle_distributed` is an    |
         |                 |                 |                |                | experimental distributed         |
         |                 |                 |                |                | implementation.                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
@@ -3429,10 +3422,10 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=========================+=================+================+================+==================================+
         | All parameters          | Partial         | Harmful        | Harmful        | OmniSci and PandasOnDask         |
-        |                         |                 |                | Non-lazy       | executions are not supported     |
+        |                         |                 |                |                | executions are not supported     |
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
         | con                     | Partial         | Harmful        | Harmful        | **Ray**:                         |
-        |                         |                 |                | Non-lazy       | Only str parameter type is       |
+        |                         |                 |                |                | Only str parameter type is       |
         |                         |                 |                |                | supported.                       |
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
         """

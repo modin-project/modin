@@ -29,8 +29,6 @@ The flags are defined as follows:
 |           | defaults to pandas (see more on defaulting to pandas at                                       |
 |           | https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html)              |
 +-----------+-----------------------------------------------------------------------------------------------+
-| Non-lazy  | Usage of this parameter can trigger non-lazy execution (applicable to OmniSci execution only) |
-+-----------+-----------------------------------------------------------------------------------------------+
 | Partial   | Parameter is partially unsupported - it's usage can be harmful to performance of your         |
 |           | application. This can happen if some parameter values or types are not supported (for         |
 |           | example, boolean values are supported while integer values are not) so Modin may default to   |
@@ -2139,7 +2137,6 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(pandas.DataFrame.to_feather, path, **kwargs)
@@ -2166,7 +2163,6 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
@@ -2218,7 +2214,6 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
@@ -2267,15 +2262,15 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=========================+=================+================+================+==================================+
         | All parameters          | Partial         | Harmful        | Harmful        | OmniSci and PandasOnDask         |
-        |                         |                 |                | Non-lazy       | executions are not supported     |
+        |                         |                 |                |                | executions are not supported     |
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
         | path                    | Partial         | Harmful        | Harmful        | **Ray**:                         |
-        |                         |                 |                | Non-lazy       | Only str parameter type is       |
+        |                         |                 |                |                | Only str parameter type is       |
         |                         |                 |                |                | supported. File path shouldn't   |
         |                         |                 |                |                | contain compression extensions   |
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
         | compression             | Partial         | Harmful        | Harmful        | **Ray**:                         |
-        |                         |                 |                | Non-lazy       | Compressions are not supported   |
+        |                         |                 |                |                | Compressions are not supported   |
         |                         |                 |                |                | (only "snappy" and None          |
         |                         |                 |                |                | parameter values are supported)  |
         +-------------------------+-----------------+----------------+----------------+----------------------------------+
@@ -2342,7 +2337,6 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
@@ -2399,7 +2393,6 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
         +=================+=================+================+================+==================================+
         | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
-        |                 |                 |                | Non-lazy       |                                  |
         +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self.__constructor__(
