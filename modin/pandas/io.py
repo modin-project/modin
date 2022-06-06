@@ -185,7 +185,8 @@ def read_csv(
     | skiprows                | Partial         | Partial        | Partial        | **Ray/Dask**:                    |
     |                         |                 |                |                | Parameter is unsupported         |
     |                         |                 |                |                | if `skiprows` and `header`       |
-    |                         |                 |                |                | values have intersections        |
+    |                         |                 |                |                | parameters are both present and  |
+    |                         |                 |                |                | their values have intersections  |
     |                         |                 |                |                | **OmniSci**:                     |
     |                         |                 |                |                | Only integer values are          |
     |                         |                 |                |                | supported                        |
@@ -323,9 +324,10 @@ def read_table(
     |                         |                 |                |                | unsupported                      |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | skiprows                | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
-    |                         |                 |                |                | Parameter is unsupported only    |
+    |                         |                 |                |                | Parameter is unsupported         |
     |                         |                 |                |                | if `skiprows` and `header`       |
-    |                         |                 |                |                | values have intersections        |
+    |                         |                 |                |                | parameters are both present and  |
+    |                         |                 |                |                | their values have intersections  |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | chunksize               | Harmful         | Harmful        | Harmful        |                                  |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
@@ -832,7 +834,8 @@ def read_fwf(
     | skiprows                | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
     |                         |                 |                |                | Parameter is unsupported         |
     |                         |                 |                |                | if `skiprows` and `header`       |
-    |                         |                 |                |                | values have intersections        |
+    |                         |                 |                |                | parameters are both present and  |
+    |                         |                 |                |                | their values have intersections  |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
     | chunksize               | Harmful         | Harmful        | Harmful        |                                  |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
