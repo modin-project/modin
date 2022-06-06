@@ -285,12 +285,29 @@ TEST_VAR = 2
 
 @pytest.mark.parametrize("method", ["query", "eval"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("local_var", [2])
-def test_eval_and_query_with_local_and_global_var(method, data, local_var):
+@pytest.mark.parametrize("level", [0, 1])
+def test_eval_and_query_with_local_and_global_var(method, data, level):
+    # NOTE: if this test is failing because pandas or modin can't find
+    # the local variable and you are investigating why, it's worth
+    # noting that Modin's `query` and `eval` functions bump scope `level`
+    # up by 1 to reflect the Modin logging function wrapper.
+    local_var = 1  # noqa: F841 eval and query can reach back in the call
+    # stack to access this variable
+
+    def df_method_with_local_var(df, method: str, *args, **kwargs):
+        # Give this level of the stack a different value of local_var, so that
+        # passing `level=0` uses value 0, and `level=1` uses value 1.
+        local_var = 0  # noqa: F841 eval and query can reach back in the call
+        # stack to access this variable
+        return getattr(df, method)(*args, **kwargs)
+
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
     op = "+" if method == "eval" else "<"
     for expr in (f"col1 {op} @local_var", f"col1 {op} @TEST_VAR"):
-        df_equals(getattr(modin_df, method)(expr), getattr(pandas_df, method)(expr))
+        df_equals(
+            df_method_with_local_var(modin_df, method, expr, level=level),
+            df_method_with_local_var(pandas_df, method, expr, level=level),
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
