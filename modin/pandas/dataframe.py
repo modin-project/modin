@@ -47,16 +47,13 @@ from .series import Series
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .groupby import DataFrameGroupBy
 from .accessor import CachedAccessor, SparseFrameAccessor
-from ._compat.factory import CompatibilityFactory
-
-
-CompatClass = CompatibilityFactory.generate_compatibility_class("DataFrame")
+from ._compat.classes import DataFrameCompat
 
 
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame.__init__], apilink="pandas.DataFrame"
 )
-class DataFrame(CompatClass, BasePandasDataset):
+class DataFrame(DataFrameCompat, BasePandasDataset):
     """
     Modin distributed representation of ``pandas.DataFrame``.
 
@@ -1683,7 +1680,7 @@ class DataFrame(CompatClass, BasePandasDataset):
             )
         )
 
-    product = CompatClass.prod
+    product = DataFrameCompat.prod
     radd = add
 
     def query(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200

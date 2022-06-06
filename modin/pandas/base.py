@@ -49,7 +49,7 @@ import modin.pandas as pd
 from modin.pandas.utils import is_scalar
 from modin.config import IsExperimental
 from modin.logging import ClassLogger, disable_logging
-from ._compat.factory import CompatibilityFactory
+from ._compat.classes import BasePandasDatasetCompat
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -91,12 +91,11 @@ _DEFAULT_BEHAVIOUR = {
     "__reduce_ex__",
 } | _ATTRS_NO_LOOKUP
 
-CompatClass = CompatibilityFactory.generate_compatibility_class("BasePandasDataset")
 _doc_binary_op_kwargs = {"returns": "BasePandasDataset", "left": "BasePandasDataset"}
 
 
 @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
-class BasePandasDataset(ClassLogger, CompatClass):
+class BasePandasDataset(ClassLogger, BasePandasDatasetCompat):
     """
     Implement most of the common code that exists in DataFrame/Series.
 
@@ -1650,7 +1649,7 @@ class BasePandasDataset(ClassLogger, CompatClass):
             )
         )
 
-    kurtosis = CompatClass.kurt
+    kurtosis = BasePandasDatasetCompat.kurt
 
     def last(self, offset):  # noqa: PR01, RT01, D200
         """

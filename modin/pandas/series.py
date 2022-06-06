@@ -34,15 +34,13 @@ from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar, _doc_binary_op
 from .accessor import CachedAccessor, SparseAccessor
 from . import _update_engine
-from ._compat.factory import CompatibilityFactory
-
-CompatClass = CompatibilityFactory.generate_compatibility_class("Series")
+from ._compat.classes import SeriesCompat
 
 
 @_inherit_docstrings(
     pandas.Series, excluded=[pandas.Series.__init__], apilink="pandas.Series"
 )
-class Series(CompatClass, BasePandasDataset):
+class Series(SeriesCompat, BasePandasDataset):
     """
     Modin distributed representation of `pandas.Series`.
 
@@ -1197,7 +1195,7 @@ class Series(CompatClass, BasePandasDataset):
             raise NotImplementedError("Series.kurt does not implement numeric_only.")
         return super(Series, self).kurt(axis, skipna, level, numeric_only, **kwargs)
 
-    kurtosis = CompatClass.kurt
+    kurtosis = SeriesCompat.kurt
 
     def le(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
         """
@@ -1451,7 +1449,7 @@ class Series(CompatClass, BasePandasDataset):
             )
         )
 
-    product = CompatClass.prod
+    product = SeriesCompat.prod
     radd = add
 
     def ravel(self, order="C"):  # noqa: PR01, RT01, D200
