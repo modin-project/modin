@@ -165,7 +165,7 @@ def read_csv(
     |                         |                 |                |                | multiple data files using a file |
     |                         |                 |                |                | pattern: read_csv_glob           |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
-    | filepath_or_buffer      |                 |                | Partial        | **Ray/Dask**:                    |
+    | filepath_or_buffer      | Partial         | Partial        | Partial        | **Ray/Dask**:                    |
     |                         |                 |                |                | Some buffer formats can be       |
     |                         |                 |                |                | unsupported                      |
     |                         |                 |                |                | **OmniSci**:                     |
@@ -318,11 +318,11 @@ def read_table(
     | All parameters          | Partial         | Partial        | Harmful        | OmniSci execution is not         |
     |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
-    | filepath_or_buffer      |                 |                | Partial        | **Ray/Dask**:                    |
+    | filepath_or_buffer      | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
     |                         |                 |                |                | Some buffer formats can be       |
     |                         |                 |                |                | unsupported                      |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
-    | skiprows                | Partial         | Partial        | Partial        | **Ray/Dask**:                    |
+    | skiprows                | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
     |                         |                 |                |                | Parameter is unsupported only    |
     |                         |                 |                |                | if `skiprows` and `header`       |
     |                         |                 |                |                | values have intersections        |
@@ -821,15 +821,15 @@ def read_fwf(
     | All parameters          | Partial         | Partial        | Harmful        | OmniSci execution is not         |
     |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
-    | filepath_or_buffer      |                 |                | Partial        | **Ray/Dask**:                    |
+    | filepath_or_buffer      | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
     |                         |                 |                |                | Some buffer formats are          |
     |                         |                 |                |                | unsupported                      |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
-    | infer_nrows             | Partial         | Partial        | Partial        | **Ray/Dask**:                    |
+    | infer_nrows             | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
     |                         |                 |                |                | Parameter values > 100 are not   |
     |                         |                 |                |                | supported                        |
     +-------------------------+-----------------+----------------+----------------+----------------------------------+
-    | skiprows                | Partial         | Partial        | Partial        | **Ray/Dask**:                    |
+    | skiprows                | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
     |                         |                 |                |                | Parameter is unsupported         |
     |                         |                 |                |                | if `skiprows` and `header`       |
     |                         |                 |                |                | values have intersections        |
