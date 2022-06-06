@@ -35,7 +35,7 @@ We can also set the maximum size of the logs (in MBs) using `LogFileSize`.
 .. code-block:: python
 
   import modin.pandas as pd
-  from modin.config import LogMode, LogMemoryInterval, LogMemorySize 
+  from modin.config import LogMode, LogMemoryInterval, LogFileSize 
   LogMode.enable()
   LogMemoryInterval.put(2) # Defaults to 5 seconds, new interval is 2 seconds
   LogFileSize.put(5) # Defaults to 10 MB per log file, new size is 5 MB 
