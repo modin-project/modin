@@ -14,9 +14,11 @@
 """Module houses class that implements ``PandasDataframePartitionManager``."""
 
 import numpy as np
+import pandas
 
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
+    wait_computations_if_benchmark_mode,
 )
 from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
 from .virtual_partition import (
@@ -52,6 +54,7 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         return DaskWrapper.materialize([partition.future for partition in partitions])
 
     @classmethod
+    @wait_computations_if_benchmark_mode
     def binary_operation(cls, left, func, right, axis=1):
         """
         Apply a function that requires partitions of two ``PandasOnRayDataframe`` objects.
@@ -72,12 +75,21 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         np.ndarray
             A NumPy array with new partitions.
         """
-        func = cls.preprocess_func(func)
         [part.drain_call_queue() for row in right for part in row]
+
+        def op_with_empty_check(x, y, *args, **kwargs):
+            y = pandas.DataFrame(index=x.index, columns=x.columns) if y is None else y
+
+            return func(x, y, *args, **kwargs)
+
+        op_with_empty_check = cls.preprocess_func(op_with_empty_check)
         return np.array(
             [
                 [
-                    part.apply(func, right[row_idx][col_idx].future)
+                    part.apply(
+                        op_with_empty_check,
+                        right[row_idx][col_idx].oid if len(right) else None,
+                    )
                     for col_idx, part in enumerate(left[row_idx])
                 ]
                 for row_idx in range(len(left))

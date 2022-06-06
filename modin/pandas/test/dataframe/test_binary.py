@@ -263,3 +263,21 @@ def test_mismatched_col_partitions():
     pandas_res = pandas_df2 + pandas_df1
 
     df_equals(modin_res, pandas_res)
+
+
+@pytest.mark.parametrize("empty_operand", ["right", "left", "both"])
+def test_empty_df(empty_operand):
+    modin_df, pandas_df = create_test_dfs([0, 1, 2, 0, 1, 2])
+    modin_df_empty, pandas_df_empty = create_test_dfs()
+
+    if empty_operand == "right":
+        modin_res = modin_df + modin_df_empty
+        pandas_res = pandas_df + pandas_df_empty
+    elif empty_operand == "left":
+        modin_res = modin_df_empty + modin_df
+        pandas_res = pandas_df_empty + pandas_df
+    else:
+        modin_res = modin_df_empty + modin_df_empty
+        pandas_res = pandas_df_empty + pandas_df_empty
+
+    df_equals(modin_res, pandas_res)

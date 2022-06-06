@@ -2507,18 +2507,36 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
         left_parts, right_parts, joined_index, row_lengths = self._copartition(
             0, right_frame, join_type, sort=True
         )
+        new_left_frame = self.__constructor__(
+            left_parts, joined_index, self.columns, row_lengths, self._column_widths
+        )
+        new_right_frame = self.__constructor__(
+            right_parts[0],
+            joined_index,
+            right_frame.columns,
+            row_lengths,
+            right_frame._column_widths,
+        )
+
+        (
+            left_parts,
+            right_parts,
+            joined_columns,
+            column_widths,
+        ) = new_left_frame._copartition(1, new_right_frame, join_type, sort=True)
+
         # unwrap list returned by `copartition`.
         right_parts = right_parts[0]
         new_frame = self._partition_mgr_cls.binary_operation(
             left_parts, lambda l, r: op(l, r), right_parts, axis=1
         )
-        new_columns = self.columns.join(right_frame.columns, how=join_type)
+
         return self.__constructor__(
             new_frame,
             joined_index,
-            new_columns,
+            joined_columns,
             row_lengths,
-            column_widths=self._column_widths_cache,
+            column_widths,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
