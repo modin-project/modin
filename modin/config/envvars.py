@@ -415,16 +415,16 @@ class LogMemoryInterval(EnvironmentVariable, type=int):
         return log_memory_interval
 
 
-class LogMemorySize(EnvironmentVariable, type=int):
-    """Size of logs (in MBs) to store per Modin job."""
+class LogFileSize(EnvironmentVariable, type=int):
+    """Max size of logs (in MBs) to store per Modin job."""
 
-    varname = "MODIN_LOG_MEMORY_SIZE"
+    varname = "MODIN_LOG_FILE_SIZE"
     default = 100
 
     @classmethod
     def put(cls, value):
         """
-        Set ``LogMemorySize`` with extra checks.
+        Set ``LogFileSize`` with extra checks.
 
         Parameters
         ----------
@@ -432,21 +432,21 @@ class LogMemorySize(EnvironmentVariable, type=int):
             Config value to set.
         """
         if value <= 0:
-            raise ValueError(f"Log memory size should be > 0 MB, passed value {value}")
+            raise ValueError(f"Log file size should be > 0 MB, passed value {value}")
         super().put(value)
 
     @classmethod
     def get(cls):
         """
-        Get ``LogMemorySize`` with extra checks.
+        Get ``LogFileSize`` with extra checks.
 
         Returns
         -------
         int
         """
-        log_memory_size = super().get()
-        assert log_memory_size > 0, "`LogMemorySize` should be > 0"
-        return log_memory_size
+        log_file_size = super().get()
+        assert log_file_size > 0, "`LogFileSize` should be > 0"
+        return log_file_size
 
 
 class PersistentPickle(EnvironmentVariable, type=bool):

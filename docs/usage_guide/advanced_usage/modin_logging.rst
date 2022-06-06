@@ -30,7 +30,7 @@ In the example below, we enable logging for internal Modin API calls.
 
 In the next example, we add logging for not only internal Modin API calls, but also for partition metadata and memory profiling.
 We can set the granularity (in seconds) at which the system memory utilization is logged using `LogMemoryInterval`. 
-We can also set the size of the memory logs (in MBs) using `LogMemorySize`. 
+We can also set the maximum size of the logs (in MBs) using `LogFileSize`. 
 
 .. code-block:: python
 
@@ -38,7 +38,7 @@ We can also set the size of the memory logs (in MBs) using `LogMemorySize`.
   from modin.config import LogMode, LogMemoryInterval, LogMemorySize 
   LogMode.enable()
   LogMemoryInterval.put(2) # Defaults to 5 seconds, new interval is 2 seconds
-  LogMemorySize.put(5) # Defaults to 10 MB per log file, new size is 5 MB 
+  LogFileSize.put(5) # Defaults to 10 MB per log file, new size is 5 MB 
 
   # Your code goes here
 
