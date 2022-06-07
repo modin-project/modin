@@ -36,7 +36,7 @@ from pandas.api.types import is_list_like, is_bool
 from pandas.core.dtypes.common import is_integer, is_bool_dtype, is_integer_dtype
 from pandas.core.indexing import IndexingError
 from modin.error_message import ErrorMessage
-from modin.logging import LoggerMixin, metaclass_resolver
+from modin.logging import LoggerMixin
 
 from .dataframe import DataFrame
 from .series import Series
@@ -593,7 +593,7 @@ class _LocationIndexerBase(LoggerMixin, object):
         return type(self)(masked_df)[(slice(None), col_loc)]
 
 
-class _LocIndexer(metaclass_resolver(_LocationIndexerBase)):
+class _LocIndexer(_LocationIndexerBase):
     """
     An indexer for modin_df.loc[] functionality.
 
@@ -846,7 +846,7 @@ class _LocIndexer(metaclass_resolver(_LocationIndexerBase)):
         return lookups
 
 
-class _iLocIndexer(metaclass_resolver(_LocationIndexerBase)):
+class _iLocIndexer(_LocationIndexerBase):
     """
     An indexer for modin_df.iloc[] functionality.
 

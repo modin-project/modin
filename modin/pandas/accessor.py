@@ -27,7 +27,7 @@ from pandas.core.arrays.sparse.dtype import SparseDtype
 import modin.pandas as pd
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings
-from modin.logging import LoggerMixin, metaclass_resolver
+from modin.logging import LoggerMixin
 
 
 class BaseSparseAccessor(LoggerMixin, object):
@@ -86,7 +86,7 @@ class BaseSparseAccessor(LoggerMixin, object):
 
 
 @_inherit_docstrings(pandas.core.arrays.sparse.accessor.SparseFrameAccessor)
-class SparseFrameAccessor(metaclass_resolver(BaseSparseAccessor)):
+class SparseFrameAccessor(BaseSparseAccessor):
     def _validate(self, data):
         """
         Verify that `data` dtypes are compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.
@@ -124,7 +124,7 @@ class SparseFrameAccessor(metaclass_resolver(BaseSparseAccessor)):
 
 
 @_inherit_docstrings(pandas.core.arrays.sparse.accessor.SparseAccessor)
-class SparseAccessor(metaclass_resolver(BaseSparseAccessor)):
+class SparseAccessor(BaseSparseAccessor):
     def _validate(self, data):
         """
         Verify that `data` dtype is compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.

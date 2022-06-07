@@ -21,29 +21,6 @@ from typing import Optional
 from .logger_function import logger_decorator
 
 
-def metaclass_resolver(*classes):
-    """
-    Resolve metaclass typing issues resulting from class inheritance.
-
-    Parameters
-    ----------
-    *classes : dict
-        Dictionary of parent classes to resolve metaclass conflicts for.
-
-    Returns
-    -------
-    str
-        The correct Metaclass that resolves inheritance conflicts.
-    """
-    metaclass = tuple(set(type(cls) for cls in classes))
-    metaclass = (
-        metaclass[0]
-        if len(metaclass) == 1
-        else type("_".join(mcls.__name__ for mcls in metaclass), metaclass, {})
-    )
-    return metaclass("_".join(cls.__name__ for cls in classes), classes, {})
-
-
 class LoggerMixin:
     """
     Ensure all subclasses of the class being inherited are logged, too.

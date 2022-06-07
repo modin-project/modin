@@ -30,7 +30,6 @@ import warnings
 
 from modin.utils import _inherit_docstrings, to_pandas, Engine
 from modin.config import IsExperimental, PersistentPickle
-from modin.logging import metaclass_resolver
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar, _doc_binary_op
@@ -41,7 +40,7 @@ from . import _update_engine
 @_inherit_docstrings(
     pandas.Series, excluded=[pandas.Series.__init__], apilink="pandas.Series"
 )
-class Series(metaclass_resolver(BasePandasDataset)):
+class Series(BasePandasDataset):
     """
     Modin distributed representation of `pandas.Series`.
 
