@@ -27,10 +27,10 @@ from pandas.core.arrays.sparse.dtype import SparseDtype
 import modin.pandas as pd
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings
-from modin.logging import LoggerMetaClass, metaclass_resolver
+from modin.logging import LoggerMixin, metaclass_resolver
 
 
-class BaseSparseAccessor(object, metaclass=LoggerMetaClass):
+class BaseSparseAccessor(LoggerMixin, object):
     """
     Base class for various sparse DataFrame accessor classes.
 
@@ -177,7 +177,7 @@ class SparseAccessor(metaclass_resolver(BaseSparseAccessor)):
 
 
 @_inherit_docstrings(pandas.core.accessor.CachedAccessor)
-class CachedAccessor(object, metaclass=LoggerMetaClass):
+class CachedAccessor(LoggerMixin, object):
     def __init__(self, name: str, accessor) -> None:
         self._name = name
         self._accessor = accessor

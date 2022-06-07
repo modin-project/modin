@@ -16,12 +16,12 @@
 from pandas import plotting as pdplot
 
 from modin.utils import instancer, to_pandas
-from modin.logging import LoggerMetaClass
+from modin.logging import LoggerMixin
 from .dataframe import DataFrame
 
 
 @instancer
-class Plotting(object, metaclass=LoggerMetaClass):
+class Plotting(LoggerMixin, object):
     """Wrapper of pandas plotting module."""
 
     def __dir__(self):

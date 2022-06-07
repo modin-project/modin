@@ -12,14 +12,14 @@
 # governing permissions and limitations under the License.
 
 from .logger_metaclass import (  # noqa: F401
-    LoggerMetaClass,
     metaclass_resolver,
+    LoggerMixin,
 )
 from .config import get_logger  # noqa: F401
 from .logger_function import logger_decorator  # noqa: F401
 
 __all__ = [
-    "LoggerMetaClass",
+    "LoggerMixin",
     "metaclass_resolver",
     "get_logger",
     "logger_decorator",

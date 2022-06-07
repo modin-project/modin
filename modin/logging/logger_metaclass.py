@@ -17,7 +17,6 @@ Module contains ``LoggerMetaClass`` class.
 ``LoggerMetaClass`` is used for adding logging to Modin classes.
 """
 from typing import Optional
-from types import FunctionType, MethodType
 
 from .logger_function import logger_decorator
 
@@ -43,46 +42,6 @@ def metaclass_resolver(*classes):
         else type("_".join(mcls.__name__ for mcls in metaclass), metaclass, {})
     )
     return metaclass("_".join(cls.__name__ for cls in classes), classes, {})
-
-
-class LoggerMetaClass(type):  # noqa: PR01
-    """Log Metaclass to attach to class definitions."""
-
-    def __new__(mcls, class_name, bases, class_dict):
-        """
-        Complete class instance creation with metaclass.
-
-        Parameters
-        ----------
-        mcls : class
-            The class to create a new instance of.
-        class_name : str
-            Name of the future class.
-        bases : dict
-            The parent classes.
-        class_dict : dict
-            Dictionary of attributes for the class.
-
-        Returns
-        -------
-        class
-            The new class instance to be created.
-        """
-        new_class_dict = {}
-        seen_attributes = {}
-        exclude_attributes = {"__getattribute__"}
-        for attribute_name, attribute in class_dict.items():
-            if (
-                isinstance(attribute, (FunctionType, MethodType))
-                and attribute_name not in exclude_attributes
-            ):
-                if attribute not in seen_attributes:
-                    seen_attributes[attribute] = logger_decorator(
-                        name=f"{class_name}.{attribute_name}"
-                    )(attribute)
-                attribute = seen_attributes[attribute]
-            new_class_dict[attribute_name] = attribute
-        return type.__new__(mcls, class_name, bases, new_class_dict)
 
 
 class LoggerMixin:
