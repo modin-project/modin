@@ -2113,6 +2113,16 @@ def test_by_series():
         [[1, 2, 3]], index=pd.Index([0], name="a"), columns=["a", "b", "c"]
     )
     modin_df = from_pandas(pandas_df)
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby(by=pandas.Series(["a"])).count(),
+    )
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby(by=pandas.Series(["a", "b"])).count(),
+    )
 
     def make_appropriately_typed_series(df, values=["a"]):
         """Return a Series from either pandas or modin.pandas depending on type of `df`."""
