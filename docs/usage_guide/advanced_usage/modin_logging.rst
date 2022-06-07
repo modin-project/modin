@@ -13,7 +13,7 @@ users have 20MB worth of Modin API logs, you can expect to find `trace.log.1` an
 
 **Developer Warning:** In some cases, running services like JupyterLab in the `modin/modin` directory may result in circular dependency issues. 
 This is as a result of a name conflict between the `modin/logging` directory and the Python `logging` module, which may be used as a default in 
-such environments. As a resolution, one one could run Jupyterlab or other services from any directory except `modin/modin`. 
+such environments. As a resolution, one could run Jupyterlab or other services from any directory except `modin/modin`. 
 
 Usage examples
 --------------
