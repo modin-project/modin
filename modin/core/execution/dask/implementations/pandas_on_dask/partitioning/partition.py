@@ -50,6 +50,20 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         self._width_cache = width
         self._ip_cache = ip
 
+    # Temp implementation, will be done in #4530
+    @property
+    def physical_data(self):
+        """
+        Get physical data stored by partition.
+
+        Returns
+        -------
+        distributed.Future
+            A reference to pandas DataFrame that's wrapped.
+        """
+        self.drain_call_queue()
+        return self.future
+
     def get(self):
         """
         Get the object wrapped by this partition out of the distributed memory.

@@ -18,7 +18,6 @@ import threading
 
 import numpy as np
 import ray
-import pandas
 
 from modin.config import ProgressBar, NPartitions
 from modin.core.execution.ray.generic.partitioning import (
@@ -29,9 +28,6 @@ from .virtual_partition import (
     PandasOnRayDataframeRowPartition,
 )
 from .partition import PandasOnRayDataframePartition
-from modin.core.dataframe.pandas.partitioning.partition_manager import (
-    wait_computations_if_benchmark_mode,
-)
 from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from pandas._libs.lib import no_default
@@ -529,8 +525,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
 
     @classmethod
     @progress_bar_wrapper
-    @wait_computations_if_benchmark_mode
-    def binary_operation(cls, left, func, right, axis=1):
+    def binary_operation(cls, left, func, right):
         """
         Apply a function that requires partitions of two ``PandasOnRayDataframe`` objects.
 
@@ -542,31 +537,12 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             The function to apply.
         right : np.ndarray
             The partitions of right ``PandasOnRayDataframe``.
-        axis : {0, 1}, default: 1
-            The axis to apply the function over (0 - rows, 1 - columns).
 
         Returns
         -------
         np.ndarray
             A NumPy array with new partitions.
         """
-        [part.drain_call_queue() for row in right for part in row]
-
-        def op_with_empty_check(x, y, *args, **kwargs):
-            y = pandas.DataFrame(index=x.index, columns=x.columns) if y is None else y
-
-            return func(x, y, *args, **kwargs)
-
-        op_with_empty_check = cls.preprocess_func(op_with_empty_check)
-        return np.array(
-            [
-                [
-                    part.apply(
-                        op_with_empty_check,
-                        right[row_idx][col_idx].oid if len(right) else None,
-                    )
-                    for col_idx, part in enumerate(left[row_idx])
-                ]
-                for row_idx in range(len(left))
-            ]
+        return super(PandasOnRayDataframePartitionManager, cls).binary_operation(
+            left, func, right
         )

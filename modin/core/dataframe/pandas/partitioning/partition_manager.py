@@ -1242,7 +1242,7 @@ class PandasDataframePartitionManager(ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def binary_operation(cls, left, func, right, axis=1):
+    def binary_operation(cls, left, func, right):
         """
         Apply a function that requires two ``PandasDataframe`` objects.
 
@@ -1254,32 +1254,31 @@ class PandasDataframePartitionManager(ABC):
             The function to apply.
         right : np.ndarray
             The partitions of right ``PandasDataframe``.
-        axis : {0, 1}, default: 1
-            The axis to apply the function over (0 - rows, 1 - columns).
 
         Returns
         -------
         np.ndarray
             A NumPy array with new partitions.
         """
-        if axis:
-            left_partitions = cls.row_partitions(left)
-            right_partitions = cls.row_partitions(right)
-        else:
-            left_partitions = cls.column_partitions(left)
-            right_partitions = cls.column_partitions(right)
-        func = cls.preprocess_func(func)
-        result = np.array(
+
+        def op_with_empty_check(x, y, *args, **kwargs):
+            y = pandas.DataFrame(index=x.index, columns=x.columns) if y is None else y
+
+            return func(x, y, *args, **kwargs)
+
+        op_with_empty_check = cls.preprocess_func(op_with_empty_check)
+        return np.array(
             [
-                left_partitions[i].apply(
-                    func,
-                    num_splits=NPartitions.get(),
-                    other_axis_partition=right_partitions[i],
-                )
-                for i in range(len(left_partitions))
+                [
+                    part.apply(
+                        op_with_empty_check,
+                        right[row_idx][col_idx].physical_data if len(right) else None,
+                    )
+                    for col_idx, part in enumerate(left[row_idx])
+                ]
+                for row_idx in range(len(left))
             ]
         )
-        return result if axis else result.T
 
     @classmethod
     @wait_computations_if_benchmark_mode

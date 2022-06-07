@@ -49,6 +49,20 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         self._length_cache = length
         self._width_cache = width
 
+    # Temp implementation, will be done in #4530
+    @property
+    def physical_data(self):
+        """
+        Get physical data stored by partition.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Copy of DataFrame that was wrapped by this partition.
+        """
+        self.drain_call_queue()
+        return self.data.copy()
+
     def get(self):
         """
         Flush the `call_queue` and return copy of the data.
