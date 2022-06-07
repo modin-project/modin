@@ -26,6 +26,7 @@ from pandas.core.dtypes.common import (
     is_dtype_equal,
     is_object_dtype,
 )
+from pandas.core.indexes.api import ensure_index
 import pandas.core.window.rolling
 import pandas.core.resample
 import pandas.core.generic
@@ -54,6 +55,7 @@ from modin.error_message import ErrorMessage
 import modin.pandas as pd
 from modin.pandas.utils import is_scalar
 from modin.config import IsExperimental
+from modin.logging import LoggerMetaClass
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -99,7 +101,7 @@ _doc_binary_op_kwargs = {"returns": "BasePandasDataset", "left": "BasePandasData
 
 
 @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
-class BasePandasDataset(object):
+class BasePandasDataset(object, metaclass=LoggerMetaClass):
     """
     Implement most of the common code that exists in DataFrame/Series.
 
@@ -1055,11 +1057,6 @@ class BasePandasDataset(object):
         if axis is not None:
             axis = self._get_axis_number(axis)
         self._validate_dtypes(numeric_only=True)
-        if is_list_like(lower) or is_list_like(upper):
-            if axis is None:
-                raise ValueError("Must specify axis = 0 or 1")
-            self._validate_other(lower, axis)
-            self._validate_other(upper, axis)
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = numpy_compat.function.validate_clip_with_axis(axis, args, kwargs)
         # any np.nan bounds are treated as None
@@ -1067,6 +1064,11 @@ class BasePandasDataset(object):
             lower = None
         if upper is not None and np.any(np.isnan(upper)):
             upper = None
+        if is_list_like(lower) or is_list_like(upper):
+            if axis is None:
+                raise ValueError("Must specify axis = 0 or 1")
+            lower = self._validate_other(lower, axis)
+            upper = self._validate_other(upper, axis)
         # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
         # purpose and does not affect the result, we shouldn't pass them to the query compiler.
         new_query_compiler = self._query_compiler.clip(
@@ -1387,6 +1389,7 @@ class BasePandasDataset(object):
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
         subset = kwargs.get("subset", None)
+        ignore_index = kwargs.get("ignore_index", False)
         if subset is not None:
             if is_list_like(subset):
                 if not isinstance(subset, list):
@@ -1396,8 +1399,13 @@ class BasePandasDataset(object):
             duplicates = self.duplicated(keep=keep, subset=subset)
         else:
             duplicates = self.duplicated(keep=keep)
-        indices = duplicates.values.nonzero()[0]
-        return self.drop(index=self.index[indices], inplace=inplace)
+        result = self[~duplicates]
+        if ignore_index:
+            result.index = pandas.RangeIndex(stop=len(result))
+        if inplace:
+            self._update_inplace(result._query_compiler)
+        else:
+            return result
 
     def eq(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
@@ -2213,6 +2221,34 @@ class BasePandasDataset(object):
             )
         )
 
+    def _copy_index_metadata(self, source, destination):  # noqa: PR01, RT01, D200
+        """
+        Copy Index metadata from `source` to `destination` inplace.
+        """
+        if hasattr(source, "name") and hasattr(destination, "name"):
+            destination.name = source.name
+        if hasattr(source, "names") and hasattr(destination, "names"):
+            destination.names = source.names
+        return destination
+
+    def _ensure_index(self, index_like, axis=0):  # noqa: PR01, RT01, D200
+        """
+        Ensure that we have an index from some index-like object.
+        """
+        if (
+            self._query_compiler.has_multiindex(axis=axis)
+            and not isinstance(index_like, pandas.Index)
+            and is_list_like(index_like)
+            and len(index_like) > 0
+            and isinstance(index_like[0], tuple)
+        ):
+            try:
+                return pandas.MultiIndex.from_tuples(index_like)
+            except TypeError:
+                # not all tuples
+                pass
+        return ensure_index(index_like)
+
     def reindex(
         self,
         index=None,
@@ -2236,7 +2272,9 @@ class BasePandasDataset(object):
         new_query_compiler = None
         if index is not None:
             if not isinstance(index, pandas.Index):
-                index = pandas.Index(index)
+                index = self._copy_index_metadata(
+                    source=self.index, destination=self._ensure_index(index, axis=0)
+                )
             if not index.equals(self.index):
                 new_query_compiler = self._query_compiler.reindex(
                     axis=0, labels=index, **kwargs
@@ -2246,7 +2284,9 @@ class BasePandasDataset(object):
         final_query_compiler = None
         if columns is not None:
             if not isinstance(columns, pandas.Index):
-                columns = pandas.Index(columns)
+                columns = self._copy_index_metadata(
+                    source=self.columns, destination=self._ensure_index(columns, axis=1)
+                )
             if not columns.equals(self.columns):
                 final_query_compiler = new_query_compiler.reindex(
                     axis=1, labels=columns, **kwargs
@@ -3658,12 +3698,12 @@ class BasePandasDataset(object):
 
     def __invert__(self):
         """
-        Apply bitwise invertion for each element of the `BasePandasDataset`.
+        Apply bitwise inverse to each element of the `BasePandasDataset`.
 
         Returns
         -------
         BasePandasDataset
-            New BasePandasDataset containing bitwise invertion for each value.
+            New BasePandasDataset containing bitwise inverse to each value.
         """
         if not all(is_numeric_dtype(d) for d in self._get_dtypes()):
             raise TypeError(

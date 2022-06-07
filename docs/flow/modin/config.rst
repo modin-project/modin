@@ -5,7 +5,7 @@ Modin Configuration Settings
 
 To adjust Modin's default behavior, you can set the value of Modin
 configs by setting an environment variable or by using the
-``modin.config`` API. To list all avaliable configs in Modin, please
+``modin.config`` API. To list all available configs in Modin, please
 run ``python -m modin.config`` to print all
 Modin configs with descriptions.
 

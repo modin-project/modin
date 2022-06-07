@@ -1172,7 +1172,7 @@ class TestAgg:
             )
 
         # Custom comparator is required because pandas is inconsistent about
-        # the order of equal values, we can't match this behaviour. For more details:
+        # the order of equal values, we can't match this behavior. For more details:
         # https://github.com/modin-project/modin/issues/1650
         run_and_compare(
             value_counts,

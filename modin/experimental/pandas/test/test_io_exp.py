@@ -125,7 +125,7 @@ class TestCsvGlob:
     def test_read_csv_without_glob(self):
         with pytest.warns(UserWarning, match=r"Shell-style wildcard"):
             with pytest.raises(FileNotFoundError):
-                pd.read_csv_glob("s3://nyc-tlc/trip data/yellow_tripdata_2020-")
+                pd.read_csv_glob("s3://dask-data/nyc-taxi/2015/yellow_tripdata_2015-")
 
     def test_read_csv_glob_4373(self):
         columns, filename = ["col0"], "1x1.csv"

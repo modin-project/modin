@@ -18,7 +18,7 @@ Partition manager can apply user-passed (arbitrary) function in different modes:
 
 * block-wise (apply a function to individual block partitions):
 
-  * optinally accepting partition indices along each axis
+  * optionally accepting partition indices along each axis
   * optionally accepting an item to be split so parts of it would be sent to each partition
 
 * along a full axis (apply a function to an entire column or row made up of block partitions when user function needs information about the whole axis)

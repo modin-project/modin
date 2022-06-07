@@ -11,6 +11,8 @@ Advanced Usage
    modin_sql
    modin_xgboost
    modin_in_the_cloud
+   modin_logging
+   batch
 
 .. meta::
     :description lang=en:
@@ -83,6 +85,20 @@ Modin provides an implementation of `distributed XGBoost`_ machine learning algo
 :doc:`Distributed XGBoost on Modin documentation <modin_xgboost>` for details about installation and usage, as well as
 :doc:`Modin XGBoost architecture documentation </flow/modin/experimental/xgboost>` for information about implementation and
 internal execution flow.
+
+Logging with Modin
+------------------
+
+Modin logging offers users greater insight into their queries by logging internal Modin API calls, partition metadata, 
+and system memory. Logging is disabled by default, but when it is enabled, log files are written to a local `.modin` directory 
+at the same directory level as the notebook/script used to run Modin. See our :doc:`Logging with Modin documentation <modin_logging>` 
+for usage information.
+
+Batch Pipeline API
+------------------
+Modin provides an experimental batched API that pipelines row parallel queries. See our :doc:`Batch Pipline API Usage Guide <batch>`
+for a walkthrough on how to use this feature, as well as :doc:`Batch Pipeline API documentation </flow/modin/experimental/batch>`
+for more information about the API.
 
 .. _`blog post`: https://medium.com/riselab/why-every-data-scientist-using-pandas-needs-modin-bringing-sql-to-dataframes-3b216b29a7c0
 .. _`Modin SQL documentation`: modin_sql.html

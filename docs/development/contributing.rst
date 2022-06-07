@@ -13,7 +13,7 @@ want to review in order to get started.
 
 Also, feel free to join the discussions on the `developer mailing list`_.
 
-If you want a quick guide to getting your development enviroment setup, please
+If you want a quick guide to getting your development environment setup, please
 use `the contributing instructions on GitHub`_.
 
 Certificate of Origin
@@ -101,6 +101,7 @@ message can be one of the following:
 * FIX: A bugfix contribution
 * REFACTOR: Moving or removing code without change in functionality
 * TEST: Test updates or improvements
+* PERF: Performance enhancements
 
 The ``#9999`` component of the commit message should be the issue number in the Modin
 GitHub issue tracker: https://github.com/modin-project/modin/issues. This is important

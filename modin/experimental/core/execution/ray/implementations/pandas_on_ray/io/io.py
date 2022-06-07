@@ -308,7 +308,7 @@ def _read_sql_with_offset_pandas_on_ray(
     Returns
     -------
     list
-        List with splitted read results and it's metadata (index, dtypes, etc.).
+        List with split read results and it's metadata (index, dtypes, etc.).
     """
     from .sql import query_put_bounders
 
