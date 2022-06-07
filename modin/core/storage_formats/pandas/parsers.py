@@ -53,7 +53,7 @@ from modin.core.io.file_dispatcher import OpenFile
 from modin.db_conn import ModinDatabaseConnection
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
-from modin.logging import LoggerMixin
+from modin.logging import LoggerBase
 
 _doc_pandas_parser_class = """
 Class for handling {data_type} on the workers using pandas storage format.
@@ -137,7 +137,7 @@ def find_common_type_cat(types):
         return find_common_type(list(types))
 
 
-class PandasParser(LoggerMixin, object):
+class PandasParser(LoggerBase):
     """Base class for parser classes with pandas storage format."""
 
     @staticmethod
