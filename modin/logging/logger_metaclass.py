@@ -78,7 +78,7 @@ class LoggerMetaClass(type):  # noqa: PR01
             ):
                 if attribute not in seen_attributes:
                     seen_attributes[attribute] = logger_decorator(
-                        "PANDAS-API", f"{class_name}.{attribute_name}", "info"
+                        name=f"{class_name}.{attribute_name}"
                     )(attribute)
                 attribute = seen_attributes[attribute]
             new_class_dict[attribute_name] = attribute
