@@ -18,6 +18,7 @@ Module contains ``logger_decorator`` function.
 """
 
 from functools import wraps
+from logging import Logger
 
 from modin.config import LogMode
 from .config import get_logger
@@ -41,6 +42,10 @@ def logger_decorator(modin_layer: str, function_name: str, log_level: str):
     func
         A decorator function.
     """
+    log_level = log_level.lower()
+    start_line = f"START::{modin_layer.upper()}::{function_name}"
+    stop_line = f"STOP::{modin_layer.upper()}::{function_name}"
+    assert hasattr(Logger, log_level.lower()), f"Invalid log level: {log_level}"
 
     def decorator(f):
         """Decorate function to add logs to Modin API function."""
@@ -65,14 +70,14 @@ def logger_decorator(modin_layer: str, function_name: str, log_level: str):
                 return f(*args, **kwargs)
 
             logger = get_logger()
+            logger_level = getattr(logger, log_level)
+            logger_level(start_line)
             try:
-                logger_level = getattr(logger, log_level.lower())
-            except AttributeError:
-                raise AttributeError(f"Invalid log_level: {log_level}")
-
-            logger_level(f"START::{modin_layer.upper()}::{function_name}")
-            result = f(*args, **kwargs)
-            logger_level(f"STOP::{modin_layer.upper()}::{function_name}")
+                result = f(*args, **kwargs)
+            except BaseException:
+                logger.exception(stop_line)
+                raise
+            logger_level(stop_line)
             return result
 
         return run_and_log

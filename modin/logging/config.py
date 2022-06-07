@@ -85,7 +85,7 @@ def bytes_int_to_str(num_bytes, suffix="B"):
         if num_bytes < factor:
             return f"{num_bytes:.2f}{unit}{suffix}"
         num_bytes /= factor
-    return f"{num_bytes:.2f}{1000+P}{suffix}"
+    return f"{num_bytes * 1000:.2f}P{suffix}"
 
 
 def configure_logging():
@@ -112,7 +112,8 @@ def configure_logging():
 
     if LogMode.get() == "enable_api_only":
         logger.setLevel(logging.INFO)
-    logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.DEBUG)
 
     logger.info(f"OS Version: {platform.platform()}")
     logger.info(f"Python Version: {platform.python_version()}")
