@@ -108,7 +108,7 @@ def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
     This new class is instantiated differently depending on
     whether this is done in remote or local context.
 
-    In local context we effectively get the same behaviour, but in remote
+    In local context we effectively get the same behavior, but in remote
     context the created class is actually of separate type which
     proxies most requests to a remote end.
 

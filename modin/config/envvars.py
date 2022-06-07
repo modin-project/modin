@@ -415,8 +415,42 @@ class LogMemoryInterval(EnvironmentVariable, type=int):
         return log_memory_interval
 
 
+class LogMemorySize(EnvironmentVariable, type=int):
+    """Size of logs (in MBs) to store per Modin job."""
+
+    varname = "MODIN_LOG_MEMORY_SIZE"
+    default = 100
+
+    @classmethod
+    def put(cls, value):
+        """
+        Set ``LogMemorySize`` with extra checks.
+
+        Parameters
+        ----------
+        value : int
+            Config value to set.
+        """
+        if value <= 0:
+            raise ValueError(f"Log memory size should be > 0 MB, passed value {value}")
+        super().put(value)
+
+    @classmethod
+    def get(cls):
+        """
+        Get ``LogMemorySize`` with extra checks.
+
+        Returns
+        -------
+        int
+        """
+        log_memory_size = super().get()
+        assert log_memory_size > 0, "`LogMemorySize` should be > 0"
+        return log_memory_size
+
+
 class PersistentPickle(EnvironmentVariable, type=bool):
-    """Wheather serialization should be persistent."""
+    """Whether serialization should be persistent."""
 
     varname = "MODIN_PERSISTENT_PICKLE"
     # When set to off, it allows faster serialization which is only

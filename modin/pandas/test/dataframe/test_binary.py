@@ -59,11 +59,11 @@ def test_math_functions(other, axis, op):
     data = test_data["float_nan_data"]
     if (op == "floordiv" or op == "rfloordiv") and axis == "rows":
         # lambda == "series_or_list"
-        pytest.xfail(reason="different behaviour")
+        pytest.xfail(reason="different behavior")
 
     if op == "rmod" and axis == "rows":
         # lambda == "series_or_list"
-        pytest.xfail(reason="different behaviour")
+        pytest.xfail(reason="different behavior")
 
     eval_general(
         *create_test_dfs(data), lambda df: getattr(df, op)(other(df, axis), axis=axis)

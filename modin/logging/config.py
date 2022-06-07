@@ -18,6 +18,7 @@ Module contains ``ModinFormatter`` class.
 """
 
 import logging
+from logging.handlers import RotatingFileHandler
 import datetime as dt
 import os
 import uuid
@@ -26,7 +27,7 @@ import psutil
 import pkg_resources
 import threading
 import time
-from modin.config import LogMemoryInterval, LogMode
+from modin.config import LogMemoryInterval, LogMemorySize, LogMode
 
 __LOGGER_CONFIGURED__: bool = False
 
@@ -96,7 +97,12 @@ def configure_logging():
 
     os.makedirs(os.path.dirname(log_filename), exist_ok=True)
 
-    logfile = logging.FileHandler(log_filename, "a")
+    logfile = RotatingFileHandler(
+        filename=log_filename,
+        mode="a",
+        maxBytes=LogMemorySize.get() * int(1e5),
+        backupCount=10,
+    )
     formatter = ModinFormatter(
         fmt="%(process)d, %(thread)d, %(asctime)s, %(message)s",
         datefmt="%Y-%m-%d,%H:%M:%S.%f",
@@ -108,7 +114,6 @@ def configure_logging():
         logger.setLevel(logging.INFO)
     logger.setLevel(logging.DEBUG)
 
-    logger = logging.getLogger("modin.logger")
     logger.info(f"OS Version: {platform.platform()}")
     logger.info(f"Python Version: {platform.python_version()}")
     modin_version = pkg_resources.get_distribution("modin").version
@@ -146,8 +151,10 @@ def memory_thread(logger, sleep_time):
         The interval at which to profile system memory.
     """
     while True:
+        rss_mem = bytes_int_to_str(psutil.Process().memory_info().rss)
         svmem = psutil.virtual_memory()
         logger.info(f"Memory Percentage: {svmem.percent}%")
+        logger.info(f"RSS Memory: {rss_mem}")
         time.sleep(sleep_time)
 
 

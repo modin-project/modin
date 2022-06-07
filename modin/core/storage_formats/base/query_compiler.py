@@ -623,7 +623,7 @@ class BaseQueryCompiler(
             self, other=other, **kwargs
         )
 
-    @doc_utils.doc_binary_method(operation="substraction", sign="-", self_on_right=True)
+    @doc_utils.doc_binary_method(operation="subtraction", sign="-", self_on_right=True)
     def rsub(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.rsub)(
             self, other=other, **kwargs
@@ -635,7 +635,7 @@ class BaseQueryCompiler(
             self, other=other, **kwargs
         )
 
-    @doc_utils.doc_binary_method(operation="substraction", sign="-")
+    @doc_utils.doc_binary_method(operation="subtraction", sign="-")
     def sub(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.sub)(self, other=other, **kwargs)
 
@@ -707,7 +707,7 @@ class BaseQueryCompiler(
             Whether to overwrite every corresponding value of self, or only if it's NAN.
         filter_func : callable(pandas.Series, pandas.Series) -> numpy.ndarray<bool>
             Function that takes column of the self and return bool mask for values, that
-            should be overwriten in the self frame.
+            should be overwritten in the self frame.
         errors : {"raise", "ignore"}
             If "raise", will raise a ``ValueError`` if `self` and `other` both contain
             non-NA data in the same place.
@@ -1011,7 +1011,7 @@ class BaseQueryCompiler(
 
     def is_monotonic_increasing(self):
         """
-        Return boolean if values in the object are monotonicly increasing.
+        Return boolean if values in the object are monotonically increasing.
 
         Returns
         -------
@@ -1021,7 +1021,7 @@ class BaseQueryCompiler(
 
     def is_monotonic_decreasing(self):
         """
-        Return boolean if values in the object are monotonicly decreasing.
+        Return boolean if values in the object are monotonically decreasing.
 
         Returns
         -------
@@ -1484,7 +1484,7 @@ class BaseQueryCompiler(
     @doc_utils.add_refer_to("DataFrame.idxmax")
     def idxmax(self, **kwargs):  # noqa: PR02
         """
-        Get position of the first occurence of the maximum for each row or column.
+        Get position of the first occurrence of the maximum for each row or column.
 
         Parameters
         ----------
@@ -1505,7 +1505,7 @@ class BaseQueryCompiler(
     @doc_utils.add_refer_to("DataFrame.idxmin")
     def idxmin(self, **kwargs):  # noqa: PR02
         """
-        Get position of the first occurence of the minimum for each row or column.
+        Get position of the first occurrence of the minimum for each row or column.
 
         Parameters
         ----------
@@ -1794,7 +1794,7 @@ class BaseQueryCompiler(
         Returns
         -------
         BaseQueryCompiler
-            New QueryCompiler with modes calculated alogn given axis.
+            New QueryCompiler with modes calculated along given axis.
         """
         return DataFrameDefault.register(pandas.DataFrame.mode)(self, **kwargs)
 
@@ -1857,7 +1857,7 @@ class BaseQueryCompiler(
         Compute numerical rank along the specified axis.
 
         By default, equal values are assigned a rank that is the average of the ranks
-        of those values, this behaviour can be changed via `method` parameter.
+        of those values, this behavior can be changed via `method` parameter.
 
         Parameters
         ----------
@@ -2607,7 +2607,7 @@ class BaseQueryCompiler(
         )
 
     @doc_utils.doc_groupby_method(
-        action="compute standart deviation", result="standart deviation", refer_to="std"
+        action="compute standard deviation", result="standard deviation", refer_to="std"
     )
     def groupby_std(
         self,
@@ -3432,7 +3432,7 @@ class BaseQueryCompiler(
         Returns
         -------
         BaseQueryCompiler
-            New QueryCompiler containing formated date-time values.
+            New QueryCompiler containing formatted date-time values.
         """
         return DateTimeDefault.register(pandas.Series.dt.strftime)(self, date_format)
 
@@ -3897,7 +3897,7 @@ class BaseQueryCompiler(
         )
 
     @doc_utils.doc_resample_reduce(
-        result="standart error of the mean",
+        result="standard error of the mean",
         params="ddof : int, default: 1",
         refer_to="sem",
     )
@@ -3915,7 +3915,7 @@ class BaseQueryCompiler(
         )
 
     @doc_utils.doc_resample_reduce(
-        result="standart deviation", params="ddof : int", refer_to="std"
+        result="standard deviation", params="ddof : int", refer_to="std"
     )
     def resample_std(self, resample_kwargs, ddof, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.std)(
@@ -4307,7 +4307,7 @@ class BaseQueryCompiler(
     # Rolling methods
 
     # FIXME: most of the rolling/window methods take *args and **kwargs parameters
-    # which are only needed for the compatibility with numpy, this behaviour is inherited
+    # which are only needed for the compatibility with numpy, this behavior is inherited
     # from the API level, we should get rid of it (Modin issue #3108).
 
     @doc_utils.doc_window_method(
@@ -4472,7 +4472,7 @@ class BaseQueryCompiler(
         )
 
     @doc_utils.doc_window_method(
-        result="standart deviation",
+        result="standard deviation",
         refer_to="std",
         params="""
         ddof : int, default: 1
@@ -4528,7 +4528,7 @@ class BaseQueryCompiler(
 
     @doc_utils.doc_window_method(
         win_type="window of the specified type",
-        result="standart deviation",
+        result="standard deviation",
         refer_to="std",
         params="""
         ddof : int, default: 1
@@ -4591,12 +4591,12 @@ class BaseQueryCompiler(
 
     def invert(self):
         """
-        Apply bitwise invertion for each element of the QueryCompiler.
+        Apply bitwise inversion for each element of the QueryCompiler.
 
         Returns
         -------
         BaseQueryCompiler
-            New QueryCompiler containing bitwise invertion for each value.
+            New QueryCompiler containing bitwise inversion for each value.
         """
         return DataFrameDefault.register(pandas.DataFrame.__invert__)(self)
 

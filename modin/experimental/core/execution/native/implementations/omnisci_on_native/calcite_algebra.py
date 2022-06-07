@@ -266,7 +266,7 @@ class CalciteAggregateNode(CalciteBaseNode):
 
 class CalciteCollation:
     """
-    A stucture to describe sorting order.
+    A structure to describe sorting order.
 
     Parameters
     ----------

@@ -2,7 +2,7 @@ PandasOnDaskDataframePartitionManager
 """""""""""""""""""""""""""""""""""""
 
 This class is the specific implementation of :py:class:`~modin.core.dataframe.pandas.partitioning.partition_manager.PandasDataframePartitionManager`
-using Dask as the execution engine. This class is responsible for partition manipulation and applying a funcion to
+using Dask as the execution engine. This class is responsible for partition manipulation and applying a function to
 block/row/column partitions.
 
 Public API
