@@ -17,6 +17,7 @@ Module contains ``logger_decorator`` function.
 ``logger_decorator`` is used for decorating individual Modin functions.
 """
 
+from typing import Optional
 from functools import wraps
 from logging import Logger
 
@@ -24,18 +25,23 @@ from modin.config import LogMode
 from .config import get_logger
 
 
-def logger_decorator(modin_layer: str, function_name: str, log_level: str):
+def logger_decorator(
+    modin_layer: str = "PANDAS-API",
+    name: Optional[str] = None,
+    log_level: Optional[str] = "info",
+):
     """
     Log Decorator used on specific internal Modin functions.
 
     Parameters
     ----------
-    modin_layer : str
-        Specified by the logger (PANDAS-API).
-    function_name : str
+    modin_layer : str, default: "PANDAS-API"
+        Specified by the logger (e.g. PANDAS-API).
+    name : str, optional
         The name of the function the decorator is being applied to.
-    log_level : str
-        The log level (logging.INFO, logging.DEBUG, logging.WARNING, etc.).
+        Taken from the decorated function name if not specified.
+    log_level : str, default: "info"
+        The log level (INFO, DEBUG, WARNING, etc.).
 
     Returns
     -------
@@ -43,12 +49,13 @@ def logger_decorator(modin_layer: str, function_name: str, log_level: str):
         A decorator function.
     """
     log_level = log_level.lower()
-    start_line = f"START::{modin_layer.upper()}::{function_name}"
-    stop_line = f"STOP::{modin_layer.upper()}::{function_name}"
     assert hasattr(Logger, log_level.lower()), f"Invalid log level: {log_level}"
 
     def decorator(f):
         """Decorate function to add logs to Modin API function."""
+
+        start_line = f"START::{modin_layer.upper()}::{name or f.__name__}"
+        stop_line = f"STOP::{modin_layer.upper()}::{name or f.__name__}"
 
         @wraps(f)
         def run_and_log(*args, **kwargs):

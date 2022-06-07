@@ -27,6 +27,8 @@ import psutil
 import pkg_resources
 import threading
 import time
+
+import modin
 from modin.config import LogMemoryInterval, LogMemorySize, LogMode
 
 __LOGGER_CONFIGURED__: bool = False
@@ -117,12 +119,11 @@ def configure_logging():
 
     logger.info(f"OS Version: {platform.platform()}")
     logger.info(f"Python Version: {platform.python_version()}")
-    modin_version = pkg_resources.get_distribution("modin").version
     pandas_version = pkg_resources.get_distribution("pandas").version
     num_physical_cores = str(psutil.cpu_count(logical=False))
     num_total_cores = str(psutil.cpu_count(logical=True))
     svmem = psutil.virtual_memory()
-    logger.info(f"Modin Version: {modin_version}")
+    logger.info(f"Modin Version: {modin.__version__}")
     logger.info(f"Pandas Version: {pandas_version}")
     logger.info(f"Physical Cores: {num_physical_cores}")
     logger.info(f"Total Cores: {num_total_cores}")
