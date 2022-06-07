@@ -37,5 +37,19 @@ class LoggerBase:
         log_level: Optional[str] = "info",
         **kwargs,
     ) -> None:
+        """
+        Apply logging decorator to all children of LoggerBase.
+
+        Parameters
+        ----------
+        modin_layer : str, default: "PANDAS-API"
+            Specified by the logger (e.g. PANDAS-API).
+        class_name : str, optional
+            The name of the class the decorator is being applied to.
+            Composed from the decorated class name if not specified.
+        log_level : str, default: "info"
+            The log level (INFO, DEBUG, WARNING, etc.).
+        **kwargs : dict
+        """
         super().__init_subclass__(**kwargs)
         logger_decorator(modin_layer, class_name, log_level)(cls)

@@ -29,7 +29,19 @@ _MODIN_LOGGER_NOWRAP = "__modin_logging_nowrap__"
 
 
 def disable_logging(func):
-    """Disable logging of one particular function. Useful for decorated classes."""
+    """
+    Disable logging of one particular function. Useful for decorated classes.
+
+    Parameters
+    ----------
+    func : callable
+        A method in a logger-decorated class for which logging should be disabled.
+
+    Returns
+    -------
+    func
+        A function with logging disabled.
+    """
     setattr(func, _MODIN_LOGGER_NOWRAP, True)
     return func
 
@@ -48,8 +60,8 @@ def logger_decorator(
         Specified by the logger (e.g. PANDAS-API).
         If it's an object to decorate, call logger_decorator() on it with default arguments.
     name : str, optional
-        The name of the function the decorator is being applied to.
-        Taken from the decorated function name if not specified.
+        The name of the object the decorator is being applied to.
+        Composed from the decorated object name if not specified.
     log_level : str, default: "info"
         The log level (INFO, DEBUG, WARNING, etc.).
 
@@ -69,7 +81,6 @@ def logger_decorator(
 
     def decorator(obj):
         """Decorate function or class to add logs to Modin API function(s)."""
-
         if isinstance(obj, type):
             seen = {}
             for attr_name, attr_value in vars(obj).items():
