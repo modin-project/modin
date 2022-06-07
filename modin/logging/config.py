@@ -93,7 +93,7 @@ def configure_logging():
     global __LOGGER_CONFIGURED__
     logger = logging.getLogger("modin.logger")
     job_id = uuid.uuid4().hex
-    log_filename = f".modin/logs/job_{job_id}.log"
+    log_filename = f".modin/logs/job_{job_id}/trace.log"
 
     os.makedirs(os.path.dirname(log_filename), exist_ok=True)
 
@@ -128,7 +128,7 @@ def configure_logging():
     if LogMode.get() != "enable_api_only":
         mem_sleep = LogMemoryInterval.get()
         mem_logger = logging.getLogger("modin_memory.logger")
-        mem_log_filename = f".modin/logs/memory_{job_id}.log"
+        mem_log_filename = f".modin/logs/job_{job_id}/memory.log"
         logfile = RotatingFileHandler(
             filename=mem_log_filename,
             mode="a",
