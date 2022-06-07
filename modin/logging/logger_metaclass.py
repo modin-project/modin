@@ -17,57 +17,9 @@ Module contains ``LoggerMetaClass`` class.
 ``LoggerMetaClass`` is used for adding logging to Modin classes.
 """
 
-from functools import wraps
 from types import FunctionType, MethodType
 
-from .config import get_logger
-from modin.config import LogMode
-
-
-def logger_class_wrapper(class_name, method_name, method):
-    """
-    Execute Modin functions with logging if enabled.
-
-    Parameters
-    ----------
-    class_name : str
-        The name of the class the LoggerMetaClass is being applied to.
-    method_name : str
-        The name of the Modin function within the class.
-    method : callable
-        The function to apply on the arguments.
-
-    Returns
-    -------
-    func
-        A decorator function.
-    """
-
-    @wraps(method)
-    def log_wrap(*args, **kwargs):
-        """
-        Compute function with logging if Modin logging is enabled.
-
-        Parameters
-        ----------
-        *args : tuple
-            The function arguments.
-        **kwargs : dict
-            The function keyword arguments.
-
-        Returns
-        -------
-        Any
-        """
-        if LogMode.get() != "disable":
-            logger = get_logger()
-            logger.info(f"START::PANDAS-API::{class_name}.{method_name}")
-            result = method(*args, **kwargs)
-            logger.info(f"END::PANDAS-API::{class_name}.{method_name}")
-            return result
-        return method(*args, **kwargs)
-
-    return log_wrap
+from .logger_function import logger_decorator
 
 
 def metaclass_resolver(*classes):
@@ -125,9 +77,9 @@ class LoggerMetaClass(type):  # noqa: PR01
                 and attribute_name not in exclude_attributes
             ):
                 if attribute not in seen_attributes:
-                    seen_attributes[attribute] = logger_class_wrapper(
-                        class_name, attribute_name, attribute
-                    )
+                    seen_attributes[attribute] = logger_decorator(
+                        "PANDAS-API", f"{class_name}.{attribute_name}", "info"
+                    )(attribute)
                 attribute = seen_attributes[attribute]
             new_class_dict[attribute_name] = attribute
         return type.__new__(mcls, class_name, bases, new_class_dict)
