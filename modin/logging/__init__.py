@@ -11,9 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .logger_metaclass import (  # noqa: F401
-    LoggerMixin,
-)
+from .logger_class_mixin import LoggerMixin  # noqa: F401
 from .config import get_logger  # noqa: F401
 from .logger_function import logger_decorator  # noqa: F401
 

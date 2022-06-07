@@ -12,9 +12,9 @@
 # governing permissions and limitations under the License.
 
 """
-Module contains ``LoggerMetaClass`` class.
+Module contains ``LoggerMixin`` class.
 
-``LoggerMetaClass`` is used for adding logging to Modin classes.
+``LoggerMixin`` is used for adding logging to Modin classes and their subclasses.
 """
 from typing import Optional
 
