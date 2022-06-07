@@ -2035,6 +2035,14 @@ def test_sum_with_level():
 
 
 def test_reset_index_groupby():
+    # Due to `reset_index` deferring the actual reindexing of partitions,
+    # when we call groupby after a `reset_index` with a `by` column name
+    # that was moved from the index to the columns via `from_labels` the
+    # algebra layer incorrectly thinks that the `by` key is duplicated
+    # across both the columns and labels, and fails, when it should
+    # succeed. We have this test to ensure that that case is correctly
+    # handled, and passes. For more details, checkout
+    # https://github.com/modin-project/modin/issues/4522.
     frame_data = np.random.randint(97, 198, size=(2**6, 2**4))
     pandas_df = pandas.DataFrame(
         frame_data,
@@ -2043,11 +2051,14 @@ def test_reset_index_groupby():
         ),
     ).add_prefix("col")
     pandas_df.index.names = [f"index_{i}" for i in range(len(pandas_df.index.names))]
-    # Convert every other column to string
+    # Convert every even column to string
     for col in pandas_df.iloc[
         :, [i for i in range(len(pandas_df.columns)) if i % 2 == 0]
     ]:
         pandas_df[col] = [str(chr(i)) for i in pandas_df[col]]
+    # The `pandas_df` contains a multi-index with 3 levels, named `index_0`, `index_1`,
+    # and `index_2`, and 16 columns, named `col0` through `col15`. Every even column
+    # has dtype `str`, while odd columns have dtype `int64`.
     modin_df = from_pandas(pandas_df)
     eval_general(
         modin_df,
