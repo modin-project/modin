@@ -18,6 +18,7 @@ Module contains ``logger_decorator`` function.
 """
 
 from typing import Optional
+from types import FunctionType, MethodType
 from functools import wraps
 from logging import Logger
 
@@ -31,7 +32,7 @@ def logger_decorator(
     log_level: Optional[str] = "info",
 ):
     """
-    Log Decorator used on specific internal Modin functions.
+    Log Decorator used on specific internal Modin functions or classes.
 
     Parameters
     ----------
@@ -51,13 +52,27 @@ def logger_decorator(
     log_level = log_level.lower()
     assert hasattr(Logger, log_level.lower()), f"Invalid log level: {log_level}"
 
-    def decorator(f):
-        """Decorate function to add logs to Modin API function."""
+    def decorator(obj):
+        """Decorate function or class to add logs to Modin API function(s)."""
 
-        start_line = f"START::{modin_layer.upper()}::{name or f.__name__}"
-        stop_line = f"STOP::{modin_layer.upper()}::{name or f.__name__}"
+        if isinstance(obj, type):
+            for attr_name, attr_value in vars(obj).items():
+                if isinstance(attr_value, (FunctionType, MethodType)):
+                    setattr(
+                        obj,
+                        attr_name,
+                        logger_decorator(
+                            modin_layer,
+                            f"{name or obj.__name__}.{attr_name}",
+                            log_level,
+                        )(attr_value),
+                    )
+            return obj
 
-        @wraps(f)
+        start_line = f"START::{modin_layer.upper()}::{name or obj.__name__}"
+        stop_line = f"STOP::{modin_layer.upper()}::{name or obj.__name__}"
+
+        @wraps(obj)
         def run_and_log(*args, **kwargs):
             """
             Compute function with logging if Modin logging is enabled.
@@ -74,13 +89,13 @@ def logger_decorator(
             Any
             """
             if LogMode.get() == "disable":
-                return f(*args, **kwargs)
+                return obj(*args, **kwargs)
 
             logger = get_logger()
             logger_level = getattr(logger, log_level)
             logger_level(start_line)
             try:
-                result = f(*args, **kwargs)
+                result = obj(*args, **kwargs)
             except BaseException:
                 logger.exception(stop_line)
                 raise
