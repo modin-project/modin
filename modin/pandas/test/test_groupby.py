@@ -1566,7 +1566,7 @@ def test_agg_exceptions(operation):
         },
     ],
 )
-def test_to_pandas_convertion(kwargs):
+def test_to_pandas_conversion(kwargs):
     data = {"a": [1, 2], "b": [3, 4], "c": [5, 6]}
     by = ["a", "b"]
 
@@ -2024,4 +2024,49 @@ def test_reset_index_groupby():
         modin_df,
         pandas_df,
         lambda df: df.reset_index().groupby(["index_0", "index_1"]).count(),
+    )
+
+def test_by_in_index_and_columns():
+    pandas_df = pandas.DataFrame(
+        [[1, 2, 3]], index=pd.Index([0], name="a"), columns=['a', 'b', 'c']
+    )
+    modin_df = from_pandas(pandas_df)
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby(by='a').count(),
+        raising_exceptions=True,
+        check_exception_type=True,
+    )
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby(by=['a', 'b']).count(),
+        raising_exceptions=True,
+        check_exception_type=True,
+    )
+    pandas_df = pandas.DataFrame(
+        [[1, 2, 3]], index=pd.Index([(0, 1)], names=["a", 'b']), columns=['a', 'b', 'c']
+    )
+    modin_df = from_pandas(pandas_df)
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby(by='a').count(),
+        raising_exceptions=True,
+        check_exception_type=True,
+    )
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby(by=['a', 'c']).count(),
+        raising_exceptions=True,
+        check_exception_type=True,
+    )
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby(by=['a', 'b']).count(),
+        raising_exceptions=True,
+        check_exception_type=True,
     )
