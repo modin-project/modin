@@ -423,7 +423,16 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         # strings is passed in, the data used for the groupby is dropped before the
         # groupby takes place.
         drop = False
-
+        # Check that there is no ambiguity in the parameter we were given.
+        _by_check = by if is_list_like(by) else [by]
+        for k in _by_check:
+            if k in self.index.names and k in self.axes[axis]:
+                level_name, index_name = "an index", "a column"
+                if axis == 1:
+                    level_name, index_name = index_name, level_name
+                raise ValueError(
+                    f"{k} is both {level_name} level and {index_name} label, which is ambiguous."
+                )
         if (
             not isinstance(by, (pandas.Series, Series))
             and is_list_like(by)
@@ -447,14 +456,6 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
             idx_name = by.name
             by = by._query_compiler
         elif is_list_like(by):
-            for k in by:
-                if k in self.index.names and k in self.axes[axis]:
-                    level_name, index_name = "an index", "a column"
-                    if axis == 1:
-                        level_name, index_name = index_name, level_name
-                    raise ValueError(
-                        f"{k} is both {level_name} level and {index_name} label, which is ambiguous."
-                    )
             # fastpath for multi column groupby
             if axis == 0 and all(
                 (
