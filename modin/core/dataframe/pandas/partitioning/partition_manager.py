@@ -127,7 +127,7 @@ class PandasDataframePartitionManager(ABC):
     @classmethod
     def column_partitions(cls, partitions, full_axis=True):
         """
-        Get the list of `BaseDataframeAxisPartition` objects representing column-wise paritions.
+        Get the list of `BaseDataframeAxisPartition` objects representing column-wise partitions.
 
         Parameters
         ----------

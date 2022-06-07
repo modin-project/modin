@@ -55,7 +55,13 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+        cls,
+        axis,
+        func,
+        num_splits,
+        maintain_partitioning,
+        *partitions,
+        **kwargs,
     ):
         """
         Deploy a function along a full axis.
@@ -68,13 +74,13 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             The function to perform.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).
-        kwargs : dict
-            Additional keywords arguments to be passed in `func`.
         maintain_partitioning : bool
             If True, keep the old partitioning if possible.
             If False, create a new partition layout.
         *partitions : iterable
             All partitions that make up the full axis (row or column).
+        **kwargs : dict
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -89,16 +95,16 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             axis,
             func,
             num_splits,
-            kwargs,
             maintain_partitioning,
             *partitions,
             num_returns=result_num_splits * 4,
             pure=False,
+            **kwargs,
         )
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
-        cls, axis, func, num_splits, len_of_left, other_shape, kwargs, *partitions
+        cls, axis, func, num_splits, len_of_left, other_shape, *partitions, **kwargs
     ):
         """
         Deploy a function along a full axis between two data sets.
@@ -116,10 +122,10 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         other_shape : np.ndarray
             The shape of right frame in terms of partitions, i.e.
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
-        kwargs : dict
-            Additional keywords arguments to be passed in `func`.
         *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
+        **kwargs : dict
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -134,10 +140,10 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             num_splits,
             len_of_left,
             other_shape,
-            kwargs,
             *partitions,
             num_returns=num_splits * 4,
             pure=False,
+            **kwargs,
         )
 
     def _wrap_partitions(self, partitions):
@@ -200,7 +206,7 @@ class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeAxisPartition):
     axis = 1
 
 
-def deploy_dask_func(func, *args):
+def deploy_dask_func(func, *args, **kwargs):
     """
     Execute a function on an axis partition in a worker process.
 
@@ -210,13 +216,15 @@ def deploy_dask_func(func, *args):
         Function to be executed on an axis partition.
     *args : iterable
         Additional arguments that need to passed in ``func``.
+    **kwargs : dict
+        Additional keyword arguments to be passed in `func`.
 
     Returns
     -------
     list
         The result of the function ``func`` and metadata for it.
     """
-    result = func(*args)
+    result = func(*args, **kwargs)
     ip = get_ip()
     if isinstance(result, pandas.DataFrame):
         return result, len(result), len(result.columns), ip

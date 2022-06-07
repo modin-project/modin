@@ -1053,7 +1053,7 @@ class DataFrameGroupBy(object, metaclass=LoggerMetaClass):
         agg_kwargs = dict() if agg_kwargs is None else agg_kwargs
 
         if numeric_only is None:
-            # pandas behaviour: if `numeric_only` wasn't explicitly specified then
+            # pandas behavior: if `numeric_only` wasn't explicitly specified then
             # the parameter is considered to be `False` if there are no numeric types
             # in the frame and `True` otherwise.
             numeric_only = any(
