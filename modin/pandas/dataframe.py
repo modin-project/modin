@@ -415,6 +415,7 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
             )
         else:
             squeeze = False
+
         axis = self._get_axis_number(axis)
         idx_name = None
         # Drop here indicates whether or not to drop the data column before doing the
