@@ -17,7 +17,7 @@ Module contains ``logger_decorator`` function.
 ``logger_decorator`` is used for decorating individual Modin functions.
 """
 
-from typing import Optional
+from typing import Optional, Callable, Union, Type
 from types import FunctionType, MethodType
 from functools import wraps
 from logging import Logger
@@ -27,7 +27,7 @@ from .config import get_logger
 
 
 def logger_decorator(
-    modin_layer: str = "PANDAS-API",
+    modin_layer: Union[str, Callable, Type] = "PANDAS-API",
     name: Optional[str] = None,
     log_level: Optional[str] = "info",
 ):
@@ -36,8 +36,9 @@ def logger_decorator(
 
     Parameters
     ----------
-    modin_layer : str, default: "PANDAS-API"
+    modin_layer : str or object to decorate, default: "PANDAS-API"
         Specified by the logger (e.g. PANDAS-API).
+        If it's an object to decorate, call logger_decorator() on it with default arguments.
     name : str, optional
         The name of the function the decorator is being applied to.
         Taken from the decorated function name if not specified.
@@ -49,6 +50,12 @@ def logger_decorator(
     func
         A decorator function.
     """
+    if not isinstance(modin_layer, str):
+        # assume the decorator is used in a form without parenthesis like:
+        # @logger_decorator
+        # def func()
+        return logger_decorator()(modin_layer)
+
     log_level = log_level.lower()
     assert hasattr(Logger, log_level.lower()), f"Invalid log level: {log_level}"
 
@@ -57,7 +64,9 @@ def logger_decorator(
 
         if isinstance(obj, type):
             for attr_name, attr_value in vars(obj).items():
-                if isinstance(attr_value, (FunctionType, MethodType)):
+                if isinstance(attr_value, (FunctionType, MethodType)) and not hasattr(
+                    attr_value, "__modin_logging_added__"
+                ):
                     setattr(
                         obj,
                         attr_name,
@@ -102,6 +111,8 @@ def logger_decorator(
             logger_level(stop_line)
             return result
 
+        # make sure we won't decorate multiple times
+        run_and_log.__modin_logging_added__ = True
         return run_and_log
 
     return decorator

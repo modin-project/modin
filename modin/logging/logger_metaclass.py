@@ -16,7 +16,7 @@ Module contains ``LoggerMetaClass`` class.
 
 ``LoggerMetaClass`` is used for adding logging to Modin classes.
 """
-
+from typing import Optional
 from types import FunctionType, MethodType
 
 from .logger_function import logger_decorator
@@ -83,3 +83,23 @@ class LoggerMetaClass(type):  # noqa: PR01
                 attribute = seen_attributes[attribute]
             new_class_dict[attribute_name] = attribute
         return type.__new__(mcls, class_name, bases, new_class_dict)
+
+
+class LoggerMixin:
+    """
+    Ensure all subclasses of the class being inherited are logged, too.
+
+    Notes
+    -----
+    This mixin must go first in class bases declaration to have the desired effect.
+    """
+
+    def __init_subclass__(
+        cls,
+        modin_layer: str = "PANDAS-API",
+        class_name: Optional[str] = None,
+        log_level: Optional[str] = "info",
+        **kwargs,
+    ) -> None:
+        super().__init_subclass__(**kwargs)
+        logger_decorator(modin_layer, class_name, log_level)(cls)
