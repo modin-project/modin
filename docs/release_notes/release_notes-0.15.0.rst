@@ -28,6 +28,7 @@ Key Features and Updates
   * FIX-#4504: Support na_action in applymap (#4505)
   * FIX-#4503: Stop the memory logging thread after session exit (#4515)
   * FIX-#4531: Fix a makedirs race condition in to_parquet (#4533)
+  * FIX-#4464: Refactor Ray utils and quick fix groupby.count failing on virtual partitions (#4490)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
   * PERF-#4493: Use partition size caches more in Modin dataframe (#4495)
@@ -38,6 +39,8 @@ Key Features and Updates
   * REFACTOR-#4284: use variable length unpacking when getting results from `deploy` function (#4285)
   * REFACTOR-#3642: Move PyArrow storage format usage from main feature to experimental ones (#4374)
   * REFACTOR-#4003: Delete the deprecated cloud mortgage example (#4406)
+  * REFACTOR-#4513: Fix spelling mistakes in docs and docstrings (#4514)
+  * REFACTOR-#4510: Align experimental and regular IO modules initializations (#4511)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements

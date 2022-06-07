@@ -35,7 +35,7 @@ class OmnisciServer:
         """
         Initialize OmniSci server.
 
-        Do nothing if it is initiliazed already.
+        Do nothing if it is initialized already.
         """
         if cls._server is None:
             cls._server = PyDbEngine(**OmnisciLaunchParameters.get())

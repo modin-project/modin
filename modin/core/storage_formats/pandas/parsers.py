@@ -74,7 +74,7 @@ Parameters
 Returns
 -------
 list
-    List with splitted parse results and it's metadata
+    List with split parse results and it's metadata
     (index, dtypes, etc.).
 """
 
@@ -265,7 +265,7 @@ class PandasParser(object, metaclass=LoggerMetaClass):
         BaseQueryCompiler or
         dict or
         pandas.io.parsers.TextFileReader
-            Object with imported data (or with reference to data) for furher
+            Object with imported data (or with reference to data) for further
             processing, object type depends on the child class `parse` function
             result type.
         """

@@ -8,7 +8,7 @@ The class serves as the intermediate level
 between ``pandas`` query compiler and conforming partition manager. All queries formed
 at the query compiler layer are ingested by this class and then conveyed jointly with the stored partitions
 into the partition manager for processing. Direct partitions manipulation by this class is prohibited except
-cases if an operation is striclty private or protected and called inside of the class only. The class provides
+cases if an operation is strictly private or protected and called inside of the class only. The class provides
 significantly reduced set of operations that fit plenty of pandas operations.
 
 Main tasks of :py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe` are storage of partitions, manipulation with labels of axes and

@@ -13,7 +13,7 @@ want to review in order to get started.
 
 Also, feel free to join the discussions on the `developer mailing list`_.
 
-If you want a quick guide to getting your development enviroment setup, please
+If you want a quick guide to getting your development environment setup, please
 use `the contributing instructions on GitHub`_.
 
 Certificate of Origin

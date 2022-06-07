@@ -1748,8 +1748,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             Column labels to sort data by.
         keep : {"first", "last", "all"}, default: "first"
             How to pick first rows in case of duplicated values:
-            - "first": prioritize first occurence.
-            - "last": prioritize last occurence.
+            - "first": prioritize first occurrence.
+            - "last": prioritize last occurrence.
             - "all": do not drop any duplicates, even if it means selecting more than `n` rows.
         sort_type : {"nsmallest", "nlargest"}, default: "nsmallest"
             "nsmallest" means sort in descending order, "nlargest" means
