@@ -25,6 +25,14 @@ from logging import Logger
 from modin.config import LogMode
 from .config import get_logger
 
+_MODIN_LOGGER_NOWRAP = "__modin_logging_nowrap__"
+
+
+def disable_logging(func):
+    """Disable logging of one particular function. Useful for decorated classes."""
+    setattr(func, _MODIN_LOGGER_NOWRAP, True)
+    return func
+
 
 def logger_decorator(
     modin_layer: Union[str, Callable, Type] = "PANDAS-API",
@@ -66,7 +74,7 @@ def logger_decorator(
             seen = {}
             for attr_name, attr_value in vars(obj).items():
                 if isinstance(attr_value, (FunctionType, MethodType)) and not hasattr(
-                    attr_value, "__modin_logging_added__"
+                    attr_value, _MODIN_LOGGER_NOWRAP
                 ):
                     try:
                         wrapped = seen[attr_value]
@@ -114,7 +122,6 @@ def logger_decorator(
             return result
 
         # make sure we won't decorate multiple times
-        run_and_log.__modin_logging_added__ = True
-        return run_and_log
+        return disable_logging(run_and_log)
 
     return decorator
