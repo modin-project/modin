@@ -425,17 +425,21 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         # groupby takes place.
         drop = False
         # Check that there is no ambiguity in the parameter we were given.
-        _by_check = by if is_list_like(by) else [by]
-        for k in _by_check:
-            if k in self.index.names and k in self.axes[axis]:
-                level_name, index_name = "an index", "a column"
-                if axis == 1:
-                    level_name, index_name = index_name, level_name
-                raise ValueError(
-                    f"{k} is both {level_name} level and {index_name} label, which is ambiguous."
-                )
+        # We don't need to check if `by` is a Series or Index, since those
+        # won't be referencing labels
+        if not isinstance(by, (pandas.Series, Series, pandas.Index)):
+            _by_check = by if is_list_like(by) else [by]
+            for k in _by_check:
+                if not isinstance(k, (Series, pandas.Series, pandas.Index)):
+                    if k in self.index.names and k in self.axes[axis ^ 1]:
+                        level_name, index_name = "an index", "a column"
+                        if axis == 1:
+                            level_name, index_name = index_name, level_name
+                        raise ValueError(
+                            f"{k} is both {level_name} level and {index_name} label, which is ambiguous."
+                        )
         if (
-            not isinstance(by, (pandas.Series, Series))
+            not isinstance(by, (pandas.Series, Series, pandas.Index))
             and is_list_like(by)
             and len(by) == 1
         ):
@@ -452,6 +456,11 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
                 level, by = by, None
             elif level is None:
                 by = self.__getitem__(by)._query_compiler
+        elif isinstance(by, (pandas.Series, pandas.Index)):
+            if isinstance(by, pandas.Index) and len(by) != len(self.axes[axis]):
+                raise ValueError("Grouper and axis must be same length")
+            idx_name = by.name
+            by = Series(by)._query_compiler
         elif isinstance(by, Series):
             drop = by._parent is self
             idx_name = by.name

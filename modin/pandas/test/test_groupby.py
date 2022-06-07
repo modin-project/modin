@@ -2076,15 +2076,16 @@ def test_by_in_index_and_columns():
         modin_df,
         pandas_df,
         lambda df: df.groupby(by="a").count(),
-        raising_exceptions=True,
-        check_exception_type=True,
     )
     eval_general(
         modin_df,
         pandas_df,
         lambda df: df.groupby(by=["a", "b"]).count(),
-        raising_exceptions=True,
-        check_exception_type=True,
+    )
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby(by=[df["b"], "a"]).count(),
     )
     pandas_df = pandas.DataFrame(
         [[1, 2, 3]], index=pd.Index([(0, 1)], names=["a", "b"]), columns=["a", "b", "c"]
@@ -2094,20 +2095,53 @@ def test_by_in_index_and_columns():
         modin_df,
         pandas_df,
         lambda df: df.groupby(by="a").count(),
-        raising_exceptions=True,
-        check_exception_type=True,
     )
     eval_general(
         modin_df,
         pandas_df,
         lambda df: df.groupby(by=["a", "c"]).count(),
-        raising_exceptions=True,
-        check_exception_type=True,
     )
     eval_general(
         modin_df,
         pandas_df,
         lambda df: df.groupby(by=["a", "b"]).count(),
-        raising_exceptions=True,
-        check_exception_type=True,
+    )
+
+
+def test_by_series():
+    pandas_df = pandas.DataFrame(
+        [[1, 2, 3]], index=pd.Index([0], name="a"), columns=["a", "b", "c"]
+    )
+    modin_df = from_pandas(pandas_df)
+
+    def make_appropriately_typed_series(df, values=["a"]):
+        """Return a Series from either pandas or modin.pandas depending on type of `df`."""
+        if isinstance(df, pd.DataFrame):
+            return pd.Series(values)
+        return pandas.Series(values)
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby(by=make_appropriately_typed_series(df)).count(),
+    )
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby(
+            by=make_appropriately_typed_series(df, ["a", "b"])
+        ).count(),
+    )
+
+
+def test_by_index():
+    pandas_df = pandas.DataFrame(
+        [[1, 2, 3]], index=pd.Index([0], name="a"), columns=["a", "b", "c"]
+    )
+    modin_df = from_pandas(pandas_df)
+    eval_general(modin_df, pandas_df, lambda df: df.groupby(by=pd.Index(["a"])).count())
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby(by=pd.Index(["a", "b"])).count(),
     )
