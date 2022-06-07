@@ -63,19 +63,21 @@ def logger_decorator(
         """Decorate function or class to add logs to Modin API function(s)."""
 
         if isinstance(obj, type):
+            seen = {}
             for attr_name, attr_value in vars(obj).items():
                 if isinstance(attr_value, (FunctionType, MethodType)) and not hasattr(
                     attr_value, "__modin_logging_added__"
                 ):
-                    setattr(
-                        obj,
-                        attr_name,
-                        logger_decorator(
+                    try:
+                        wrapped = seen[attr_value]
+                    except KeyError:
+                        wrapped = seen[attr_value] = logger_decorator(
                             modin_layer,
                             f"{name or obj.__name__}.{attr_name}",
                             log_level,
-                        )(attr_value),
-                    )
+                        )(attr_value)
+
+                    setattr(obj, attr_name, wrapped)
             return obj
 
         start_line = f"START::{modin_layer.upper()}::{name or obj.__name__}"
