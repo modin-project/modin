@@ -16,6 +16,7 @@
 import os
 import sys
 import psutil
+from packaging import version
 import warnings
 
 import ray
@@ -31,6 +32,12 @@ from modin.config import (
     NPartitions,
     ValueSource,
 )
+
+ObjectIDType = ray.ObjectRef
+if version.parse(ray.__version__) >= version.parse("1.2.0"):
+    from ray.util.client.common import ClientObjectRef
+
+    ObjectIDType = (ray.ObjectRef, ClientObjectRef)
 
 
 def _move_stdlib_ahead_of_site_packages(*args):
@@ -223,3 +230,31 @@ def initialize_ray(
         NPartitions._put(num_gpus)
     else:
         NPartitions._put(num_cpus)
+
+
+def deserialize(obj):
+    """
+    Deserialize a Ray object.
+
+    Parameters
+    ----------
+    obj : ObjectIDType, iterable of ObjectIDType, or mapping of keys to ObjectIDTypes
+        Object(s) to deserialize.
+
+    Returns
+    -------
+    obj
+        The deserialized object.
+    """
+    if isinstance(obj, ObjectIDType):
+        return ray.get(obj)
+    elif isinstance(obj, (tuple, list)) and any(
+        isinstance(o, ObjectIDType) for o in obj
+    ):
+        return ray.get(list(obj))
+    elif isinstance(obj, dict) and any(
+        isinstance(val, ObjectIDType) for val in obj.values()
+    ):
+        return dict(zip(obj.keys(), ray.get(list(obj.values()))))
+    else:
+        return obj
