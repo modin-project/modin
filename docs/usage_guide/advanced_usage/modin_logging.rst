@@ -12,7 +12,7 @@ named ``memory.log``. By default, if any log file exceeds 10MB, the logs will ro
 users have 20MB worth of Modin API logs, they can expect to find ``trace.log.1`` and ``trace.log.2`` in the ``.modin/logs/job_<uuid>`` directory.
 
 **Developer Warning:** In some cases, running services like JupyterLab in the ``modin/modin`` directory may result in circular dependency issues.
-This is as a result of a name conflict between the ``modin/logging`` directory and the Python ``logging`` module, which may be used as a default in
+This is due to a naming conflict between the ``modin/logging`` directory and the Python ``logging`` module, which may be used as a default in
 such environments. To resolve this, please run Jupyterlab or other similar services from directories other than ``modin/modin``.
 
 Usage examples
