@@ -21,7 +21,7 @@ Data File Splitting Mechanism
 
 Modin's file splitting mechanism differs depending on the data format type:
 
-* text format type - the file is split into bytes according to user specified arguments(?).
+* text format type - the file is split into bytes according to user specified arguments.
   In the simplest case, when no row related parameters (such as ``nrows`` or
   ``skiprows``) are passed, data chunk limits (start and end bytes) are derived
   by dividing the file size by the number of partitions (chunks can

@@ -27,7 +27,9 @@ Key Features and Updates
   * FIX-#4481: Allow clipping with a Modin Series of bounds (#4486)  
   * FIX-#4504: Support na_action in applymap (#4505)
   * FIX-#4503: Stop the memory logging thread after session exit (#4515)
+  * FIX-#4531: Fix a makedirs race condition in to_parquet (#4533)
   * FIX-#4464: Refactor Ray utils and quick fix groupby.count failing on virtual partitions (#4490)
+  * FIX-#4436: Fix to_pydatetime dtype for timezone None (#4437)
   * FIX-#4541: Fix merge_asof with non-unique right index (#4542)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
@@ -35,6 +37,7 @@ Key Features and Updates
 * Benchmarking enhancements
   * FEAT-#4371: Add logging to Modin (#4372)
   * FEAT-#4501: Add RSS Memory Profiling to Modin Logging (#4502)
+  * FEAT-#4524: Split Modin API and Memory log files (#4526)
 * Refactor Codebase
   * REFACTOR-#4284: use variable length unpacking when getting results from `deploy` function (#4285)
   * REFACTOR-#3642: Move PyArrow storage format usage from main feature to experimental ones (#4374)
