@@ -14,6 +14,7 @@
 import numpy as np
 import pandas
 import pytest
+import ray
 
 import modin.pandas as pd
 from modin.distributed.dataframe.pandas import unwrap_partitions, from_partitions

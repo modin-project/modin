@@ -202,11 +202,15 @@ def test_merge_ordered():
 
 
 @pytest.mark.parametrize("right_index", [None, [0] * 5], ids=["default", "non_unique"])
-def test_merge_asof(right_index):
+@pytest.mark.parametrize("dummy_param", list(range(10)))
+def test_merge_asof(right_index, dummy_param):
     left = pd.DataFrame({"a": [1, 5, 10], "left_val": ["a", "b", "c"]})
     right = pd.DataFrame(
         {"a": [1, 2, 3, 6, 7], "right_val": [1, 2, 3, 6, 7]}, index=right_index
     )
+    import ray
+
+    assert 1 = 2, (lambda : f'ray cluster: {ray.cluster}')()
 
     with warns_that_defaulting_to_pandas():
         df = pd.merge_asof(left, right, on="a")
@@ -238,6 +242,7 @@ def test_merge_asof(right_index):
             left_index=True,
             right_index=True,
         )
+    assert False
 
 
 def test_merge_asof_on_variations():
