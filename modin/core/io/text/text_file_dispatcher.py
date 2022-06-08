@@ -792,7 +792,7 @@ class TextFileDispatcher(FileDispatcher):
         pre_reading = skiprows_partitioning = skiprows_md = 0
         if isinstance(skiprows, int):
             skiprows_partitioning = skiprows
-        elif is_list_like(skiprows):
+        elif is_list_like(skiprows) and len(skiprows) > 0:
             skiprows_md = np.sort(skiprows)
             if np.all(np.diff(skiprows_md) == 1):
                 # `skiprows` is uniformly distributed array.
@@ -1021,7 +1021,7 @@ class TextFileDispatcher(FileDispatcher):
         # In these cases we should pass additional metadata
         # to the workers to match pandas output
         pass_names = names in [None, lib.no_default] and (
-            skiprows not in [None, 0] or kwargs["skipfooter"] != 0
+            skiprows not in [None, 0, []] or kwargs["skipfooter"] != 0
         )
 
         pd_df_metadata = cls.read_callback(
