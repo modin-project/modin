@@ -31,6 +31,7 @@ Key Features and Updates
   * FIX-#4464: Refactor Ray utils and quick fix groupby.count failing on virtual partitions (#4490)
   * FIX-#4436: Fix to_pydatetime dtype for timezone None (#4437)
   * FIX-#4541: Fix merge_asof with non-unique right index (#4542)
+  * FIX-#4543: Fix `read_csv` in case skiprows=<0, []> (#4544)
 * Performance enhancements
   * FEAT-#4320: Add connectorx as an alternative engine for read_sql (#4346)
   * PERF-#4493: Use partition size caches more in Modin dataframe (#4495)
