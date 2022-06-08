@@ -257,7 +257,10 @@ jobs:
       - run: python -m pytest modin/test/storage_formats/base/test_internals.py
       - run: python -m pytest modin/test/storage_formats/pandas/test_internals.py
       - run: python -m pytest modin/test/test_envvar_npartitions.py
-      - run: python -m pytest -n 2 modin/test/test_partition_api.py
+      # TODO(https://github.com/modin-project/modin/issues/4550): this test is
+      # slow (~140 sec), but using 2 cores usually causes ray worker crashes.
+      # Fix the crashes and increase cores to 2.
+      - run: python -m pytest modin/test/test_partition_api.py
       - run: python -m pytest modin/test/test_utils.py
       - run: python -m pytest asv_bench/test/test_utils.py
       - run: python -m pytest modin/test/exchange/dataframe_protocol/base
