@@ -24,10 +24,11 @@ Key Features and Updates
 * Update testing suite
   *
 * Documentation improvements
-  *
+  * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
 * Dependencies
   *
 * New Features
 
 Contributors
 ------------
+@mvashishtha
