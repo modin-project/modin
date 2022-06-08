@@ -55,7 +55,7 @@ from modin.error_message import ErrorMessage
 import modin.pandas as pd
 from modin.pandas.utils import is_scalar
 from modin.config import IsExperimental
-from modin.logging import LoggerBase
+from modin.logging import LoggerBase, disable_logging
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -3862,6 +3862,7 @@ class BasePandasDataset(LoggerBase):
         """
         return self.to_numpy()
 
+    @disable_logging
     def __getattribute__(self, item):
         """
         Return item from the `BasePandasDataset`.
