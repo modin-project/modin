@@ -135,7 +135,7 @@ def initialize_ray(
             # We only start ray in a cluster setting for the head node.
             ray.init(
                 address=redis_address or "auto",
-                include_dashboard=True,
+                include_dashboard=False,
                 ignore_reinit_error=True,
                 _redis_password=redis_password,
             )
@@ -201,7 +201,7 @@ def initialize_ray(
             ray_init_kwargs = {
                 "num_cpus": CpuCount.get(),
                 "num_gpus": GpuCount.get(),
-                "include_dashboard": True,
+                "include_dashboard": False,
                 "ignore_reinit_error": True,
                 "object_store_memory": object_store_memory,
                 "_redis_password": redis_password,
