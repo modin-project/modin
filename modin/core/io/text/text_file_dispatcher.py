@@ -1020,8 +1020,20 @@ class TextFileDispatcher(FileDispatcher):
         is_quoting = kwargs["quoting"] != QUOTE_NONE
         # In these cases we should pass additional metadata
         # to the workers to match pandas output
+
+        def _check_skiprows(skiprows):
+            if skiprows is not None:
+                if isinstance(skiprows, int) and skiprows == 0:
+                    return False
+                elif is_list_like(skiprows):
+                    return kwargs.get("usecols", None) is None
+                else:
+                    return True
+            else:
+                return False
+
         pass_names = names in [None, lib.no_default] and (
-            skiprows not in [None, 0, []] or kwargs["skipfooter"] != 0
+            _check_skiprows(skiprows) or kwargs["skipfooter"] != 0
         )
 
         pd_df_metadata = cls.read_callback(
