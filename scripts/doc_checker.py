@@ -491,6 +491,7 @@ def pydocstyle_validate(
     if result.returncode:
         logging.info(f"PYDOCSTYLE OUTPUT FOR {path}")
         logging.error(result.stdout)
+        logging.error(result.stderr)
     return True if result.returncode == 0 else False
 
 
