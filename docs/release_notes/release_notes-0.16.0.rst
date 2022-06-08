@@ -22,7 +22,7 @@ Key Features and Updates
 * Developer API enhancements
   *
 * Update testing suite
-  *
+  * TEST-#4557: Delete multiindex sorts instead of xfailing (#4559)
 * Documentation improvements
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
 * Dependencies
