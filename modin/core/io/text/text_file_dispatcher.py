@@ -1021,7 +1021,7 @@ class TextFileDispatcher(FileDispatcher):
         # In these cases we should pass additional metadata
         # to the workers to match pandas output
         pass_names = names in [None, lib.no_default] and (
-            skiprows is not None or kwargs["skipfooter"] != 0
+            skiprows not in [None, 0] or kwargs["skipfooter"] != 0
         )
 
         pd_df_metadata = cls.read_callback(
@@ -1064,7 +1064,6 @@ class TextFileDispatcher(FileDispatcher):
                 header_size=header_size,
                 pre_reading=pre_reading,
             )
-
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
             splits, callback=cls.read_callback, **partition_kwargs
         )

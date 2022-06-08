@@ -1000,6 +1000,18 @@ class TestCsv:
             cast_to_str=StorageFormat.get() != "Omnisci",
         )
 
+    @pytest.mark.parametrize("skiprows", [None, 0])
+    def test_read_csv_skiprows_with_usecols(self, skiprows):
+        usecols = {"float_data": "float64"}
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer="modin/pandas/test/data/issue_4543.csv",
+            skiprows=skiprows,
+            usecols=usecols.keys(),
+            dtype=usecols,
+        )
+
     def test_read_csv_sep_none(self):
         eval_io(
             fn_name="read_csv",
