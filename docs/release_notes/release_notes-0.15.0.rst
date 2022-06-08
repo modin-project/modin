@@ -36,6 +36,7 @@ Key Features and Updates
 * Benchmarking enhancements
   * FEAT-#4371: Add logging to Modin (#4372)
   * FEAT-#4501: Add RSS Memory Profiling to Modin Logging (#4502)
+  * FEAT-#4524: Split Modin API and Memory log files (#4526)
 * Refactor Codebase
   * REFACTOR-#4284: use variable length unpacking when getting results from `deploy` function (#4285)
   * REFACTOR-#3642: Move PyArrow storage format usage from main feature to experimental ones (#4374)
