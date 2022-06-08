@@ -177,9 +177,10 @@ def _dt_func_map(func_name):
     def dt_op_builder(df, *args, **kwargs):
         """Apply specified function against ``dt`` accessor of the passed frame."""
         dt_s = df.squeeze(axis=1).dt
-        return pandas.DataFrame(
-            getattr(pandas.Series.dt, func_name)(dt_s, *args, **kwargs)
-        )
+        dt_func_result = getattr(pandas.Series.dt, func_name)(dt_s, *args, **kwargs)
+        # If we don't specify the dtype for the frame, the frame might get the
+        # wrong dtype, e.g. for to_pydatetime in https://github.com/modin-project/modin/issues/4436
+        return pandas.DataFrame(dt_func_result, dtype=dt_func_result.dtype)
 
     return dt_op_builder
 
