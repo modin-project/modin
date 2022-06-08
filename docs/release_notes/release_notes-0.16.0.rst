@@ -31,4 +31,4 @@ Key Features and Updates
 
 Contributors
 ------------
-mvashishtha
+@mvashishtha
