@@ -428,8 +428,8 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
         # We don't need to check if `by` is a Series or Index, since those
         # won't be referencing labels
         if not isinstance(by, (pandas.Series, Series, pandas.Index)):
-            _by_check = by if is_list_like(by) else [by]
-            for k in _by_check:
+            _by_list = by if is_list_like(by) else [by]
+            for k in _by_list:
                 if not isinstance(k, (Series, pandas.Series, pandas.Index)):
                     if k in self.index.names and k in self.axes[axis ^ 1]:
                         level_name, index_name = "an index", "a column"
