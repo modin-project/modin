@@ -419,7 +419,7 @@ class LogFileSize(EnvironmentVariable, type=int):
     """Max size of logs (in MBs) to store per Modin job."""
 
     varname = "MODIN_LOG_FILE_SIZE"
-    default = 100
+    default = 10
 
     @classmethod
     def put(cls, value):
