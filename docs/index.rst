@@ -21,6 +21,10 @@
 .. figure:: img/Modin_Pandas_Import.gif
    :align: center
 
+.. raw:: html
+
+    <h2 align="center"><a href='https://join.slack.com/t/modin-project/shared_invite/zt-yvk5hr3b-f08p_ulbuRWsAfg9rMY3uA'>💬 Join us on Slack 💬</a></h2>
+
 Scale your pandas workflow by changing a single line of code
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 

@@ -11,6 +11,8 @@
 <a href="https://modin.org/modin-bench/#/"><img src="https://img.shields.io/badge/benchmarked%20by-asv-blue.svg" align="center"></a>
 </p>
 
+<h2 align="center"><a href='https://join.slack.com/t/modin-project/shared_invite/zt-yvk5hr3b-f08p_ulbuRWsAfg9rMY3uA'>:speech_balloon: Join us on Slack :speech_balloon:</a></h2>
+
 ### What is Modin?
 
 Modin is a drop-in replacement for [pandas](https://github.com/pandas-dev/pandas). While pandas is
