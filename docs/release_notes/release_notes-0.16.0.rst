@@ -12,7 +12,7 @@ Key Features and Updates
 * Benchmarking enhancements
   *
 * Refactor Codebase
-  *
+  * REFACTOR-#4534: Remove logging metaclass (#4535)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
@@ -32,3 +32,4 @@ Key Features and Updates
 Contributors
 ------------
 @mvashishtha
+@vnlitvinov

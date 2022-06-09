@@ -30,6 +30,7 @@ class LoggerBase:
     This mixin must go first in class bases declaration to have the desired effect.
     """
 
+    @classmethod
     def __init_subclass__(
         cls,
         modin_layer: str = "PANDAS-API",
