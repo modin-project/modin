@@ -12,7 +12,7 @@ Key Features and Updates
 * Benchmarking enhancements
   *
 * Refactor Codebase
-  *
+  * REFACTOR-#4530: Standardize access to physical data in partitions (#4563)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
@@ -33,3 +33,4 @@ Key Features and Updates
 Contributors
 ------------
 @mvashishtha
+@prutskov
