@@ -111,13 +111,12 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         List
             A list of ``ray.ObjectRef``.
         """
-        # Defer draining call queue until we get the partitions
-        # TODO Look into draining call queue at the same time as the task
-        result = [None] * len(self.list_of_partitions_to_combine)
-        for idx, partition in enumerate(self.list_of_partitions_to_combine):
-            partition.drain_call_queue()
-            result[idx] = partition.physical_data
-        return result
+        # Draining call queue of partition is happening during access to physical
+        # data of partition. Defer draining call queue until we get the partitions.
+        # TODO: Look into draining call queue at the same time as the task.
+        return [
+            partition.physical_data for partition in self.list_of_partitions_to_combine
+        ]
 
     @property
     def list_of_ips(self):

@@ -43,6 +43,8 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             raise NotImplementedError(
                 "Pandas on Dask execution requires full-axis partitions."
             )
+        for obj in list_of_blocks:
+            obj.drain_call_queue()
         # Unwrap from PandasDataframePartition object for ease of use
         self.list_of_blocks = [obj.physical_data for obj in list_of_blocks]
         if get_ip:
