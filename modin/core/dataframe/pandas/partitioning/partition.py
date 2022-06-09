@@ -37,7 +37,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
     @property
     def physical_data(self):
         """
-        Flush the `call_queue` and get the physical data wrapped by this partition.
+        Drain the `call_queue` and get the physical data wrapped by this partition.
 
         Returns
         -------
