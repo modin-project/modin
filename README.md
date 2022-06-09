@@ -1,9 +1,14 @@
 <p align="center"><a href="https://modin.readthedocs.io"><img width=77% alt="" src="https://github.com/modin-project/modin/blob/3d6368edf311995ad231ec5342a51cd9e4e3dc20/docs/img/MODIN_ver2_hrz.png?raw=true"></a></p>
 <h2 align="center">Scale your pandas workflows by changing one line of code</h2>
 
-| Dev Community & Support (<1 day response)   | Forums | Socials |
-| :---------: | :---------: | :---------: |
+<div align="center">
+
+Dev Community & Support (<1 day response) | Forums | Socials |
+|:---: | :---: | :---: |
 | <a href='https://join.slack.com/t/modin-project/shared_invite/zt-yvk5hr3b-f08p_ulbuRWsAfg9rMY3uA'><img src='https://img.shields.io/static/v1?label=chat&logo=slack&message=Slack&color=brightgreen' alt='Slack' height=28/></a>     | <a href="https://discuss.modin.org"><img alt="" src="https://img.shields.io/badge/discourse-forum-purple.svg?logo=discourse&logoColor=white" height=28></a> [![Stack Overflow](https://img.shields.io/badge/-Stackoverflow-FE7A16?style=for-the-badge&logo=stack-overflow&logoColor=white)](https://stackoverflow.com/questions/tagged/modin) | [![Twitter](https://img.shields.io/twitter/follow/modin_project?style=social&logo=twitter)](https://twitter.com/modin_project) |
+
+</div>
+
 
 <p align="center">
 <a href="https://pepy.tech/project/modin"><img src="https://static.pepy.tech/personalized-badge/modin?period=total&units=international_system&left_color=black&right_color=blue&left_text=Downloads" align="center"></a>
