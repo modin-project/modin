@@ -1018,8 +1018,6 @@ class TextFileDispatcher(FileDispatcher):
             )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE
-        # In these cases we should pass additional metadata
-        # to the workers to match pandas output
 
         def _check_skiprows(skiprows):
             if skiprows is not None:
@@ -1032,6 +1030,8 @@ class TextFileDispatcher(FileDispatcher):
             else:
                 return False
 
+        # In these cases we should pass additional metadata
+        # to the workers to match pandas output
         pass_names = names in [None, lib.no_default] and (
             _check_skiprows(skiprows) or kwargs["skipfooter"] != 0
         )
@@ -1076,6 +1076,7 @@ class TextFileDispatcher(FileDispatcher):
                 header_size=header_size,
                 pre_reading=pre_reading,
             )
+
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
             splits, callback=cls.read_callback, **partition_kwargs
         )
