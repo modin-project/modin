@@ -1023,17 +1023,15 @@ class TextFileDispatcher(FileDispatcher):
             if skiprows is not None:
                 if isinstance(skiprows, int) and skiprows == 0:
                     return False
-                elif is_list_like(skiprows):
+                if is_list_like(skiprows):
                     return kwargs.get("usecols", None) is None
-                else:
-                    return True
-            else:
-                return False
+                return True
+            return False
 
         # In these cases we should pass additional metadata
         # to the workers to match pandas output
         pass_names = names in [None, lib.no_default] and (
-            _calc_skiprows_conditions(skiprows) or kwargs["skipfooter"] != 0
+            kwargs["skipfooter"] != 0 or _calc_skiprows_conditions(skiprows)
         )
 
         pd_df_metadata = cls.read_callback(
