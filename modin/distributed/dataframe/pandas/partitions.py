@@ -53,15 +53,19 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
     if axis is None:
 
         def _unwrap_partitions():
-            return [
-                [
-                    (partition._ip_cache, partition.physical_data)
-                    if get_ip
-                    else partition.physical_data
-                    for partition in row
+            if get_ip:
+                return [
+                    [
+                        (partition._ip_cache, partition.physical_data)
+                        for partition in row
+                    ]
+                    for row in api_layer_object._query_compiler._modin_frame._partitions
                 ]
-                for row in api_layer_object._query_compiler._modin_frame._partitions
-            ]
+            else:
+                return [
+                    [partition.physical_data for partition in row]
+                    for row in api_layer_object._query_compiler._modin_frame._partitions
+                ]
 
         actual_engine = type(
             api_layer_object._query_compiler._modin_frame._partitions[0][0]
