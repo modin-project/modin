@@ -47,4 +47,6 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         list
             The objects wrapped by `partitions`.
         """
-        return DaskWrapper.materialize([partition.future for partition in partitions])
+        return DaskWrapper.materialize(
+            [partition.physical_data for partition in partitions]
+        )

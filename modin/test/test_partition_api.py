@@ -67,16 +67,10 @@ def test_unwrap_partitions(axis):
         )
         for row_idx in range(expected_partitions.shape[0]):
             for col_idx in range(expected_partitions.shape[1]):
-                if Engine.get() == "Ray":
-                    assert (
-                        expected_partitions[row_idx][col_idx].oid
-                        == actual_partitions[row_idx][col_idx]
-                    )
-                if Engine.get() == "Dask":
-                    assert (
-                        expected_partitions[row_idx][col_idx].future
-                        == actual_partitions[row_idx][col_idx]
-                    )
+                assert (
+                    expected_partitions[row_idx][col_idx].physical_data
+                    == actual_partitions[row_idx][col_idx]
+                )
     else:
         expected_axis_partitions = (
             df._query_compiler._modin_frame._partition_mgr_cls.axis_partition(
