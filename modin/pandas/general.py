@@ -194,6 +194,11 @@ def merge_asof(
         or not isinstance(by, (str, type(None)))
         or not isinstance(left_by, (str, type(None)))
         or not isinstance(right_by, (str, type(None)))
+        # The implementation below assumes that the right index is unique
+        # because it uses merge_asof to map each position in the merged
+        # index to the label of the one right row that should be merged
+        # at that row position.
+        or not right.index.is_unique
     ):
         if isinstance(right, DataFrame):
             right = to_pandas(right)
