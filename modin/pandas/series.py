@@ -663,9 +663,7 @@ class Series(SeriesCompat, BasePandasDataset):
             else:
                 return result
         else:
-            result = getattr(sys.modules[self.__module__], return_type)(
-                query_compiler=result
-            )
+            result = globals()[return_type](query_compiler=result)
             if result.name == self.index[0]:
                 result.name = None
             return result
