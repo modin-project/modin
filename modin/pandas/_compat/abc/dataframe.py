@@ -1,7 +1,9 @@
 from abc import ABC
 
+from modin.logging import LoggerBase
 
-class BaseCompatibilityDataFrame(ABC):
+
+class BaseCompatibilityDataFrame(ABC, LoggerBase):
     def applymap(self, *args, **kwargs):
         pass
 

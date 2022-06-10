@@ -1,7 +1,9 @@
 from abc import ABC
 
+from modin.logging import LoggerBase
 
-class BaseCompatibilityBasePandasDataset(ABC):
+
+class BaseCompatibilityBasePandasDataset(ABC, LoggerBase):
     def max(self, *args, **kwargs):
         pass
 
