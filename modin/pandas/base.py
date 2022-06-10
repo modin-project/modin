@@ -2513,7 +2513,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             obj.set_axis(labels, axis=axis, inplace=True)
             return obj
 
-    def shift(
+    def _shift(
         self, periods=1, freq=None, axis=0, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
