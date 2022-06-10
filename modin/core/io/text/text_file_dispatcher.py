@@ -1149,7 +1149,6 @@ class TextFileDispatcher(FileDispatcher):
         bool
             Whether to use inferred column names in ``read_csv`` of the workers or not.
         """
-
         if names not in [None, lib.no_default]:
             return False
         if skipfooter != 0:
