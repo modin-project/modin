@@ -1123,12 +1123,17 @@ class TextFileDispatcher(FileDispatcher):
         Tells whether need to use inferred column names in workers or not.
 
         1) ``False`` is returned in 2 cases and means next:
-            1.a) `names` paramter was provided from high-level API. In this case parameter
+            1.a) `names` parameter was provided from high-level API. In this case parameter
             `names` must be provided as `names` parameter for ``read_csv`` in the workers.
             1.b) `names` parameter wasn't provided from high-level API. In this case column names
             inference must happen in each partition.
         2) ``True`` is returned in a case when inferred column names from pre-reading stage must be
             provided as `names` parameter for ``read_csv`` in the workers.
+
+        In case `names` was provided the other parameters isn't checked. Otherwise, inferred column
+        names should be used in a case of not full data reading which is defined by `skipfooter` parameter,
+        when need to skip lines at the bottom of file or by `skiprows` parameter, when need to skip lines on
+        the top of file (but if `usecols` was provided, column names inference must happen in the workers).
 
         Parameters
         ----------
