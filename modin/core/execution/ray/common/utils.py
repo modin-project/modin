@@ -224,6 +224,8 @@ def initialize_ray(
         _move_stdlib_ahead_of_site_packages
     )
     ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
+    import time
+    time.sleep(1)
     num_cpus = int(ray.cluster_resources()["CPU"])
     num_gpus = int(ray.cluster_resources().get("GPU", 0))
     if StorageFormat.get() == "Cudf":
