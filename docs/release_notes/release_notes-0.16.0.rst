@@ -27,7 +27,7 @@ Key Features and Updates
 * Documentation improvements
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
 * Dependencies
-  * FIX-#4564: Register customer serializer to avoid Ray race condition (#4568)
+  * FIX-#4564: Register custom serializer to avoid Ray race condition (#4568)
 * New Features
 
 Contributors
