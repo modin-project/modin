@@ -953,7 +953,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         return self.loc[indexer] if axis == 0 else self.loc[:, indexer]
 
     def _between_time(self, **kwargs):
-        axis = self._get_axis_number(kwargs.get("axis"))
+        axis = self._get_axis_number(kwargs.pop("axis", None))
         idx = self.index if axis == 0 else self.columns
         indexer = pandas.Series(index=idx).between_time(**kwargs).index
         return self.loc[indexer] if axis == 0 else self.loc[:, indexer]
