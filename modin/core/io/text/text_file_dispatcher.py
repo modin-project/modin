@@ -1018,20 +1018,8 @@ class TextFileDispatcher(FileDispatcher):
             )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE
-
-        def _calc_skiprows_conditions(skiprows):
-            if skiprows is not None:
-                if isinstance(skiprows, int) and skiprows == 0:
-                    return False
-                if is_list_like(skiprows):
-                    return kwargs.get("usecols", None) is None
-                return True
-            return False
-
-        # In these cases we should pass additional metadata
-        # to the workers to match pandas output
-        pass_names = names in [None, lib.no_default] and (
-            kwargs["skipfooter"] != 0 or _calc_skiprows_conditions(skiprows)
+        pass_names = cls._should_pass_names(
+            names, skiprows, kwargs.get("skipfooter", 0), kwargs.get("usecols", None)
         )
 
         pd_df_metadata = cls.read_callback(
@@ -1125,3 +1113,44 @@ class TextFileDispatcher(FileDispatcher):
             mask = rows_index.map(skiprows)
 
         return mask
+
+    @classmethod
+    @logger_decorator("PANDAS-API", "TextFileDispatcher._should_pass_names", "INFO")
+    def _should_pass_names(cls, names, skiprows, skipfooter, usecols):
+        """
+        Calculate conditions for passing additional metadata to workers.
+
+        Parameters
+        ----------
+        names : array-like
+            List of column names to use.
+        skiprows : list-like, int or callable
+            Line numbers to skip (0-indexed) or number of lines to skip (int) at
+            the start of the file. If callable, the callable function will be
+            evaluated against the row indices, returning ``True`` if the row should
+            be skipped and ``False`` otherwise.
+        skipfooter : int
+            Number of lines at bottom of the file to skip.
+        usecols : list-like or callable
+            Subset of the columns.
+
+        Returns
+        -------
+        bool
+            Whether to pass additional metadata to ``read_csv`` of the workers or not.
+        """
+
+        def _calc_skiprows_conditions(skiprows):
+            if skiprows is not None:
+                if isinstance(skiprows, int) and skiprows == 0:
+                    return False
+                if is_list_like(skiprows):
+                    return usecols is None
+                return True
+            return False
+
+        # In these cases we should pass additional metadata
+        # to the workers to match pandas output.
+        return names in [None, lib.no_default] and (
+            skipfooter != 0 or _calc_skiprows_conditions(skiprows)
+        )
