@@ -1018,7 +1018,7 @@ class TextFileDispatcher(FileDispatcher):
             )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE
-        pass_names = cls._should_pass_names(
+        use_inferred_column_names = cls._should_use_inferred_column_names(
             names, skiprows, kwargs.get("skipfooter", 0), kwargs.get("usecols", None)
         )
 
@@ -1034,9 +1034,9 @@ class TextFileDispatcher(FileDispatcher):
             kwargs,
             fname=filepath_or_buffer_md,
             num_splits=num_splits,
-            header_size=header_size if not pass_names else 0,
-            names=names if not pass_names else column_names,
-            header=header if not pass_names else "infer",
+            header_size=0 if use_inferred_column_names else header_size,
+            names=column_names if use_inferred_column_names else names,
+            header="infer" if use_inferred_column_names else header,
             skipfooter=0,
             skiprows=None,
             nrows=None,
@@ -1115,10 +1115,20 @@ class TextFileDispatcher(FileDispatcher):
         return mask
 
     @classmethod
-    @logger_decorator("PANDAS-API", "TextFileDispatcher._should_pass_names", "INFO")
-    def _should_pass_names(cls, names, skiprows, skipfooter, usecols):
+    @logger_decorator(
+        "PANDAS-API", "TextFileDispatcher._should_use_inferred_column_names", "INFO"
+    )
+    def _should_use_inferred_column_names(cls, names, skiprows, skipfooter, usecols):
         """
-        Calculate conditions for passing additional metadata to workers.
+        Tells whether need to use inferred column names in workers or not.
+
+        1) ``False`` is returned in 2 cases and means next:
+            1.a) `names` paramter was provided from high-level API. In this case parameter
+            `names` must be provided as `names` parameter for ``read_csv`` in the workers.
+            1.b) `names` parameter wasn't provided from high-level API. In this case column names
+            inference must happen in each partition.
+        2) ``True`` is returned in a case when inferred column names from pre-reading stage must be
+            provided as `names` parameter for ``read_csv`` in the workers.
 
         Parameters
         ----------
@@ -1137,20 +1147,15 @@ class TextFileDispatcher(FileDispatcher):
         Returns
         -------
         bool
-            Whether to pass additional metadata to ``read_csv`` of the workers or not.
+            Whether to use inferred column names in ``read_csv`` of the workers or not.
         """
 
-        def _calc_skiprows_conditions(skiprows):
-            if skiprows is not None:
-                if isinstance(skiprows, int) and skiprows == 0:
-                    return False
-                if is_list_like(skiprows):
-                    return usecols is None
-                return True
+        if names not in [None, lib.no_default]:
             return False
-
-        # In these cases we should pass additional metadata
-        # to the workers to match pandas output.
-        return names in [None, lib.no_default] and (
-            skipfooter != 0 or _calc_skiprows_conditions(skiprows)
-        )
+        if skipfooter != 0:
+            return True
+        if isinstance(skiprows, int) and skiprows == 0:
+            return False
+        if is_list_like(skiprows):
+            return usecols is None
+        return skiprows is not None
