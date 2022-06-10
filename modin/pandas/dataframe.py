@@ -345,15 +345,13 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         """
         return DataFrame(query_compiler=self._query_compiler.add_suffix(suffix))
 
-    def _applymap(self, func):  # noqa: PR01, RT01, D200
+    def _applymap(self, func, **kwargs):  # noqa: PR01, RT01, D200
         """
         Apply a function to a ``DataFrame`` elementwise.
         """
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
-        return DataFrame(
-            query_compiler=self._query_compiler.applymap(func, na_action, **kwargs)
-        )
+        return DataFrame(query_compiler=self._query_compiler.applymap(func, **kwargs))
 
     def _apply(
         self, func, axis=0, raw=False, result_type=None, args=(), **kwargs

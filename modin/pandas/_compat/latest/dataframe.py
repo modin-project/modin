@@ -33,7 +33,7 @@ class LatestCompatibleDataFrame(BaseCompatibilityDataFrame):
         """
         Apply a function to a ``DataFrame`` elementwise.
         """
-        return self._applymap(func)
+        return self._applymap(func, na_action=na_action, **kwargs)
 
     def apply(
         self, func, axis=0, raw=False, result_type=None, args=(), **kwargs
