@@ -639,9 +639,8 @@ class Series(SeriesCompat, BasePandasDataset):
             or is_list_like(func)
             or return_type not in ["DataFrame", "Series"]
         ):
-            from ...base import BasePandasDataset
-
-            result = BasePandasDataset.apply(self, func, *args, **kwargs)
+            # use the explicit non-Compat parent to avoid infinite recursion
+            result = BasePandasDataset._apply(self, func, *args, **kwargs)
         else:
             # handle ufuncs and lambdas
             if kwargs or args and not isinstance(func, np.ufunc):
