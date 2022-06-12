@@ -2441,7 +2441,7 @@ class Series(metaclass_resolver(BasePandasDataset)):
             Series with retrieved data.
         """
         key = apply_if_callable(key, self)
-        if isinstance(key, Series) and key.dtype == np.bool:
+        if isinstance(key, Series) and key.dtype == bool:
             # This ends up being significantly faster than looping through and getting
             # each item individually.
             key = key._to_pandas()

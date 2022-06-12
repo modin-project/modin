@@ -186,7 +186,7 @@ def test_2195(datetime_is_numeric, has_numeric_column):
     [
         ([np.float64], None),
         (np.float64, None),
-        (None, [np.timedelta64, np.datetime64, np.object, np.bool]),
+        (None, [np.timedelta64, np.datetime64, np.object, bool]),
         (None, "all"),
         (None, np.number),
     ],

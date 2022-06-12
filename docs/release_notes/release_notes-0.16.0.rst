@@ -6,7 +6,7 @@ Key Features and Updates
 ------------------------
 
 * Stability and Bugfixes
-  *
+  * FIX-#4570: Replace ``np.bool`` -> ``np.bool_`` (#4571)
 * Performance enhancements
   *
 * Benchmarking enhancements
@@ -33,3 +33,4 @@ Key Features and Updates
 Contributors
 ------------
 @mvashishtha
+@NickCrews
