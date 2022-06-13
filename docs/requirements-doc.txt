@@ -9,6 +9,10 @@ pyyaml
 recommonmark
 sphinx
 sphinx-click
+# Pin ray to < 1.13.0 to work around GH#4564
+# TODO(https://github.com/modin-project/modin/issues/4564): let ray go past 1.13.0.      
+ray[default]>=1.4.0,<1.13.0
+git+https://github.com/modin-project/modin.git@master#egg=modin[all] 
 sphinxcontrib_plantuml
 sphinx-issues
 xgboost
