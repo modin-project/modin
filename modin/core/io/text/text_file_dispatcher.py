@@ -1018,7 +1018,7 @@ class TextFileDispatcher(FileDispatcher):
             )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE
-        use_inferred_column_names = cls._should_use_inferred_column_names(
+        use_inferred_column_names = cls.uses_inferred_column_names(
             names, skiprows, kwargs.get("skipfooter", 0), kwargs.get("usecols", None)
         )
 
@@ -1114,25 +1114,25 @@ class TextFileDispatcher(FileDispatcher):
 
         return mask
 
-    @classmethod
+    @staticmethod
     @logger_decorator(
-        "PANDAS-API", "TextFileDispatcher._should_use_inferred_column_names", "INFO"
+        "PANDAS-API", "TextFileDispatcher.uses_inferred_column_names", "INFO"
     )
-    def _should_use_inferred_column_names(cls, names, skiprows, skipfooter, usecols):
+    def uses_inferred_column_names(names, skiprows, skipfooter, usecols):
         """
-        Tells whether need to use inferred column names in workers or not.
+        Tell whether need to use inferred column names in workers or not.
 
         1) ``False`` is returned in 2 cases and means next:
-            1.a) `names` parameter was provided from high-level API. In this case parameter
+            1.a) `names` parameter was provided from the API layer. In this case parameter
             `names` must be provided as `names` parameter for ``read_csv`` in the workers.
-            1.b) `names` parameter wasn't provided from high-level API. In this case column names
+            1.b) `names` parameter wasn't provided from the API layer. In this case column names
             inference must happen in each partition.
-        2) ``True`` is returned in a case when inferred column names from pre-reading stage must be
+        2) ``True`` is returned in case when inferred column names from pre-reading stage must be
             provided as `names` parameter for ``read_csv`` in the workers.
 
-        In case `names` was provided the other parameters isn't checked. Otherwise, inferred column
+        In case `names` was provided, the other parameters aren't checked. Otherwise, inferred column
         names should be used in a case of not full data reading which is defined by `skipfooter` parameter,
-        when need to skip lines at the bottom of file or by `skiprows` parameter, when need to skip lines on
+        when need to skip lines at the bottom of file or by `skiprows` parameter, when need to skip lines at
         the top of file (but if `usecols` was provided, column names inference must happen in the workers).
 
         Parameters
