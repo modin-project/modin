@@ -1164,8 +1164,11 @@ def test_bool(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_clip(request, data):
-    modin_series, pandas_series = create_test_series(data)
+@pytest.mark.parametrize("bound_type", ["list", "series"], ids=["list", "series"])
+def test_clip_scalar(request, data, bound_type):
+    modin_series, pandas_series = create_test_series(
+        data,
+    )
 
     if name_contains(request.node.name, numeric_dfs):
         # set bounds
@@ -1179,6 +1182,37 @@ def test_clip(request, data):
         # test lower and upper scalar bound
         modin_result = modin_series.clip(lower, upper)
         pandas_result = pandas_series.clip(lower, upper)
+        df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("bound_type", ["list", "series"], ids=["list", "series"])
+def test_clip_sequence(request, data, bound_type):
+    modin_series, pandas_series = create_test_series(
+        data,
+    )
+
+    if name_contains(request.node.name, numeric_dfs):
+        lower = random_state.random_integers(RAND_LOW, RAND_HIGH, len(pandas_series))
+        upper = random_state.random_integers(RAND_LOW, RAND_HIGH, len(pandas_series))
+
+        if bound_type == "series":
+            modin_lower = pd.Series(lower)
+            pandas_lower = pandas.Series(lower)
+            modin_upper = pd.Series(upper)
+            pandas_upper = pandas.Series(upper)
+        else:
+            modin_lower = pandas_lower = lower
+            modin_upper = pandas_upper = upper
+
+        # test lower and upper list bound
+        modin_result = modin_series.clip(modin_lower, modin_upper, axis=0)
+        pandas_result = pandas_series.clip(pandas_lower, pandas_upper)
+        df_equals(modin_result, pandas_result)
+
+        # test only upper list bound
+        modin_result = modin_series.clip(np.nan, modin_upper, axis=0)
+        pandas_result = pandas_series.clip(np.nan, pandas_upper)
         df_equals(modin_result, pandas_result)
 
 
@@ -1586,8 +1620,14 @@ def test_dtype(data):
     df_equals(modin_series.dtype, pandas_series.dtypes)
 
 
-def test_dt():
-    data = pd.date_range("2016-12-31", periods=128, freq="D", tz="Europe/Berlin")
+# Bug https://github.com/modin-project/modin/issues/4436 in
+# Series.dt.to_pydatetime is only reproducible when the date range out of which
+# the frame is created has timezone None, so that its dtype is datetime64[ns]
+# as opposed to, e.g. datetime64[ns, Europe/Berlin]. To reproduce that bug, we
+# use timezones None and Europe/Berlin.
+@pytest.mark.parametrize("timezone", [None, "Europe/Berlin"])
+def test_dt(timezone):
+    data = pd.date_range("2016-12-31", periods=128, freq="D", tz=timezone)
     modin_series = pd.Series(data)
     pandas_series = pandas.Series(data)
 
@@ -1627,10 +1667,11 @@ def test_dt():
         modin_series.dt.tz_localize(None),
         pandas_series.dt.tz_localize(None),
     )
-    df_equals(
-        modin_series.dt.tz_convert(tz="Europe/Berlin"),
-        pandas_series.dt.tz_convert(tz="Europe/Berlin"),
-    )
+    if timezone:
+        df_equals(
+            modin_series.dt.tz_convert(tz="Europe/Berlin"),
+            pandas_series.dt.tz_convert(tz="Europe/Berlin"),
+        )
 
     df_equals(modin_series.dt.normalize(), pandas_series.dt.normalize())
     df_equals(

@@ -34,6 +34,7 @@ import sys
 from typing import IO, Optional, Union, Iterator
 import warnings
 
+from modin.logging import metaclass_resolver
 from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, to_pandas, hashable
@@ -53,7 +54,7 @@ from .accessor import CachedAccessor, SparseFrameAccessor
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame.__init__], apilink="pandas.DataFrame"
 )
-class DataFrame(BasePandasDataset):
+class DataFrame(metaclass_resolver(BasePandasDataset)):
     """
     Modin distributed representation of ``pandas.DataFrame``.
 
@@ -282,7 +283,7 @@ class DataFrame(BasePandasDataset):
         Return ``DataFrame`` with duplicate rows removed.
         """
         return super(DataFrame, self).drop_duplicates(
-            subset=subset, keep=keep, inplace=inplace
+            subset=subset, keep=keep, inplace=inplace, ignore_index=ignore_index
         )
 
     @property
@@ -353,7 +354,9 @@ class DataFrame(BasePandasDataset):
         """
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
-        return DataFrame(query_compiler=self._query_compiler.applymap(func))
+        return DataFrame(
+            query_compiler=self._query_compiler.applymap(func, na_action, **kwargs)
+        )
 
     def apply(
         self, func, axis=0, raw=False, result_type=None, args=(), **kwargs
@@ -807,8 +810,8 @@ class DataFrame(BasePandasDataset):
             return
         frame = sys._getframe()
         try:
-            f_locals = frame.f_back.f_back.f_locals
-            f_globals = frame.f_back.f_back.f_globals
+            f_locals = frame.f_back.f_back.f_back.f_back.f_locals
+            f_globals = frame.f_back.f_back.f_back.f_back.f_globals
         finally:
             del frame
         local_names = set(re.findall(r"@([\w]+)", expr))
@@ -1126,13 +1129,16 @@ class DataFrame(BasePandasDataset):
         """
         Insert column into ``DataFrame`` at specified location.
         """
-        if isinstance(value, (DataFrame, pandas.DataFrame)):
-            if len(value.columns) != 1:
+        if (
+            isinstance(value, (DataFrame, pandas.DataFrame))
+            or isinstance(value, np.ndarray)
+            and len(value.shape) > 1
+        ):
+            if value.shape[1] != 1:
                 raise ValueError(
-                    f"Wrong number of items passed {len(value.columns)}, placement implies 1"
+                    f"Expected a 1D array, got an array with shape {value.shape}"
                 )
             value = value.squeeze(axis=1)
-
         if not self._query_compiler.lazy_execution and len(self.index) == 0:
             if not hasattr(value, "index"):
                 try:
@@ -1158,18 +1164,18 @@ class DataFrame(BasePandasDataset):
                 and not isinstance(value, (pandas.Series, Series))
                 and len(value) != len(self.index)
             ):
-                raise ValueError("Length of values does not match length of index")
+                raise ValueError(
+                    "Length of values ({}) does not match length of index ({})".format(
+                        len(value), len(self.index)
+                    )
+                )
             if not allow_duplicates and column in self.columns:
                 raise ValueError(f"cannot insert {column}, already exists")
-            if loc > len(self.columns):
+            if not -len(self.columns) <= loc <= len(self.columns):
                 raise IndexError(
                     f"index {loc} is out of bounds for axis 0 with size {len(self.columns)}"
                 )
-            if loc < 0:
-                if loc < -len(self.columns):
-                    raise IndexError(
-                        f"index {loc} is out of bounds for axis 0 with size {len(self.columns)}"
-                    )
+            elif loc < 0:
                 raise ValueError("unbounded slice")
             if isinstance(value, Series):
                 value = value._query_compiler
@@ -2521,30 +2527,13 @@ class DataFrame(BasePandasDataset):
 
         if hashable(key) and key not in self.columns:
             if isinstance(value, Series) and len(self.columns) == 0:
+                # Note: column information is lost when assigning a query compiler
+                prev_index = self.columns
                 self._query_compiler = value._query_compiler.copy()
                 # Now that the data is appended, we need to update the column name for
-                # that column to `key`, otherwise the name could be incorrect. Drop the
-                # last column name from the list (the appended value's name and append
-                # the new name.
-                self.columns = self.columns[:-1].append(pandas.Index([key]))
+                # that column to `key`, otherwise the name could be incorrect.
+                self.columns = prev_index.insert(0, key)
                 return
-            elif (
-                isinstance(value, (pandas.DataFrame, DataFrame)) and value.shape[1] != 1
-            ):
-                raise ValueError(
-                    "Wrong number of items passed %i, placement implies 1"
-                    % value.shape[1]
-                )
-            elif isinstance(value, np.ndarray) and len(value.shape) > 1:
-                if value.shape[1] == 1:
-                    # Transform into columnar table and take first column
-                    value = value.copy().T[0]
-                else:
-                    raise ValueError(
-                        "Wrong number of items passed %i, placement implies 1"
-                        % value.shape[1]
-                    )
-
             # Do new column assignment after error checks and possible value modifications
             self.insert(loc=len(self.columns), column=key, value=value)
             return

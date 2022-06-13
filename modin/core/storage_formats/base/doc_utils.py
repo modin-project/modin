@@ -282,7 +282,7 @@ def doc_reduce_agg(method, refer_to, params=None, extra_params=None):
 doc_cum_agg = partial(
     doc_qc_method,
     template="""
-    Get cummulative {method} for every row or column.
+    Get cumulative {method} for every row or column.
 
     Parameters
     ----------
@@ -371,7 +371,7 @@ def doc_resample_reduce(result, refer_to, params=None, compatibility_params=True
 
     build_rules = f"""
             - Labels on the specified axis are the group names (time-stamps)
-            - Labels on the opposit of specified axis are preserved.
+            - Labels on the opposite of specified axis are preserved.
             - Each element of QueryCompiler is the {result} for the
               corresponding group and column/row."""
     return doc_resample(
@@ -421,7 +421,7 @@ def doc_resample_agg(action, output, refer_to, params=None):
 
     build_rules = f"""
             - Labels on the specified axis are the group names (time-stamps)
-            - Labels on the opposit of specified axis are a MultiIndex, where first level
+            - Labels on the opposite of specified axis are a MultiIndex, where first level
               contains preserved labels of this axis and the second level is the {output}.
             - Each element of QueryCompiler is the result of corresponding function for the
               corresponding group and column/row."""
@@ -579,7 +579,7 @@ def doc_window_method(
         -------
         BaseQueryCompiler
             New QueryCompiler containing {result} for each window, built by the following
-            rulles:
+            rules:
 
             {build_rules}
         """
@@ -589,7 +589,7 @@ def doc_window_method(
             - Each element is the {result} for the corresponding window.""",
         "udf_aggregation": """
             - Labels on the specified axis are preserved.
-            - Labels on the opposit of specified axis are MultiIndex, where first level
+            - Labels on the opposite of specified axis are MultiIndex, where first level
               contains preserved labels of this axis and the second level has the function names.
             - Each element of QueryCompiler is the result of corresponding function for the
               corresponding window and column/row.""",
@@ -662,7 +662,7 @@ def doc_groupby_method(result, refer_to, action=None):
         QueryCompiler containing the result of groupby reduce built by the
         following rules:
 
-        - Labels on the opposit of specified axis are preserved.
+        - Labels on the opposite of specified axis are preserved.
         - If groupby_args["as_index"] is True then labels on the specified axis
           are the group names, otherwise labels would be default: 0, 1 ... n.
         - If groupby_args["as_index"] is False, then first N columns/rows of the frame

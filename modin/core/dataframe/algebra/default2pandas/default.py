@@ -85,10 +85,20 @@ class DefaultMethod(Operator):
                 and func != "to_numpy"
                 and func != pandas.DataFrame.to_numpy
             ):
+                # When applying a DatetimeProperties function, if we don't
+                # specify the dtype for the DataFrame, the frame might get the
+                # wrong dtype, e.g. for to_pydatetime in
+                # https://github.com/modin-project/modin/issues/4436
+                astype_kwargs = {}
+                dtype = getattr(result, "dtype", None)
+                if dtype and isinstance(
+                    df, pandas.core.indexes.accessors.DatetimeProperties
+                ):
+                    astype_kwargs["dtype"] = dtype
                 result = (
-                    pandas.DataFrame(result)
+                    pandas.DataFrame(result, **astype_kwargs)
                     if is_list_like(result)
-                    else pandas.DataFrame([result])
+                    else pandas.DataFrame([result], **astype_kwargs)
                 )
             if isinstance(result, pandas.Series):
                 if result.name is None:

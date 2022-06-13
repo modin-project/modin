@@ -116,7 +116,7 @@ def test_omnisci_compatibility_with_pyarrow_gandiva(import_strategy, expected_to
     If this test appears to fail, it means that these packages are now compatible/incopmatible,
     if it's so, please post the actual compatibility status to the issue:
     https://github.com/modin-project/modin/issues/3865
-    And then inverse `expected_to_fail` parameter for the scenario that has changed its behaviour.
+    And then inverse `expected_to_fail` parameter for the scenario that has changed its behavior.
 
     Parameters
     ----------

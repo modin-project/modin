@@ -177,9 +177,10 @@ def _dt_func_map(func_name):
     def dt_op_builder(df, *args, **kwargs):
         """Apply specified function against ``dt`` accessor of the passed frame."""
         dt_s = df.squeeze(axis=1).dt
-        return pandas.DataFrame(
-            getattr(pandas.Series.dt, func_name)(dt_s, *args, **kwargs)
-        )
+        dt_func_result = getattr(pandas.Series.dt, func_name)(dt_s, *args, **kwargs)
+        # If we don't specify the dtype for the frame, the frame might get the
+        # wrong dtype, e.g. for to_pydatetime in https://github.com/modin-project/modin/issues/4436
+        return pandas.DataFrame(dt_func_result, dtype=dt_func_result.dtype)
 
     return dt_op_builder
 
@@ -1601,6 +1602,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     diff = Fold.register(pandas.DataFrame.diff)
 
     def clip(self, lower, upper, **kwargs):
+        if isinstance(lower, BaseQueryCompiler):
+            lower = lower.to_pandas().squeeze(1)
+        if isinstance(upper, BaseQueryCompiler):
+            upper = upper.to_pandas().squeeze(1)
         kwargs["upper"] = upper
         kwargs["lower"] = lower
         axis = kwargs.get("axis", 0)
@@ -1744,8 +1749,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             Column labels to sort data by.
         keep : {"first", "last", "all"}, default: "first"
             How to pick first rows in case of duplicated values:
-            - "first": prioritize first occurence.
-            - "last": prioritize last occurence.
+            - "first": prioritize first occurrence.
+            - "last": prioritize last occurrence.
             - "all": do not drop any duplicates, even if it means selecting more than `n` rows.
         sort_type : {"nsmallest", "nlargest"}, default: "nsmallest"
             "nsmallest" means sort in descending order, "nlargest" means

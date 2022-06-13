@@ -277,6 +277,9 @@ class PandasOnRayIO(RayIO):
         if not cls._to_parquet_check_support(kwargs):
             return RayIO.to_parquet(qc, **kwargs)
 
+        output_path = kwargs["path"]
+        os.makedirs(output_path, exist_ok=True)
+
         def func(df, **kw):
             """
             Dump a chunk of rows as parquet, then save them to target maintaining order.
@@ -289,11 +292,8 @@ class PandasOnRayIO(RayIO):
                 Arguments to pass to ``pandas.to_parquet(**kwargs)`` plus an extra argument
                 `partition_idx` serving as chunk index to maintain rows order.
             """
-            output_path = kwargs["path"]
             compression = kwargs["compression"]
             partition_idx = kw["partition_idx"]
-            if not os.path.exists(output_path):
-                os.makedirs(output_path)
             kwargs[
                 "path"
             ] = f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"

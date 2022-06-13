@@ -20,6 +20,7 @@ from ray.util import get_node_ip_address
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
+from modin.core.execution.ray.common.utils import deserialize
 from .partition import PandasOnRayDataframePartition
 
 
@@ -137,7 +138,13 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+        cls,
+        axis,
+        func,
+        num_splits,
+        maintain_partitioning,
+        *partitions,
+        **kwargs,
     ):
         """
         Deploy a function along a full axis.
@@ -150,13 +157,13 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             The function to perform.
         num_splits : int
             The number of splits to return (see ``split_result_of_axis_func_pandas``).
-        kwargs : dict
-            Additional keywords arguments to be passed in `func`.
         maintain_partitioning : bool
             If True, keep the old partitioning if possible.
             If False, create a new partition layout.
         *partitions : iterable
             All partitions that make up the full axis (row or column).
+        **kwargs : dict
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -173,14 +180,21 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             axis,
             func,
             num_splits,
-            kwargs,
             maintain_partitioning,
             *partitions,
+            **kwargs,
         )
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
-        cls, axis, func, num_splits, len_of_left, other_shape, kwargs, *partitions
+        cls,
+        axis,
+        func,
+        num_splits,
+        len_of_left,
+        other_shape,
+        *partitions,
+        **kwargs,
     ):
         """
         Deploy a function along a full axis between two data sets.
@@ -198,10 +212,10 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         other_shape : np.ndarray
             The shape of right frame in terms of partitions, i.e.
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
-        kwargs : dict
-            Additional keywords arguments to be passed in `func`.
         *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
+        **kwargs : dict
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -215,8 +229,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             num_splits,
             len_of_left,
             other_shape,
-            kwargs,
             *partitions,
+            **kwargs,
         )
 
     def _wrap_partitions(self, partitions):
@@ -241,6 +255,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     def apply(
         self,
         func,
+        *args,
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
@@ -253,6 +268,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         ----------
         func : callable
             The function to apply.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
         num_splits : int, default: None
             The number of times to split the result object.
         other_axis_partition : PandasDataframeAxisPartition, default: None
@@ -273,14 +290,19 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of `PandasOnRayDataframeVirtualPartition` objects.
         """
-        # If this is not a full axis partition, it already contains a subset of
-        # the full axis, so we shouldn't split the result further.
         if not self.full_axis:
+            # If this is not a full axis partition, it already contains a subset of
+            # the full axis, so we shouldn't split the result further.
             num_splits = 1
         if len(self.call_queue) > 0:
             self.drain_call_queue()
+        kwargs["args"] = args
         result = super(PandasOnRayDataframeVirtualPartition, self).apply(
-            func, num_splits, other_axis_partition, maintain_partitioning, **kwargs
+            func,
+            num_splits,
+            other_axis_partition,
+            maintain_partitioning,
+            **kwargs,
         )
         if self.full_axis:
             return result
@@ -381,15 +403,24 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
                 self._width_cache = self.list_of_partitions_to_combine[0].width()
         return self._width_cache
 
-    def drain_call_queue(self):
-        """Execute all operations stored in this partition's call queue."""
+    def drain_call_queue(self, num_splits=None):
+        """
+        Execute all operations stored in this partition's call queue.
+
+        Parameters
+        ----------
+        num_splits : int, default: None
+            The number of times to split the result object.
+        """
 
         def drain(df):
             for func, args, kwargs in self.call_queue:
                 df = func(df, *args, **kwargs)
             return df
 
-        drained = super(PandasOnRayDataframeVirtualPartition, self).apply(drain)
+        drained = super(PandasOnRayDataframeVirtualPartition, self).apply(
+            drain, num_splits=num_splits
+        )
         self.list_of_partitions_to_combine = drained
         self.call_queue = []
 
@@ -474,7 +505,7 @@ class PandasOnRayDataframeRowPartition(PandasOnRayDataframeVirtualPartition):
 
 
 @ray.remote
-def deploy_ray_func(func, *args):  # pragma: no cover
+def deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
     """
     Execute a function on an axis partition in a worker process.
 
@@ -484,17 +515,21 @@ def deploy_ray_func(func, *args):  # pragma: no cover
         Function to be executed on an axis partition.
     *args : iterable
         Additional arguments that need to passed in ``func``.
+    **kwargs : dict
+        Additional keyword arguments to be passed in `func`.
 
     Returns
     -------
-    list
+    list : Union[tuple, list]
         The result of the function ``func`` and metadata for it.
 
     Notes
     -----
     Ray functions are not detected by codecov (thus pragma: no cover).
     """
-    result = func(*args)
+    if "args" in kwargs:
+        kwargs["args"] = deserialize(kwargs["args"])
+    result = func(*args, **kwargs)
     ip = get_node_ip_address()
     if isinstance(result, pandas.DataFrame):
         return result, len(result), len(result.columns), ip

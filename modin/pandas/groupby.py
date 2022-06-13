@@ -34,12 +34,13 @@ from modin.utils import (
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.config import IsExperimental
+from modin.logging import LoggerMetaClass, metaclass_resolver
 from .series import Series
 from .utils import is_label
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
-class DataFrameGroupBy(object):
+class DataFrameGroupBy(object, metaclass=LoggerMetaClass):
     def __init__(
         self,
         df,
@@ -293,8 +294,16 @@ class DataFrameGroupBy(object):
         self._indices_cache = self._compute_index_grouped(numerical=True)
         return self._indices_cache
 
-    def pct_change(self):
-        return self._default_to_pandas(lambda df: df.pct_change())
+    def pct_change(self, periods=1, fill_method="ffill", limit=None, freq=None, axis=0):
+        return self._default_to_pandas(
+            lambda df: df.pct_change(
+                periods=periods,
+                fill_method=fill_method,
+                limit=limit,
+                freq=freq,
+                axis=axis,
+            )
+        )
 
     def filter(self, func, dropna=True, *args, **kwargs):
         return self._default_to_pandas(
@@ -1044,7 +1053,7 @@ class DataFrameGroupBy(object):
         agg_kwargs = dict() if agg_kwargs is None else agg_kwargs
 
         if numeric_only is None:
-            # pandas behaviour: if `numeric_only` wasn't explicitly specified then
+            # pandas behavior: if `numeric_only` wasn't explicitly specified then
             # the parameter is considered to be `False` if there are no numeric types
             # in the frame and `True` otherwise.
             numeric_only = any(
@@ -1171,7 +1180,7 @@ class DataFrameGroupBy(object):
 
 
 @_inherit_docstrings(pandas.core.groupby.SeriesGroupBy)
-class SeriesGroupBy(DataFrameGroupBy):
+class SeriesGroupBy(metaclass_resolver(DataFrameGroupBy)):
     @property
     def ndim(self):
         """

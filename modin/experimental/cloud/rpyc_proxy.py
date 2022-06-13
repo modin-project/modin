@@ -23,6 +23,7 @@ from rpyc.core import netref, AsyncResult, consts
 from . import get_connection
 from .meta_magic import _LOCAL_ATTRS, RemoteMeta, _KNOWN_DUALS
 from modin.config import DoTraceRpyc
+from modin.logging import LoggerMetaClass
 
 from .rpyc_patches import apply_pathes
 
@@ -184,13 +185,13 @@ class WrappingConnection(rpyc.Connection):
 
     def __patched_netref(self, id_pack):
         """
-        Default RPyC behaviour is to defer almost everything to be always obtained
+        Default RPyC behavior is to defer almost everything to be always obtained
         from remote side. This is almost always correct except when Python behaves
         strangely. For example, when checking for isinstance() or issubclass() it
         gets obj.__bases__ tuple and uses its elements *after* calling a decref
         on the __bases__, because Python assumes that the class type holds
         a reference to __bases__, which isn't true for RPyC proxy classes, so in
-        RPyC case the element gets destroyed and undefined behaviour happens.
+        RPyC case the element gets destroyed and undefined behavior happens.
 
         So we're patching RPyC netref __getattribute__ to keep a reference
         for certain read-only properties to better emulate local objects.
@@ -417,7 +418,9 @@ def make_proxy_cls(
                         namespace[name] = method
             return namespace
 
-    class Wrapper(override, origin_cls, metaclass=ProxyMeta):
+    class Wrapper(
+        override, origin_cls, metaclass=type("", (ProxyMeta, LoggerMetaClass), {})
+    ):
         """
         Subclass origin_cls replacing attributes with what is defined in override while
         relaying requests for all other attributes to remote_cls.
@@ -459,7 +462,7 @@ def make_proxy_cls(
             Effectively, any attributes not currently known to Wrapper (i.e. not defined here
             or in override class) will be retrieved from the remote end.
 
-            Algorithm (mimicking default Python behaviour):
+            Algorithm (mimicking default Python behavior):
             1) check if type(self).__dict__[name] exists and is a get/set data descriptor
             2) check if self.__dict__[name] exists
             3) check if type(self).__dict__[name] is a non-data descriptor
