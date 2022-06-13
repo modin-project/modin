@@ -32,20 +32,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
 
     _length_cache = None
     _width_cache = None
-    _physical_data = None
-
-    @property
-    def physical_data(self):
-        """
-        Drain the `call_queue` and get the physical data wrapped by this partition.
-
-        Returns
-        -------
-        object
-            The physical data wrapped by this partition.
-        """
-        self.drain_call_queue()
-        return self._physical_data
+    _data = None
 
     def get(self):
         """

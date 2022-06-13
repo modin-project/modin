@@ -25,7 +25,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
 
     Parameters
     ----------
-    physical_data : pandas.DataFrame
+    data : pandas.DataFrame
         ``pandas.DataFrame`` that should be wrapped with this class.
     length : int, optional
         Length of `data` (number of rows in the input dataframe).
@@ -41,30 +41,17 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
     subclasses. There is no logic for updating in-place.
     """
 
-    def __init__(self, physical_data, length=None, width=None, call_queue=None):
-        self._physical_data = physical_data
+    def __init__(self, data, length=None, width=None, call_queue=None):
+        self._data = data
         if call_queue is None:
             call_queue = []
         self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width
 
-    @property
-    def physical_data(self):
-        """
-        Drain the `call_queue` and get the physical data wrapped by this partition.
-
-        Returns
-        -------
-        pandas.DataFrame
-            Copy of pandas DataFrame wrapped by this partition.
-        """
-        self.drain_call_queue()
-        return self._physical_data.copy()
-
     def get(self):
         """
-        Flush the `call_queue` and return copy of the physical data.
+        Flush the `call_queue` and return copy of the data.
 
         Returns
         -------
@@ -76,7 +63,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         Since this object is a simple wrapper, just return the copy of data.
         """
         self.drain_call_queue()
-        return self._physical_data.copy()
+        return self._data.copy()
 
     def apply(self, func, *args, **kwargs):
         """
@@ -121,10 +108,10 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
                     raise e
             return result
 
-        self._physical_data = call_queue_closure(self._physical_data, self.call_queue)
+        self._data = call_queue_closure(self._data, self.call_queue)
         self.call_queue = []
         return PandasOnPythonDataframePartition(
-            func(self._physical_data.copy(), *args, **kwargs)
+            func(self._data.copy(), *args, **kwargs)
         )
 
     def add_to_apply_calls(self, func, *args, **kwargs):
@@ -146,7 +133,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
             New ``PandasOnPythonDataframePartition`` object with extended call queue.
         """
         return PandasOnPythonDataframePartition(
-            self._physical_data.copy(),
+            self._data.copy(),
             call_queue=self.call_queue + [(func, args, kwargs)],
         )
 
@@ -213,7 +200,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
             The length of the object.
         """
         if self._length_cache is None:
-            self._length_cache = self.apply(self._length_extraction_fn())._physical_data
+            self._length_cache = self.apply(self._length_extraction_fn())._data
         return self._length_cache
 
     def width(self):
@@ -226,5 +213,5 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
             The width of the object.
         """
         if self._width_cache is None:
-            self._width_cache = self.apply(self._width_extraction_fn())._physical_data
+            self._width_cache = self.apply(self._width_extraction_fn())._data
         return self._width_cache

@@ -28,7 +28,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
 
     Parameters
     ----------
-    physical_data : distributed.Future
+    data : distributed.Future
         A reference to pandas DataFrame that need to be wrapped with this class.
     length : distributed.Future or int, optional
         Length or reference to it of wrapped pandas DataFrame.
@@ -40,11 +40,9 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         Call queue that needs to be executed on wrapped pandas DataFrame.
     """
 
-    def __init__(
-        self, physical_data, length=None, width=None, ip=None, call_queue=None
-    ):
-        assert isinstance(physical_data, Future)
-        self._physical_data = physical_data
+    def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
+        assert isinstance(data, Future)
+        self._data = data
         if call_queue is None:
             call_queue = []
         self.call_queue = call_queue
@@ -62,7 +60,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             The object from the distributed memory.
         """
         self.drain_call_queue()
-        return DaskWrapper.materialize(self._physical_data)
+        return DaskWrapper.materialize(self._data)
 
     def apply(self, func, *args, **kwargs):
         """
@@ -91,7 +89,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             futures = DaskWrapper.deploy(
                 apply_list_of_funcs,
                 call_queue,
-                self._physical_data,
+                self._data,
                 num_returns=2,
                 pure=False,
             )
@@ -101,7 +99,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             func, args, kwargs = call_queue[0]
             futures = DaskWrapper.deploy(
                 apply_func,
-                self._physical_data,
+                self._data,
                 func,
                 *args,
                 num_returns=2,
@@ -133,7 +131,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         The keyword arguments are sent as a dictionary.
         """
         return PandasOnDaskDataframePartition(
-            self._physical_data, call_queue=self.call_queue + [[func, args, kwargs]]
+            self._data, call_queue=self.call_queue + [[func, args, kwargs]]
         )
 
     def drain_call_queue(self):
@@ -145,7 +143,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             futures = DaskWrapper.deploy(
                 apply_list_of_funcs,
                 call_queue,
-                self._physical_data,
+                self._data,
                 num_returns=2,
                 pure=False,
             )
@@ -155,21 +153,21 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             func, args, kwargs = call_queue[0]
             futures = DaskWrapper.deploy(
                 apply_func,
-                self._physical_data,
+                self._data,
                 func,
                 *args,
                 num_returns=2,
                 pure=False,
                 **kwargs,
             )
-        self._physical_data = futures[0]
+        self._data = futures[0]
         self._ip_cache = futures[1]
         self.call_queue = []
 
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        wait(self._physical_data)
+        wait(self._data)
 
     def mask(self, row_labels, col_labels):
         """
@@ -208,7 +206,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             A copy of this partition.
         """
         return PandasOnDaskDataframePartition(
-            self._physical_data,
+            self._data,
             length=self._length_cache,
             width=self._width_cache,
             ip=self._ip_cache,
@@ -259,7 +257,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             The length of the object.
         """
         if self._length_cache is None:
-            self._length_cache = self.apply(lambda df: len(df))._physical_data
+            self._length_cache = self.apply(lambda df: len(df))._data
         if isinstance(self._length_cache, Future):
             self._length_cache = DaskWrapper.materialize(self._length_cache)
         return self._length_cache
@@ -274,7 +272,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             The width of the object.
         """
         if self._width_cache is None:
-            self._width_cache = self.apply(lambda df: len(df.columns))._physical_data
+            self._width_cache = self.apply(lambda df: len(df.columns))._data
         if isinstance(self._width_cache, Future):
             self._width_cache = DaskWrapper.materialize(self._width_cache)
         return self._width_cache

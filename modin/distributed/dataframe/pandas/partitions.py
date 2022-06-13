@@ -55,15 +55,12 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
         def _unwrap_partitions():
             if get_ip:
                 return [
-                    [
-                        (partition._ip_cache, partition.physical_data)
-                        for partition in row
-                    ]
+                    [(partition._ip_cache, partition._data) for partition in row]
                     for row in api_layer_object._query_compiler._modin_frame._partitions
                 ]
             else:
                 return [
-                    [partition.physical_data for partition in row]
+                    [partition._data for partition in row]
                     for row in api_layer_object._query_compiler._modin_frame._partitions
                 ]
 
