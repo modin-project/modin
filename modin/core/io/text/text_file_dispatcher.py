@@ -1018,7 +1018,7 @@ class TextFileDispatcher(FileDispatcher):
             )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE
-        use_inferred_column_names = cls.uses_inferred_column_names(
+        use_inferred_column_names = cls._uses_inferred_column_names(
             names, skiprows, kwargs.get("skipfooter", 0), kwargs.get("usecols", None)
         )
 
@@ -1116,9 +1116,9 @@ class TextFileDispatcher(FileDispatcher):
 
     @staticmethod
     @logger_decorator(
-        "PANDAS-API", "TextFileDispatcher.uses_inferred_column_names", "INFO"
+        "PANDAS-API", "TextFileDispatcher._uses_inferred_column_names", "INFO"
     )
-    def uses_inferred_column_names(names, skiprows, skipfooter, usecols):
+    def _uses_inferred_column_names(names, skiprows, skipfooter, usecols):
         """
         Tell whether need to use inferred column names in workers or not.
 
