@@ -90,10 +90,26 @@ def bytes_int_to_str(num_bytes, suffix="B"):
     return f"{num_bytes * 1000:.2f}P{suffix}"
 
 
-_KNOWN_LOG_NAMESPACES = set()
-
-
 def _create_logger(namespace, job_id, log_name, log_level):
+    """
+    Create and configure logger as Modin expects it to be.
+
+    Parameters
+    ----------
+    namespace : str
+        Logging namespace to use, e.g. "modin.logger".
+    job_id : str
+        Part of path to where logs are stored.
+    log_name : str
+        Name of the log file to create.
+    log_level : int
+        Log level as accepted by `Logger.setLevel()`.
+
+    Returns
+    -------
+    Logger
+        Logger object configured per Modin settings.
+    """
     log_filename = f".modin/logs/job_{job_id}/{log_name}.log"
     os.makedirs(os.path.dirname(log_filename), exist_ok=True)
 
@@ -112,7 +128,6 @@ def _create_logger(namespace, job_id, log_name, log_level):
     logger.addHandler(logfile)
     logger.setLevel(log_level)
 
-    _KNOWN_LOG_NAMESPACES.add(namespace)
     return logger
 
 
@@ -182,6 +197,11 @@ def get_logger(namespace="modin.logger"):
     """
     Configure Modin logger based on Modin config and returns the logger.
 
+    Parameters
+    ----------
+    namespace : str, default: "modin.logger"
+        Which namespace to use for logging.
+
     Returns
     -------
     logging.Logger
@@ -189,5 +209,4 @@ def get_logger(namespace="modin.logger"):
     """
     if not __LOGGER_CONFIGURED__ and LogMode.get() != "disable":
         configure_logging()
-    assert namespace in _KNOWN_LOG_NAMESPACES, f"Unknown log namespace: {namespace}"
     return logging.getLogger(namespace)
