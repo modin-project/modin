@@ -32,6 +32,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
 
     _length_cache = None
     _width_cache = None
+    _data = None
 
     def get(self):
         """
