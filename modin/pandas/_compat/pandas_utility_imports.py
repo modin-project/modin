@@ -4,6 +4,6 @@ import pandas
 
 pandas_version = pandas.__version__
 if version.parse("1.1.0") <= version.parse(pandas_version) <= version.parse("1.1.5"):
-    from .py36.imports import *
+    from .py36.imports import *  # noqa: F401,F403
 elif version.parse("1.4.0") <= version.parse(pandas_version) <= version.parse("1.4.99"):
-    from .latest.imports import *
+    from .latest.imports import *  # noqa: F401,F403

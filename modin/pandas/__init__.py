@@ -83,7 +83,6 @@ with warnings.catch_warnings():
         api,
     )
 import os
-import multiprocessing
 
 from modin.config import Engine, Parameter
 
@@ -215,9 +214,9 @@ from .general import (
 )
 from .plotting import Plotting as plotting
 from modin.utils import show_versions
-from ._compat.namespace import *
+from ._compat.namespace import *  # noqa: F403
 
-__all__ = [
+__all__ = [  # noqa: F405
     "DataFrame",
     "Series",
     "read_csv",

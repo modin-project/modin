@@ -23,7 +23,6 @@ from pandas.core.dtypes.common import (
 )
 from pandas._libs.lib import no_default
 from pandas._typing import IndexKeyFunc
-from pandas.util._decorators import doc
 from typing import Union, Optional
 import warnings
 
@@ -1400,9 +1399,7 @@ class Series(SeriesCompat, BasePandasDataset):
         min_count=0,
         **kwargs,
     ):
-        """
-        Return the product of the values over the requested `axis`.
-        """
+        """Return the product of the values over the requested `axis`."""
         axis = self._get_axis_number(axis)
         if level is not None:
             if (

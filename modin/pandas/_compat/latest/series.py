@@ -1,9 +1,7 @@
 import numpy as np
 import pandas
-from pandas.core.dtypes.common import is_list_like
 from pandas.util._validators import validate_bool_kwarg
 from pandas._libs.lib import no_default
-import sys
 
 from ..abc.series import BaseCompatibilitySeries
 

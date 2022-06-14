@@ -1,7 +1,4 @@
 import numpy as np
-import pandas
-from pandas.core.dtypes.common import is_list_like
-import sys
 
 from ..abc.series import BaseCompatibilitySeries
 

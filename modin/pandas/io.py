@@ -20,12 +20,10 @@ Manually add documentation for methods which are not presented in pandas.
 """
 
 import inspect
-import pickle
 import pandas
 import pathlib
 import re
-from collections import OrderedDict
-from typing import Union, IO, AnyStr, Sequence, Dict, List, Optional, Any
+from typing import Union, IO, AnyStr, Sequence, Dict, List, Optional
 
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, enable_logging
