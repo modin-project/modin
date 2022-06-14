@@ -1092,9 +1092,6 @@ class TextFileDispatcher(FileDispatcher):
         return mask
 
     @staticmethod
-    @logger_decorator(
-        "PANDAS-API", "TextFileDispatcher._uses_inferred_column_names", "INFO"
-    )
     def _uses_inferred_column_names(names, skiprows, skipfooter, usecols):
         """
         Tell whether need to use inferred column names in workers or not.

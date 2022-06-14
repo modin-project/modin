@@ -18,7 +18,7 @@ Module contains ``LoggerBase`` class.
 """
 from typing import Optional
 
-from .logger_function import logger_decorator
+from .logger_decorator import logger_decorator
 
 
 class LoggerBase:

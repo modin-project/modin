@@ -13,7 +13,7 @@
 
 from .logger_base_class import LoggerBase  # noqa: F401
 from .config import get_logger  # noqa: F401
-from .logger_function import logger_decorator, disable_logging  # noqa: F401
+from .logger_decorator import logger_decorator, disable_logging  # noqa: F401
 
 __all__ = [
     "LoggerBase",
