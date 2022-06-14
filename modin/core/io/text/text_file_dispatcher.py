@@ -655,12 +655,11 @@ class TextFileDispatcher(FileDispatcher):
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(filepath_or_buffer):
                 return False
+        elif hasattr(filepath_or_buffer, "name"):
+            # `hasattr` check is needed for the case when modin can speed up reading from buffer
+            if not cls.file_exists(filepath_or_buffer.name):
+                return False
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
-            return False
-        elif not (
-            hasattr(filepath_or_buffer, "name")
-            and cls.file_exists(filepath_or_buffer.name)
-        ):
             return False
 
         if read_kwargs["chunksize"] is not None:

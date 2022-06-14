@@ -12,6 +12,7 @@ Key Features and Updates
 * Benchmarking enhancements
   *
 * Refactor Codebase
+  * REFACTOR-#4282: Rename `filepath_or_buffer_md` variable name as it is misleading since no buffer is used in it (#4283)
   * REFACTOR-#4530: Standardize access to physical data in partitions (#4563)
 * Pandas API implementations and improvements
   *
