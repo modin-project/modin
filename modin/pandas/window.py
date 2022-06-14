@@ -16,13 +16,13 @@
 from typing import Optional
 import pandas.core.window.rolling
 from modin.utils import _inherit_docstrings
-from modin.logging import LoggerBase
+from modin.logging import ClassLogger
 
 from pandas.core.dtypes.common import is_list_like
 
 
 @_inherit_docstrings(pandas.core.window.rolling.Window)
-class Window(LoggerBase):
+class Window(ClassLogger):
     def __init__(
         self,
         dataframe,
@@ -82,7 +82,7 @@ class Window(LoggerBase):
     pandas.core.window.rolling.Rolling,
     excluded=[pandas.core.window.rolling.Rolling.__init__],
 )
-class Rolling(LoggerBase):
+class Rolling(ClassLogger):
     def __init__(
         self,
         dataframe,

@@ -30,7 +30,7 @@ from pandas._typing import CompressionOptions, StorageOptions
 from typing import Union, IO, AnyStr, Sequence, Dict, List, Optional, Any
 
 from modin.error_message import ErrorMessage
-from modin.logging import LoggerBase, logger_decorator
+from modin.logging import ClassLogger, logger_decorator
 from .dataframe import DataFrame
 from modin.utils import _inherit_docstrings, Engine
 from . import _update_engine
@@ -762,7 +762,7 @@ def read_xml(
 
 
 @_inherit_docstrings(pandas.HDFStore)
-class HDFStore(LoggerBase, pandas.HDFStore):  # noqa: PR01, D200
+class HDFStore(ClassLogger, pandas.HDFStore):  # noqa: PR01, D200
     """
     Dict-like IO interface for storing pandas objects in PyTables.
     """
@@ -819,7 +819,7 @@ class HDFStore(LoggerBase, pandas.HDFStore):  # noqa: PR01, D200
 
 
 @_inherit_docstrings(pandas.ExcelFile)
-class ExcelFile(LoggerBase, pandas.ExcelFile):  # noqa: PR01, D200
+class ExcelFile(ClassLogger, pandas.ExcelFile):  # noqa: PR01, D200
     """
     Class for parsing tabular excel sheets into DataFrame objects.
     """

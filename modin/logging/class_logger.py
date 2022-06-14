@@ -21,7 +21,7 @@ from typing import Optional
 from .logger_decorator import logger_decorator
 
 
-class LoggerBase:
+class ClassLogger:
     """
     Ensure all subclasses of the class being inherited are logged, too.
 

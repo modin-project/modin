@@ -11,12 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .logger_base_class import LoggerBase  # noqa: F401
+from .class_logger import ClassLogger  # noqa: F401
 from .config import get_logger  # noqa: F401
 from .logger_decorator import logger_decorator, disable_logging  # noqa: F401
 
 __all__ = [
-    "LoggerBase",
+    "ClassLogger",
     "get_logger",
     "logger_decorator",
     "disable_logging",

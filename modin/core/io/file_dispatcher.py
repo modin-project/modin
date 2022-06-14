@@ -23,7 +23,7 @@ import os
 import re
 from modin.config import StorageFormat
 from modin.utils import import_optional_dependency
-from modin.logging import LoggerBase
+from modin.logging import ClassLogger
 import numpy as np
 
 S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
@@ -111,7 +111,7 @@ class OpenFile:
         self.file.close()
 
 
-class FileDispatcher(LoggerBase):
+class FileDispatcher(ClassLogger):
     """
     Class handles util functions for reading data from different kinds of files.
 

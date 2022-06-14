@@ -23,11 +23,11 @@ from pandas._typing import (
 from pandas.core.dtypes.common import is_list_like
 from typing import Optional, Union
 from modin.utils import _inherit_docstrings
-from modin.logging import LoggerBase
+from modin.logging import ClassLogger
 
 
 @_inherit_docstrings(pandas.core.resample.Resampler)
-class Resampler(LoggerBase):
+class Resampler(ClassLogger):
     def __init__(
         self,
         dataframe,
