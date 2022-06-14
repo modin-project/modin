@@ -40,7 +40,7 @@ class ClassLogger:
         **kwargs,
     ) -> None:
         """
-        Apply logging decorator to all children of LoggerBase.
+        Apply logging decorator to all children of ClassLogger.
 
         Parameters
         ----------

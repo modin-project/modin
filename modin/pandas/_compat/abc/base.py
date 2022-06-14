@@ -13,10 +13,10 @@
 
 from abc import ABC
 
-from modin.logging import LoggerBase
+from modin.logging import ClassLogger
 
 
-class BaseCompatibilityBasePandasDataset(ABC, LoggerBase):
+class BaseCompatibilityBasePandasDataset(ABC, ClassLogger):
     def max(self, *args, **kwargs):
         pass
 

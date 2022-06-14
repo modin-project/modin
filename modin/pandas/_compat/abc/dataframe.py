@@ -13,10 +13,10 @@
 
 from abc import ABC
 
-from modin.logging import LoggerBase
+from modin.logging import ClassLogger
 
 
-class BaseCompatibilityDataFrame(ABC, LoggerBase):
+class BaseCompatibilityDataFrame(ABC, ClassLogger):
     def applymap(self, *args, **kwargs):
         pass
 

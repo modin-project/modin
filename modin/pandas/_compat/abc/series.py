@@ -11,8 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.logging import LoggerBase
+from modin.logging import ClassLogger
 
 
-class BaseCompatibilitySeries(LoggerBase):
+class BaseCompatibilitySeries(ClassLogger):
     pass
