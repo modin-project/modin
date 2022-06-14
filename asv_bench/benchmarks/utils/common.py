@@ -513,11 +513,11 @@ def execute(
         if ASV_USE_ENGINE == "ray":
             from ray import wait
 
-            all(map(lambda partition: wait([partition.oid]), partitions))
+            all(map(lambda partition: wait([partition._data]), partitions))
         elif ASV_USE_ENGINE == "dask":
             from dask.distributed import wait
 
-            all(map(lambda partition: wait(partition.future), partitions))
+            all(map(lambda partition: wait(partition._data), partitions))
         elif ASV_USE_ENGINE == "python":
             pass
 
