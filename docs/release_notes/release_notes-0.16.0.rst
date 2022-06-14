@@ -7,6 +7,7 @@ Key Features and Updates
 
 * Stability and Bugfixes
   * FIX-#4570: Replace ``np.bool`` -> ``np.bool_`` (#4571)
+  * FIX-#4543: Fix `read_csv` in case skiprows=<0, []> (#4544)
 * Performance enhancements
   *
 * Benchmarking enhancements
@@ -34,3 +35,4 @@ Contributors
 ------------
 @mvashishtha
 @NickCrews
+@prutskov
