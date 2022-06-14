@@ -129,7 +129,8 @@ def logger_decorator(
             except BaseException:
                 get_logger("modin.logger.errors").exception(stop_line)
                 raise
-            logger_level(stop_line)
+            finally:
+                logger_level(stop_line)
             return result
 
         # make sure we won't decorate multiple times

@@ -97,7 +97,7 @@ def _create_logger(namespace, job_id, log_name, log_level):
     Parameters
     ----------
     namespace : str
-        Logging namespace to use, e.g. "modin.logger".
+        Logging namespace to use, e.g. "modin.logger.default".
     job_id : str
         Part of path to where logs are stored.
     log_name : str
@@ -134,11 +134,11 @@ def _create_logger(namespace, job_id, log_name, log_level):
 def configure_logging():
     """Configure Modin logging by setting up directory structure and formatting."""
     global __LOGGER_CONFIGURED__
-    logger = logging.getLogger("modin.logger")
+    logger = logging.getLogger("modin.logger.default")
     job_id = uuid.uuid4().hex
 
     logger = _create_logger(
-        "modin.logging",
+        "modin.logger.default",
         job_id,
         "trace",
         logging.INFO if LogMode.get() == "enable_api_only" else logging.DEBUG,
@@ -193,13 +193,13 @@ def memory_thread(logger, sleep_time):
         time.sleep(sleep_time)
 
 
-def get_logger(namespace="modin.logger"):
+def get_logger(namespace="modin.logger.default"):
     """
     Configure Modin logger based on Modin config and returns the logger.
 
     Parameters
     ----------
-    namespace : str, default: "modin.logger"
+    namespace : str, default: "modin.logger.default"
         Which namespace to use for logging.
 
     Returns
