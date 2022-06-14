@@ -1393,16 +1393,16 @@ def test_describe(data):
 
     try:
         pandas_result = pandas_series.describe(
-            include=[np.timedelta64, np.datetime64, np.object, bool]
+            include=[np.timedelta64, np.datetime64, np.object, np.bool_]
         )
     except Exception as e:
         with pytest.raises(type(e)):
             modin_series.describe(
-                include=[np.timedelta64, np.datetime64, np.object, bool]
+                include=[np.timedelta64, np.datetime64, np.object, np.bool_]
             )
     else:
         modin_result = modin_series.describe(
-            include=[np.timedelta64, np.datetime64, np.object, bool]
+            include=[np.timedelta64, np.datetime64, np.object, np.bool_]
         )
         df_equals(modin_result, pandas_result)
 

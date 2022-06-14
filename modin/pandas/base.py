@@ -739,7 +739,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
                             type(self).__name__, "all"
                         )
                     )
-                data_for_compute = self[self.columns[self.dtypes == bool]]
+                data_for_compute = self[self.columns[self.dtypes == np.bool_]]
                 return data_for_compute.all(
                     axis=axis, bool_only=False, skipna=skipna, level=level, **kwargs
                 )
@@ -802,7 +802,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
                             type(self).__name__, "all"
                         )
                     )
-                data_for_compute = self[self.columns[self.dtypes == bool]]
+                data_for_compute = self[self.columns[self.dtypes == np.bool_]]
                 return data_for_compute.any(
                     axis=axis, bool_only=False, skipna=skipna, level=level, **kwargs
                 )
@@ -1105,7 +1105,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         Count non-NA cells for `BasePandasDataset`.
         """
         axis = self._get_axis_number(axis)
-        frame = self.select_dtypes([np.number, bool]) if numeric_only else self
+        frame = self.select_dtypes([np.number, np.bool_]) if numeric_only else self
 
         if level is not None:
             if not frame._query_compiler.has_multiindex(axis=axis):
