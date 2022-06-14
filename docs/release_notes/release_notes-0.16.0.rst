@@ -12,7 +12,7 @@ Key Features and Updates
 * Benchmarking enhancements
   *
 * Refactor Codebase
-  * REFACTOR-#4534: Remove logging metaclass (#4535)
+  * REFACTOR-#4534: Replace logging meta class with class decorator (#4535)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
