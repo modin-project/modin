@@ -127,7 +127,7 @@ def logger_decorator(
             try:
                 result = obj(*args, **kwargs)
             except BaseException:
-                logger.exception(stop_line)
+                get_logger("modin.logger.errors").exception(stop_line)
                 raise
             logger_level(stop_line)
             return result
