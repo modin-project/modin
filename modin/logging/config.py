@@ -134,7 +134,6 @@ def _create_logger(namespace, job_id, log_name, log_level):
 def configure_logging():
     """Configure Modin logging by setting up directory structure and formatting."""
     global __LOGGER_CONFIGURED__
-    logger = logging.getLogger("modin.logger.default")
     job_id = uuid.uuid4().hex
 
     logger = _create_logger(

@@ -84,9 +84,9 @@ def logger_decorator(
         if isinstance(obj, type):
             seen = {}
             for attr_name, attr_value in vars(obj).items():
-                if isinstance(attr_value, (FunctionType, MethodType)) and not hasattr(
-                    attr_value, _MODIN_LOGGER_NOWRAP
-                ):
+                if isinstance(
+                    attr_value, (FunctionType, MethodType, classmethod, staticmethod)
+                ) and not hasattr(attr_value, _MODIN_LOGGER_NOWRAP):
                     try:
                         wrapped = seen[attr_value]
                     except KeyError:
@@ -98,6 +98,10 @@ def logger_decorator(
 
                     setattr(obj, attr_name, wrapped)
             return obj
+        elif isinstance(obj, classmethod):
+            return classmethod(decorator(obj.__func__))
+        elif isinstance(obj, staticmethod):
+            return staticmethod(decorator(obj.__func__))
 
         start_line = f"START::{modin_layer.upper()}::{name or obj.__name__}"
         stop_line = f"STOP::{modin_layer.upper()}::{name or obj.__name__}"
