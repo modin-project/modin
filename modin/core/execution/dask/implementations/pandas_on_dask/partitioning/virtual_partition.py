@@ -257,7 +257,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
-        **kwargs
+        **kwargs,
     ):
         """
         Apply a function to this axis partition along full axis.
@@ -397,7 +397,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
     def drain_call_queue(self, num_splits=None):
         """
         Execute all operations stored in this partition's call queue.
-        
+
         Parameters
         ----------
         num_splits : int, default: None
