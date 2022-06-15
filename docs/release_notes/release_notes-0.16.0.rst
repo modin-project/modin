@@ -6,13 +6,13 @@ Key Features and Updates
 ------------------------
 
 * Stability and Bugfixes
-  *
+  * FIX-#4543: Fix `read_csv` in case skiprows=<0, []> (#4544)
 * Performance enhancements
   *
 * Benchmarking enhancements
   *
 * Refactor Codebase
-  *
+  * REFACTOR-#4530: Standardize access to physical data in partitions (#4563)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
@@ -33,3 +33,4 @@ Key Features and Updates
 Contributors
 ------------
 @mvashishtha
+@prutskov
