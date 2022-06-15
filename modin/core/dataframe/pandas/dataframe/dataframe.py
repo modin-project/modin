@@ -2525,10 +2525,12 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
             column_widths,
         ) = new_left_frame._copartition(1, new_right_frame, join_type, sort=True)
 
-        # unwrap list returned by `copartition`.
-        right_parts = right_parts[0]
-        new_frame = self._partition_mgr_cls.binary_operation(
-            left_parts, op, right_parts
+        new_frame = (
+            np.array([])
+            if len(left_parts) == 0 or len(right_parts[0]) == 0
+            else self._partition_mgr_cls.binary_operation(
+                left_parts, op, right_parts[0]
+            )
         )
 
         return self.__constructor__(

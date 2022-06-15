@@ -1262,18 +1262,13 @@ class PandasDataframePartitionManager(ABC):
         """
         [part.drain_call_queue() for part in right.flatten()]
 
-        def op_with_empty_check(x, y, *args, **kwargs):
-            y = pandas.DataFrame(index=x.index, columns=x.columns) if y is None else y
-
-            return func(x, y, *args, **kwargs)
-
-        op_with_empty_check = cls.preprocess_func(op_with_empty_check)
+        func = cls.preprocess_func(func)
         return np.array(
             [
                 [
                     part.apply(
-                        op_with_empty_check,
-                        right[row_idx][col_idx]._data if len(right) else None,
+                        func,
+                        right[row_idx][col_idx]._data,
                     )
                     for col_idx, part in enumerate(left[row_idx])
                 ]
