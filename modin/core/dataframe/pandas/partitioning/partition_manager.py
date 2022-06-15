@@ -1260,6 +1260,7 @@ class PandasDataframePartitionManager(ABC):
         np.ndarray
             A NumPy array with new partitions.
         """
+        [part.drain_call_queue() for part in right.flatten()]
 
         def op_with_empty_check(x, y, *args, **kwargs):
             y = pandas.DataFrame(index=x.index, columns=x.columns) if y is None else y
@@ -1272,7 +1273,7 @@ class PandasDataframePartitionManager(ABC):
                 [
                     part.apply(
                         op_with_empty_check,
-                        right[row_idx][col_idx].physical_data if len(right) else None,
+                        right[row_idx][col_idx]._data if len(right) else None,
                     )
                     for col_idx, part in enumerate(left[row_idx])
                 ]

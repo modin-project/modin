@@ -64,20 +64,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             )
         )
 
-    # Temp implementation, will be done in #4530
-    @property
-    def physical_data(self):
-        """
-        Get physical data stored by partition.
-
-        Returns
-        -------
-        ray.ObjectRef
-            A reference to pandas DataFrame that's wrapped.
-        """
-        self.drain_call_queue()
-        return self.oid
-
     def get(self):
         """
         Get the object wrapped by this partition out of the Plasma store.
