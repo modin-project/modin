@@ -12,10 +12,11 @@
 # governing permissions and limitations under the License.
 
 """
-Module contains ``LoggerBase`` class.
+Module contains ``ClassLogger`` class.
 
-``LoggerBase`` is used for adding logging to Modin classes and their subclasses.
+``ClassLogger`` is used for adding logging to Modin classes and their subclasses.
 """
+
 from typing import Optional
 
 from .logger_decorator import enable_logging
