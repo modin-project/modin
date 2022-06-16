@@ -12,9 +12,9 @@
 # governing permissions and limitations under the License.
 
 """
-Module contains ``logger_decorator`` function.
+Module contains the functions designed for the enable/disable of logging.
 
-``logger_decorator`` is used for decorating individual Modin functions or classes.
+``enable_logging`` is used for decorating individual Modin functions or classes.
 """
 
 from typing import Optional, Callable, Union, Type
