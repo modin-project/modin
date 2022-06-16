@@ -113,7 +113,7 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
 
 
 @pytest.mark.skipif(
-    Engine.get() != "Dask" and Engine.get() != "Ray",
+    Engine.get() not in ("Dask", "Ray")
     reason="Rebalancing partitions is only supported for Dask and Ray engines",
 )
 def test_rebalance_partitions():
@@ -128,8 +128,8 @@ def test_rebalance_partitions():
     large_df = pd.concat(small_dfs)
     large_modin_frame = large_df._query_compiler._modin_frame
     assert large_modin_frame._partitions.shape == (
-        4,
-        4,
+        NPartitions.get()
+        NPartitions.get(),
     ), "Partitions were not rebalanced after concat."
     assert all(
         isinstance(ptn, large_modin_frame._partition_mgr_cls._column_partitions_class)
@@ -138,8 +138,8 @@ def test_rebalance_partitions():
     large_df = large_df.apply(lambda x: x + 1)
     large_modin_frame = large_df._query_compiler._modin_frame
     assert large_modin_frame._partitions.shape == (
-        4,
-        4,
+        NPartitions.get(),
+        NPartitions.get(),
     ), "Partitions are not block partitioned after apply."
     assert all(
         isinstance(ptn, large_modin_frame._partition_mgr_cls._partition_class)
