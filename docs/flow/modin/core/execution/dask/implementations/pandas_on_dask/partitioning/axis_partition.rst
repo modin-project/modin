@@ -1,5 +1,5 @@
 PandasOnDaskDataframeVirtualPartition
-""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""
 
 The class is the specific implementation of :py:class:`~modin.core.dataframe.pandas.partitioning.virtual_partition.PandasOnDaskDataframeVirtualPartition`,
 providing the API to perform operations on an axis (column or row) partition using Dask as the execution engine.

@@ -120,7 +120,7 @@ def test_rebalance_partitions():
     small_dfs = [
         pd.DataFrame(
             [[i + j for j in range(0, 100)]],
-            columns=[f"col{l}" for l in range(1, 101)],
+            columns=[f"col{j}" for j in range(1, 101)],
             index=pd.Index([i - 1]),
         )
         for i in range(1, 10001, 100)
