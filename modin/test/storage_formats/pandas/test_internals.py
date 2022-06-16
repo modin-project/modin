@@ -118,19 +118,19 @@ small_dfs = [
         columns=[f"col{j}" for j in range(1, 1001)],
         index=pd.Index([i - 1]),
     )
-    for i in range(1, 10001, 100)
+    for i in range(1, 100001, 1000)
 ]
-
+large_df = pd.DataFrame([[i + j for j in range(1, 1000)] for i  in range(0, 100000, 1000)], columns=[f"col{j}" for j in range(1, 1000)],index=pd.Index(list(range(0, 100000, 1000))))
 
 @pytest.mark.skipif(
     Engine.get() not in ("Dask", "Ray"),
     reason="Rebalancing partitions is only supported for Dask and Ray engines",
 )
 @pytest.mark.parametrize(
-    "large_df",
-    [pd.concat(small_dfs), pd.concat([pd.concat(small_dfs)] + small_dfs[:3])],
+    "large_df,col_length",
+    [(pd.concat(small_dfs), 100), (pd.concat([pd.concat(small_dfs)] + small_dfs[:3]), 103), (pd.concat([large_df] + small_dfs[:3]), 103)],
 )
-def test_rebalance_partitions(large_df):
+def test_rebalance_partitions(large_df, col_length):
     large_modin_frame = large_df._query_compiler._modin_frame
     assert large_modin_frame._partitions.shape == (
         NPartitions.get(),
@@ -144,7 +144,7 @@ def test_rebalance_partitions(large_df):
     # over the orthogonal axis from non-full-axis virtual partitions.
 
     def col_apply_func(col):
-        assert len(col) == 100, "Partial axis partition detected."
+        assert len(col) == col_length, "Partial axis partition detected."
         return col + 1
 
     large_df = large_df.apply(col_apply_func)
