@@ -24,7 +24,7 @@ import os
 import uuid
 import platform
 import psutil
-import pkg_resources
+import pandas
 import threading
 import time
 
@@ -145,11 +145,10 @@ def configure_logging():
 
     logger.info(f"OS Version: {platform.platform()}")
     logger.info(f"Python Version: {platform.python_version()}")
-    pandas_version = pkg_resources.get_distribution("pandas").version
     num_physical_cores = str(psutil.cpu_count(logical=False))
     num_total_cores = str(psutil.cpu_count(logical=True))
     logger.info(f"Modin Version: {modin.__version__}")
-    logger.info(f"Pandas Version: {pandas_version}")
+    logger.info(f"Pandas Version: {pandas.__version__}")
     logger.info(f"Physical Cores: {num_physical_cores}")
     logger.info(f"Total Cores: {num_total_cores}")
 
