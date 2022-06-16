@@ -123,7 +123,7 @@ small_dfs = [
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ("Dask", "Ray")
+    Engine.get() not in ("Dask", "Ray"),
     reason="Rebalancing partitions is only supported for Dask and Ray engines",
 )
 @pytest.mark.parametrize(
