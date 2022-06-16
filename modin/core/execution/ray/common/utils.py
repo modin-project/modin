@@ -219,6 +219,24 @@ def initialize_ray(
             if not GPU_MANAGERS:
                 for i in range(GpuCount.get()):
                     GPU_MANAGERS.append(GPUManager.remote(i))
+    else:
+        ray_obj_store_mem = ray.available_resources()["object_store_memory"]
+        system_memory = psutil.virtual_memory().total
+        if sys.platform.startswith("linux"):
+            shm_fd = os.open("/dev/shm", os.O_RDONLY)
+            try:
+                shm_stats = os.fstatvfs(shm_fd)
+                system_memory = shm_stats.f_bsize * shm_stats.f_bavail
+            finally:
+                os.close(shm_fd)
+        if (ray_obj_store_mem // 1e9) < (0.6 * system_memory) // 1e9:
+            warnings.warn(
+                "Modin has detected that it is running on a pre-initialized Ray cluster. "
+                + f"This cluster has currently allocated {ray_obj_store_mem // 1e9} GB for its "
+                + f"object store, but the device has {system_memory // 1e9} GB of RAM available. "
+                + "Modin recommends initializing Ray with at least 60% of available RAM to prevent "
+                + "Out Of Memory errors."
+            )
     _move_stdlib_ahead_of_site_packages()
     ray.worker.global_worker.run_function_on_all_workers(
         _move_stdlib_ahead_of_site_packages

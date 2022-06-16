@@ -22,7 +22,7 @@ Key Features and Updates
 * XGBoost enhancements
   *
 * Developer API enhancements
-  *
+  * FEAT-#4574: Warn users when pre-initialized Ray cluster is not using all available memory (#4575)
 * Update testing suite
   * TEST-#4508: Reduce test_partition_api pytest threads to deflake it (#4551)
   * TEST-#4550: Use much less data in test_partition_api (#4554)
@@ -37,3 +37,4 @@ Contributors
 @mvashishtha
 @NickCrews
 @prutskov
+@RehanSD
