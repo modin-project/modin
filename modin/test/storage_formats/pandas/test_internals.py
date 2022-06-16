@@ -123,7 +123,7 @@ small_dfs = [
 
 
 @pytest.mark.skipif(
-    Engine.get() != "Dask" and Engine.get() != "Ray",
+    Engine.get() not in ("Dask", "Ray")
     reason="Rebalancing partitions is only supported for Dask and Ray engines",
 )
 @pytest.mark.parametrize(
@@ -133,8 +133,8 @@ small_dfs = [
 def test_rebalance_partitions(large_df):
     large_modin_frame = large_df._query_compiler._modin_frame
     assert large_modin_frame._partitions.shape == (
-        4,
-        4,
+        NPartitions.get(),
+        NPartitions.get(),
     ), "Partitions were not rebalanced after concat."
     assert all(
         isinstance(ptn, large_modin_frame._partition_mgr_cls._column_partitions_class)
@@ -150,8 +150,8 @@ def test_rebalance_partitions(large_df):
     large_df = large_df.apply(col_apply_func)
     new_large_modin_frame = large_df._query_compiler._modin_frame
     assert new_large_modin_frame._partitions.shape == (
-        4,
-        4,
+        NPartitions.get(),
+        NPartitions.get(),
     ), "Partitions list shape is incorrect."
     assert all(
         isinstance(ptn, new_large_modin_frame._partition_mgr_cls._partition_class)
