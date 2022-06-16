@@ -112,20 +112,25 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
     df_equals(md_df, pd_df)
 
 
+small_dfs = [
+    pd.DataFrame(
+        [[i + j for j in range(0, 1000)]],
+        columns=[f"col{j}" for j in range(1, 1001)],
+        index=pd.Index([i - 1]),
+    )
+    for i in range(1, 10001, 100)
+]
+
+
 @pytest.mark.skipif(
     Engine.get() != "Dask" and Engine.get() != "Ray",
     reason="Rebalancing partitions is only supported for Dask and Ray engines",
 )
-def test_rebalance_partitions():
-    small_dfs = [
-        pd.DataFrame(
-            [[i + j for j in range(0, 100)]],
-            columns=[f"col{j}" for j in range(1, 101)],
-            index=pd.Index([i - 1]),
-        )
-        for i in range(1, 10001, 100)
-    ]
-    large_df = pd.concat(small_dfs)
+@pytest.mark.parametrize(
+    "large_df",
+    [pd.concat(small_dfs), pd.concat([pd.concat(small_dfs)] + small_dfs[:3])],
+)
+def test_rebalance_partitions(large_df):
     large_modin_frame = large_df._query_compiler._modin_frame
     assert large_modin_frame._partitions.shape == (
         4,
@@ -135,13 +140,40 @@ def test_rebalance_partitions():
         isinstance(ptn, large_modin_frame._partition_mgr_cls._column_partitions_class)
         for ptn in large_modin_frame._partitions.flatten()
     )
-    large_df = large_df.apply(lambda x: x + 1)
-    large_modin_frame = large_df._query_compiler._modin_frame
-    assert large_modin_frame._partitions.shape == (
+    # The following check tests that we can correctly form full-axis virtual partitions
+    # over the orthogonal axis from non-full-axis virtual partitions.
+
+    def col_apply_func(col):
+        assert len(col) == 100, "Partial axis partition detected."
+        return col + 1
+
+    large_df = large_df.apply(col_apply_func)
+    new_large_modin_frame = large_df._query_compiler._modin_frame
+    assert new_large_modin_frame._partitions.shape == (
         4,
         4,
-    ), "Partitions are not block partitioned after apply."
+    ), "Partitions list shape is incorrect."
     assert all(
-        isinstance(ptn, large_modin_frame._partition_mgr_cls._partition_class)
-        for ptn in large_modin_frame._partitions.flatten()
+        isinstance(ptn, new_large_modin_frame._partition_mgr_cls._partition_class)
+        for ptn in new_large_modin_frame._partitions.flatten()
+    ), "Partitions are not block partitioned after apply."
+    large_df = pd.DataFrame(
+        query_compiler=large_df._query_compiler.__constructor__(large_modin_frame)
     )
+    # The following check tests that we can correctly form full-axis virtual partitions
+    # over the same axis from non-full-axis virtual partitions.
+
+    def row_apply_func(row):
+        assert len(row) == 1000, "Partial axis partition detected."
+        return row + 1
+
+    large_df = large_df.apply(row_apply_func, axis=1)
+    new_large_modin_frame = large_df._query_compiler._modin_frame
+    assert new_large_modin_frame._partitions.shape == (
+        4,
+        4,
+    ), "Partitions list shape is incorrect."
+    assert all(
+        isinstance(ptn, new_large_modin_frame._partition_mgr_cls._partition_class)
+        for ptn in new_large_modin_frame._partitions.flatten()
+    ), "Partitions are not block partitioned after apply."
