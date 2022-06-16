@@ -7,8 +7,9 @@ Key Features and Updates
 
 * Stability and Bugfixes
   * FIX-#4543: Fix `read_csv` in case skiprows=<0, []> (#4544)
+  * FIX-#4059: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
 * Performance enhancements
-  * PERF-#4182: Add cell-wise execution for binary operations (#4391)
+  * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
 * Benchmarking enhancements
   *
 * Refactor Codebase
