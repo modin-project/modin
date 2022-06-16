@@ -1981,8 +1981,8 @@ def test_groupby_with_virtual_partitions():
     big_pandas_df = pandas.concat([pandas_df for _ in range(5)])
 
     # Check that the constructed Modin DataFrame has virtual partitions when
-    # using Ray, and doesn't when using another execution engines.
-    if Engine.get() == "Ray":
+    # using Ray or Dask, and doesn't when using another execution engines.
+    if Engine.get() == "Ray" or Engine.get() == "Dask":
         assert issubclass(
             type(big_modin_df._query_compiler._modin_frame._partitions[0][0]),
             PandasDataframeAxisPartition,

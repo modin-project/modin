@@ -13,6 +13,8 @@
 
 """Module houses class that implements ``PandasDataframePartitionManager``."""
 
+import numpy as np
+
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
@@ -23,6 +25,7 @@ from .virtual_partition import (
 )
 from .partition import PandasOnDaskDataframePartition
 from modin.core.storage_formats.pandas.utils import compute_chunksize
+from modin.config import NPartitions
 
 
 class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
@@ -49,6 +52,39 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
             The objects wrapped by `partitions`.
         """
         return DaskWrapper.materialize([partition._data for partition in partitions])
+
+    @classmethod
+    def concat(cls, axis, left_parts, right_parts):
+        """
+        Concatenate the blocks of partitions with another set of blocks.
+
+        Parameters
+        ----------
+        axis : int
+            The axis to concatenate to.
+        left_parts : np.ndarray
+            NumPy array of partitions to concatenate with.
+        right_parts : np.ndarray or list
+            NumPy array of partitions to be concatenated.
+
+        Returns
+        -------
+        np.ndarray
+            A new NumPy array with concatenated partitions.
+
+        Notes
+        -----
+        Assumes that the `left_parts` and `right_parts` blocks are already the same
+        shape on the dimension (opposite `axis`) as the one being concatenated. A
+        ``ValueError`` will be thrown if this condition is not met.
+        """
+        result = super(PandasOnDaskDataframePartitionManager, cls).concat(
+            axis, left_parts, right_parts
+        )
+        if axis == 0:
+            return cls.rebalance_partitions(result)
+        else:
+            return result
 
     @classmethod
     def rebalance_partitions(cls, partitions):

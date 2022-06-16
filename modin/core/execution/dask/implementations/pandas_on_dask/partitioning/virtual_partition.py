@@ -119,7 +119,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         result = [None] * len(self.list_of_partitions_to_combine)
         for idx, partition in enumerate(self.list_of_partitions_to_combine):
             partition.drain_call_queue()
-            result[idx] = partition.future
+            result[idx] = partition._data
         return result
 
     @property
@@ -254,6 +254,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
     def apply(
         self,
         func,
+        *args,
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
@@ -266,6 +267,8 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         ----------
         func : callable
             The function to apply.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
         num_splits : int, default: None
             The number of times to split the result object.
         other_axis_partition : PandasDataframeAxisPartition, default: None
@@ -292,6 +295,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             num_splits = 1
         if len(self.call_queue) > 0:
             self.drain_call_queue()
+        kwargs["args"] = args
         result = super(PandasOnDaskDataframeVirtualPartition, self).apply(
             func, num_splits, other_axis_partition, maintain_partitioning, **kwargs
         )
@@ -383,7 +387,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         Returns
         -------
         int
-            THe width of the partition.
+            The width of the partition.
         """
         if self._width_cache is None:
             if self.axis == 1:
@@ -463,7 +467,7 @@ class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeVirtualPartition
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
     full_axis : bool, default: True
-        Whether or not the virtual partition encompasses the whole axis.
+        Whether this partition spans an entire axis of the dataframe.
     call_queue : list, optional
         A list of tuples (callable, args, kwargs) that contains deferred calls.
     """
@@ -485,7 +489,7 @@ class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeVirtualPartition):
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
     full_axis : bool, default: True
-        Whether or not the virtual partition encompasses the whole axis.
+        Whether this partition spans an entire axis of the dataframe.
     call_queue : list, optional
         A list of tuples (callable, args, kwargs) that contains deferred calls.
     """
