@@ -13,11 +13,11 @@
 
 from .class_logger import ClassLogger  # noqa: F401
 from .config import get_logger  # noqa: F401
-from .logger_decorator import logger_decorator, disable_logging  # noqa: F401
+from .logger_decorator import enable_logging, disable_logging  # noqa: F401
 
 __all__ = [
     "ClassLogger",
     "get_logger",
-    "logger_decorator",
+    "enable_logging",
     "disable_logging",
 ]

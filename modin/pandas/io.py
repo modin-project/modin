@@ -30,7 +30,7 @@ from pandas._typing import CompressionOptions, StorageOptions
 from typing import Union, IO, AnyStr, Sequence, Dict, List, Optional, Any
 
 from modin.error_message import ErrorMessage
-from modin.logging import ClassLogger, logger_decorator
+from modin.logging import ClassLogger, enable_logging
 from .dataframe import DataFrame
 from modin.utils import _inherit_docstrings, Engine
 from . import _update_engine
@@ -73,7 +73,7 @@ def _read(**kwargs):
 
 
 @_inherit_docstrings(pandas.read_csv, apilink="pandas.read_csv")
-@logger_decorator
+@enable_logging
 def read_csv(
     filepath_or_buffer: "FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str]",
     sep=lib.no_default,
@@ -141,7 +141,7 @@ def read_csv(
 
 
 @_inherit_docstrings(pandas.read_table, apilink="pandas.read_table")
-@logger_decorator
+@enable_logging
 def read_table(
     filepath_or_buffer: "FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str]",
     sep=lib.no_default,
@@ -211,7 +211,7 @@ def read_table(
 
 
 @_inherit_docstrings(pandas.read_parquet, apilink="pandas.read_parquet")
-@logger_decorator
+@enable_logging
 def read_parquet(
     path,
     engine: str = "auto",
@@ -239,7 +239,7 @@ def read_parquet(
 
 
 @_inherit_docstrings(pandas.read_json, apilink="pandas.read_json")
-@logger_decorator
+@enable_logging
 def read_json(
     path_or_buf=None,
     orient=None,
@@ -271,7 +271,7 @@ def read_json(
 
 
 @_inherit_docstrings(pandas.read_gbq, apilink="pandas.read_gbq")
-@logger_decorator
+@enable_logging
 def read_gbq(
     query: str,
     project_id: Optional[str] = None,
@@ -300,7 +300,7 @@ def read_gbq(
 
 
 @_inherit_docstrings(pandas.read_html, apilink="pandas.read_html")
-@logger_decorator
+@enable_logging
 def read_html(
     io,
     match=".+",
@@ -330,7 +330,7 @@ def read_html(
 
 
 @_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")
-@logger_decorator
+@enable_logging
 def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover  # noqa: PR01, RT01, D200
     """
     Read text from clipboard and pass to read_csv.
@@ -345,7 +345,7 @@ def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover  # noqa: PR01, RT0
 
 
 @_inherit_docstrings(pandas.read_excel, apilink="pandas.read_excel")
-@logger_decorator
+@enable_logging
 def read_excel(
     io,
     sheet_name: "str | int | list[IntStrT] | None" = 0,
@@ -394,7 +394,7 @@ def read_excel(
 
 
 @_inherit_docstrings(pandas.read_hdf, apilink="pandas.read_hdf")
-@logger_decorator
+@enable_logging
 def read_hdf(
     path_or_buf,
     key=None,
@@ -421,7 +421,7 @@ def read_hdf(
 
 
 @_inherit_docstrings(pandas.read_feather, apilink="pandas.read_feather")
-@logger_decorator
+@enable_logging
 def read_feather(
     path,
     columns=None,
@@ -440,7 +440,7 @@ def read_feather(
 
 
 @_inherit_docstrings(pandas.read_stata, apilink="pandas.read_stata")
-@logger_decorator
+@enable_logging
 def read_stata(
     filepath_or_buffer,
     convert_dates=True,
@@ -467,7 +467,7 @@ def read_stata(
 
 
 @_inherit_docstrings(pandas.read_sas, apilink="pandas.read_sas")
-@logger_decorator
+@enable_logging
 def read_sas(
     filepath_or_buffer,
     format=None,
@@ -488,7 +488,7 @@ def read_sas(
 
 
 @_inherit_docstrings(pandas.read_pickle, apilink="pandas.read_pickle")
-@logger_decorator
+@enable_logging
 def read_pickle(
     filepath_or_buffer,
     compression: Optional[str] = "infer",
@@ -506,7 +506,7 @@ def read_pickle(
 
 
 @_inherit_docstrings(pandas.read_sql, apilink="pandas.read_sql")
-@logger_decorator
+@enable_logging
 def read_sql(
     sql,
     con,
@@ -535,7 +535,7 @@ def read_sql(
 
 
 @_inherit_docstrings(pandas.read_fwf, apilink="pandas.read_fwf")
-@logger_decorator
+@enable_logging
 def read_fwf(
     filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
     colspecs="infer",
@@ -566,7 +566,7 @@ def read_fwf(
 
 
 @_inherit_docstrings(pandas.read_sql_table, apilink="pandas.read_sql_table")
-@logger_decorator
+@enable_logging
 def read_sql_table(
     table_name,
     con,
@@ -589,7 +589,7 @@ def read_sql_table(
 
 
 @_inherit_docstrings(pandas.read_sql_query, apilink="pandas.read_sql_query")
-@logger_decorator
+@enable_logging
 def read_sql_query(
     sql,
     con,
@@ -612,7 +612,7 @@ def read_sql_query(
 
 
 @_inherit_docstrings(pandas.read_spss, apilink="pandas.read_spss")
-@logger_decorator
+@enable_logging
 def read_spss(
     path: Union[str, pathlib.Path],
     usecols: Union[Sequence[str], type(None)] = None,
@@ -630,7 +630,7 @@ def read_spss(
 
 
 # Adding docstring since pandas docs don't have web section for this function.
-@logger_decorator
+@enable_logging
 def to_pickle(
     obj: Any,
     filepath_or_buffer,
@@ -688,7 +688,7 @@ def to_pickle(
 
 
 @_inherit_docstrings(pandas.json_normalize, apilink="pandas.json_normalize")
-@logger_decorator
+@enable_logging
 def json_normalize(
     data: Union[Dict, List[Dict]],
     record_path: Optional[Union[str, List]] = None,
@@ -712,7 +712,7 @@ def json_normalize(
 
 
 @_inherit_docstrings(pandas.read_orc, apilink="pandas.read_orc")
-@logger_decorator
+@enable_logging
 def read_orc(
     path, columns: Optional[List[str]] = None, **kwargs
 ) -> DataFrame:  # noqa: PR01, RT01, D200
@@ -725,7 +725,7 @@ def read_orc(
 
 
 @_inherit_docstrings(pandas.read_xml, apilink="pandas.read_xml")
-@logger_decorator
+@enable_logging
 def read_xml(
     path_or_buffer,
     xpath="./*",

@@ -66,7 +66,7 @@ def get_log_messages():
 
 
 def test_function_decorator(monkeypatch, get_log_messages):
-    @modin.logging.logger_decorator
+    @modin.logging.enable_logging
     def func(do_raise):
         if do_raise:
             raise ValueError()
@@ -86,7 +86,7 @@ def test_function_decorator(monkeypatch, get_log_messages):
 
 
 def test_class_decorator(monkeypatch, get_log_messages):
-    @modin.logging.logger_decorator("CUSTOM")
+    @modin.logging.enable_logging("CUSTOM")
     class Foo:
         def method1(self):
             pass

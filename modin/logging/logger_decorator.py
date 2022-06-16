@@ -14,7 +14,7 @@
 """
 Module contains ``logger_decorator`` function.
 
-``logger_decorator`` is used for decorating individual Modin functions.
+``logger_decorator`` is used for decorating individual Modin functions or classes.
 """
 
 from typing import Optional, Callable, Union, Type
@@ -46,13 +46,13 @@ def disable_logging(func):
     return func
 
 
-def logger_decorator(
+def enable_logging(
     modin_layer: Union[str, Callable, Type] = "PANDAS-API",
     name: Optional[str] = None,
     log_level: Optional[str] = "info",
 ):
     """
-    Log Decorator used on specific internal Modin functions or classes.
+    Log Decorator used on specific Modin functions or classes.
 
     Parameters
     ----------
@@ -74,7 +74,7 @@ def logger_decorator(
         # assume the decorator is used in a form without parenthesis like:
         # @logger_decorator
         # def func()
-        return logger_decorator()(modin_layer)
+        return enable_logging()(modin_layer)
 
     log_level = log_level.lower()
     assert hasattr(Logger, log_level.lower()), f"Invalid log level: {log_level}"
@@ -90,7 +90,7 @@ def logger_decorator(
                     try:
                         wrapped = seen[attr_value]
                     except KeyError:
-                        wrapped = seen[attr_value] = logger_decorator(
+                        wrapped = seen[attr_value] = enable_logging(
                             modin_layer,
                             f"{name or obj.__name__}.{attr_name}",
                             log_level,

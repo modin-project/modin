@@ -18,7 +18,7 @@ Module contains ``LoggerBase`` class.
 """
 from typing import Optional
 
-from .logger_decorator import logger_decorator
+from .logger_decorator import enable_logging
 
 
 class ClassLogger:
@@ -53,4 +53,4 @@ class ClassLogger:
         **kwargs : dict
         """
         super().__init_subclass__(**kwargs)
-        logger_decorator(modin_layer, class_name, log_level)(cls)
+        enable_logging(modin_layer, class_name, log_level)(cls)
