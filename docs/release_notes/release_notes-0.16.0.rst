@@ -29,8 +29,10 @@ Key Features and Updates
 * Dependencies
   *
 * New Features
+  * FEAT-#4419: Extend virtual partitioning API to pandas on Dask (#4420)
 
 Contributors
 ------------
 @mvashishtha
 @prutskov
+@RehanSD
