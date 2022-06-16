@@ -25,6 +25,7 @@ from pandas.core.dtypes.common import (
     is_datetime_or_timedelta_dtype,
     is_dtype_equal,
     is_object_dtype,
+    pandas_dtype,
 )
 from pandas.core.indexes.api import ensure_index
 import pandas.core.window.rolling
@@ -1186,12 +1187,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         if include is not None and (isinstance(include, np.dtype) or include != "all"):
             if not is_list_like(include):
                 include = [include]
-            include = [
-                np.dtype(i)
-                if not (isinstance(i, type) and i.__module__ == "numpy")
-                else i
-                for i in include
-            ]
+            include = [pandas_dtype(i) if i != np.number else i for i in include]
             if not any(
                 (isinstance(inc, np.dtype) and inc == d)
                 or (
@@ -1206,7 +1202,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         if exclude is not None:
             if not is_list_like(exclude):
                 exclude = [exclude]
-            exclude = [np.dtype(e) for e in exclude]
+            exclude = [pandas_dtype(e) if e != np.number else e for e in exclude]
             if all(
                 (isinstance(exc, np.dtype) and exc == d)
                 or (
