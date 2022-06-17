@@ -178,18 +178,30 @@ def _update_engine(publisher: Parameter):
 from .. import __version__
 from .dataframe import DataFrame
 from .io import (
+    read_csv,
+    read_parquet,
+    read_json,
     read_html,
     read_clipboard,
+    read_excel,
     read_hdf,
+    read_feather,
+    read_stata,
     read_sas,
+    read_pickle,
     read_sql,
+    read_gbq,
+    read_table,
     read_fwf,
     read_sql_table,
+    read_sql_query,
     read_spss,
     ExcelFile,
+    to_pickle,
     HDFStore,
     json_normalize,
     read_orc,
+    read_xml,
 )
 from .series import Series
 from .general import (
@@ -214,7 +226,6 @@ from .general import (
 )
 from .plotting import Plotting as plotting
 from modin.utils import show_versions
-from ._compat.namespace import *  # noqa: F403
 
 __all__ = [  # noqa: F405
     "DataFrame",
@@ -321,6 +332,7 @@ __all__ = [  # noqa: F405
     "datetime",
     "NamedAgg",
     "api",
+    "read_xml",
 ]
 
 del pandas, Engine, Parameter

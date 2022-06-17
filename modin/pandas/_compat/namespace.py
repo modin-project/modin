@@ -32,6 +32,9 @@ if version.parse("1.1.0") <= version.parse(pandas_version) <= version.parse("1.1
     )
     from .py36.general import pivot_table
 
+    def read_xml(*args, **kw):
+        raise NotImplementedError(f"Pandas {pandas_version} does not have read_xml")
+
     __all__ = [
         "read_csv",
         "read_json",
@@ -45,6 +48,7 @@ if version.parse("1.1.0") <= version.parse(pandas_version) <= version.parse("1.1
         "read_sql_query",
         "to_pickle",
         "pivot_table",
+        "read_xml",
     ]
 elif version.parse("1.4.0") <= version.parse(pandas_version) <= version.parse("1.4.99"):
     from .latest.io import (

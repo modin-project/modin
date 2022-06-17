@@ -31,6 +31,21 @@ from .dataframe import DataFrame
 from modin.utils import _inherit_docstrings, Engine
 from . import _update_engine
 
+from ._compat.namespace import (
+    read_csv,
+    read_parquet,
+    read_json,
+    read_excel,
+    read_feather,
+    read_stata,
+    read_pickle,
+    read_gbq,
+    read_table,
+    read_sql_query,
+    to_pickle,
+    read_xml,
+)
+
 PQ_INDEX_REGEX = re.compile(r"__index_level_\d+__")
 
 
@@ -371,3 +386,31 @@ class ExcelFile(ClassLogger, pandas.ExcelFile):  # noqa: PR01, D200
                 # We replace the method with `return_handler` for inplace operations
                 method = return_handler
         return method
+
+
+__all__ = [
+    "ExcelFile",
+    "HDFStore",
+    "json_normalize",
+    "read_clipboard",
+    "read_csv",
+    "read_excel",
+    "read_feather",
+    "read_fwf",
+    "read_gbq",
+    "read_hdf",
+    "read_html",
+    "read_json",
+    "read_orc",
+    "read_parquet",
+    "read_pickle",
+    "read_sas",
+    "read_spss",
+    "read_sql",
+    "read_sql_query",
+    "read_sql_table",
+    "read_stata",
+    "read_table",
+    "read_xml",
+    "to_pickle",
+]

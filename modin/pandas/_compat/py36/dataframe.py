@@ -28,7 +28,7 @@ class Python36CompatibleDataFrame(BaseCompatibilityDataFrame):
         copy=False,
         query_compiler=None,
     ):
-        return self._init(
+        self._init(
             data=data,
             index=index,
             columns=columns,
@@ -214,6 +214,3 @@ class Python36CompatibleDataFrame(BaseCompatibilityDataFrame):
             errors=errors,
             try_cast=try_cast,
         )
-
-    def __div__(self):
-        pass
