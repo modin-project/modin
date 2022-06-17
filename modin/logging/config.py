@@ -24,9 +24,11 @@ import os
 import uuid
 import platform
 import psutil
-import pkg_resources
+import pandas
 import threading
 import time
+
+import modin
 from modin.config import LogMemoryInterval, LogFileSize, LogMode
 
 __LOGGER_CONFIGURED__: bool = False
@@ -85,18 +87,33 @@ def bytes_int_to_str(num_bytes, suffix="B"):
         if num_bytes < factor:
             return f"{num_bytes:.2f}{unit}{suffix}"
         num_bytes /= factor
-    return f"{num_bytes:.2f}{1000+P}{suffix}"
+    return f"{num_bytes * 1000:.2f}P{suffix}"
 
 
-def configure_logging():
-    """Configure Modin logging by setting up directory structure and formatting."""
-    global __LOGGER_CONFIGURED__
-    logger = logging.getLogger("modin.logger")
-    job_id = uuid.uuid4().hex
-    log_filename = f".modin/logs/job_{job_id}/trace.log"
+def _create_logger(namespace, job_id, log_name, log_level):
+    """
+    Create and configure logger as Modin expects it to be.
 
+    Parameters
+    ----------
+    namespace : str
+        Logging namespace to use, e.g. "modin.logger.default".
+    job_id : str
+        Part of path to where logs are stored.
+    log_name : str
+        Name of the log file to create.
+    log_level : int
+        Log level as accepted by `Logger.setLevel()`.
+
+    Returns
+    -------
+    Logger
+        Logger object configured per Modin settings.
+    """
+    log_filename = f".modin/logs/job_{job_id}/{log_name}.log"
     os.makedirs(os.path.dirname(log_filename), exist_ok=True)
 
+    logger = logging.getLogger(namespace)
     logfile = RotatingFileHandler(
         filename=log_filename,
         mode="a",
@@ -109,35 +126,37 @@ def configure_logging():
     )
     logfile.setFormatter(formatter)
     logger.addHandler(logfile)
+    logger.setLevel(log_level)
 
-    if LogMode.get() == "enable_api_only":
-        logger.setLevel(logging.INFO)
-    logger.setLevel(logging.DEBUG)
+    return logger
+
+
+def configure_logging():
+    """Configure Modin logging by setting up directory structure and formatting."""
+    global __LOGGER_CONFIGURED__
+    job_id = uuid.uuid4().hex
+
+    logger = _create_logger(
+        "modin.logger.default",
+        job_id,
+        "trace",
+        logging.INFO if LogMode.get() == "enable_api_only" else logging.DEBUG,
+    )
 
     logger.info(f"OS Version: {platform.platform()}")
     logger.info(f"Python Version: {platform.python_version()}")
-    modin_version = pkg_resources.get_distribution("modin").version
-    pandas_version = pkg_resources.get_distribution("pandas").version
     num_physical_cores = str(psutil.cpu_count(logical=False))
     num_total_cores = str(psutil.cpu_count(logical=True))
-    logger.info(f"Modin Version: {modin_version}")
-    logger.info(f"Pandas Version: {pandas_version}")
+    logger.info(f"Modin Version: {modin.__version__}")
+    logger.info(f"Pandas Version: {pandas.__version__}")
     logger.info(f"Physical Cores: {num_physical_cores}")
     logger.info(f"Total Cores: {num_total_cores}")
 
     if LogMode.get() != "enable_api_only":
         mem_sleep = LogMemoryInterval.get()
-        mem_logger = logging.getLogger("modin_memory.logger")
-        mem_log_filename = f".modin/logs/job_{job_id}/memory.log"
-        logfile = RotatingFileHandler(
-            filename=mem_log_filename,
-            mode="a",
-            maxBytes=LogFileSize.get() * int(1e6),
-            backupCount=10,
+        mem_logger = _create_logger(
+            "modin_memory.logger", job_id, "memory", logging.DEBUG
         )
-        logfile.setFormatter(formatter)
-        mem_logger.addHandler(logfile)
-        mem_logger.setLevel(logging.DEBUG)
 
         svmem = psutil.virtual_memory()
         mem_logger.info(f"Memory Total: {bytes_int_to_str(svmem.total)}")
@@ -147,6 +166,8 @@ def configure_logging():
             target=memory_thread, args=[mem_logger, mem_sleep], daemon=True
         )
         mem.start()
+
+    _create_logger("modin.logger.errors", job_id, "error", logging.INFO)
 
     __LOGGER_CONFIGURED__ = True
 
@@ -170,9 +191,14 @@ def memory_thread(logger, sleep_time):
         time.sleep(sleep_time)
 
 
-def get_logger():
+def get_logger(namespace="modin.logger.default"):
     """
     Configure Modin logger based on Modin config and returns the logger.
+
+    Parameters
+    ----------
+    namespace : str, default: "modin.logger.default"
+        Which namespace to use for logging.
 
     Returns
     -------
@@ -181,4 +207,4 @@ def get_logger():
     """
     if not __LOGGER_CONFIGURED__ and LogMode.get() != "disable":
         configure_logging()
-    return logging.getLogger("modin.logger")
+    return logging.getLogger(namespace)

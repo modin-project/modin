@@ -56,7 +56,7 @@ from modin.error_message import ErrorMessage
 import modin.pandas as pd
 from modin.pandas.utils import is_scalar
 from modin.config import IsExperimental
-from modin.logging import LoggerMetaClass
+from modin.logging import ClassLogger, disable_logging
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -102,7 +102,7 @@ _doc_binary_op_kwargs = {"returns": "BasePandasDataset", "left": "BasePandasData
 
 
 @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
-class BasePandasDataset(object, metaclass=LoggerMetaClass):
+class BasePandasDataset(ClassLogger):
     """
     Implement most of the common code that exists in DataFrame/Series.
 
@@ -3858,6 +3858,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         """
         return self.to_numpy()
 
+    @disable_logging
     def __getattribute__(self, item):
         """
         Return item from the `BasePandasDataset`.

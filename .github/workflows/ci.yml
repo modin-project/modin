@@ -261,6 +261,7 @@ jobs:
       - run: python -m pytest modin/test/test_utils.py
       - run: python -m pytest asv_bench/test/test_utils.py
       - run: python -m pytest modin/test/exchange/dataframe_protocol/base
+      - run: python -m pytest modin/test/test_logging.py
       - uses: codecov/codecov-action@v2
 
   test-defaults:

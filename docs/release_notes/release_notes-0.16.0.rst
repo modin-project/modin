@@ -15,6 +15,7 @@ Key Features and Updates
   *
 * Refactor Codebase
   * REFACTOR-#4530: Standardize access to physical data in partitions (#4563)
+  * REFACTOR-#4534: Replace logging meta class with class decorator (#4535)
 * Pandas API implementations and improvements
   *
 * OmniSci enhancements
@@ -37,3 +38,4 @@ Contributors
 @mvashishtha
 @NickCrews
 @prutskov
+@vnlitvinov

@@ -34,13 +34,13 @@ from modin.utils import (
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.config import IsExperimental
-from modin.logging import LoggerMetaClass, metaclass_resolver
+from modin.logging import ClassLogger
 from .series import Series
 from .utils import is_label
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
-class DataFrameGroupBy(object, metaclass=LoggerMetaClass):
+class DataFrameGroupBy(ClassLogger):
     def __init__(
         self,
         df,
@@ -1180,7 +1180,7 @@ class DataFrameGroupBy(object, metaclass=LoggerMetaClass):
 
 
 @_inherit_docstrings(pandas.core.groupby.SeriesGroupBy)
-class SeriesGroupBy(metaclass_resolver(DataFrameGroupBy)):
+class SeriesGroupBy(DataFrameGroupBy):
     @property
     def ndim(self):
         """
