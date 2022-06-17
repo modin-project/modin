@@ -14,7 +14,8 @@
 import inspect
 import pandas
 import pathlib
-from typing import Union, IO, AnyStr, Optional, Dict, Any, OrderedDict, List
+from typing import Union, IO, AnyStr, Optional, Dict, Any, List
+from collections import OrderedDict
 
 from modin.utils import _inherit_docstrings, Engine
 from modin.logging import enable_logging

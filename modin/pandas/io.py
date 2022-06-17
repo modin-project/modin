@@ -185,7 +185,7 @@ def read_fwf(
     """
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-    from pandas.io.parsers.base_parser import parser_defaults
+    from modin.pandas._compat.parsers import parser_defaults
 
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))

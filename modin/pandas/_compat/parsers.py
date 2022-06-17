@@ -11,6 +11,17 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from pandas.core.aggregation import reconstruct_func
+from packaging import version
+import pandas
 
-__all__ = ["reconstruct_func"]
+
+pandas_version = pandas.__version__
+if version.parse("1.1.0") <= version.parse(pandas_version) <= version.parse("1.1.5"):
+    from pandas.io.parsers import _validate_usecols_arg
+    from pandas.io.parsers import _parser_defaults as parser_defaults
+elif version.parse("1.4.0") <= version.parse(pandas_version) <= version.parse("1.4.99"):
+    from pandas.io.parsers.base_parser import ParserBase, parser_defaults
+
+    _validate_usecols_arg = ParserBase._validate_usecols_arg
+
+__all__ = ["_validate_usecols_arg", "parser_defaults"]
