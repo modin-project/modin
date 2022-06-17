@@ -2761,7 +2761,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
     def to_dict(self, orient="dict", into=dict):  # pragma: no cover
         return self._default_to_pandas("to_dict", orient=orient, into=into)
 
-    def to_hdf(self, path_or_buf, key, format="table", **kwargs):  # pragma: no cover
+    def to_hdf(
+        self, path_or_buf, key, format="table", **kwargs
+    ):  # pragma: no cover  # noqa: PR01, RT01, D200
         """
         Write the contained data to an HDF5 file using HDFStore.
         """
