@@ -36,6 +36,7 @@ Key Features and Updates
   * FEAT-#4598: Add support for pandas 1.4.3 (#4599)
 * New Features
   * FEAT-4463: Add experimental fuzzydata integration for testing against a randomized dataframe workflow (#4556)
+  * FEAT-#4147: Support multiple pandas versions (#4301)
 
 Contributors
 ------------
@@ -46,3 +47,4 @@ Contributors
 @pyrito
 @suhailrehman
 @RehanSD
+@devin-petersohn
