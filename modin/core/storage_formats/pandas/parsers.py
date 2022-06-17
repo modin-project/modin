@@ -642,12 +642,7 @@ class PandasParquetParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, row_group_start, row_group_end, start, **kwargs):
-        import time
-
         columns = kwargs.get("columns", None)
-        print(
-            f"row{row_group_start}-{row_group_end},columns{columns}: start {time.time()- start}"
-        )
         from pyarrow.parquet import ParquetFile
 
         file = ParquetFile(fname)
@@ -661,9 +656,6 @@ class PandasParquetParser(PandasParser):
         columns = [c for c in columns if c not in df.index.names and c in df.columns]
         if columns is not None:
             df = df[columns]
-        print(
-            f"row{row_group_start}-{row_group_end},columns{columns}: end {time.time() - start}"
-        )
         return df, df.dtypes
 
 

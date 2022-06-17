@@ -71,7 +71,6 @@ class ColumnStoreDispatcher(FileDispatcher):
                         columns=cols,
                         row_group_start=row_start,
                         row_group_end=row_start + step,
-                        row_group_end=row_start + step,
                         start=start,
                         num_returns=2,
                         **kwargs,
@@ -220,9 +219,7 @@ class ColumnStoreDispatcher(FileDispatcher):
         dtypes : pandas.Series
             Series with dtypes for columns.
         """
-        dtypes = pandas.concat(
-            [df.dtypes for df in cls.materialize(list(partition_ids))], axis=0
-        )
+        dtypes = pandas.concat(cls.materialize(list(partition_ids)), axis=0)
         dtypes.index = columns
         return dtypes
 
