@@ -212,7 +212,7 @@ def append_to_docstring(message: str):
     """
 
     def decorator(func):
-        to_append = align_indents(func.__doc__, message)
+        to_append = align_indents(func.__doc__ or "", message)
         return Appender(to_append)(func)
 
     return decorator

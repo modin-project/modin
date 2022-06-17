@@ -952,6 +952,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
         indexer = pandas.Series(index=idx).at_time(time, asof=asof).index
         return self.loc[indexer] if axis == 0 else self.loc[:, indexer]
 
+    @_inherit_docstrings(
+        pandas.DataFrame.between_time, apilink="pandas.DataFrame,between_time"
+    )
     def _between_time(self, **kwargs):
         axis = self._get_axis_number(kwargs.pop("axis", None))
         idx = self.index if axis == 0 else self.columns
@@ -1358,9 +1361,13 @@ class BasePandasDataset(BasePandasDatasetCompat):
             exploded = exploded.reset_index(drop=True)
         return exploded
 
+    @_inherit_docstrings(pandas.DataFrame.ewm, apilink="pandas.DataFrame.ewm")
     def _ewm(self, **kwargs):
         return self._default_to_pandas("ewm", **kwargs)
 
+    @_inherit_docstrings(
+        pandas.DataFrame.expanding, apilink="pandas.DataFrame.expanding"
+    )
     def _expanding(self, **kwargs):
         return self._default_to_pandas("expanding", **kwargs)
 
@@ -1618,6 +1625,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
         return _iLocIndexer(self)
 
+    @_inherit_docstrings(pandas.DataFrame.kurt, apilink="pandas.DataFrame.kurt")
     def _kurt(self, axis, skipna=None, level=None, numeric_only=None, **kwargs):
         axis = self._get_axis_number(axis)
         if level is not None:
@@ -1685,6 +1693,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
         return _LocIndexer(self)
 
+    @_inherit_docstrings(pandas.DataFrame.mad, apilink="pandas.DataFrame.mad")
     def _mad(self, axis=None, skipna=True, level=None):
         axis = self._get_axis_number(axis)
         if level is not None:
@@ -1701,9 +1710,11 @@ class BasePandasDataset(BasePandasDatasetCompat):
             self._query_compiler.mad(axis=axis, skipna=skipna, level=level)
         )
 
+    @_inherit_docstrings(pandas.DataFrame.mask, apilink="pandas.DataFrame.mask")
     def _mask(self, *args, **kwargs):
         return self._default_to_pandas("mask", *args, **kwargs)
 
+    @_inherit_docstrings(pandas.DataFrame.max, apilink="pandas.DataFrame.max")
     def _max(self, axis=None, skipna=True, level=None, numeric_only=None, **kwargs):
         self._validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
@@ -2000,6 +2011,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 result.name = q
             return result
 
+    @_inherit_docstrings(pandas.DataFrame.rank, apilink="pandas.DataFrame.rank")
     def _rank(
         self,
         axis=0,
@@ -2972,7 +2984,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
     #     Series's index will be a regular single dimensional ``Index``.
     #     """
     # )
-    # @_inherit_docstrings(pandas.DataFrame.value_counts, apilink="pandas.DataFrame.value_counts")
+    @_inherit_docstrings(
+        pandas.DataFrame.value_counts, apilink="pandas.DataFrame.value_counts"
+    )
     def _value_counts(
         self,
         subset: Sequence[Hashable] = None,

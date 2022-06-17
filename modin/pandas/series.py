@@ -1225,6 +1225,7 @@ class Series(SeriesCompat, BasePandasDataset):
             )
         )
 
+    @_inherit_docstrings(pandas.Series.mask, apilink="pandas.Series.mask")
     def _mask(
         self,
         cond,
@@ -1390,6 +1391,7 @@ class Series(SeriesCompat, BasePandasDataset):
             new_other, level=level, fill_value=None, axis=axis
         )
 
+    @_inherit_docstrings(pandas.Series.prod, apilink="pandas.Series.prod")
     def _prod(
         self,
         axis=None,
@@ -1399,7 +1401,6 @@ class Series(SeriesCompat, BasePandasDataset):
         min_count=0,
         **kwargs,
     ):
-        """Return the product of the values over the requested `axis`."""
         axis = self._get_axis_number(axis)
         if level is not None:
             if (

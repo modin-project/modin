@@ -35,12 +35,9 @@ import warnings
 
 from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
-from modin.utils import _inherit_docstrings, to_pandas, hashable
+from modin.utils import _inherit_docstrings, to_pandas, hashable, append_to_docstring
 from modin.config import Engine, IsExperimental, PersistentPickle
-from .utils import (
-    from_pandas,
-    from_non_pandas,
-)
+from .utils import from_pandas, from_non_pandas
 from . import _update_engine
 from .iterator import PartitionIterator
 from .series import Series
@@ -98,6 +95,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
     _pandas_class = pandas.DataFrame
 
+    @append_to_docstring(__doc__)
     def _init(
         self,
         data=None,
