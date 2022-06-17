@@ -136,10 +136,10 @@ def simulate_cloud(request):
         with request.config.pluginmanager.getplugin(
             "capturemanager"
         ).global_and_fixture_disabled():
-            print(
+            sys.stderr.write(
                 "WARNING! You're running tests in simulate-cloud mode. "
                 + "To enable pdb in remote side please disable output capturing "
-                + "by passing '-s' or '--capture=no' to pytest command line"
+                + "by passing '-s' or '--capture=no' to pytest command line\n"
             )
 
     if mode not in ("normal", "experimental"):
