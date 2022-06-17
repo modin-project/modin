@@ -1189,7 +1189,7 @@ class Series(SeriesCompat, BasePandasDataset):
         axis = self._get_axis_number(axis)
         if numeric_only is True:
             raise NotImplementedError("Series.kurt does not implement numeric_only.")
-        return super()._kurt(axis, skipna, level, numeric_only, **kwargs)
+        return super(Series, self)._kurt(axis, skipna, level, numeric_only, **kwargs)
 
     kurtosis = SeriesCompat.kurt
 
@@ -1481,7 +1481,7 @@ class Series(SeriesCompat, BasePandasDataset):
                 "reindex() got an unexpected keyword "
                 + f'argument "{list(kwargs.keys())[0]}"'
             )
-        return super()._reindex(
+        return super(Series, self)._reindex(
             index=index,
             method=method,
             level=level,

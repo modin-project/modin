@@ -11,12 +11,10 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from abc import ABC
-
 from modin.logging import ClassLogger
 
 
-class BaseCompatibilityDataFrame(ABC, ClassLogger):
+class BaseCompatibilityDataFrame(ClassLogger):
     def applymap(self, *args, **kwargs):
         pass
 
