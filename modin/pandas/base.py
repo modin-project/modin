@@ -25,6 +25,7 @@ from pandas.core.dtypes.common import (
     is_datetime_or_timedelta_dtype,
     is_dtype_equal,
     is_object_dtype,
+    pandas_dtype,
 )
 from pandas.core.indexes.api import ensure_index
 import pandas.core.window.rolling
@@ -55,7 +56,7 @@ from modin.error_message import ErrorMessage
 import modin.pandas as pd
 from modin.pandas.utils import is_scalar
 from modin.config import IsExperimental
-from modin.logging import LoggerMetaClass
+from modin.logging import ClassLogger, disable_logging
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -101,7 +102,7 @@ _doc_binary_op_kwargs = {"returns": "BasePandasDataset", "left": "BasePandasData
 
 
 @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
-class BasePandasDataset(object, metaclass=LoggerMetaClass):
+class BasePandasDataset(ClassLogger):
     """
     Implement most of the common code that exists in DataFrame/Series.
 
@@ -739,7 +740,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
                             type(self).__name__, "all"
                         )
                     )
-                data_for_compute = self[self.columns[self.dtypes == np.bool]]
+                data_for_compute = self[self.columns[self.dtypes == np.bool_]]
                 return data_for_compute.all(
                     axis=axis, bool_only=False, skipna=skipna, level=level, **kwargs
                 )
@@ -802,7 +803,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
                             type(self).__name__, "all"
                         )
                     )
-                data_for_compute = self[self.columns[self.dtypes == np.bool]]
+                data_for_compute = self[self.columns[self.dtypes == np.bool_]]
                 return data_for_compute.any(
                     axis=axis, bool_only=False, skipna=skipna, level=level, **kwargs
                 )
@@ -1105,7 +1106,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         Count non-NA cells for `BasePandasDataset`.
         """
         axis = self._get_axis_number(axis)
-        frame = self.select_dtypes([np.number, np.bool]) if numeric_only else self
+        frame = self.select_dtypes([np.number, np.bool_]) if numeric_only else self
 
         if level is not None:
             if not frame._query_compiler.has_multiindex(axis=axis):
@@ -1186,12 +1187,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         if include is not None and (isinstance(include, np.dtype) or include != "all"):
             if not is_list_like(include):
                 include = [include]
-            include = [
-                np.dtype(i)
-                if not (isinstance(i, type) and i.__module__ == "numpy")
-                else i
-                for i in include
-            ]
+            include = [pandas_dtype(i) if i != np.number else i for i in include]
             if not any(
                 (isinstance(inc, np.dtype) and inc == d)
                 or (
@@ -1206,7 +1202,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         if exclude is not None:
             if not is_list_like(exclude):
                 exclude = [exclude]
-            exclude = [np.dtype(e) for e in exclude]
+            exclude = [pandas_dtype(e) if e != np.number else e for e in exclude]
             if all(
                 (isinstance(exc, np.dtype) and exc == d)
                 or (
@@ -3862,6 +3858,7 @@ class BasePandasDataset(object, metaclass=LoggerMetaClass):
         """
         return self.to_numpy()
 
+    @disable_logging
     def __getattribute__(self, item):
         """
         Return item from the `BasePandasDataset`.
