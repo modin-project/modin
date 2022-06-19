@@ -120,7 +120,12 @@ small_dfs = [
     )
     for i in range(1, 100001, 1000)
 ]
-large_df = pd.DataFrame([[i + j for j in range(1, 1000)] for i  in range(0, 100000, 1000)], columns=[f"col{j}" for j in range(1, 1000)],index=pd.Index(list(range(0, 100000, 1000))))
+large_df = pd.DataFrame(
+    [[i + j for j in range(1, 1000)] for i in range(0, 100000, 1000)],
+    columns=[f"col{j}" for j in range(1, 1000)],
+    index=pd.Index(list(range(0, 100000, 1000))),
+)
+
 
 @pytest.mark.skipif(
     Engine.get() not in ("Dask", "Ray"),
@@ -128,7 +133,11 @@ large_df = pd.DataFrame([[i + j for j in range(1, 1000)] for i  in range(0, 1000
 )
 @pytest.mark.parametrize(
     "large_df,col_length",
-    [(pd.concat(small_dfs), 100), (pd.concat([pd.concat(small_dfs)] + small_dfs[:3]), 103), (pd.concat([large_df] + small_dfs[:3]), 103)],
+    [
+        (pd.concat(small_dfs), 100),
+        (pd.concat([pd.concat(small_dfs)] + small_dfs[:3]), 103),
+        (pd.concat([large_df] + small_dfs[:3]), 103),
+    ],
 )
 def test_rebalance_partitions(large_df, col_length):
     large_modin_frame = large_df._query_compiler._modin_frame
