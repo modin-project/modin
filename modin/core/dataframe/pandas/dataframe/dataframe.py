@@ -432,8 +432,6 @@ class PandasDataframe(ClassLogger):
 
     def _filter_empties(self):
         """Remove empty partitions from `self._partitions` to avoid triggering excess computation."""
-        print("HI!")
-        print(self._partitions)
         if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
             # This is the case for an empty frame. We don't want to completely remove
             # all metadata and partitions so for the moment, we won't prune if the frame
