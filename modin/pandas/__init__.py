@@ -225,12 +225,10 @@ from .general import (
     wide_to_long,
 )
 
-from ._compat.namespace import pivot_table
+from ._compat.namespace import pivot_table, PandasCompatVersion
 
-try:
+if PandasCompatVersion.CURRENT != PandasCompatVersion.PY36:
     from ._compat.namespace import Flags, Float32Dtype, Float64Dtype
-except ImportError:
-    pass
 
 from .plotting import Plotting as plotting
 from modin.utils import show_versions

@@ -11,14 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from packaging import version
-import pandas
+from .versions import PandasCompatVersion
 
-
-pandas_version = pandas.__version__
-if version.parse("1.1.0") <= version.parse(pandas_version) <= version.parse("1.1.5"):
+if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
     from pandas.core.aggregation import reconstruct_func
-elif version.parse("1.4.0") <= version.parse(pandas_version) <= version.parse("1.4.99"):
+elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
     from pandas.core.apply import reconstruct_func
 
 __all__ = ["reconstruct_func"]

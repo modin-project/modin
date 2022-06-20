@@ -11,12 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from packaging import version
-import pandas
+from .versions import PandasCompatVersion
 
-
-pandas_version = pandas.__version__
-if version.parse("1.1.0") <= version.parse(pandas_version) <= version.parse("1.1.5"):
+if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
     from .py36.io import (
         read_csv,
         read_json,
@@ -33,7 +30,9 @@ if version.parse("1.1.0") <= version.parse(pandas_version) <= version.parse("1.1
     from .py36.general import pivot_table
 
     def read_xml(*args, **kw):
-        raise NotImplementedError(f"Pandas {pandas_version} does not have read_xml")
+        import pandas
+
+        raise NotImplementedError(f"Pandas {pandas.__version__} does not have read_xml")
 
     __all__ = [
         "read_csv",
@@ -50,7 +49,7 @@ if version.parse("1.1.0") <= version.parse(pandas_version) <= version.parse("1.1
         "pivot_table",
         "read_xml",
     ]
-elif version.parse("1.4.0") <= version.parse(pandas_version) <= version.parse("1.4.99"):
+elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
     from .latest.io import (
         read_xml,
         read_csv,

@@ -11,19 +11,22 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .versions import PandasCompatVersion
+from packaging import version
+import pandas
 
-if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-    from .py36 import (
-        Python36CompatibleBasePandasDataset as BasePandasDatasetCompat,
-    )
-    from .py36 import Python36CompatibleDataFrame as DataFrameCompat
-    from .py36 import Python36CompatibilitySeries as SeriesCompat
-elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
-    from .latest import (
-        LatestCompatibleBasePandasDataset as BasePandasDatasetCompat,
-    )
-    from .latest import LatestCompatibleDataFrame as DataFrameCompat
-    from .latest import LatestCompatibleSeries as SeriesCompat
+pandas_version = version.parse(pandas.__version__)
 
-__all__ = ["BasePandasDatasetCompat", "DataFrameCompat", "SeriesCompat"]
+
+class PandasCompatVersion:
+    PY36 = "py36-compat"
+    LATEST = "latest"
+
+    if version.parse("1.1.0") <= pandas_version <= version.parse("1.1.5"):
+        CURRENT = PY36
+    elif version.parse("1.4.0") <= pandas_version <= version.parse("1.4.99"):
+        CURRENT = LATEST
+    else:
+        raise ImportError(f"Unsupported pandas version: {pandas.__version__}")
+
+
+__all__ = ["PandasCompatVersion"]
