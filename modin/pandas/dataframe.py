@@ -2498,6 +2498,10 @@ class DataFrame(BasePandasDataset):
             pass
         elif key in self and key not in dir(self):
             self.__setitem__(key, value)
+            # Note: return immediately so we don't keep this `key` as dataframe state.
+            # `__getattr__` will return the columns not present in `dir(self)`, so we do not need
+            # to manually track this state in the `dir`.
+            return
         elif isinstance(value, pandas.Series):
             warnings.warn(
                 "Modin doesn't allow columns to be created via a new attribute name - see "
