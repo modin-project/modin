@@ -651,13 +651,11 @@ class BaseIO(BaseIOCompat):
     @_inherit_docstrings(
         pandas.DataFrame.to_pickle, apilink="pandas.DataFrame.to_pickle"
     )
-    def to_pickle(
+    def _to_pickle(
         cls,
         obj: Any,
         filepath_or_buffer,
-        compression="infer",
-        protocol: int = pickle.HIGHEST_PROTOCOL,
-        storage_options=None,
+        **kwargs,
     ):  # noqa: PR01, D200
         """
         Pickle (serialize) object to file.
@@ -669,9 +667,7 @@ class BaseIO(BaseIOCompat):
         return pandas.to_pickle(
             obj,
             filepath_or_buffer=filepath_or_buffer,
-            compression=compression,
-            protocol=protocol,
-            storage_options=storage_options,
+            **kwargs,
         )
 
     @classmethod

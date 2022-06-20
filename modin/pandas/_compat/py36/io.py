@@ -333,7 +333,7 @@ def to_pickle(
     obj: Any,
     filepath_or_buffer: Union[str, pathlib.Path],
     compression: Optional[str] = "infer",
-    protocol: int = 5,
+    protocol: int = 4,  # older pandas supports only protocol <= 4
 ):
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher

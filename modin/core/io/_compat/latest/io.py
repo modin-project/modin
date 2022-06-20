@@ -314,3 +314,23 @@ class LatestBaseIOCompat(object):
             chunksize=chunksize,
             dtype=dtype,
         )
+
+    @classmethod
+    @_inherit_docstrings(
+        pandas.DataFrame.to_pickle, apilink="pandas.DataFrame.to_pickle"
+    )
+    def to_pickle(
+        cls,
+        obj: Any,
+        filepath_or_buffer,
+        compression="infer",
+        protocol: int = pickle.HIGHEST_PROTOCOL,
+        storage_options=None,
+    ):  # noqa: PR01, D200
+        return cls._to_pickle(
+            obj,
+            filepath_or_buffer,
+            compression=compression,
+            protocol=protocol,
+            storage_options=storage_options,
+        )

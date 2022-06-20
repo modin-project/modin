@@ -17,7 +17,7 @@ Module houses `Py36BaseIOCompat` class.
 `Py36BaseIOCompat` is base mixin for IO classes relying on older pandas.
 """
 
-from typing import Optional
+from typing import Optional, Any
 
 import pandas._libs.lib as lib
 
@@ -26,17 +26,8 @@ class Py36BaseIOCompat(object):
     """Class for basic utils and default implementation of IO functions for older pandas."""
 
     @classmethod
-    def read_parquet(
-        cls, path, engine, columns, storage_options, use_nullable_dtypes, **kwargs
-    ):  # noqa: PR01
-        return cls._read_parquet(
-            path=path,
-            engine=engine,
-            columns=columns,
-            storage_options=storage_options,
-            use_nullable_dtypes=use_nullable_dtypes,
-            **kwargs
-        )
+    def read_parquet(cls, path, engine, columns, **kwargs):  # noqa: PR01
+        return cls._read_parquet(path=path, engine=engine, columns=columns, **kwargs)
 
     @classmethod
     def read_csv(
@@ -157,12 +148,10 @@ class Py36BaseIOCompat(object):
         precise_float=False,
         date_unit=None,
         encoding=None,
-        encoding_errors="strict",
         lines=False,
         chunksize=None,
         compression="infer",
         nrows: Optional[int] = None,
-        storage_options=None,
     ):  # noqa: PR01
         return cls._read_json(
             path_or_buf=path_or_buf,
@@ -176,23 +165,23 @@ class Py36BaseIOCompat(object):
             precise_float=precise_float,
             date_unit=date_unit,
             encoding=encoding,
-            encoding_errors=encoding_errors,
             lines=lines,
             chunksize=chunksize,
             compression=compression,
             nrows=nrows,
-            storage_options=storage_options,
         )
 
     @classmethod
     def read_feather(
-        cls, path, columns=None, use_threads=True, storage_options=None
+        cls,
+        path,
+        columns=None,
+        use_threads=True,
     ):  # noqa: PR01
         return cls._read_feather(
             path=path,
             columns=columns,
             use_threads=use_threads,
-            storage_options=storage_options,
         )
 
     @classmethod
@@ -208,8 +197,6 @@ class Py36BaseIOCompat(object):
         order_categoricals=True,
         chunksize=None,
         iterator=False,
-        compression="infer",
-        storage_options=None,
     ):  # noqa: PR01
         return cls._read_stata(
             filepath_or_buffer=filepath_or_buffer,
@@ -222,18 +209,17 @@ class Py36BaseIOCompat(object):
             order_categoricals=order_categoricals,
             chunksize=chunksize,
             iterator=iterator,
-            compression=compression,
-            storage_options=storage_options,
         )
 
     @classmethod
     def read_pickle(
-        cls, filepath_or_buffer, compression="infer", storage_options=None
+        cls,
+        filepath_or_buffer,
+        compression="infer",
     ):  # noqa: PR01
         return cls._read_pickle(
             filepath_or_buffer=filepath_or_buffer,
             compression=compression,
-            storage_options=storage_options,
         )
 
     @classmethod
@@ -246,7 +232,6 @@ class Py36BaseIOCompat(object):
         params=None,
         parse_dates=None,
         chunksize=None,
-        dtype=None,
     ):  # noqa: PR01
         return cls._read_sql_query(
             sql=sql,
@@ -256,5 +241,19 @@ class Py36BaseIOCompat(object):
             params=params,
             parse_dates=parse_dates,
             chunksize=chunksize,
-            dtype=dtype,
+        )
+
+    @classmethod
+    def to_pickle(
+        cls,
+        obj: Any,
+        filepath_or_buffer,
+        compression="infer",
+        protocol: int = 4,  # older pandas only supports protocol <= 4
+    ):  # noqa: PR01, D200
+        return cls._to_pickle(
+            obj,
+            filepath_or_buffer,
+            compression=compression,
+            protocol=protocol,
         )
