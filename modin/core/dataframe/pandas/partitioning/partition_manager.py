@@ -30,7 +30,6 @@ from modin.core.dataframe.pandas.utils import concatenate
 from modin.config import NPartitions, ProgressBar, BenchmarkMode, Engine, StorageFormat
 
 import os
-
 from modin.logging import ClassLogger
 
 
