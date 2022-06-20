@@ -634,6 +634,13 @@ def test_add_suffix(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_agg(data, func):
+    if (
+        isinstance(func, int)
+        and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36
+    ):
+        pytest.xfail(
+            "Older pandas raises TypeError but Modin conforms to AssertionError"
+        )
     eval_general(
         *create_test_series(data),
         lambda df: df.agg(func),
@@ -684,6 +691,13 @@ def test_agg_numeric_except(request, data, func):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_aggregate(data, func):
+    if (
+        isinstance(func, int)
+        and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36
+    ):
+        pytest.xfail(
+            "Older pandas raises TypeError but Modin conforms to AssertionError"
+        )
     axis = 0
     eval_general(
         *create_test_series(data),
