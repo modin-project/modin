@@ -17,12 +17,10 @@ Module houses `BaseIO` class.
 `BaseIO` is base class for IO classes, that stores IO functions.
 """
 
-import pickle
 from collections import OrderedDict
-from typing import Any, Optional
+from typing import Any
 
 import pandas
-import pandas._libs.lib as lib
 from pandas.util._decorators import doc
 
 from modin.db_conn import ModinDatabaseConnection
