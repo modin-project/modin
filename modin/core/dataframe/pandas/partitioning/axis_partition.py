@@ -125,8 +125,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         args.extend(self.list_of_blocks)
         return self._wrap_partitions(self.deploy_axis_func(*args, **kwargs))
 
-    @disable_logging
     @classmethod
+    @disable_logging
     def deploy_axis_func(
         cls, axis, func, num_splits, maintain_partitioning, *partitions, **kwargs
     ):

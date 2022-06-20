@@ -17,11 +17,13 @@ import pandas
 from typing import Union, Sequence
 
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
+from modin.logging import disable_logging
 
 
 class FWFDispatcher(TextFileDispatcher):
     """Class handles utils for reading of tables with fixed-width formatted lines."""
 
+    @disable_logging
     def read_callback(*args, **kwargs):
         """
         Parse data on each partition.
