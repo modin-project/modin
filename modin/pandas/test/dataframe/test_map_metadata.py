@@ -19,6 +19,8 @@ import matplotlib
 import modin.pandas as pd
 from modin.utils import get_current_execution
 
+from modin.pandas._compat import PandasCompatVersion
+
 from modin.pandas.test.utils import (
     random_state,
     RAND_LOW,
@@ -406,6 +408,13 @@ def test_append(data):
             modin_df.append(list(modin_df.iloc[-1]))
     else:
         modin_result = modin_df.append(list(modin_df.iloc[-1]))
+        if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+            # Note: older pandas does not preserve order of columns when
+            # inserting something which columns don't already belong to original frame.
+            # For now just disable this particular edge case test.
+            # Hence we sort both frames to compare them.
+            pandas_result = pandas_result[sorted(pandas_result.columns, key=str)]
+            modin_result = modin_result[sorted(modin_result.columns, key=str)]
         df_equals(modin_result, pandas_result)
 
     verify_integrity_values = [True, False]
