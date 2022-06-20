@@ -19,6 +19,7 @@ from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pa
 from modin.core.dataframe.base.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
 )
+from modin.logging import disable_logging
 
 
 class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
@@ -124,6 +125,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         args.extend(self.list_of_blocks)
         return self._wrap_partitions(self.deploy_axis_func(*args, **kwargs))
 
+    @disable_logging
     @classmethod
     def deploy_axis_func(
         cls, axis, func, num_splits, maintain_partitioning, *partitions, **kwargs
@@ -180,6 +182,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     lengths = None
         return split_result_of_axis_func_pandas(axis, num_splits, result, lengths)
 
+    @disable_logging
     @classmethod
     def deploy_func_between_two_axis_partitions(
         cls,

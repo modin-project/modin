@@ -13,6 +13,7 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
+from modin.config import LogMode
 import ray
 from ray.util import get_node_ip_address
 import uuid
@@ -20,9 +21,12 @@ from modin.core.execution.ray.common.utils import deserialize, ObjectIDType
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
-from modin.logging import get_logger
+from modin.logging import get_worker_logger
+from modin.logging.config import JOB_ID
 
 compute_sliced_len = ray.remote(compute_sliced_len)
+
+__WORKER_ENV__ = {"env_vars": {"MODIN_LOG_MODE": LogMode.get()}}
 
 
 class PandasOnRayDataframePartition(PandasDataframePartition):
@@ -54,16 +58,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         self._ip_cache = ip
         self._identity = uuid.uuid4().hex
 
-        logger = get_logger()
-        logger.debug(
-            "Partition ID: {}, Height: {}, Width: {}, Node IP: {}".format(
-                self._identity,
-                str(self._length_cache),
-                str(self._width_cache),
-                str(self._ip_cache),
-            )
-        )
-
     def get(self):
         """
         Get the object wrapped by this partition out of the Plasma store.
@@ -73,12 +67,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         pandas.DataFrame
             The object from the Plasma store.
         """
-        logger = get_logger()
-        logger.debug(f"ENTER::Partition.get::{self._identity}")
         if len(self.call_queue):
             self.drain_call_queue()
         result = ray.get(self._data)
-        logger.debug(f"EXIT::Partition.get::{self._identity}")
         return result
 
     def apply(self, func, *args, **kwargs):
@@ -104,20 +95,15 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
-        logger = get_logger()
-        logger.debug(f"ENTER::Partition.apply::{self._identity}")
         data = self._data
         call_queue = self.call_queue + [(func, args, kwargs)]
         if len(call_queue) > 1:
-            logger.debug(f"SUBMIT::_apply_list_of_funcs::{self._identity}")
             result, length, width, ip = _apply_list_of_funcs.remote(call_queue, data)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
             result, length, width, ip = _apply_func.remote(data, func, *args, **kwargs)
-            logger.debug(f"SUBMIT::_apply_func::{self._identity}")
-        logger.debug(f"EXIT::Partition.apply::{self._identity}")
         return PandasOnRayDataframePartition(result, length, width, ip)
 
     def add_to_apply_calls(self, func, *args, **kwargs):
@@ -149,14 +135,11 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
-        logger = get_logger()
-        logger.debug(f"ENTER::Partition.drain_call_queue::{self._identity}")
         if len(self.call_queue) == 0:
             return
         data = self._data
         call_queue = self.call_queue
         if len(call_queue) > 1:
-            logger.debug(f"SUBMIT::_apply_list_of_funcs::{self._identity}")
             (
                 self._data,
                 self._length_cache,
@@ -167,14 +150,12 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
-            logger.debug(f"SUBMIT::_apply_func::{self._identity}")
             (
                 self._data,
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
             ) = _apply_func.remote(data, func, *args, **kwargs)
-        logger.debug(f"EXIT::Partition.drain_call_queue::{self._identity}")
         self.call_queue = []
 
     def wait(self):
@@ -215,8 +196,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         PandasOnRayDataframePartition
             A new ``PandasOnRayDataframePartition`` object.
         """
-        logger = get_logger()
-        logger.debug(f"ENTER::Partition.mask::{self._identity}")
         new_obj = super().mask(row_labels, col_labels)
         if isinstance(row_labels, slice) and isinstance(
             self._length_cache, ObjectIDType
@@ -230,7 +209,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             new_obj._width_cache = compute_sliced_len.remote(
                 col_labels, self._width_cache
             )
-        logger.debug(f"EXIT::Partition.mask::{self._identity}")
         return new_obj
 
     @classmethod
@@ -328,7 +306,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         return self._ip_cache
 
 
-@ray.remote(num_returns=2)
+@ray.remote(num_returns=2, runtime_env=__WORKER_ENV__)
 def _get_index_and_columns(df):
     """
     Get the number of rows and columns of a pandas DataFrame.
@@ -345,10 +323,18 @@ def _get_index_and_columns(df):
     int
         The number of columns.
     """
-    return len(df.index), len(df.columns)
+    logger = get_worker_logger(JOB_ID)
+    logger.info(
+        f"START::PANDAS-API::PandasOnRayDataframePartition._get_index_and_columns"
+    )
+    res = len(df.index), len(df.columns)
+    logger.info(
+        f"STOP::PANDAS-API::PandasOnRayDataframePartition._get_index_and_columns"
+    )
+    return res
 
 
-@ray.remote(num_returns=4)
+@ray.remote(num_returns=4, runtime_env=__WORKER_ENV__)
 def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     """
     Execute a function on the partition in a worker process.
@@ -375,6 +361,10 @@ def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     str
         The node IP address of the worker process.
     """
+    logger = get_worker_logger(JOB_ID)
+    logger.info(
+        f"START::PANDAS-API::PandasOnRayDataframePartition._apply_func {func=} {args=} {kwargs=}"
+    )
     try:
         result = func(partition, *args, **kwargs)
     # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
@@ -382,15 +372,17 @@ def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     # we absolutely have to.
     except ValueError:
         result = func(partition.copy(), *args, **kwargs)
-    return (
+    res = (
         result,
         len(result) if hasattr(result, "__len__") else 0,
         len(result.columns) if hasattr(result, "columns") else 0,
         get_node_ip_address(),
     )
+    logger.info(f"STOP::PANDAS-API::PandasOnRayDataframePartition._apply_func")
+    return res
 
 
-@ray.remote(num_returns=4)
+@ray.remote(num_returns=4, runtime_env=__WORKER_ENV__)
 def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
     """
     Execute all operations stored in the call queue on the partition in a worker process.
@@ -413,6 +405,10 @@ def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
     str
         The node IP address of the worker process.
     """
+    logger = get_worker_logger(JOB_ID)
+    logger.info(
+        f"START::PANDAS-API::PandasOnRayDataframePartition._apply_list_of_funcs"
+    )
     for func, args, kwargs in funcs:
         func = deserialize(func)
         args = deserialize(args)
@@ -424,10 +420,11 @@ def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
         # we absolutely have to.
         except ValueError:
             partition = func(partition.copy(), *args, **kwargs)
-
-    return (
+    res = (
         partition,
         len(partition) if hasattr(partition, "__len__") else 0,
         len(partition.columns) if hasattr(partition, "columns") else 0,
         get_node_ip_address(),
     )
+    logger.info(f"STOP::PANDAS-API::PandasOnRayDataframePartition._apply_list_of_funcs")
+    return res

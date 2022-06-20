@@ -54,6 +54,7 @@ from modin.db_conn import ModinDatabaseConnection
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
+from modin.logging import disable_logging
 
 _doc_pandas_parser_class = """
 Class for handling {data_type} on the workers using pandas storage format.
@@ -140,6 +141,7 @@ def find_common_type_cat(types):
 class PandasParser(ClassLogger):
     """Base class for parser classes with pandas storage format."""
 
+    @disable_logging
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def generic_parse(fname, **kwargs):
@@ -292,6 +294,7 @@ class PandasParser(ClassLogger):
 
 @doc(_doc_pandas_parser_class, data_type="CSV files")
 class PandasCSVParser(PandasParser):
+    @disable_logging
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):

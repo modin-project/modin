@@ -33,6 +33,7 @@ import modin
 from modin.config import LogMemoryInterval, LogFileSize, LogMode
 
 __LOGGER_CONFIGURED__: bool = False
+JOB_ID = uuid.uuid4().hex
 
 
 class ModinFormatter(logging.Formatter):  # noqa: PR01
@@ -138,14 +139,12 @@ def _create_logger(
     return logger
 
 
-def configure_logging() -> None:
+def configure_head_logging() -> None:
     """Configure Modin logging by setting up directory structure and formatting."""
     global __LOGGER_CONFIGURED__
-    job_id = uuid.uuid4().hex
-
     logger = _create_logger(
         "modin.logger.default",
-        job_id,
+        JOB_ID,
         "trace",
         logging.INFO if LogMode.get() == "enable_api_only" else logging.DEBUG,
     )
@@ -162,7 +161,7 @@ def configure_logging() -> None:
     if LogMode.get() != "enable_api_only":
         mem_sleep = LogMemoryInterval.get()
         mem_logger = _create_logger(
-            "modin_memory.logger", job_id, "memory", logging.DEBUG
+            "modin_memory.logger", JOB_ID, "memory", logging.DEBUG
         )
 
         svmem = psutil.virtual_memory()
@@ -174,9 +173,25 @@ def configure_logging() -> None:
         )
         mem.start()
 
-    _create_logger("modin.logger.errors", job_id, "error", logging.INFO)
+    _create_logger("modin.logger.errors", JOB_ID, "error", logging.INFO)
 
     __LOGGER_CONFIGURED__ = True
+
+
+def get_worker_logger(job_id: str) -> logging.Logger:
+    """Configure Modin logging by setting up directory structure and formatting."""
+    global __LOGGER_CONFIGURED__
+    worker_id = os.getpid()
+    namespace = f"modin.logger.worker.{worker_id}"
+    if not __LOGGER_CONFIGURED__ and LogMode.get() != "disable":
+        _create_logger(
+            namespace,
+            job_id,
+            worker_id,
+            logging.INFO if LogMode.get() == "enable_api_only" else logging.DEBUG,
+        )
+        __LOGGER_CONFIGURED__ = True
+    return logging.getLogger(namespace)
 
 
 def memory_thread(logger: logging.Logger, sleep_time: int) -> None:
@@ -213,5 +228,5 @@ def get_logger(namespace: str = "modin.logger.default") -> logging.Logger:
         The Modin logger.
     """
     if not __LOGGER_CONFIGURED__ and LogMode.get() != "disable":
-        configure_logging()
+        configure_head_logging()
     return logging.getLogger(namespace)

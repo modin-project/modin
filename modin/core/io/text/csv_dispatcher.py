@@ -16,11 +16,13 @@
 import pandas
 
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
+from modin.logging import disable_logging
 
 
 class CSVDispatcher(TextFileDispatcher):
     """Class handles utils for reading `.csv` files."""
 
+    @disable_logging
     def read_callback(*args, **kwargs):
         """
         Parse data on each partition.

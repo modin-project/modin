@@ -31,6 +31,8 @@ from modin.config import NPartitions, ProgressBar, BenchmarkMode, Engine, Storag
 
 import os
 
+from modin.logging import ClassLogger
+
 
 def wait_computations_if_benchmark_mode(func):
     """
@@ -78,7 +80,7 @@ def wait_computations_if_benchmark_mode(func):
     return func
 
 
-class PandasDataframePartitionManager(ABC):
+class PandasDataframePartitionManager(ClassLogger, ABC):
     """
     Base class for managing the dataframe data layout and operators across the distribution of partitions.
 

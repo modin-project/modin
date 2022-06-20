@@ -18,11 +18,15 @@ To be used as a piece of building a Ray-based engine.
 """
 
 import asyncio
-
+from modin.config import LogMode
+from modin.logging import get_worker_logger, ClassLogger
+from modin.logging.config import JOB_ID
 import ray
 
+__WORKER_ENV__ = {"env_vars": {"MODIN_LOG_MODE": LogMode.get()}}
 
-@ray.remote
+
+@ray.remote(runtime_env=__WORKER_ENV__)
 def _deploy_ray_func(func, args):  # pragma: no cover
     """
     Wrap `func` to ease calling it remotely.
@@ -39,10 +43,14 @@ def _deploy_ray_func(func, args):  # pragma: no cover
     ray.ObjectRef or list
         Ray identifier of the result being put to Plasma store.
     """
-    return func(**args)
+    logger = get_worker_logger(JOB_ID)
+    logger.info(f"START::PANDAS-API::deploy_ray_func.{func.__qualname__}")
+    res = func(**args)
+    logger.info(f"STOP::PANDAS-API::deploy_ray_func.{func.__qualname__}")
+    return res
 
 
-class RayTask:
+class RayTask(ClassLogger):
     """Mixin that provides means of running functions remotely and getting local results."""
 
     @classmethod

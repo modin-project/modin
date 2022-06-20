@@ -23,6 +23,7 @@ CachedAccessor implements API of pandas.core.accessor.CachedAccessor
 
 import pandas
 from pandas.core.arrays.sparse.dtype import SparseDtype
+from modin.logging import disable_logging
 
 import modin.pandas as pd
 from modin.error_message import ErrorMessage
@@ -178,6 +179,7 @@ class SparseAccessor(BaseSparseAccessor):
 
 @_inherit_docstrings(pandas.core.accessor.CachedAccessor)
 class CachedAccessor(ClassLogger):
+    @disable_logging
     def __init__(self, name: str, accessor) -> None:
         self._name = name
         self._accessor = accessor

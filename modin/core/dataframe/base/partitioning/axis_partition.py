@@ -14,9 +14,10 @@
 """Base class of an axis partition for a Modin Dataframe."""
 
 from abc import ABC
+from modin.logging import ClassLogger
 
 
-class BaseDataframeAxisPartition(ABC):  # pragma: no cover
+class BaseDataframeAxisPartition(ClassLogger, ABC):  # pragma: no cover
     """
     An abstract class that represents the parent class for any axis partition class.
 
