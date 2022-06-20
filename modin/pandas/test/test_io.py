@@ -33,6 +33,7 @@ from modin.config import (
     TestReadFromSqlServer,
     ReadSqlEngine,
 )
+from modin.pandas._compat.versions import PandasCompatVersion
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 from modin.test.test_utils import warns_that_defaulting_to_pandas
@@ -788,7 +789,11 @@ class TestCsv:
             filepath_or_buffer=pytest.csvs_names["test_read_csv_bad_lines"],
             warn_bad_lines=warn_bad_lines,
             error_bad_lines=error_bad_lines,
-            on_bad_lines=on_bad_lines,
+            **(
+                {}
+                if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36
+                else dict(on_bad_lines=on_bad_lines)
+            ),
         )
 
     # Internal parameters tests
@@ -925,9 +930,17 @@ class TestCsv:
             index_col=index_col,
             parse_dates=parse_dates,
             encoding=encoding,
-            encoding_errors=encoding_errors,
+            **(
+                {}
+                if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36
+                else dict(encoding_errors=encoding_errors)
+            ),
         )
 
+    @pytest.mark.skipif(
+        PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+        reason="storage_options not supported for older pandas",
+    )
     @pytest.mark.parametrize(
         "storage_options",
         [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
@@ -1071,6 +1084,8 @@ class TestCsv:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
     def test_to_csv(self, header, mode):
+        if "b" in mode and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+            pytest.xfail(reason="older pandas do not support to_csv with binary mode")
 
         pandas_df = generate_dataframe()
         modin_df = pd.DataFrame(pandas_df)

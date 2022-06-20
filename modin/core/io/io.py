@@ -189,19 +189,23 @@ class BaseIO(object):
         escapechar=None,
         comment=None,
         encoding=None,
-        encoding_errors="strict",
         dialect=None,
         error_bad_lines=None,
         warn_bad_lines=None,
-        on_bad_lines=None,
         skipfooter=0,
         doublequote=True,
         delim_whitespace=False,
         low_memory=True,
         memory_map=False,
         float_precision=None,
-        storage_options=None,
+        **kw,
+        # NOTE: do not keep some arguments listed explicitly here, as older pandas
+        # do not have them; pass them via `**kw` instead.
+        # Arguments omitted: encoding_errors="strict", on_bad_lines=None, storage_options=None,
     ):  # noqa: PR01
+        for extra_arg in kw:
+            if extra_arg not in {"encoding_errors", "on_bad_lines", "storage_options"}:
+                raise TypeError(f"Unexpected argument `{extra_arg}` for read_csv")
         kwargs = {
             "filepath_or_buffer": filepath_or_buffer,
             "sep": sep,
@@ -243,18 +247,16 @@ class BaseIO(object):
             "escapechar": escapechar,
             "comment": comment,
             "encoding": encoding,
-            "encoding_errors": encoding_errors,
             "dialect": dialect,
             "error_bad_lines": error_bad_lines,
             "warn_bad_lines": warn_bad_lines,
-            "on_bad_lines": on_bad_lines,
             "skipfooter": skipfooter,
             "doublequote": doublequote,
             "delim_whitespace": delim_whitespace,
             "low_memory": low_memory,
             "memory_map": memory_map,
             "float_precision": float_precision,
-            "storage_options": storage_options,
+            **kw,
         }
         ErrorMessage.default_to_pandas("`read_csv`")
         return cls._read(**kwargs)
