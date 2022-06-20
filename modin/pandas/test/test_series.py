@@ -19,6 +19,7 @@ import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
 from pandas.core.base import SpecificationError
+from modin.pandas._compat.versions import PandasCompatVersion
 from modin.utils import get_current_execution
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 import sys
@@ -3066,6 +3067,10 @@ def test_shift_slice_shift(data, index, periods):
 )
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 def test_sort_index(data, ascending, sort_remaining, na_position):
+    if ascending is None and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+        pytest.xfail(
+            "Modin expects pandas to raise ValueError on ascending=None which older pandas does not"
+        )
     modin_series, pandas_series = create_test_series(data)
     eval_general(
         modin_series,
