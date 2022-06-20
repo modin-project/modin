@@ -2842,6 +2842,10 @@ def test_resample(closed, label, level):
 @pytest.mark.parametrize("name", [None, "Custom name"])
 @pytest.mark.parametrize("inplace", [True, False])
 def test_reset_index(data, drop, name, inplace):
+    if name is not None and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+        pytest.xfail(
+            "pandas.Series.reset_index() should ignore `name` when `drop=True` but it does not"
+        )
     eval_general(
         *create_test_series(data),
         lambda df, *args, **kwargs: df.reset_index(*args, **kwargs),
