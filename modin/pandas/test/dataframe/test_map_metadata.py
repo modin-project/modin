@@ -497,6 +497,8 @@ def test_astype():
             if isinstance(df, pd.DataFrame)
             else pandas.Series([str, str], index=["col1", "col1"])
         ),
+        # NOTE: older pandas gives different error, so we ignore it here
+        check_exception_type=PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST,
     )
 
 
@@ -1069,6 +1071,10 @@ def test_insert(data):
     )
 
 
+@pytest.mark.skipif(
+    PandasCompatVersion.CURRENT != PandasCompatVersion.LATEST,
+    reason="assert_series_equal() does not have check_index in older pandas",
+)
 def test_insert_4407():
     data = {"col1": [1, 2, 3], "col2": [2, 3, 4]}
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
