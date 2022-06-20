@@ -148,6 +148,17 @@ class LatestCompatibleSeries(BaseCompatibilitySeries):
     ) -> "DataFrame":  # noqa: PR01, RT01, D200
         return self._to_frame(name=name)
 
+    def value_counts(
+        self, normalize=False, sort=True, ascending=False, bins=None, dropna=True
+    ):  # noqa: PR01, RT01, D200
+        return self._value_counts(
+            normalize=normalize,
+            sort=sort,
+            ascending=ascending,
+            bins=bins,
+            dropna=dropna,
+        )
+
     def where(
         self,
         cond,

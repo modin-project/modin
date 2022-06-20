@@ -1968,7 +1968,7 @@ class Series(SeriesCompat, BasePandasDataset):
         query_compiler = self._query_compiler.series_update(other._query_compiler)
         self._update_inplace(new_query_compiler=query_compiler)
 
-    def value_counts(
+    def _value_counts(
         self, normalize=False, sort=True, ascending=False, bins=None, dropna=True
     ):  # noqa: PR01, RT01, D200
         """
@@ -1986,7 +1986,7 @@ class Series(SeriesCompat, BasePandasDataset):
                 bins=bins,
                 dropna=dropna,
             )
-        counted_values = super(Series, self).value_counts(
+        counted_values = super(Series, self)._value_counts(
             subset=self,
             normalize=normalize,
             sort=sort,
