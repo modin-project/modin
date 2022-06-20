@@ -14,16 +14,19 @@
 from modin.core._compat import PandasCompatVersion
 
 if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-    from .py36 import (
-        Python36CompatibleBasePandasDataset as BasePandasDatasetCompat,
-    )
-    from .py36 import Python36CompatibleDataFrame as DataFrameCompat
-    from .py36 import Python36CompatibilitySeries as SeriesCompat
+    from .py36.io import Py36BaseIOCompat as BaseIOCompat
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
-    from .latest import (
-        LatestCompatibleBasePandasDataset as BasePandasDatasetCompat,
-    )
-    from .latest import LatestCompatibleDataFrame as DataFrameCompat
-    from .latest import LatestCompatibleSeries as SeriesCompat
+    from .latest.io import LatestBaseIOCompat as BaseIOCompat
 
-__all__ = ["BasePandasDatasetCompat", "DataFrameCompat", "SeriesCompat"]
+from .doc_common import (
+    _doc_default_io_method,
+    _doc_returns_qc,
+    _doc_returns_qc_or_parser,
+)
+
+__all__ = [
+    "BaseIOCompat",
+    "_doc_default_io_method",
+    "_doc_returns_qc",
+    "_doc_returns_qc_or_parser",
+]

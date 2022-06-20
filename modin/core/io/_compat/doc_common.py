@@ -11,19 +11,24 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.core._compat import PandasCompatVersion
+"""
+Module houses common docstring patterns for BaseIO and descendants.
+"""
 
-if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-    from .py36 import (
-        Python36CompatibleBasePandasDataset as BasePandasDatasetCompat,
-    )
-    from .py36 import Python36CompatibleDataFrame as DataFrameCompat
-    from .py36 import Python36CompatibilitySeries as SeriesCompat
-elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
-    from .latest import (
-        LatestCompatibleBasePandasDataset as BasePandasDatasetCompat,
-    )
-    from .latest import LatestCompatibleDataFrame as DataFrameCompat
-    from .latest import LatestCompatibleSeries as SeriesCompat
+_doc_default_io_method = """
+{summary} using pandas.
 
-__all__ = ["BasePandasDatasetCompat", "DataFrameCompat", "SeriesCompat"]
+For parameters description please refer to pandas API.
+
+Returns
+-------
+{returns}
+"""
+
+_doc_returns_qc = """BaseQueryCompiler
+    QueryCompiler with read data."""
+
+_doc_returns_qc_or_parser = """BaseQueryCompiler or TextParser
+    QueryCompiler or TextParser with read data."""
+
+__all__ = ["_doc_default_io_method", "_doc_returns_qc", "_doc_returns_qc_or_parser"]

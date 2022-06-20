@@ -225,7 +225,8 @@ from .general import (
     wide_to_long,
 )
 
-from ._compat.namespace import pivot_table, PandasCompatVersion
+from ._compat.namespace import pivot_table
+from modin.core._compat import PandasCompatVersion
 
 if PandasCompatVersion.CURRENT != PandasCompatVersion.PY36:
     from ._compat.namespace import Flags, Float32Dtype, Float64Dtype
