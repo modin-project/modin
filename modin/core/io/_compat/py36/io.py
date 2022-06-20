@@ -89,7 +89,7 @@ class Py36BaseIOCompat(object):
             header=header,
             names=names,
             index_col=index_col,
-            secols=usecols,
+            usecols=usecols,
             squeeze=squeeze,
             prefix=prefix,
             mangle_dupe_cols=mangle_dupe_cols,
