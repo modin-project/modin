@@ -1,0 +1,50 @@
+channels:
+  - conda-forge
+dependencies:
+  - python=3.6
+  - pandas
+  - numpy>=1.18.5
+  - pyarrow>=4.0.1
+  - dask[complete]>=2.22.0,<2022.2.0
+  - distributed>=2.22.0,<2022.2.0
+  - fsspec
+  - xarray
+  - Jinja2
+  - scipy
+  - pip
+  - s3fs>=2021.8,<=2022.1.0
+  - feather-format
+  - lxml
+  - openpyxl
+  - xlrd
+  - matplotlib<=3.2.2
+  - sqlalchemy>=1.4.0
+  - pandas-gbq
+  - pytables
+  - msgpack-python
+  - psutil
+  - pytest>=6.0.1
+  - pytest-benchmark
+  - pytest-cov>=2.10.1
+  - pytest-xdist>=2.1.0
+  - packaging
+  - coverage<5.0
+  - pygithub==1.53
+  - rpyc==4.1.5
+  - cloudpickle
+  - boto3
+  - scikit-learn
+  - pymssql
+  - psycopg2
+  - pip:
+      - modin-spreadsheet>=0.1.1
+      - tqdm
+      # Pin ray to < 1.13.0 to work around GH#4564
+      # TODO(https://github.com/modin-project/modin/issues/4564): let ray go past 1.13.0.      
+      - ray[default]>=1.4.0,<1.13.0
+      # TODO: remove when resolving GH#4398
+      - redis>=3.5.0,<4.0.0
+      - black
+      - flake8
+      # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
+      - numpydoc==1.1.0

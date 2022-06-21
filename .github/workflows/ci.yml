@@ -522,6 +522,74 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - uses: codecov/codecov-action@v2
 
+  test-compat-linux:
+    needs: [lint-flake8, lint-black, test-api, test-headers]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      matrix:
+        python-version: ["3.6"]
+        engine: ["python", "ray", "dask"]
+    env:
+      MODIN_ENGINE: ${{matrix.engine}}
+      MODIN_MEMORY: 1000000000
+    name: test-compat-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: modin
+          environment-file: requirements/requirements-py36.yml
+          python-version: 3.6
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Conda environment
+        run: |
+          conda info
+          conda list
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+      - run: python -m pytest modin/pandas/test/test_io.py --verbose
+      - uses: codecov/codecov-action@v2
+
+  test-compat-windows:
+    needs: [lint-flake8, lint-black, test-api, test-headers]
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      matrix:
+        python-version: ["3.6"]
+        engine: ["python", "ray", "dask"]
+    env:
+      MODIN_ENGINE: ${{matrix.engine}}
+      MODIN_MEMORY: 1000000000
+    name: test-compat-win (engine ${{matrix.engine}}, python ${{matrix.python-version}})
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          activate-environment: modin
+          environment-file: requirements/requirements-py36.yml
+          python-version: 3.6
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Conda environment
+        run: |
+          conda info
+          conda list
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+      - run: python -m pytest modin/pandas/test/test_io.py --verbose
+      - uses: codecov/codecov-action@v2
+
   test-cloud:
     needs: [lint-flake8, lint-black, test-api, test-headers]
     runs-on: ubuntu-latest
