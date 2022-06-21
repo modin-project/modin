@@ -30,6 +30,7 @@ from modin.core.io import (
     SQLDispatcher,
     ExcelDispatcher,
 )
+from modin.core.io._compat.pd_common import get_handle as pd_get_handle
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVParser,
     PandasFWFParser,
@@ -203,7 +204,7 @@ class PandasOnRayIO(RayIO):
             ray.get(signals.wait.remote(partition_idx))
 
             # preparing to write data from the buffer to a file
-            with pandas.io.common.get_handle(
+            with pd_get_handle(
                 path_or_buf,
                 # in case when using URL in implicit text mode
                 # pandas try to open `path_or_buf` in binary mode
@@ -211,7 +212,7 @@ class PandasOnRayIO(RayIO):
                 encoding=kwargs["encoding"],
                 errors=kwargs["errors"],
                 compression=kwargs["compression"],
-                storage_options=kwargs["storage_options"],
+                storage_options=kwargs.get("storage_options", None),
                 is_text=False,
             ) as handles:
                 handles.handle.write(content)
