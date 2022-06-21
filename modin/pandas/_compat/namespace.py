@@ -30,9 +30,9 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
     from .py36.general import pivot_table
 
     def read_xml(*args, **kw):
-        import pandas
+        from pandas import __version__
 
-        raise NotImplementedError(f"Pandas {pandas.__version__} does not have read_xml")
+        raise NotImplementedError(f"Pandas {__version__} does not have read_xml")
 
     __all__ = [
         "read_csv",

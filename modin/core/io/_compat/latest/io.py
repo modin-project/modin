@@ -16,7 +16,8 @@ Module houses `LatestBaseIOCompat` class.
 
 `LatestBaseIOCompat` is base mixin for IO classes relying on older pandas.
 """
-from typing import Optional
+from typing import Optional, Any
+import pickle
 
 import pandas
 import pandas._libs.lib as lib
