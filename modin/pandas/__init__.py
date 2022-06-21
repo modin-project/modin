@@ -230,6 +230,7 @@ from modin.core._compat import PandasCompatVersion
 
 if PandasCompatVersion.CURRENT != PandasCompatVersion.PY36:
     from ._compat.namespace import Flags, Float32Dtype, Float64Dtype
+del PandasCompatVersion
 
 from .plotting import Plotting as plotting
 from modin.utils import show_versions
