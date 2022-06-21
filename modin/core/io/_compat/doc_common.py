@@ -11,9 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""
-Module houses common docstring patterns for BaseIO and descendants.
-"""
+"""Module houses common docstring patterns for BaseIO and descendants."""
 
 _doc_default_io_method = """
 {summary} using pandas.

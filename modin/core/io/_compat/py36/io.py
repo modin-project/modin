@@ -20,16 +20,37 @@ Module houses `Py36BaseIOCompat` class.
 from typing import Optional, Any
 
 import pandas._libs.lib as lib
+from pandas.util._decorators import doc
+import pandas
+
+from modin.utils import _inherit_docstrings
+from ..doc_common import (
+    _doc_default_io_method,
+    _doc_returns_qc,
+    _doc_returns_qc_or_parser,
+)
 
 
 class Py36BaseIOCompat(object):
     """Class for basic utils and default implementation of IO functions for older pandas."""
 
     @classmethod
+    @_inherit_docstrings(pandas.read_parquet, apilink="pandas.read_parquet")
+    @doc(
+        _doc_default_io_method,
+        summary="Load a parquet object from the file path, returning a query compiler",
+        returns=_doc_returns_qc,
+    )
     def read_parquet(cls, path, engine, columns, **kwargs):  # noqa: PR01
         return cls._read_parquet(path=path, engine=engine, columns=columns, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(pandas.read_csv, apilink="pandas.read_csv")
+    @doc(
+        _doc_default_io_method,
+        summary="Read a comma-separated values (CSV) file into query compiler",
+        returns=_doc_returns_qc_or_parser,
+    )
     def read_csv(
         cls,
         filepath_or_buffer,
@@ -135,6 +156,12 @@ class Py36BaseIOCompat(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_json, apilink="pandas.read_json")
+    @doc(
+        _doc_default_io_method,
+        summary="Convert a JSON string to query compiler",
+        returns=_doc_returns_qc,
+    )
     def read_json(
         cls,
         path_or_buf=None,
@@ -172,6 +199,12 @@ class Py36BaseIOCompat(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_feather, apilink="pandas.read_feather")
+    @doc(
+        _doc_default_io_method,
+        summary="Load a feather-format object from the file path into query compiler",
+        returns=_doc_returns_qc,
+    )
     def read_feather(
         cls,
         path,
@@ -185,6 +218,12 @@ class Py36BaseIOCompat(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_stata, apilink="pandas.read_stata")
+    @doc(
+        _doc_default_io_method,
+        summary="Read Stata file into query compiler",
+        returns=_doc_returns_qc,
+    )
     def read_stata(
         cls,
         filepath_or_buffer,
@@ -212,6 +251,12 @@ class Py36BaseIOCompat(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_pickle, apilink="pandas.read_pickle")
+    @doc(
+        _doc_default_io_method,
+        summary="Load pickled pandas object (or any object) from file into query compiler",
+        returns=_doc_returns_qc,
+    )
     def read_pickle(
         cls,
         filepath_or_buffer,
@@ -223,6 +268,12 @@ class Py36BaseIOCompat(object):
         )
 
     @classmethod
+    @_inherit_docstrings(pandas.read_sql_query, apilink="pandas.read_sql_query")
+    @doc(
+        _doc_default_io_method,
+        summary="Read SQL query into query compiler",
+        returns=_doc_returns_qc,
+    )
     def read_sql_query(
         cls,
         sql,
@@ -244,6 +295,9 @@ class Py36BaseIOCompat(object):
         )
 
     @classmethod
+    @_inherit_docstrings(
+        pandas.DataFrame.to_pickle, apilink="pandas.DataFrame.to_pickle"
+    )
     def to_pickle(
         cls,
         obj: Any,
