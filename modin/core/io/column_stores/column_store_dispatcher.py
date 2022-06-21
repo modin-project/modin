@@ -55,13 +55,10 @@ class ColumnStoreDispatcher(FileDispatcher):
         """
         from pyarrow.parquet import ParquetFile
 
-        num_row_groups = ParquetFile(fname).metadata.num_row_groups
+        num_row_groups = ParquetFile(fname).num_row_groups
         step = num_row_groups // NPartitions.get()
         if num_row_groups % NPartitions.get() != 0:
             step += 1
-        import time
-
-        start = time.time()
         return np.array(
             [
                 [
@@ -71,7 +68,6 @@ class ColumnStoreDispatcher(FileDispatcher):
                         columns=cols,
                         row_group_start=row_start,
                         row_group_end=row_start + step,
-                        start=start,
                         num_returns=2,
                         **kwargs,
                     )

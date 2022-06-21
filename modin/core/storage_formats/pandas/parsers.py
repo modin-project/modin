@@ -641,15 +641,13 @@ class PandasJSONParser(PandasParser):
 class PandasParquetParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
-    def parse(fname, row_group_start, row_group_end, start, **kwargs):
+    def parse(fname, row_group_start, row_group_end, **kwargs):
         columns = kwargs.get("columns", None)
         from pyarrow.parquet import ParquetFile
 
         file = ParquetFile(fname)
         df = file.read_row_groups(
-            list(
-                range(row_group_start, min(row_group_end, file.metadata.num_row_groups))
-            ),
+            list(range(row_group_start, min(row_group_end, file.num_row_groups))),
             columns=columns,
             use_pandas_metadata=True,
         ).to_pandas()
