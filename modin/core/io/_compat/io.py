@@ -16,9 +16,16 @@
 from modin.core._compat import PandasCompatVersion
 
 if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+    from pandas.io.parsers import _validate_usecols_arg
+    from pandas.io.parsers import _parser_defaults as parser_defaults
+
     from .py36.io import Py36BaseIOCompat as BaseIOCompat
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
+    from pandas.io.parsers.base_parser import ParserBase, parser_defaults
+
     from .latest.io import LatestBaseIOCompat as BaseIOCompat
+
+    _validate_usecols_arg = ParserBase._validate_usecols_arg
 
 from .doc_common import (
     _doc_default_io_method,
@@ -31,4 +38,6 @@ __all__ = [
     "_doc_default_io_method",
     "_doc_returns_qc",
     "_doc_returns_qc_or_parser",
+    "_validate_usecols_arg",
+    "parser_defaults",
 ]
