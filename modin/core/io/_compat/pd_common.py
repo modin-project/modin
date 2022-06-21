@@ -18,6 +18,6 @@ from modin.core._compat import PandasCompatVersion
 if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
     from .py36.pd_common import get_handle
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
-    from .py36.pd_common import get_handle
+    from .latest.pd_common import get_handle
 
 __all__ = ["get_handle"]
