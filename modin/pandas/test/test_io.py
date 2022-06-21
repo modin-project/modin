@@ -605,6 +605,13 @@ class TestCsv:
     @pytest.mark.parametrize("encoding", [None, "latin8", "utf16"])
     @pytest.mark.parametrize("engine", [None, "python", "c"])
     def test_read_csv_compression(self, make_csv_file, compression, encoding, engine):
+        if (
+            compression == "zip"
+            and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36
+        ):
+            pytest.xfail(
+                "Parallel read_csv does not support compression with older pandas"
+            )
         unique_filename = get_unique_filename()
         make_csv_file(
             filename=unique_filename, encoding=encoding, compression=compression

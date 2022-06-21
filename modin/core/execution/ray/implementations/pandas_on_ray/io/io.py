@@ -195,7 +195,9 @@ class PandasOnRayIO(RayIO):
             # for parallelization purposes, each partition is written to an intermediate buffer
             path_or_buf = csv_kwargs["path_or_buf"]
             is_binary = "b" in csv_kwargs["mode"]
-            csv_kwargs["path_or_buf"] = io.BytesIO() if is_binary else io.StringIO()
+            csv_kwargs["path_or_buf"] = (
+                io.BytesIO() if is_binary else io.StringIO(newline=None)
+            )
             df.to_csv(**csv_kwargs)
             content = csv_kwargs["path_or_buf"].getvalue()
             csv_kwargs["path_or_buf"].close()
