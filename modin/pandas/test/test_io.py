@@ -1791,7 +1791,9 @@ class TestExcel:
             teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
     @pytest.mark.xfail(
-        Engine.get() != "Python", reason="Test fails because of issue 3305"
+        Engine.get() != "Python"
+        and PandasCompatVersion.CURRENT != PandasCompatVersion.PY36,
+        reason="Test fails because of issue 3305",
     )
     @check_file_leaks
     @pytest.mark.xfail(
@@ -2146,6 +2148,13 @@ class TestFwf:
 
     @pytest.mark.parametrize("nrows", [13, None])
     def test_fwf_file_skiprows(self, make_fwf_file, nrows):
+        if (
+            nrows is not None
+            and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36
+        ):
+            pytest.xfail(
+                "older pandas read_fwf had a bug with list of skiprows and non-None nrows: pandas-dev#10261"
+            )
         unique_filename = make_fwf_file()
 
         eval_io(
