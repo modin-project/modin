@@ -275,9 +275,18 @@ def test___setattr__mutating_column():
     df_equals(modin_df, pandas_df)
     # Check that the col0 attribute reflects the value update.
     df_equals(modin_df.col0, pandas_df.col0)
+
+    pandas_df.col0 = pd.Series([5])
     modin_df.col0 = pd.Series([5])
+
+    # Check that the col0 attribute reflects this update
+    df_equals(modin_df, pandas_df)
+
+    pandas_df.loc[0, "col0"] = 4
     modin_df.loc[0, "col0"] = 4
 
+    # Check that the col0 attribute reflects update via loc
+    df_equals(modin_df, pandas_df)
     assert modin_df.col0.equals(modin_df["col0"])
 
 
