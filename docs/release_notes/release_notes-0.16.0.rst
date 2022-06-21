@@ -9,6 +9,7 @@ Key Features and Updates
   * FIX-#4570: Replace ``np.bool`` -> ``np.bool_`` (#4571)
   * FIX-#4543: Fix `read_csv` in case skiprows=<0, []> (#4544)
   * FIX-#4059: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
+  * FIX-#4589: Pin protobuf<4.0.0 to fix ray (#4590)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
 * Benchmarking enhancements
