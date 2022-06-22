@@ -88,6 +88,7 @@ class Python36CompatibleDataFrame(BaseCompatibilityDataFrame):
             dropna=dropna,
             margins_name=margins_name,
             observed=observed,
+            sort=None,
         )
 
     def prod(

@@ -54,6 +54,7 @@ from modin.core.dataframe.algebra import (
     is_reduce_function,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
+from modin.core._compat.methods import pd_pivot_table
 
 
 def _get_axis(axis):
@@ -2946,7 +2947,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 Pivot table for this particular partition.
             """
             concated = pandas.concat([df, other], axis=1, copy=False)
-            result = concated.pivot_table(
+            result = pd_pivot_table(
+                concated,
                 index=index,
                 values=values if len(values) > 0 else None,
                 columns=columns,

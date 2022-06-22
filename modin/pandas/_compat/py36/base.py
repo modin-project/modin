@@ -141,28 +141,16 @@ class Python36CompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
 
     def reindex(
         self,
-        labels=None,
         index=None,
         columns=None,
-        axis=None,
-        method=None,
         copy=True,
-        level=None,
-        fill_value=nan,
-        limit=None,
-        tolerance=None,
+        **kwargs,
     ):
         return self._reindex(
-            labels=labels,
             index=index,
             columns=columns,
-            axis=axis,
-            method=method,
             copy=copy,
-            level=level,
-            fill_value=fill_value,
-            limit=limit,
-            tolerance=tolerance,
+            **kwargs,
         )
 
     def rolling(
@@ -212,7 +200,7 @@ class Python36CompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
             level=level,
             ddof=ddof,
             numeric_only=numeric_only,
-            **kwargs
+            **kwargs,
         )
 
     def shift(self, periods=1, freq=None, axis=0, fill_value=None):
@@ -232,7 +220,7 @@ class Python36CompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
             level=level,
             ddof=ddof,
             numeric_only=numeric_only,
-            **kwargs
+            **kwargs,
         )
 
     def to_csv(
@@ -437,5 +425,5 @@ class Python36CompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
             level=level,
             ddof=ddof,
             numeric_only=numeric_only,
-            **kwargs
+            **kwargs,
         )
