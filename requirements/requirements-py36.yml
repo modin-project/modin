@@ -5,8 +5,8 @@ dependencies:
   - pandas
   - numpy>=1.18.5
   - pyarrow>=4.0.1
-  - dask[complete]>=2.22.0,<2022.2.0
-  - distributed>=2.22.0,<2022.2.0
+  - dask[complete]>=2.22.0,<2021.3.0
+  - distributed>=2.22.0,<2021.3.0
   - pickle5 # for dask to correctly serialize nested functions
   - fsspec
   - xarray
