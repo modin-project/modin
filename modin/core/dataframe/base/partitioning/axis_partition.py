@@ -26,6 +26,7 @@ class BaseDataframeAxisPartition(
 
     This class is intended to simplify the way that operations are performed.
     """
+
     _modin_layer = "PARTITION"
 
     def apply(
