@@ -36,6 +36,7 @@ dependencies:
   - scikit-learn
   - pymssql
   - psycopg2
+  - pywinpty>=1.1.0 # modin-spreadsheet needs that through jupyter, but it won't install on Py36 via pip
   - pip:
       - modin-spreadsheet>=0.1.1
       - tqdm
