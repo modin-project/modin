@@ -132,11 +132,9 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
 
     def mean(self, numeric_only=None):
-        return self._check_index(
-            self._wrap_aggregation(
-                type(self._query_compiler).groupby_mean,
-                numeric_only=numeric_only,
-            )
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_mean,
+            numeric_only=numeric_only,
         )
 
     def any(self, skipna=True):

@@ -2487,6 +2487,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_prod = GroupByReduce.register("prod")
     groupby_sum = GroupByReduce.register("sum")
 
+    groupby_mean = GroupByReduce.register(
+        lambda dfgb: dfgb.agg(["sum", "count"]).swaplevel(axis=1),
+        lambda dfgb: dfgb.apply(
+            lambda group: group.loc[:, "sum"].sum() / group.loc[:, "count"].sum()
+        ),
+        default_to_pandas_func=lambda dfgb, **kwargs: dfgb.mean(**kwargs),
+        method="mean",
+    )
+
     def groupby_size(
         self,
         by,
