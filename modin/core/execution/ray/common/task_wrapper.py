@@ -44,8 +44,10 @@ def _deploy_ray_func(func, args):  # pragma: no cover
     return func(**args)
 
 
-class RayTask(ClassLogger, modin_layer="RAY-REMOTE"):
+class RayTask(ClassLogger):
     """Mixin that provides means of running functions remotely and getting local results."""
+
+    _modin_layer = "RAY-REMOTE"
 
     @classmethod
     def deploy(cls, func, *args, num_returns=1, **kwargs):

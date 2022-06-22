@@ -82,7 +82,6 @@ def wait_computations_if_benchmark_mode(func):
 class PandasDataframePartitionManager(
     ABC,
     ClassLogger,
-    modin_layer="PARTITION",
 ):
     """
     Base class for managing the dataframe data layout and operators across the distribution of partitions.
@@ -91,6 +90,7 @@ class PandasDataframePartitionManager(
     Each partition must extend the `PandasDataframePartition` class.
     """
 
+    _modin_layer = "PARTITION"
     _partition_class = None
     # Column partitions class is the class to use to create the column partitions.
     _column_partitions_class = None
