@@ -14,9 +14,32 @@
 """
 Implement I/O public API as pandas does.
 
-Almost all docstrings for public and magic methods should be inherited from pandas
-for better maintability.
-Manually add documentation for methods which are not presented in pandas.
+Method docstrings contain tables with information on supported parameters.
+These tables are structured as follows: The first column contains the parameter name,
+the second, third and fourth column contain flags describing particular properties of
+method parameters - each column corresponding to a concrete execution supported by Modin
+(`PandasOnRay`, `PandasOnDask` or `OmniSci`), and the last column contains parameter notes.
+The flags are defined as follows:
+
++-----------+-----------------------------------------------------------------------------------------------+
+| Flag      | Meaning                                                                                       |
++===========+===============================================================================================+
+| Harmful   | Usage of this parameter can be harmful to performance of your application. This usually       |
+|           | happens when a parameter (full range of values and all types) is not supported and Modin      |
+|           | defaults to pandas (see more on defaulting to pandas at                                       |
+|           | https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html)              |
++-----------+-----------------------------------------------------------------------------------------------+
+| Partial   | Parameter is partially unsupported - it's usage can be harmful to performance of your         |
+|           | application. This can happen if some parameter values or types are not supported (for         |
+|           | example, boolean values are supported while integer values are not) so Modin may default to   |
+|           | pandas (see more on defaulting to pandas at                                                   |
+|           | https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html)              |
++-----------+-----------------------------------------------------------------------------------------------+
+
+The first row (`All parameters` parameter name) shows a summary of support for the whole
+method while further rows break down support status by parameter. Please note, that the
+tables only list unsupported/partially supported parameters. If a parameter is supported,
+it won't be present in the table.
 """
 
 import inspect
@@ -130,6 +153,95 @@ def read_csv(
 ):  # noqa: PR01, RT01, D200
     """
     Read a comma-separated values (csv) file into DataFrame.
+
+    Parameters Support Status:
+
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=========================+=================+================+================+==================================+
+    | All parameters          | Partial         | Partial        | Partial        | **Ray**:                         |
+    |                         |                 |                |                | See also experimental            |
+    |                         |                 |                |                | implementation that can read     |
+    |                         |                 |                |                | multiple data files using a file |
+    |                         |                 |                |                | pattern: read_csv_glob           |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | filepath_or_buffer      | Partial         | Partial        | Partial        | **Ray/Dask**:                    |
+    |                         |                 |                |                | Some buffer formats can be       |
+    |                         |                 |                |                | unsupported                      |
+    |                         |                 |                |                | **OmniSci**:                     |
+    |                         |                 |                |                | Only local non-buffered files    |
+    |                         |                 |                |                | are supported                    |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | header                  |                 |                | Partial        | **OmniSci**:                     |
+    |                         |                 |                |                | If `names` is defined, `header`  |
+    |                         |                 |                |                | can be only 0, None or "infer"   |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | names                   |                 |                | Partial        | **OmniSci**:                     |
+    |                         |                 |                |                | Parameter is unsupported if      |
+    |                         |                 |                |                | the number of provided names     |
+    |                         |                 |                |                | doesn't correpond to the actual  |
+    |                         |                 |                |                | number of columns                |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | skiprows                | Partial         | Partial        | Partial        | **Ray/Dask**:                    |
+    |                         |                 |                |                | Parameter is unsupported         |
+    |                         |                 |                |                | if `skiprows` and `header`       |
+    |                         |                 |                |                | parameters are both present and  |
+    |                         |                 |                |                | their values have intersections  |
+    |                         |                 |                |                | **OmniSci**:                     |
+    |                         |                 |                |                | Only integer values are          |
+    |                         |                 |                |                | supported                        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | skip_blank_lines        |                 |                | Partial        | **OmniSci**:                     |
+    |                         |                 |                |                | Must be True if specified        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | parse_dates             |                 |                | Partial        | **OmniSci**:                     |
+    |                         |                 |                |                | Only bool and flattened list of  |
+    |                         |                 |                |                | string column names are          |
+    |                         |                 |                |                | supported                        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | chunksize               | Harmful         | Harmful        | Harmful        |                                  |
+    |                         |                 |                |                |                                  |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | compression             |                 |                |                | **OmniSci**:                     |
+    |                         |                 |                |                | `compression` is inferred        |
+    |                         |                 |                |                | automatically and shouldn't be   |
+    |                         |                 |                |                | specified                        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | index_col               |                 |                | Harmful        | This parameter and the ones that |
+    | squeeze                 |                 |                |                | follow are not supported by      |
+    | prefix                  |                 |                |                | OmniSci execution                |
+    | mangle_dupe_cols        |                 |                |                |                                  |
+    | converters              |                 |                |                |                                  |
+    | skipinitialspace        |                 |                |                |                                  |
+    | nrows                   |                 |                |                |                                  |
+    | na_values               |                 |                |                |                                  |
+    | keep_default_na         |                 |                |                |                                  |
+    | na_filter               |                 |                |                |                                  |
+    | keep_default_na         |                 |                |                |                                  |
+    | verbose                 |                 |                |                |                                  |
+    | infer_datetime_format   |                 |                |                |                                  |
+    | keep_date_col           |                 |                |                |                                  |
+    | date_parser             |                 |                |                |                                  |
+    | dayfirst                |                 |                |                |                                  |
+    | cache_dates             |                 |                |                |                                  |
+    | iterator                |                 |                |                |                                  |
+    | thousands               |                 |                |                |                                  |
+    | decimal                 |                 |                |                |                                  |
+    | lineterminator          |                 |                |                |                                  |
+    | quoting                 |                 |                |                |                                  |
+    | comment                 |                 |                |                |                                  |
+    | encoding                |                 |                |                |                                  |
+    | encoding_errors         |                 |                |                |                                  |
+    | dialect                 |                 |                |                |                                  |
+    | error_bad_lines         |                 |                |                |                                  |
+    | warn_bad_lines          |                 |                |                |                                  |
+    | on_bad_lines            |                 |                |                |                                  |
+    | skipfooter              |                 |                |                |                                  |
+    | low_memory              |                 |                |                |                                  |
+    | memory_map              |                 |                |                |                                  |
+    | float_precision         |                 |                |                |                                  |
+    | storage_options         |                 |                |                |                                  |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
     """
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_csv_signature = {
@@ -198,6 +310,27 @@ def read_table(
 ):  # noqa: PR01, RT01, D200
     """
     Read general delimited file into DataFrame.
+
+    Parameters Support Status:
+
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=========================+=================+================+================+==================================+
+    | All parameters          | Partial         | Partial        | Harmful        | OmniSci execution is not         |
+    |                         |                 |                |                | supported                        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | filepath_or_buffer      | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
+    |                         |                 |                |                | Some buffer formats can be       |
+    |                         |                 |                |                | unsupported                      |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | skiprows                | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
+    |                         |                 |                |                | Parameter is unsupported         |
+    |                         |                 |                |                | if `skiprows` and `header`       |
+    |                         |                 |                |                | parameters are both present and  |
+    |                         |                 |                |                | their values have intersections  |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | chunksize               | Harmful         | Harmful        | Harmful        |                                  |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
     """
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_csv_signature = {
@@ -222,6 +355,15 @@ def read_parquet(
 ):  # noqa: PR01, RT01, D200
     """
     Load a parquet object from the file path, returning a DataFrame.
+
+    Parameters Support Status:
+
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=========================+=================+================+================+==================================+
+    | All parameters          |                 |                | Harmful        | OmniSci execution is not         |
+    |                         |                 |                |                | supported                        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
     """
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
@@ -261,6 +403,23 @@ def read_json(
 ):  # noqa: PR01, RT01, D200
     """
     Convert a JSON string to Modin object.
+
+    Parameters Support Status:
+
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=========================+=================+================+================+==================================+
+    | All parameters          | Partial         | Partial        | Harmful        | OmniSci execution is not         |
+    |                         |                 |                |                | supported                        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | path_or_buf             | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
+    |                         |                 |                |                | String parameters and some       |
+    |                         |                 |                |                | buffer formats are not supported |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | lines                   | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
+    |                         |                 |                |                | Must be True if specified        |
+    |                         |                 |                |                | supported                        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -289,6 +448,14 @@ def read_gbq(
 ) -> DataFrame:  # noqa: PR01, RT01, D200
     """
     Load data from Google BigQuery.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=================+=================+================+================+==================================+
+    | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
@@ -320,6 +487,14 @@ def read_html(
 ):  # noqa: PR01, RT01, D200
     """
     Read HTML tables into a ``DataFrame`` object.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=================+=================+================+================+==================================+
+    | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -334,6 +509,14 @@ def read_html(
 def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover  # noqa: PR01, RT01, D200
     """
     Read text from clipboard and pass to read_csv.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=================+=================+================+================+==================================+
+    | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
@@ -377,6 +560,29 @@ def read_excel(
 ) -> "DataFrame | dict[IntStrT, DataFrame]":  # noqa: PR01, RT01, D200
     """
     Read an Excel file into a DataFrame.
+
+    Parameters Support Status:
+
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=========================+=================+================+================+==================================+
+    | All parameters          | Partial         | Partial        | Harmful        | OmniSci execution is not         |
+    |                         |                 |                |                | supported                        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | io                      | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
+    |                         |                 |                |                | Only newer Excel file formats    |
+    |                         |                 |                |                | are supported                    |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | sheet_name              | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
+    |                         |                 |                |                | Only single sheets imports are   |
+    |                         |                 |                |                | supported (str and int parameter |
+    |                         |                 |                |                | values)                          |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | engine                  | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
+    |                         |                 |                |                | Only "openpyxl" engine is        |
+    |                         |                 |                |                | supported (None and "openpyxl"   |
+    |                         |                 |                |                | parameter values)                |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -410,6 +616,14 @@ def read_hdf(
 ):  # noqa: PR01, RT01, D200
     """
     Read data from the store into DataFrame.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=================+=================+================+================+==================================+
+    | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
@@ -430,6 +644,18 @@ def read_feather(
 ):  # noqa: PR01, RT01, D200
     """
     Load a feather-format object from the file path.
+
+    Parameters Support Status:
+
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=========================+=================+================+================+==================================+
+    | All parameters          | Partial         | Partial        | Harmful        | OmniSci execution is not         |
+    |                         |                 |                |                | supported                        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | path                    | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
+    |                         |                 |                |                | Buffers are not supported        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -457,6 +683,14 @@ def read_stata(
 ):  # noqa: PR01, RT01, D200
     """
     Read Stata file into a DataFrame.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=================+=================+================+================+==================================+
+    | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -478,6 +712,14 @@ def read_sas(
 ):  # pragma: no cover  # noqa: PR01, RT01, D200
     """
     Read SAS files stored as either XPORT or SAS7BDAT format files.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=================+=================+================+================+==================================+
+    | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -496,6 +738,17 @@ def read_pickle(
 ):  # noqa: PR01, RT01, D200
     """
     Load pickled Modin object (or any object) from file.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=================+=================+================+================+==================================+
+    | All parameters  | Harmful         | Harmful        | Harmful        | **Ray**:                         |
+    |                 |                 |                |                | read_pickle_distributed is an    |
+    |                 |                 |                |                | experimental, distributed        |
+    |                 |                 |                |                | implementation                   |
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -519,6 +772,22 @@ def read_sql(
 ):  # noqa: PR01, RT01, D200
     """
     Read SQL query or database table into a DataFrame.
+
+    Parameters Support Status:
+
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=========================+=================+================+================+==================================+
+    | All parameters          |                 |                | Harmful        | OmniSci execution is not         |
+    |                         |                 |                |                | supported                        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | con                     |                 |                | Harmful        | **Ray/Dask**:                    |
+    |                         |                 |                |                | Please use                       |
+    |                         |                 |                |                | `ModinDatabaseConnection`        |
+    |                         |                 |                |                | instead of sqlalchemy            |
+    |                         |                 |                |                | connections to avoid performance |
+    |                         |                 |                |                | degradation                      |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -545,6 +814,31 @@ def read_fwf(
 ):  # noqa: PR01, RT01, D200
     """
     Read a table of fixed-width formatted lines into DataFrame.
+
+    Parameters Support Status:
+
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=========================+=================+================+================+==================================+
+    | All parameters          | Partial         | Partial        | Harmful        | OmniSci execution is not         |
+    |                         |                 |                |                | supported                        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | filepath_or_buffer      | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
+    |                         |                 |                |                | Some buffer formats are          |
+    |                         |                 |                |                | unsupported                      |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | infer_nrows             | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
+    |                         |                 |                |                | Parameter values > 100 are not   |
+    |                         |                 |                |                | supported                        |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | skiprows                | Partial         | Partial        | Harmful        | **Ray/Dask**:                    |
+    |                         |                 |                |                | Parameter is unsupported         |
+    |                         |                 |                |                | if `skiprows` and `header`       |
+    |                         |                 |                |                | parameters are both present and  |
+    |                         |                 |                |                | their values have intersections  |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
+    | chunksize               | Harmful         | Harmful        | Harmful        |                                  |
+    +-------------------------+-----------------+----------------+----------------+----------------------------------+
     """
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
@@ -579,6 +873,14 @@ def read_sql_table(
 ):  # noqa: PR01, RT01, D200
     """
     Read SQL database table into a DataFrame.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=================+=================+================+================+==================================+
+    | All parameters  | Harmful         | Harmful        | Harmful        | Please use `pd.read_sql` instead |
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -602,6 +904,14 @@ def read_sql_query(
 ):  # noqa: PR01, RT01, D200
     """
     Read SQL query into a DataFrame.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=================+=================+================+================+==================================+
+    | All parameters  | Harmful         | Harmful        | Harmful        | Please use `pd.read_sql` instead |
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -620,6 +930,14 @@ def read_spss(
 ):  # noqa: PR01, RT01, D200
     """
     Load an SPSS file from the file path, returning a DataFrame.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=================+=================+================+================+==================================+
+    | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
@@ -640,6 +958,17 @@ def to_pickle(
 ):  # noqa: RT01
     """
     Pickle (serialize) object to file.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=================+=================+================+================+==================================+
+    | All parameters  | Harmful         | Harmful        | Harmful        | **Ray**                          |
+    |                 |                 |                |                | to_pickle_distributed is an      |
+    |                 |                 |                |                | experimental, distributed        |
+    |                 |                 |                |                | implementation                   |
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
 
     Parameters
     ----------
@@ -701,6 +1030,14 @@ def json_normalize(
 ) -> DataFrame:  # noqa: PR01, RT01, D200
     """
     Normalize semi-structured JSON data into a flat table.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=================+=================+================+================+==================================+
+    | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     ErrorMessage.default_to_pandas("json_normalize")
     Engine.subscribe(_update_engine)
@@ -718,6 +1055,14 @@ def read_orc(
 ) -> DataFrame:  # noqa: PR01, RT01, D200
     """
     Load an ORC object from the file path, returning a DataFrame.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=================+=================+================+================+==================================+
+    | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     ErrorMessage.default_to_pandas("read_orc")
     Engine.subscribe(_update_engine)
@@ -741,6 +1086,14 @@ def read_xml(
 ) -> DataFrame:  # noqa: PR01, RT01, D200
     """
     Read XML document into a ``DataFrame`` object.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=================+=================+================+================+==================================+
+    | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
     ErrorMessage.default_to_pandas("read_xml")
     Engine.subscribe(_update_engine)
@@ -765,6 +1118,14 @@ def read_xml(
 class HDFStore(ClassLogger, pandas.HDFStore):  # noqa: PR01, D200
     """
     Dict-like IO interface for storing pandas objects in PyTables.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=================+=================+================+================+==================================+
+    | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
 
     _return_modin_dataframe = True
@@ -822,6 +1183,15 @@ class HDFStore(ClassLogger, pandas.HDFStore):  # noqa: PR01, D200
 class ExcelFile(ClassLogger, pandas.ExcelFile):  # noqa: PR01, D200
     """
     Class for parsing tabular excel sheets into DataFrame objects.
+
+    Parameters Support Status:
+
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
+    | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+    +=================+=================+================+================+==================================+
+    | All parameters  | Harmful         | Harmful        | Harmful        | Please use `pd.read_excel`       |
+    |                 |                 |                |                | instead                          |
+    +-----------------+-----------------+----------------+----------------+----------------------------------+
     """
 
     def __getattribute__(self, item):

@@ -11,7 +11,36 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses ``DataFrame`` class, that is distributed version of ``pandas.DataFrame``."""
+"""
+Module houses ``DataFrame`` class, which is a distributed version of the ``pandas.DataFrame``.
+
+Method docstrings contain tables with information on supported parameters.
+These tables are structured as follows: The first column contains the parameter name,
+the second, third and fourth column contain flags describing particular properties of
+method parameters - each column corresponding to a concrete execution supported by Modin
+(`PandasOnRay`, `PandasOnDask` or `OmniSci`), and the last column contains parameter notes.
+The flags are defined as follows:
+
++-----------+-----------------------------------------------------------------------------------------------+
+| Flag      | Meaning                                                                                       |
++===========+===============================================================================================+
+| Harmful   | Usage of this parameter can be harmful to performance of your application. This usually       |
+|           | happens when a parameter (full range of values and all types) is not supported and Modin      |
+|           | defaults to pandas (see more on defaulting to pandas at                                       |
+|           | https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html)              |
++-----------+-----------------------------------------------------------------------------------------------+
+| Partial   | Parameter is partially unsupported - it's usage can be harmful to performance of your         |
+|           | application. This can happen if some parameter values or types are not supported (for         |
+|           | example, boolean values are supported while integer values are not) so Modin may default to   |
+|           | pandas (see more on defaulting to pandas at                                                   |
+|           | https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html)              |
++-----------+-----------------------------------------------------------------------------------------------+
+
+The first row (`All parameters` parameter name) shows a summary of support for the whole
+method while further rows break down support status by parameter. Please note, that the
+tables only list unsupported/partially supported parameters. If a parameter is supported,
+it won't be present in the table.
+"""
 
 import pandas
 from pandas.core.common import apply_if_callable
@@ -2100,6 +2129,14 @@ class DataFrame(BasePandasDataset):
     def to_feather(self, path, **kwargs):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Write a ``DataFrame`` to the binary Feather format.
+
+        Parameters Support Status:
+
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=================+=================+================+================+==================================+
+        | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(pandas.DataFrame.to_feather, path, **kwargs)
 
@@ -2118,6 +2155,14 @@ class DataFrame(BasePandasDataset):
     ):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Write a ``DataFrame`` to a Google BigQuery table.
+
+        Parameters Support Status:
+
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=================+=================+================+================+==================================+
+        | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
             pandas.DataFrame.to_gbq,
@@ -2161,6 +2206,14 @@ class DataFrame(BasePandasDataset):
     ):  # noqa: PR01, RT01, D200
         """
         Render a ``DataFrame`` as an HTML table.
+
+        Parameters Support Status:
+
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=================+=================+================+================+==================================+
+        | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
             pandas.DataFrame.to_html,
@@ -2201,6 +2254,25 @@ class DataFrame(BasePandasDataset):
     ):  # noqa: PR01, RT01, D200
         """
         Write a DataFrame to the binary parquet format.
+
+        Parameters Support Status:
+
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=========================+=================+================+================+==================================+
+        | All parameters          | Partial         | Harmful        | Harmful        | OmniSci and PandasOnDask         |
+        |                         |                 |                |                | executions are not supported     |
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
+        | path                    | Partial         | Harmful        | Harmful        | **Ray**:                         |
+        |                         |                 |                |                | Only str parameter type is       |
+        |                         |                 |                |                | supported. File path shouldn't   |
+        |                         |                 |                |                | contain compression extensions   |
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
+        | compression             | Partial         | Harmful        | Harmful        | **Ray**:                         |
+        |                         |                 |                |                | Compressions are not supported   |
+        |                         |                 |                |                | (only "snappy" and None          |
+        |                         |                 |                |                | parameter values are supported)  |
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
         """
         config = {
             "path": path,
@@ -2257,6 +2329,14 @@ class DataFrame(BasePandasDataset):
     ):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Export ``DataFrame`` object to Stata data format.
+
+        Parameters Support Status:
+
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=================+=================+================+================+==================================+
+        | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
             pandas.DataFrame.to_stata,
@@ -2305,6 +2385,14 @@ class DataFrame(BasePandasDataset):
     ):  # noqa: PR01, RT01, D200
         """
         Render a DataFrame to an XML document.
+
+        Parameters Support Status:
+
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=================+=================+================+================+==================================+
+        | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self.__constructor__(
             query_compiler=self._query_compiler.default_to_pandas(

@@ -11,7 +11,36 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Implement DataFrame/Series public API as pandas does."""
+"""
+Implement DataFrame/Series public API as pandas does.
+
+Method docstrings contain tables with information on supported parameters.
+These tables are structured as follows: The first column contains the parameter name,
+the second, third and fourth column contain flags describing particular properties of
+method parameters - each column corresponding to a concrete execution supported by Modin
+(`PandasOnRay`, `PandasOnDask` or `OmniSci`), and the last column contains parameter notes.
+The flags are defined as follows:
+
++-----------+-----------------------------------------------------------------------------------------------+
+| Flag      | Meaning                                                                                       |
++===========+===============================================================================================+
+| Harmful   | Usage of this parameter can be harmful to performance of your application. This usually       |
+|           | happens when a parameter (full range of values and all types) is not supported and Modin      |
+|           | defaults to pandas (see more on defaulting to pandas at                                       |
+|           | https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html)              |
++-----------+-----------------------------------------------------------------------------------------------+
+| Partial   | Parameter is partially unsupported - it's usage can be harmful to performance of your         |
+|           | application. This can happen if some parameter values or types are not supported (for         |
+|           | example, boolean values are supported while integer values are not) so Modin may default to   |
+|           | pandas (see more on defaulting to pandas at                                                   |
+|           | https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html)              |
++-----------+-----------------------------------------------------------------------------------------------+
+
+The first row (`All parameters` parameter name) shows a summary of support for the whole
+method while further rows break down support status by parameter. Please note, that the
+tables only list unsupported/partially supported parameters. If a parameter is supported,
+it won't be present in the table.
+"""
 
 import numpy as np
 from numpy import nan
@@ -2971,6 +3000,14 @@ class BasePandasDataset(ClassLogger):
     ):  # pragma: no cover  # noqa: PR01, RT01, D200
         """
         Copy object to the system clipboard.
+
+        Parameters Support Status:
+
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=================+=================+================+================+==================================+
+        | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas("to_clipboard", excel=excel, sep=sep, **kwargs)
 
@@ -3000,6 +3037,34 @@ class BasePandasDataset(ClassLogger):
     ):  # pragma: no cover  # noqa: PR01, RT01, D200
         """
         Write object to a comma-separated values (csv) file.
+
+        Parameters Support Status:
+
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=========================+=================+================+================+==================================+
+        | All parameters          | Partial         | Harmful        | Harmful        | OmniSci and PandasOnDask         |
+        |                         |                 |                |                | executions are not supported     |
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
+        | path_or_buf             | Partial         | Harmful        | Harmful        | **Ray**:                         |
+        |                         |                 |                |                | Only str parameter type is       |
+        |                         |                 |                |                | supported. File path shouldn't   |
+        |                         |                 |                |                | contain compression extensions   |
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
+        | mode                    | Partial         | Harmful        | Harmful        | **Ray**:                         |
+        |                         |                 |                |                | Modes with "r+" components are   |
+        |                         |                 |                |                | not supported                    |
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
+        | encoding                | Partial         | Harmful        | Harmful        | **Ray**:                         |
+        |                         |                 |                |                | Encodings with BOMs (utf-16 and  |
+        |                         |                 |                |                | utf-16 with all aliases) are not |
+        |                         |                 |                |                | supported                        |
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
+        | compression             | Partial         | Harmful        | Harmful        | **Ray**:                         |
+        |                         |                 |                |                | Compressions are not supported   |
+        |                         |                 |                |                | (only "infer" and None parameter |
+        |                         |                 |                |                | values are supported)            |
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
         """
         kwargs = {
             "path_or_buf": path_or_buf,
@@ -3062,6 +3127,14 @@ class BasePandasDataset(ClassLogger):
     ):  # pragma: no cover  # noqa: PR01, RT01, D200
         """
         Write object to an Excel sheet.
+
+        Parameters Support Status:
+
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=================+=================+================+================+==================================+
+        | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
             "to_excel",
@@ -3089,6 +3162,14 @@ class BasePandasDataset(ClassLogger):
     ):  # pragma: no cover  # noqa: PR01, RT01, D200
         """
         Write the contained data to an HDF5 file using HDFStore.
+
+        Parameters Support Status:
+
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=================+=================+================+================+==================================+
+        | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
             "to_hdf", path_or_buf, key, format=format, **kwargs
@@ -3111,6 +3192,14 @@ class BasePandasDataset(ClassLogger):
     ):  # pragma: no cover  # noqa: PR01, RT01, D200
         """
         Convert the object to a JSON string.
+
+        Parameters Support Status:
+
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=================+=================+================+================+==================================+
+        | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
             "to_json",
@@ -3155,6 +3244,14 @@ class BasePandasDataset(ClassLogger):
     ):  # pragma: no cover  # noqa: PR01, RT01, D200
         """
         Render object to a LaTeX tabular, longtable, or nested table.
+
+        Parameters Support Status:
+
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=================+=================+================+================+==================================+
+        | All parameters  | Harmful         | Harmful        | Harmful        |                                  |
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         return self._default_to_pandas(
             "to_latex",
@@ -3231,6 +3328,17 @@ class BasePandasDataset(ClassLogger):
     ):  # pragma: no cover  # noqa: PR01, D200
         """
         Pickle (serialize) object to file.
+
+        Parameters Support Status:
+
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters      | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=================+=================+================+================+==================================+
+        | All parameters  | Harmful         | Harmful        | Harmful        | **Ray**                          |
+        |                 |                 |                |                | `to_pickle_distributed` is an    |
+        |                 |                 |                |                | experimental distributed         |
+        |                 |                 |                |                | implementation.                  |
+        +-----------------+-----------------+----------------+----------------+----------------------------------+
         """
         from modin.pandas.io import to_pickle
 
@@ -3303,6 +3411,19 @@ class BasePandasDataset(ClassLogger):
     ):  # noqa: PR01, D200
         """
         Write records stored in a `BasePandasDataset` to a SQL database.
+
+        Parameters Support Status:
+
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
+        | Parameters              | PandasOnRay     | PandasOnDask   | OmniSci        | Notes                            |
+        +=========================+=================+================+================+==================================+
+        | All parameters          | Partial         | Harmful        | Harmful        | OmniSci and PandasOnDask         |
+        |                         |                 |                |                | executions are not supported     |
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
+        | con                     | Partial         | Harmful        | Harmful        | **Ray**:                         |
+        |                         |                 |                |                | Only str parameter type is       |
+        |                         |                 |                |                | supported.                       |
+        +-------------------------+-----------------+----------------+----------------+----------------------------------+
         """
         new_query_compiler = self._query_compiler
         # writing the index to the database by inserting it to the DF
