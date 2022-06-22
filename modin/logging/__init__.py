@@ -12,10 +12,11 @@
 # governing permissions and limitations under the License.
 
 from .class_logger import ClassLogger  # noqa: F401
-from .config import get_logger, get_worker_logger  # noqa: F401
+from .config import get_logger  # noqa: F401
 from .logger_decorator import (
     enable_logging,
     disable_logging,
+    enable_remote_logging,
 )  # noqa: F401
 
 __all__ = [
@@ -23,5 +24,5 @@ __all__ = [
     "get_logger",
     "enable_logging",
     "disable_logging",
-    "get_worker_logger",
+    "enable_remote_logging",
 ]

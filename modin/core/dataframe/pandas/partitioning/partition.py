@@ -24,7 +24,11 @@ from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_p
 from modin.logging import ClassLogger
 
 
-class PandasDataframePartition(ClassLogger, ABC):  # pragma: no cover
+class PandasDataframePartition(
+    ABC,
+    ClassLogger,
+    modin_layer="PARTITION",
+):  # pragma: no cover
     """
     An abstract class that is base for any partition class of ``pandas`` storage format.
 

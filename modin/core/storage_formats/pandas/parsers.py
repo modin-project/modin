@@ -141,7 +141,6 @@ def find_common_type_cat(types):
 class PandasParser(ClassLogger):
     """Base class for parser classes with pandas storage format."""
 
-    @disable_logging
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def generic_parse(fname, **kwargs):
@@ -294,8 +293,9 @@ class PandasParser(ClassLogger):
 
 @doc(_doc_pandas_parser_class, data_type="CSV files")
 class PandasCSVParser(PandasParser):
-    @disable_logging
+    # Disable logging for a function that is executed in a remote context, see TextFileDispatcher._launch_tasks
     @staticmethod
+    @disable_logging
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
         return PandasParser.generic_parse(fname, **kwargs)
@@ -386,7 +386,9 @@ class PandasPickleExperimentalParser(PandasParser):
 
 @doc(_doc_pandas_parser_class, data_type="custom text")
 class CustomTextExperimentalParser(PandasParser):
+    # Disable logging for a function that is executed in a remote context, see TextFileDispatcher._launch_tasks
     @staticmethod
+    @disable_logging
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
         return PandasParser.generic_parse(fname, **kwargs)
@@ -394,7 +396,9 @@ class CustomTextExperimentalParser(PandasParser):
 
 @doc(_doc_pandas_parser_class, data_type="tables with fixed-width formatted lines")
 class PandasFWFParser(PandasParser):
+    # Disable logging for a function that is executed in a remote context, see TextFileDispatcher._launch_tasks
     @staticmethod
+    @disable_logging
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
         return PandasParser.generic_parse(fname, **kwargs)

@@ -125,6 +125,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         args.extend(self.list_of_blocks)
         return self._wrap_partitions(self.deploy_axis_func(*args, **kwargs))
 
+    # Disable logging for a function that is executed in a remote context, see ray/dask virtual_partition.py
     @classmethod
     @disable_logging
     def deploy_axis_func(
@@ -182,8 +183,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     lengths = None
         return split_result_of_axis_func_pandas(axis, num_splits, result, lengths)
 
-    @disable_logging
+    # Disable logging for a function that is executed in a remote context, see ray/dask virtual_partition.py
     @classmethod
+    @disable_logging
     def deploy_func_between_two_axis_partitions(
         cls,
         axis,

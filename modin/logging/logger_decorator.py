@@ -23,7 +23,8 @@ from functools import wraps
 from logging import Logger
 
 from modin.config import LogMode
-from .config import get_logger
+from .config import get_logger, get_worker_logger
+from modin.logging.config import JOB_ID
 
 _MODIN_LOGGER_NOWRAP = "__modin_logging_nowrap__"
 
@@ -143,3 +144,65 @@ def enable_logging(
         return disable_logging(run_and_log)
 
     return decorator
+
+
+def enable_remote_logging(
+    func,
+    modin_layer: Union[str, Callable, Type] = "RAY-REMOTE",
+    log_level: Optional[str] = "info",
+):
+    """
+    Log Decorator used on Modin remote functions.
+
+    Parameters
+    ----------
+    modin_layer : str or object to decorate, default: "RAY-REMOTE"
+        If it's an object to decorate, call logger_decorator() on it with default arguments.
+    log_level : str, default: "info"
+        The log level (INFO, DEBUG, WARNING, etc.).
+
+    Returns
+    -------
+    func
+        A decorator function.
+    """
+
+    log_level = log_level.lower()
+    assert hasattr(Logger, log_level.lower()), f"Invalid log level: {log_level}"
+
+    @wraps(func)
+    def run_and_log(*args, **kwargs):
+        """
+        Compute function with logging if Modin logging is enabled.
+
+        Parameters
+        ----------
+        *args : tuple
+            The function arguments.
+        **kwargs : dict
+            The function keyword arguments.
+
+        Returns
+        -------
+        Any
+        """
+        # Don't log remote calls if LogMode is disable or api_only.
+        if LogMode.get() != "enable":
+            return func(*args, **kwargs)
+
+        logger = get_worker_logger(JOB_ID)
+        start_line = f"START::{modin_layer.upper()}::{func.__name__}"
+        stop_line = f"STOP::{modin_layer.upper()}::{func.__name__}"
+
+        funcs = [arg for arg in args if isinstance(arg, Callable)]
+        if funcs:
+            start_line += f":{funcs}"
+            stop_line += f":{funcs}"
+
+        logger.info(start_line)
+        try:
+            return func(*args, **kwargs)
+        finally:
+            logger.info(stop_line)
+
+    return run_and_log

@@ -14,16 +14,14 @@
 """Module houses classes responsible for storing a virtual partition and applying a function to it."""
 
 import pandas
-from modin.config import LogMode
-from modin.logging import get_worker_logger
-from modin.logging.config import JOB_ID
+from modin.logging import enable_remote_logging
 import ray
 from ray.util import get_node_ip_address
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-from modin.core.execution.ray.common.utils import deserialize
+from modin.core.execution.ray.common.utils import deserialize, ray_remote_env
 from .partition import PandasOnRayDataframePartition
 
 
@@ -508,10 +506,8 @@ class PandasOnRayDataframeRowPartition(PandasOnRayDataframeVirtualPartition):
     axis = 1
 
 
-__WORKER_ENV__ = {"env_vars": {"MODIN_LOG_MODE": LogMode.get()}}
-
-
-@ray.remote(runtime_env=__WORKER_ENV__)
+@ray_remote_env(num_returns=2)
+@enable_remote_logging
 def deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
     """
     Execute a function on an axis partition in a worker process.
@@ -534,21 +530,13 @@ def deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
     -----
     Ray functions are not detected by codecov (thus pragma: no cover).
     """
-    logger = get_worker_logger(JOB_ID)
-    logger.info(
-        f"START::PANDAS-API::PandasOnRayDataframeVirtualPartition.deploy_ray_func {func}"
-    )
     if "args" in kwargs:
         kwargs["args"] = deserialize(kwargs["args"])
     result = func(*args, **kwargs)
     ip = get_node_ip_address()
     if isinstance(result, pandas.DataFrame):
-        res = result, len(result), len(result.columns), ip
+        return result, len(result), len(result.columns), ip
     elif all(isinstance(r, pandas.DataFrame) for r in result):
-        res = [i for r in result for i in [r, len(r), len(r.columns), ip]]
+        return [i for r in result for i in [r, len(r), len(r.columns), ip]]
     else:
-        res = [i for r in result for i in [r, None, None, ip]]
-    logger.info(
-        f"STOP::PANDAS-API::PandasOnRayDataframeVirtualPartition.deploy_ray_func {func}"
-    )
-    return res
+        return [i for r in result for i in [r, None, None, ip]]

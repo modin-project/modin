@@ -13,7 +13,6 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
-from modin.config import LogMode
 import ray
 from ray.util import get_node_ip_address
 import uuid
@@ -21,12 +20,10 @@ from modin.core.execution.ray.common.utils import deserialize, ObjectIDType
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
-from modin.logging import get_worker_logger
-from modin.logging.config import JOB_ID
+from modin.logging import get_logger, enable_remote_logging
+from modin.core.execution.ray.common.utils import ray_remote_env
 
 compute_sliced_len = ray.remote(compute_sliced_len)
-
-__WORKER_ENV__ = {"env_vars": {"MODIN_LOG_MODE": LogMode.get()}}
 
 
 class PandasOnRayDataframePartition(PandasDataframePartition):
@@ -57,6 +54,14 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         self._width_cache = width
         self._ip_cache = ip
         self._identity = uuid.uuid4().hex
+        logger = get_logger()
+        logger.debug(
+            "Partition ID: %s, Height: %s, Width: %s, Node IP: %s",
+            self._identity,
+            str(self._length_cache),
+            str(self._width_cache),
+            str(self._ip_cache),
+        )
 
     def get(self):
         """
@@ -306,7 +311,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         return self._ip_cache
 
 
-@ray.remote(num_returns=2, runtime_env=__WORKER_ENV__)
+@ray_remote_env(num_returns=2)
+@enable_remote_logging
 def _get_index_and_columns(df):
     """
     Get the number of rows and columns of a pandas DataFrame.
@@ -323,18 +329,11 @@ def _get_index_and_columns(df):
     int
         The number of columns.
     """
-    logger = get_worker_logger(JOB_ID)
-    logger.info(
-        f"START::PANDAS-API::PandasOnRayDataframePartition._get_index_and_columns"
-    )
-    res = len(df.index), len(df.columns)
-    logger.info(
-        f"STOP::PANDAS-API::PandasOnRayDataframePartition._get_index_and_columns"
-    )
-    return res
+    return len(df.index), len(df.columns)
 
 
-@ray.remote(num_returns=4, runtime_env=__WORKER_ENV__)
+@ray_remote_env(num_returns=4)
+@enable_remote_logging
 def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     """
     Execute a function on the partition in a worker process.
@@ -361,10 +360,6 @@ def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     str
         The node IP address of the worker process.
     """
-    logger = get_worker_logger(JOB_ID)
-    logger.info(
-        f"START::PANDAS-API::PandasOnRayDataframePartition._apply_func {func=} {args=} {kwargs=}"
-    )
     try:
         result = func(partition, *args, **kwargs)
     # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
@@ -372,17 +367,16 @@ def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     # we absolutely have to.
     except ValueError:
         result = func(partition.copy(), *args, **kwargs)
-    res = (
+    return (
         result,
         len(result) if hasattr(result, "__len__") else 0,
         len(result.columns) if hasattr(result, "columns") else 0,
         get_node_ip_address(),
     )
-    logger.info(f"STOP::PANDAS-API::PandasOnRayDataframePartition._apply_func")
-    return res
 
 
-@ray.remote(num_returns=4, runtime_env=__WORKER_ENV__)
+@ray_remote_env(num_returns=4)
+@enable_remote_logging
 def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
     """
     Execute all operations stored in the call queue on the partition in a worker process.
@@ -405,10 +399,6 @@ def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
     str
         The node IP address of the worker process.
     """
-    logger = get_worker_logger(JOB_ID)
-    logger.info(
-        f"START::PANDAS-API::PandasOnRayDataframePartition._apply_list_of_funcs"
-    )
     for func, args, kwargs in funcs:
         func = deserialize(func)
         args = deserialize(args)
@@ -420,11 +410,9 @@ def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
         # we absolutely have to.
         except ValueError:
             partition = func(partition.copy(), *args, **kwargs)
-    res = (
+    return (
         partition,
         len(partition) if hasattr(partition, "__len__") else 0,
         len(partition.columns) if hasattr(partition, "columns") else 0,
         get_node_ip_address(),
     )
-    logger.info(f"STOP::PANDAS-API::PandasOnRayDataframePartition._apply_list_of_funcs")
-    return res

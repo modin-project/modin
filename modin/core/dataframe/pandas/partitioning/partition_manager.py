@@ -79,7 +79,11 @@ def wait_computations_if_benchmark_mode(func):
     return func
 
 
-class PandasDataframePartitionManager(ClassLogger, ABC):
+class PandasDataframePartitionManager(
+    ABC,
+    ClassLogger,
+    modin_layer="PARTITION",
+):
     """
     Base class for managing the dataframe data layout and operators across the distribution of partitions.
 

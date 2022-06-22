@@ -17,7 +17,11 @@ from abc import ABC
 from modin.logging import ClassLogger
 
 
-class BaseDataframeAxisPartition(ClassLogger, ABC):  # pragma: no cover
+class BaseDataframeAxisPartition(
+    ABC,
+    ClassLogger,
+    modin_layer="PARTITION",
+):  # pragma: no cover
     """
     An abstract class that represents the parent class for any axis partition class.
 

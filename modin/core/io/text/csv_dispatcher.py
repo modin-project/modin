@@ -22,6 +22,7 @@ from modin.logging import disable_logging
 class CSVDispatcher(TextFileDispatcher):
     """Class handles utils for reading `.csv` files."""
 
+    # Disable logging for a function that is executed in a remote context, see TextFileDispatcher._read
     @disable_logging
     def read_callback(*args, **kwargs):
         """

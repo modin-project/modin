@@ -3825,6 +3825,7 @@ class BasePandasDataset(ClassLogger):
         """
         return self.to_numpy()
 
+    # Disable logging attributes as they are not useful.
     @disable_logging
     def __getattribute__(self, item):
         """
