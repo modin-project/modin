@@ -235,14 +235,6 @@ class BasePandasDataset(ClassLogger):
             Specifies axis along which to do validation. When `1` or `None`
             is specified, validation is done along `index`, if `0` is specified
             validation is done along `columns` of `other` frame.
-        numeric_only : bool, default: False
-            Validates that both frames have only numeric dtypes.
-        numeric_or_time_only : bool, default: False
-            Validates that both frames have either numeric or time dtypes.
-        numeric_or_object_only : bool, default: False
-            Validates that both frames have either numeric or object dtypes.
-        comparison_dtypes_only : bool, default: False
-            Validates that both frames have either numeric or time or equal dtypes.
         compare_index : bool, default: False
             Compare Index if True.
 
