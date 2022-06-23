@@ -140,11 +140,13 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     def deploy_axis_func(
         cls,
         axis,
-        func,
+        invokable,
         num_splits,
         maintain_partitioning,
         *partitions,
-        **kwargs,
+        manual_partition=False,
+        lengths=None,
+        max_retries=None,
     ):
         """
         Deploy a function along a full axis.
@@ -170,31 +172,29 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of ``ray.ObjectRef``-s.
         """
-        lengths = kwargs.get("_lengths", None)
-        max_retries = kwargs.pop("max_retries", None)
         return deploy_ray_func.options(
             num_returns=(num_splits if lengths is None else len(lengths)) * 4,
             **({"max_retries": max_retries} if max_retries is not None else {}),
         ).remote(
             PandasDataframeAxisPartition.deploy_axis_func,
             axis,
-            func,
+            invokable,
             num_splits,
             maintain_partitioning,
             *partitions,
-            **kwargs,
+            lengths=lengths,
+            manual_partition=manual_partition,
         )
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
         cls,
         axis,
-        func,
+        invokable,
         num_splits,
         len_of_left,
         other_shape,
         *partitions,
-        **kwargs,
     ):
         """
         Deploy a function along a full axis between two data sets.
@@ -225,12 +225,11 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         return deploy_ray_func.options(num_returns=num_splits * 4).remote(
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
-            func,
+            invokable,
             num_splits,
             len_of_left,
             other_shape,
             *partitions,
-            **kwargs,
         )
 
     def _wrap_partitions(self, partitions):
@@ -259,6 +258,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
+        manual_partition=False,
+        lengths=None,
         **kwargs,
     ):
         """
@@ -282,6 +283,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             In this case, we have to return the partitioning to its previous
             orientation (the lengths will remain the same). This is ignored between
             two axis partitions.
+        args : tuple
+            Positional arguments to be passed in `func`.
         **kwargs : dict
             Additional keywords arguments to be passed in `func`.
 
@@ -296,12 +299,14 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             num_splits = 1
         if len(self.call_queue) > 0:
             self.drain_call_queue()
-        kwargs["args"] = args
         result = super(PandasOnRayDataframeVirtualPartition, self).apply(
             func,
-            num_splits,
-            other_axis_partition,
-            maintain_partitioning,
+            *args,
+            num_splits=num_splits,
+            other_axis_partition=other_axis_partition,
+            maintain_partitioning=maintain_partitioning,
+            manual_partition=manual_partition,
+            lengths=lengths,
             **kwargs,
         )
         if self.full_axis:
@@ -527,8 +532,9 @@ def deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
     -----
     Ray functions are not detected by codecov (thus pragma: no cover).
     """
-    if "args" in kwargs:
-        kwargs["args"] = deserialize(kwargs["args"])
+    func = deserialize(func)
+    args = (deserialize(arg) for arg in args)
+    kwargs = deserialize(kwargs)
     result = func(*args, **kwargs)
     ip = get_node_ip_address()
     if isinstance(result, pandas.DataFrame):

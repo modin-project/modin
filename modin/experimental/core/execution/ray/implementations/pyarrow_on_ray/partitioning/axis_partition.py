@@ -17,6 +17,7 @@ from modin.core.dataframe.pandas.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
 )
 from .partition import PyarrowOnRayDataframePartition
+from modin.utils import Invokable
 
 import ray
 import pyarrow
@@ -38,7 +39,7 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
         # Unwrap from PandasDataframePartition object for ease of use
         self.list_of_blocks = [obj._data for obj in list_of_blocks]
 
-    def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
+    def apply(self, func, *args, num_splits=None, other_axis_partition=None, **kwargs):
         """
         Apply func to the object in the Plasma store.
 
@@ -73,20 +74,20 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
                     num_returns=num_splits
                 ).remote(
                     self.axis,
-                    func,
+                    Invokable(func=func, args=args, kwargs=kwargs),
                     num_splits,
                     len(self.list_of_blocks),
-                    kwargs,
                     *(self.list_of_blocks + other_axis_partition.list_of_blocks),
                 )
             ]
 
-        args = [self.axis, func, num_splits, kwargs]
-        args.extend(self.list_of_blocks)
         return [
             PyarrowOnRayDataframePartition(obj)
             for obj in deploy_ray_axis_func.options(num_returns=num_splits).remote(
-                *args
+                self.axis,
+                Invokable(func=func, args=args, kwargs=kwargs),
+                num_splits,
+                *self.list_of_blocks,
             )
         ]
 
@@ -278,7 +279,11 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
 
 @ray.remote
 def deploy_ray_func_between_two_axis_partitions(
-    axis, func, num_splits, len_of_left, kwargs, *partitions
+    axis,
+    invokable,
+    num_splits,
+    len_of_left,
+    *partitions,
 ):
     """
     Deploy a function along a full axis between two data sets in Ray.
@@ -306,12 +311,13 @@ def deploy_ray_func_between_two_axis_partitions(
     """
     lt_table = concat_arrow_table_partitions(axis, partitions[:len_of_left])
     rt_table = concat_arrow_table_partitions(axis, partitions[len_of_left:])
+    func, args, kwargs = invokable
     try:
-        result = func(lt_table, rt_table, **kwargs)
+        result = func(lt_table, rt_table, *args, **kwargs)
     except Exception:
         lt_frame = lt_table.from_pandas()
         rt_frame = rt_table.from_pandas()
-        result = pyarrow.Table.from_pandas(func(lt_frame, rt_frame, **kwargs))
+        result = pyarrow.Table.from_pandas(func(lt_frame, rt_frame, *args, **kwargs))
     return split_arrow_table_result(
         axis, result, len(result.num_rows), num_splits, result.schema.metadata
     )

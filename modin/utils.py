@@ -22,7 +22,7 @@ import json
 import codecs
 
 from textwrap import dedent, indent
-from typing import Union
+from typing import Tuple, Union, Callable, NamedTuple
 from packaging import version
 
 import pandas
@@ -42,6 +42,25 @@ MAX_RAY_VERSION_EXCLUSIVE = version.parse("1.13.0")
 MIN_DASK_VERSION = version.parse("2.22.0")
 
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
+
+
+class Invokable(NamedTuple):
+    """
+    Class for config data manipulating of exact type.
+
+    Parameters
+    ----------
+    func : Callable
+        The function to invoke.
+    args : Tuple
+        Tuple of positional arguments to call func with.
+    kwargs: dict
+        Dictionary of keyword arguments to call func with.
+    """
+
+    func: Callable
+    args: Tuple = ()
+    kwargs: dict = {}
 
 
 def _make_api_url(token):

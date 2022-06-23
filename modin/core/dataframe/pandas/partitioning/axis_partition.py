@@ -19,6 +19,7 @@ from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pa
 from modin.core.dataframe.base.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
 )
+from modin.utils import Invokable
 
 
 class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
@@ -31,9 +32,12 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
     def apply(
         self,
         func,
+        *args,
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
+        lengths=None,
+        manual_partition=False,
         **kwargs,
     ):
         """
@@ -79,7 +83,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             return self._wrap_partitions(
                 self.deploy_func_between_two_axis_partitions(
                     self.axis,
-                    func,
+                    Invokable(func=func, args=args, kwargs=kwargs),
                     num_splits,
                     len(self.list_of_blocks),
                     other_shape,
@@ -91,14 +95,21 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                             for part in axis_partition.list_of_blocks
                         ]
                     ),
-                    **kwargs,
                 )
             )
-        args = [self.axis, func, num_splits, maintain_partitioning]
-        args.extend(self.list_of_blocks)
-        return self._wrap_partitions(self.deploy_axis_func(*args, **kwargs))
+        return self._wrap_partitions(
+            self.deploy_axis_func(
+                self.axis,
+                Invokable(func=func, args=args, kwargs=kwargs),
+                num_splits,
+                maintain_partitioning,
+                *self.list_of_blocks,
+                manual_partition=manual_partition,
+                lengths=lengths,
+            )
+        )
 
-    def shuffle(self, func, lengths, **kwargs):
+    def shuffle(self, func, *args, lengths=[], **kwargs):
         """
         Shuffle the order of the data in this axis partition based on the `lengths`.
 
@@ -116,17 +127,29 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         list
             A list of `PandasDataframePartition` objects split by `lengths`.
         """
-        num_splits = len(lengths)
-        # We add these to kwargs and will pop them off before performing the operation.
-        kwargs["manual_partition"] = True
-        kwargs["_lengths"] = lengths
-        args = [self.axis, func, num_splits, False]
-        args.extend(self.list_of_blocks)
-        return self._wrap_partitions(self.deploy_axis_func(*args, **kwargs))
+
+        return self._wrap_partitions(
+            self.deploy_axis_func(
+                self.axis,
+                Invokable(func=func, args=args, kwargs=kwargs),
+                len(lengths),
+                False,
+                *self.list_of_blocks,
+                manual_partition=False,
+                lengths=lengths,
+            )
+        )
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, maintain_partitioning, *partitions, **kwargs
+        cls,
+        axis,
+        invokable,
+        num_splits,
+        maintain_partitioning,
+        *partitions,
+        manual_partition=False,
+        lengths=None,
     ):
         """
         Deploy a function along a full axis.
@@ -152,14 +175,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         list
             A list of pandas DataFrames.
         """
-        # Pop these off first because they aren't expected by the function.
-        manual_partition = kwargs.pop("manual_partition", False)
-        lengths = kwargs.pop("_lengths", None)
-
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
-        # To not mix the args for deploy_axis_func and args for func, we fold
-        # args into kwargs. This is a bit of a hack, but it works.
-        result = func(dataframe, *kwargs.pop("args", ()), **kwargs)
+        result = invokable.func(dataframe, *invokable.args, **invokable.kwargs)
 
         if manual_partition:
             # The split function is expecting a list
@@ -184,12 +201,11 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
     def deploy_func_between_two_axis_partitions(
         cls,
         axis,
-        func,
+        invokable,
         num_splits,
         len_of_left,
         other_shape,
         *partitions,
-        **kwargs,
     ):
         """
         Deploy a function along a full axis between two data sets.
@@ -231,7 +247,5 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             for i in range(1, len(other_shape))
         ]
         rt_frame = pandas.concat(combined_axis, axis=axis ^ 1, copy=False)
-        # To not mix the args for deploy_func_between_two_axis_partitions and args
-        # for func, we fold args into kwargs. This is a bit of a hack, but it works.
-        result = func(lt_frame, rt_frame, *kwargs.pop("args", ()), **kwargs)
+        result = invokable.func(lt_frame, rt_frame, *invokable.args, **invokable.kwargs)
         return split_result_of_axis_func_pandas(axis, num_splits, result)

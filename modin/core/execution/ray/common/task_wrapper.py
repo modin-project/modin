@@ -23,7 +23,7 @@ import ray
 
 
 @ray.remote
-def _deploy_ray_func(func, args):  # pragma: no cover
+def _deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
     """
     Wrap `func` to ease calling it remotely.
 
@@ -39,7 +39,7 @@ def _deploy_ray_func(func, args):  # pragma: no cover
     ray.ObjectRef or list
         Ray identifier of the result being put to Plasma store.
     """
-    return func(**args)
+    return func(*args, **kwargs)
 
 
 class RayTask:
@@ -67,7 +67,7 @@ class RayTask:
             Ray identifier of the result being put to Plasma store.
         """
         return _deploy_ray_func.options(num_returns=num_returns).remote(
-            func, *args, kwargs
+            func, *args, **kwargs
         )
 
     @classmethod

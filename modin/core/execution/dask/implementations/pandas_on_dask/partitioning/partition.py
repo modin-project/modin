@@ -20,6 +20,7 @@ from dask.distributed import wait
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
 from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
+from modin.utils import Invokable
 
 
 class PandasOnDaskDataframePartition(PandasDataframePartition):
@@ -84,12 +85,10 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         -----
         The keyword arguments are sent as a dictionary.
         """
-        call_queue = self.call_queue + [[func, args, kwargs]]
+        call_queue = self.call_queue + [Invokable(func=func, args=args, kwargs=kwargs)]
         if len(call_queue) > 1:
             futures = DaskWrapper.deploy(
-                apply_list_of_funcs,
-                call_queue,
-                self._data,
+                Invokable(func=apply_list_of_funcs, args=(call_queue, self._data)),
                 num_returns=2,
                 pure=False,
             )
@@ -98,13 +97,15 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             # this improves performance a bit.
             func, args, kwargs = call_queue[0]
             futures = DaskWrapper.deploy(
-                apply_func,
-                self._data,
-                func,
-                *args,
+                Invokable(
+                    func=apply_func,
+                    args=(
+                        self._data,
+                        Invokable(func=func, args=args, kwargs=kwargs),
+                    ),
+                ),
                 num_returns=2,
                 pure=False,
-                **kwargs,
             )
         return PandasOnDaskDataframePartition(futures[0], ip=futures[1])
 
@@ -131,7 +132,9 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         The keyword arguments are sent as a dictionary.
         """
         return PandasOnDaskDataframePartition(
-            self._data, call_queue=self.call_queue + [[func, args, kwargs]]
+            self._data,
+            call_queue=self.call_queue
+            + [Invokable(func=func, args=args, kwargs=kwargs)],
         )
 
     def drain_call_queue(self):
@@ -141,9 +144,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         call_queue = self.call_queue
         if len(call_queue) > 1:
             futures = DaskWrapper.deploy(
-                apply_list_of_funcs,
-                call_queue,
-                self._data,
+                Invokable(func=apply_list_of_funcs, args=(call_queue, self._data)),
                 num_returns=2,
                 pure=False,
             )
@@ -152,13 +153,12 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             # this improves performance a bit.
             func, args, kwargs = call_queue[0]
             futures = DaskWrapper.deploy(
-                apply_func,
-                self._data,
-                func,
-                *args,
+                Invokable(
+                    func=apply_func,
+                    args=(self._data, Invokable(func=func, args=args, kwargs=kwargs)),
+                ),
                 num_returns=2,
                 pure=False,
-                **kwargs,
             )
         self._data = futures[0]
         self._ip_cache = futures[1]
@@ -188,11 +188,13 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         new_obj = super().mask(row_labels, col_labels)
         if isinstance(row_labels, slice) and isinstance(self._length_cache, Future):
             new_obj._length_cache = DaskWrapper.deploy(
-                compute_sliced_len, row_labels, self._length_cache
+                Invokable(
+                    func=compute_sliced_len, args=(row_labels, self._length_cache)
+                )
             )
         if isinstance(col_labels, slice) and isinstance(self._width_cache, Future):
             new_obj._width_cache = DaskWrapper.deploy(
-                compute_sliced_len, col_labels, self._width_cache
+                Invokable(func=compute_sliced_len, args=(col_labels, self._width_cache))
             )
         return new_obj
 
@@ -293,7 +295,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         return self._ip_cache
 
 
-def apply_func(partition, func, *args, **kwargs):
+def apply_func(partition, invokable):
     """
     Execute a function on the partition in a worker process.
 
@@ -315,11 +317,11 @@ def apply_func(partition, func, *args, **kwargs):
     str
         The node IP address of the worker process.
     """
-    result = func(partition, *args, **kwargs)
+    result = invokable.func(partition, *invokable.args, **invokable.kwargs)
     return result, get_ip()
 
 
-def apply_list_of_funcs(funcs, partition):
+def apply_list_of_funcs(invokables, partition):
     """
     Execute all operations stored in the call queue on the partition in a worker process.
 
@@ -337,6 +339,6 @@ def apply_list_of_funcs(funcs, partition):
     str
         The node IP address of the worker process.
     """
-    for func, args, kwargs in funcs:
+    for func, args, kwargs in invokables:
         partition = func(partition, *args, **kwargs)
     return partition, get_ip()

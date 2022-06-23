@@ -18,6 +18,7 @@ import sys
 import psutil
 from packaging import version
 import warnings
+from modin.utils import Invokable
 
 import ray
 
@@ -248,10 +249,16 @@ def deserialize(obj):
     """
     if isinstance(obj, ObjectIDType):
         return ray.get(obj)
+    elif isinstance(obj, Invokable):
+        return Invokable(
+            func=deserialize(obj.func),
+            args=deserialize(obj.args),
+            kwargs=deserialize(obj.kwargs),
+        )
     elif isinstance(obj, (tuple, list)) and any(
-        isinstance(o, ObjectIDType) for o in obj
+        ray_refs := [o for o in obj if isinstance(o, ObjectIDType)]
     ):
-        return ray.get(list(obj))
+        return ray.get(list(ray_refs))
     elif isinstance(obj, dict) and any(
         isinstance(val, ObjectIDType) for val in obj.values()
     ):

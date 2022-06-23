@@ -26,9 +26,12 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
     def apply(
         self,
         func,
+        *args,
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
+        manual_partition=False,
+        lengths=[],
         **kwargs,
     ):
         """
