@@ -32,7 +32,7 @@ Key Features and Updates
 * Documentation improvements
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
 * Dependencies
-  *
+  * FEAT-#4598: Add support for pandas 1.4.3 (#4599)
 * New Features
   * FEAT-4463: Add experimental fuzzydata integration for testing against a randomized dataframe workflow (#4556)
 
@@ -44,3 +44,4 @@ Contributors
 @vnlitvinov
 @pyrito
 @suhailrehman
+@RehanSD
