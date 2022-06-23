@@ -121,7 +121,10 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
         return [
             PyarrowOnRayDataframePartition(obj)
             for obj in deploy_ray_axis_func.options(num_returns=num_splits).remote(
-                *args
+                self.axis,
+                Invokable(func=func, kwargs=kwargs),
+                num_splits,
+                *self.list_of_blocks,
             )
         ]
 
@@ -245,7 +248,7 @@ def split_arrow_table_result(axis, result, num_partitions, num_splits, metadata)
 
 
 @ray.remote
-def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
+def deploy_ray_axis_func(axis, invokable, num_splits, *partitions):
     """
     Deploy a function along a full axis in Ray.
 
@@ -268,10 +271,11 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
         List of PyArrow Tables.
     """
     table = concat_arrow_table_partitions(axis, partitions)
+    func, args, kwargs = invokable
     try:
-        result = func(table, **kwargs)
+        result = func(table, *args, **kwargs)
     except Exception:
-        result = pyarrow.Table.from_pandas(func(table.to_pandas(), **kwargs))
+        result = pyarrow.Table.from_pandas(func(table.to_pandas(), *args, **kwargs))
     return split_arrow_table_result(
         axis, result, len(partitions), num_splits, table.schema.metadata
     )
@@ -324,7 +328,7 @@ def deploy_ray_func_between_two_axis_partitions(
 
 
 @ray.remote
-def deploy_ray_shuffle_func(axis, func, num_splits, kwargs, *partitions):
+def deploy_ray_shuffle_func(axis, invokable, num_splits, *partitions):
     """
     Deploy shuffle function that defines the order of the data in this axis partition.
 

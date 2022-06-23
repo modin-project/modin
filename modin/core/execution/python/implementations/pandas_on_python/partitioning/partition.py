@@ -14,6 +14,7 @@
 """The module defines interface for a partition with pandas storage format and Python engine."""
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
+from modin.utils import Invokable
 
 
 class PandasOnPythonDataframePartition(PandasDataframePartition):
@@ -134,7 +135,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         """
         return PandasOnPythonDataframePartition(
             self._data.copy(),
-            call_queue=self.call_queue + [(func, args, kwargs)],
+            call_queue=self.call_queue + [Invokable(func, args, kwargs)],
         )
 
     def drain_call_queue(self):

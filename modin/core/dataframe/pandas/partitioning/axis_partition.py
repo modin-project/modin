@@ -97,6 +97,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     ),
                 )
             )
+        inv = Invokable(func=func, args=args, kwargs=kwargs)
+        print(self.axis, inv, num_splits, maintain_partitioning, self.list_of_blocks, manual_partition, lengths)
         return self._wrap_partitions(
             self.deploy_axis_func(
                 self.axis,
@@ -109,7 +111,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             )
         )
 
-    def shuffle(self, func, *args, lengths=[], **kwargs):
+    def shuffle(self, func, *args, lengths=None, **kwargs):
         """
         Shuffle the order of the data in this axis partition based on the `lengths`.
 
@@ -127,12 +129,11 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         list
             A list of `PandasDataframePartition` objects split by `lengths`.
         """
-
         return self._wrap_partitions(
             self.deploy_axis_func(
                 self.axis,
                 Invokable(func=func, args=args, kwargs=kwargs),
-                len(lengths),
+                0 if not lengths else len(lengths),
                 False,
                 *self.list_of_blocks,
                 manual_partition=False,

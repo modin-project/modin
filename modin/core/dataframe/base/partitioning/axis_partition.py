@@ -31,7 +31,7 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         other_axis_partition=None,
         maintain_partitioning=True,
         manual_partition=False,
-        lengths=[],
+        lengths=None,
         **kwargs,
     ):
         """
@@ -71,7 +71,7 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         """
         pass
 
-    def shuffle(self, func, lengths, **kwargs):
+    def shuffle(self, func, *args, lengths, **kwargs):
         """
         Shuffle the order of the data in this axis partition based on the `lengths`.
 

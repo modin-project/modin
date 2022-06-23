@@ -255,10 +255,8 @@ def deserialize(obj):
             args=deserialize(obj.args),
             kwargs=deserialize(obj.kwargs),
         )
-    elif isinstance(obj, (tuple, list)) and any(
-        ray_refs := [o for o in obj if isinstance(o, ObjectIDType)]
-    ):
-        return ray.get(list(ray_refs))
+    elif isinstance(obj, (tuple, list)):
+        return [deserialize(o) for o in obj]
     elif isinstance(obj, dict) and any(
         isinstance(val, ObjectIDType) for val in obj.values()
     ):

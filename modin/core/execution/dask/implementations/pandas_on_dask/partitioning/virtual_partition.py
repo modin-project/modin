@@ -20,6 +20,7 @@ import pandas
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
+from modin.utils import Invokable
 from .partition import PandasOnDaskDataframePartition
 from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
 
@@ -90,13 +91,18 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         """
         result_num_splits = len(lengths) if lengths else num_splits
         return DaskWrapper.deploy(
-            deploy_dask_func,
-            PandasDataframeAxisPartition.deploy_axis_func,
-            axis,
-            invokable,
-            num_splits,
-            maintain_partitioning,
-            *partitions,
+            Invokable(
+                func=deploy_dask_func,
+                args=(
+                    PandasDataframeAxisPartition.deploy_axis_func,
+                    axis,
+                    invokable,
+                    num_splits,
+                    maintain_partitioning,
+                    *partitions,
+                ),
+                kwargs={"manual_partition": manual_partition, "lengths": lengths},
+            ),
             num_returns=result_num_splits * 4,
             pure=False,
         )
@@ -138,14 +144,18 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             A list of distributed.Future.
         """
         return DaskWrapper.deploy(
-            deploy_dask_func,
-            PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
-            axis,
-            invokable,
-            num_splits,
-            len_of_left,
-            other_shape,
-            *partitions,
+            Invokable(
+                func=deploy_dask_func,
+                args=(
+                    PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
+                    axis,
+                    invokable,
+                    num_splits,
+                    len_of_left,
+                    other_shape,
+                    *partitions,
+                ),
+            ),
             num_returns=num_splits * 4,
             pure=False,
         )
