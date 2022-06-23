@@ -18,8 +18,6 @@ Module contains ``PandasQueryCompiler`` class.
 queries for the ``PandasDataframe``.
 """
 
-import time
-
 import numpy as np
 import pandas
 import functools
@@ -2490,6 +2488,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_sum = GroupByReduce.register("sum")
 
     def _mean_reduce(dfgb):
+        """
+        Compute mean value for each column using sum/count info.
+
+        Parameters
+        ----------
+        dfgb : pandas.DataFrameGroupBy
+
+        Returns
+        -------
+        pandas.DataFrame
+            Dataframe with mean values in each column of each group.
+        """
         full_result = dfgb.sum()
         sum_df = full_result.iloc[:, : len(full_result.columns) // 2]
         count_df = full_result.iloc[:, len(full_result.columns) // 2 :]
