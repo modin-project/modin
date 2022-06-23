@@ -31,16 +31,12 @@ class DaskWrapper:
 
         Parameters
         ----------
-        func : callable
-            Function to be deployed in a worker process.
-        *args : list
-            Additional positional arguments to be passed in `func`.
+        invokable : Invokable
+            The function with its args and kwargs to be deployed in a worker process.
         num_returns : int, default: 1
             The number of returned objects.
         pure : bool, optional
             Whether or not `func` is pure. See `Client.submit` for details.
-        **kwargs : dict
-            Additional keyword arguments to be passed in ``func``.
 
         Returns
         -------

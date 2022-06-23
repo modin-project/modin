@@ -31,7 +31,9 @@ def _deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
     ----------
     func : callable
         A local function that we want to call remotely.
-    args : dict
+    *args : tuple
+        Positional arguments to pass to `func` when calling remotely.
+    **kwargs : dict
         Keyword arguments to pass to `func` when calling remotely.
 
     Returns
@@ -54,7 +56,7 @@ class RayTask:
         ----------
         func : callable
             A function to call.
-        *args : list
+        *args : tuple
             Additional positional arguments to be passed in `func`.
         num_returns : int, default: 1
             Amount of return values expected from `func`.

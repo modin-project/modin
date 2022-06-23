@@ -146,8 +146,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         maintain_partitioning,
         *partitions,
         max_retries=None,
-        manual_partition=False,
         lengths=None,
+        manual_partition=False,
     ):
         """
         Deploy a function along a full axis.
@@ -156,8 +156,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        func : callable
-            The function to perform.
+        invokable : Invokable
+            The function to perform with its args and kwargs.
         num_splits : int
             The number of splits to return (see ``split_result_of_axis_func_pandas``).
         maintain_partitioning : bool
@@ -165,8 +165,12 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             If False, create a new partition layout.
         *partitions : iterable
             All partitions that make up the full axis (row or column).
-        **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
+        max_retries : int, default: None
+            The max number of times to retry the func.
+        lengths : list, default: None
+            The list of lengths to shuffle the object.
+        manual_partition : bool, default: False
+            If True, partition the result with lengths.
 
         Returns
         -------
@@ -210,8 +214,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        func : callable
-            The function to perform.
+        invokable : Invokable
+            The function to perform with its args and kwargs.
         num_splits : int
             The number of splits to return (see ``split_result_of_axis_func_pandas``).
         len_of_left : int
@@ -221,8 +225,6 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
         *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
-        **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -269,8 +271,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
-        manual_partition=False,
         lengths=None,
+        manual_partition=False,
         **kwargs,
     ):
         """
@@ -294,8 +296,10 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             In this case, we have to return the partitioning to its previous
             orientation (the lengths will remain the same). This is ignored between
             two axis partitions.
-        args : tuple
-            Positional arguments to be passed in `func`.
+        lengths : list, default: None
+            The list of lengths to shuffle the object.
+        manual_partition : bool, default: False
+            If True, partition the result with lengths.
         **kwargs : dict
             Additional keywords arguments to be passed in `func`.
 
@@ -527,17 +531,13 @@ def deploy_ray_func(invokable):  # pragma: no cover
 
     Parameters
     ----------
-    func : callable
-        Function to be executed on an axis partition.
-    *args : iterable
-        Additional arguments that need to passed in ``func``.
-    **kwargs : dict
-        Additional keyword arguments to be passed in `func`.
+    invokable : Invokable
+        The function with its args and kwargs to be executed on an axis partition.
 
     Returns
     -------
     list : Union[tuple, list]
-        The result of the function ``func`` and metadata for it.
+        The result of the `invokable` and metadata for it.
 
     Notes
     -----

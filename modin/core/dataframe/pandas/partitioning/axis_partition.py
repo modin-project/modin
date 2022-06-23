@@ -47,6 +47,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         ----------
         func : callable
             The function to apply.
+        *args : tuple
+            Positional arguments to be passed in `func`.
         num_splits : int, default: None
             The number of times to split the result object.
         other_axis_partition : PandasDataframeAxisPartition, default: None
@@ -59,6 +61,10 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             In this case, we have to return the partitioning to its previous
             orientation (the lengths will remain the same). This is ignored between
             two axis partitions.
+        lengths : iterable, default: None
+            The list of lengths to shuffle the object.
+        manual_partition : bool, default: False
+            If True, partition the result with lengths.
         **kwargs : dict
             Additional keywords arguments to be passed in `func`.
 
@@ -97,8 +103,6 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     ),
                 )
             )
-        inv = Invokable(func=func, args=args, kwargs=kwargs)
-        print(self.axis, inv, num_splits, maintain_partitioning, self.list_of_blocks, manual_partition, lengths)
         return self._wrap_partitions(
             self.deploy_axis_func(
                 self.axis,
@@ -119,7 +123,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         ----------
         func : callable
             The function to apply before splitting.
-        lengths : list
+        *args : tuple
+            Positional arguments to be passed in `func`.
+        lengths : iterable, default: None
             The list of partition lengths to split the result into.
         **kwargs : dict
             Additional keywords arguments to be passed in `func`.
@@ -149,8 +155,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         num_splits,
         maintain_partitioning,
         *partitions,
-        manual_partition=False,
         lengths=None,
+        manual_partition=False,
     ):
         """
         Deploy a function along a full axis.
@@ -159,8 +165,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        func : callable
-            The function to perform.
+        invokable : Invokable
+            The function to perform with its args and kwargs.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).
         maintain_partitioning : bool
@@ -168,8 +174,10 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             If False, create a new partition layout.
         *partitions : iterable
             All partitions that make up the full axis (row or column).
-        **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
+        lengths : list, default: None
+            The list of lengths to shuffle the object.
+        manual_partition : bool, default: False
+            If True, partition the result with lengths.
 
         Returns
         -------
@@ -215,8 +223,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        func : callable
-            The function to perform.
+        invokable : Invokable
+            The function to perform with its args and kwargs.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).
         len_of_left : int
@@ -226,8 +234,6 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
         *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
-        **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------

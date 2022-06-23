@@ -358,12 +358,8 @@ def _apply_func(partition, invokable):  # pragma: no cover
     ----------
     partition : pandas.DataFrame
         A pandas DataFrame the function needs to be executed on.
-    func : callable
-        Function that needs to be executed on the partition.
-    *args : iterable
-        Additional positional arguments to be passed in `func`.
-    **kwargs : dict
-        Additional keyword arguments to be passed in `func`.
+    invokable : Invokable
+        The function with its args and kwargs that needs to be executed on the partition.
 
     Returns
     -------

@@ -303,12 +303,8 @@ def apply_func(partition, invokable):
     ----------
     partition : pandas.DataFrame
         A pandas DataFrame the function needs to be executed on.
-    func : callable
-        Function that needs to be executed on `partition`.
-    *args
-        Additional positional arguments to be passed in `func`.
-    **kwargs
-        Additional keyword arguments to be passed in `func`.
+    invokable : Invokable
+        The function with its args and kwargs that needs to be executed on `partition`.
 
     Returns
     -------
@@ -327,8 +323,8 @@ def apply_list_of_funcs(invokables, partition):
 
     Parameters
     ----------
-    funcs : list
-        A call queue that needs to be executed on the partition.
+    invokables : list
+        A call queue of Invokable(s) that needs to be executed on the partition.
     partition : pandas.DataFrame
         A pandas DataFrame the call queue needs to be executed on.
 
