@@ -193,22 +193,11 @@ class GroupByReduce(TreeReduce):
         # https://github.com/pandas-dev/pandas/issues/39699
         by_part = pandas.Index(df.index.names)
         if drop:
-            if method == "mean":
-                to_drop = [
-                    tup for tup in df.columns if len(by_part.intersection(tup)) > 0
-                ]
-                if len(to_drop) > 0:
-                    to_drop = pandas.MultiIndex.from_tuples(to_drop)
-            else:
-                to_drop = df.columns.intersection(by_part)
+            to_drop = df.columns.intersection(by_part)
             if isinstance(reduce_func, dict):
                 to_drop = to_drop.difference(reduce_func.keys())
             if len(to_drop) > 0:
-                df.drop(
-                    columns=to_drop if method == "mean" else by_part,
-                    errors="ignore",
-                    inplace=True,
-                )
+                df.drop(columns=by_part, errors="ignore", inplace=True)
 
         groupby_kwargs = groupby_kwargs.copy()
         as_index = groupby_kwargs["as_index"]

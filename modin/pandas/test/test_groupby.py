@@ -1504,7 +1504,7 @@ def test_dict_agg_rename_mi_columns(
     "operation",
     [
         "quantile",
-        "mean",
+        # "mean",
         pytest.param(
             "sum", marks=pytest.mark.skip("See Modin issue #2255 for details")
         ),
