@@ -291,7 +291,82 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         if isinstance(self._ip_cache, Future):
             self._ip_cache = DaskWrapper.materialize(self._ip_cache)
         return self._ip_cache
+    
+    def split(self, split_func, num_splits, *args):
+        """
+        Split the object wrapped by the partition into multiple partitions.
 
+        Parameters
+        ----------
+        split_func : Callable[pandas.DataFrame, List[Any]] -> List[pandas.DataFrame]
+            The function that will split this partition into multiple partitions.
+        num_splits : int
+            The number of resulting partitions (may be empty).
+        *args : List[Any]
+            Arguments to pass to ``split_func``
+
+        Returns
+        -------
+        list
+            A list of partitions.
+        """
+        outputs = DaskWrapper.deploy(
+            split_func,
+            *([self._data] + list(args)),
+            num_returns=num_splits,
+            pure=True
+        )
+        return outputs
+
+    @classmethod
+    def put_splits(cls, splits):
+        """
+        Create a new partition that wraps the input splits after concatenating them.
+
+        Returns
+        -------
+        PandasOnDaskDataframePartition
+            New `PandasOnDaskDataframePartition` object.
+        """
+        futures = DaskWrapper.deploy(
+            _concat_splits,
+            *splits,
+            num_returns=4,
+            pure=True,
+        )
+        data = futures[0]
+        length, width, ip = DaskWrapper.materialize(futures[1:])
+        return cls(data, length, width, ip)
+
+
+def _concat_splits(*splits):
+    """
+    Concatenate the splits into one dataframe in a worker process.
+
+    Parameters
+    ----------
+    splits : List[Future]
+        List of ObjectIDs that correspond to splits to concatenate
+    
+    Returns
+    -------
+    pandas.DataFrame
+        The resulting pandas DataFrame.
+    int
+        The number of rows of the resulting pandas DataFrame.
+    int
+        The number of columns of the resulting pandas DataFrame.
+    str
+        The node IP address of the worker process.
+    """
+    import pandas
+    df = pandas.concat(splits)
+    return (
+        df,
+        len(df),
+        len(df.columns),
+        get_ip()
+    )
 
 def apply_func(partition, func, *args, **kwargs):
     """

@@ -155,12 +155,15 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         # Pop these off first because they aren't expected by the function.
         manual_partition = kwargs.pop("manual_partition", False)
         lengths = kwargs.pop("_lengths", None)
+        impure = kwargs.pop("_impure", False)
+
 
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
         # To not mix the args for deploy_axis_func and args for func, we fold
         # args into kwargs. This is a bit of a hack, but it works.
         result = func(dataframe, *kwargs.pop("args", ()), **kwargs)
-
+        if impure:
+            return [result]
         if manual_partition:
             # The split function is expecting a list
             lengths = list(lengths)

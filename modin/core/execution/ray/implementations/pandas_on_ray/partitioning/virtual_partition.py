@@ -22,6 +22,8 @@ from modin.core.dataframe.pandas.partitioning.axis_partition import (
 )
 from modin.core.execution.ray.common.utils import deserialize
 from .partition import PandasOnRayDataframePartition
+from modin.core.execution.ray.common.utils import deserialize, ObjectIDType
+
 
 
 class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
@@ -415,6 +417,10 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
 
         def drain(df):
             for func, args, kwargs in self.call_queue:
+                # Since we are now lazy mapping a sort, we potentially must deserialize things.
+                func = deserialize(func)
+                args = deserialize(args)
+                kwargs = deserialize(kwargs)
                 df = func(df, *args, **kwargs)
             return df
 

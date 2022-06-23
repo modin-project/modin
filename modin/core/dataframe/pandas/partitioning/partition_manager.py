@@ -835,13 +835,13 @@ class PandasDataframePartitionManager(ABC):
         func = cls.preprocess_func(index_func)
         if axis == 0:
             new_idx = (
-                [idx.apply(func) for idx in partitions.T[0]]
+                [idx.apply(func, _impure=True) for idx in partitions.T[0]]
                 if len(partitions.T)
                 else []
             )
         else:
             new_idx = (
-                [idx.apply(func) for idx in partitions[0]] if len(partitions) else []
+                [idx.apply(func, _impure=True) for idx in partitions[0]] if len(partitions) else []
             )
         new_idx = cls.get_objects_from_partitions(new_idx)
         # TODO FIX INFORMATION LEAK!!!!1!!1!!
@@ -1310,3 +1310,46 @@ class PandasDataframePartitionManager(ABC):
             The same 2-d array.
         """
         return partitions
+    
+    @classmethod
+    def shuffle_partitions(cls, partitions, sample_func, pivot_func, split_func):
+        """
+        Return shuffled partitions.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            The 2-d array of partitions to shuffle.
+        sample_func : Callable(pandas.DataFrame) -> Any
+            Function to sample partitions. Output of this function will be passed to `pivot_func`
+            to determine pivots.
+        pivot_func : Callable(List[Any]) -> Any
+            Function to determine pivots from partitions. The pivots determined by this function
+            will be passed to `split_func` to split each partition.
+        split_func : Callable(pandas.DataFrame, Any) -> *List[pandas.Dataframe]
+            Function that splits a partition based off of the pivots provided. Should return an
+            unpacked list of pandas Dataframes.
+        
+        Returns
+        -------
+        np.ndarray
+            A list of row-partitions that have been shuffled.
+        """
+        # Convert our partitions into row partitions
+        row_partitions = cls.row_partitions(partitions)
+        # Sample each partition
+        samples = [partition.apply(sample_func, _impure=True) for partition in row_partitions]
+        # Get each sample to pass in to the pivot function
+        samples = [row.get() for frame in samples for row in frame]
+        pivots = pivot_func(samples)
+        # Get each ``partition_cls`` wrapped by the ``axis_partition_cls`` (should be 1 per axis
+        # partition since  we set ``num_splits`` to 1 earlier).
+        row_partitions = [partition.list_of_partitions_to_combine[0] for partition in row_partitions]
+        # Gather together all of the sub-partitions
+        split_row_partitions = np.swapaxes(np.array([partition.split(split_func, len(pivots), pivots) for partition in row_partitions]), 0, 1)
+        new_partitions = [[cls._partition_class.put_splits(splits)] for splits in split_row_partitions]
+        return cls.rebalance_partitions(np.array(new_partitions))
+        
+
+
+        

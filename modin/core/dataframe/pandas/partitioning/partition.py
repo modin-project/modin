@@ -295,6 +295,38 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             preprocessed_func = cls.preprocess_func(func)
             self._width_cache = self.apply(preprocessed_func)
         return self._width_cache
+    
+    def split(self, split_func, num_splits, *args):
+        """
+        Split the object wrapped by the partition into multiple partitions.
+
+        Parameters
+        ----------
+        split_func : Callable[pandas.DataFrame, List[Any]] -> List[pandas.DataFrame]
+            The function that will split this partition into multiple partitions.
+        num_splits : int
+            The number of resulting partitions (may be empty).
+        *args : List[Any]
+            Arguments to pass to ``split_func``
+
+        Returns
+        -------
+        list
+            A list of partitions.
+        """
+        pass
+
+    @classmethod
+    def put_splits(cls, splits):
+        """
+        Create a new partition that wraps the input splits after concatenating them.
+
+        Returns
+        -------
+        PandasDataframePartition
+            New `PandasDataframePartition` object.
+        """
+        pass
 
     @classmethod
     def empty(cls):

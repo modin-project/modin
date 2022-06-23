@@ -39,6 +39,7 @@ from modin.core.dataframe.base.dataframe.utils import (
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
 from modin.logging import LoggerMetaClass
+from modin.config import NPartitions
 
 
 def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
@@ -1769,7 +1770,52 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
         PandasDataframe
             A new PandasDataframe sorted into lexicographical order by the specified column(s).
         """
-        pass
+        columns = columns if isinstance(columns, list) else [columns]
+        axis = Axis(axis)
+        if axis == Axis.ROW_WISE and columns[0] != self.index.names:
+            def sample_func(df):
+                quantiles = [i / (NPartitions.get() * 2) for i in range(NPartitions.get() * 2)]
+                # Heuristic for a "small" df we will compute histogram over entirety of.
+                if len(df) <= 100:
+                    return np.quantile(df[columns[0]], quantiles)
+                # Heuristic for a "medium" df where we will include first 100 rows, and sample
+                # of remaining rows
+                if len(df) <= 1900:
+                    return np.quantile(np.concatenate((df[columns[0]][:100].values, df[columns[0]][100:].sample(frac=0.1))), quantiles)
+                return np.quantile(df[columns[0]].sample(frac=0.1), quantiles)
+            def pivot_func(pivots):
+                all_pivots = np.unique(np.sort(np.array(pivots).flatten()))
+                quantiles = [i / (NPartitions.get() * 2) for i in range(NPartitions.get() * 2)]
+                overall_quantiles = np.quantile(all_pivots, quantiles)
+                overall_quantiles[0] = np.NINF
+                overall_quantiles[-1] = np.inf
+                return overall_quantiles
+            def split_func(df, pivots):
+                groupby_col =  np.digitize(
+                    df[columns[0]].squeeze(), pivots
+                )
+                grouped = df.groupby(groupby_col)
+                groups = [
+                    grouped.get_group(i)
+                    if i in grouped.keys
+                    else pandas.DataFrame(columns=df.columns)
+                    for i in range(len(pivots))
+                ]
+                return tuple(groups)
+            new_partitions = self._partition_mgr_cls.shuffle_partitions(self._partitions, sample_func, pivot_func, split_func)
+            new_partitions = self._partition_mgr_cls.lazy_map_partitions(new_partitions, lambda df: df.sort_values(by=columns, ascending=ascending))
+            new_axes = [0, 0]
+            new_axes[axis.value] = self._compute_axis_labels(0, new_partitions)
+            new_axes[axis.value ^ 1] = self.axes[axis.value ^ 1]
+            new_lengths = [0, 0]
+            new_lengths[axis.value] = self._axes_lengths[axis.value]
+            new_lengths[axis.value ^ 1] = None
+            return self.__constructor__(
+                new_partitions,
+                *new_axes,
+                *new_lengths,
+                self.dtypes
+            )
 
     @lazy_metadata_decorator(apply_axis="both")
     def filter(self, axis: Union[Axis, int], condition: Callable) -> "PandasDataframe":
