@@ -41,12 +41,15 @@ Data parsing mechanism differs depending on the data format type:
 
 from collections import OrderedDict
 from io import BytesIO, TextIOWrapper
+import fsspec
+from unicodedata import name
 import numpy as np
 import pandas
 from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
 from pandas.util._decorators import doc
+from typing import NamedTuple
 import warnings
 
 from modin.core.io.file_dispatcher import OpenFile
@@ -637,24 +640,43 @@ class PandasJSONParser(PandasParser):
         ]
 
 
+class ParquetFileToRead(NamedTuple):
+    path: str
+    row_group_start: int
+    row_group_end: int
+
+
 @doc(_doc_pandas_parser_class, data_type="PARQUET data")
 class PandasParquetParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
-    def parse(fname, row_group_start, row_group_end, **kwargs):
-        columns = kwargs.get("columns", None)
+    def parse(**kwargs):
         from pyarrow.parquet import ParquetFile
 
-        file = ParquetFile(fname)
-        df = file.read_row_groups(
-            list(range(row_group_start, min(row_group_end, file.num_row_groups))),
-            columns=columns,
-            use_pandas_metadata=True,
-        ).to_pandas()
-        columns = [c for c in columns if c not in df.index.names and c in df.columns]
-        if columns is not None:
-            df = df[columns]
-        return df, df.dtypes
+        columns = kwargs.get("columns", None)
+
+        files_for_parser = kwargs["files_for_parser"]
+
+        chunks = []
+        for file_for_parser in files_for_parser:
+            with fsspec.open(file_for_parser.path) as f:
+                chunk = ParquetFile(f).read_row_groups(
+                    list(
+                        range(
+                            file_for_parser.row_group_start, file_for_parser.row_group_end
+                        )
+                    ),
+                    columns=columns,
+                    use_pandas_metadata=True,
+                ).to_pandas()
+            columns = [
+                c for c in columns if c not in chunk.index.names and c in chunk.columns
+            ]
+            if columns is not None:
+                chunk = chunk[columns]
+            chunks.append(chunk)
+        df = pandas.concat(chunks)
+        return df, df.dtypes, len(df)
 
 
 @doc(_doc_pandas_parser_class, data_type="HDF data")
