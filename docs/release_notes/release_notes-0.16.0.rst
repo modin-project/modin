@@ -34,6 +34,7 @@ Key Features and Updates
 * Dependencies
   *
 * New Features
+  * FEAT-4463: Add experimental fuzzydata integration for testing against a randomized dataframe workflow (#4556)
 
 Contributors
 ------------
@@ -42,3 +43,4 @@ Contributors
 @prutskov
 @vnlitvinov
 @pyrito
+@suhailrehman
