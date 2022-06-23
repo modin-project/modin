@@ -19,7 +19,7 @@ from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pa
 from modin.core.dataframe.base.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
 )
-from modin.utils import Invokable
+from modin.utils import Invocable
 
 
 class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
@@ -89,7 +89,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             return self._wrap_partitions(
                 self.deploy_func_between_two_axis_partitions(
                     self.axis,
-                    Invokable(func=func, args=args, kwargs=kwargs),
+                    Invocable(func=func, args=args, kwargs=kwargs),
                     num_splits,
                     len(self.list_of_blocks),
                     other_shape,
@@ -106,7 +106,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         return self._wrap_partitions(
             self.deploy_axis_func(
                 self.axis,
-                Invokable(func=func, args=args, kwargs=kwargs),
+                Invocable(func=func, args=args, kwargs=kwargs),
                 num_splits,
                 maintain_partitioning,
                 *self.list_of_blocks,
@@ -138,11 +138,11 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         return self._wrap_partitions(
             self.deploy_axis_func(
                 self.axis,
-                Invokable(func=func, args=args, kwargs=kwargs),
+                Invocable(func=func, args=args, kwargs=kwargs),
                 0 if not lengths else len(lengths),
                 False,
                 *self.list_of_blocks,
-                manual_partition=False,
+                manual_partition=True,
                 lengths=lengths,
             )
         )
@@ -151,7 +151,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
     def deploy_axis_func(
         cls,
         axis,
-        invokable,
+        invocable,
         num_splits,
         maintain_partitioning,
         *partitions,
@@ -165,7 +165,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        invokable : Invokable
+        invocable : Invocable
             The function to perform with its args and kwargs.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).
@@ -185,7 +185,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             A list of pandas DataFrames.
         """
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
-        result = invokable.func(dataframe, *invokable.args, **invokable.kwargs)
+        func, args, kwargs = invocable
+        result = func(dataframe, *args, **kwargs)
 
         if manual_partition:
             # The split function is expecting a list
@@ -210,7 +211,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
     def deploy_func_between_two_axis_partitions(
         cls,
         axis,
-        invokable,
+        invocable,
         num_splits,
         len_of_left,
         other_shape,
@@ -223,7 +224,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        invokable : Invokable
+        invocable : Invocable
             The function to perform with its args and kwargs.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).
@@ -254,5 +255,6 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             for i in range(1, len(other_shape))
         ]
         rt_frame = pandas.concat(combined_axis, axis=axis ^ 1, copy=False)
-        result = invokable.func(lt_frame, rt_frame, *invokable.args, **invokable.kwargs)
+        func, args, kwargs = invocable
+        result = func(lt_frame, rt_frame, *args, **kwargs)
         return split_result_of_axis_func_pandas(axis, num_splits, result)

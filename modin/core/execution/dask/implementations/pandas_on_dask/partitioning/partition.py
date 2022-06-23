@@ -20,7 +20,7 @@ from dask.distributed import wait
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
 from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
-from modin.utils import Invokable
+from modin.utils import Invocable
 
 
 class PandasOnDaskDataframePartition(PandasDataframePartition):
@@ -85,10 +85,10 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         -----
         The keyword arguments are sent as a dictionary.
         """
-        call_queue = self.call_queue + [Invokable(func=func, args=args, kwargs=kwargs)]
+        call_queue = self.call_queue + [Invocable(func=func, args=args, kwargs=kwargs)]
         if len(call_queue) > 1:
             futures = DaskWrapper.deploy(
-                Invokable(func=apply_list_of_funcs, args=(call_queue, self._data)),
+                Invocable(func=apply_list_of_funcs, args=(call_queue, self._data)),
                 num_returns=2,
                 pure=False,
             )
@@ -97,11 +97,11 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             # this improves performance a bit.
             func, args, kwargs = call_queue[0]
             futures = DaskWrapper.deploy(
-                Invokable(
+                Invocable(
                     func=apply_func,
                     args=(
                         self._data,
-                        Invokable(func=func, args=args, kwargs=kwargs),
+                        Invocable(func=func, args=args, kwargs=kwargs),
                     ),
                 ),
                 num_returns=2,
@@ -134,7 +134,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         return PandasOnDaskDataframePartition(
             self._data,
             call_queue=self.call_queue
-            + [Invokable(func=func, args=args, kwargs=kwargs)],
+            + [Invocable(func=func, args=args, kwargs=kwargs)],
         )
 
     def drain_call_queue(self):
@@ -144,7 +144,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         call_queue = self.call_queue
         if len(call_queue) > 1:
             futures = DaskWrapper.deploy(
-                Invokable(func=apply_list_of_funcs, args=(call_queue, self._data)),
+                Invocable(func=apply_list_of_funcs, args=(call_queue, self._data)),
                 num_returns=2,
                 pure=False,
             )
@@ -153,9 +153,9 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             # this improves performance a bit.
             func, args, kwargs = call_queue[0]
             futures = DaskWrapper.deploy(
-                Invokable(
+                Invocable(
                     func=apply_func,
-                    args=(self._data, Invokable(func=func, args=args, kwargs=kwargs)),
+                    args=(self._data, Invocable(func=func, args=args, kwargs=kwargs)),
                 ),
                 num_returns=2,
                 pure=False,
@@ -188,13 +188,13 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         new_obj = super().mask(row_labels, col_labels)
         if isinstance(row_labels, slice) and isinstance(self._length_cache, Future):
             new_obj._length_cache = DaskWrapper.deploy(
-                Invokable(
+                Invocable(
                     func=compute_sliced_len, args=(row_labels, self._length_cache)
                 )
             )
         if isinstance(col_labels, slice) and isinstance(self._width_cache, Future):
             new_obj._width_cache = DaskWrapper.deploy(
-                Invokable(func=compute_sliced_len, args=(col_labels, self._width_cache))
+                Invocable(func=compute_sliced_len, args=(col_labels, self._width_cache))
             )
         return new_obj
 
@@ -295,7 +295,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         return self._ip_cache
 
 
-def apply_func(partition, invokable):
+def apply_func(partition, invocable):
     """
     Execute a function on the partition in a worker process.
 
@@ -303,7 +303,7 @@ def apply_func(partition, invokable):
     ----------
     partition : pandas.DataFrame
         A pandas DataFrame the function needs to be executed on.
-    invokable : Invokable
+    invocable : Invocable
         The function with its args and kwargs that needs to be executed on `partition`.
 
     Returns
@@ -313,18 +313,19 @@ def apply_func(partition, invokable):
     str
         The node IP address of the worker process.
     """
-    result = invokable.func(partition, *invokable.args, **invokable.kwargs)
+    func, args, kwargs = invocable
+    result = func(partition, *args, **kwargs)
     return result, get_ip()
 
 
-def apply_list_of_funcs(invokables, partition):
+def apply_list_of_funcs(invocables, partition):
     """
     Execute all operations stored in the call queue on the partition in a worker process.
 
     Parameters
     ----------
-    invokables : list
-        A call queue of Invokable(s) that needs to be executed on the partition.
+    invocables : list
+        A call queue of Invocable(s) that needs to be executed on the partition.
     partition : pandas.DataFrame
         A pandas DataFrame the call queue needs to be executed on.
 
@@ -335,6 +336,6 @@ def apply_list_of_funcs(invokables, partition):
     str
         The node IP address of the worker process.
     """
-    for func, args, kwargs in invokables:
+    for func, args, kwargs in invocables:
         partition = func(partition, *args, **kwargs)
     return partition, get_ip()

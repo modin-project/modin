@@ -18,7 +18,7 @@ import sys
 import psutil
 from packaging import version
 import warnings
-from modin.utils import Invokable
+from modin.utils import Invocable
 
 import ray
 
@@ -249,8 +249,8 @@ def deserialize(obj):
     """
     if isinstance(obj, ObjectIDType):
         return ray.get(obj)
-    elif isinstance(obj, Invokable):
-        return Invokable(
+    elif isinstance(obj, Invocable):
+        return Invocable(
             func=deserialize(obj.func),
             args=deserialize(obj.args),
             kwargs=deserialize(obj.kwargs),

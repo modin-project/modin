@@ -20,7 +20,7 @@ import pandas
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-from modin.utils import Invokable
+from modin.utils import Invocable
 from .partition import PandasOnDaskDataframePartition
 from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
 
@@ -58,7 +58,7 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
     def deploy_axis_func(
         cls,
         axis,
-        invokable,
+        invocable,
         num_splits,
         maintain_partitioning,
         *partitions,
@@ -72,7 +72,7 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        invokable : Invokable
+        invocable : Invocable
             The function to perform with its args and kwargs.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).
@@ -93,15 +93,19 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         """
         result_num_splits = len(lengths) if lengths else num_splits
         return DaskWrapper.deploy(
-            Invokable(
+            Invocable(
                 func=deploy_dask_func,
                 args=(
-                    PandasDataframeAxisPartition.deploy_axis_func,
-                    axis,
-                    invokable,
-                    num_splits,
-                    maintain_partitioning,
-                    *partitions,
+                    Invocable(
+                        func=PandasDataframeAxisPartition.deploy_axis_func,
+                        args=(
+                            axis,
+                            invocable,
+                            num_splits,
+                            maintain_partitioning,
+                            *partitions,
+                        ),
+                    ),
                 ),
                 kwargs={"manual_partition": manual_partition, "lengths": lengths},
             ),
@@ -113,7 +117,7 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
     def deploy_func_between_two_axis_partitions(
         cls,
         axis,
-        invokable,
+        invocable,
         num_splits,
         len_of_left,
         other_shape,
@@ -126,7 +130,7 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        invokable : Invokable
+        invocable : Invocable
             The function to perform with its args and kwargs.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).
@@ -144,16 +148,20 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             A list of distributed.Future.
         """
         return DaskWrapper.deploy(
-            Invokable(
+            Invocable(
                 func=deploy_dask_func,
                 args=(
-                    PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
-                    axis,
-                    invokable,
-                    num_splits,
-                    len_of_left,
-                    other_shape,
-                    *partitions,
+                    Invocable(
+                        func=PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
+                        args=(
+                            axis,
+                            invocable,
+                            num_splits,
+                            len_of_left,
+                            other_shape,
+                            *partitions,
+                        ),
+                    ),
                 ),
             ),
             num_returns=num_splits * 4,
@@ -220,24 +228,21 @@ class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeAxisPartition):
     axis = 1
 
 
-def deploy_dask_func(func, *args, **kwargs):
+def deploy_dask_func(invocable):
     """
     Execute a function on an axis partition in a worker process.
 
     Parameters
     ----------
-    func : callable
+    invocable : Invocable
         Function to be executed on an axis partition.
-    *args : iterable
-        Additional arguments that need to passed in ``func``.
-    **kwargs : dict
-        Additional keyword arguments to be passed in `func`.
 
     Returns
     -------
     list
         The result of the function ``func`` and metadata for it.
     """
+    func, args, kwargs = invocable
     result = func(*args, **kwargs)
     ip = get_ip()
     if isinstance(result, pandas.DataFrame):

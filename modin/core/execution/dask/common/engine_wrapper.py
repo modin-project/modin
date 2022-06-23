@@ -22,7 +22,7 @@ class DaskWrapper:
     @classmethod
     def deploy(
         cls,
-        invokable,
+        invocable,
         num_returns=1,
         pure=None,
     ):
@@ -31,7 +31,7 @@ class DaskWrapper:
 
         Parameters
         ----------
-        invokable : Invokable
+        invocable : Invocable
             The function with its args and kwargs to be deployed in a worker process.
         num_returns : int, default: 1
             The number of returned objects.
@@ -44,7 +44,7 @@ class DaskWrapper:
             The result of ``func`` split into parts in accordance with ``num_returns``.
         """
         client = default_client()
-        func, args, kwargs = invokable
+        func, args, kwargs = invocable
         remote_task_future = client.submit(func, *args, pure=pure, **kwargs)
         if num_returns != 1:
             return [

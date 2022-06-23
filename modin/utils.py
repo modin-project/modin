@@ -44,7 +44,7 @@ MIN_DASK_VERSION = version.parse("2.22.0")
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
 
 
-class Invokable(NamedTuple):
+class Invocable(NamedTuple):
     """
     Class for config data manipulating of exact type.
 

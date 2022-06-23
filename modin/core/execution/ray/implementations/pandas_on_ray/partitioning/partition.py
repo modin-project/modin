@@ -13,7 +13,7 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
-from modin.utils import Invokable
+from modin.utils import Invocable
 import ray
 from ray.util import get_node_ip_address
 import uuid
@@ -108,15 +108,15 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         logger = get_logger()
         logger.debug(f"ENTER::Partition.apply::{self._identity}")
         data = self._data
-        call_queue = self.call_queue + [Invokable(func=func, args=args, kwargs=kwargs)]
+        call_queue = self.call_queue + [Invocable(func=func, args=args, kwargs=kwargs)]
         if len(call_queue) > 1:
             logger.debug(f"SUBMIT::_apply_list_of_funcs::{self._identity}")
             result, length, width, ip = _apply_list_of_funcs.remote(call_queue, data)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
-            invokable = call_queue[0]
-            result, length, width, ip = _apply_func.remote(data, invokable)
+            invocable = call_queue[0]
+            result, length, width, ip = _apply_func.remote(data, invocable)
             logger.debug(f"SUBMIT::_apply_func::{self._identity}")
         logger.debug(f"EXIT::Partition.apply::{self._identity}")
         return PandasOnRayDataframePartition(result, length, width, ip)
@@ -145,7 +145,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         return PandasOnRayDataframePartition(
-            self._data, call_queue=self.call_queue + [Invokable(func, args, kwargs)]
+            self._data, call_queue=self.call_queue + [Invocable(func, args, kwargs)]
         )
 
     def drain_call_queue(self):
@@ -167,14 +167,14 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
-            invokable = call_queue[0]
+            invocable = call_queue[0]
             logger.debug(f"SUBMIT::_apply_func::{self._identity}")
             (
                 self._data,
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
-            ) = _apply_func.remote(data, invokable)
+            ) = _apply_func.remote(data, invocable)
         logger.debug(f"EXIT::Partition.drain_call_queue::{self._identity}")
         self.call_queue = []
 
@@ -350,7 +350,7 @@ def _get_index_and_columns(df):
 
 
 @ray.remote(num_returns=4)
-def _apply_func(partition, invokable):  # pragma: no cover
+def _apply_func(partition, invocable):  # pragma: no cover
     """
     Execute a function on the partition in a worker process.
 
@@ -358,7 +358,7 @@ def _apply_func(partition, invokable):  # pragma: no cover
     ----------
     partition : pandas.DataFrame
         A pandas DataFrame the function needs to be executed on.
-    invokable : Invokable
+    invocable : Invocable
         The function with its args and kwargs that needs to be executed on the partition.
 
     Returns
@@ -372,7 +372,7 @@ def _apply_func(partition, invokable):  # pragma: no cover
     str
         The node IP address of the worker process.
     """
-    func, args, kwargs = deserialize(invokable)
+    func, args, kwargs = deserialize(invocable)
     try:
         result = func(partition, *args, **kwargs)
     # Sometimes Arrow forces us to make a copy of an object before we operate on it. We

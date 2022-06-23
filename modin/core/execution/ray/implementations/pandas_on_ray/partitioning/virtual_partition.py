@@ -14,7 +14,7 @@
 """Module houses classes responsible for storing a virtual partition and applying a function to it."""
 
 import pandas
-from modin.utils import Invokable
+from modin.utils import Invocable
 import ray
 from ray.util import get_node_ip_address
 
@@ -141,13 +141,13 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     def deploy_axis_func(
         cls,
         axis,
-        invokable,
+        invocable,
         num_splits,
         maintain_partitioning,
         *partitions,
-        max_retries=None,
         lengths=None,
         manual_partition=False,
+        max_retries=None,
     ):
         """
         Deploy a function along a full axis.
@@ -156,7 +156,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        invokable : Invokable
+        invocable : Invocable
             The function to perform with its args and kwargs.
         num_splits : int
             The number of splits to return (see ``split_result_of_axis_func_pandas``).
@@ -165,12 +165,12 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             If False, create a new partition layout.
         *partitions : iterable
             All partitions that make up the full axis (row or column).
-        max_retries : int, default: None
-            The max number of times to retry the func.
         lengths : list, default: None
             The list of lengths to shuffle the object.
         manual_partition : bool, default: False
             If True, partition the result with lengths.
+        max_retries : int, default: None
+            The max number of times to retry the func.
 
         Returns
         -------
@@ -181,11 +181,11 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             num_returns=(num_splits if lengths is None else len(lengths)) * 4,
             **({"max_retries": max_retries} if max_retries is not None else {}),
         ).remote(
-            Invokable(
+            Invocable(
                 func=PandasDataframeAxisPartition.deploy_axis_func,
                 args=(
                     axis,
-                    invokable,
+                    invocable,
                     num_splits,
                     maintain_partitioning,
                     *partitions,
@@ -201,7 +201,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     def deploy_func_between_two_axis_partitions(
         cls,
         axis,
-        invokable,
+        invocable,
         num_splits,
         len_of_left,
         other_shape,
@@ -214,7 +214,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        invokable : Invokable
+        invocable : Invocable
             The function to perform with its args and kwargs.
         num_splits : int
             The number of splits to return (see ``split_result_of_axis_func_pandas``).
@@ -232,11 +232,11 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             A list of ``ray.ObjectRef``-s.
         """
         return deploy_ray_func.options(num_returns=num_splits * 4).remote(
-            Invokable(
+            Invocable(
                 func=PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
                 args=(
                     axis,
-                    invokable,
+                    invocable,
                     num_splits,
                     len_of_left,
                     other_shape,
@@ -476,7 +476,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         return type(self)(
             self.list_of_partitions_to_combine,
             full_axis=self.full_axis,
-            call_queue=self.call_queue + [Invokable(func, args, kwargs)],
+            call_queue=self.call_queue + [Invocable(func, args, kwargs)],
         )
 
 
@@ -525,25 +525,25 @@ class PandasOnRayDataframeRowPartition(PandasOnRayDataframeVirtualPartition):
 
 
 @ray.remote
-def deploy_ray_func(invokable):  # pragma: no cover
+def deploy_ray_func(invocable):  # pragma: no cover
     """
     Execute a function on an axis partition in a worker process.
 
     Parameters
     ----------
-    invokable : Invokable
+    invocable : Invocable
         The function with its args and kwargs to be executed on an axis partition.
 
     Returns
     -------
     list : Union[tuple, list]
-        The result of the `invokable` and metadata for it.
+        The result of the `invocable` and metadata for it.
 
     Notes
     -----
     Ray functions are not detected by codecov (thus pragma: no cover).
     """
-    func, args, kwargs = deserialize(invokable)
+    func, args, kwargs = deserialize(invocable)
     result = func(*args, **kwargs)
     ip = get_node_ip_address()
     if isinstance(result, pandas.DataFrame):
