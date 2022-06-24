@@ -21,10 +21,32 @@ spreadsheet_deps = ["modin-spreadsheet>=0.1.0"]
 sql_deps = ["dfsql>=0.4.2", "pyparsing<=2.4.7"]
 all_deps = dask_deps + ray_deps + remote_deps + spreadsheet_deps
 
+# Distribute 'modin-autoimport-pandas.pth' along with binary and source distributions.
+# This file provides the "import pandas before Ray init" feature if specific
+# environment variable is set (see https://github.com/modin-project/modin/issues/4564).
+cmdclass = versioneer.get_cmdclass()
+
+
+class AddPthFileBuild(cmdclass["build_py"]):
+    def _get_data_files(self):
+        return (super()._get_data_files() or []) + [
+            (".", ".", self.build_lib, ["modin-autoimport-pandas.pth"])
+        ]
+
+
+class AddPthFileSDist(cmdclass["sdist"]):
+    def make_distribution(self):
+        self.filelist.append("modin-autoimport-pandas.pth")
+        return super().make_distribution()
+
+
+cmdclass["build_py"] = AddPthFileBuild
+cmdclass["sdist"] = AddPthFileSDist
+
 setup(
     name="modin",
     version=versioneer.get_version(),
-    cmdclass=versioneer.get_cmdclass(),
+    cmdclass=cmdclass,
     description="Modin: Make your pandas code run faster by changing one line of code.",
     packages=find_packages(exclude=["scripts", "scripts.*"]),
     include_package_data=True,
