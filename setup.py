@@ -5,16 +5,10 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 dask_deps = ["dask>=2.22.0,<2022.2.0", "distributed>=2.22.0,<2022.2.0"]
-# TODO: remove redis dependency when resolving GH#4398
-# Pin ray to < 1.13.0 to work around GH#4564
-# TODO(https://github.com/modin-project/modin/issues/4564): let ray go past 1.13.0.
-# Following https://github.com/ray-project/ray/pull/25648, pin protobuf < 4,
-# because versions >= 4.0.0 are incompatible with ray<1.13.0.
 ray_deps = [
-    "ray[default]>=1.4.0,<1.13.0",
+    "ray[default]>=1.4.0",
     "pyarrow>=4.0.1",
     "redis>=3.5.0,<4.0.0",
-    "protobuf<4.0.0",
 ]
 remote_deps = ["rpyc==4.1.5", "cloudpickle", "boto3"]
 spreadsheet_deps = ["modin-spreadsheet>=0.1.0"]

@@ -83,7 +83,6 @@ class Engine(EnvironmentVariable, type=str):
         """
         from modin.utils import (
             MIN_RAY_VERSION,
-            MAX_RAY_VERSION_EXCLUSIVE,
             MIN_DASK_VERSION,
         )
 
@@ -95,14 +94,11 @@ class Engine(EnvironmentVariable, type=str):
         except ImportError:
             pass
         else:
-            if (
-                version.parse(ray.__version__) < MIN_RAY_VERSION
-                or version.parse(ray.__version__) >= MAX_RAY_VERSION_EXCLUSIVE
-            ):
+            if version.parse(ray.__version__) < MIN_RAY_VERSION:
                 raise ImportError(
                     "Please `pip install modin[ray]` to install compatible Ray "
                     + "version "
-                    + f"(>={MIN_RAY_VERSION},<{MAX_RAY_VERSION_EXCLUSIVE})."
+                    + f"(>={MIN_RAY_VERSION})."
                 )
             return "Ray"
         try:
