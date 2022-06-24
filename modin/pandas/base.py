@@ -222,6 +222,7 @@ class BasePandasDataset(ClassLogger):
         self,
         other,
         axis,
+        type_check=False,
         compare_index=False,
     ):
         """
@@ -235,6 +236,8 @@ class BasePandasDataset(ClassLogger):
             Specifies axis along which to do validation. When `1` or `None`
             is specified, validation is done along `index`, if `0` is specified
             validation is done along `columns` of `other` frame.
+        type_check : bool, default: False
+            Validates that both frames have compatible dtypes.
         compare_index : bool, default: False
             Compare Index if True.
 
@@ -288,17 +291,18 @@ class BasePandasDataset(ClassLogger):
             if not self.index.equals(other.index):
                 raise TypeError("Cannot perform operation with non-equal index")
         # Do dtype checking.
-        if not all(
-            (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
-            or (is_object_dtype(self_dtype) and is_object_dtype(other_dtype))
-            or (
-                is_datetime_or_timedelta_dtype(self_dtype)
-                and is_datetime_or_timedelta_dtype(other_dtype)
-            )
-            or is_dtype_equal(self_dtype, other_dtype)
-            for self_dtype, other_dtype in zip(self._get_dtypes(), other_dtypes)
-        ):
-            raise TypeError("Cannot do operation with improper dtypes")
+        if type_check:
+            if not all(
+                (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
+                or (is_object_dtype(self_dtype) and is_object_dtype(other_dtype))
+                or (
+                    is_datetime_or_timedelta_dtype(self_dtype)
+                    and is_datetime_or_timedelta_dtype(other_dtype)
+                )
+                or is_dtype_equal(self_dtype, other_dtype)
+                for self_dtype, other_dtype in zip(self._get_dtypes(), other_dtypes)
+            ):
+                raise TypeError("Cannot do operation with improper dtypes")
         return result
 
     def _validate_function(self, func, on_invalid=None):
@@ -377,7 +381,7 @@ class BasePandasDataset(ClassLogger):
             return self._default_to_pandas(
                 getattr(self._pandas_class, op), other, **kwargs
             )
-        other = self._validate_other(other, axis)
+        other = self._validate_other(other, axis, type_check=True)
         exclude_list = [
             "__add__",
             "__radd__",
