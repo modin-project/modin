@@ -75,26 +75,6 @@ def _move_stdlib_ahead_of_site_packages(*args):
         sys.path.insert(site_packages_path_index, os.path.dirname(site_packages_path))
 
 
-def _import_pandas(*args):
-    """
-    Import pandas to make sure all its machinery is ready.
-
-    This prevents a race condition between two threads deserializing functions
-    and trying to import pandas at the same time.
-
-    Parameters
-    ----------
-    *args : tuple
-        Ignored, added for compatibility with Ray.
-
-    Notes
-    -----
-    This function is expected to be run on all workers before any
-    serialization or deserialization starts.
-    """
-    import pandas  # noqa F401
-
-
 def initialize_ray(
     override_is_cluster=False,
     override_redis_address: str = None,
@@ -243,7 +223,7 @@ def initialize_ray(
     ray.worker.global_worker.run_function_on_all_workers(
         _move_stdlib_ahead_of_site_packages
     )
-    ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
+
     num_cpus = int(ray.cluster_resources()["CPU"])
     num_gpus = int(ray.cluster_resources().get("GPU", 0))
     if StorageFormat.get() == "Cudf":
