@@ -33,6 +33,7 @@ from modin.config import (
     NPartitions,
     ValueSource,
 )
+from modin.error_message import ErrorMessage
 
 ObjectIDType = ray.ObjectRef
 if version.parse(ray.__version__) >= version.parse("1.2.0"):
@@ -125,8 +126,6 @@ def initialize_ray(
                 **extra_init_kw,
             )
         else:
-            from modin.error_message import ErrorMessage
-
             # This string is intentionally formatted this way. We want it indented in
             # the warning message.
             ErrorMessage.not_initialized(
