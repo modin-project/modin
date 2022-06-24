@@ -18,6 +18,7 @@ import sys
 import psutil
 from packaging import version
 import warnings
+import json
 
 import ray
 
@@ -117,6 +118,9 @@ def initialize_ray(
         What password to use when connecting to Redis.
         If not specified, ``modin.config.RayRedisPassword`` is used.
     """
+    extra_init_kw = {
+        "runtime_env": {"env_vars": {"__MODIN_AUTOIMPORT_PANDAS_WORKAROUND__": "1"}}
+    }
     if not ray.is_initialized() or override_is_cluster:
         cluster = override_is_cluster or IsRayCluster.get()
         redis_address = override_redis_address or RayRedisAddress.get()
@@ -138,6 +142,7 @@ def initialize_ray(
                 include_dashboard=False,
                 ignore_reinit_error=True,
                 _redis_password=redis_password,
+                **extra_init_kw,
             )
         else:
             from modin.error_message import ErrorMessage
@@ -146,9 +151,9 @@ def initialize_ray(
             # the warning message.
             ErrorMessage.not_initialized(
                 "Ray",
-                """
+                f"""
     import ray
-    ray.init()
+    ray.init({', '.join([f'{k}={v}' for k,v in extra_init_kw.items()])})
 """,
             )
             object_store_memory = Memory.get()
@@ -206,6 +211,7 @@ def initialize_ray(
                 "object_store_memory": object_store_memory,
                 "_redis_password": redis_password,
                 "_memory": object_store_memory,
+                **extra_init_kw,
             }
             ray.init(**ray_init_kwargs)
 
@@ -219,6 +225,20 @@ def initialize_ray(
             if not GPU_MANAGERS:
                 for i in range(GpuCount.get()):
                     GPU_MANAGERS.append(GPUManager.remote(i))
+    else:  # ray is already initialized, check runtime env config
+        main_cfg = ray.worker.global_worker.core_worker.get_job_config()
+        try:
+            runtime_env = json.loads(main_cfg.runtime_env_info.serialized_runtime_env)
+        except json.JSONDecodeError:
+            runtime_env = {}
+        env_vars = runtime_env.get("envVars", {})
+        for varname, varvalue in extra_init_kw["runtime_env"]["env_vars"].items():
+            if str(env_vars.get(varname, "")) != str(varvalue):
+                ErrorMessage.single_warning(
+                    "If initialising Ray yourself, please ensure its runtime env "
+                    + f"sets environment variable {varname} to {varvalue}"
+                )
+
     _move_stdlib_ahead_of_site_packages()
     ray.worker.global_worker.run_function_on_all_workers(
         _move_stdlib_ahead_of_site_packages
