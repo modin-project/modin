@@ -291,7 +291,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         if isinstance(self._ip_cache, Future):
             self._ip_cache = DaskWrapper.materialize(self._ip_cache)
         return self._ip_cache
-    
+
     def split(self, split_func, num_splits, *args):
         """
         Split the object wrapped by the partition into multiple partitions.
@@ -311,10 +311,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             A list of partitions.
         """
         outputs = DaskWrapper.deploy(
-            split_func,
-            *([self._data] + list(args)),
-            num_returns=num_splits,
-            pure=True
+            split_func, *([self._data] + list(args)), num_returns=num_splits, pure=True
         )
         return outputs
 
@@ -347,7 +344,7 @@ def _concat_splits(*splits):
     ----------
     splits : List[Future]
         List of ObjectIDs that correspond to splits to concatenate
-    
+
     Returns
     -------
     pandas.DataFrame
@@ -360,13 +357,10 @@ def _concat_splits(*splits):
         The node IP address of the worker process.
     """
     import pandas
+
     df = pandas.concat(splits)
-    return (
-        df,
-        len(df),
-        len(df.columns),
-        get_ip()
-    )
+    return (df, len(df), len(df.columns), get_ip())
+
 
 def apply_func(partition, func, *args, **kwargs):
     """

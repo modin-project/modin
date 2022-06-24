@@ -1310,7 +1310,7 @@ class PandasDataframePartitionManager(ABC):
             The same 2-d array.
         """
         return partitions
-    
+
     @classmethod
     def shuffle_partitions(cls, partitions, sample_func, pivot_func, split_func):
         """
@@ -1329,7 +1329,7 @@ class PandasDataframePartitionManager(ABC):
         split_func : Callable(pandas.DataFrame, Any) -> *List[pandas.Dataframe]
             Function that splits a partition based off of the pivots provided. Should return an
             unpacked list of pandas Dataframes.
-        
+
         Returns
         -------
         np.ndarray
@@ -1338,14 +1338,29 @@ class PandasDataframePartitionManager(ABC):
         # Convert our partitions into row partitions
         row_partitions = cls.row_partitions(partitions)
         # Sample each partition
-        samples = [partition.apply(sample_func, _impure=True) for partition in row_partitions]
+        samples = [
+            partition.apply(sample_func, _impure=True) for partition in row_partitions
+        ]
         # Get each sample to pass in to the pivot function
         samples = [row.get() for frame in samples for row in frame]
         pivots = pivot_func(samples)
         # Get each ``partition_cls`` wrapped by the ``axis_partition_cls`` (should be 1 per axis
         # partition since  we set ``num_splits`` to 1 earlier).
-        row_partitions = [partition.list_of_partitions_to_combine[0] for partition in row_partitions]
+        row_partitions = [
+            partition.list_of_partitions_to_combine[0] for partition in row_partitions
+        ]
         # Gather together all of the sub-partitions
-        split_row_partitions = np.swapaxes(np.array([partition.split(split_func, len(pivots), pivots) for partition in row_partitions]), 0, 1)
-        new_partitions = [[cls._partition_class.put_splits(splits)] for splits in split_row_partitions]
+        split_row_partitions = np.swapaxes(
+            np.array(
+                [
+                    partition.split(split_func, len(pivots), pivots)
+                    for partition in row_partitions
+                ]
+            ),
+            0,
+            1,
+        )
+        new_partitions = [
+            [cls._partition_class.put_splits(splits)] for splits in split_row_partitions
+        ]
         return np.array(new_partitions)

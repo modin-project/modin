@@ -1772,28 +1772,43 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
         """
         columns = columns if isinstance(columns, list) else [columns]
         axis = Axis(axis)
-        if axis == Axis.ROW_WISE and columns[0] != self.index.names:
+        if axis == Axis.ROW_WISE and not (
+            len(columns) == 1 and columns[0] == self.index.names[0]
+        ):
+
             def sample_func(df):
-                quantiles = [i / (NPartitions.get() * 2) for i in range(NPartitions.get() * 2)]
+                quantiles = [
+                    i / (NPartitions.get() * 2) for i in range(NPartitions.get() * 2)
+                ]
                 # Heuristic for a "small" df we will compute histogram over entirety of.
                 if len(df) <= 100:
                     return np.quantile(df[columns[0]], quantiles)
                 # Heuristic for a "medium" df where we will include first 100 rows, and sample
                 # of remaining rows
                 if len(df) <= 1900:
-                    return np.quantile(np.concatenate((df[columns[0]][:100].values, df[columns[0]][100:].sample(frac=0.1))), quantiles)
+                    return np.quantile(
+                        np.concatenate(
+                            (
+                                df[columns[0]][:100].values,
+                                df[columns[0]][100:].sample(frac=0.1),
+                            )
+                        ),
+                        quantiles,
+                    )
                 return np.quantile(df[columns[0]].sample(frac=0.1), quantiles)
+
             def pivot_func(pivots):
                 all_pivots = np.unique(np.sort(np.array(pivots).flatten()))
-                quantiles = [i / (NPartitions.get() * 2) for i in range(NPartitions.get() * 2)]
+                quantiles = [
+                    i / (NPartitions.get() * 2) for i in range(NPartitions.get() * 2)
+                ]
                 overall_quantiles = np.quantile(all_pivots, quantiles)
                 overall_quantiles[0] = np.NINF
                 overall_quantiles[-1] = np.inf
                 return overall_quantiles
+
             def split_func(df, pivots):
-                groupby_col =  np.digitize(
-                    df[columns[0]].squeeze(), pivots
-                )
+                groupby_col = np.digitize(df[columns[0]].squeeze(), pivots)
                 grouped = df.groupby(groupby_col)
                 groups = [
                     grouped.get_group(i)
@@ -1804,20 +1819,45 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
                 if not ascending:
                     groups = groups[::-1]
                 return tuple(groups)
-            new_partitions = self._partition_mgr_cls.shuffle_partitions(self._partitions, sample_func, pivot_func, split_func)
-            new_partitions = self._partition_mgr_cls.lazy_map_partitions(new_partitions, lambda df: df.sort_values(by=columns, ascending=ascending))
+
+            new_partitions = self._partition_mgr_cls.shuffle_partitions(
+                self._partitions, sample_func, pivot_func, split_func
+            )
+            new_partitions = self._partition_mgr_cls.lazy_map_partitions(
+                new_partitions,
+                lambda df: df.sort_values(by=columns, ascending=ascending),
+            )
             new_axes = [0, 0]
             new_axes[axis.value] = self._compute_axis_labels(0, new_partitions)
             new_axes[axis.value ^ 1] = self.axes[axis.value ^ 1]
             new_lengths = [0, 0]
-            new_lengths[axis.value^1] = self._axes_lengths[axis.value^1]
-            new_lengths[axis.value] = None
-            new_partitions = self._partition_mgr_cls.rebalance_partitions(new_partitions)
+            new_lengths = [None, None]
+            new_partitions = self._partition_mgr_cls.rebalance_partitions(
+                new_partitions
+            )
             return self.__constructor__(
-                new_partitions,
-                *new_axes,
-                *new_lengths,
-                self.dtypes
+                new_partitions, *new_axes, *new_lengths, self.dtypes
+            )
+        elif (
+            axis == Axis.ROW_WISE
+            and len(columns) == 1
+            and columns[0] == self.index.names[0]
+        ):
+            print("hi!")
+            new_partitions = self._partition_mgr_cls.map_axis_partitions(
+                axis.value,
+                self._partitions,
+                lambda df: df.sort_index(ascending=ascending),
+            )
+            new_axes = [0, 0]
+            new_axes[axis.value] = self._compute_axis_labels(0, new_partitions).rename(
+                self.axes[axis.value].names[0]
+            )
+            new_axes[axis.value ^ 1] = self.axes[axis.value ^ 1]
+            new_lengths = [0, 0]
+            new_lengths = [None, None]
+            return self.__constructor__(
+                new_partitions, *new_axes, *new_lengths, self.dtypes
             )
 
     @lazy_metadata_decorator(apply_axis="both")

@@ -295,7 +295,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             preprocessed_func = cls.preprocess_func(func)
             self._width_cache = self.apply(preprocessed_func)
         return self._width_cache
-    
+
     def split(self, split_func, num_splits, *args):
         """
         Split the object wrapped by the partition into multiple partitions.

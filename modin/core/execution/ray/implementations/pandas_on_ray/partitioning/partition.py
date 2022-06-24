@@ -326,7 +326,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         if isinstance(self._ip_cache, ObjectIDType):
             self._ip_cache = ray.get(self._ip_cache)
         return self._ip_cache
-    
+
     def split(self, split_func, num_splits, *args):
         """
         Split the object wrapped by the partition into multiple partitions.
@@ -347,14 +347,16 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         """
         logger = get_logger()
         logger.debug(f"ENTER::Partition.split::{self._identity}")
+
         @ray.remote(num_returns=num_splits)
-        def _split_df(df, split_func, *args): # pragma: no cover
+        def _split_df(df, split_func, *args):  # pragma: no cover
             return split_func(df, *args)
+
         outputs = _split_df.remote(self._data, split_func, *args)
         logger.debug(f"SUBMIT::_split_df::{self._identity}")
         logger.debug(f"EXIT::Partition.split::{self._identity}")
         return outputs
-    
+
     @classmethod
     def put_splits(cls, splits):
         """
@@ -477,6 +479,7 @@ def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
         get_node_ip_address(),
     )
 
+
 @ray.remote(num_returns=4)
 def _concat_splits(*splits):
     """
@@ -486,7 +489,7 @@ def _concat_splits(*splits):
     ----------
     splits : List[pandas.DataFrame]
         List of dataframes that correspond to splits to concatenate
-    
+
     Returns
     -------
     pandas.DataFrame
@@ -499,10 +502,6 @@ def _concat_splits(*splits):
         The node IP address of the worker process.
     """
     import pandas
+
     df = pandas.concat(splits)
-    return (
-        df,
-        len(df),
-        len(df.columns),
-        get_node_ip_address()
-    )
+    return (df, len(df), len(df.columns), get_node_ip_address())
