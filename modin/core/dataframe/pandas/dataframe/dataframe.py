@@ -1801,6 +1801,8 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
                     else pandas.DataFrame(columns=df.columns)
                     for i in range(len(pivots))
                 ]
+                if not ascending:
+                    groups = groups[::-1]
                 return tuple(groups)
             new_partitions = self._partition_mgr_cls.shuffle_partitions(self._partitions, sample_func, pivot_func, split_func)
             new_partitions = self._partition_mgr_cls.lazy_map_partitions(new_partitions, lambda df: df.sort_values(by=columns, ascending=ascending))
@@ -1808,8 +1810,9 @@ class PandasDataframe(object, metaclass=LoggerMetaClass):
             new_axes[axis.value] = self._compute_axis_labels(0, new_partitions)
             new_axes[axis.value ^ 1] = self.axes[axis.value ^ 1]
             new_lengths = [0, 0]
-            new_lengths[axis.value] = self._axes_lengths[axis.value]
-            new_lengths[axis.value ^ 1] = None
+            new_lengths[axis.value^1] = self._axes_lengths[axis.value^1]
+            new_lengths[axis.value] = None
+            new_partitions = self._partition_mgr_cls.rebalance_partitions(new_partitions)
             return self.__constructor__(
                 new_partitions,
                 *new_axes,

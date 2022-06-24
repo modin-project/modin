@@ -835,13 +835,13 @@ class PandasDataframePartitionManager(ABC):
         func = cls.preprocess_func(index_func)
         if axis == 0:
             new_idx = (
-                [idx.apply(func, _impure=True) for idx in partitions.T[0]]
+                [idx.apply(func) for idx in partitions.T[0]]
                 if len(partitions.T)
                 else []
             )
         else:
             new_idx = (
-                [idx.apply(func, _impure=True) for idx in partitions[0]] if len(partitions) else []
+                [idx.apply(func) for idx in partitions[0]] if len(partitions) else []
             )
         new_idx = cls.get_objects_from_partitions(new_idx)
         # TODO FIX INFORMATION LEAK!!!!1!!1!!
@@ -1348,8 +1348,4 @@ class PandasDataframePartitionManager(ABC):
         # Gather together all of the sub-partitions
         split_row_partitions = np.swapaxes(np.array([partition.split(split_func, len(pivots), pivots) for partition in row_partitions]), 0, 1)
         new_partitions = [[cls._partition_class.put_splits(splits)] for splits in split_row_partitions]
-        return cls.rebalance_partitions(np.array(new_partitions))
-        
-
-
-        
+        return np.array(new_partitions)
