@@ -34,7 +34,6 @@ import sys
 from typing import IO, Optional, Union, Iterator
 import warnings
 
-from modin.logging import metaclass_resolver
 from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, to_pandas, hashable
@@ -54,7 +53,7 @@ from .accessor import CachedAccessor, SparseFrameAccessor
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame.__init__], apilink="pandas.DataFrame"
 )
-class DataFrame(metaclass_resolver(BasePandasDataset)):
+class DataFrame(BasePandasDataset):
     """
     Modin distributed representation of ``pandas.DataFrame``.
 
@@ -2499,6 +2498,10 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
             pass
         elif key in self and key not in dir(self):
             self.__setitem__(key, value)
+            # Note: return immediately so we don't keep this `key` as dataframe state.
+            # `__getattr__` will return the columns not present in `dir(self)`, so we do not need
+            # to manually track this state in the `dir`.
+            return
         elif isinstance(value, pandas.Series):
             warnings.warn(
                 "Modin doesn't allow columns to be created via a new attribute name - see "
