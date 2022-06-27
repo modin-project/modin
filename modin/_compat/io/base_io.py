@@ -11,19 +11,33 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.core._compat import PandasCompatVersion
+"""Module that houses pandas version-dependent BaseIO compatibility class."""
+
+from modin._compat import PandasCompatVersion
 
 if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-    from .py36 import (
-        Python36CompatibleBasePandasDataset as BasePandasDatasetCompat,
-    )
-    from .py36 import Python36CompatibleDataFrame as DataFrameCompat
-    from .py36 import Python36CompatibilitySeries as SeriesCompat
-elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
-    from .latest import (
-        LatestCompatibleBasePandasDataset as BasePandasDatasetCompat,
-    )
-    from .latest import LatestCompatibleDataFrame as DataFrameCompat
-    from .latest import LatestCompatibleSeries as SeriesCompat
+    from pandas.io.parsers import _validate_usecols_arg
+    from pandas.io.parsers import _parser_defaults as parser_defaults
 
-__all__ = ["BasePandasDatasetCompat", "DataFrameCompat", "SeriesCompat"]
+    from .py36.base_io import Py36BaseIOCompat as BaseIOCompat
+elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
+    from pandas.io.parsers.base_parser import ParserBase, parser_defaults
+
+    from .latest.base_io import LatestBaseIOCompat as BaseIOCompat
+
+    _validate_usecols_arg = ParserBase._validate_usecols_arg
+
+from .doc_common import (
+    _doc_default_io_method,
+    _doc_returns_qc,
+    _doc_returns_qc_or_parser,
+)
+
+__all__ = [
+    "BaseIOCompat",
+    "_doc_default_io_method",
+    "_doc_returns_qc",
+    "_doc_returns_qc_or_parser",
+    "_validate_usecols_arg",
+    "parser_defaults",
+]

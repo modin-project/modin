@@ -33,7 +33,7 @@ from modin.config import (
     TestReadFromSqlServer,
     ReadSqlEngine,
 )
-from modin.core._compat import PandasCompatVersion
+from modin._compat import PandasCompatVersion
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 from modin.test.test_utils import warns_that_defaulting_to_pandas

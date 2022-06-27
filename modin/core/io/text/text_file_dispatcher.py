@@ -35,7 +35,7 @@ from modin.utils import _inherit_docstrings
 from modin.core.io.text.utils import CustomNewlineIterator
 from modin.config import NPartitions
 from modin.error_message import ErrorMessage
-from modin.core.io._compat.io import _validate_usecols_arg
+from modin._compat.io.base_io import _validate_usecols_arg
 
 ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
 IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]

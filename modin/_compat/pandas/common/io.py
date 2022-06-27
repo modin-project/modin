@@ -14,7 +14,7 @@
 import pandas
 
 from modin.utils import Engine
-from ... import _update_engine, DataFrame
+from modin.pandas import _update_engine, DataFrame
 
 
 def _read(**kwargs):

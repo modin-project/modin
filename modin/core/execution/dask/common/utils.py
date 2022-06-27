@@ -15,7 +15,7 @@
 
 from modin.config import CpuCount, Memory, NPartitions
 from modin.error_message import ErrorMessage
-from modin.core._compat import PandasCompatVersion
+from modin._compat import PandasCompatVersion
 
 
 def initialize_dask():

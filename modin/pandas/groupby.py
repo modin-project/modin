@@ -36,7 +36,7 @@ from modin.config import IsExperimental
 from modin.logging import ClassLogger
 from .series import Series
 from .utils import is_label
-from ._compat.pandas_utility_imports import reconstruct_func
+from modin._compat.methods import reconstruct_func
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)

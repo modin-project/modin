@@ -14,15 +14,18 @@
 from . import PandasCompatVersion
 
 if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+    from pandas.core.aggregation import reconstruct_func
 
     def pd_pivot_table(df, **kwargs):
-        assert kwargs.pop("sort", None) is None
+        unsupported_sort = kwargs.pop("sort", None)
+        assert unsupported_sort is None
         return df.pivot_table(**kwargs)
 
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
+    from pandas.core.apply import reconstruct_func
 
     def pd_pivot_table(df, **kwargs):
         return df.pivot_table(**kwargs)
 
 
-__all__ = ["pd_pivot_table"]
+__all__ = ["pd_pivot_table", "reconstruct_func"]

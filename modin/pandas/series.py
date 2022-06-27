@@ -33,7 +33,7 @@ from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar, _doc_binary_op
 from .accessor import CachedAccessor, SparseAccessor
 from . import _update_engine
-from ._compat.classes import SeriesCompat
+from modin._compat.pandas.classes import SeriesCompat
 
 
 @_inherit_docstrings(

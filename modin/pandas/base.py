@@ -49,7 +49,7 @@ from modin import pandas as pd
 from modin.pandas.utils import is_scalar
 from modin.config import IsExperimental
 from modin.logging import disable_logging
-from ._compat.classes import BasePandasDatasetCompat
+from modin._compat.pandas.classes import BasePandasDatasetCompat
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.

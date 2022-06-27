@@ -31,7 +31,7 @@ from .dataframe import DataFrame
 from modin.utils import _inherit_docstrings, Engine
 from . import _update_engine
 
-from ._compat.namespace import (
+from modin._compat.pandas.namespace import (
     read_csv,
     read_parquet,
     read_json,
@@ -185,7 +185,7 @@ def read_fwf(
     """
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-    from modin.core.io._compat.io import parser_defaults
+    from modin._compat.io.base_io import parser_defaults
 
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))

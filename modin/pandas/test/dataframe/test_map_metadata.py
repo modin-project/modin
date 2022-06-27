@@ -19,7 +19,7 @@ import matplotlib
 import modin.pandas as pd
 from modin.utils import get_current_execution
 
-from modin.core._compat import PandasCompatVersion
+from modin._compat import PandasCompatVersion
 
 from modin.pandas.test.utils import (
     random_state,

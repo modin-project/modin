@@ -11,33 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module that houses pandas version-dependent BaseIO compatibility class."""
+"""Module that houses compat functions and objects for `pandas.io.common`."""
 
-from modin.core._compat import PandasCompatVersion
+from modin._compat import PandasCompatVersion
 
 if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-    from pandas.io.parsers import _validate_usecols_arg
-    from pandas.io.parsers import _parser_defaults as parser_defaults
-
-    from .py36.io import Py36BaseIOCompat as BaseIOCompat
+    from .py36.pd_common import get_handle
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
-    from pandas.io.parsers.base_parser import ParserBase, parser_defaults
+    from .latest.pd_common import get_handle
 
-    from .latest.io import LatestBaseIOCompat as BaseIOCompat
-
-    _validate_usecols_arg = ParserBase._validate_usecols_arg
-
-from .doc_common import (
-    _doc_default_io_method,
-    _doc_returns_qc,
-    _doc_returns_qc_or_parser,
-)
-
-__all__ = [
-    "BaseIOCompat",
-    "_doc_default_io_method",
-    "_doc_returns_qc",
-    "_doc_returns_qc_or_parser",
-    "_validate_usecols_arg",
-    "parser_defaults",
-]
+__all__ = ["get_handle"]

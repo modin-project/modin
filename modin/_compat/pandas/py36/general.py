@@ -15,7 +15,7 @@ import pandas
 
 from modin.utils import _inherit_docstrings
 from modin.logging import enable_logging
-from ... import DataFrame
+from modin.pandas import DataFrame
 
 
 @_inherit_docstrings(pandas.pivot_table)
