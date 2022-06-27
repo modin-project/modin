@@ -12,6 +12,7 @@ Key Features and Updates
   * FIX-#4589: Pin protobuf<4.0.0 to fix ray (#4590)
   * FIX-#4577: Set attribute of Modin dataframe to updated value (#4588)
   * FIX-#4411: Fix binary_op between datetime64 Series and pandas timedelta (#4592)
+  * FIX-#4582: Inherit custom log layer (#4583)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
 * Benchmarking enhancements
