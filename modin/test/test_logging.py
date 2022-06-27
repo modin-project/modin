@@ -144,6 +144,6 @@ def test_class_inheritance(monkeypatch, get_log_messages):
         "STOP::CUSTOM::Foo.method1",
         "START::CUSTOM::Foo.method1",
         "STOP::CUSTOM::Foo.method1",
-        "START::PANDAS-API::Bar.method2",
-        "STOP::PANDAS-API::Bar.method2",
+        "START::CUSTOM::Bar.method2",
+        "STOP::CUSTOM::Bar.method2",
     ]
