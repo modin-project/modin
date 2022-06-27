@@ -169,12 +169,7 @@ def initialize_ray(
                 for i in range(GpuCount.get()):
                     GPU_MANAGERS.append(GPUManager.remote(i))
     else:  # ray is already initialized, check runtime env config
-        main_cfg = ray.worker.global_worker.core_worker.get_job_config()
-        try:
-            runtime_env = json.loads(main_cfg.runtime_env_info.serialized_runtime_env)
-        except json.JSONDecodeError:
-            runtime_env = {}
-        env_vars = runtime_env.get("envVars", {})
+        env_vars = ray.get_runtime_context().runtime_env.get("env_vars", {})
         for varname, varvalue in extra_init_kw["runtime_env"]["env_vars"].items():
             if str(env_vars.get(varname, "")) != str(varvalue):
                 ErrorMessage.single_warning(
