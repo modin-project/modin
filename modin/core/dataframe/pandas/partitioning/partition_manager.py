@@ -1351,9 +1351,9 @@ class PandasDataframePartitionManager(ABC):
                     partition.split(split_func, len(pivots), pivots)
                     for partition in row_partitions
                 ]
-            ),
-            0,
-            1,
+            ), # array whose axes to swap
+            0, # axis1
+            1, # axis2
         )
         new_partitions = [
             [cls._partition_class.put_splits(splits)] for splits in split_row_partitions
