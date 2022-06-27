@@ -111,35 +111,57 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
 
     df_equals(md_df, pd_df)
 
-
-small_dfs = [
-    pd.DataFrame(
-        [[i + j for j in range(0, 1000)]],
-        columns=[f"col{j}" for j in range(1, 1001)],
-        index=pd.Index([i - 1]),
-    )
-    for i in range(1, 100001, 1000)
-]
-large_df = pd.DataFrame(
-    [[i + j for j in range(1, 1000)] for i in range(0, 100000, 1000)],
-    columns=[f"col{j}" for j in range(1, 1000)],
-    index=pd.Index(list(range(0, 100000, 1000))),
-)
-
-
 @pytest.mark.skipif(
     Engine.get() not in ("Dask", "Ray"),
     reason="Rebalancing partitions is only supported for Dask and Ray engines",
 )
 @pytest.mark.parametrize(
-    "large_df,col_length",
+    "test_type",
     [
-        (pd.concat(small_dfs), 100),
-        (pd.concat([pd.concat(small_dfs)] + small_dfs[:3]), 103),
-        (pd.concat([large_df] + small_dfs[:3]), 103),
+        "many_small_dfs",
+        "concatted_df_with_small_dfs",
+        "large_df_plust_small_dfs",
     ],
 )
-def test_rebalance_partitions(large_df, col_length):
+def test_rebalance_partitions(test_type, large_df, col_length):
+    if test_type == "many_small_dfs":
+        small_dfs = [
+            pd.DataFrame(
+                [[i + j for j in range(0, 1000)]],
+                columns=[f"col{j}" for j in range(0, 1000)],
+                index=pd.Index([i]),
+            )
+            for i in range(1, 100001, 1000)
+        ]
+        large_df = pd.concat(small_dfs)
+        col_length = 100
+    elif test_type == "concatted_df_with_small_dfs":
+        small_dfs = [
+            pd.DataFrame(
+                [[i + j for j in range(0, 1000)]],
+                columns=[f"col{j}" for j in range(0, 1000)],
+                index=pd.Index([i]),
+            )
+            for i in range(1, 100001, 1000)
+        ]
+        large_df = pd.concat([pd.concat(small_dfs)] + small_dfs[:3])
+        col_length = 103
+    else:
+        large_df = pd.DataFrame(
+            [[i + j for j in range(1, 1000)] for i in range(0, 100000, 1000)],
+            columns=[f"col{j}" for j in range(1, 1000)],
+            index=pd.Index(list(range(0, 100000, 1000))),
+        )
+        small_dfs = [
+            pd.DataFrame(
+                [[i + j for j in range(0, 1000)]],
+                columns=[f"col{j}" for j in range(0, 1000)],
+                index=pd.Index([i]),
+            )
+            for i in range(1, 4001, 1000)
+        ]
+        large_df = pd.concat([large_df] + small_dfs[:3])
+        col_length = 103
     large_modin_frame = large_df._query_compiler._modin_frame
     assert large_modin_frame._partitions.shape == (
         NPartitions.get(),
