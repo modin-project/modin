@@ -1141,6 +1141,14 @@ def test_between_time():
     )
 
 
+def test_add_series_to_timedeltaindex():
+    # Make a pandas.core.indexes.timedeltas.TimedeltaIndex
+    deltas = pd.to_timedelta([1], unit="h")
+    test_series = create_test_series(np.datetime64("2000-12-12"))
+    eval_general(*test_series, lambda s: s + deltas)
+    eval_general(*test_series, lambda s: s - deltas)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_bfill(data):
     modin_series, pandas_series = create_test_series(data)
