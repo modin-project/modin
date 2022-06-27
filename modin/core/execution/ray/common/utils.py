@@ -18,7 +18,6 @@ import sys
 import psutil
 from packaging import version
 import warnings
-import json
 
 import ray
 
