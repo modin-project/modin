@@ -562,6 +562,26 @@ def test_loc_multi_index():
     df_equals(modin_df.loc[modin_df.index[:7]], pandas_df.loc[pandas_df.index[:7]])
 
 
+def test_loc_4358():
+    arrays = [
+        ["bar", "bar", "baz", "baz", "foo", "foo", "qux", "qux"],
+        ["one", "two", "one", "two", "one", "two", "one", "two"],
+    ]
+    columns =  pd.MultiIndex.from_tuples(zip(*arrays), names=['a', 'b'])
+    data = [np.random.randint(10, 50, len(columns)) for _ in range(30)]
+    modin_df = pd.DataFrame(data, columns=columns)
+    pandas_df = pandas.DataFrame(data, columns=columns)
+    df_equals(modin_df.loc[:, ('bar','two')], pandas_df.loc[:, ('bar','two')])
+
+    # We have not handled the case of tuple of lists. This is a possible indexing
+    #print(df.loc[:, (['bar','baz'], ['one'])])
+
+
+def test_loc_fail():
+    df = pd.DataFrame([1, 2], index=[['a', 'a'], ['b', 'b']])
+    print(df.loc[('a', 'b'), 0])
+
+
 def test_loc_empty():
     pandas_df = pandas.DataFrame(index=range(5))
     modin_df = pd.DataFrame(index=range(5))
