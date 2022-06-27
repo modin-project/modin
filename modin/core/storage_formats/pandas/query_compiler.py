@@ -2512,30 +2512,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def groupby_mean_numeric(
         self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False
     ):
-        """
-        Execute ``GroupBy.mean`` aggregation with TreeReduce approach.
-
-        Parameters
-        ----------
-        by : BaseQueryCompiler, column or index label, Grouper or list of such
-            Object that determine groups.
-        axis : {0, 1}
-            Axis to group and apply aggregation function along. 0 means index axis
-            when 1 means column axis.
-        groupby_kwargs : dict
-            Dictionary which carries arguments for pandas.DataFrame.groupby.
-        agg_args : list-like
-            Positional arguments to pass to the aggregation functions.
-        agg_kwargs : dict
-            Keyword arguments to pass to the aggregation functions.
-        drop : bool, default: False
-            Indicates whether or not by-data came from the `self` frame.
-
-        Returns
-        -------
-        The same type as `query_compiler`
-            QueryCompiler which carries the result of ``GroupBy.mean`` aggregation.
-        """
         return GroupByReduce.register(
             lambda dfgb, **kwargs: pandas.concat(
                 [dfgb.sum(**kwargs), dfgb.count()],
