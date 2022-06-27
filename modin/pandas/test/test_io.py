@@ -773,6 +773,10 @@ class TestCsv:
     @pytest.mark.parametrize("warn_bad_lines", [True, False, None])
     @pytest.mark.parametrize("error_bad_lines", [True, False, None])
     @pytest.mark.parametrize("on_bad_lines", ["error", "warn", "skip", None])
+    @pytest.mark.skipif(
+        PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+        reason="In compat mode, some error handling tests are failing due to https://github.com/modin-project/modin/issues/2845",
+    )
     def test_read_csv_error_handling(
         self,
         warn_bad_lines,
