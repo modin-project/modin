@@ -2487,29 +2487,72 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_prod = GroupByReduce.register("prod")
     groupby_sum = GroupByReduce.register("sum")
 
-    def _mean_reduce(dfgb):
+    @staticmethod
+    def _groupby_mean_reduce(dfgb, **kwargs):
         """
-        Compute mean value for each column using sum/count info.
+        Compute `groupby.mean` value in each group using sums/counts values from map stage.
 
         Parameters
         ----------
         dfgb : pandas.DataFrameGroupBy
+            GroupBy object for column-partition.
+        **kwargs : dict
+            Additional keyword parameters to be passed in ``pandas.DataFrameGroupBy.sum``.
 
         Returns
         -------
         pandas.DataFrame
-            Dataframe with mean values in each column of each group.
+            A pandas Dataframe with mean values in each column of each group.
         """
-        full_result = dfgb.sum()
-        sum_df = full_result.iloc[:, : len(full_result.columns) // 2]
-        count_df = full_result.iloc[:, len(full_result.columns) // 2 :]
+        sums_counts_df = dfgb.sum(**kwargs)
+        sum_df = sums_counts_df.iloc[:, : len(sums_counts_df.columns) // 2]
+        count_df = sums_counts_df.iloc[:, len(sums_counts_df.columns) // 2 :]
         return sum_df / count_df
 
-    groupby_mean = GroupByReduce.register(
-        lambda dfgb: pandas.concat([dfgb.sum(), dfgb.count()], axis=1),
-        _mean_reduce,
-        default_to_pandas_func=lambda dfgb, **kwargs: dfgb.mean(**kwargs),
-    )
+    def groupby_mean_numeric(
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False
+    ):
+        """
+        Execute ``GroupBy.mean`` aggregation with TreeReduce approach.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler, column or index label, Grouper or list of such
+            Object that determine groups.
+        axis : {0, 1}
+            Axis to group and apply aggregation function along. 0 means index axis
+            when 1 means column axis.
+        groupby_kwargs : dict
+            Dictionary which carries arguments for pandas.DataFrame.groupby.
+        agg_args : list-like
+            Positional arguments to pass to the aggregation functions.
+        agg_kwargs : dict
+            Keyword arguments to pass to the aggregation functions.
+        drop : bool, default: False
+            Indicates whether or not by-data came from the `self` frame.
+
+        Returns
+        -------
+        The same type as `query_compiler`
+            QueryCompiler which carries the result of ``GroupBy.mean`` aggregation.
+        """
+        return GroupByReduce.register(
+            lambda dfgb, **kwargs: pandas.concat(
+                [dfgb.sum(**kwargs), dfgb.count()],
+                axis=1,
+                copy=False,
+            ),
+            self._groupby_mean_reduce,
+            default_to_pandas_func=lambda dfgb, **kwargs: dfgb.mean(**kwargs),
+        )(
+            query_compiler=self,
+            by=by,
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
 
     def groupby_size(
         self,

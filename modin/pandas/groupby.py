@@ -16,7 +16,11 @@
 import numpy as np
 import pandas
 import pandas.core.groupby
-from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
+from pandas.core.dtypes.common import (
+    is_list_like,
+    is_numeric_dtype,
+    is_datetime64_any_dtype,
+)
 from pandas.core.apply import reconstruct_func
 from pandas._libs.lib import no_default
 import pandas.core.common as com
@@ -132,10 +136,47 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
 
     def mean(self, numeric_only=None):
-        return self._wrap_aggregation(
-            type(self._query_compiler).groupby_mean,
-            numeric_only=numeric_only,
+        dtypes = (
+            {self._df.name: self._df.dtype}
+            if isinstance(self._df, Series)
+            else self._df.dtypes
         )
+        datetime_cols = (
+            {
+                col: dtype
+                for col, dtype in dtypes.items()
+                if is_datetime64_any_dtype(dtype)
+            }
+            if not numeric_only
+            else dict()
+        )
+
+        if len(datetime_cols) > 0:
+            datetime_df = self._df[list(datetime_cols)]
+            if datetime_df.isna().any()[0]:
+                return self._check_index(
+                    self._wrap_aggregation(
+                        type(self._query_compiler).groupby_mean,
+                        numeric_only=numeric_only,
+                        agg_kwargs=dict(numeric_only=numeric_only),
+                    )
+                )
+
+        df_without_datetime_cols = (
+            self.astype({col: "int64" for col in datetime_cols.keys()})
+            if len(datetime_cols) > 0
+            else self
+        )
+        result = self._check_index(
+            self._wrap_aggregation(
+                type(df_without_datetime_cols._query_compiler).groupby_mean_numeric,
+                numeric_only=numeric_only,
+                agg_kwargs=dict(numeric_only=numeric_only),
+            )
+        )
+        if len(datetime_cols) > 0:
+            result = result.astype({col: dtype for col, dtype in datetime_cols.items()})
+        return result
 
     def any(self, skipna=True):
         return self._wrap_aggregation(

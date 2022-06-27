@@ -245,22 +245,22 @@ class GetColumn:
         # col2 contains NaN, is it necessary to test functions like size()
         "col2",
         ["col2"],  # 5
-        # pytest.param(
-        #     ["col1", "col2"],
-        #     marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
-        # ),
-        # pytest.param(
-        # ["col2", "col4"],
-        #     marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
-        # ),
-        # pytest.param(
-        # ["col4", "col2"],
-        #     marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
-        # ),
-        # pytest.param(
-        #     ["col3", "col4", "col2"],
-        #     marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
-        # ),
+        pytest.param(
+            ["col1", "col2"],
+            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        ),
+        pytest.param(
+            ["col2", "col4"],
+            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        ),
+        pytest.param(
+            ["col4", "col2"],
+            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        ),
+        pytest.param(
+            ["col3", "col4", "col2"],
+            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        ),
         # but cum* functions produce undefined results with NaNs so we need to test the same combinations without NaN too
         ["col5"],  # 10
         ["col1", "col5"],
@@ -1504,7 +1504,7 @@ def test_dict_agg_rename_mi_columns(
     "operation",
     [
         "quantile",
-        # "mean",
+        "mean",
         pytest.param(
             "sum", marks=pytest.mark.skip("See Modin issue #2255 for details")
         ),
@@ -1516,7 +1516,20 @@ def test_dict_agg_rename_mi_columns(
 def test_agg_exceptions(operation):
     N = 256
     fill_data = [
-        ("nan_column", [None, np.datetime64("2010")] * (N // 2)),
+        (
+            "nan_column",
+            [
+                np.datetime64("2010"),
+                None,
+                np.datetime64("2007"),
+                np.datetime64("2010"),
+                np.datetime64("2006"),
+                np.datetime64("2012"),
+                None,
+                np.datetime64("2011"),
+            ]
+            * (N // 8),
+        ),
         (
             "date_column",
             [
