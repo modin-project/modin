@@ -42,40 +42,6 @@ if version.parse(ray.__version__) >= version.parse("1.2.0"):
     ObjectIDType = (ray.ObjectRef, ClientObjectRef)
 
 
-def _move_stdlib_ahead_of_site_packages(*args):
-    """
-    Ensure packages from stdlib have higher import priority than from site-packages.
-
-    Parameters
-    ----------
-    *args : tuple
-        Ignored, added for compatibility with Ray.
-
-    Notes
-    -----
-    This function is expected to be run on all workers including the driver.
-    This is a hack solution to fix GH-#647, GH-#746.
-    """
-    site_packages_path = None
-    site_packages_path_index = -1
-    for i, path in enumerate(sys.path):
-        if sys.exec_prefix in path and path.endswith("site-packages"):
-            site_packages_path = path
-            site_packages_path_index = i
-            # break on first found
-            break
-
-    if site_packages_path is not None:
-        # stdlib packages layout as follows:
-        # - python3.x
-        #   - typing.py
-        #   - site-packages/
-        #     - pandas
-        # So extracting the dirname of the site_packages can point us
-        # to the directory containing standard libraries.
-        sys.path.insert(site_packages_path_index, os.path.dirname(site_packages_path))
-
-
 def initialize_ray(
     override_is_cluster=False,
     override_redis_address: str = None,
@@ -99,9 +65,7 @@ def initialize_ray(
         What password to use when connecting to Redis.
         If not specified, ``modin.config.RayRedisPassword`` is used.
     """
-    extra_init_kw = {
-        "runtime_env": {"env_vars": {"__MODIN_AUTOIMPORT_PANDAS_WORKAROUND__": "1"}}
-    }
+    extra_init_kw = {"runtime_env": {"env_vars": {"__MODIN_AUTOIMPORT_PANDAS__": "1"}}}
     if not ray.is_initialized() or override_is_cluster:
         cluster = override_is_cluster or IsRayCluster.get()
         redis_address = override_redis_address or RayRedisAddress.get()
@@ -217,11 +181,6 @@ def initialize_ray(
                     "If initialising Ray yourself, please ensure its runtime env "
                     + f"sets environment variable {varname} to {varvalue}"
                 )
-
-    _move_stdlib_ahead_of_site_packages()
-    ray.worker.global_worker.run_function_on_all_workers(
-        _move_stdlib_ahead_of_site_packages
-    )
 
     num_cpus = int(ray.cluster_resources()["CPU"])
     num_gpus = int(ray.cluster_resources().get("GPU", 0))
