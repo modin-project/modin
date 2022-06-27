@@ -1772,11 +1772,36 @@ class PandasDataframe(ClassLogger):
         """
         columns = columns if isinstance(columns, list) else [columns]
         axis = Axis(axis)
+        # The first if selects cases where we are either sorting by a single column that is not
+        # the index, or we are sorting by multiple columns, since in this case, we will have to
+        # shuffle the data before sorting.
+        # The elif selects the case where we are only sorting by index. All partitions maintain
+        # a copy of the index for their data, so if we are just sorting by index, we can make
+        # column partitions, and sort each by their index in parallel, which should be faster than
+        # shuffling our data and sorting.
         if axis == Axis.ROW_WISE and not (
             len(columns) == 1 and columns[0] == self.index.names[0]
         ):
 
             def sample_func(df):
+                """
+                Sample the given partition.
+
+                This function is applied to each row-axis partition in parallel to select samples
+                from each. It samples using the following algorithm:
+                    * If there are <= 100 rows in the dataframe, we pick quantiles over the entire dataframe.
+                    * If there are 100 < # of rows <= 1900, we pick quantiles over the first 100 rows, plus a sample
+                    of 5% of the remaining rows.
+                    * If there are > 1900 rows, we pick quantiles over a sample of 10% of all of the rows.
+                
+                These numbers are a heuristic. They were picked such that the size of the sample
+                in scenario 2 scales well. In other words, we picked A, k, and q such that:
+                    A + (len(df) - A)*k = q*len(df)
+                Where q is the proportion we sample in scenario 3, k is the proportion we sample
+                of remaining rows in scenario 2, and A is the threshold below which we just return
+                the entire dataframe, instead of sampling (scenario 1).
+                q = 0.1 and k = 0.05 were picked such that this formula holds for A = 100.
+                """
                 quantiles = [
                     i / (NPartitions.get() * 2) for i in range(NPartitions.get() * 2)
                 ]
@@ -1790,15 +1815,26 @@ class PandasDataframe(ClassLogger):
                         np.concatenate(
                             (
                                 df[columns[0]][:100].values,
-                                df[columns[0]][100:].sample(frac=0.1),
+                                df[columns[0]][100:].sample(frac=0.05),
                             )
                         ),
                         quantiles,
                     )
                 return np.quantile(df[columns[0]].sample(frac=0.1), quantiles)
 
-            def pivot_func(pivots):
-                all_pivots = np.unique(np.sort(np.array(pivots).flatten()))
+            def pivot_func(samples):
+                """
+                Determine quantiles from the given samples.
+
+                This function takes as input the quantiles calculated over all partitions from 
+                `sample_func` defined above, and determines a final NPartitions.get() * 2 quantiles
+                to use to roughly sort the entire dataframe. It does so by collating all the samples
+                and computing NPartitions.get() * 2 quantiles for the overall set.
+                """
+                # We don't call `np.unique` on the samples, since if a quantile shows up in multiple
+                # partition's samples, this is probably an indicator of skew in the dataset, and we
+                # want our final partitions to take this into account.
+                all_pivots = np.array(samples).flatten()
                 quantiles = [
                     i / (NPartitions.get() * 2) for i in range(NPartitions.get() * 2)
                 ]
@@ -1808,6 +1844,14 @@ class PandasDataframe(ClassLogger):
                 return overall_quantiles
 
             def split_func(df, pivots):
+                """
+                Split the given dataframe into the partitions specified by `pivots`.
+
+                This function takes as input a row-axis partition, as well as the quantiles determined
+                by the `pivot_func` defined above. It then splits the input dataframe into NPartitions.get() * 2
+                dataframes, with the elements in the i-th split belonging to the i-th partition, as determined
+                by the quantiles we're using.
+                """
                 groupby_col = np.digitize(df[columns[0]].squeeze(), pivots)
                 grouped = df.groupby(groupby_col)
                 groups = [
@@ -1843,7 +1887,6 @@ class PandasDataframe(ClassLogger):
             and len(columns) == 1
             and columns[0] == self.index.names[0]
         ):
-            print("hi!")
             new_partitions = self._partition_mgr_cls.map_axis_partitions(
                 axis.value,
                 self._partitions,
