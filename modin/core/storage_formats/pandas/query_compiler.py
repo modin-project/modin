@@ -2490,7 +2490,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     @staticmethod
     def _groupby_mean_reduce(dfgb, **kwargs):
         """
-        Compute `groupby.mean` value in each group using sums/counts values from map stage.
+        Compute mean value in each group using sums/counts values from map stage.
 
         Parameters
         ----------
@@ -2504,7 +2504,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         pandas.DataFrame
             A pandas Dataframe with mean values in each column of each group.
         """
-        sums_counts_df = dfgb.sum(**kwargs)
+        sums_counts_df = dfgb.sum(min_count=1, **kwargs)
         sum_df = sums_counts_df.iloc[:, : len(sums_counts_df.columns) // 2]
         count_df = sums_counts_df.iloc[:, len(sums_counts_df.columns) // 2 :]
         return sum_df / count_df
@@ -2514,7 +2514,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     ):
         return GroupByReduce.register(
             lambda dfgb, **kwargs: pandas.concat(
-                [dfgb.sum(**kwargs), dfgb.count()],
+                [dfgb.sum(min_count=1, **kwargs), dfgb.count()],
                 axis=1,
                 copy=False,
             ),

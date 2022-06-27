@@ -162,14 +162,16 @@ class DataFrameGroupBy(ClassLogger):
                     )
                 )
 
-        df_without_datetime_cols = (
+        df_with_converted_datetime_cols = (
             self.astype({col: "int64" for col in datetime_cols.keys()})
             if len(datetime_cols) > 0
             else self
         )
         result = self._check_index(
             self._wrap_aggregation(
-                type(df_without_datetime_cols._query_compiler).groupby_mean_numeric,
+                type(
+                    df_with_converted_datetime_cols._query_compiler
+                ).groupby_mean_numeric,
                 numeric_only=numeric_only,
                 agg_kwargs=dict(numeric_only=numeric_only),
             )
