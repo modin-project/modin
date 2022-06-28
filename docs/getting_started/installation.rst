@@ -146,10 +146,12 @@ also use ``pip``.
 
 .. code-block:: bash
 
-  pip install git+https://github.com/modin-project/modin
+  pip install "modin[all] @ git+https://github.com/modin-project/modin"
 
 This will install directly from the repo without you having to manually clone it! Please be aware
 that these changes have not made it into a release and may not be completely stable.
+
+If you would like to install Modin with a specific engine, you can use ``modin[ray]`` or ``modin[dask]`` instead of ``modin[all]`` in the command above.
 
 Windows
 -------
