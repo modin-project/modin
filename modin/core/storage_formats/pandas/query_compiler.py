@@ -28,6 +28,7 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
+    is_datetime64_any_dtype,
 )
 from pandas.core.base import DataError
 from collections.abc import Iterable
@@ -2509,10 +2510,36 @@ class PandasQueryCompiler(BaseQueryCompiler):
         count_df = sums_counts_df.iloc[:, len(sums_counts_df.columns) // 2 :]
         return sum_df / count_df
 
-    def groupby_mean_numeric(
-        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False
-    ):
-        return GroupByReduce.register(
+    def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
+        numeric_only = agg_kwargs.get("numeric_only", False)
+        datetime_cols = (
+            {
+                col: dtype
+                for col, dtype in dict(self.dtypes).items()
+                if is_datetime64_any_dtype(dtype)
+            }
+            if not numeric_only
+            else dict()
+        )
+
+        if len(datetime_cols) > 0:
+            datetime_qc = self.getitem_array(datetime_cols)
+            if datetime_qc.isna().any().any(axis=1).to_pandas().squeeze():
+                return super().groupby_mean(
+                    by=by,
+                    axis=axis,
+                    groupby_kwargs=groupby_kwargs,
+                    agg_args=agg_args,
+                    agg_kwargs=agg_kwargs,
+                    drop=drop,
+                )
+
+        qc_with_converted_datetime_cols = (
+            self.astype({col: "int64" for col in datetime_cols.keys()})
+            if len(datetime_cols) > 0
+            else self
+        )
+        result = GroupByReduce.register(
             lambda dfgb, **kwargs: pandas.concat(
                 [dfgb.sum(min_count=1, **kwargs), dfgb.count()],
                 axis=1,
@@ -2521,7 +2548,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             self._groupby_mean_reduce,
             default_to_pandas_func=lambda dfgb, **kwargs: dfgb.mean(**kwargs),
         )(
-            query_compiler=self,
+            query_compiler=qc_with_converted_datetime_cols,
             by=by,
             axis=axis,
             groupby_kwargs=groupby_kwargs,
@@ -2529,6 +2556,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
             agg_kwargs=agg_kwargs,
             drop=drop,
         )
+
+        if len(datetime_cols) > 0:
+            result = result.astype({col: dtype for col, dtype in datetime_cols.items()})
+        return result
 
     def groupby_size(
         self,
