@@ -46,3 +46,6 @@ flake8
 numpydoc==1.1.0
 # experimental version of fuzzydata requires at least 0.0.6 to successfully resolve all dependencies
 fuzzydata>=0.0.6
+# Pin versions of mypy and pandas stubs for stability
+mypy==0.961
+pandas-stubs==1.4.2.220626
