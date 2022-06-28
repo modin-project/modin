@@ -146,7 +146,7 @@ also use ``pip``.
 
 .. code-block:: bash
 
-  pip install modin[all] git+https://github.com/modin-project/modin
+  pip install "modin[all] @ git+https://github.com/modin-project/modin"
 
 This will install directly from the repo without you having to manually clone it! Please be aware
 that these changes have not made it into a release and may not be completely stable.
