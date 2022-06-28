@@ -146,10 +146,13 @@ also use ``pip``.
 
 .. code-block:: bash
 
-  pip install git+https://github.com/modin-project/modin
+  pip install modin[all] git+https://github.com/modin-project/modin
 
 This will install directly from the repo without you having to manually clone it! Please be aware
 that these changes have not made it into a release and may not be completely stable.
+
+If you would like to install Modin with a specific engine, you can use ``modin[ray]`` or ``modin[dask]`` instead of ``modin[all]`` in the command above.
+For more documentation about installing particula rengines, see the `README PyPI installation instructions`_.
 
 Windows
 -------
@@ -195,4 +198,5 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
 .. _`Intel Distribution of Modin`: https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html#gs.86stqv
 .. _`Intel Distribution of Modin Getting Started`: https://www.intel.com/content/www/us/en/developer/articles/technical/intel-distribution-of-modin-getting-started-guide.html
 .. |reg|    unicode:: U+000AE .. REGISTERED SIGN
+.. _`README PyPI installation instructions.`: https://github.com/modin-project/modin/blob/master/README.md#from-pypi
 .. _Colab: https://colab.research.google.com/
