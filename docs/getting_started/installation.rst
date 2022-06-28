@@ -152,7 +152,7 @@ This will install directly from the repo without you having to manually clone it
 that these changes have not made it into a release and may not be completely stable.
 
 If you would like to install Modin with a specific engine, you can use ``modin[ray]`` or ``modin[dask]`` instead of ``modin[all]`` in the command above.
-For more documentation about installing particula rengines, see the `README PyPI installation instructions`_.
+For more documentation about installing particular engines, see the `README PyPI installation instructions`_.
 
 Windows
 -------
