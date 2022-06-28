@@ -198,5 +198,5 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
 .. _`Intel Distribution of Modin`: https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html#gs.86stqv
 .. _`Intel Distribution of Modin Getting Started`: https://www.intel.com/content/www/us/en/developer/articles/technical/intel-distribution-of-modin-getting-started-guide.html
 .. |reg|    unicode:: U+000AE .. REGISTERED SIGN
-.. _`README PyPI installation instructions.`: https://github.com/modin-project/modin/blob/master/README.md#from-pypi
+.. _`README PyPI installation instructions`: https://github.com/modin-project/modin/blob/master/README.md#from-pypi
 .. _Colab: https://colab.research.google.com/
