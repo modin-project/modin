@@ -52,6 +52,7 @@ jobs:
       # install test dependencies
       - run: pip install pytest pytest-cov black flake8 flake8-print flake8-no-implicit-concat
         if: matrix.execution != 'omnisci_on_native'
+      # Reproduce problem
       - run: conda install black flake8 flake8-print jupyter nbformat nbconvert -c conda-forge
         if: matrix.execution == 'omnisci_on_native'
       - run: pip list
