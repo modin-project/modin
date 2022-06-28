@@ -2,6 +2,8 @@ name: ci
 on:
   pull_request:
     paths:
+      # NOTE: keep these paths in sync with the paths that trigger the
+      # fuzzydata Github Actions in .github/workflows/fuzzydata-test.yml
       - .github/**
       - asv_bench/**
       - modin/**
