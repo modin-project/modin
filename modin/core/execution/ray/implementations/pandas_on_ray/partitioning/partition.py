@@ -115,8 +115,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
-            result, length, width, ip = _apply_func.remote(data, func, *args, **kwargs)
             logger.debug(f"SUBMIT::_apply_func::{self._identity}")
+            result, length, width, ip = _apply_func.remote(data, func, *args, **kwargs)
         logger.debug(f"EXIT::Partition.apply::{self._identity}")
         return PandasOnRayDataframePartition(result, length, width, ip)
 
@@ -338,7 +338,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         num_splits : int
             The number of resulting partitions (may be empty).
         *args : List[Any]
-            Arguments to pass to ``split_func``
+            Arguments to pass to ``split_func``.
 
         Returns
         -------
@@ -352,8 +352,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         def _split_df(df, split_func, *args):  # pragma: no cover
             return split_func(df, *args)
 
-        outputs = _split_df.remote(self._data, split_func, *args)
         logger.debug(f"SUBMIT::_split_df::{self._identity}")
+        outputs = _split_df.remote(self._data, split_func, *args)
         logger.debug(f"EXIT::Partition.split::{self._identity}")
         return outputs
 
@@ -362,16 +362,21 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         """
         Create a new partition that wraps the input splits after concatenating them.
 
+        Parameters
+        ----------
+        splits : List[ray.ObjectRef]
+            List of references to partition splits to concatenate and wrap.
+
         Returns
         -------
         PandasOnRayDataframePartition
             New `PandasOnRayDataframePartition` object.
         """
         logger = get_logger()
-        logger.debug(f"ENTER::Partition.put_splits")
+        logger.debug("ENTER::Partition.put_splits")
+        logger.debug("SUBMIT::_concat_splits")
         data, length, width, ip = _concat_splits.remote(*splits)
-        logger.debug(f"SUBMIT::_concat_splits")
-        logger.debug(f"EXIT::Partition.put_splits")
+        logger.debug("EXIT::Partition.put_splits")
         return cls(data, length, width, ip)
 
 
@@ -487,8 +492,8 @@ def _concat_splits(*splits):
 
     Parameters
     ----------
-    splits : List[pandas.DataFrame]
-        List of dataframes that correspond to splits to concatenate
+    *splits : List[pandas.DataFrame]
+        List of dataframes that correspond to splits to concatenate.
 
     Returns
     -------

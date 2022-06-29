@@ -1765,6 +1765,8 @@ class PandasDataframe(ClassLogger):
             Column label(s) to use to determine lexicographical ordering.
         ascending : boolean, default: True
             Whether to sort in ascending or descending order.
+        **kwargs : dict
+            Keyword arguments to pass when sorting partitions.
 
         Returns
         -------

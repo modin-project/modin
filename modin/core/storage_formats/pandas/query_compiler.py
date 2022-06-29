@@ -2026,6 +2026,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 dtypes="copy" if axis == 0 else None,
             )
         else:
+            kwargs.pop("ascending", False)
             new_modin_frame = self._modin_frame.sort_by(
                 axis, "__index__", ascending=ascending, **kwargs
             )
@@ -3073,6 +3074,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
+        kwargs.pop("ascending", False)
         new_modin_frame = self._modin_frame.sort_by(
             0, columns, ascending=ascending, **kwargs
         )

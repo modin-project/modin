@@ -307,7 +307,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         num_splits : int
             The number of resulting partitions (may be empty).
         *args : List[Any]
-            Arguments to pass to ``split_func``
+            Arguments to pass to ``split_func``.
 
         Returns
         -------
@@ -320,6 +320,11 @@ class PandasDataframePartition(ABC):  # pragma: no cover
     def put_splits(cls, splits):
         """
         Create a new partition that wraps the input splits after concatenating them.
+
+        Parameters
+        ----------
+        splits : list
+            List of partition splits to concatenate and wrap.
 
         Returns
         -------
