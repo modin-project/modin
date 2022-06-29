@@ -27,6 +27,7 @@ import psutil
 import pandas
 import threading
 import time
+from typing import Optional
 
 import modin
 from modin.config import LogMemoryInterval, LogFileSize, LogMode
@@ -37,7 +38,9 @@ __LOGGER_CONFIGURED__: bool = False
 class ModinFormatter(logging.Formatter):  # noqa: PR01
     """Implement custom formatter to log at microsecond granularity."""
 
-    def formatTime(self, record, datefmt=None):
+    def formatTime(
+        self, record: logging.LogRecord, datefmt: Optional[str] = None
+    ) -> str:
         """
         Return the creation time of the specified LogRecord as formatted text.
 
@@ -66,7 +69,7 @@ class ModinFormatter(logging.Formatter):  # noqa: PR01
         return s
 
 
-def bytes_int_to_str(num_bytes, suffix="B"):
+def bytes_int_to_str(num_bytes: int, suffix: str = "B") -> str:
     """
     Scale bytes to its human-readable format (e.g: 1253656678 => '1.17GB').
 
@@ -83,14 +86,17 @@ def bytes_int_to_str(num_bytes, suffix="B"):
         Human-readable string format.
     """
     factor = 1000
+    bytes: float = num_bytes
     for unit in ["", "K", "M", "G", "T", "P"]:
-        if num_bytes < factor:
-            return f"{num_bytes:.2f}{unit}{suffix}"
-        num_bytes /= factor
-    return f"{num_bytes * 1000:.2f}P{suffix}"
+        if bytes < factor:
+            return f"{bytes:.2f}{unit}{suffix}"
+        bytes /= factor
+    return f"{bytes * 1000:.2f}P{suffix}"
 
 
-def _create_logger(namespace, job_id, log_name, log_level):
+def _create_logger(
+    namespace: str, job_id: str, log_name: str, log_level: int
+) -> logging.Logger:
     """
     Create and configure logger as Modin expects it to be.
 
@@ -131,7 +137,7 @@ def _create_logger(namespace, job_id, log_name, log_level):
     return logger
 
 
-def configure_logging():
+def configure_logging() -> None:
     """Configure Modin logging by setting up directory structure and formatting."""
     global __LOGGER_CONFIGURED__
     job_id = uuid.uuid4().hex
@@ -172,7 +178,7 @@ def configure_logging():
     __LOGGER_CONFIGURED__ = True
 
 
-def memory_thread(logger, sleep_time):
+def memory_thread(logger: logging.Logger, sleep_time: int) -> None:
     """
     Configure Modin logging system memory profiling thread.
 
@@ -191,7 +197,7 @@ def memory_thread(logger, sleep_time):
         time.sleep(sleep_time)
 
 
-def get_logger(namespace="modin.logger.default"):
+def get_logger(namespace: str = "modin.logger.default") -> logging.Logger:
     """
     Configure Modin logger based on Modin config and returns the logger.
 

@@ -17,7 +17,7 @@ Module contains the functions designed for the enable/disable of logging.
 ``enable_logging`` is used for decorating individual Modin functions or classes.
 """
 
-from typing import Optional, Callable, Union, Type
+from typing import Any, Optional, Callable, Dict, Union, Type, Tuple
 from types import FunctionType, MethodType
 from functools import wraps
 from logging import Logger
@@ -28,7 +28,7 @@ from .config import get_logger
 _MODIN_LOGGER_NOWRAP = "__modin_logging_nowrap__"
 
 
-def disable_logging(func):
+def disable_logging(func: Callable) -> Callable:
     """
     Disable logging of one particular function. Useful for decorated classes.
 
@@ -49,8 +49,8 @@ def disable_logging(func):
 def enable_logging(
     modin_layer: Union[str, Callable, Type] = "PANDAS-API",
     name: Optional[str] = None,
-    log_level: Optional[str] = "info",
-):
+    log_level: str = "info",
+) -> Callable:
     """
     Log Decorator used on specific Modin functions or classes.
 
@@ -79,10 +79,10 @@ def enable_logging(
     log_level = log_level.lower()
     assert hasattr(Logger, log_level.lower()), f"Invalid log level: {log_level}"
 
-    def decorator(obj):
+    def decorator(obj: Any) -> Any:
         """Decorate function or class to add logs to Modin API function(s)."""
         if isinstance(obj, type):
-            seen = {}
+            seen: Dict[Any, Any] = {}
             for attr_name, attr_value in vars(obj).items():
                 if isinstance(
                     attr_value, (FunctionType, MethodType, classmethod, staticmethod)
@@ -103,11 +103,13 @@ def enable_logging(
         elif isinstance(obj, staticmethod):
             return staticmethod(decorator(obj.__func__))
 
+        assert isinstance(modin_layer, str)
+
         start_line = f"START::{modin_layer.upper()}::{name or obj.__name__}"
         stop_line = f"STOP::{modin_layer.upper()}::{name or obj.__name__}"
 
         @wraps(obj)
-        def run_and_log(*args, **kwargs):
+        def run_and_log(*args: Tuple, **kwargs: Dict) -> Any:
             """
             Compute function with logging if Modin logging is enabled.
 
