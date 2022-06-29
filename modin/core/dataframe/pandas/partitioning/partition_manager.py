@@ -1316,11 +1316,11 @@ class PandasDataframePartitionManager(ABC):
         partitions : np.ndarray
             The 2-d array of partitions to shuffle.
         sample_func : Callable(pandas.DataFrame) -> Any
-            Function to sample partitions. Output of this function will be passed to `pivot_func`
+            Function to sample partitions. Output of this function will be passed to ``pivot_func``
             to determine pivots.
         pivot_func : Callable(List[Any]) -> Any
             Function to determine pivots from partitions. The pivots determined by this function
-            will be passed to `split_func` to split each partition.
+            will be passed to ``split_func`` to split each partition.
         split_func : Callable(pandas.DataFrame, Any) -> *List[pandas.Dataframe]
             Function that splits a partition based off of the pivots provided. Should return an
             unpacked list of pandas Dataframes.
