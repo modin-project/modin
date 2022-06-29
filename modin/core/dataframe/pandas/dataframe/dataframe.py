@@ -1786,6 +1786,7 @@ class PandasDataframe(ClassLogger):
                 method = "inverted_cdf"
             else:
                 method = "linear"
+
             def sample_func(df, A=100, k=0.05, q=0.1):
                 """
                 Sample the given partition.
@@ -1796,7 +1797,7 @@ class PandasDataframe(ClassLogger):
                     * If there are 100 < # of rows <= 1900, we pick quantiles over the first 100 rows, plus a sample
                     of 5% of the remaining rows.
                     * If there are > 1900 rows, we pick quantiles over a sample of 10% of all of the rows.
-                
+
                 These numbers are a heuristic. They were picked such that the size of the sample
                 in scenario 2 scales well. In other words, we picked A, k, and q such that:
                     A + (len(df) - A)*k = q*len(df)
@@ -1813,7 +1814,7 @@ class PandasDataframe(ClassLogger):
                     return np.quantile(df[columns[0]], quantiles, method=method)
                 # Heuristic for a "medium" df where we will include first 100 (A) rows, and sample
                 # of remaining rows when computing quantiles.
-                if len(df) <= A*(1-k)/(1-q):
+                if len(df) <= A * (1 - k) / (1 - q):
                     return np.quantile(
                         np.concatenate(
                             (
@@ -1826,13 +1827,15 @@ class PandasDataframe(ClassLogger):
                     )
                 # Heuristic for a "large" df where we will sample 10% (q) of all rows to compute quantiles
                 # over.
-                return np.quantile(df[columns[0]].sample(frac=q), quantiles, method=method)
+                return np.quantile(
+                    df[columns[0]].sample(frac=q), quantiles, method=method
+                )
 
             def pivot_func(samples):
                 """
                 Determine quantiles from the given samples.
 
-                This function takes as input the quantiles calculated over all partitions from 
+                This function takes as input the quantiles calculated over all partitions from
                 `sample_func` defined above, and determines a final NPartitions.get() * 2 quantiles
                 to use to roughly sort the entire dataframe. It does so by collating all the samples
                 and computing NPartitions.get() * 2 quantiles for the overall set.
@@ -1892,11 +1895,7 @@ class PandasDataframe(ClassLogger):
         # a copy of the index for their data, so if we are just sorting by index, we can make
         # column partitions, and sort each by their index in parallel, which should be faster than
         # shuffling our data and sorting.
-        elif (
-            axis == Axis.ROW_WISE
-            and len(columns) == 1
-            and columns[0] == "__index__"
-        ):
+        elif axis == Axis.ROW_WISE and len(columns) == 1 and columns[0] == "__index__":
             new_partitions = self._partition_mgr_cls.map_axis_partitions(
                 axis.value,
                 self._partitions,

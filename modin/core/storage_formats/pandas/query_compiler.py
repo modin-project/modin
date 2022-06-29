@@ -2026,7 +2026,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 dtypes="copy" if axis == 0 else None,
             )
         else:
-            new_modin_frame = self._modin_frame.sort_by(axis, "__index__", ascending=ascending, **kwargs)
+            new_modin_frame = self._modin_frame.sort_by(
+                axis, "__index__", ascending=ascending, **kwargs
+            )
         return self.__constructor__(new_modin_frame)
 
     def melt(
@@ -3071,7 +3073,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
-        new_modin_frame = self._modin_frame.sort_by(0, columns, ascending=ascending, **kwargs)
+        new_modin_frame = self._modin_frame.sort_by(
+            0, columns, ascending=ascending, **kwargs
+        )
         return self.__constructor__(new_modin_frame)
 
     def sort_columns_by_row_values(self, rows, ascending=True, **kwargs):
