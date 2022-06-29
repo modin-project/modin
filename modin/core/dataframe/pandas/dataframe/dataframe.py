@@ -1770,20 +1770,17 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             A new PandasDataframe sorted into lexicographical order by the specified column(s).
         """
-        columns = columns if isinstance(columns, list) else [columns]
+        if not isinstance(columns, list):
+            columns = [columns]
         axis = Axis(axis)
-        # The first if selects cases where we are either sorting by a single column that is not
+        # This if selects cases where we are either sorting by a single column that is not
         # the index, or we are sorting by multiple columns, since in this case, we will have to
         # shuffle the data before sorting.
-        # The elif selects the case where we are only sorting by index. All partitions maintain
-        # a copy of the index for their data, so if we are just sorting by index, we can make
-        # column partitions, and sort each by their index in parallel, which should be faster than
-        # shuffling our data and sorting.
         if axis == Axis.ROW_WISE and not (
             len(columns) == 1 and columns[0] == self.index.names[0]
         ):
 
-            def sample_func(df):
+            def sample_func(df, A=100, k=0.05, q=0.1):
                 """
                 Sample the given partition.
 
@@ -1805,22 +1802,24 @@ class PandasDataframe(ClassLogger):
                 quantiles = [
                     i / (NPartitions.get() * 2) for i in range(NPartitions.get() * 2)
                 ]
-                # Heuristic for a "small" df we will compute histogram over entirety of.
-                if len(df) <= 100:
+                # Heuristic for a "small" df we will compute quantiles over entirety of.
+                if len(df) <= A:
                     return np.quantile(df[columns[0]], quantiles)
-                # Heuristic for a "medium" df where we will include first 100 rows, and sample
-                # of remaining rows
-                if len(df) <= 1900:
+                # Heuristic for a "medium" df where we will include first 100 (A) rows, and sample
+                # of remaining rows when computing quantiles.
+                if len(df) <= A*(1-k)/(1-q):
                     return np.quantile(
                         np.concatenate(
                             (
                                 df[columns[0]][:100].values,
-                                df[columns[0]][100:].sample(frac=0.05),
+                                df[columns[0]][100:].sample(frac=k),
                             )
                         ),
                         quantiles,
                     )
-                return np.quantile(df[columns[0]].sample(frac=0.1), quantiles)
+                # Heuristic for a "large" df where we will sample 10% (q) of all rows to compute quantiles
+                # over.
+                return np.quantile(df[columns[0]].sample(frac=q), quantiles)
 
             def pivot_func(samples):
                 """
@@ -1882,6 +1881,10 @@ class PandasDataframe(ClassLogger):
             return self.__constructor__(
                 new_partitions, *new_axes, *new_lengths, self.dtypes
             )
+        # The elif selects the case where we are only sorting by index. All partitions maintain
+        # a copy of the index for their data, so if we are just sorting by index, we can make
+        # column partitions, and sort each by their index in parallel, which should be faster than
+        # shuffling our data and sorting.
         elif (
             axis == Axis.ROW_WISE
             and len(columns) == 1

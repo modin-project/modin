@@ -1345,16 +1345,12 @@ class PandasDataframePartitionManager(ABC):
             partition.list_of_partitions_to_combine[0] for partition in row_partitions
         ]
         # Gather together all of the sub-partitions
-        split_row_partitions = np.swapaxes(
-            np.array(
-                [
-                    partition.split(split_func, len(pivots), pivots)
-                    for partition in row_partitions
-                ]
-            ), # array whose axes to swap
-            0, # axis1
-            1, # axis2
-        )
+        split_row_partitions = np.array(
+            [
+                partition.split(split_func, len(pivots), pivots)
+                for partition in row_partitions
+            ]
+        ).T
         new_partitions = [
             [cls._partition_class.put_splits(splits)] for splits in split_row_partitions
         ]
