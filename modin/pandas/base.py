@@ -109,6 +109,10 @@ class BasePandasDataset(ClassLogger):
     Since both objects share the same underlying representation, and the algorithms
     are the same, we use this object to define the general behavior of those objects
     and then use those objects to define the output type.
+
+    Notes
+    -----
+    This class is intended to be inherited only and shouldn't be interacted directly.
     """
 
     # Pandas class that we pretend to be; usually it has the same name as our class

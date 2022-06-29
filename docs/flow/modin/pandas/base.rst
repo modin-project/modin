@@ -8,4 +8,3 @@ Public API
 
 .. autoclass:: modin.pandas.base.BasePandasDataset
   :noindex:
-  :members:

@@ -3,10 +3,12 @@
 Series Module Overview
 """"""""""""""""""""""
 
+.. currentmodule:: modin.pandas
+
 Modin's ``pandas.Series`` API
 '''''''''''''''''''''''''''''
 
-Modin's ``pandas.Series`` API is backed by a distributed object providing an identical
+Modin's ``pandas.Series`` API is backed by a distributed object(s) providing an identical
 API to pandas. After the user calls some ``Series`` function, this call is internally rewritten
 into a representation that can be processed in parallel by the partitions. These
 results can be e.g., reduced to single output, identical to the single threaded
@@ -19,7 +21,10 @@ pandas ``Series`` method output.
 Public API
 ----------
 
-.. autoclass:: modin.pandas.series.Series
+.. autosummary::
+    :toctree: api/
+
+    Series
 
 Usage Guide
 '''''''''''

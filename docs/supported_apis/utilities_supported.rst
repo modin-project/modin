@@ -6,54 +6,44 @@ If you run ``import modin.pandas as pd``, the following operations are available
 would like to request it, feel free to `open an issue`_. Make sure you tell us your
 primary use-case so we can make it happen faster!
 
-The following table is structured as follows: The first column contains the method name.
-The second column is a flag for whether or not there is an implementation in Modin for
-the method in the left column. ``Y`` stands for yes, ``N`` stands for no, ``P`` stands
-for partial (meaning some parameters may not be supported yet), and ``D`` stands for
-default to pandas.
+Supported APIs table is structured as follows: The first column contains the method name,
+the second, third and fourth columns contain different flags which describes overall status for
+whole method for concrete execution, and the last column contains method supported APIs
+notes. In order to check method parameters supported status please follow method link. Please note,
+that the tables only list unsupported/partially supported parameters. If a parameter is supported,
+it won't be present or marked somehow in the table.
 
-.. note::
-    Currently, the second column reflects implementation status for Ray and Dask engines. By default, support for a method
-    in the Omnisci engine could be treated as ``D`` unless ``Notes`` column contains additional information. Similarly,
-    by default ``Notes`` contains information about ``Ray`` and ``Dask`` engines unless ``Omnisci`` is explicitly mentioned.
+The flags stand for the following:
 
-+---------------------------+---------------------------------+----------------------------------------------------+
-| Utility method            | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.concat`_              | Y                               | **Omnisci**: ``Y`` but ``sort`` and                |
-|                           |                                 | `ignore_index`` parameters ignored                 |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.eval`_                | Y                               |                                                    |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.unique`_              | Y                               |                                                    |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.value_counts``       | Y                               | The indices order of resulting object may differ   |
-|                           |                                 | from pandas.                                       |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.cut`_                 | D                               |                                                    |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.to_numeric`_          | D                               |                                                    |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.factorize`_           | D                               |                                                    |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.qcut`_                | D                               |                                                    |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.match``              | D                               |                                                    |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.to_datetime`_         | D                               |                                                    |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.get_dummies`_         | Y                               |                                                    |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.date_range`_          | D                               |                                                    |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.bdate_range`_         | D                               |                                                    |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.to_timedelta`_        | D                               |                                                    |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.options``            | Y                               |                                                    |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.datetime``           | D                               |                                                    |
-+---------------------------+---------------------------------+----------------------------------------------------+
+.. table::
+   :widths: 1, 5
+
+   +-------------+-----------------------------------------------------------------------------------------------+
+   | Flag        | Meaning                                                                                       |
+   +=============+===============================================================================================+
+   | Harmful     | Usage of this parameter can be harmful for performance of your application. This usually      |
+   |             | happens when parameter (full range of values and all types) is not supported and Modin        |
+   |             | is defaulting to pandas (see more on defaulting to pandas mechanism on                        |
+   |             | :doc:`defaulting to pandas page </supported_apis/defaulting_to_pandas>`)                      |
+   +-------------+-----------------------------------------------------------------------------------------------+
+   | Non-lazy    | Usage of this parameter can trigger non-lazy execution (actual for OmniSci execution only)    |
+   +-------------+-----------------------------------------------------------------------------------------------+
+   | Partial     | Parameter can be partly unsupported, it's usage can be harmful for performance of your        |
+   |             | appcication. This can happen if some parameter values or types are not supported (for example |
+   |             | boolean values are suported while integer are not) and default pandas implementation is used  |
+   |             | (see more on defaulting to pandas mechanism on                                                |
+   |             | :doc:`defaulting to pandas page </supported_apis/defaulting_to_pandas>`)                      |
+   +-------------+-----------------------------------------------------------------------------------------------+
+   | pure pandas | Usage of this parameter, triggers usage of original pandas function as is, no performance     |
+   |             | degradation/improvement should be observed                                                    |
+   +-------------+-----------------------------------------------------------------------------------------------+
+
+Supported APIs table
+--------------------
+
+.. csv-table::
+   :file: utilities_supported.csv
+   :header-rows: 1
 
 Other objects & structures
 --------------------------
@@ -63,7 +53,6 @@ are compatible with the distributed components of Modin. If you are interested i
 contributing a distributed version of any of these objects, feel free to open a
 `pull request`_.
 
-* Panel
 * Index
 * MultiIndex
 * CategoricalIndex
@@ -94,7 +83,6 @@ contributing a distributed version of any of these objects, feel free to open a
 * TimedeltaIndex
 * IntervalIndex
 * IndexSlice
-* TimeGrouper
 * Grouper
 * array
 * Period
@@ -106,15 +94,3 @@ contributing a distributed version of any of these objects, feel free to open a
 
 .. _open an issue: https://github.com/modin-project/modin/issues
 .. _pull request: https://github.com/modin-project/modin/pulls
-.. _`pd.concat`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.concat.html#pandas.concat
-.. _`pd.eval`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.eval.html#pandas.eval
-.. _`pd.unique`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.unique.html#pandas.unique
-.. _`pd.cut`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.cut.html#pandas.cut
-.. _`pd.to_numeric`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.to_numeric.html#pandas.to_numeric
-.. _`pd.factorize`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.factorize.html#pandas.factorize
-.. _`pd.qcut`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.qcut.html#pandas.qcut
-.. _`pd.to_datetime`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.to_datetime.html#pandas.to_datetime
-.. _`pd.get_dummies`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.get_dummies.html#pandas.get_dummies
-.. _`pd.date_range`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.date_range.html#pandas.date_range
-.. _`pd.bdate_range`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.bdate_range.html#pandas.bdate_range
-.. _`pd.to_timedelta`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.to_timedelta.html#pandas.to_timedelta
