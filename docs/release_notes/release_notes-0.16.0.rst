@@ -36,6 +36,7 @@ Key Features and Updates
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
 * Dependencies
   * FEAT-#4598: Add support for pandas 1.4.3 (#4599)
+  * FEAT-#4619: Integrate mypy static type checking (#4620)
 * New Features
   * FEAT-4463: Add experimental fuzzydata integration for testing against a randomized dataframe workflow (#4556)
 
