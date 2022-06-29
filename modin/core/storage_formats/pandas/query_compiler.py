@@ -2016,18 +2016,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if axis:
             new_columns = pandas.Series(self.columns).sort_values(**kwargs)
             new_index = self.index
+            new_modin_frame = self._modin_frame.apply_full_axis(
+                axis,
+                lambda df: df.sort_index(
+                    axis=axis, level=level, sort_remaining=sort_remaining, **kwargs
+                ),
+                new_index,
+                new_columns,
+                dtypes="copy" if axis == 0 else None,
+            )
         else:
-            new_index = pandas.Series(self.index).sort_values(**kwargs)
-            new_columns = self.columns
-        new_modin_frame = self._modin_frame.apply_full_axis(
-            axis,
-            lambda df: df.sort_index(
-                axis=axis, level=level, sort_remaining=sort_remaining, **kwargs
-            ),
-            new_index,
-            new_columns,
-            dtypes="copy" if axis == 0 else None,
-        )
+            new_modin_frame = self._modin_frame.sort_by(axis, "__index__", ascending=ascending, **kwargs)
         return self.__constructor__(new_modin_frame)
 
     def melt(
@@ -3072,42 +3071,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
-        ignore_index = kwargs.get("ignore_index", False)
-        kwargs["ignore_index"] = False
-        if not is_list_like(columns):
-            columns = [columns]
-        # Currently, sort_values will just reindex based on the sorted values.
-        # TODO create a more efficient way to sort
-        ErrorMessage.default_to_pandas("sort_values")
-        broadcast_value_dict = {
-            col: self.getitem_column_array([col]).to_pandas().squeeze(axis=1)
-            for col in columns
-        }
-        # Clear index level names because they also appear in broadcast_value_dict
-        orig_index_level_names = self.index.names
-        tmp_index = self.index.copy()
-        tmp_index.names = [None] * tmp_index.nlevels
-        # Index may contain duplicates
-        broadcast_values1 = pandas.DataFrame(broadcast_value_dict, index=tmp_index)
-        # Index without duplicates
-        broadcast_values2 = pandas.DataFrame(broadcast_value_dict)
-        broadcast_values2 = broadcast_values2.reset_index(drop=True)
-        # Index may contain duplicates
-        new_index1 = broadcast_values1.sort_values(
-            by=columns, axis=0, ascending=ascending, **kwargs
-        ).index
-        # Index without duplicates
-        new_index2 = broadcast_values2.sort_values(
-            by=columns, axis=0, ascending=ascending, **kwargs
-        ).index
-
-        result = self.reset_index(drop=True).reindex(axis=0, labels=new_index2)
-        if ignore_index:
-            result = result.reset_index(drop=True)
-        else:
-            result.index = new_index1
-            result.index.names = orig_index_level_names
-        return result
+        new_modin_frame = self._modin_frame.sort_by(0, columns, ascending=ascending, **kwargs)
+        return self.__constructor__(new_modin_frame)
 
     def sort_columns_by_row_values(self, rows, ascending=True, **kwargs):
         if not is_list_like(rows):

@@ -1752,6 +1752,7 @@ class PandasDataframe(ClassLogger):
         axis: Union[int, Axis],
         columns: Union[str, List[str]],
         ascending: bool = True,
+        **kwargs,
     ) -> "PandasDataframe":
         """
         Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
@@ -1777,7 +1778,7 @@ class PandasDataframe(ClassLogger):
         # the index, or we are sorting by multiple columns, since in this case, we will have to
         # shuffle the data before sorting.
         if axis == Axis.ROW_WISE and not (
-            len(columns) == 1 and columns[0] == self.index.names[0]
+            len(columns) == 1 and columns[0] == "__index__"
         ):
 
             def sample_func(df, A=100, k=0.05, q=0.1):
@@ -1868,7 +1869,7 @@ class PandasDataframe(ClassLogger):
             )
             new_partitions = self._partition_mgr_cls.lazy_map_partitions(
                 new_partitions,
-                lambda df: df.sort_values(by=columns, ascending=ascending),
+                lambda df: df.sort_values(by=columns, ascending=ascending, **kwargs),
             )
             new_axes = [0, 0]
             new_axes[axis.value] = self._compute_axis_labels(0, new_partitions)
@@ -1888,12 +1889,12 @@ class PandasDataframe(ClassLogger):
         elif (
             axis == Axis.ROW_WISE
             and len(columns) == 1
-            and columns[0] == self.index.names[0]
+            and columns[0] == "__index__"
         ):
             new_partitions = self._partition_mgr_cls.map_axis_partitions(
                 axis.value,
                 self._partitions,
-                lambda df: df.sort_index(ascending=ascending),
+                lambda df: df.sort_index(ascending=ascending, **kwargs),
             )
             new_axes = [0, 0]
             new_axes[axis.value] = self._compute_axis_labels(0, new_partitions).rename(
