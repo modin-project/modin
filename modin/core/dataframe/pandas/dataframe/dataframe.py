@@ -1780,7 +1780,12 @@ class PandasDataframe(ClassLogger):
         if axis == Axis.ROW_WISE and not (
             len(columns) == 1 and columns[0] == "__index__"
         ):
-
+            if self.dtypes[columns[0]] == object:
+                # This means we are not sorting numbers, so we need our quantiles to not try
+                # arithmetic on the values.
+                method = "inverted_cdf"
+            else:
+                method = "linear"
             def sample_func(df, A=100, k=0.05, q=0.1):
                 """
                 Sample the given partition.
@@ -1805,7 +1810,7 @@ class PandasDataframe(ClassLogger):
                 ]
                 # Heuristic for a "small" df we will compute quantiles over entirety of.
                 if len(df) <= A:
-                    return np.quantile(df[columns[0]], quantiles)
+                    return np.quantile(df[columns[0]], quantiles, method=method)
                 # Heuristic for a "medium" df where we will include first 100 (A) rows, and sample
                 # of remaining rows when computing quantiles.
                 if len(df) <= A*(1-k)/(1-q):
@@ -1817,10 +1822,11 @@ class PandasDataframe(ClassLogger):
                             )
                         ),
                         quantiles,
+                        method=method,
                     )
                 # Heuristic for a "large" df where we will sample 10% (q) of all rows to compute quantiles
                 # over.
-                return np.quantile(df[columns[0]].sample(frac=q), quantiles)
+                return np.quantile(df[columns[0]].sample(frac=q), quantiles, method=method)
 
             def pivot_func(samples):
                 """
