@@ -36,7 +36,7 @@ dependencies:
   - scikit-learn
   - pymssql
   - psycopg2
-  - mypy==0.961
+  - mypy
   - pandas-stubs
   - pip:
       - xgboost>=1.6.0

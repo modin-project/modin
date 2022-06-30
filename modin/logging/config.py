@@ -86,6 +86,7 @@ def bytes_int_to_str(num_bytes: int, suffix: str = "B") -> str:
         Human-readable string format.
     """
     factor = 1000
+    # Convert n_bytes to float b/c we divide it by factor
     n_bytes: float = num_bytes
     for unit in ["", "K", "M", "G", "T", "P"]:
         if n_bytes < factor:
