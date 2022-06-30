@@ -1867,7 +1867,10 @@ class PandasDataframe(ClassLogger):
                 if self.dtypes[columns[0]] != object:
                     groupby_col = np.digitize(df[columns[0]].squeeze(), pivots) - 1
                 else:
-                    groupby_col = np.searchsorted(pivots, df[columns[0]].squeeze(), side="right") - 1
+                    groupby_col = (
+                        np.searchsorted(pivots, df[columns[0]].squeeze(), side="right")
+                        - 1
+                    )
                 grouped = df.groupby(groupby_col)
                 groups = [
                     grouped.get_group(i)
