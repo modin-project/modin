@@ -18,6 +18,7 @@ import pandas
 import matplotlib
 import modin.pandas as pd
 import io
+import warnings
 
 from modin.pandas.test.utils import (
     random_state,
@@ -288,6 +289,28 @@ def test___setattr__mutating_column():
     # Check that the col0 attribute reflects update via loc
     df_equals(modin_df, pandas_df)
     assert modin_df.col0.equals(modin_df["col0"])
+
+    # Check taht adding a new col via attributes raises warning
+    with pytest.warns(
+        UserWarning,
+        match="Modin doesn't allow columns to be created via a new attribute name - see",
+    ):
+        modin_df.col1 = [4]
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        modin_df.col1 = [5]
+        modin_df.col1 = 6
+        modin_df.new_attr = 7
+
+    assert "new_attr" in dir(
+        modin_df
+    ), "Modin attribute was not correctly added to the df."
+    assert (
+        "new_attr" not in modin_df
+    ), "New attribute was not correctly added to columns."
+    assert modin_df.new_attr == 7, "Modin attribute value was set incorrectly."
+    assert isinstance(modin_df.col1, pd.Series), "Scalar was not broadcasted correctly."
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

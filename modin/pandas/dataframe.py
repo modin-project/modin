@@ -2496,6 +2496,10 @@ class DataFrame(BasePandasDataset):
         # - `_siblings`, which Modin initializes before it appears in __dict__
         if key in ["_query_compiler", "_siblings"] or key in self.__dict__:
             pass
+        elif key not in dir(self) and key not in self and not is_list_like(value):
+            # Assigning a scalar to a non-existing attribute should not result in a
+            # broadcasted column, but rather just an an attribute
+            pass
         elif key not in dir(self):
             if key not in self:
                 warnings.warn(
