@@ -103,7 +103,10 @@ def enable_logging(
         elif isinstance(obj, staticmethod):
             return staticmethod(decorator(obj.__func__))
 
-        assert isinstance(modin_layer, str)
+        assert isinstance(modin_layer, str), (
+            "obj is not a type or class/static method "
+            "and modin_layer is somehow not a string!"
+        )
 
         start_line = f"START::{modin_layer.upper()}::{name or obj.__name__}"
         stop_line = f"STOP::{modin_layer.upper()}::{name or obj.__name__}"

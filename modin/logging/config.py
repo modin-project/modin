@@ -56,8 +56,8 @@ class ModinFormatter(logging.Formatter):  # noqa: PR01
 
         Returns
         -------
-        datetime
-            Datetime object containing microsecond timestamp.
+        str
+            Datetime string containing microsecond timestamp.
         """
         ct = dt.datetime.fromtimestamp(record.created)
         if datefmt:
@@ -86,12 +86,12 @@ def bytes_int_to_str(num_bytes: int, suffix: str = "B") -> str:
         Human-readable string format.
     """
     factor = 1000
-    bytes: float = num_bytes
+    n_bytes: float = num_bytes
     for unit in ["", "K", "M", "G", "T", "P"]:
-        if bytes < factor:
-            return f"{bytes:.2f}{unit}{suffix}"
-        bytes /= factor
-    return f"{bytes * 1000:.2f}P{suffix}"
+        if n_bytes < factor:
+            return f"{n_bytes:.2f}{unit}{suffix}"
+        n_bytes /= factor
+    return f"{n_bytes * 1000:.2f}P{suffix}"
 
 
 def _create_logger(
