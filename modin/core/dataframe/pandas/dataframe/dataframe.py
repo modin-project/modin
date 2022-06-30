@@ -1850,8 +1850,9 @@ class PandasDataframe(ClassLogger):
                     i / (NPartitions.get() * 2) for i in range(NPartitions.get() * 2)
                 ]
                 overall_quantiles = np.quantile(all_pivots, quantiles, method=method)
-                overall_quantiles[0] = np.NINF
-                overall_quantiles[-1] = np.inf
+                if self.dtypes[columns[0]] != object:
+                    overall_quantiles[0] = np.NINF
+                    overall_quantiles[-1] = np.inf
                 return overall_quantiles
 
             def split_func(df, pivots):
@@ -1863,7 +1864,10 @@ class PandasDataframe(ClassLogger):
                 dataframes, with the elements in the i-th split belonging to the i-th partition, as determined
                 by the quantiles we're using.
                 """
-                groupby_col = np.digitize(df[columns[0]].squeeze(), pivots)
+                if self.dtypes[columns[0]] != object:
+                    groupby_col = np.digitize(df[columns[0]].squeeze(), pivots) - 1
+                else:
+                    groupby_col = np.searchsorted(pivots, df[columns[0]].squeeze(), side="right") - 1
                 grouped = df.groupby(groupby_col)
                 groups = [
                     grouped.get_group(i)
