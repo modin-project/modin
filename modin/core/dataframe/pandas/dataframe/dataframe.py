@@ -1849,7 +1849,7 @@ class PandasDataframe(ClassLogger):
                 quantiles = [
                     i / (NPartitions.get() * 2) for i in range(NPartitions.get() * 2)
                 ]
-                overall_quantiles = np.quantile(all_pivots, quantiles)
+                overall_quantiles = np.quantile(all_pivots, quantiles, method=method)
                 overall_quantiles[0] = np.NINF
                 overall_quantiles[-1] = np.inf
                 return overall_quantiles
