@@ -2498,7 +2498,7 @@ class DataFrame(BasePandasDataset):
             pass
         elif key not in dir(self) and key not in self and not is_list_like(value):
             # Assigning a scalar to a non-existing attribute should not result in a
-            # broadcasted column, but rather just an an attribute
+            # broadcasted column, but rather just a new attribute.
             pass
         elif key not in dir(self):
             if key not in self:
