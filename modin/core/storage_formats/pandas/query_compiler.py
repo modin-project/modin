@@ -36,6 +36,7 @@ import warnings
 
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.config import Engine
 from modin.error_message import ErrorMessage
 from modin.utils import (
     try_cast_to_pandas,
