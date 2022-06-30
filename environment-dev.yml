@@ -37,7 +37,7 @@ dependencies:
   - pymssql
   - psycopg2
   - mypy==0.961
-  - pandas-stubs==1.4.2.220626
+  - pandas-stubs
   - pip:
       - xgboost>=1.6.0
       - modin-spreadsheet>=0.1.1
