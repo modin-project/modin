@@ -290,7 +290,8 @@ def test___setattr__mutating_column():
     df_equals(modin_df, pandas_df)
     assert modin_df.col0.equals(modin_df["col0"])
 
-    # Check that adding a new col via attributes raises warning
+    # Check that attempting to add a new col via attributes raises warning
+    # and adds the provided list as a new attribute and not a column.
     with pytest.warns(
         UserWarning,
         match="Modin doesn't allow columns to be created via a new attribute name - see",
@@ -298,9 +299,12 @@ def test___setattr__mutating_column():
         modin_df.col1 = [4]
 
     with warnings.catch_warnings():
-        warnings.simplefilter("error")
+        warnings.filterwarnings(
+            action="error", 
+            message="Modin doesn't allow columns to be created via a new attribute name - see")
         modin_df.col1 = [5]
         modin_df.new_attr = 6
+        modin_df.col0 = 7
 
     assert "new_attr" in dir(
         modin_df
@@ -309,6 +313,7 @@ def test___setattr__mutating_column():
         "new_attr" not in modin_df
     ), "New attribute was not correctly added to columns."
     assert modin_df.new_attr == 6, "Modin attribute value was set incorrectly."
+    assert isinstance(modin_df.col0, pd.Series), "Scalar was not broadcasted properly to an existing column."
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
