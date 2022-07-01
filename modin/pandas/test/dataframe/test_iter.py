@@ -300,8 +300,7 @@ def test___setattr__mutating_column():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         modin_df.col1 = [5]
-        modin_df.col0 = 6
-        modin_df.new_attr = 7
+        modin_df.new_attr = 6
 
     assert "new_attr" in dir(
         modin_df
@@ -310,7 +309,6 @@ def test___setattr__mutating_column():
         "new_attr" not in modin_df
     ), "New attribute was not correctly added to columns."
     assert modin_df.new_attr == 7, "Modin attribute value was set incorrectly."
-    assert isinstance(modin_df.col0, pd.Series), "Scalar was not broadcasted correctly."
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
