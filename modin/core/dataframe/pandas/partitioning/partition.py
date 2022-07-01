@@ -25,9 +25,7 @@ from modin.logging import ClassLogger
 
 
 class PandasDataframePartition(
-    ABC,
-    ClassLogger,
-    modin_layer="PARTITION"
+    ABC, ClassLogger, modin_layer="PARTITION"
 ):  # pragma: no cover
     """
     An abstract class that is base for any partition class of ``pandas`` storage format.
