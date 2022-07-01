@@ -2496,22 +2496,18 @@ class DataFrame(BasePandasDataset):
         # - `_siblings`, which Modin initializes before it appears in __dict__
         if key in ["_query_compiler", "_siblings"] or key in self.__dict__:
             pass
-        elif key not in dir(self) and key not in self and not is_list_like(value):
-            # Assigning a scalar to a non-existing attribute should not result in a
-            # broadcasted column, but rather just a new attribute.
-            pass
-        elif key not in dir(self):
-            if key not in self:
-                warnings.warn(
-                    "Modin doesn't allow columns to be created via a new attribute name - see "
-                    + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
-                    UserWarning,
-                )
+        elif key in self and key not in dir(self):
             self.__setitem__(key, value)
             # Note: return immediately so we don't keep this `key` as dataframe state.
             # `__getattr__` will return the columns not present in `dir(self)`, so we do not need
             # to manually track this state in the `dir`.
             return
+        elif is_list_like(value):
+            warnings.warn(
+                "Modin doesn't allow columns to be created via a new attribute name - see "
+                + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
+                UserWarning,
+            )
         object.__setattr__(self, key, value)
 
     def __setitem__(self, key, value):
