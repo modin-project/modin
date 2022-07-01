@@ -2829,7 +2829,7 @@ class PandasDataframe(ClassLogger):
             for axis in [0, 1]:
                 ErrorMessage.catch_bugs_and_request_email(
                     not df.axes[axis].equals(self.axes[axis]),
-                    f"Internal and external indices on axis {axis} do not match. Internal index {df.axes[axis]} and external index {self.axes[axis]}",
+                    f"Internal and external indices on axis {axis} do not match.",
                 )
             df.index = self.index
             df.columns = self.columns

@@ -20,6 +20,7 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 import shutil
+from typing import Optional
 
 assert (
     "modin.utils" not in sys.modules
@@ -449,6 +450,7 @@ def make_parquet_file():
         force=True,
         directory=False,
         partitioned_columns=[],
+        row_group_size: Optional[int] = None,
     ):
         """Helper function to generate parquet files/directories.
 
@@ -471,11 +473,15 @@ def make_parquet_file():
                 else:
                     os.makedirs(filename)
                 table = pa.Table.from_pandas(df)
-                pq.write_to_dataset(table, root_path=filename)
+                pq.write_to_dataset(table, root_path=filename, row_group_size=row_group_size)
             elif len(partitioned_columns) > 0:
-                df.to_parquet(filename, partition_cols=partitioned_columns)
+                df.to_parquet(
+                    filename,
+                    partition_cols=partitioned_columns,
+                    row_group_size=row_group_size,
+                )
             else:
-                df.to_parquet(filename)
+                df.to_parquet(filename, row_group_size=row_group_size)
             filenames.append(filename)
 
     # Return function that generates parquet files
