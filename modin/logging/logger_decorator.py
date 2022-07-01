@@ -147,10 +147,10 @@ def enable_logging(
 
 
 def enable_remote_logging(
-    func,
-    modin_layer: Optional[str] = "RAY-REMOTE",
-    log_level: Optional[str] = "info",
-):
+    func: Callable,
+    modin_layer: str = "RAY-REMOTE",
+    log_level: str = "info",
+) -> Callable:
     """
     Log Decorator used on Modin remote functions.
 
@@ -172,7 +172,7 @@ def enable_remote_logging(
     assert hasattr(Logger, log_level.lower()), f"Invalid log level: {log_level}"
 
     @wraps(func)
-    def run_and_log(*args, **kwargs):
+    def run_and_log(*args: tuple, **kwargs: Dict[Any, Any]) -> None:
         """
         Compute function with logging if Modin logging is enabled.
 
@@ -195,7 +195,7 @@ def enable_remote_logging(
         start_line = f"START::{modin_layer.upper()}::{func.__name__}"
         stop_line = f"STOP::{modin_layer.upper()}::{func.__name__}"
 
-        funcs = [arg for arg in args if isinstance(arg, Callable)]
+        funcs = [arg for arg in args if callable(arg)]
         if funcs:
             start_line += f":{funcs}"
             stop_line += f":{funcs}"

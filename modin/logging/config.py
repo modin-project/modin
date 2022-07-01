@@ -199,7 +199,7 @@ def get_worker_logger(job_id: str) -> logging.Logger:
         _create_logger(
             namespace,
             job_id,
-            worker_id,
+            str(worker_id),
             logging.INFO if LogMode.get() == "enable_api_only" else logging.DEBUG,
         )
         __LOGGER_CONFIGURED__ = True
