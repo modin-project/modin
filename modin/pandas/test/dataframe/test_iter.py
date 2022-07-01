@@ -301,7 +301,8 @@ def test___setattr__mutating_column():
     with warnings.catch_warnings():
         warnings.filterwarnings(
             action="error",
-            message="Modin doesn't allow columns to be created via a new attribute name - see")
+            message="Modin doesn't allow columns to be created via a new attribute name - see",
+        )
         modin_df.col1 = [5]
         modin_df.new_attr = 6
         modin_df.col0 = 7
@@ -313,8 +314,8 @@ def test___setattr__mutating_column():
         "new_attr" not in modin_df
     ), "New attribute was not correctly added to columns."
     assert modin_df.new_attr == 6, "Modin attribute value was set incorrectly."
-    assert (
-        isinstance(modin_df.col0, pd.Series)
+    assert isinstance(
+        modin_df.col0, pd.Series
     ), "Scalar was not broadcasted properly to an existing column."
 
 
