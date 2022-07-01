@@ -308,7 +308,7 @@ def test___setattr__mutating_column():
     assert (
         "new_attr" not in modin_df
     ), "New attribute was not correctly added to columns."
-    assert modin_df.new_attr == 7, "Modin attribute value was set incorrectly."
+    assert modin_df.new_attr == 6, "Modin attribute value was set incorrectly."
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
