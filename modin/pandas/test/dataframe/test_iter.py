@@ -32,7 +32,6 @@ from modin.pandas.test.utils import (
 )
 from modin.config import NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-from pandas.core.dtypes.common import is_list_like
 
 NPartitions.put(4)
 
