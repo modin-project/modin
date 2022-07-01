@@ -294,14 +294,16 @@ def test___setattr__mutating_column():
     # and adds the provided list as a new attribute and not a column.
     with pytest.warns(
         UserWarning,
-        match="Modin doesn't allow columns to be created via a new attribute name - see",
+        match="Modin doesn't allow columns to be created via a new attribute name - see"
+        + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
     ):
         modin_df.col1 = [4]
 
     with warnings.catch_warnings():
         warnings.filterwarnings(
             action="error",
-            message="Modin doesn't allow columns to be created via a new attribute name - see",
+            message="Modin doesn't allow columns to be created via a new attribute name - see"
+            + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
         )
         modin_df.col1 = [5]
         modin_df.new_attr = 6
