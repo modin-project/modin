@@ -21,7 +21,7 @@ from ray.util import get_node_ip_address
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-from modin.core.execution.ray.common.utils import deserialize, ray_remote_env
+from modin.core.execution.ray.common.utils import deserialize
 from .partition import PandasOnRayDataframePartition
 
 
@@ -506,7 +506,7 @@ class PandasOnRayDataframeRowPartition(PandasOnRayDataframeVirtualPartition):
     axis = 1
 
 
-@ray_remote_env(num_returns=2)
+@ray.remote(num_returns=2)
 @enable_remote_logging
 def deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
     """

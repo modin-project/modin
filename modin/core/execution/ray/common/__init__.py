@@ -14,6 +14,10 @@
 """Common utilities for Ray execution engine."""
 
 from .task_wrapper import RayTask, SignalActor
-from .utils import initialize_ray, ray_remote_env
+from .utils import initialize_ray
 
-__all__ = ["initialize_ray", "RayTask", "SignalActor", "ray_remote_env"]
+__all__ = [
+    "initialize_ray",
+    "RayTask",
+    "SignalActor",
+]

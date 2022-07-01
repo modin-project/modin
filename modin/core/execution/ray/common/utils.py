@@ -18,7 +18,6 @@ import sys
 import psutil
 from packaging import version
 import warnings
-from functools import partial
 
 import ray
 
@@ -33,6 +32,7 @@ from modin.config import (
     NPartitions,
     ValueSource,
     LogMode,
+    LogFileSize,
 )
 from modin.error_message import ErrorMessage
 
@@ -41,11 +41,6 @@ if version.parse(ray.__version__) >= version.parse("1.2.0"):
     from ray.util.client.common import ClientObjectRef
 
     ObjectIDType = (ray.ObjectRef, ClientObjectRef)
-
-
-__WORKER_ENV__ = {"env_vars": {"MODIN_LOG_MODE": LogMode.get()}}
-
-ray_remote_env = partial(ray.remote, runtime_env=__WORKER_ENV__)
 
 
 def _move_stdlib_ahead_of_site_packages(*args):
@@ -125,7 +120,15 @@ def initialize_ray(
         What password to use when connecting to Redis.
         If not specified, ``modin.config.RayRedisPassword`` is used.
     """
-    extra_init_kw = {"runtime_env": {"env_vars": {"__MODIN_AUTOIMPORT_PANDAS__": "1"}}}
+    extra_init_kw = {
+        "runtime_env": {
+            "env_vars": {
+                "__MODIN_AUTOIMPORT_PANDAS__": "1",
+                "MODIN_LOG_MODE": LogMode.get(),
+                "MODIN_LOG_FILE_SIZE": LogFileSize.get(),
+            }
+        }
+    }
     if not ray.is_initialized() or override_is_cluster:
         cluster = override_is_cluster or IsRayCluster.get()
         redis_address = override_redis_address or RayRedisAddress.get()
@@ -216,6 +219,7 @@ def initialize_ray(
                 "_memory": object_store_memory,
                 **extra_init_kw,
             }
+
             ray.init(**ray_init_kwargs)
 
         if StorageFormat.get() == "Cudf":

@@ -21,7 +21,6 @@ from modin.core.execution.ray.common.utils import deserialize, ObjectIDType
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
 from modin.logging import get_logger, enable_remote_logging
-from modin.core.execution.ray.common.utils import ray_remote_env
 
 compute_sliced_len = ray.remote(compute_sliced_len)
 
@@ -311,7 +310,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         return self._ip_cache
 
 
-@ray_remote_env(num_returns=2)
+@ray.remote(num_returns=2)
 @enable_remote_logging
 def _get_index_and_columns(df):
     """
@@ -332,7 +331,7 @@ def _get_index_and_columns(df):
     return len(df.index), len(df.columns)
 
 
-@ray_remote_env(num_returns=4)
+@ray.remote(num_returns=4)
 @enable_remote_logging
 def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     """
@@ -375,7 +374,7 @@ def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     )
 
 
-@ray_remote_env(num_returns=4)
+@ray.remote(num_returns=4)
 @enable_remote_logging
 def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
     """

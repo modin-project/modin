@@ -20,14 +20,13 @@ from modin.logging import ClassLogger
 class BaseDataframeAxisPartition(
     ABC,
     ClassLogger,
+    modin_layer="PARTITION"
 ):  # pragma: no cover
     """
     An abstract class that represents the parent class for any axis partition class.
 
     This class is intended to simplify the way that operations are performed.
     """
-
-    _modin_layer = "PARTITION"
 
     def apply(
         self,
