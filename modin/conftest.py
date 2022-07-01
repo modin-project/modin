@@ -17,8 +17,6 @@ import pytest
 import pandas
 from pandas.util._decorators import doc
 import numpy as np
-import pyarrow as pa
-import pyarrow.parquet as pq
 import shutil
 from typing import Optional
 
@@ -467,14 +465,7 @@ def make_parquet_file():
             df = pandas.DataFrame(
                 {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
             )
-            if directory:
-                if os.path.exists(filename):
-                    shutil.rmtree(filename)
-                else:
-                    os.makedirs(filename)
-                table = pa.Table.from_pandas(df)
-                pq.write_to_dataset(table, root_path=filename, row_group_size=row_group_size)
-            elif len(partitioned_columns) > 0:
+            if len(partitioned_columns) > 0:
                 df.to_parquet(
                     filename,
                     partition_cols=partitioned_columns,

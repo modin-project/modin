@@ -45,7 +45,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         if filesystem.stat(path)["type"] == "directory":
             return filesystem, [
                 filesystem.unstrip_protocol(path)
-                for path in sorted(filesystem.ls(path))
+                for path in sorted(filesystem.find(path))
             ]
         return filesystem, [filesystem.unstrip_protocol(path)]
 

@@ -45,6 +45,7 @@ import shutil
 import sqlalchemy as sa
 import csv
 import tempfile
+from typing import Dict
 
 from .utils import (
     check_file_leaks,
@@ -198,6 +199,26 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
         assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
     finally:
         teardown_test_files([unique_filename_modin, unique_filename_pandas])
+
+
+@pytest.fixture
+def make_parquet_dir():
+    list_of_path: list[str] = []
+
+    def _make_parquet_dir(
+        path: str, dfs_by_filename: Dict[str, pandas.DataFrame], row_group_size: int
+    ):
+        if os.path.exists(path):
+            shutil.rmtree(path)
+        else:
+            os.makedirs(path)
+        for filename, df in dfs_by_filename.items():
+            df.to_parquet(os.path.join(path, filename), row_group_size=row_group_size)
+        list_of_path.append(path)
+
+    yield _make_parquet_dir
+
+    shutil.rmtree(list_of_path[0])
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
@@ -1370,20 +1391,34 @@ class TestParquet:
 
     @pytest.mark.parametrize("columns", [None, ["col1"]])
     @pytest.mark.parametrize("row_group_size", [None, 100, 1000, 10_000])
+    @pytest.mark.parametrize(
+        "rows_per_file", [[1000] * 40, [0, 0, 40_000], [10_000, 10_000] + [100] * 200]
+    )
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet_directory(self, make_parquet_file, columns, row_group_size):
+    def test_read_parquet_directory(
+        self, make_parquet_dir, columns, row_group_size, rows_per_file
+    ):
+        path = get_unique_filename(extension=None)
 
-        unique_filename = get_unique_filename(extension=None)
-        make_parquet_file(
-            filename=unique_filename, directory=True, row_group_size=row_group_size
+        num_cols = DATASET_SIZE_DICT.get(
+            TestDatasetSize.get(), DATASET_SIZE_DICT["Small"]
         )
+        dfs_by_filename = {}
+        start_row = 0
+        for i, length in enumerate(rows_per_file):
+            end_row = start_row + length
+            dfs_by_filename[f"{i}.parquet"] = pandas.DataFrame(
+                {f"col{x + 1}": np.arange(start_row, end_row) for x in range(num_cols)}
+            )
+            start_row = end_row
+        make_parquet_dir(path, dfs_by_filename, row_group_size)
         eval_io(
             fn_name="read_parquet",
             # read_parquet kwargs
-            path=unique_filename,
+            path=path,
             columns=columns,
         )
 
