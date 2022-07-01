@@ -335,7 +335,8 @@ class _LocationIndexerBase(ClassLogger):
         else:
             axis = (
                 None
-                if (self.col_scalar and self.row_scalar) or (self.row_multiindex and self.col_multiindex)
+                if (self.col_scalar and self.row_scalar)
+                or (self.row_multiindex and self.col_multiindex)
                 else 1
                 if self.col_scalar or self.col_multiindex
                 else 0
@@ -564,8 +565,14 @@ class _LocIndexer(_LocationIndexerBase):
         row_loc, col_loc, ndim = self._parse_row_and_column_locators(key)
         self.row_scalar = is_scalar(row_loc)
         self.col_scalar = is_scalar(col_loc)
-        self.row_multiindex = True if self.qc.has_multiindex() and isinstance(row_loc, tuple) else False
-        self.col_multiindex = True if self.qc.has_multiindex(axis=1) and isinstance(col_loc, tuple) else False
+        self.row_multiindex = (
+            True if self.qc.has_multiindex() and isinstance(row_loc, tuple) else False
+        )
+        self.col_multiindex = (
+            True
+            if self.qc.has_multiindex(axis=1) and isinstance(col_loc, tuple)
+            else False
+        )
 
         if isinstance(row_loc, Series) and is_boolean_array(row_loc):
             return self._handle_boolean_masking(row_loc, col_loc)
@@ -577,11 +584,21 @@ class _LocIndexer(_LocationIndexerBase):
             result._parent_axis = 0
         row_loc_as_list = [row_loc] if self.row_scalar else row_loc
         col_loc_as_list = [col_loc] if self.col_scalar else col_loc
+        # Check to see if the lookup is with a tuple key and see if the full lookup exists
+        do_not_drop = False
+        if self.row_multiindex:
+            if row_loc in self.df.index.tolist():
+                do_not_drop = True
+
+        if self.col_multiindex:
+            if col_loc in self.df.columns.tolist():
+                do_not_drop = True
         # Pandas drops the levels that are in the `loc`, so we have to as well.
         if (
             isinstance(result, (Series, DataFrame))
             and result._query_compiler.has_multiindex()
-        ):  
+            and not do_not_drop
+        ):
             if (
                 isinstance(result, Series)
                 and not isinstance(col_loc_as_list, slice)
@@ -589,7 +606,7 @@ class _LocIndexer(_LocationIndexerBase):
                     col_loc_as_list[i] in result.index.levels[i]
                     for i in range(len(col_loc_as_list))
                 )
-            ):  
+            ):
                 result.index = result.index.droplevel(list(range(len(col_loc_as_list))))
             elif not isinstance(row_loc_as_list, slice) and all(
                 not isinstance(row_loc_as_list[i], slice)
@@ -600,6 +617,7 @@ class _LocIndexer(_LocationIndexerBase):
         if (
             hasattr(result, "columns")
             and not isinstance(col_loc_as_list, slice)
+            and not do_not_drop
             and result._query_compiler.has_multiindex(axis=1)
             and all(
                 col_loc_as_list[i] in result.columns.levels[i]

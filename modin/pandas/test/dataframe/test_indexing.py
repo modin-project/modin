@@ -567,19 +567,36 @@ def test_loc_4358():
         ["bar", "bar", "baz", "baz", "foo", "foo", "qux", "qux"],
         ["one", "two", "one", "two", "one", "two", "one", "two"],
     ]
-    columns =  pd.MultiIndex.from_tuples(zip(*arrays), names=['a', 'b'])
+    columns = pd.MultiIndex.from_tuples(zip(*arrays), names=["a", "b"])
     data = [np.random.randint(10, 50, len(columns)) for _ in range(30)]
     modin_df = pd.DataFrame(data, columns=columns)
     pandas_df = pandas.DataFrame(data, columns=columns)
-    df_equals(modin_df.loc[:, ('bar','two')], pandas_df.loc[:, ('bar','two')])
-
-    # We have not handled the case of tuple of lists. This is a possible indexing
-    #print(df.loc[:, (['bar','baz'], ['one'])])
+    df_equals(modin_df.loc[:, ("bar", "two")], pandas_df.loc[:, ("bar", "two")])
 
 
-def test_loc_fail():
-    df = pd.DataFrame([1, 2], index=[['a', 'a'], ['b', 'b']])
-    print(df.loc[('a', 'b'), 0])
+def test_loc_multiindex_duplicate():
+    modin_df = pd.DataFrame([1, 2], index=[["a", "a"], ["b", "b"]])
+    pandas_df = pd.DataFrame([1, 2], index=[["a", "a"], ["b", "b"]])
+    df_equals(modin_df.loc[("a", "b"), 0], pandas_df.loc[("a", "b"), 0])
+    df_equals(modin_df.loc[("a", "b"), :], pandas_df.loc[("a", "b"), :])
+
+
+def test_loc_multiindex_both_axes():
+    multi_index = pd.MultiIndex.from_tuples(
+        [("r0", "rA"), ("r1", "rB")], names=["Courses", "Fee"]
+    )
+    cols = pd.MultiIndex.from_tuples(
+        [
+            ("Gasoline", "Toyota"),
+            ("Gasoline", "Ford"),
+            ("Electric", "Tesla"),
+            ("Electric", "Nio"),
+        ]
+    )
+    data = [[100, 300, 900, 400], [200, 500, 300, 600]]
+    df = pd.DataFrame(data, columns=cols, index=multi_index)
+    pdf = pandas.DataFrame(data, columns=cols, index=multi_index)
+    df_equals(df.loc[("r0", "rA"), :], pdf.loc[("r0", "rA"), :])
 
 
 def test_loc_empty():
