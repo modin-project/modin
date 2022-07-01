@@ -148,7 +148,7 @@ def enable_logging(
 
 def enable_remote_logging(
     func,
-    modin_layer: Union[str, Callable, Type] = "RAY-REMOTE",
+    modin_layer: Optional[str] = "RAY-REMOTE",
     log_level: Optional[str] = "info",
 ):
     """
@@ -156,8 +156,10 @@ def enable_remote_logging(
 
     Parameters
     ----------
-    modin_layer : str or object to decorate, default: "RAY-REMOTE"
-        If it's an object to decorate, call logger_decorator() on it with default arguments.
+    func : Callable
+        The function to decorate.
+    modin_layer : str, default: "RAY-REMOTE"
+        The modin_layer to decorate the remote function with.
     log_level : str, default: "info"
         The log level (INFO, DEBUG, WARNING, etc.).
 
@@ -166,7 +168,6 @@ def enable_remote_logging(
     func
         A decorator function.
     """
-
     log_level = log_level.lower()
     assert hasattr(Logger, log_level.lower()), f"Invalid log level: {log_level}"
 

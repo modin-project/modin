@@ -107,7 +107,7 @@ def _create_logger(
     namespace : str
         Logging namespace to use, e.g. "modin.logger.default".
     job_id : str
-        Part of path to where logs are stored.
+        The id of the logging job, which forms part of path to where logs are stored.
     log_name : str
         Name of the log file to create.
     log_level : int
@@ -179,7 +179,19 @@ def configure_head_logging() -> None:
 
 
 def get_worker_logger(job_id: str) -> logging.Logger:
-    """Configure Modin logging by setting up directory structure and formatting."""
+    """
+    Configure Modin logging by setting up directory structure and formatting.
+
+    Parameters
+    ----------
+    job_id : str
+        The id of the logging job, which forms part of path to where logs are stored.
+
+    Returns
+    -------
+    Logger
+        Logger object configured per Modin settings.
+    """
     global __LOGGER_CONFIGURED__
     worker_id = os.getpid()
     namespace = f"modin.logger.worker.{worker_id}"
