@@ -15,20 +15,18 @@
 
 import os
 
-from asyncore import file_wrapper
 import fsspec
 import fsspec.core
 from fsspec.core import split_protocol
+import io
 from fsspec.registry import get_filesystem_class
 import numpy as np
 import pandas
-from modin.config.envvars import MinPartitionSize
 from pandas.io.common import is_fsspec_url
 from pyarrow.parquet import ParquetFile, ParquetDataset, read_table
 
-from modin.core.io.file_dispatcher import FileDispatcher
 from modin.core.storage_formats.pandas.utils import compute_chunksize
-from modin.config import MinPartitionSize, NPartitions
+from modin.config import NPartitions
 
 
 from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
@@ -40,11 +38,16 @@ class ParquetDispatcher(ColumnStoreDispatcher):
 
     @classmethod
     def get_fsspec_files(cls, path, storage_options):
+        if isinstance(path, io.IOBase):
+            return path.fs, [path]
         protocol, path = split_protocol(path)
-        filesystem = get_filesystem_class(protocol)(**(storage_options or {}))
+        filesystem = get_filesystem_class(protocol)(**storage_options)
         if filesystem.stat(path)["type"] == "directory":
-            return [filesystem.unstrip_protocol(path) for path in sorted(filesystem.ls(path))]
-        return [path]
+            return filesystem, [
+                filesystem.unstrip_protocol(path)
+                for path in sorted(filesystem.ls(path))
+            ]
+        return filesystem, [filesystem.unstrip_protocol(path)]
 
     @classmethod
     def call_deploy(cls, fname, col_partitions, storage_options, **kwargs):
@@ -68,19 +71,21 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         """
         from modin.core.storage_formats.pandas.parsers import ParquetFileToRead
 
-        parquet_files = cls.get_fsspec_files(fname, storage_options)
+        storage_options = storage_options or {}
 
-
+        filesystem, parquet_files = cls.get_fsspec_files(fname, storage_options)
 
         row_groups_per_file = []
         num_row_groups = 0
         for file in parquet_files:
-            with fsspec.open(file) as f:
+            with filesystem.open(file) as f:
                 row_groups = ParquetFile(f).num_row_groups
                 row_groups_per_file.append(row_groups)
                 num_row_groups += row_groups
         step = compute_chunksize(
-            num_row_groups, NPartitions.get(), min_block_size=1,
+            num_row_groups,
+            NPartitions.get(),
+            min_block_size=1,
         )
         current_partition_size = 0
         file_index = 0
@@ -93,11 +98,13 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         while total_groups_added != num_row_groups:
             if current_partition_size == 0:
                 partition_files.append([])
-            partition_file = partition_files[-1]            
+            partition_file = partition_files[-1]
             row_group_start = groups_used_in_current_file
             file_path = parquet_files[file_index]
-            row_groups_left_in_file = row_groups_per_file[file_index] - groups_used_in_current_file
-            groups_remaining_for_this_partition =  step - current_partition_size
+            row_groups_left_in_file = (
+                row_groups_per_file[file_index] - groups_used_in_current_file
+            )
+            groups_remaining_for_this_partition = step - current_partition_size
             if groups_remaining_for_this_partition <= row_groups_left_in_file:
                 # File has at least what we need to finish partition
                 # So finish this partition and start a new one.
@@ -106,28 +113,33 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             else:
                 # File doesn't have enough to complete this partition. Add
                 # it into current partition and go to next file.
-                num_groups_to_add = row_groups_left_in_file       
-                current_partition_size += num_groups_to_add               
+                num_groups_to_add = row_groups_left_in_file
+                current_partition_size += num_groups_to_add
             if num_groups_to_add == row_groups_left_in_file:
                 file_index += 1
                 groups_used_in_current_file = 0
             else:
                 groups_used_in_current_file += num_groups_to_add
-            partition_file.append(ParquetFileToRead(file_path, row_group_start, row_group_start + num_groups_to_add))
+            partition_file.append(
+                ParquetFileToRead(
+                    file_path, row_group_start, row_group_start + num_groups_to_add
+                )
+            )
             total_groups_added += num_groups_to_add
         all_partitions = []
         for partition_files in partition_files:
             all_partitions.append([])
             for cols in col_partitions:
                 all_partitions[-1].append(
-                        cls.deploy(
-                            cls.parse,
-                            columns=cols,
-                            files_for_parser=partition_files,
-                            num_returns=3,
-                            **kwargs,
-                        )
-                    )            
+                    cls.deploy(
+                        cls.parse_fsspec_files,
+                        files_for_parser=partition_files,
+                        columns=cols,
+                        num_returns=3,
+                        storage_options=storage_options,
+                        **kwargs,
+                    )
+                )
         return all_partitions
 
     @classmethod
@@ -187,10 +199,21 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             if is_fsspec_url(path)
             else (None, path)
         )
-        pandas_metadata = ParquetDataset(path_, filesystem=fs, use_legacy_dataset=False).schema.pandas_metadata
+        pandas_metadata = ParquetDataset(
+            path_, filesystem=fs, use_legacy_dataset=False
+        ).schema.pandas_metadata
+        index_columns = []
         if pandas_metadata is not None:
-            index_columns = pandas_metadata.get("index_columns", [])
-        complete_index = read_table(path, columns=[]).to_pandas().index
+            index_columns = pandas_metadata.get("index_columns", index_columns)
+        column_names_to_read = []
+        for column in index_columns:
+            if isinstance(column, str):
+                column_names_to_read.append(column)
+            elif column["name"] is not None:
+                column_names_to_read.append(column["name"])
+        complete_index = (
+            read_table(path, columns=column_names_to_read).to_pandas().index
+        )
         return complete_index, len(index_columns) == 0 or any(
             not isinstance(c, str) for c in index_columns
         )
@@ -273,18 +296,20 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         partition_ids = cls.call_deploy(path, col_partitions, **kwargs)
         index, needs_index_sync = cls.build_index(path, kwargs["storage_options"])
         remote_parts = cls.build_partition(partition_ids, column_widths)
-        if len(partition_ids) > 0:
+        if len(partition_ids) > 0 and len(partition_ids[0]) > 0:
             first_row = partition_ids[0]
             dtypes = cls.build_dtypes(
                 [dtype_and_partition[1] for dtype_and_partition in first_row], columns
             )
+            row_lengths = [part.length() for part in remote_parts.T[0]]
         else:
             dtypes = None
+            row_lengths = None
         frame = cls.frame_cls(
             remote_parts,
             index,
             columns,
-            row_lengths=[part.length() for part in remote_parts.T[0]],
+            row_lengths=row_lengths,
             column_widths=column_widths,
             dtypes=dtypes,
         )
