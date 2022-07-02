@@ -13,6 +13,7 @@ Key Features and Updates
   * FIX-#4577: Set attribute of Modin dataframe to updated value (#4588)
   * FIX-#4411: Fix binary_op between datetime64 Series and pandas timedelta (#4592)
   * FIX-#4582: Inherit custom log layer (#4583)
+  * FIX-#4593: Ensure Modin warns when setting columns via attributes (#4621)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
@@ -50,3 +51,4 @@ Contributors
 @pyrito
 @suhailrehman
 @RehanSD
+@helmeleegy
