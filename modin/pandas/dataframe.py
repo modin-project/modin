@@ -2503,7 +2503,7 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
             # `__getattr__` will return the columns not present in `dir(self)`, so we do not need
             # to manually track this state in the `dir`.
             return
-        elif isinstance(value, pandas.Series):
+        elif is_list_like(value):
             warnings.warn(
                 "Modin doesn't allow columns to be created via a new attribute name - see "
                 + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
