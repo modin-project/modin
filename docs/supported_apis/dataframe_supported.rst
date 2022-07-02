@@ -418,7 +418,14 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_latex``               | `to_latex`_               | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``to_parquet``             | `to_parquet`_             | D                      |                                                    |
+| ``to_parquet``             | `to_parquet`_             | P                      | **Dask**: Defaults to Pandas implementation as a   |
+|                            |                           |                        | single file. **Ray**: Parallel implementation with |
+|                            |                           |                        | potentially multiple file output only if path      |
+|                            |                           |                        | parameter is a string, does not end with ".gz",    |
+|                            |                           |                        | ".bz2", ".zip", or ".xz" and compression parameter |
+|                            |                           |                        | is not none or "snappy". In these cases, paths     |
+|                            |                           |                        | with Modin on Ray for ``to_parquet`` are           |
+|                            |                           |                        | `directory` and not file paths.                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_period``              | `to_period`_              | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
