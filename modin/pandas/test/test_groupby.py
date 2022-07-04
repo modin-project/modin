@@ -1500,6 +1500,25 @@ def test_dict_agg_rename_mi_columns(
     df_equals(md_res, pd_res)
 
 
+def test_agg_4604():
+    data = {"col1": [1, 2], "col2": [3, 4]}
+    md_df, pd_df = pd.DataFrame(data), pandas.DataFrame(data)
+    # add another partition
+    md_df["col3"] = md_df["col1"]
+    pd_df["col3"] = pd_df["col1"]
+
+    # problem only with custom aggregation function
+    def col3(x):
+        return np.max(x)
+
+    agg_func = {"col2": ["sum", "min"], "col3": col3}
+
+    md_res = md_df.groupby(["col1"]).agg(agg_func)
+    pd_res = pd_df.groupby(["col1"]).agg(agg_func)
+
+    df_equals(md_res, pd_res)
+
+
 @pytest.mark.parametrize(
     "operation",
     [
