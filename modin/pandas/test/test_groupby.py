@@ -1511,12 +1511,11 @@ def test_agg_4604():
     def col3(x):
         return np.max(x)
 
+    by = ["col1"]
     agg_func = {"col2": ["sum", "min"], "col3": col3}
 
-    md_res = md_df.groupby(["col1"]).agg(agg_func)
-    pd_res = pd_df.groupby(["col1"]).agg(agg_func)
-
-    df_equals(md_res, pd_res)
+    md_groupby, pd_groupby = md_df.groupby(by), pd_df.groupby(by)
+    eval_agg(md_groupby, pd_groupby, agg_func)
 
 
 @pytest.mark.parametrize(
