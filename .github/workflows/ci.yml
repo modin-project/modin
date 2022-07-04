@@ -2,6 +2,8 @@ name: ci
 on:
   pull_request:
     paths:
+      # NOTE: keep these paths in sync with the paths that trigger the
+      # fuzzydata Github Actions in .github/workflows/fuzzydata-test.yml
       - .github/**
       - asv_bench/**
       - modin/**
@@ -26,6 +28,20 @@ jobs:
           architecture: "x64"
       - run: pip install black
       - run: black --check --diff modin/ asv_bench/benchmarks scripts/doc_checker.py
+
+  lint-mypy:
+    name: lint (mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8.x"
+          architecture: "x64"
+      - run: pip install -r requirements-dev.txt
+      - run: mypy --config-file mypy.ini
 
   build-docs:
     name: build docs
@@ -187,7 +203,7 @@ jobs:
         run: python -m pytest modin/test/test_headers.py
 
   test-clean-install-ubuntu:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -208,7 +224,7 @@ jobs:
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
 
   test-clean-install-windows:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: windows-latest
     defaults:
       run:
@@ -229,7 +245,7 @@ jobs:
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
 
   test-internals:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -265,7 +281,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-defaults:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -315,7 +331,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-omnisci:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -349,7 +365,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-asv-benchmarks:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -415,7 +431,7 @@ jobs:
         if: failure()
 
   test-all:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -492,7 +508,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-experimental:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -523,7 +539,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-cloud:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -557,7 +573,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-windows:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: windows-latest
     defaults:
       run:
@@ -612,7 +628,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-pyarrow:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -643,7 +659,7 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_io.py::TestCsv --verbose
 
   test-spreadsheet:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:

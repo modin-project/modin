@@ -238,7 +238,7 @@ class Parameter(object):
         return cls._value_source
 
     @classmethod
-    def get(cls):
+    def get(cls) -> typing.Any:
         """
         Get config value.
 
