@@ -22,7 +22,6 @@ import fsspec
 import os
 import re
 from modin.config import StorageFormat
-from modin.utils import import_optional_dependency
 from modin.logging import ClassLogger
 import numpy as np
 
@@ -236,7 +235,7 @@ class FileDispatcher(ClassLogger):
         return size
 
     @classmethod
-    def file_exists(cls, file_path):
+    def file_exists(cls, file_path, storage_options=None):
         """
         Check if `file_path` exists.
 
@@ -252,23 +251,22 @@ class FileDispatcher(ClassLogger):
             Whether file exists or not.
         """
         if isinstance(file_path, str):
-            match = S3_ADDRESS_REGEX.search(file_path)
-            if match is not None:
-                if file_path[0] == "S":
-                    file_path = "{}{}".format("s", file_path[1:])
-                S3FS = import_optional_dependency(
-                    "s3fs", "Module s3fs is required to read S3FS files."
-                )
-                from botocore.exceptions import NoCredentialsError
+            from botocore.exceptions import NoCredentialsError
 
-                s3fs = S3FS.S3FileSystem(anon=False)
-                exists = False
-                try:
-                    exists = s3fs.exists(file_path) or exists
-                except NoCredentialsError:
-                    pass
-                s3fs = S3FS.S3FileSystem(anon=True)
-                return exists or s3fs.exists(file_path)
+            if storage_options is not None:
+                new_storage_options = dict(storage_options)
+                if "anon" in new_storage_options:
+                    del new_storage_options["anon"]
+            else:
+                new_storage_options = {}
+            fs = fsspec.core.url_to_fs(file_path, anon=False, **new_storage_options)[0]
+            exists = False
+            try:
+                exists = fs.exists(file_path)
+            except (NoCredentialsError, PermissionError):
+                pass
+            fs = fsspec.core.url_to_fs(file_path, anon=True, **new_storage_options)[0]
+            return exists or fs.exists(file_path)
         return os.path.exists(file_path)
 
     @classmethod
