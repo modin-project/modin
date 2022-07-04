@@ -407,7 +407,7 @@ class LogMemoryInterval(EnvironmentVariable, type=int):
         super().put(value)
 
     @classmethod
-    def get(cls):
+    def get(cls) -> int:
         """
         Get ``LogMemoryInterval`` with extra checks.
 
@@ -441,7 +441,7 @@ class LogFileSize(EnvironmentVariable, type=int):
         super().put(value)
 
     @classmethod
-    def get(cls):
+    def get(cls) -> int:
         """
         Get ``LogFileSize`` with extra checks.
 

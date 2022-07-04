@@ -17,7 +17,7 @@ Module contains ``ClassLogger`` class.
 ``ClassLogger`` is used for adding logging to Modin classes and their subclasses.
 """
 
-from typing import Optional
+from typing import Dict, Optional
 
 from .logger_decorator import enable_logging
 
@@ -38,8 +38,8 @@ class ClassLogger:
         cls,
         modin_layer: Optional[str] = None,
         class_name: Optional[str] = None,
-        log_level: Optional[str] = "info",
-        **kwargs,
+        log_level: str = "info",
+        **kwargs: Dict,
     ) -> None:
         """
         Apply logging decorator to all children of LoggerBase.
