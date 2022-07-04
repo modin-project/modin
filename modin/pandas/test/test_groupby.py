@@ -1516,7 +1516,20 @@ def test_dict_agg_rename_mi_columns(
 def test_agg_exceptions(operation):
     N = 256
     fill_data = [
-        ("nan_column", [None, np.datetime64("2010")] * (N // 2)),
+        (
+            "nan_column",
+            [
+                np.datetime64("2010"),
+                None,
+                np.datetime64("2007"),
+                np.datetime64("2010"),
+                np.datetime64("2006"),
+                np.datetime64("2012"),
+                None,
+                np.datetime64("2011"),
+            ]
+            * (N // 8),
+        ),
         (
             "date_column",
             [

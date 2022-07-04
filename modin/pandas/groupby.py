@@ -136,6 +136,7 @@ class DataFrameGroupBy(ClassLogger):
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_mean,
                 numeric_only=numeric_only,
+                agg_kwargs=dict(numeric_only=numeric_only),
             )
         )
 

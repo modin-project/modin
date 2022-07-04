@@ -17,7 +17,7 @@ Module contains ``ClassLogger`` class.
 ``ClassLogger`` is used for adding logging to Modin classes and their subclasses.
 """
 
-from typing import Optional
+from typing import Dict, Optional
 
 from .logger_decorator import enable_logging
 
@@ -31,13 +31,15 @@ class ClassLogger:
     This mixin must go first in class bases declaration to have the desired effect.
     """
 
+    _modin_logging_layer = "PANDAS-API"
+
     @classmethod
     def __init_subclass__(
         cls,
-        modin_layer: str = "PANDAS-API",
+        modin_layer: Optional[str] = None,
         class_name: Optional[str] = None,
-        log_level: Optional[str] = "info",
-        **kwargs,
+        log_level: str = "info",
+        **kwargs: Dict,
     ) -> None:
         """
         Apply logging decorator to all children of ClassLogger.
@@ -53,5 +55,7 @@ class ClassLogger:
             The log level (INFO, DEBUG, WARNING, etc.).
         **kwargs : dict
         """
+        modin_layer = modin_layer or cls._modin_logging_layer
         super().__init_subclass__(**kwargs)
         enable_logging(modin_layer, class_name, log_level)(cls)
+        cls._modin_logging_layer = modin_layer

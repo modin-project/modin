@@ -28,6 +28,7 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
+    is_datetime64_any_dtype,
 )
 from pandas.core.base import DataError
 from collections.abc import Iterable
@@ -2487,6 +2488,79 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_min = GroupByReduce.register("min")
     groupby_prod = GroupByReduce.register("prod")
     groupby_sum = GroupByReduce.register("sum")
+
+    def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
+        numeric_only = agg_kwargs.get("numeric_only", False)
+        datetime_cols = (
+            {
+                col: dtype
+                for col, dtype in zip(self.dtypes.index, self.dtypes)
+                if is_datetime64_any_dtype(dtype)
+            }
+            if not numeric_only
+            else dict()
+        )
+
+        if len(datetime_cols) > 0:
+            datetime_qc = self.getitem_array(datetime_cols)
+            if datetime_qc.isna().any().any(axis=1).to_pandas().squeeze():
+                return super().groupby_mean(
+                    by=by,
+                    axis=axis,
+                    groupby_kwargs=groupby_kwargs,
+                    agg_args=agg_args,
+                    agg_kwargs=agg_kwargs,
+                    drop=drop,
+                )
+
+        qc_with_converted_datetime_cols = (
+            self.astype({col: "int64" for col in datetime_cols.keys()})
+            if len(datetime_cols) > 0
+            else self
+        )
+
+        def _groupby_mean_reduce(dfgb, **kwargs):
+            """
+            Compute mean value in each group using sums/counts values within reduce phase.
+
+            Parameters
+            ----------
+            dfgb : pandas.DataFrameGroupBy
+                GroupBy object for column-partition.
+            **kwargs : dict
+                Additional keyword parameters to be passed in ``pandas.DataFrameGroupBy.sum``.
+
+            Returns
+            -------
+            pandas.DataFrame
+                A pandas Dataframe with mean values in each column of each group.
+            """
+            sums_counts_df = dfgb.sum(**kwargs)
+            sum_df = sums_counts_df.iloc[:, : len(sums_counts_df.columns) // 2]
+            count_df = sums_counts_df.iloc[:, len(sums_counts_df.columns) // 2 :]
+            return sum_df / count_df
+
+        result = GroupByReduce.register(
+            lambda dfgb, **kwargs: pandas.concat(
+                [dfgb.sum(**kwargs), dfgb.count()],
+                axis=1,
+                copy=False,
+            ),
+            _groupby_mean_reduce,
+            default_to_pandas_func=lambda dfgb, **kwargs: dfgb.mean(**kwargs),
+        )(
+            query_compiler=qc_with_converted_datetime_cols,
+            by=by,
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+        if len(datetime_cols) > 0:
+            result = result.astype({col: dtype for col, dtype in datetime_cols.items()})
+        return result
 
     def groupby_size(
         self,
