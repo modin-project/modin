@@ -1502,7 +1502,7 @@ def test_dict_agg_rename_mi_columns(
 
 def test_agg_4604():
     data = {"col1": [1, 2], "col2": [3, 4]}
-    md_df, pd_df = pd.DataFrame(data), pandas.DataFrame(data)
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
     # add another partition
     md_df["col3"] = md_df["col1"]
     pd_df["col3"] = pd_df["col1"]
@@ -1514,7 +1514,7 @@ def test_agg_4604():
     by = ["col1"]
     agg_func = {"col2": ["sum", "min"], "col3": col3}
 
-    md_groupby, pd_groupby = md_df.groupby(by), pd_df.groupby(by)
+    modin_groupby, pandas_groupby = md_df.groupby(by), pd_df.groupby(by)
     eval_agg(md_groupby, pd_groupby, agg_func)
 
 
