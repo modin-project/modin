@@ -513,17 +513,14 @@ class DataFrameGroupBy(ClassLogger):
             relabeling_required, func_dict, new_columns, order = reconstruct_func(
                 func, **kwargs
             )
-            _wrapper = lambda fn: fn  # noqa: E731
+            func_dict = {col: try_get_str_func(fn) for col, fn in func_dict.items()}
             if any(isinstance(fn, list) for fn in func_dict.values()):
                 # multicolumn case
                 # putting functions in a `list` allows to achieve multicolumn in each partition
-                _wrapper = lambda fn: [fn]  # noqa: E731
-            func_dict = {
-                col: try_get_str_func(fn)
-                if isinstance(fn, list)
-                else _wrapper(try_get_str_func(fn))
-                for col, fn in func_dict.items()
-            }
+                func_dict = {
+                    col: fn if isinstance(fn, list) else [fn]
+                    for col, fn in func_dict.items()
+                }
             if (
                 relabeling_required
                 and not self._as_index
