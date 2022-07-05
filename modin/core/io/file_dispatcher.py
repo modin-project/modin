@@ -341,3 +341,7 @@ class FileDispatcher(ClassLogger):
                 for i in range(len(partition_ids))
             ]
         )
+
+    @classmethod
+    def _file_not_found_msg(filename):
+        return f"No file with name '{filename}'"

@@ -47,9 +47,9 @@ class PickleExperimentalDispatcher(FileDispatcher):
         The number of partitions is equal to the number of input files.
         """
         if not (isinstance(filepath_or_buffer, str) and "*" in filepath_or_buffer):
-            warnings.warn("Defaulting to Modin core implementation")
             return cls.single_worker_read(
                 filepath_or_buffer,
+                "Defaulting to Modin core implementation",
                 single_worker_read=True,
                 **kwargs,
             )

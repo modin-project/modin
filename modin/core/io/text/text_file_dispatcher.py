@@ -30,7 +30,6 @@ import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
 
 from modin.core.io.file_dispatcher import FileDispatcher, OpenFile
-from modin.core.io.text.utils import warn_defaulting_to_pandas
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.utils import _inherit_docstrings
 from modin.core.io.text.utils import CustomNewlineIterator
@@ -641,15 +640,14 @@ class TextFileDispatcher(FileDispatcher):
             message describing why parameters are not supported.
         """
         skiprows = read_kwargs.get("skiprows")
-        e_prefix = "Defaulting to pandas implementation:"
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(filepath_or_buffer):
-                return (False, f"{e_prefix} No local file with name '{filepath_or_buffer}'")
+                return (False, f"No file with name '{filepath_or_buffer}'")
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
-            return (False, f"{e_prefix} No local file with name '{filepath_or_buffer}'")
+            return (False, f"No file with name '{filepath_or_buffer}'")
 
         if read_kwargs["chunksize"] is not None:
-            return (False, f"{e_prefix} `chunksize` parameter is not supported")
+            return (False, "`chunksize` parameter is not supported")
 
         skiprows_supported = True
         if is_list_like(skiprows_md) and skiprows_md[0] < header_size:
@@ -665,8 +663,8 @@ class TextFileDispatcher(FileDispatcher):
         if not skiprows_supported:
             return (
                 False,
-                f"{e_prefix}: Values of `header` and `skiprows` parameters have intersections; "
-                + "this case is unsupported by Modin"
+                "Values of `header` and `skiprows` parameters have intersections; "
+                + "this case is unsupported by Modin",
             )
 
         return (True, None)
@@ -996,9 +994,11 @@ class TextFileDispatcher(FileDispatcher):
             header_size,
         )
         if not use_modin_impl:
-            warn_defaulting_to_pandas(fallback_reason)
             return cls.single_worker_read(
-                filepath_or_buffer, callback=cls.read_callback, **kwargs
+                filepath_or_buffer,
+                fallback_reason,
+                callback=cls.read_callback,
+                **kwargs,
             )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE

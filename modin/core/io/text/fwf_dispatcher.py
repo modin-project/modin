@@ -74,7 +74,7 @@ class FWFDispatcher(TextFileDispatcher):
             return (
                 False,
                 "Defaulting to pandas implementation: `infer_nrows` is a significant portion "
-                + "of the number of rows, so Pandas may be faster"
+                + "of the number of rows, so Pandas may be faster",
             )
         return super().check_parameters_support(
             filepath_or_buffer, read_kwargs, skiprows_md, header_size

@@ -15,8 +15,6 @@
 
 import io
 
-from modin.error_message import ErrorMessage
-
 
 class CustomNewlineIterator:
     r"""
@@ -63,20 +61,3 @@ class CustomNewlineIterator:
     def seek(self):
         """Change the stream positition to where the last returned line ends."""
         self.file.seek(self.bytes_read - self.chunk_size, 1)
-
-
-DEFAULT_TO_PANDAS_PREFIX = "Defaulting to pandas implementation"
-
-
-def warn_defaulting_to_pandas(reason=None):
-    """
-    Parameters
-    ----------
-    reason : Optional[str]
-        An additional message to be printed with the warning, describing the reason
-        Modin defaulted to pandas.
-    """
-    if reason is not None:
-        ErrorMessage.single_warning(f"{DEFAULT_TO_PANDAS_PREFIX}: {reason}")
-    else:
-        ErrorMessage.single_warning(DEFAULT_TO_PANDAS_PREFIX)

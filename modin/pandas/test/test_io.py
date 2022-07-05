@@ -1000,7 +1000,9 @@ class TestCsv:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
     def test_read_csv_default_to_pandas(self):
-        with warns_that_defaulting_to_pandas(), pytest.warns(UserWarning, match="No such file"):
+        with warns_that_defaulting_to_pandas(), pytest.warns(
+            UserWarning, match="No such file"
+        ):
             # This tests that we default to pandas on a buffer
             from io import StringIO
 

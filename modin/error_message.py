@@ -47,7 +47,7 @@ class ErrorMessage(object):
         cls.printed_warnings.add(message_hash)
 
     @classmethod
-    def default_to_pandas(cls, message=""):
+    def default_to_pandas(cls, message="", reason=""):
         if message != "":
             message = f"{message} defaulting to pandas implementation."
         else:
@@ -60,6 +60,8 @@ class ErrorMessage(object):
                 + "https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html for explanation."
             )
             cls.printed_default_to_pandas = True
+        if reason:
+            message += "\n" + reason
         get_logger().debug(f"Modin Warning: Default to pandas: {message}")
         warnings.warn(message)
 

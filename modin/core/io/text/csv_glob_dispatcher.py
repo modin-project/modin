@@ -64,10 +64,18 @@ class CSVGlobDispatcher(CSVDispatcher):
                     + f"files at once. Did you forget it? Passed filename: '{filepath_or_buffer}'"
                 )
             if not cls.file_exists(filepath_or_buffer, kwargs.get("storage_options")):
-                return cls.single_worker_read(filepath_or_buffer, **kwargs)
+                return cls.single_worker_read(
+                    filepath_or_buffer,
+                    cls._file_not_found_msg(filepath_or_buffer),
+                    **kwargs,
+                )
             filepath_or_buffer = cls.get_path(filepath_or_buffer)
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
-            return cls.single_worker_read(filepath_or_buffer, **kwargs)
+            return cls.single_worker_read(
+                filepath_or_buffer,
+                cls._file_not_found_msg(filepath_or_buffer),
+                **kwargs,
+            )
 
         # We read multiple csv files when the file path is a list of absolute file paths. We assume that all of the files will be essentially replicas of the
         # first file but with different data values.
@@ -92,15 +100,25 @@ class CSVGlobDispatcher(CSVDispatcher):
                 # need python3.7 to .seek and .tell ZipExtFile
                 kwargs["compression"] = compression_type
             else:
-                return cls.single_worker_read(filepath_or_buffer, **kwargs)
+                return cls.single_worker_read(
+                    filepath_or_buffer,
+                    f"Unsupported compression type {compression_type}",
+                    **kwargs,
+                )
 
         chunksize = kwargs.get("chunksize")
         if chunksize is not None:
-            return cls.single_worker_read(filepath_or_buffer, **kwargs)
+            return cls.single_worker_read(
+                filepath_or_buffer, "`chunksize` parameter is not supported", **kwargs
+            )
 
         skiprows = kwargs.get("skiprows")
         if skiprows is not None and not isinstance(skiprows, int):
-            return cls.single_worker_read(filepath_or_buffer, **kwargs)
+            return cls.single_worker_read(
+                filepath_or_buffer,
+                "Non-integer `skiprows` value not supported",
+                **kwargs,
+            )
 
         nrows = kwargs.pop("nrows", None)
         names = kwargs.get("names", lib.no_default)
