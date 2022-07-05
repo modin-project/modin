@@ -251,22 +251,28 @@ class FileDispatcher(ClassLogger):
             Whether file exists or not.
         """
         if isinstance(file_path, str):
-            from botocore.exceptions import NoCredentialsError
+            match = S3_ADDRESS_REGEX.search(file_path)
+            if match is not None:
+                from botocore.exceptions import NoCredentialsError
 
-            if storage_options is not None:
-                new_storage_options = dict(storage_options)
-                if "anon" in new_storage_options:
-                    del new_storage_options["anon"]
-            else:
-                new_storage_options = {}
-            fs = fsspec.core.url_to_fs(file_path, anon=False, **new_storage_options)[0]
-            exists = False
-            try:
-                exists = fs.exists(file_path)
-            except (NoCredentialsError, PermissionError):
-                pass
-            fs = fsspec.core.url_to_fs(file_path, anon=True, **new_storage_options)[0]
-            return exists or fs.exists(file_path)
+                if storage_options is not None:
+                    new_storage_options = dict(storage_options)
+                    if "anon" in new_storage_options:
+                        del new_storage_options["anon"]
+                else:
+                    new_storage_options = {}
+                fs = fsspec.core.url_to_fs(
+                    file_path, anon=False, **new_storage_options
+                )[0]
+                exists = False
+                try:
+                    exists = fs.exists(file_path)
+                except (NoCredentialsError, PermissionError):
+                    pass
+                fs = fsspec.core.url_to_fs(file_path, anon=True, **new_storage_options)[
+                    0
+                ]
+                return exists or fs.exists(file_path)
         return os.path.exists(file_path)
 
     @classmethod

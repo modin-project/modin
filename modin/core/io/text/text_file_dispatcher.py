@@ -638,7 +638,9 @@ class TextFileDispatcher(FileDispatcher):
         """
         skiprows = read_kwargs.get("skiprows")
         if isinstance(filepath_or_buffer, str):
-            if not cls.file_exists(filepath_or_buffer, read_kwargs["storage_options"]):
+            if not cls.file_exists(
+                filepath_or_buffer, read_kwargs.get("storage_options")
+            ):
                 return False
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return False
