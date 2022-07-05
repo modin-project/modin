@@ -14,7 +14,7 @@
 """Module houses `FWFDispatcher` class, that is used for reading of tables with fixed-width formatted lines."""
 
 import pandas
-from typing import Union, Sequence
+from typing import Optional, Union, Sequence, Tuple
 
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 

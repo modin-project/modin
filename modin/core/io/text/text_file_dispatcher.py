@@ -30,11 +30,11 @@ import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
 
 from modin.core.io.file_dispatcher import FileDispatcher, OpenFile
+from modin.core.io.text.utils import warn_defaulting_to_pandas
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.utils import _inherit_docstrings
 from modin.core.io.text.utils import CustomNewlineIterator
 from modin.config import NPartitions
-from modin.error_message import ErrorMessage
 from modin._compat.core.base_io import _validate_usecols_arg
 
 ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
@@ -643,9 +643,10 @@ class TextFileDispatcher(FileDispatcher):
         skiprows = read_kwargs.get("skiprows")
         e_prefix = "Defaulting to pandas implementation:"
         if isinstance(filepath_or_buffer, str):
-            return (False, f"{e_prefix} No such file")
+            if not cls.file_exists(filepath_or_buffer):
+                return (False, f"{e_prefix} No local file with name '{filepath_or_buffer}'")
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
-            return (False, f"{e_prefix} No such file")
+            return (False, f"{e_prefix} No local file with name '{filepath_or_buffer}'")
 
         if read_kwargs["chunksize"] is not None:
             return (False, f"{e_prefix} `chunksize` parameter is not supported")
@@ -995,7 +996,7 @@ class TextFileDispatcher(FileDispatcher):
             header_size,
         )
         if not use_modin_impl:
-            ErrorMessage.single_warning(fallback_reason)
+            warn_defaulting_to_pandas(fallback_reason)
             return cls.single_worker_read(
                 filepath_or_buffer, callback=cls.read_callback, **kwargs
             )
