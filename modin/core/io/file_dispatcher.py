@@ -245,6 +245,8 @@ class FileDispatcher(ClassLogger):
         file_path : str
             String that represents the path to the file (paths to S3 buckets
             are also acceptable).
+        storage_options : dict, optional
+            Keyword from `read-*` functions.
 
         Returns
         -------
@@ -262,9 +264,10 @@ class FileDispatcher(ClassLogger):
                 from botocore.exceptions import NoCredentialsError
 
                 if storage_options is not None:
+                    # make copy
                     new_storage_options = dict(storage_options)
-                    if "anon" in new_storage_options:
-                        del new_storage_options["anon"]
+                    # avoid keyword duplication problems
+                    new_storage_options.pop("anon", None)
                 else:
                     new_storage_options = {}
 

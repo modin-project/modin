@@ -1022,7 +1022,7 @@ class TextFileDispatcher(FileDispatcher):
             nrows=None,
             compression=compression_infered,
         )
-        storage_options = kwargs.pop("storage_options", None) or {}
+        storage_options = kwargs.get("storage_options") or {}
         with OpenFile(
             filepath_or_buffer_md, "rb", compression_infered, **storage_options
         ) as f:
