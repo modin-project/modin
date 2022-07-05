@@ -1023,7 +1023,10 @@ class TextFileDispatcher(FileDispatcher):
             compression=compression_infered,
         )
         with OpenFile(
-            filepath_or_buffer_md, "rb", compression_infered, **(kwargs.get("storage_options", None) or {}),
+            filepath_or_buffer_md,
+            "rb",
+            compression_infered,
+            **(kwargs.get("storage_options", None) or {}),
         ) as f:
             old_pos = f.tell()
             fio = io.TextIOWrapper(f, encoding=encoding, newline="")
