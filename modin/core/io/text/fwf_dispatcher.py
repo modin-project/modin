@@ -47,7 +47,7 @@ class FWFDispatcher(TextFileDispatcher):
         read_kwargs: dict,
         skiprows_md: Union[Sequence, callable, int],
         header_size: int,
-    ):
+    ) -> Tuple[bool, Optional[str]]:
         """
         Check support of parameters of `read_fwf` function.
 
@@ -66,11 +66,16 @@ class FWFDispatcher(TextFileDispatcher):
         -------
         bool
             Whether passed parameters are supported or not.
+        Optional[str]
+            `None` if parameters are supported, otherwise an error
+            message describing why parameters are not supported.
         """
         if read_kwargs["infer_nrows"] > 100:
-            # If infer_nrows is a significant portion of the number of rows, pandas may be
-            # faster.
-            return False
+            return (
+                False,
+                "Defaulting to pandas implementation: `infer_nrows` is a significant portion "
+                + "of the number of rows, so Pandas may be faster"
+            )
         return super().check_parameters_support(
             filepath_or_buffer, read_kwargs, skiprows_md, header_size
         )
