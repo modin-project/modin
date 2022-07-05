@@ -57,9 +57,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         logger.debug(
             "Partition ID: %s, Height: %s, Width: %s, Node IP: %s",
             self._identity,
-            str(self._length_cache),
-            str(self._width_cache),
-            str(self._ip_cache),
+            self._length_cache,
+            self._width_cache,
+            self._ip_cache,
         )
 
     def get(self):

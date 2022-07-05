@@ -33,7 +33,7 @@ In the example below, we enable logging for internal Modin API calls.
 In the next example, we add logging for not only internal Modin API calls, but also for partition metadata, remote execution, and memory profiling.
 We can set the granularity (in seconds) at which the system memory utilization is logged using ``LogMemoryInterval``.
 We can also set the maximum size of the logs (in MBs) using ``LogFileSize``.
-**Note:**: Logging should be enabled before any Modin calls, and remote execution calls cannot be disabled once enabled.
+**Note:**: Logging should be enabled before any Modin calls, and logging of remote execution calls cannot be disabled once enabled.
 
 .. code-block:: python
 

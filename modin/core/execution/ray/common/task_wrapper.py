@@ -22,7 +22,7 @@ from modin.logging import ClassLogger, enable_remote_logging
 import ray
 
 
-@ray.remote(num_returns=2)
+@ray.remote
 @enable_remote_logging
 def _deploy_ray_func(func, args):  # pragma: no cover
     """

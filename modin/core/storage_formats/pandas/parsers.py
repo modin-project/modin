@@ -293,7 +293,8 @@ class PandasParser(ClassLogger):
 
 @doc(_doc_pandas_parser_class, data_type="CSV files")
 class PandasCSVParser(PandasParser):
-    # Disable logging for a function that is executed in a remote context, see TextFileDispatcher._launch_tasks
+    # Disable logging for a function that is executed in a remote context, see TextFileDispatcher._launch_tasks,
+    # where cls.parse is deployed remotely by the execution wrapper.
     @staticmethod
     @disable_logging
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
@@ -386,7 +387,8 @@ class PandasPickleExperimentalParser(PandasParser):
 
 @doc(_doc_pandas_parser_class, data_type="custom text")
 class CustomTextExperimentalParser(PandasParser):
-    # Disable logging for a function that is executed in a remote context, see TextFileDispatcher._launch_tasks
+    # Disable logging for a function that is executed in a remote context, see TextFileDispatcher._launch_tasks,
+    # where cls.parse is deployed remotely by the execution wrapper.
     @staticmethod
     @disable_logging
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
@@ -396,7 +398,8 @@ class CustomTextExperimentalParser(PandasParser):
 
 @doc(_doc_pandas_parser_class, data_type="tables with fixed-width formatted lines")
 class PandasFWFParser(PandasParser):
-    # Disable logging for a function that is executed in a remote context, see TextFileDispatcher._launch_tasks
+    # Disable logging for a function that is executed in a remote context, see TextFileDispatcher._launch_tasks,
+    # where cls.parse is deployed remotely by the execution wrapper.
     @staticmethod
     @disable_logging
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)

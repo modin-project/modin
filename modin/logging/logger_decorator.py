@@ -17,7 +17,7 @@ Module contains the functions designed for the enable/disable of logging.
 ``enable_logging`` is used for decorating individual Modin functions or classes.
 """
 
-from typing import Any, Optional, Callable, Dict, Union, Type, Tuple
+from typing import Any, List, Optional, Callable, Dict, Union, Type, Tuple
 from types import FunctionType, MethodType
 from functools import wraps
 from logging import Logger
@@ -172,7 +172,7 @@ def enable_remote_logging(
     assert hasattr(Logger, log_level.lower()), f"Invalid log level: {log_level}"
 
     @wraps(func)
-    def run_and_log(*args: tuple, **kwargs: Dict[Any, Any]) -> None:
+    def run_and_log(*args: tuple, **kwargs: Dict[Any, Any]) -> Any:
         """
         Compute function with logging if Modin logging is enabled.
 
@@ -194,11 +194,10 @@ def enable_remote_logging(
         logger = get_worker_logger(JOB_ID)
         start_line = f"START::{modin_layer.upper()}::{func.__name__}"
         stop_line = f"STOP::{modin_layer.upper()}::{func.__name__}"
-
-        funcs = [arg for arg in args if callable(arg)]
+        funcs: List[Callable] = [arg for arg in args if callable(arg)]
         if funcs:
-            start_line += f":{funcs}"
-            stop_line += f":{funcs}"
+            start_line += f":{':'.join(f.__name__ for f in funcs)}"
+            stop_line += f":{':'.join(f.__name__ for f in funcs)}"
 
         logger.info(start_line)
         try:
