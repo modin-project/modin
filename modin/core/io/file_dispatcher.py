@@ -264,7 +264,9 @@ class FileDispatcher(ClassLogger):
                 from botocore.exceptions import NoCredentialsError
 
                 if storage_options is not None:
+                    # make copy
                     new_storage_options = dict(storage_options)
+                    # avoid keyword duplication problems
                     new_storage_options.pop("anon", None)
                 else:
                     new_storage_options = {}
