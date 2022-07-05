@@ -12,6 +12,7 @@ Key Features and Updates
   * FIX-#4589: Pin protobuf<4.0.0 to fix ray (#4590)
   * FIX-#4577: Set attribute of Modin dataframe to updated value (#4588)
   * FIX-#4411: Fix binary_op between datetime64 Series and pandas timedelta (#4592)
+  * FIX-#4604: Fix `groupby` + `agg` in case when multicolumn can arise (#4642)
   * FIX-#4582: Inherit custom log layer (#4583)
   * FIX-#4593: Ensure Modin warns when setting columns via attributes (#4621)
 * Performance enhancements
@@ -53,3 +54,4 @@ Contributors
 @suhailrehman
 @RehanSD
 @helmeleegy
+@anmyachev
