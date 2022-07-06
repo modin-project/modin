@@ -14,6 +14,7 @@ Key Features and Updates
   * FIX-#4411: Fix binary_op between datetime64 Series and pandas timedelta (#4592)
   * FIX-#4604: Fix `groupby` + `agg` in case when multicolumn can arise (#4642)
   * FIX-#4582: Inherit custom log layer (#4583)
+  * FIX-#4639: Fix `storage_options` usage for `read_csv` and `read_csv_glob` (#4644)
   * FIX-#4593: Ensure Modin warns when setting columns via attributes (#4621)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
