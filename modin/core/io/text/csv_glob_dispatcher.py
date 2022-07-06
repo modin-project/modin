@@ -299,7 +299,7 @@ class CSVGlobDispatcher(CSVDispatcher):
         file_path : str
             String representing a path.
         storage_options : dict, optional
-            Keyword from `read-*` functions.
+            Keyword from `read_*` functions.
 
         Returns
         -------
@@ -317,9 +317,7 @@ class CSVGlobDispatcher(CSVDispatcher):
                 from botocore.exceptions import NoCredentialsError
 
                 if storage_options is not None:
-                    # make copy
                     new_storage_options = dict(storage_options)
-                    # avoid keyword duplication problems
                     new_storage_options.pop("anon", None)
                 else:
                     new_storage_options = {}
