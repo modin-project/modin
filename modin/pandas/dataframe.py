@@ -2552,13 +2552,16 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
                     if len(key) != value.shape[0 if value.ndim == 1 else 1]:
                         raise ValueError("Columns must be same length as key")
                 item = broadcast_item(
-                    self._query_compiler, slice(None), key, value, need_reindex=False
+                    self._query_compiler,
+                    slice(None),
+                    key,
+                    value,
+                    need_columns_reindex=False,
                 )
                 new_qc = self._query_compiler.write_items(
                     slice(None), self.columns.get_indexer_for(key), item
                 )
                 self._update_inplace(new_qc)
-
                 # self.loc[:, key] = value
                 return
 

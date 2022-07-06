@@ -256,7 +256,12 @@ def check_both_not_none(option1, option2):
 
 
 def broadcast_item(
-    query_compiler, row_lookup, col_lookup, item, to_shape=None, need_reindex=True
+    query_compiler,
+    row_lookup,
+    col_lookup,
+    item,
+    to_shape=None,
+    need_columns_reindex=True,
 ):
     """
     Use NumPy to broadcast or reshape item.
@@ -273,7 +278,7 @@ def broadcast_item(
         Value that should be broadcast to a new shape of `to_shape`.
     to_shape : tuple of two int, optional
         Shape of dataset that `item` should be broadcasted to.
-    need_reindex : bool, default: True
+    need_columns_reindex : bool, default: True
         In the case of assigning columns to a dataframe (broadcasting is
         part of the flow), reindexing is not needed.
 
@@ -308,15 +313,13 @@ def broadcast_item(
         new_col_len = len(col_lookup)
     to_shape = new_row_len, new_col_len
 
-    if need_reindex and isinstance(
-        item, (pandas.Series, pandas.DataFrame, Series, DataFrame)
-    ):
+    if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
         # convert indices in lookups to names, as Pandas reindex expects them to be so
         axes_to_reindex = {}
         index_values = query_compiler.index[row_lookup]
         if not index_values.equals(item.index):
             axes_to_reindex["index"] = index_values
-        if hasattr(item, "columns"):
+        if need_columns_reindex and hasattr(item, "columns"):
             column_values = query_compiler.columns[col_lookup]
             if not column_values.equals(item.columns):
                 axes_to_reindex["columns"] = column_values
