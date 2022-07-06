@@ -56,7 +56,6 @@ class ExcelDispatcher(TextFileDispatcher):
                 **kwargs
             )
         if sys.version_info < (3, 7):
-            warnings.warn()
             return cls.single_worker_read(
                 io, "Python 3.7 or higher required for parallel `read_excel`.", **kwargs
             )

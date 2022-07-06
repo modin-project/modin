@@ -59,8 +59,8 @@ Key Features and Updates
 * New Features
   * FEAT-4463: Add experimental fuzzydata integration for testing against a randomized dataframe workflow (#4556)
   * FEAT-#4419: Extend virtual partitioning API to pandas on Dask (#4420)
-  * FEAT-#4569: Add error message when `read_` function defaults to pandas
   * FEAT-#4147: Add partial compatibility with Python 3.6 and pandas 1.1 (#4301)
+  * FEAT-#4569: Add error message when `read_` function defaults to pandas (#4647)
 
 Contributors
 ------------
