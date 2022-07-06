@@ -343,5 +343,5 @@ class FileDispatcher(ClassLogger):
         )
 
     @classmethod
-    def _file_not_found_msg(filename):
+    def _file_not_found_msg(cls, filename):
         return f"No file with name '{filename}'"

@@ -1000,9 +1000,7 @@ class TestCsv:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
     def test_read_csv_default_to_pandas(self):
-        with warns_that_defaulting_to_pandas(), pytest.warns(
-            UserWarning, match="No such file"
-        ):
+        with warns_that_defaulting_to_pandas("No file with name"):
             # This tests that we default to pandas on a buffer
             from io import StringIO
 
@@ -1019,7 +1017,7 @@ class TestCsv:
         eval_io(
             fn_name="read_csv",
             modin_warning=UserWarning,
-            modin_warning_str_match="No such file",
+            modin_warning_str_match="No file with name",
             # read_csv kwargs
             filepath_or_buffer="https://raw.githubusercontent.com/modin-project/modin/master/modin/pandas/test/data/blah.csv",
             # It takes about ~17Gb of RAM for Omnisci to import the whole table from this test

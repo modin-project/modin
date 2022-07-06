@@ -271,7 +271,7 @@ class PandasParser(ClassLogger):
             processing, object type depends on the child class `parse` function
             result type.
         """
-        ErrorMessage.default_to_pandas(reason)
+        ErrorMessage.default_to_pandas(reason=reason)
         # Use default args for everything
         pandas_frame = cls.parse(fname, **kwargs)
         if isinstance(pandas_frame, pandas.io.parsers.TextFileReader):

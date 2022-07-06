@@ -242,9 +242,15 @@ def test_format_string():
     assert answer == expected
 
 
-def warns_that_defaulting_to_pandas():
+def warns_that_defaulting_to_pandas(other_match=None):
     """
     Assert that code warns that it's defaulting to pandas.
+
+    Parameters
+    ----------
+    other_match : Optional[str]
+        If specified, checks that the warning message matches this argument
+        in addition to "defaulting to pandas".
 
     Returns
     -------
@@ -252,7 +258,11 @@ def warns_that_defaulting_to_pandas():
         A WarningsChecker checking for a UserWarning saying that Modin is
         defaulting to Pandas.
     """
-    return pytest.warns(UserWarning, match="[Dd]efaulting to pandas")
+    match = "[Dd]efaulting to pandas"
+    if other_match:
+        # Reason message may be separated by newlines
+        match += "(.|\\n)+" + other_match
+    return pytest.warns(UserWarning, match=match)
 
 
 @pytest.mark.parametrize("as_json", [True, False])
