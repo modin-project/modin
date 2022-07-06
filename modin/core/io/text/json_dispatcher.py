@@ -55,7 +55,7 @@ class JSONDispatcher(TextFileDispatcher):
             )
         if not kwargs.get("lines", False):
             return cls.single_worker_read(
-                path_or_buf, cls._file_not_found_msg(path_or_buf), **kwargs
+                path_or_buf, "`lines` argument not supported", **kwargs
             )
         with OpenFile(path_or_buf, "rb") as f:
             columns = pandas.read_json(BytesIO(b"" + f.readline()), lines=True).columns

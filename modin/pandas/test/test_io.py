@@ -1000,7 +1000,7 @@ class TestCsv:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
     def test_read_csv_default_to_pandas(self):
-        with warns_that_defaulting_to_pandas("No file with name"):
+        with warns_that_defaulting_to_pandas(suffix="No file with name"):
             # This tests that we default to pandas on a buffer
             from io import StringIO
 
@@ -1582,7 +1582,7 @@ class TestJson:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_json_string_bytes(self, data):
-        with warns_that_defaulting_to_pandas():
+        with warns_that_defaulting_to_pandas(prefix="read_json"):
             modin_df = pd.read_json(data)
         # For I/O objects we need to rewind to reuse the same object.
         if hasattr(data, "seek"):

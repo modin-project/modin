@@ -242,15 +242,18 @@ def test_format_string():
     assert answer == expected
 
 
-def warns_that_defaulting_to_pandas(other_match=None):
+def warns_that_defaulting_to_pandas(prefix=None, suffix=None):
     """
     Assert that code warns that it's defaulting to pandas.
 
     Parameters
     ----------
-    other_match : Optional[str]
-        If specified, checks that the warning message matches this argument
-        in addition to "defaulting to pandas".
+    prefix : Optional[str]
+        If specified, checks that the start of the warning message matches this argument
+        before "[Dd]efaulting to pandas".
+    suffix : Optional[str]
+        If specified, checks that the end of the warning message matches this argument
+        after "[Dd]efaulting to pandas".
 
     Returns
     -------
@@ -259,9 +262,11 @@ def warns_that_defaulting_to_pandas(other_match=None):
         defaulting to Pandas.
     """
     match = "[Dd]efaulting to pandas"
-    if other_match:
-        # Reason message may be separated by newlines
-        match += "(.|\\n)+" + other_match
+    if prefix:
+        # Message may be separated by newlines
+        match = match + "(.|\\n)+"
+    if suffix:
+        match += "(.|\\n)+" + suffix
     return pytest.warns(UserWarning, match=match)
 
 
