@@ -240,7 +240,7 @@ class FileDispatcher:
 
     @classmethod
     @logger_decorator("PANDAS-API", "FileDispatcher.file_exists", "INFO")
-    def file_exists(cls, file_path):
+    def file_exists(cls, file_path, storage_options=None):
         """
         Check if `file_path` exists.
 
@@ -249,6 +249,8 @@ class FileDispatcher:
         file_path : str
             String that represents the path to the file (paths to S3 buckets
             are also acceptable).
+        storage_options : dict, optional
+            Keyword from `read_*` functions.
 
         Returns
         -------
@@ -268,13 +270,19 @@ class FileDispatcher:
                     EndpointConnectionError,
                 )
 
-                s3fs = S3FS.S3FileSystem(anon=False)
+                if storage_options is not None:
+                    new_storage_options = dict(storage_options)
+                    new_storage_options.pop("anon", None)
+                else:
+                    new_storage_options = {}
+
+                s3fs = S3FS.S3FileSystem(anon=False, **new_storage_options)
                 exists = False
                 try:
                     exists = s3fs.exists(file_path) or exists
-                except (NoCredentialsError, EndpointConnectionError):
+                except (NoCredentialsError, PermissionError, EndpointConnectionError):
                     pass
-                s3fs = S3FS.S3FileSystem(anon=True)
+                s3fs = S3FS.S3FileSystem(anon=True, **new_storage_options)
                 return exists or s3fs.exists(file_path)
         return os.path.exists(file_path)
 

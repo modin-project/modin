@@ -63,7 +63,7 @@ class CSVGlobDispatcher(CSVDispatcher):
                     "Shell-style wildcard '*' must be in the filename pattern in order to read multiple "
                     + f"files at once. Did you forget it? Passed filename: '{filepath_or_buffer}'"
                 )
-            if not cls.file_exists(filepath_or_buffer):
+            if not cls.file_exists(filepath_or_buffer, kwargs.get("storage_options")):
                 return cls.single_worker_read(filepath_or_buffer, **kwargs)
             filepath_or_buffer = cls.get_path(filepath_or_buffer)
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
@@ -160,7 +160,14 @@ class CSVGlobDispatcher(CSVDispatcher):
 
         with ExitStack() as stack:
             files = [
-                stack.enter_context(OpenFile(fname, "rb", compression_type))
+                stack.enter_context(
+                    OpenFile(
+                        fname,
+                        "rb",
+                        compression_type,
+                        **(kwargs.get("storage_options", None) or {}),
+                    )
+                )
                 for fname in glob_filepaths
             ]
 
@@ -283,7 +290,7 @@ class CSVGlobDispatcher(CSVDispatcher):
         return new_query_compiler
 
     @classmethod
-    def file_exists(cls, file_path: str) -> bool:
+    def file_exists(cls, file_path: str, storage_options=None) -> bool:
         """
         Check if the `file_path` is valid.
 
@@ -291,6 +298,8 @@ class CSVGlobDispatcher(CSVDispatcher):
         ----------
         file_path : str
             String representing a path.
+        storage_options : dict, optional
+            Keyword from `read_*` functions.
 
         Returns
         -------
@@ -310,13 +319,19 @@ class CSVGlobDispatcher(CSVDispatcher):
                     EndpointConnectionError,
                 )
 
-                s3fs = S3FS.S3FileSystem(anon=False)
+                if storage_options is not None:
+                    new_storage_options = dict(storage_options)
+                    new_storage_options.pop("anon", None)
+                else:
+                    new_storage_options = {}
+
+                s3fs = S3FS.S3FileSystem(anon=False, **new_storage_options)
                 exists = False
                 try:
                     exists = len(s3fs.glob(file_path)) > 0 or exists
-                except (NoCredentialsError, EndpointConnectionError):
+                except (NoCredentialsError, PermissionError, EndpointConnectionError):
                     pass
-                s3fs = S3FS.S3FileSystem(anon=True)
+                s3fs = S3FS.S3FileSystem(anon=True, **new_storage_options)
                 return exists or len(s3fs.glob(file_path)) > 0
         return len(glob.glob(file_path)) > 0
 
