@@ -51,6 +51,8 @@ def wait_computations_if_benchmark_mode(func):
     `func` should return NumPy array with partitions.
     """
     if BenchmarkMode.get():
+        # Importing at the start of the file would cause a circular import
+        from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import PandasOnRayDataframePartitionManager
 
         @wraps(func)
         def wait(*args, **kwargs):
@@ -67,12 +69,9 @@ def wait_computations_if_benchmark_mode(func):
             # serially kick off all the deferred computations so that they can
             # all run asynchronously, then wait on all the results.
             [part.drain_call_queue() for part in partitions.flatten()]
-            # need to go through all the values of the map iterator
-            # since `wait` does not return anything, we need to explicitly add
-            # the return `True` value from the lambda
-            # TODO(https://github.com/modin-project/modin/issues/4491): Wait
-            # for all the partitions in parallel.
-            ray.get(list(map(lambda partition: partition._data, partitions.flatten())))
+            # The PandasOnRay partition manager invokes ray.get under the hood, which waits
+            # in parallel for all computations to finish
+            PandasOnRayDataframePartitionManager.get_objects_from_partitions(partitions.flatten())
             return result
 
         return wait
