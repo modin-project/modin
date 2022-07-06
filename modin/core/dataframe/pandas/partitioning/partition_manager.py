@@ -72,7 +72,7 @@ def wait_computations_if_benchmark_mode(func):
             # the return `True` value from the lambda
             # TODO(https://github.com/modin-project/modin/issues/4491): Wait
             # for all the partitions in parallel.
-            all(map(lambda partition: partition.wait() or True, partitions.flatten()))
+            ray.get(list(map(lambda partition: partition._data, partitions.flatten())))
             return result
 
         return wait
