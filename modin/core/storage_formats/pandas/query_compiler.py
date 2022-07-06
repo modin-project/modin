@@ -2196,7 +2196,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             Axis to set `value` along. 0 means set row, 1 means set column.
         key : scalar
             Row/column label to set `value` in.
-        value : PandasQueryCompiler (from Series), list-like or scalar
+        value : PandasQueryCompiler (1xN), list-like or scalar
             Define new row/column value.
         how : {"inner", "outer", "left", "right", None}, default: "inner"
             Type of join to perform if specified axis of `self` and `value` are not
