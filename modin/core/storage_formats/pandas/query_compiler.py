@@ -1577,7 +1577,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         def describe_builder(df, internal_indices=[]):
             """Apply `describe` function to the subset of columns in a single partition."""
-            return df.iloc[:, internal_indices].describe(**kwargs)
+            return df.iloc[:, internal_indices].describe(**kwargs).reindex(new_index)
 
         return self.__constructor__(
             self._modin_frame.apply_full_axis_select_indices(

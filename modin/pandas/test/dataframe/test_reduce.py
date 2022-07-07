@@ -181,6 +181,15 @@ def test_2195(datetime_is_numeric, has_numeric_column):
     )
 
 
+def test_describe_different_index():
+    df = pd.DataFrame(np.zeros((2, 60)))
+    pdf = pandas.DataFrame(np.zeros((2, 60)))
+    df["new"] = "abc"
+    pdf["new"] = "abc"
+    df_equals(df.describe(include="all"), pdf.describe(include="all"))
+    df_equals(df.describe(include="all").T, pdf.describe(include="all").T)
+
+
 @pytest.mark.parametrize(
     "exclude,include",
     [
