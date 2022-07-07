@@ -51,12 +51,12 @@ def wait_computations_if_benchmark_mode(func):
     `func` should return NumPy array with partitions.
     """
     if BenchmarkMode.get():
-        # Importing at the start of the file would cause a circular import
-        from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import PandasOnRayDataframePartitionManager
 
         @wraps(func)
         def wait(*args, **kwargs):
             """Wait for computation results."""
+            # Importing at the start of the file would cause a circular import
+            from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import PandasOnRayDataframePartitionManager
             result = func(*args, **kwargs)
             if isinstance(result, tuple):
                 partitions = result[0]
