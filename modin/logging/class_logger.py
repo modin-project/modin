@@ -42,7 +42,7 @@ class ClassLogger:
         **kwargs: Dict,
     ) -> None:
         """
-        Apply logging decorator to all children of ClassLogger.
+        Apply logging decorator to all children of ``ClassLogger``.
 
         Parameters
         ----------

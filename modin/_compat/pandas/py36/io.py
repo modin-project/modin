@@ -138,7 +138,6 @@ def read_table(
     memory_map=False,
     float_precision=None,
 ):
-    # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_csv_signature = {
         val.name for val in inspect.signature(pandas.read_csv).parameters.values()
     }

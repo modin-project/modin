@@ -12,9 +12,9 @@
 # governing permissions and limitations under the License.
 
 """
-Module houses `LatestBaseIOCompat` class.
+Module houses ``LatestBaseIOCompat`` class.
 
-`LatestBaseIOCompat` is base mixin for IO classes relying on older pandas.
+``LatestBaseIOCompat`` is base mixin for IO classes relying on older pandas.
 """
 from typing import Optional, Any
 import pickle
@@ -31,7 +31,7 @@ from ..doc_common import (
 )
 
 
-class LatestBaseIOCompat(object):
+class LatestBaseIOCompat:
     """Class for basic utils and default implementation of IO functions for older pandas."""
 
     @classmethod
