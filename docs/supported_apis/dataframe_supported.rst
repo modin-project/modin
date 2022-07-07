@@ -418,14 +418,15 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_latex``               | `to_latex`_               | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``to_parquet``             | `to_parquet`_             | P                      | **Dask**: Defaults to Pandas implementation and 
-|                            |                           |                        | writes a  single output file. 
-|                            |                           |                        | **Ray**: Parallel implementation only if path  |
+| ``to_parquet``             | `to_parquet`_             | P                      | **Dask**: Defaults to Pandas implementation and    |
+|                            |                           |                        | writes a  single output file.                      |
+|                            |                           |                        | **Ray**: Parallel implementation only if path      |
 |                            |                           |                        | parameter is a string; does not end with ".gz",    |
-|                            |                           |                        | ".bz2", ".zip", or ".xz"; and compression parameter |
-|                            |                           |                        | is not ``None`` or "snappy". In these cases, the |
-|                            |                           |                        | ``path`` parameter specifies a directory where |
-|                            |                           |                        | one file is written per row partition of the Modin dataframe. |
+|                            |                           |                        | ".bz2", ".zip", or ".xz"; and compression parameter|
+|                            |                           |                        | is not ``None`` or "snappy". In these cases, the   |
+|                            |                           |                        | ``path`` parameter specifies a directory where     |
+|                            |                           |                        | one file is written per row partition of the Modin |
+|                            |                           |                        | dataframe.                                         |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_period``              | `to_period`_              | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
