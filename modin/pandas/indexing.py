@@ -40,7 +40,7 @@ from modin.logging import LoggerMetaClass, metaclass_resolver
 
 from .dataframe import DataFrame
 from .series import Series
-from .utils import is_scalar, broadcast_item
+from .utils import is_scalar, reindex_and_broadcast_item
 
 
 def is_slice(x):
@@ -382,7 +382,7 @@ class _LocationIndexerBase(object, metaclass=LoggerMetaClass):
         # Assignment to both axes.
         else:
             if not is_scalar(item):
-                item = broadcast_item(self.qc, row_lookup, col_lookup, item)
+                item = reindex_and_broadcast_item(self.df, row_lookup, col_lookup, item)
             self._write_items(row_lookup, col_lookup, item)
 
     def _write_items(self, row_lookup, col_lookup, item):

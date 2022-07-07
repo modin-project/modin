@@ -42,7 +42,7 @@ from modin.config import Engine, IsExperimental, PersistentPickle
 from .utils import (
     from_pandas,
     from_non_pandas,
-    broadcast_item,
+    reindex_and_broadcast_item,
 )
 from . import _update_engine
 from .iterator import PartitionIterator
@@ -2551,8 +2551,8 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
                         value = np.array(value)
                     if len(key) != value.shape[0 if value.ndim == 1 else 1]:
                         raise ValueError("Columns must be same length as key")
-                item = broadcast_item(
-                    self._query_compiler,
+                item = reindex_and_broadcast_item(
+                    self,
                     slice(None),
                     key,
                     value,

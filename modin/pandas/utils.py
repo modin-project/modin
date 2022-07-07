@@ -255,29 +255,26 @@ def check_both_not_none(option1, option2):
     return not (option1 is None or option2 is None)
 
 
-def broadcast_item(
-    query_compiler,
+def reindex_and_broadcast_item(
+    obj,
     row_lookup,
     col_lookup,
     item,
-    to_shape=None,
     need_columns_reindex=True,
 ):
     """
-    Use NumPy to broadcast or reshape item.
+    Use NumPy to broadcast or reshape item with reindexing.
 
     Parameters
     ----------
-    query_compiler : BaseQueryCompiler
-        Query compiler contains the necessary information about the axes.
+    obj : DataFrame or Series
+        The object contains the necessary information about the axes.
     row_lookup : slice or scalar
         The global row index to locate inside of `item`.
     col_lookup : range, array, list, slice or scalar
         The global col index to locate inside of `item`.
     item : DataFrame, Series, or query_compiler
         Value that should be broadcast to a new shape of `to_shape`.
-    to_shape : tuple of two int, optional
-        Shape of dataset that `item` should be broadcasted to.
     need_columns_reindex : bool, default: True
         In the case of assigning columns to a dataframe (broadcasting is
         part of the flow), reindexing is not needed.
@@ -291,7 +288,7 @@ def broadcast_item(
     ------
     ValueError
         If `row_lookup` or `col_lookup` contain values missing in
-        `query_compiler` index or columns correspondingly.
+        DataFrame/Series index or columns correspondingly.
         If `item` cannot be broadcast from its own shape to `to_shape`.
 
     Notes
@@ -304,11 +301,11 @@ def broadcast_item(
     from .series import Series
 
     if isinstance(row_lookup, slice):
-        new_row_len = len(query_compiler.index[row_lookup])
+        new_row_len = len(obj.index[row_lookup])
     else:
         new_row_len = len(row_lookup)
     if isinstance(col_lookup, slice):
-        new_col_len = len(query_compiler.columns[col_lookup])
+        new_col_len = len(obj.columns[col_lookup])
     else:
         new_col_len = len(col_lookup)
     to_shape = new_row_len, new_col_len
@@ -316,11 +313,11 @@ def broadcast_item(
     if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
         # convert indices in lookups to names, as Pandas reindex expects them to be so
         axes_to_reindex = {}
-        index_values = query_compiler.index[row_lookup]
+        index_values = obj.index[row_lookup]
         if not index_values.equals(item.index):
             axes_to_reindex["index"] = index_values
         if need_columns_reindex and hasattr(item, "columns"):
-            column_values = query_compiler.columns[col_lookup]
+            column_values = obj.columns[col_lookup]
             if not column_values.equals(item.columns):
                 axes_to_reindex["columns"] = column_values
         # New value for columns/index make that reindex add NaN values
