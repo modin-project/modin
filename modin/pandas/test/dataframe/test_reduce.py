@@ -182,12 +182,11 @@ def test_2195(datetime_is_numeric, has_numeric_column):
 
 
 def test_describe_different_index():
-    df = pd.DataFrame(np.zeros((2, 60)))
-    pdf = pandas.DataFrame(np.zeros((2, 60)))
-    df["new"] = "abc"
-    pdf["new"] = "abc"
-    df_equals(df.describe(include="all"), pdf.describe(include="all"))
-    df_equals(df.describe(include="all").T, pdf.describe(include="all").T)
+    modin_df = pd.DataFrame(np.zeros((2, 60)))
+    pandas_df = pandas.DataFrame(np.zeros((2, 60)))
+    modin_df["new"] = pandas_df["new"] = "abc"
+    df_equals(modin_df.describe(include="all"), pandas_df.describe(include="all"))
+    df_equals(modin_df.describe(include="all").T, pandas_df.describe(include="all").T)
 
 
 @pytest.mark.parametrize(
