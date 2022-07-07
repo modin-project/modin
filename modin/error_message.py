@@ -13,7 +13,7 @@
 
 import warnings
 from modin.logging import get_logger
-
+from modin.utils import get_current_execution
 
 class ErrorMessage(object):
     # Only print full ``default to pandas`` warning one time.
@@ -47,9 +47,11 @@ class ErrorMessage(object):
         cls.printed_warnings.add(message_hash)
 
     @classmethod
-    def default_to_pandas(cls, message="", reason=""):
-        if message != "":
-            message = f"{message} defaulting to pandas implementation."
+    def default_to_pandas(cls, method="", reason=""):
+        if method != "":
+            execution_str = get_current_execution()
+            message = f"`{method}` is not currently supported by {execution_str} "
+            + ", defaulting to pandas implementation."
         else:
             message = "Defaulting to pandas implementation."
 

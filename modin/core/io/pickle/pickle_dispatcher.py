@@ -49,7 +49,7 @@ class PickleExperimentalDispatcher(FileDispatcher):
         if not (isinstance(filepath_or_buffer, str) and "*" in filepath_or_buffer):
             return cls.single_worker_read(
                 filepath_or_buffer,
-                "Defaulting to Modin core implementation",
+                "Buffers and wildcard file names are not supported",
                 single_worker_read=True,
                 **kwargs,
             )
