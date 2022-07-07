@@ -644,7 +644,7 @@ class TextFileDispatcher(FileDispatcher):
             if not cls.file_exists(filepath_or_buffer):
                 return (False, cls._file_not_found_msg(filepath_or_buffer))
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
-            return (False, "Reading from buffers or other non-path-like objects is not supported")
+            return (False, cls._buffer_unsupported_msg())
 
         if read_kwargs["chunksize"] is not None:
             return (False, "`chunksize` parameter is not supported")

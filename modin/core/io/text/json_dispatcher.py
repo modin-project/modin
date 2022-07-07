@@ -51,7 +51,7 @@ class JSONDispatcher(TextFileDispatcher):
             path_or_buf = cls.get_path(path_or_buf)
         elif not cls.pathlib_or_pypath(path_or_buf):
             return cls.single_worker_read(
-                path_or_buf, cls._file_not_found_msg(path_or_buf), **kwargs
+                path_or_buf, cls._buffer_unsupported_msg(), **kwargs
             )
         if not kwargs.get("lines", False):
             return cls.single_worker_read(

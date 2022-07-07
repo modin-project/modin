@@ -73,7 +73,7 @@ class CSVGlobDispatcher(CSVDispatcher):
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return cls.single_worker_read(
                 filepath_or_buffer,
-                cls._file_not_found_msg(filepath_or_buffer),
+                cls._buffer_unsupported_msg(),
                 **kwargs,
             )
 

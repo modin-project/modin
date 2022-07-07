@@ -358,3 +358,7 @@ class FileDispatcher(ClassLogger):
             A message indicating `filename` was not found.
         """
         return f"No file with name '{filename}'"
+
+    @classmethod
+    def _buffer_unsupported_msg(cls):
+        return "Reading from buffers or other non-path-like objects is not supported"
