@@ -19,18 +19,19 @@ all_deps = dask_deps + ray_deps + remote_deps + spreadsheet_deps
 # This file provides the "import pandas before Ray init" feature if specific
 # environment variable is set (see https://github.com/modin-project/modin/issues/4564).
 cmdclass = versioneer.get_cmdclass()
+extra_files = ["modin-autoimport-pandas.pth"]
 
 
 class AddPthFileBuild(cmdclass["build_py"]):
     def _get_data_files(self):
         return (super()._get_data_files() or []) + [
-            (".", ".", self.build_lib, ["modin-autoimport-pandas.pth"])
+            (".", ".", self.build_lib, extra_files)
         ]
 
 
 class AddPthFileSDist(cmdclass["sdist"]):
     def make_distribution(self):
-        self.filelist.append("modin-autoimport-pandas.pth")
+        self.filelist.extend(extra_files)
         return super().make_distribution()
 
 
