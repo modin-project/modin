@@ -639,7 +639,9 @@ class TextFileDispatcher(FileDispatcher):
         """
         skiprows = read_kwargs.get("skiprows")
         if isinstance(filepath_or_buffer, str):
-            if not cls.file_exists(filepath_or_buffer):
+            if not cls.file_exists(
+                filepath_or_buffer, read_kwargs.get("storage_options")
+            ):
                 return False
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return False
@@ -1021,8 +1023,12 @@ class TextFileDispatcher(FileDispatcher):
             nrows=None,
             compression=compression_infered,
         )
-
-        with OpenFile(filepath_or_buffer_md, "rb", compression_infered) as f:
+        with OpenFile(
+            filepath_or_buffer_md,
+            "rb",
+            compression_infered,
+            **(kwargs.get("storage_options", None) or {}),
+        ) as f:
             old_pos = f.tell()
             fio = io.TextIOWrapper(f, encoding=encoding, newline="")
             newline, quotechar = cls.compute_newline(
