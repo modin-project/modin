@@ -181,12 +181,19 @@ def test_2195(datetime_is_numeric, has_numeric_column):
     )
 
 
-def test_describe_different_index():
-    modin_df = pd.DataFrame(np.zeros((2, 60)))
-    pandas_df = pandas.DataFrame(np.zeros((2, 60)))
-    modin_df["new"] = pandas_df["new"] = "abc"
-    df_equals(modin_df.describe(include="all"), pandas_df.describe(include="all"))
-    df_equals(modin_df.describe(include="all").T, pandas_df.describe(include="all").T)
+# Issue: https://github.com/modin-project/modin/issues/4641
+def test_describe_column_partition_has_different_index():
+    pandas_df = pandas.DataFrame(test_data["int_data"])
+    # The index of the resulting dataframe is the same amongst all partitions
+    # when dealing with only numerical data. However, if we work with columns
+    # that contain strings, we will get extra values in our result index such as
+    # 'unique', 'top', and 'freq'. Since we call describe() on each partition,
+    # we can have cases where certain partitions do not contain any of the
+    # object string data. Thus, we add an extra string column to make sure
+    # that we are setting the index correctly for all partitions.
+    pandas_df["string_column"] = "abc"
+    modin_df = pd.DataFrame(pandas_df)
+    eval_general(modin_df, pandas_df, lambda df: df.describe(include="all"))
 
 
 @pytest.mark.parametrize(
