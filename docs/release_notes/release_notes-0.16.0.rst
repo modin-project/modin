@@ -39,6 +39,7 @@ Key Features and Updates
   * TEST-#2564: Add caching and use mamba for conda setups in GH (#4607)
 * Documentation improvements
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
+  * DOCS-#4628: Add to_parquet partial support notes (#4648)
 * Dependencies
   * FEAT-#4598: Add support for pandas 1.4.3 (#4599)
   * FEAT-#4619: Integrate mypy static type checking (#4620)
@@ -56,3 +57,4 @@ Contributors
 @RehanSD
 @helmeleegy
 @anmyachev
+@d33bs
