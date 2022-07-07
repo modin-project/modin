@@ -16,6 +16,7 @@ Key Features and Updates
   * FIX-#4582: Inherit custom log layer (#4583)
   * FIX-#4639: Fix `storage_options` usage for `read_csv` and `read_csv_glob` (#4644)
   * FIX-#4593: Ensure Modin warns when setting columns via attributes (#4621)
+  * FIX-#4584: Enable pdb debug when running cloud tests (#4585)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
