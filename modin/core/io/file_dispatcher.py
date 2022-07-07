@@ -361,4 +361,5 @@ class FileDispatcher(ClassLogger):
 
     @classmethod
     def _buffer_unsupported_msg(cls):
+        """Produce a message indicating that buffers are not supported."""
         return "Reading from buffers or other non-path-like objects is not supported"
