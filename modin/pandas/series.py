@@ -601,7 +601,7 @@ class Series(SeriesCompat, BasePandasDataset):
         else:
             return Series(query_compiler=query_compiler)
 
-    def aggregate(self, func=None, axis=0, *args, **kwargs):
+    def aggregate(self, func=None, axis=0, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
         Aggregate using one or more operations over the specified axis.
         """
