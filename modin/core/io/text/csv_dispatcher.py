@@ -16,7 +16,6 @@
 import pandas
 
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
-from modin.error_message import ErrorMessage
 
 
 class CSVDispatcher(TextFileDispatcher):
@@ -38,5 +37,5 @@ class CSVDispatcher(TextFileDispatcher):
         pandas.DataFrame or pandas.io.parsers.TextParser
             Function call result.
         """
-        ErrorMessage.default_to_pandas("`read_csv`")
+        # ErrorMessage.default_to_pandas("`read_csv`")
         return pandas.read_csv(*args, **kwargs)

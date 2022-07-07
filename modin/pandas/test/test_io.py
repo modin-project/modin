@@ -1000,7 +1000,7 @@ class TestCsv:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
     def test_read_csv_default_to_pandas(self):
-        with warns_that_defaulting_to_pandas(suffix="No file with name"):
+        with warns_that_defaulting_to_pandas(suffix="buffers"):
             # This tests that we default to pandas on a buffer
             from io import StringIO
 

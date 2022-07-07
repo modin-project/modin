@@ -642,9 +642,9 @@ class TextFileDispatcher(FileDispatcher):
         skiprows = read_kwargs.get("skiprows")
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(filepath_or_buffer):
-                return (False, f"No file with name '{filepath_or_buffer}'")
+                return (False, cls._file_not_found_msg(filepath_or_buffer))
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
-            return (False, f"No file with name '{filepath_or_buffer}'")
+            return (False, "Reading from buffers or other non-path-like objects is not supported")
 
         if read_kwargs["chunksize"] is not None:
             return (False, "`chunksize` parameter is not supported")
