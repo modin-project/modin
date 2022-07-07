@@ -50,8 +50,10 @@ class ErrorMessage(object):
     def default_to_pandas(cls, method="", reason=""):
         if method != "":
             execution_str = get_current_execution()
-            message = f"`{method}` is not currently supported by {execution_str} "
-            + ", defaulting to pandas implementation."
+            message = (
+                f"`{method}` is not currently supported by {execution_str} "
+                + ", defaulting to pandas implementation."
+            )
         else:
             message = "Defaulting to pandas implementation."
 
