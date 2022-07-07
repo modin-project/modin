@@ -56,7 +56,10 @@ def wait_computations_if_benchmark_mode(func):
         def wait(*args, **kwargs):
             """Wait for computation results."""
             # Importing at the start of the file would cause a circular import
-            from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import PandasOnRayDataframePartitionManager
+            from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
+                PandasOnRayDataframePartitionManager,
+            )
+
             result = func(*args, **kwargs)
             if isinstance(result, tuple):
                 partitions = result[0]
@@ -71,7 +74,9 @@ def wait_computations_if_benchmark_mode(func):
             [part.drain_call_queue() for part in partitions.flatten()]
             # The PandasOnRay partition manager invokes ray.get under the hood, which waits
             # in parallel for all computations to finish
-            PandasOnRayDataframePartitionManager.get_objects_from_partitions(partitions.flatten())
+            PandasOnRayDataframePartitionManager.get_objects_from_partitions(
+                partitions.flatten()
+            )
             return result
 
         return wait
