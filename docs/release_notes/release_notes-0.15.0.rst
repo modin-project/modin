@@ -65,6 +65,7 @@ Key Features and Updates
   * DOCS-#4469: Say that commit messages can start with PERF (#4470).
   * DOCS-#4466: Recommend GitHub issues over bug_reports@modin.org (#4474).  
   * DOCS-#4487: Recommend GitHub issues over feature_requests@modin.org (#4489).
+  * DOCS-#4545: Add socials to README (#4555).
 * Dependencies
   * FIX-#4327: Update min pin for xgboost version (#4328)
   * FIX-#4383: Remove `pathlib` from deps (#4384)

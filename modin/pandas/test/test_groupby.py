@@ -1500,6 +1500,24 @@ def test_dict_agg_rename_mi_columns(
     df_equals(md_res, pd_res)
 
 
+def test_agg_4604():
+    data = {"col1": [1, 2], "col2": [3, 4]}
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    # add another partition
+    modin_df["col3"] = modin_df["col1"]
+    pandas_df["col3"] = pandas_df["col1"]
+
+    # problem only with custom aggregation function
+    def col3(x):
+        return np.max(x)
+
+    by = ["col1"]
+    agg_func = {"col2": ["sum", "min"], "col3": col3}
+
+    modin_groupby, pandas_groupby = modin_df.groupby(by), pandas_df.groupby(by)
+    eval_agg(modin_groupby, pandas_groupby, agg_func)
+
+
 @pytest.mark.parametrize(
     "operation",
     [
@@ -1516,7 +1534,20 @@ def test_dict_agg_rename_mi_columns(
 def test_agg_exceptions(operation):
     N = 256
     fill_data = [
-        ("nan_column", [None, np.datetime64("2010")] * (N // 2)),
+        (
+            "nan_column",
+            [
+                np.datetime64("2010"),
+                None,
+                np.datetime64("2007"),
+                np.datetime64("2010"),
+                np.datetime64("2006"),
+                np.datetime64("2012"),
+                None,
+                np.datetime64("2011"),
+            ]
+            * (N // 8),
+        ),
         (
             "date_column",
             [

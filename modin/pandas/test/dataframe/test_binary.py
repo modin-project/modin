@@ -249,3 +249,40 @@ def test_duplicate_indexes():
     modin_df2, pandas_df2 = create_test_dfs({"a": data, "b": data})
     df_equals(modin_df1 / modin_df2, pandas_df1 / pandas_df2)
     df_equals(modin_df1 / modin_df1, pandas_df1 / pandas_df1)
+
+
+@pytest.mark.parametrize("subset_operand", ["left", "right"])
+def test_mismatched_col_partitions(subset_operand):
+    data = [0, 1, 2, 3]
+    modin_df1, pandas_df1 = create_test_dfs({"a": data, "b": data})
+    modin_df_tmp, pandas_df_tmp = create_test_dfs({"c": data})
+
+    modin_df2 = pd.concat([modin_df1, modin_df_tmp], axis=1)
+    pandas_df2 = pandas.concat([pandas_df1, pandas_df_tmp], axis=1)
+
+    if subset_operand == "right":
+        modin_res = modin_df2 + modin_df1
+        pandas_res = pandas_df2 + pandas_df1
+    else:
+        modin_res = modin_df1 + modin_df2
+        pandas_res = pandas_df1 + pandas_df2
+
+    df_equals(modin_res, pandas_res)
+
+
+@pytest.mark.parametrize("empty_operand", ["right", "left", "both"])
+def test_empty_df(empty_operand):
+    modin_df, pandas_df = create_test_dfs([0, 1, 2, 0, 1, 2])
+    modin_df_empty, pandas_df_empty = create_test_dfs()
+
+    if empty_operand == "right":
+        modin_res = modin_df + modin_df_empty
+        pandas_res = pandas_df + pandas_df_empty
+    elif empty_operand == "left":
+        modin_res = modin_df_empty + modin_df
+        pandas_res = pandas_df_empty + pandas_df
+    else:
+        modin_res = modin_df_empty + modin_df_empty
+        pandas_res = pandas_df_empty + pandas_df_empty
+
+    df_equals(modin_res, pandas_res)

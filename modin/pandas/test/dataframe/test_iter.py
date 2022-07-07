@@ -18,6 +18,7 @@ import pandas
 import matplotlib
 import modin.pandas as pd
 import io
+import warnings
 
 from modin.pandas.test.utils import (
     random_state,
@@ -248,7 +249,8 @@ def test_inplace_series_ops(data):
         df_equals(modin_df, pandas_df)
 
 
-def test___setattr__():
+# Note: Tests setting an attribute that is not an existing column label
+def test___setattr__not_column():
     pandas_df = pandas.DataFrame([1, 2, 3])
     modin_df = pd.DataFrame([1, 2, 3])
 
@@ -256,6 +258,67 @@ def test___setattr__():
     modin_df.new_col = [4, 5, 6]
 
     df_equals(modin_df, pandas_df)
+
+    # While `new_col` is not a column of the dataframe,
+    # it should be accessible with __getattr__.
+    assert modin_df.new_col == pandas_df.new_col
+
+
+def test___setattr__mutating_column():
+    # Use case from issue #4577
+    pandas_df = pandas.DataFrame([[1]], columns=["col0"])
+    modin_df = pd.DataFrame([[1]], columns=["col0"])
+
+    # Replacing a column with a list should mutate the column in place.
+    pandas_df.col0 = [3]
+    modin_df.col0 = [3]
+
+    df_equals(modin_df, pandas_df)
+    # Check that the col0 attribute reflects the value update.
+    df_equals(modin_df.col0, pandas_df.col0)
+
+    pandas_df.col0 = pd.Series([5])
+    modin_df.col0 = pd.Series([5])
+
+    # Check that the col0 attribute reflects this update
+    df_equals(modin_df, pandas_df)
+
+    pandas_df.loc[0, "col0"] = 4
+    modin_df.loc[0, "col0"] = 4
+
+    # Check that the col0 attribute reflects update via loc
+    df_equals(modin_df, pandas_df)
+    assert modin_df.col0.equals(modin_df["col0"])
+
+    # Check that attempting to add a new col via attributes raises warning
+    # and adds the provided list as a new attribute and not a column.
+    with pytest.warns(
+        UserWarning,
+        match="Modin doesn't allow columns to be created via a new attribute name - see "
+        + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
+    ):
+        modin_df.col1 = [4]
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            action="error",
+            message="Modin doesn't allow columns to be created via a new attribute name - see "
+            + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
+        )
+        modin_df.col1 = [5]
+        modin_df.new_attr = 6
+        modin_df.col0 = 7
+
+    assert "new_attr" in dir(
+        modin_df
+    ), "Modin attribute was not correctly added to the df."
+    assert (
+        "new_attr" not in modin_df
+    ), "New attribute was not correctly added to columns."
+    assert modin_df.new_attr == 6, "Modin attribute value was set incorrectly."
+    assert isinstance(
+        modin_df.col0, pd.Series
+    ), "Scalar was not broadcasted properly to an existing column."
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
