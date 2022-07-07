@@ -12,8 +12,11 @@ Key Features and Updates
   * FIX-#4589: Pin protobuf<4.0.0 to fix ray (#4590)
   * FIX-#4577: Set attribute of Modin dataframe to updated value (#4588)
   * FIX-#4411: Fix binary_op between datetime64 Series and pandas timedelta (#4592)
+  * FIX-#4604: Fix `groupby` + `agg` in case when multicolumn can arise (#4642)
   * FIX-#4582: Inherit custom log layer (#4583)
+  * FIX-#4639: Fix `storage_options` usage for `read_csv` and `read_csv_glob` (#4644)
   * FIX-#4593: Ensure Modin warns when setting columns via attributes (#4621)
+  * FIX-#4584: Enable pdb debug when running cloud tests (#4585)
   * FIX-#4564: Workaround import issues in Ray: auto-import pandas on python start if env var is set (#4603)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
@@ -35,8 +38,10 @@ Key Features and Updates
   * TEST-#4508: Reduce test_partition_api pytest threads to deflake it (#4551)
   * TEST-#4550: Use much less data in test_partition_api (#4554)
   * TEST-#4610: Remove explicit installation of `black`/`flake8` for omnisci ci-notebooks (#4609)
+  * TEST-#2564: Add caching and use mamba for conda setups in GH (#4607)
 * Documentation improvements
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
+  * DOCS-#4628: Add to_parquet partial support notes (#4648)
 * Dependencies
   * FEAT-#4598: Add support for pandas 1.4.3 (#4599)
   * FEAT-#4619: Integrate mypy static type checking (#4620)
@@ -53,3 +58,5 @@ Contributors
 @suhailrehman
 @RehanSD
 @helmeleegy
+@anmyachev
+@d33bs
