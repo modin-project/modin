@@ -291,10 +291,6 @@ or
     df = pd.DataFrame([0, 1, 2, 3])
     print(df)
 
-.. _issue: https://github.com/modin-project/modin/issues
-.. _Slack: https://modin.org/slack.html
-
-
 Spurious error "cannot import partially initialised pandas module" on custom Ray cluster
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
@@ -329,3 +325,6 @@ Modin sets up automatically on the Ray clusters it spawns, but it might be missi
 
 So if you're seeing the issue like shown above, please make sure you set this environment variable on all
 worker nodes of your cluster before actually spawning the workers.
+
+.. _issue: https://github.com/modin-project/modin/issues
+.. _Slack: https://modin.org/slack.html

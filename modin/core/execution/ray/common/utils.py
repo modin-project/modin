@@ -167,14 +167,16 @@ def initialize_ray(
             if not GPU_MANAGERS:
                 for i in range(GpuCount.get()):
                     GPU_MANAGERS.append(GPUManager.remote(i))
-    else:  # ray is already initialized, check runtime env config
-        env_vars = ray.get_runtime_context().runtime_env.get("env_vars", {})
-        for varname, varvalue in extra_init_kw["runtime_env"]["env_vars"].items():
-            if str(env_vars.get(varname, "")) != str(varvalue):
-                ErrorMessage.single_warning(
-                    "When using a pre-initialized Ray cluster, please ensure that the runtime env "
-                    + f"sets environment variable {varname} to {varvalue}"
-                )
+
+    # Now ray is initialized, check runtime env config - especially useful if we join
+    # an externally pre-configured cluster
+    env_vars = ray.get_runtime_context().runtime_env.get("env_vars", {})
+    for varname, varvalue in extra_init_kw["runtime_env"]["env_vars"].items():
+        if str(env_vars.get(varname, "")) != str(varvalue):
+            ErrorMessage.single_warning(
+                "When using a pre-initialized Ray cluster, please ensure that the runtime env "
+                + f"sets environment variable {varname} to {varvalue}"
+            )
 
     num_cpus = int(ray.cluster_resources()["CPU"])
     num_gpus = int(ray.cluster_resources().get("GPU", 0))
