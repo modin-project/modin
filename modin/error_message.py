@@ -47,12 +47,12 @@ class ErrorMessage(object):
         cls.printed_warnings.add(message_hash)
 
     @classmethod
-    def default_to_pandas(cls, method="", reason=""):
-        if method != "":
+    def default_to_pandas(cls, message="", reason=""):
+        if message != "":
             execution_str = get_current_execution()
             message = (
-                f"`{method}` is not currently supported by {execution_str} "
-                + ", defaulting to pandas implementation."
+                f"{message} is not currently supported by {execution_str}, "
+                + "defaulting to pandas implementation."
             )
         else:
             message = "Defaulting to pandas implementation."

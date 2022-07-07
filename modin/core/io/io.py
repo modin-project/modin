@@ -203,7 +203,7 @@ class BaseIO(BaseIOCompat):
         progress_bar_type=None,
         max_results=None,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("read_gbq")
+        ErrorMessage.default_to_pandas("`read_gbq`")
         return cls.from_pandas(
             pandas.read_gbq(
                 query,
@@ -247,7 +247,7 @@ class BaseIO(BaseIOCompat):
         keep_default_na=True,
         displayed_only=True,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("read_html")
+        ErrorMessage.default_to_pandas("`read_html`")
         kwargs = {
             "io": io,
             "match": match,
@@ -275,7 +275,7 @@ class BaseIO(BaseIOCompat):
         returns=_doc_returns_qc,
     )
     def read_clipboard(cls, sep=r"\s+", **kwargs):  # pragma: no cover # noqa: PR01
-        ErrorMessage.default_to_pandas("read_clipboard")
+        ErrorMessage.default_to_pandas("`read_clipboard`")
         return cls.from_pandas(pandas.read_clipboard(sep=sep, **kwargs))
 
     @classmethod
@@ -318,7 +318,7 @@ class BaseIO(BaseIOCompat):
     ):  # noqa: PR01
         if skip_footer != 0:
             skipfooter = skip_footer
-        ErrorMessage.default_to_pandas("read_excel")
+        ErrorMessage.default_to_pandas("`read_excel`")
         intermediate = pandas.read_excel(
             io,
             sheet_name=sheet_name,
@@ -378,7 +378,7 @@ class BaseIO(BaseIOCompat):
     ):  # noqa: PR01
         from modin.pandas.io import HDFStore
 
-        ErrorMessage.default_to_pandas("read_hdf")
+        ErrorMessage.default_to_pandas("`read_hdf`")
         modin_store = isinstance(path_or_buf, HDFStore)
         if modin_store:
             path_or_buf._return_modin_dataframe = False
@@ -412,7 +412,7 @@ class BaseIO(BaseIOCompat):
         path,
         **kwargs,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("read_feather")
+        ErrorMessage.default_to_pandas("`read_feather`")
         return cls.from_pandas(
             pandas.read_feather(
                 path,
@@ -451,7 +451,7 @@ class BaseIO(BaseIOCompat):
         chunksize=None,
         iterator=False,
     ):  # pragma: no cover # noqa: PR01
-        ErrorMessage.default_to_pandas("read_sas")
+        ErrorMessage.default_to_pandas("`read_sas`")
         return cls.from_pandas(
             pandas.read_sas(
                 filepath_or_buffer,
@@ -475,7 +475,7 @@ class BaseIO(BaseIOCompat):
         filepath_or_buffer,
         **kwargs,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("read_pickle")
+        ErrorMessage.default_to_pandas("`read_pickle`")
         return cls.from_pandas(
             pandas.read_pickle(
                 filepath_or_buffer,
@@ -501,7 +501,7 @@ class BaseIO(BaseIOCompat):
         columns=None,
         chunksize=None,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("read_sql")
+        ErrorMessage.default_to_pandas("`read_sql`")
         if isinstance(con, ModinDatabaseConnection):
             con = con.get_connection()
         return cls.from_pandas(
@@ -527,7 +527,7 @@ class BaseIO(BaseIOCompat):
     def read_fwf(
         cls, filepath_or_buffer, colspecs="infer", widths=None, infer_nrows=100, **kwds
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("read_fwf")
+        ErrorMessage.default_to_pandas("`read_fwf`")
         pd_obj = pandas.read_fwf(
             filepath_or_buffer,
             colspecs=colspecs,
@@ -564,7 +564,7 @@ class BaseIO(BaseIOCompat):
         columns=None,
         chunksize=None,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("read_sql_table")
+        ErrorMessage.default_to_pandas("`read_sql_table`")
         return cls.from_pandas(
             pandas.read_sql_table(
                 table_name,
@@ -591,7 +591,7 @@ class BaseIO(BaseIOCompat):
         con,
         **kwargs,
     ):  # noqa: PR01
-        ErrorMessage.default_to_pandas("read_sql_query")
+        ErrorMessage.default_to_pandas("`read_sql_query`")
         return cls.from_pandas(
             pandas.read_sql_query(
                 sql,
@@ -608,7 +608,7 @@ class BaseIO(BaseIOCompat):
         returns=_doc_returns_qc,
     )
     def read_spss(cls, path, usecols, convert_categoricals):  # noqa: PR01
-        ErrorMessage.default_to_pandas("read_spss")
+        ErrorMessage.default_to_pandas("`read_spss`")
         return cls.from_pandas(pandas.read_spss(path, usecols, convert_categoricals))
 
     @classmethod
