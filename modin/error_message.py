@@ -15,6 +15,7 @@ import warnings
 from modin.logging import get_logger
 from modin.utils import get_current_execution
 
+
 class ErrorMessage(object):
     # Only print full ``default to pandas`` warning one time.
     printed_default_to_pandas = False
