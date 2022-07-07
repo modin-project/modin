@@ -172,7 +172,7 @@ def initialize_ray(
         for varname, varvalue in extra_init_kw["runtime_env"]["env_vars"].items():
             if str(env_vars.get(varname, "")) != str(varvalue):
                 ErrorMessage.single_warning(
-                    "If initialising Ray yourself, please ensure its runtime env "
+                    "When using a pre-initialized Ray cluster, please ensure that the runtime env "
                     + f"sets environment variable {varname} to {varvalue}"
                 )
 
