@@ -37,5 +37,4 @@ class CSVDispatcher(TextFileDispatcher):
         pandas.DataFrame or pandas.io.parsers.TextParser
             Function call result.
         """
-        # ErrorMessage.default_to_pandas("`read_csv`")
         return pandas.read_csv(*args, **kwargs)
