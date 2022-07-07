@@ -269,7 +269,7 @@ def broadcast_item(
     Parameters
     ----------
     query_compiler : BaseQueryCompiler
-        Query compiler ontains the necessary information about the axes.
+        Query compiler contains the necessary information about the axes.
     row_lookup : slice or scalar
         The global row index to locate inside of `item`.
     col_lookup : range, array, list, slice or scalar
