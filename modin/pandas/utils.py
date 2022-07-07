@@ -13,7 +13,6 @@
 
 """Implement utils for pandas component."""
 
-from pandas import MultiIndex
 from pandas.util._decorators import doc
 import pandas
 import numpy as np
@@ -381,5 +380,5 @@ def _doc_binary_op(operation, bin_op, left="Series", right="right", returns="Ser
     return doc_op
 
 
-_original_pandas_MultiIndex_from_frame = MultiIndex.from_frame
-MultiIndex.from_frame = from_modin_frame_to_mi
+_original_pandas_MultiIndex_from_frame = pandas.MultiIndex.from_frame
+pandas.MultiIndex.from_frame = from_modin_frame_to_mi
