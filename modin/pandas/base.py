@@ -1627,6 +1627,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     @_inherit_docstrings(pandas.DataFrame.kurt, apilink="pandas.DataFrame.kurt")
     def _kurt(self, axis, skipna=None, level=None, numeric_only=None, **kwargs):
+        self._validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis = self._get_axis_number(axis)
         if level is not None:
             func_kwargs = {
@@ -1695,6 +1696,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     @_inherit_docstrings(pandas.DataFrame.mad, apilink="pandas.DataFrame.mad")
     def _mad(self, axis=None, skipna=True, level=None):
+        self._validate_bool_kwarg(skipna, "skipna", none_allowed=True)
         axis = self._get_axis_number(axis)
         if level is not None:
             if (

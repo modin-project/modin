@@ -1629,6 +1629,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         """
         Return the product of the values over the requested axis.
         """
+        self._validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis = self._get_axis_number(axis)
         if level is not None:
             if (

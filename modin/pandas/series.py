@@ -601,6 +601,23 @@ class Series(SeriesCompat, BasePandasDataset):
         else:
             return Series(query_compiler=query_compiler)
 
+    def aggregate(self, func=None, axis=0, *args, **kwargs):
+        """
+        Aggregate using one or more operations over the specified axis.
+        """
+
+        def error_raiser(msg, exception):
+            """Convert passed exception to the same type as pandas do and raise it."""
+            # HACK: to concord with pandas error types by replacing all of the
+            # TypeErrors to the AssertionErrors
+            exception = exception if exception is not TypeError else AssertionError
+            raise exception(msg)
+
+        self._validate_function(func, on_invalid=error_raiser)
+        return super(Series, self).aggregate(func, axis, *args, **kwargs)
+
+    agg = aggregate
+
     def _apply(
         self, func, convert_dtype=True, args=(), **kwargs
     ):  # noqa: PR01, RT01, D200
@@ -666,19 +683,6 @@ class Series(SeriesCompat, BasePandasDataset):
                 result.name = None
             return result
 
-    def aggregate(self, func=None, axis=0, *args, **kwargs):
-        def error_raiser(msg, exception):
-            """Convert passed exception to the same type as pandas do and raise it."""
-            # HACK: to concord with pandas error types by replacing all of the
-            # TypeErrors to the AssertionErrors
-            exception = exception if exception is not TypeError else AssertionError
-            raise exception(msg)
-
-        self._validate_function(func, on_invalid=error_raiser)
-        return super(Series, self).aggregate(func, axis, *args, **kwargs)
-
-    agg = aggregate
-
     def argmax(self, axis=None, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return int position of the largest value in the Series.
@@ -711,7 +715,7 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         return self.corr(self.shift(lag))
 
-    def _between(self, left, right, inclusive=True):  # noqa: PR01, RT01, D200
+    def _between(self, left, right, inclusive):  # noqa: PR01, RT01, D200
         """
         Return boolean Series equivalent to left <= series <= right.
         """

@@ -594,7 +594,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
-          environment-file: requirements/requirements-py36-win.yml
+          environment-file: requirements/requirements-py36.yml
           python-version: 3.6
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
