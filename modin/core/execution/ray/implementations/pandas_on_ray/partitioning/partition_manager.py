@@ -121,7 +121,9 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         partitions : np.ndarray
             NumPy array with ``PandasDataframePartition``-s.
         """
-        ray.wait([partition._data for partition in partitions], num_returns=len(partitions))
+        ray.wait(
+            [partition._data for partition in partitions], num_returns=len(partitions)
+        )
 
     @classmethod
     @progress_bar_wrapper
