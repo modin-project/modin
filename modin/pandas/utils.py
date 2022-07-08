@@ -254,7 +254,7 @@ def check_both_not_none(option1, option2):
     return not (option1 is None or option2 is None)
 
 
-def reindex_and_broadcast_item(
+def broadcast_item(
     obj,
     row_lookup,
     col_lookup,
