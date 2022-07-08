@@ -2,7 +2,7 @@ name: modin
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.4.2
+  - pandas==1.4.3
   - numpy>=1.18.5
   - pyarrow>=4.0.1
   - dask[complete]>=2.22.0,<2022.2.0
@@ -36,14 +36,14 @@ dependencies:
   - scikit-learn
   - pymssql
   - psycopg2
+  - mypy
+  - pandas-stubs
   - pip:
       - xgboost>=1.6.0
       - modin-spreadsheet>=0.1.1
       - tqdm
       - git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
-      # Pin ray to < 1.13.0 to work around GH#4564
-      # TODO(https://github.com/modin-project/modin/issues/4564): let ray go past 1.13.0.      
-      - ray[default]>=1.4.0,<1.13.0
+      - ray[default]>=1.4.0
       - connectorx>=0.2.6a4
       # TODO: remove when resolving GH#4398
       - redis>=3.5.0,<4.0.0
@@ -51,3 +51,5 @@ dependencies:
       - flake8
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
       - numpydoc==1.1.0
+      # experimental version of fuzzydata requires at least 0.0.6 to successfully resolve all dependencies
+      - fuzzydata>=0.0.6

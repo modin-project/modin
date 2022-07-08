@@ -27,10 +27,10 @@ from pandas.core.arrays.sparse.dtype import SparseDtype
 import modin.pandas as pd
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings
-from modin.logging import LoggerMetaClass, metaclass_resolver
+from modin.logging import ClassLogger
 
 
-class BaseSparseAccessor(object, metaclass=LoggerMetaClass):
+class BaseSparseAccessor(ClassLogger):
     """
     Base class for various sparse DataFrame accessor classes.
 
@@ -86,7 +86,7 @@ class BaseSparseAccessor(object, metaclass=LoggerMetaClass):
 
 
 @_inherit_docstrings(pandas.core.arrays.sparse.accessor.SparseFrameAccessor)
-class SparseFrameAccessor(metaclass_resolver(BaseSparseAccessor)):
+class SparseFrameAccessor(BaseSparseAccessor):
     def _validate(self, data):
         """
         Verify that `data` dtypes are compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.
@@ -124,7 +124,7 @@ class SparseFrameAccessor(metaclass_resolver(BaseSparseAccessor)):
 
 
 @_inherit_docstrings(pandas.core.arrays.sparse.accessor.SparseAccessor)
-class SparseAccessor(metaclass_resolver(BaseSparseAccessor)):
+class SparseAccessor(BaseSparseAccessor):
     def _validate(self, data):
         """
         Verify that `data` dtype is compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.
@@ -177,7 +177,7 @@ class SparseAccessor(metaclass_resolver(BaseSparseAccessor)):
 
 
 @_inherit_docstrings(pandas.core.accessor.CachedAccessor)
-class CachedAccessor(object, metaclass=LoggerMetaClass):
+class CachedAccessor(ClassLogger):
     def __init__(self, name: str, accessor) -> None:
         self._name = name
         self._accessor = accessor

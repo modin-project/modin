@@ -32,7 +32,7 @@ from modin.core.dataframe.algebra.default2pandas import (
 )
 from modin.error_message import ErrorMessage
 import modin.core.storage_formats.base.doc_utils as doc_utils
-from modin.logging import LoggerMetaClass
+from modin.logging import ClassLogger
 
 from pandas.core.dtypes.common import is_scalar
 import pandas.core.resample
@@ -90,9 +90,7 @@ def _set_axis(axis):
 # Currently actual arguments are placed in the methods docstrings, but since they're
 # not presented in the function's signature it makes linter to raise `PR02: unknown parameters`
 # warning. For now, they're silenced by using `noqa` (Modin issue #3108).
-class BaseQueryCompiler(
-    abc.ABC, metaclass=type("", (abc.ABCMeta, LoggerMetaClass), {})
-):
+class BaseQueryCompiler(ClassLogger, abc.ABC):
     """
     Abstract class that handles the queries to Modin dataframes.
 
@@ -3088,13 +3086,15 @@ class BaseQueryCompiler(
         BaseQueryCompiler
             New QueryCompiler with updated values.
         """
+        if not isinstance(row_numeric_index, slice):
+            row_numeric_index = list(row_numeric_index)
+        if not isinstance(col_numeric_index, slice):
+            col_numeric_index = list(col_numeric_index)
 
         def write_items(df, broadcasted_items):
             if isinstance(df.iloc[row_numeric_index, col_numeric_index], pandas.Series):
                 broadcasted_items = broadcasted_items.squeeze()
-            df.iloc[
-                list(row_numeric_index), list(col_numeric_index)
-            ] = broadcasted_items
+            df.iloc[row_numeric_index, col_numeric_index] = broadcasted_items
             return df
 
         return DataFrameDefault.register(write_items)(

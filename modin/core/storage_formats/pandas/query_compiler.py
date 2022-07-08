@@ -28,6 +28,7 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
+    is_datetime64_any_dtype,
 )
 from pandas.core.base import DataError
 from collections.abc import Iterable
@@ -1347,13 +1348,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
     invert = Map.register(pandas.DataFrame.__invert__)
-    isin = Map.register(pandas.DataFrame.isin, dtypes=np.bool)
-    isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool)
+    isin = Map.register(pandas.DataFrame.isin, dtypes=np.bool_)
+    isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
     _isfinite = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df))
     )
     negative = Map.register(pandas.DataFrame.__neg__)
-    notna = Map.register(pandas.DataFrame.notna, dtypes=np.bool)
+    notna = Map.register(pandas.DataFrame.notna, dtypes=np.bool_)
     round = Map.register(pandas.DataFrame.round)
     replace = Map.register(pandas.DataFrame.replace)
     series_view = Map.register(
@@ -1373,22 +1374,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     str_capitalize = Map.register(_str_map("capitalize"), dtypes="copy")
     str_center = Map.register(_str_map("center"), dtypes="copy")
-    str_contains = Map.register(_str_map("contains"), dtypes=np.bool)
+    str_contains = Map.register(_str_map("contains"), dtypes=np.bool_)
     str_count = Map.register(_str_map("count"), dtypes=int)
-    str_endswith = Map.register(_str_map("endswith"), dtypes=np.bool)
+    str_endswith = Map.register(_str_map("endswith"), dtypes=np.bool_)
     str_find = Map.register(_str_map("find"), dtypes="copy")
     str_findall = Map.register(_str_map("findall"), dtypes="copy")
     str_get = Map.register(_str_map("get"), dtypes="copy")
     str_index = Map.register(_str_map("index"), dtypes="copy")
-    str_isalnum = Map.register(_str_map("isalnum"), dtypes=np.bool)
-    str_isalpha = Map.register(_str_map("isalpha"), dtypes=np.bool)
-    str_isdecimal = Map.register(_str_map("isdecimal"), dtypes=np.bool)
-    str_isdigit = Map.register(_str_map("isdigit"), dtypes=np.bool)
-    str_islower = Map.register(_str_map("islower"), dtypes=np.bool)
-    str_isnumeric = Map.register(_str_map("isnumeric"), dtypes=np.bool)
-    str_isspace = Map.register(_str_map("isspace"), dtypes=np.bool)
-    str_istitle = Map.register(_str_map("istitle"), dtypes=np.bool)
-    str_isupper = Map.register(_str_map("isupper"), dtypes=np.bool)
+    str_isalnum = Map.register(_str_map("isalnum"), dtypes=np.bool_)
+    str_isalpha = Map.register(_str_map("isalpha"), dtypes=np.bool_)
+    str_isdecimal = Map.register(_str_map("isdecimal"), dtypes=np.bool_)
+    str_isdigit = Map.register(_str_map("isdigit"), dtypes=np.bool_)
+    str_islower = Map.register(_str_map("islower"), dtypes=np.bool_)
+    str_isnumeric = Map.register(_str_map("isnumeric"), dtypes=np.bool_)
+    str_isspace = Map.register(_str_map("isspace"), dtypes=np.bool_)
+    str_istitle = Map.register(_str_map("istitle"), dtypes=np.bool_)
+    str_isupper = Map.register(_str_map("isupper"), dtypes=np.bool_)
     str_join = Map.register(_str_map("join"), dtypes="copy")
     str_len = Map.register(_str_map("len"), dtypes=int)
     str_ljust = Map.register(_str_map("ljust"), dtypes="copy")
@@ -1409,7 +1410,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_slice = Map.register(_str_map("slice"), dtypes="copy")
     str_slice_replace = Map.register(_str_map("slice_replace"), dtypes="copy")
     str_split = Map.register(_str_map("split"), dtypes="copy")
-    str_startswith = Map.register(_str_map("startswith"), dtypes=np.bool)
+    str_startswith = Map.register(_str_map("startswith"), dtypes=np.bool_)
     str_strip = Map.register(_str_map("strip"), dtypes="copy")
     str_swapcase = Map.register(_str_map("swapcase"), dtypes="copy")
     str_title = Map.register(_str_map("title"), dtypes="copy")
@@ -2195,9 +2196,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         ----------
         axis : {0, 1}
             Axis to set `value` along. 0 means set row, 1 means set column.
-        key : label
+        key : scalar
             Row/column label to set `value` in.
-        value : PandasQueryCompiler, list-like or scalar
+        value : PandasQueryCompiler (1xN), list-like or scalar
             Define new row/column value.
         how : {"inner", "outer", "left", "right", None}, default: "inner"
             Type of join to perform if specified axis of `self` and `value` are not
@@ -2486,6 +2487,79 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_min = GroupByReduce.register("min")
     groupby_prod = GroupByReduce.register("prod")
     groupby_sum = GroupByReduce.register("sum")
+
+    def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
+        numeric_only = agg_kwargs.get("numeric_only", False)
+        datetime_cols = (
+            {
+                col: dtype
+                for col, dtype in zip(self.dtypes.index, self.dtypes)
+                if is_datetime64_any_dtype(dtype)
+            }
+            if not numeric_only
+            else dict()
+        )
+
+        if len(datetime_cols) > 0:
+            datetime_qc = self.getitem_array(datetime_cols)
+            if datetime_qc.isna().any().any(axis=1).to_pandas().squeeze():
+                return super().groupby_mean(
+                    by=by,
+                    axis=axis,
+                    groupby_kwargs=groupby_kwargs,
+                    agg_args=agg_args,
+                    agg_kwargs=agg_kwargs,
+                    drop=drop,
+                )
+
+        qc_with_converted_datetime_cols = (
+            self.astype({col: "int64" for col in datetime_cols.keys()})
+            if len(datetime_cols) > 0
+            else self
+        )
+
+        def _groupby_mean_reduce(dfgb, **kwargs):
+            """
+            Compute mean value in each group using sums/counts values within reduce phase.
+
+            Parameters
+            ----------
+            dfgb : pandas.DataFrameGroupBy
+                GroupBy object for column-partition.
+            **kwargs : dict
+                Additional keyword parameters to be passed in ``pandas.DataFrameGroupBy.sum``.
+
+            Returns
+            -------
+            pandas.DataFrame
+                A pandas Dataframe with mean values in each column of each group.
+            """
+            sums_counts_df = dfgb.sum(**kwargs)
+            sum_df = sums_counts_df.iloc[:, : len(sums_counts_df.columns) // 2]
+            count_df = sums_counts_df.iloc[:, len(sums_counts_df.columns) // 2 :]
+            return sum_df / count_df
+
+        result = GroupByReduce.register(
+            lambda dfgb, **kwargs: pandas.concat(
+                [dfgb.sum(**kwargs), dfgb.count()],
+                axis=1,
+                copy=False,
+            ),
+            _groupby_mean_reduce,
+            default_to_pandas_func=lambda dfgb, **kwargs: dfgb.mean(**kwargs),
+        )(
+            query_compiler=qc_with_converted_datetime_cols,
+            by=by,
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+        if len(datetime_cols) > 0:
+            result = result.astype({col: dtype for col, dtype in datetime_cols.items()})
+        return result
 
     def groupby_size(
         self,

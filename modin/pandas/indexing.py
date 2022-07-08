@@ -36,11 +36,11 @@ from pandas.api.types import is_list_like, is_bool
 from pandas.core.dtypes.common import is_integer, is_bool_dtype, is_integer_dtype
 from pandas.core.indexing import IndexingError
 from modin.error_message import ErrorMessage
-from modin.logging import LoggerMetaClass, metaclass_resolver
+from modin.logging import ClassLogger
 
 from .dataframe import DataFrame
 from .series import Series
-from .utils import is_scalar
+from .utils import is_scalar, broadcast_item
 
 
 def is_slice(x):
@@ -268,7 +268,7 @@ def _compute_ndim(row_loc, col_loc):
     return ndim
 
 
-class _LocationIndexerBase(object, metaclass=LoggerMetaClass):
+class _LocationIndexerBase(ClassLogger):
     """
     Base class for location indexer like loc and iloc.
 
@@ -367,87 +367,23 @@ class _LocationIndexerBase(object, metaclass=LoggerMetaClass):
         # This is True when we dealing with assignment of a full column. This case
         # should be handled in a fastpath with `df[col] = item`.
         if axis == 0:
+            assert len(col_lookup) == 1
             self.df[self.df.columns[col_lookup][0]] = item
         # This is True when we are assigning to a full row. We want to reuse the setitem
         # mechanism to operate along only one axis for performance reasons.
         elif axis == 1:
             if hasattr(item, "_query_compiler"):
+                if isinstance(item, DataFrame):
+                    item = item.squeeze(axis=0)
                 item = item._query_compiler
+            assert len(row_lookup) == 1
             new_qc = self.qc.setitem(1, self.qc.index[row_lookup[0]], item)
             self.df._create_or_update_from_compiler(new_qc, inplace=True)
         # Assignment to both axes.
         else:
-            if isinstance(row_lookup, slice):
-                new_row_len = len(self.df.index[row_lookup])
-            else:
-                new_row_len = len(row_lookup)
-            if isinstance(col_lookup, slice):
-                new_col_len = len(self.df.columns[col_lookup])
-            else:
-                new_col_len = len(col_lookup)
-            to_shape = new_row_len, new_col_len
             if not is_scalar(item):
-                item = self._broadcast_item(row_lookup, col_lookup, item, to_shape)
+                item = broadcast_item(self.df, row_lookup, col_lookup, item)
             self._write_items(row_lookup, col_lookup, item)
-
-    def _broadcast_item(self, row_lookup, col_lookup, item, to_shape):
-        """
-        Use NumPy to broadcast or reshape item.
-
-        Parameters
-        ----------
-        row_lookup : slice or scalar
-            The global row index to locate inside of `item`.
-        col_lookup : slice or scalar
-            The global col index to locate inside of `item`.
-        item : DataFrame, Series, or query_compiler
-            Value that should be broadcast to a new shape of `to_shape`.
-        to_shape : tuple of two int
-            Shape of dataset that `item` should be broadcasted to.
-
-        Returns
-        -------
-        numpy.ndarray
-            `item` after it was broadcasted to `to_shape`.
-
-        Raises
-        ------
-        ValueError
-            If `row_lookup` or `col_lookup` contain values missing in
-            `self` index or columns correspondingly.
-            If `item` cannot be broadcast from its own shape to `to_shape`.
-
-        Notes
-        -----
-        NumPy is memory efficient, there shouldn't be performance issue.
-        """
-        # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
-        # the target the user is trying to overwrite. This
-        if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
-            # convert indices in lookups to names, as Pandas reindex expects them to be so
-            axes_to_reindex = {}
-            index_values = self.qc.index[row_lookup]
-            if not index_values.equals(item.index):
-                axes_to_reindex["index"] = index_values
-            if hasattr(item, "columns"):
-                column_values = self.qc.columns[col_lookup]
-                if not column_values.equals(item.columns):
-                    axes_to_reindex["columns"] = column_values
-            # New value for columns/index make that reindex add NaN values
-            if axes_to_reindex:
-                item = item.reindex(**axes_to_reindex)
-        try:
-            item = np.array(item)
-            if np.prod(to_shape) == np.prod(item.shape):
-                return item.reshape(to_shape)
-            else:
-                return np.broadcast_to(item, to_shape)
-        except ValueError:
-            from_shape = np.array(item).shape
-            raise ValueError(
-                f"could not broadcast input array from shape {from_shape} into shape "
-                + f"{to_shape}"
-            )
 
     def _write_items(self, row_lookup, col_lookup, item):
         """
@@ -593,7 +529,7 @@ class _LocationIndexerBase(object, metaclass=LoggerMetaClass):
         return type(self)(masked_df)[(slice(None), col_loc)]
 
 
-class _LocIndexer(metaclass_resolver(_LocationIndexerBase)):
+class _LocIndexer(_LocationIndexerBase):
     """
     An indexer for modin_df.loc[] functionality.
 
@@ -846,7 +782,7 @@ class _LocIndexer(metaclass_resolver(_LocationIndexerBase)):
         return lookups
 
 
-class _iLocIndexer(metaclass_resolver(_LocationIndexerBase)):
+class _iLocIndexer(_LocationIndexerBase):
     """
     An indexer for modin_df.iloc[] functionality.
 
