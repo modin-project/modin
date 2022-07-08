@@ -1899,9 +1899,8 @@ def test___setitem__unhashable_list():
 
 
 def test_setitem_unhashable_key():
-    data = test_data["float_nan_data"]
-    source_modin_df, source_pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    count_rows = source_modin_df.shape[0]
+    source_modin_df, source_pandas_df = create_test_dfs(test_data["float_nan_data"])
+    row_count = source_modin_df.shape[0]
 
     def _make_copy(df1, df2):
         return df1.copy(deep=True), df2.copy(deep=True)
@@ -1913,14 +1912,13 @@ def test_setitem_unhashable_key():
         eval_setitem(modin_df, pandas_df, value, key)
 
         # 2d list case
-        value = [[1, 2]] * count_rows
+        value = [[1, 2]] * row_count
         modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
         eval_setitem(modin_df, pandas_df, value, key)
 
         # pandas DataFrame case
         df_value = pandas.DataFrame(value, columns=["value_col1", "value_col2"])
         modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        # import pdb;pdb.set_trace()
         eval_setitem(modin_df, pandas_df, df_value, key)
 
         # numpy array case

@@ -2549,7 +2549,7 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
                 if is_list_like(value):
                     if not (hasattr(value, "shape") and hasattr(value, "ndim")):
                         value = np.array(value)
-                    if len(key) != value.shape[0 if value.ndim == 1 else 1]:
+                    if len(key) != value.shape[-1]:
                         raise ValueError("Columns must be same length as key")
                 item = reindex_and_broadcast_item(
                     self,

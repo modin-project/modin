@@ -267,7 +267,7 @@ def reindex_and_broadcast_item(
     Parameters
     ----------
     obj : DataFrame or Series
-        The object contains the necessary information about the axes.
+        The object containing the necessary information about the axes.
     row_lookup : slice or scalar
         The global row index to locate inside of `item`.
     col_lookup : range, array, list, slice or scalar
@@ -280,37 +280,37 @@ def reindex_and_broadcast_item(
 
     Returns
     -------
-    numpy.ndarray
+    np.ndarray
         `item` after it was broadcasted to `to_shape`.
 
     Raises
     ------
     ValueError
-        If `row_lookup` or `col_lookup` contain values missing in
+        1) If `row_lookup` or `col_lookup` contains values missing in
         DataFrame/Series index or columns correspondingly.
-        If `item` cannot be broadcast from its own shape to `to_shape`.
+        2) If `item` cannot be broadcast from its own shape to `to_shape`.
 
     Notes
     -----
     NumPy is memory efficient, there shouldn't be performance issue.
     """
     # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
-    # the target the user is trying to overwrite. This
+    # the target the user is trying to overwrite.
     from .dataframe import DataFrame
     from .series import Series
 
-    if isinstance(row_lookup, slice):
-        new_row_len = len(obj.index[row_lookup])
-    else:
-        new_row_len = len(row_lookup)
-    if isinstance(col_lookup, slice):
-        new_col_len = len(obj.columns[col_lookup])
-    else:
-        new_col_len = len(col_lookup)
+    new_row_len = (
+        len(obj.index[row_lookup]) if isinstance(row_lookup, slice) else len(row_lookup)
+    )
+    new_col_len = (
+        len(obj.columns[col_lookup])
+        if isinstance(col_lookup, slice)
+        else len(col_lookup)
+    )
     to_shape = new_row_len, new_col_len
 
     if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
-        # convert indices in lookups to names, as Pandas reindex expects them to be so
+        # convert indices in lookups to names, as pandas reindex expects them to be so
         axes_to_reindex = {}
         index_values = obj.index[row_lookup]
         if not index_values.equals(item.index):
