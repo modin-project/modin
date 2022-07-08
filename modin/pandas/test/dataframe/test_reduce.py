@@ -184,13 +184,8 @@ def test_2195(datetime_is_numeric, has_numeric_column):
 # Issue: https://github.com/modin-project/modin/issues/4641
 def test_describe_column_partition_has_different_index():
     pandas_df = pandas.DataFrame(test_data["int_data"])
-    # The index of the resulting dataframe is the same amongst all partitions
-    # when dealing with only numerical data. However, if we work with columns
-    # that contain strings, we will get extra values in our result index such as
-    # 'unique', 'top', and 'freq'. Since we call describe() on each partition,
-    # we can have cases where certain partitions do not contain any of the
-    # object string data. Thus, we add an extra string column to make sure
-    # that we are setting the index correctly for all partitions.
+    # We add a string column to test the case where partitions with mixed data
+    # types have different 'describe' rows, which causes an index mismatch.
     pandas_df["string_column"] = "abc"
     modin_df = pd.DataFrame(pandas_df)
     eval_general(modin_df, pandas_df, lambda df: df.describe(include="all"))
