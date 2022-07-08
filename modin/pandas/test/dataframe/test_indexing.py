@@ -1941,7 +1941,7 @@ def test_setitem_unhashable_key():
         modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
         eval_setitem(modin_df, pandas_df, value, key)
 
-        # failed case
+        # test failed case: ValueError('Columns must be same length as key')
         eval_setitem(modin_df, pandas_df, df_value[["value_col1"]], key)
 
 
