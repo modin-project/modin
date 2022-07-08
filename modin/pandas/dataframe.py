@@ -50,6 +50,7 @@ from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .groupby import DataFrameGroupBy
 from .accessor import CachedAccessor, SparseFrameAccessor
 from modin._compat.pandas_api.classes import DataFrameCompat
+from modin.core.storage_formats.pandas import small_query_compiler
 
 
 @_inherit_docstrings(
@@ -146,16 +147,6 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
                 if columns is None:
                     columns = slice(None)
                 self._query_compiler = data.loc[index, columns]._query_compiler
-        if len(self.columns) == 0 or len(self.index) == 0:
-            return EmptyDataFrame(
-                data=data,
-                index=index,
-                columns=columns,
-                dtype=dtype,
-                copy=copy,
-                query_compiler=query_compiler,
-            )
-
         # Check type of data and use appropriate constructor
         elif query_compiler is None:
             distributed_frame = from_non_pandas(data, index, columns, dtype)
