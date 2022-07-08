@@ -22,6 +22,7 @@ Key Features and Updates
   * FIX-#2064: Fix `iloc`/`loc` assignment when dataframe is empty (#4677)
   * FIX-#4634: Check for FrozenList as `by` in `df.groupby()` (#4667)
   * FIX-#4491: Wait for all partitions in parallel in benchmark mode (#4656)
+  * FIX-#4658: Expand exception handling for `read_*` functions from s3 storages (#4659)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
