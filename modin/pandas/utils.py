@@ -254,59 +254,15 @@ def check_both_not_none(option1, option2):
     return not (option1 is None or option2 is None)
 
 
-def reindex_item(obj, row_lookup, col_lookup, item, need_columns_reindex=True):
+def reindex_and_broadcast_item(
+    obj,
+    row_lookup,
+    col_lookup,
+    item,
+    need_columns_reindex=True,
+):
     """
-    Reindex item by using row/column lookups.
-
-    Parameters
-    ----------
-    obj : DataFrame or Series
-        The object containing the necessary information about the axes.
-    row_lookup : slice or scalar
-        The global row index to locate inside of `item`.
-    col_lookup : range, array, list, slice or scalar
-        The global col index to locate inside of `item`.
-    item : DataFrame, Series, or query_compiler
-        Value that should be reindexed.
-    need_columns_reindex : bool, default: True
-        In the case of assigning columns to a dataframe (broadcasting is
-        part of the flow), reindexing is not needed.
-
-    Returns
-    -------
-    np.ndarray
-        `item` after it was reindexed.
-
-    Raises
-    ------
-    ValueError
-        If `row_lookup` or `col_lookup` contains values missing in
-        DataFrame/Series index or columns correspondingly.
-    """
-    # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
-    # the target the user is trying to overwrite.
-    from .dataframe import DataFrame
-    from .series import Series
-
-    if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
-        # convert indices in lookups to names, as pandas reindex expects them to be so
-        axes_to_reindex = {}
-        index_values = obj.index[row_lookup]
-        if not index_values.equals(item.index):
-            axes_to_reindex["index"] = index_values
-        if need_columns_reindex and hasattr(item, "columns"):
-            column_values = obj.columns[col_lookup]
-            if not column_values.equals(item.columns):
-                axes_to_reindex["columns"] = column_values
-        # New value for columns/index make that reindex add NaN values
-        if axes_to_reindex:
-            item = item.reindex(**axes_to_reindex)
-    return item
-
-
-def broadcast_item(obj, row_lookup, col_lookup, item):
-    """
-    Use NumPy to broadcast or reshape item.
+    Use NumPy to broadcast or reshape item with reindexing.
 
     Parameters
     ----------
@@ -318,6 +274,9 @@ def broadcast_item(obj, row_lookup, col_lookup, item):
         The global col index to locate inside of `item`.
     item : DataFrame, Series, or query_compiler
         Value that should be broadcast to a new shape of `to_shape`.
+    need_columns_reindex : bool, default: True
+        In the case of assigning columns to a dataframe (broadcasting is
+        part of the flow), reindexing is not needed.
 
     Returns
     -------
@@ -335,6 +294,11 @@ def broadcast_item(obj, row_lookup, col_lookup, item):
     -----
     NumPy is memory efficient, there shouldn't be performance issue.
     """
+    # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
+    # the target the user is trying to overwrite.
+    from .dataframe import DataFrame
+    from .series import Series
+
     new_row_len = (
         len(obj.index[row_lookup]) if isinstance(row_lookup, slice) else len(row_lookup)
     )
@@ -345,6 +309,19 @@ def broadcast_item(obj, row_lookup, col_lookup, item):
     )
     to_shape = new_row_len, new_col_len
 
+    if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
+        # convert indices in lookups to names, as pandas reindex expects them to be so
+        axes_to_reindex = {}
+        index_values = obj.index[row_lookup]
+        if not index_values.equals(item.index):
+            axes_to_reindex["index"] = index_values
+        if need_columns_reindex and hasattr(item, "columns"):
+            column_values = obj.columns[col_lookup]
+            if not column_values.equals(item.columns):
+                axes_to_reindex["columns"] = column_values
+        # New value for columns/index make that reindex add NaN values
+        if axes_to_reindex:
+            item = item.reindex(**axes_to_reindex)
     try:
         item = np.array(item)
         if np.prod(to_shape) == np.prod(item.shape):
