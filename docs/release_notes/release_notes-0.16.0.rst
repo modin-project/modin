@@ -18,6 +18,7 @@ Key Features and Updates
   * FIX-#4593: Ensure Modin warns when setting columns via attributes (#4621)
   * FIX-#4584: Enable pdb debug when running cloud tests (#4585)
   * FIX-#4564: Workaround import issues in Ray: auto-import pandas on python start if env var is set (#4603)
+  * FIX-#4641: Reindex pandas partitions in `df.describe()` (#4651)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
