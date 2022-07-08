@@ -42,7 +42,8 @@ from modin.config import Engine, IsExperimental, PersistentPickle
 from .utils import (
     from_pandas,
     from_non_pandas,
-    reindex_and_broadcast_item,
+    reindex_item,
+    broadcast_item,
 )
 from . import _update_engine
 from .iterator import PartitionIterator
@@ -2551,12 +2552,14 @@ class DataFrame(metaclass_resolver(BasePandasDataset)):
                         value = np.array(value)
                     if len(key) != value.shape[-1]:
                         raise ValueError("Columns must be same length as key")
-                item = reindex_and_broadcast_item(
+                item = reindex_item(
+                    self, slice(None), key, value, need_columns_reindex=False
+                )
+                item = broadcast_item(
                     self,
                     slice(None),
                     key,
-                    value,
-                    need_columns_reindex=False,
+                    item,
                 )
                 new_qc = self._query_compiler.write_items(
                     slice(None), self.columns.get_indexer_for(key), item
