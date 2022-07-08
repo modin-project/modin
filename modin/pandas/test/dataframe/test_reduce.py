@@ -181,6 +181,16 @@ def test_2195(datetime_is_numeric, has_numeric_column):
     )
 
 
+# Issue: https://github.com/modin-project/modin/issues/4641
+def test_describe_column_partition_has_different_index():
+    pandas_df = pandas.DataFrame(test_data["int_data"])
+    # We add a string column to test the case where partitions with mixed data
+    # types have different 'describe' rows, which causes an index mismatch.
+    pandas_df["string_column"] = "abc"
+    modin_df = pd.DataFrame(pandas_df)
+    eval_general(modin_df, pandas_df, lambda df: df.describe(include="all"))
+
+
 @pytest.mark.parametrize(
     "exclude,include",
     [

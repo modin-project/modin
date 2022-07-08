@@ -1576,7 +1576,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         def describe_builder(df, internal_indices=[]):
             """Apply `describe` function to the subset of columns in a single partition."""
-            return df.iloc[:, internal_indices].describe(**kwargs)
+            # The index of the resulting dataframe is the same amongst all partitions
+            # when dealing with the same data type. However, if we work with columns
+            # that contain strings, we can get extra values in our result index such as
+            # 'unique', 'top', and 'freq'. Since we call describe() on each partition,
+            # we can have cases where certain partitions do not contain any of the
+            # object string data leading to an index mismatch between partitions.
+            # Thus, we must reindex each partition with the global new_index.
+            return df.iloc[:, internal_indices].describe(**kwargs).reindex(new_index)
 
         return self.__constructor__(
             self._modin_frame.apply_full_axis_select_indices(
