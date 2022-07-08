@@ -39,6 +39,7 @@ Key Features and Updates
   * TEST-#4550: Use much less data in test_partition_api (#4554)
   * TEST-#4610: Remove explicit installation of `black`/`flake8` for omnisci ci-notebooks (#4609)
   * TEST-#2564: Add caching and use mamba for conda setups in GH (#4607)
+  * TEST-#4557: Delete multiindex sorts instead of xfailing (#4559)  
 * Documentation improvements
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
   * DOCS-#4628: Add to_parquet partial support notes (#4648)
