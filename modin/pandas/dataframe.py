@@ -37,7 +37,11 @@ from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings, to_pandas, hashable, append_to_docstring
 from modin.config import Engine, IsExperimental, PersistentPickle
-from .utils import from_pandas, from_non_pandas
+from .utils import (
+    from_pandas,
+    from_non_pandas,
+    broadcast_item,
+)
 from . import _update_engine
 from .iterator import PartitionIterator
 from .series import Series
@@ -2400,6 +2404,26 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
                         raise ValueError("Array must be same shape as DataFrame")
                     key = DataFrame(key, columns=self.columns)
                 return self.mask(key, value, inplace=True)
+
+            if isinstance(key, list) and all((x in self.columns for x in key)):
+                if is_list_like(value):
+                    if not (hasattr(value, "shape") and hasattr(value, "ndim")):
+                        value = np.array(value)
+                    if len(key) != value.shape[-1]:
+                        raise ValueError("Columns must be same length as key")
+                item = broadcast_item(
+                    self,
+                    slice(None),
+                    key,
+                    value,
+                    need_columns_reindex=False,
+                )
+                new_qc = self._query_compiler.write_items(
+                    slice(None), self.columns.get_indexer_for(key), item
+                )
+                self._update_inplace(new_qc)
+                # self.loc[:, key] = value
+                return
 
             def setitem_unhashable_key(df, value):
                 df[key] = value
