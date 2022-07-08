@@ -110,6 +110,20 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         return ray.get([partition._data for partition in partitions])
 
     @classmethod
+    def wait_partitions(cls, partitions):
+        """
+        Wait on the objects wrapped by `partitions` in parallel, without materializing them.
+
+        This method will block until all computations in the list have completed.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            NumPy array with ``PandasDataframePartition``-s.
+        """
+        ray.wait([partition._data for partition in partitions], num_returns=len(partitions))
+
+    @classmethod
     @progress_bar_wrapper
     def map_partitions(cls, partitions, map_func):
         """
