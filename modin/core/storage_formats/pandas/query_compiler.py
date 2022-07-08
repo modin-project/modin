@@ -2027,10 +2027,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 dtypes="copy" if axis == 0 else None,
             )
         else:
-            kwargs.pop("ascending", False)
-            new_modin_frame = self._modin_frame.sort_by(
-                axis, "__index__", ascending=ascending, **kwargs
-            )
+            if Engine.get() in ["Ray"]:
+                kwargs.pop("ascending", False)
+                new_modin_frame = self._modin_frame.sort_by(
+                    axis, "__index__", ascending=ascending, **kwargs
+                )
+            else:
+                new_index = pandas.Series(self.index).sort_values(**kwargs)
+                new_columns = self.columns
+                new_modin_frame = self._modin_frame.apply_full_axis(
+                    axis,
+                    lambda df: df.sort_index(
+                        axis=axis, level=level, sort_remaining=sort_remaining, **kwargs
+                    ),
+                    new_index,
+                    new_columns,
+                    dtypes="copy" if axis == 0 else None,
+                )
         return self.__constructor__(new_modin_frame)
 
     def melt(
