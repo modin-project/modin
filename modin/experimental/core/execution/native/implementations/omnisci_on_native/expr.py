@@ -702,7 +702,7 @@ class OpExpr(BaseExpr):
     """
     A generic operation expression.
 
-    Used for arithmetics, comparisons, conditional operations, etc.
+    Used for arithmetic, comparisons, conditional operations, etc.
 
     Parameters
     ----------

@@ -23,7 +23,7 @@ import os
 import re
 from modin.config import StorageFormat
 from modin.utils import import_optional_dependency
-from modin.logging import logger_decorator
+from modin.logging import ClassLogger
 import numpy as np
 
 S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
@@ -111,7 +111,7 @@ class OpenFile:
         self.file.close()
 
 
-class FileDispatcher:
+class FileDispatcher(ClassLogger):
     """
     Class handles util functions for reading data from different kinds of files.
 
@@ -127,7 +127,6 @@ class FileDispatcher:
     query_compiler_cls = None
 
     @classmethod
-    @logger_decorator("PANDAS-API", "FileDispatcher.read", "INFO")
     def read(cls, *args, **kwargs):
         """
         Read data according passed `args` and `kwargs`.
@@ -190,7 +189,6 @@ class FileDispatcher:
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
     @classmethod
-    @logger_decorator("PANDAS-API", "FileDispatcher.get_path", "INFO")
     def get_path(cls, file_path):
         """
         Process `file_path` in accordance to it's type.
@@ -217,7 +215,6 @@ class FileDispatcher:
             return os.path.abspath(file_path)
 
     @classmethod
-    @logger_decorator("PANDAS-API", "FileDispatcher.file_size", "INFO")
     def file_size(cls, f):
         """
         Get the size of file associated with file handle `f`.
@@ -239,8 +236,7 @@ class FileDispatcher:
         return size
 
     @classmethod
-    @logger_decorator("PANDAS-API", "FileDispatcher.file_exists", "INFO")
-    def file_exists(cls, file_path):
+    def file_exists(cls, file_path, storage_options=None):
         """
         Check if `file_path` exists.
 
@@ -249,6 +245,8 @@ class FileDispatcher:
         file_path : str
             String that represents the path to the file (paths to S3 buckets
             are also acceptable).
+        storage_options : dict, optional
+            Keyword from `read_*` functions.
 
         Returns
         -------
@@ -265,13 +263,19 @@ class FileDispatcher:
                 )
                 from botocore.exceptions import NoCredentialsError
 
-                s3fs = S3FS.S3FileSystem(anon=False)
+                if storage_options is not None:
+                    new_storage_options = dict(storage_options)
+                    new_storage_options.pop("anon", None)
+                else:
+                    new_storage_options = {}
+
+                s3fs = S3FS.S3FileSystem(anon=False, **new_storage_options)
                 exists = False
                 try:
                     exists = s3fs.exists(file_path) or exists
-                except NoCredentialsError:
+                except (NoCredentialsError, PermissionError):
                     pass
-                s3fs = S3FS.S3FileSystem(anon=True)
+                s3fs = S3FS.S3FileSystem(anon=True, **new_storage_options)
                 return exists or s3fs.exists(file_path)
         return os.path.exists(file_path)
 

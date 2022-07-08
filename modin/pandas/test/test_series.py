@@ -1141,6 +1141,14 @@ def test_between_time():
     )
 
 
+def test_add_series_to_timedeltaindex():
+    # Make a pandas.core.indexes.timedeltas.TimedeltaIndex
+    deltas = pd.to_timedelta([1], unit="h")
+    test_series = create_test_series(np.datetime64("2000-12-12"))
+    eval_general(*test_series, lambda s: s + deltas)
+    eval_general(*test_series, lambda s: s - deltas)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_bfill(data):
     modin_series, pandas_series = create_test_series(data)
@@ -1393,16 +1401,16 @@ def test_describe(data):
 
     try:
         pandas_result = pandas_series.describe(
-            include=[np.timedelta64, np.datetime64, np.object, np.bool]
+            include=[np.timedelta64, np.datetime64, np.object, np.bool_]
         )
     except Exception as e:
         with pytest.raises(type(e)):
             modin_series.describe(
-                include=[np.timedelta64, np.datetime64, np.object, np.bool]
+                include=[np.timedelta64, np.datetime64, np.object, np.bool_]
             )
     else:
         modin_result = modin_series.describe(
-            include=[np.timedelta64, np.datetime64, np.object, np.bool]
+            include=[np.timedelta64, np.datetime64, np.object, np.bool_]
         )
         df_equals(modin_result, pandas_result)
 
@@ -1620,8 +1628,14 @@ def test_dtype(data):
     df_equals(modin_series.dtype, pandas_series.dtypes)
 
 
-def test_dt():
-    data = pd.date_range("2016-12-31", periods=128, freq="D", tz="Europe/Berlin")
+# Bug https://github.com/modin-project/modin/issues/4436 in
+# Series.dt.to_pydatetime is only reproducible when the date range out of which
+# the frame is created has timezone None, so that its dtype is datetime64[ns]
+# as opposed to, e.g. datetime64[ns, Europe/Berlin]. To reproduce that bug, we
+# use timezones None and Europe/Berlin.
+@pytest.mark.parametrize("timezone", [None, "Europe/Berlin"])
+def test_dt(timezone):
+    data = pd.date_range("2016-12-31", periods=128, freq="D", tz=timezone)
     modin_series = pd.Series(data)
     pandas_series = pandas.Series(data)
 
@@ -1661,10 +1675,11 @@ def test_dt():
         modin_series.dt.tz_localize(None),
         pandas_series.dt.tz_localize(None),
     )
-    df_equals(
-        modin_series.dt.tz_convert(tz="Europe/Berlin"),
-        pandas_series.dt.tz_convert(tz="Europe/Berlin"),
-    )
+    if timezone:
+        df_equals(
+            modin_series.dt.tz_convert(tz="Europe/Berlin"),
+            pandas_series.dt.tz_convert(tz="Europe/Berlin"),
+        )
 
     df_equals(modin_series.dt.normalize(), pandas_series.dt.normalize())
     df_equals(

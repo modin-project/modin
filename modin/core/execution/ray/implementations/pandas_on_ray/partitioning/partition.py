@@ -15,18 +15,12 @@
 
 import ray
 from ray.util import get_node_ip_address
-from packaging import version
 import uuid
+from modin.core.execution.ray.common.utils import deserialize, ObjectIDType
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
 from modin.logging import get_logger
-
-ObjectIDType = ray.ObjectRef
-if version.parse(ray.__version__) >= version.parse("1.2.0"):
-    from ray.util.client.common import ClientObjectRef
-
-    ObjectIDType = (ray.ObjectRef, ClientObjectRef)
 
 compute_sliced_len = ray.remote(compute_sliced_len)
 
@@ -37,7 +31,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
     Parameters
     ----------
-    object_id : ray.ObjectRef
+    data : ray.ObjectRef
         A reference to ``pandas.DataFrame`` that need to be wrapped with this class.
     length : ray.ObjectRef or int, optional
         Length or reference to it of wrapped ``pandas.DataFrame``.
@@ -49,9 +43,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         Call queue that needs to be executed on wrapped ``pandas.DataFrame``.
     """
 
-    def __init__(self, object_id, length=None, width=None, ip=None, call_queue=None):
-        assert isinstance(object_id, ObjectIDType)
-        self.oid = object_id
+    def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
+        assert isinstance(data, ObjectIDType)
+        self._data = data
         if call_queue is None:
             call_queue = []
         self.call_queue = call_queue
@@ -83,7 +77,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         logger.debug(f"ENTER::Partition.get::{self._identity}")
         if len(self.call_queue):
             self.drain_call_queue()
-        result = ray.get(self.oid)
+        result = ray.get(self._data)
         logger.debug(f"EXIT::Partition.get::{self._identity}")
         return result
 
@@ -112,16 +106,16 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         """
         logger = get_logger()
         logger.debug(f"ENTER::Partition.apply::{self._identity}")
-        oid = self.oid
+        data = self._data
         call_queue = self.call_queue + [(func, args, kwargs)]
         if len(call_queue) > 1:
             logger.debug(f"SUBMIT::_apply_list_of_funcs::{self._identity}")
-            result, length, width, ip = _apply_list_of_funcs.remote(call_queue, oid)
+            result, length, width, ip = _apply_list_of_funcs.remote(call_queue, data)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
-            result, length, width, ip = _apply_func.remote(oid, func, *args, **kwargs)
+            result, length, width, ip = _apply_func.remote(data, func, *args, **kwargs)
             logger.debug(f"SUBMIT::_apply_func::{self._identity}")
         logger.debug(f"EXIT::Partition.apply::{self._identity}")
         return PandasOnRayDataframePartition(result, length, width, ip)
@@ -150,7 +144,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         return PandasOnRayDataframePartition(
-            self.oid, call_queue=self.call_queue + [(func, args, kwargs)]
+            self._data, call_queue=self.call_queue + [(func, args, kwargs)]
         )
 
     def drain_call_queue(self):
@@ -159,34 +153,34 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         logger.debug(f"ENTER::Partition.drain_call_queue::{self._identity}")
         if len(self.call_queue) == 0:
             return
-        oid = self.oid
+        data = self._data
         call_queue = self.call_queue
         if len(call_queue) > 1:
             logger.debug(f"SUBMIT::_apply_list_of_funcs::{self._identity}")
             (
-                self.oid,
+                self._data,
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
-            ) = _apply_list_of_funcs.remote(call_queue, oid)
+            ) = _apply_list_of_funcs.remote(call_queue, data)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             func, args, kwargs = call_queue[0]
             logger.debug(f"SUBMIT::_apply_func::{self._identity}")
             (
-                self.oid,
+                self._data,
                 self._length_cache,
                 self._width_cache,
                 self._ip_cache,
-            ) = _apply_func.remote(oid, func, *args, **kwargs)
+            ) = _apply_func.remote(data, func, *args, **kwargs)
         logger.debug(f"EXIT::Partition.drain_call_queue::{self._identity}")
         self.call_queue = []
 
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        ray.wait([self.oid])
+        ray.wait([self._data])
 
     def __copy__(self):
         """
@@ -198,7 +192,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             A copy of this partition.
         """
         return PandasOnRayDataframePartition(
-            self.oid,
+            self._data,
             length=self._length_cache,
             width=self._width_cache,
             ip=self._ip_cache,
@@ -289,7 +283,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self.drain_call_queue()
             else:
                 self._length_cache, self._width_cache = _get_index_and_columns.remote(
-                    self.oid
+                    self._data
                 )
         if isinstance(self._length_cache, ObjectIDType):
             self._length_cache = ray.get(self._length_cache)
@@ -309,7 +303,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self.drain_call_queue()
             else:
                 self._length_cache, self._width_cache = _get_index_and_columns.remote(
-                    self.oid
+                    self._data
                 )
         if isinstance(self._width_cache, ObjectIDType):
             self._width_cache = ray.get(self._width_cache)
@@ -419,21 +413,6 @@ def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
     str
         The node IP address of the worker process.
     """
-
-    def deserialize(obj):
-        if isinstance(obj, ObjectIDType):
-            return ray.get(obj)
-        elif isinstance(obj, (tuple, list)) and any(
-            isinstance(o, ObjectIDType) for o in obj
-        ):
-            return ray.get(list(obj))
-        elif isinstance(obj, dict) and any(
-            isinstance(val, ObjectIDType) for val in obj.values()
-        ):
-            return dict(zip(obj.keys(), ray.get(list(obj.values()))))
-        else:
-            return obj
-
     for func, args, kwargs in funcs:
         func = deserialize(func)
         args = deserialize(args)

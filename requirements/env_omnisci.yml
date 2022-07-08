@@ -2,7 +2,7 @@ name: modin_on_omnisci
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.4.2
+  - pandas==1.4.3
   - pyarrow=6
   - numpy>=1.18.5
   - fsspec
@@ -22,3 +22,5 @@ dependencies:
   - pip:
       - black
       - flake8
+      # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
+      - numpydoc==1.1.0

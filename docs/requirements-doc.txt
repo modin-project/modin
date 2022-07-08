@@ -9,6 +9,7 @@ pyyaml
 recommonmark
 sphinx
 sphinx-click
+ray[default]>=1.4.0
 git+https://github.com/modin-project/modin.git@master#egg=modin[all]
 sphinxcontrib_plantuml
 sphinx-issues

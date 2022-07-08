@@ -44,7 +44,7 @@ class PyarrowCSVParser:
         Returns
         -------
         list
-            List with splitted parse results and it's metadata:
+            List with split parse results and it's metadata:
 
             - First `num_split` elements are PyArrow tables, representing the corresponding chunk.
             - Next element is the number of rows in the parsed table.

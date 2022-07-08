@@ -2,7 +2,7 @@ name: modin
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.4.2
+  - pandas==1.4.3
   - numpy>=1.18.5
   - pyarrow>=4.0.1
   - dask[complete]>=2.22.0,<2022.2.0
@@ -36,6 +36,8 @@ dependencies:
   - scikit-learn
   - pymssql
   - psycopg2
+  - mypy
+  - pandas-stubs
   - pip:
       - xgboost>=1.6.0
       - modin-spreadsheet>=0.1.1
@@ -47,3 +49,7 @@ dependencies:
       - redis>=3.5.0,<4.0.0
       - black
       - flake8
+      # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
+      - numpydoc==1.1.0
+      # experimental version of fuzzydata requires at least 0.0.6 to successfully resolve all dependencies
+      - fuzzydata>=0.0.6

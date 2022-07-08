@@ -27,6 +27,7 @@ Key Features and Updates
   *
 * Dependencies
   *
+* New Features
 
 Contributors
 ------------

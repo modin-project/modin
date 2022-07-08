@@ -469,7 +469,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         else:
             agg_cols = [col for col in self.columns if col not in groupby_cols]
 
-        # Mimic pandas behaviour: pandas does not allow for aggregation to be empty
+        # Mimic pandas behavior: pandas does not allow for aggregation to be empty
         # in case of multi-column 'by'.
         if not as_index and len(agg_cols) == 0 and len(groupby_cols) > 1:
             agg_cols = self.columns
@@ -716,7 +716,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         Parameters
         ----------
         obj : str
-            Datetime unit to expract.
+            Datetime unit to extract.
 
         Returns
         -------
@@ -1197,7 +1197,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         """
         Perform binary operation.
 
-        An arithemtic binary operation or a comparison operation to
+        An arithmetic binary operation or a comparison operation to
         perform on columns.
 
         Parameters
@@ -2163,7 +2163,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         """
         Set new name for the index column.
 
-        Sohuldn't be called for frames with multi-index.
+        Shouldn't be called for frames with multi-index.
 
         Parameters
         ----------
@@ -2447,7 +2447,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             Source table.
         index_cols : list of str, optional
             List of index columns in the source table which
-            are ignored in tranformation.
+            are ignored in transformation.
         index : pandas.Index, optional
             An index to be used by the new frame. Should present
             if `index_cols` is not None.

@@ -2,6 +2,8 @@ name: ci
 on:
   pull_request:
     paths:
+      # NOTE: keep these paths in sync with the paths that trigger the
+      # fuzzydata Github Actions in .github/workflows/fuzzydata-test.yml
       - .github/**
       - asv_bench/**
       - modin/**
@@ -20,15 +22,15 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.8.x"
           architecture: "x64"
       - run: pip install black
       - run: black --check --diff modin/ asv_bench/benchmarks scripts/doc_checker.py
 
-  build-docs:
-    name: build docs
+  lint-mypy:
+    name: lint (mypy)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -38,6 +40,22 @@ jobs:
         with:
           python-version: "3.8.x"
           architecture: "x64"
+      - run: pip install -r requirements-dev.txt
+      - run: mypy --config-file mypy.ini
+
+  build-docs:
+    name: build docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.8.x"
+          architecture: "x64"
+          cache: "pip"
+          cache-dependency-path: '**/requirements-doc.txt'
       - run: pip install -r docs/requirements-doc.txt
       - run: cd docs && sphinx-build -T -E -W -b html . build
 
@@ -48,10 +66,11 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.8.x"
           architecture: "x64"
+      # The `numpydoc` version here MUST match the versions in the dev requirements files.
       - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0 xgboost
       - run: pytest scripts/test
       - run: pip install -e .[all]
@@ -116,6 +135,7 @@ jobs:
             modin/experimental/core/execution/native/implementations/omnisci_on_native/omnisci_worker.py \
       - run: python scripts/doc_checker.py modin/experimental/core/storage_formats/omnisci
       - run: python scripts/doc_checker.py modin/experimental/core/execution/native/implementations/omnisci_on_native/exchange/dataframe_protocol
+      - run: python scripts/doc_checker.py modin/experimental/batch/pipeline.py
       - run: python scripts/doc_checker.py modin/logging
 
   lint-flake8:
@@ -125,7 +145,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.8.x"
           architecture: "x64"
@@ -143,8 +163,19 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
           activate-environment: modin
           environment-file: environment-dev.yml
           python-version: 3.8
@@ -170,8 +201,19 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
           activate-environment: modin
           environment-file: environment-dev.yml
           python-version: 3.8
@@ -185,7 +227,7 @@ jobs:
         run: python -m pytest modin/test/test_headers.py
 
   test-clean-install-ubuntu:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -195,7 +237,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.8.x"
           architecture: "x64"
@@ -206,7 +248,7 @@ jobs:
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
 
   test-clean-install-windows:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: windows-latest
     defaults:
       run:
@@ -216,7 +258,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.8.x"
           architecture: "x64"
@@ -227,7 +269,7 @@ jobs:
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
 
   test-internals:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -237,8 +279,19 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
           activate-environment: modin
           environment-file: environment-dev.yml
           python-version: 3.8
@@ -255,14 +308,15 @@ jobs:
       - run: python -m pytest modin/test/storage_formats/base/test_internals.py
       - run: python -m pytest modin/test/storage_formats/pandas/test_internals.py
       - run: python -m pytest modin/test/test_envvar_npartitions.py
-      - run: python -m pytest -n 2 modin/test/test_partition_api.py
+      - run: python -m pytest modin/test/test_partition_api.py
       - run: python -m pytest modin/test/test_utils.py
       - run: python -m pytest asv_bench/test/test_utils.py
       - run: python -m pytest modin/test/exchange/dataframe_protocol/base
+      - run: python -m pytest modin/test/test_logging.py
       - uses: codecov/codecov-action@v2
 
   test-defaults:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -278,8 +332,19 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
           activate-environment: modin
           environment-file: environment-dev.yml
           python-version: 3.8
@@ -312,7 +377,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-omnisci:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -324,9 +389,20 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('requirements/env_omnisci.yml') }}
       - name: Setting up Modin environment
         uses: conda-incubator/setup-miniconda@v2
         with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
           activate-environment: modin_on_omnisci
           environment-file: requirements/env_omnisci.yml
           python-version: 3.8
@@ -346,7 +422,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-asv-benchmarks:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -412,7 +488,7 @@ jobs:
         if: failure()
 
   test-all:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -434,8 +510,19 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
           activate-environment: modin
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
@@ -459,6 +546,7 @@ jobs:
         if: matrix.engine == 'ray'
       - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
         if: matrix.engine == 'ray'
+      - run: pytest -n 2 modin/experimental/batch/test/test_pipeline.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
@@ -488,7 +576,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-experimental:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -502,8 +590,19 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
           activate-environment: modin
           environment-file: environment-dev.yml
           python-version: 3.8
@@ -519,7 +618,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-cloud:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -533,8 +632,19 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
           activate-environment: modin
           environment-file: environment-dev.yml
           python-version: 3.8
@@ -553,7 +663,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-windows:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: windows-latest
     defaults:
       run:
@@ -588,8 +698,19 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
           activate-environment: modin
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
@@ -608,7 +729,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-pyarrow:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -624,8 +745,19 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
           activate-environment: modin
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
@@ -639,7 +771,7 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_io.py::TestCsv --verbose
 
   test-spreadsheet:
-    needs: [lint-flake8, lint-black, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -656,8 +788,19 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
           activate-environment: modin
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}

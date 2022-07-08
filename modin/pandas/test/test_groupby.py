@@ -15,6 +15,10 @@ import pytest
 import itertools
 import pandas
 import numpy as np
+from modin.config.envvars import Engine
+from modin.core.dataframe.pandas.partitioning.axis_partition import (
+    PandasDataframeAxisPartition,
+)
 import modin.pandas as pd
 from modin.utils import try_cast_to_pandas, get_current_execution, hashable
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
@@ -1496,6 +1500,24 @@ def test_dict_agg_rename_mi_columns(
     df_equals(md_res, pd_res)
 
 
+def test_agg_4604():
+    data = {"col1": [1, 2], "col2": [3, 4]}
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    # add another partition
+    modin_df["col3"] = modin_df["col1"]
+    pandas_df["col3"] = pandas_df["col1"]
+
+    # problem only with custom aggregation function
+    def col3(x):
+        return np.max(x)
+
+    by = ["col1"]
+    agg_func = {"col2": ["sum", "min"], "col3": col3}
+
+    modin_groupby, pandas_groupby = modin_df.groupby(by), pandas_df.groupby(by)
+    eval_agg(modin_groupby, pandas_groupby, agg_func)
+
+
 @pytest.mark.parametrize(
     "operation",
     [
@@ -1512,7 +1534,20 @@ def test_dict_agg_rename_mi_columns(
 def test_agg_exceptions(operation):
     N = 256
     fill_data = [
-        ("nan_column", [None, np.datetime64("2010")] * (N // 2)),
+        (
+            "nan_column",
+            [
+                np.datetime64("2010"),
+                None,
+                np.datetime64("2007"),
+                np.datetime64("2010"),
+                np.datetime64("2006"),
+                np.datetime64("2012"),
+                None,
+                np.datetime64("2011"),
+            ]
+            * (N // 8),
+        ),
         (
             "date_column",
             [
@@ -1966,6 +2001,31 @@ def test_validate_by():
     result_by = GroupBy.validate_by(by)
     reference_by = ["col1", "col2", pandas.Series([1, 2, 3], name=None)]
     compare(reference_by, result_by)
+
+
+def test_groupby_with_virtual_partitions():
+    # from https://github.com/modin-project/modin/issues/4464
+    modin_df, pandas_df = create_test_dfs(test_data["int_data"])
+
+    # Concatenate DataFrames here to make virtual partitions.
+    big_modin_df = pd.concat([modin_df for _ in range(5)])
+    big_pandas_df = pandas.concat([pandas_df for _ in range(5)])
+
+    # Check that the constructed Modin DataFrame has virtual partitions when
+    # using Ray, and doesn't when using another execution engines.
+    if Engine.get() == "Ray":
+        assert issubclass(
+            type(big_modin_df._query_compiler._modin_frame._partitions[0][0]),
+            PandasDataframeAxisPartition,
+        )
+    else:
+        assert not issubclass(
+            type(big_modin_df._query_compiler._modin_frame._partitions[0][0]),
+            PandasDataframeAxisPartition,
+        )
+    eval_general(
+        big_modin_df, big_pandas_df, lambda df: df.groupby(df.columns[0]).count()
+    )
 
 
 @pytest.mark.parametrize("sort", [True, False])

@@ -81,7 +81,10 @@ class Engine(EnvironmentVariable, type=str):
         -------
         str
         """
-        from modin.utils import MIN_RAY_VERSION, MIN_DASK_VERSION
+        from modin.utils import (
+            MIN_RAY_VERSION,
+            MIN_DASK_VERSION,
+        )
 
         if IsDebug.get():
             return "Python"
@@ -93,7 +96,9 @@ class Engine(EnvironmentVariable, type=str):
         else:
             if version.parse(ray.__version__) < MIN_RAY_VERSION:
                 raise ImportError(
-                    f"Please `pip install modin[ray]` to install compatible Ray version (>={MIN_RAY_VERSION})."
+                    "Please `pip install modin[ray]` to install compatible Ray "
+                    + "version "
+                    + f"(>={MIN_RAY_VERSION})."
                 )
             return "Ray"
         try:
@@ -402,7 +407,7 @@ class LogMemoryInterval(EnvironmentVariable, type=int):
         super().put(value)
 
     @classmethod
-    def get(cls):
+    def get(cls) -> int:
         """
         Get ``LogMemoryInterval`` with extra checks.
 
@@ -415,8 +420,42 @@ class LogMemoryInterval(EnvironmentVariable, type=int):
         return log_memory_interval
 
 
+class LogFileSize(EnvironmentVariable, type=int):
+    """Max size of logs (in MBs) to store per Modin job."""
+
+    varname = "MODIN_LOG_FILE_SIZE"
+    default = 10
+
+    @classmethod
+    def put(cls, value):
+        """
+        Set ``LogFileSize`` with extra checks.
+
+        Parameters
+        ----------
+        value : int
+            Config value to set.
+        """
+        if value <= 0:
+            raise ValueError(f"Log file size should be > 0 MB, passed value {value}")
+        super().put(value)
+
+    @classmethod
+    def get(cls) -> int:
+        """
+        Get ``LogFileSize`` with extra checks.
+
+        Returns
+        -------
+        int
+        """
+        log_file_size = super().get()
+        assert log_file_size > 0, "`LogFileSize` should be > 0"
+        return log_file_size
+
+
 class PersistentPickle(EnvironmentVariable, type=bool):
-    """Wheather serialization should be persistent."""
+    """Whether serialization should be persistent."""
 
     varname = "MODIN_PERSISTENT_PICKLE"
     # When set to off, it allows faster serialization which is only
