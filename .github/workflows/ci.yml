@@ -642,14 +642,14 @@ jobs:
             ~/conda_pkgs_dir
             ~/.cache/pip
           key:
-            ${{ runner.os }}-conda-${{ hashFiles('requirements/requirements-py36.yml') }}
+            ${{ runner.os }}-conda-${{ hashFiles('requirements/environment-py36.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           use-mamba: true
           activate-environment: modin
-          environment-file: requirements/requirements-py36.yml
+          environment-file: requirements/environment-py36.yml
           python-version: 3.6
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
@@ -688,14 +688,14 @@ jobs:
             ~/conda_pkgs_dir
             ~/.cache/pip
           key:
-            ${{ runner.os }}-conda-${{ hashFiles('requirements/requirements-py36.yml') }}
+            ${{ runner.os }}-conda-${{ hashFiles('requirements/environment-py36.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           use-mamba: true
           activate-environment: modin
-          environment-file: requirements/requirements-py36.yml
+          environment-file: requirements/environment-py36.yml
           python-version: 3.6
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
