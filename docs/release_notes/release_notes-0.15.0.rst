@@ -29,6 +29,7 @@ Key Features and Updates
   * FIX-#4503: Stop the memory logging thread after session exit (#4515)
   * FIX-#4531: Fix a makedirs race condition in to_parquet (#4533)
   * FIX-#4464: Refactor Ray utils and quick fix groupby.count failing on virtual partitions (#4490)
+  * FIX-#4522: Correct multiindex metadata with groupby (#4523)
   * FIX-#4436: Fix to_pydatetime dtype for timezone None (#4437)
   * FIX-#4541: Fix merge_asof with non-unique right index (#4542)
 * Performance enhancements

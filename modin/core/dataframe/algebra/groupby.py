@@ -133,6 +133,14 @@ class GroupByReduce(TreeReduce):
                     axis=1,
                 )
                 other = list(other.columns)
+                # GH#4522: Vile as this may be, it is necessary to avoid the case where we are
+                # grouping by columns that were recently added to the data via
+                # `from_labels`. The internal dataframe doesn't know what to do when
+                # the label matches a column name.
+                # We ensure that the columns, index, and by don't intersect in the API level,
+                # so if we hit this if statement, we know its a result of a deferred re-index.
+                if len(df.columns.intersection(df.index.names)) > 0:
+                    df = df.reset_index(drop=True)
             by_part = other
         else:
             by_part = by

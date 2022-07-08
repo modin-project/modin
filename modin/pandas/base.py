@@ -3422,7 +3422,9 @@ class BasePandasDataset(ClassLogger):
         Count unique values in the `BasePandasDataset`.
         """
         if subset is None:
-            subset = self._query_compiler.columns
+            # Need to get column names as array rather than as Index, since `groupby` does not
+            # treat `Index` arguments to `by` as a list of labels.
+            subset = self._query_compiler.columns.values
         counted_values = self.groupby(by=subset, dropna=dropna, observed=True).size()
         if sort:
             counted_values.sort_values(ascending=ascending, inplace=True)
