@@ -66,7 +66,7 @@ class ErrorMessage(object):
             )
             cls.printed_default_to_pandas = True
         if reason:
-            message += "\nReason: " + reason
+            message += f"\nReason: {reason}"
         get_logger().debug(f"Modin Warning: Default to pandas: {message}")
         warnings.warn(message)
 
