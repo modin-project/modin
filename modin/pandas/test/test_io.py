@@ -998,7 +998,7 @@ class TestCsv:
     def _has_pandas_fallback_reason(self):
         # The Python engine does not use custom IO dispatchers, so specialized error messages
         # won't appear
-        return Engine.get() != "Python"
+        return Engine.get() != "Python" and StorageFormat != "Omnisci"
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
