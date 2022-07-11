@@ -34,7 +34,7 @@ from modin.config import (
     ReadSqlEngine,
 )
 from modin._compat import PandasCompatVersion
-from modin.utils import to_pandas, get_current_execution
+from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 import pyarrow as pa
@@ -995,17 +995,20 @@ class TestCsv:
             skiprows=skiprows,
         )
 
+    def _has_pandas_fallback_reason(self):
+        # The Python engine does not use custom IO dispatchers, so specialized error messages
+        # won't appear
+        return Engine.get() != "Python"
+
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
     def test_read_csv_default_to_pandas(self):
-        if get_current_execution() == "PandasOnPython":
-            # The Python engine does not use custom IO dispatchers, so specialized error messages
-            # won't appear
-            warning_suffix = ""
-        else:
+        if self._has_pandas_fallback_reason():
             warning_suffix = "buffers"
+        else:
+            warning_suffix = ""
         with warns_that_defaulting_to_pandas(suffix=warning_suffix):
             # This tests that we default to pandas on a buffer
             from io import StringIO
@@ -1020,12 +1023,10 @@ class TestCsv:
     )
     def test_read_csv_default_to_pandas_url(self):
         # We haven't implemented read_csv from https, but if it's implemented, then this needs to change
-        if get_current_execution() == "PandasOnPython":
-            # The Python engine does not use custom IO dispatchers, so specialized error messages
-            # won't appear
-            warning_match = ""
-        else:
+        if self._has_pandas_fallback_reason():
             warning_match = "No file with name"
+        else:
+            warning_match = ""
         eval_io(
             fn_name="read_csv",
             modin_warning=UserWarning,
