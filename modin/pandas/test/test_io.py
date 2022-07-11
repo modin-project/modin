@@ -34,7 +34,7 @@ from modin.config import (
     ReadSqlEngine,
 )
 from modin._compat import PandasCompatVersion
-from modin.utils import to_pandas
+from modin.utils import to_pandas, get_current_execution
 from modin.pandas.utils import from_arrow
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 import pyarrow as pa
@@ -1000,7 +1000,13 @@ class TestCsv:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
     def test_read_csv_default_to_pandas(self):
-        with warns_that_defaulting_to_pandas(suffix="buffers"):
+        if get_current_execution() == "PandasOnPython":
+            # The Python engine does not use custom IO dispatchers, so specialized error messages
+            # won't appear
+            warning_suffix = ""
+        else:
+            warning_suffix = "buffers"
+        with warns_that_defaulting_to_pandas(suffix=warning_suffix):
             # This tests that we default to pandas on a buffer
             from io import StringIO
 
@@ -1014,10 +1020,16 @@ class TestCsv:
     )
     def test_read_csv_default_to_pandas_url(self):
         # We haven't implemented read_csv from https, but if it's implemented, then this needs to change
+        if get_current_execution() == "PandasOnPython":
+            # The Python engine does not use custom IO dispatchers, so specialized error messages
+            # won't appear
+            warning_match = ""
+        else:
+            warning_match = "No file with name"
         eval_io(
             fn_name="read_csv",
             modin_warning=UserWarning,
-            modin_warning_str_match="No file with name",
+            modin_warning_str_match=warning_match,
             # read_csv kwargs
             filepath_or_buffer="https://raw.githubusercontent.com/modin-project/modin/master/modin/pandas/test/data/blah.csv",
             # It takes about ~17Gb of RAM for Omnisci to import the whole table from this test
