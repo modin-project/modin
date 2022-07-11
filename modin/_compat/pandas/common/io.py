@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Functions common for all compatibility branches in io, placed here to make _compat more 'hermetic'."""
+
 import pandas
 
 from modin.utils import Engine
@@ -20,10 +22,12 @@ from modin.pandas import _update_engine, DataFrame
 def _read(**kwargs):
     """
     Read csv file from local disk.
+
     Parameters
     ----------
     **kwargs : dict
         Keyword arguments in pandas.read_csv.
+
     Returns
     -------
     modin.pandas.DataFrame

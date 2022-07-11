@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module for 'latest pandas' compatibility layer for Dataset (common DataFrame/Series)."""
+
 from ..abc import BaseCompatibilityBasePandasDataset
 
 import pandas
@@ -23,12 +25,17 @@ from numpy import nan
 from typing import Sequence, Hashable, Optional
 
 from .utils import create_stat_method
+from modin.utils import _inherit_docstrings
 
 
 class LatestCompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
+    """Compatibility layer for 'latest pandas' for Dataset."""
+
+    @_inherit_docstrings(validate_ascending)
     def _validate_ascending(self, ascending):
         return validate_ascending(ascending)
 
+    @_inherit_docstrings(validate_bool_kwarg)
     def _validate_bool_kwarg(self, value, arg_name, **kwargs):
         return validate_bool_kwarg(value, arg_name, **kwargs)
 
@@ -67,6 +74,9 @@ class LatestCompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
             convert_floating=convert_floating,
         )
 
+    @_inherit_docstrings(
+        parent=pandas.DataFrame.explode, apilink="pandas.DataFrame.explode"
+    )
     def explode(self, column, ignore_index: bool = False):
         exploded = self.__constructor__(
             query_compiler=self._query_compiler.explode(column)

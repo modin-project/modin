@@ -11,8 +11,24 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module for utility functions used by 'Python 3.6 pandas' compatibility layer."""
+
 
 def create_stat_method(name):
+    """
+    Create statistical method from operation name.
+
+    Parameters
+    ----------
+    name : str
+        Operation name to perform.
+
+    Returns
+    -------
+    callable
+        Method to perform given statistics, for more see ``BasePandasDataset._stat_operation``.
+    """
+
     def stat_method(
         self,
         axis=None,

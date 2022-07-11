@@ -11,30 +11,34 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module for interface for class compatibility layer for DataFrame."""
+
 from modin.logging import ClassLogger
 
 
 class BaseCompatibilityDataFrame(ClassLogger):
-    def applymap(self, *args, **kwargs):
+    """Interface for compatibility layer for DataFrame."""
+
+    def applymap(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def apply(self, *args, **kwargs):
+    def apply(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def info(self, *args, **kwargs):
+    def info(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def pivot_table(self, *args, **kwargs):
+    def pivot_table(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def prod(self, *args, **kwargs):
+    def prod(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def replace(self, *args, **kwargs):
+    def replace(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def sum(self, *args, **kwargs):
+    def sum(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def to_parquet(self, *args, **kwargs):
+    def to_parquet(self, *args, **kwargs):  # noqa: GL08
         pass

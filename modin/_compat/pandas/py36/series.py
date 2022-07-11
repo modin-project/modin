@@ -11,12 +11,19 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module for 'Python 3.6 pandas' compatibility layer for Series."""
+
 import numpy as np
+import pandas
 
 from ..abc.series import BaseCompatibilitySeries
+from modin.utils import _inherit_docstrings
 
 
+@_inherit_docstrings(pandas.Series)
 class Python36CompatibilitySeries(BaseCompatibilitySeries):
+    """Compatibility layer for 'Python 3.6 pandas' for Series."""
+
     def apply(
         self, func, convert_dtype=True, args=(), **kwds
     ):  # noqa: PR01, RT01, D200

@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Compatibility layer for core pandas methods having slightly different signatures in different versions."""
+
 from . import PandasCompatVersion
 
 if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:

@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module for 'latest pandas' compatibility layer for DataFrame."""
+
 from typing import Optional, Union, IO
 import pandas
 from pandas.util._validators import validate_bool_kwarg
@@ -21,7 +23,9 @@ from numpy import nan
 from ..abc import BaseCompatibilityDataFrame
 
 
-class LatestCompatibleDataFrame(BaseCompatibilityDataFrame):
+class LatestCompatibleDataFrame(BaseCompatibilityDataFrame):  # noqa: PR01
+    """Compatibility layer for 'latest pandas' for DataFrame."""
+
     def __init__(
         self,
         data=None,

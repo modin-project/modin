@@ -618,9 +618,7 @@ class Series(SeriesCompat, BasePandasDataset):
 
     agg = aggregate
 
-    def _apply(
-        self, func, convert_dtype=True, args=(), **kwargs
-    ):  # noqa: PR01, RT01, D200
+    def _apply(self, func, convert_dtype, args, **kwargs):  # noqa: PR01, RT01, D200
         """
         Invoke function on values of Series.
         """

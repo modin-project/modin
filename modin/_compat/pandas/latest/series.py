@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module for 'latest pandas' compatibility layer for Series."""
+
 import numpy as np
 import pandas
 from pandas.util._validators import validate_bool_kwarg
@@ -20,6 +22,8 @@ from ..abc.series import BaseCompatibilitySeries
 
 
 class LatestCompatibleSeries(BaseCompatibilitySeries):
+    """Compatibility layer for 'latest pandas' for Series."""
+
     def apply(self, func, convert_dtype=True, args=(), **kwargs):
         return self._apply(func, convert_dtype=convert_dtype, args=args, **kwargs)
 

@@ -11,14 +11,20 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module for 'Python 3.6 pandas' compatibility layer for DataFrame."""
+
 from typing import Union, Tuple, Mapping
 import pandas
 from numpy import nan
 
 from ..abc import BaseCompatibilityDataFrame
+from modin.utils import _inherit_docstrings
 
 
-class Python36CompatibleDataFrame(BaseCompatibilityDataFrame):
+@_inherit_docstrings(pandas.DataFrame)
+class Python36CompatibleDataFrame(BaseCompatibilityDataFrame):  # noqa: PR01
+    """Compatibility layer for 'Python 3.6 pandas' for DataFrame."""
+
     def __init__(
         self,
         data=None,

@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module for 'latest pandas' compatibility layer for input/output methods."""
+
 import inspect
 import pandas
 from pandas._libs.lib import no_default

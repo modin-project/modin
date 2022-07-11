@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module for 'Python 3.6 pandas' compatibility layer for pandas methods."""
+
 import pandas
 
 from modin.utils import _inherit_docstrings

@@ -18,6 +18,8 @@ pandas_version = version.parse(pandas.__version__)
 
 
 class PandasCompatVersion:
+    """Enum-like class describing if we're working in "pandas compat" or normal mode."""
+
     PY36 = "py36-compat"
     LATEST = "latest"
 

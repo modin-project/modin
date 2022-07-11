@@ -530,6 +530,10 @@ def monkeypatching():
     sys.getdlopenflags = Mock()
     sys.setdlopenflags = Mock()
 
+    # Some modin._compat submodules cannot be imported without fully importing
+    # modin.pandas first - they break with circular import; so add explicit import here
+    import modin.pandas
+
 
 def validate(
     paths: List[pathlib.Path], add_ignore: List[str], use_numpydoc: bool

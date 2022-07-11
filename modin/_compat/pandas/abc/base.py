@@ -11,60 +11,64 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module for interface for class compatibility layer for Dataset (common DataFrame/Series)."""
+
 from modin.logging import ClassLogger
 
 
 class BaseCompatibilityBasePandasDataset(ClassLogger):
-    def max(self, *args, **kwargs):
+    """Interface for compatibility layer for Dataset."""
+
+    def max(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def min(self, *args, **kwargs):
+    def min(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def mean(self, *args, **kwargs):
+    def mean(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def median(self, *args, **kwargs):
+    def median(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def rank(self, *args, **kwargs):
+    def rank(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def reindex(self, *args, **kwargs):
+    def reindex(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def rolling(self, *args, **kwargs):
+    def rolling(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def sample(self, *args, **kwargs):
+    def sample(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def sem(self, *args, **kwargs):
+    def sem(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def shift(self, *args, **kwargs):
+    def shift(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def skew(self, *args, **kwargs):
+    def skew(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def std(self, *args, **kwargs):
+    def std(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def to_csv(self, *args, **kwargs):
+    def to_csv(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def to_json(self, *args, **kwargs):
+    def to_json(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def to_markdown(self, *args, **kwargs):
+    def to_markdown(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def to_latex(self, *args, **kwargs):
+    def to_latex(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def to_pickle(self, *args, **kwargs):
+    def to_pickle(self, *args, **kwargs):  # noqa: GL08
         pass
 
-    def var(self, *args, **kwargs):
+    def var(self, *args, **kwargs):  # noqa: GL08
         pass

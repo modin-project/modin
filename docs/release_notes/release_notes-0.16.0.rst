@@ -49,7 +49,7 @@ Key Features and Updates
   * FEAT-#4619: Integrate mypy static type checking (#4620)
 * New Features
   * FEAT-4463: Add experimental fuzzydata integration for testing against a randomized dataframe workflow (#4556)
-  * FEAT-#4147: Support multiple pandas versions (#4301)
+  * FEAT-#4147: Add partial compatibility with Python 3.6 and pandas 1.1 (#4301)
 
 Contributors
 ------------

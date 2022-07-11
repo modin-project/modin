@@ -11,6 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""Module for 'Python 3.6 pandas' compatibility layer for Dataset (common DataFrame/Series)."""
+
+import pandas
 from ..abc import BaseCompatibilityBasePandasDataset
 from pandas.util._validators import validate_bool_kwarg
 import pickle as pkl
@@ -18,12 +21,18 @@ from numpy import nan
 from typing import Sequence, Hashable
 
 from .utils import create_stat_method
+from modin.utils import _inherit_docstrings
 
 
+@_inherit_docstrings(pandas.DataFrame)
 class Python36CompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
-    def _validate_ascending(self, ascending):
-        return ascending
+    """Compatibility layer for 'Python 3.6 pandas' for Dataset."""
 
+    def _validate_ascending(self, ascending):  # noqa: PR01, RT01
+        """Validate that `ascending` is a boolean."""
+        return bool(ascending)
+
+    @_inherit_docstrings(validate_bool_kwarg)
     def _validate_bool_kwarg(self, value, arg_name, **kwargs):
         return validate_bool_kwarg(value, arg_name)
 
