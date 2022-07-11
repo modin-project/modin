@@ -73,9 +73,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             if len(partitioned_columns):
                 return cls.single_worker_read(
                     path,
-                    "Mixed partitioning columns in Parquet",
                     engine=engine,
                     columns=columns,
+                    reason="Mixed partitioning columns in Parquet",
                     **kwargs
                 )
 

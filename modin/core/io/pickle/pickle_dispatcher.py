@@ -49,8 +49,8 @@ class PickleExperimentalDispatcher(FileDispatcher):
         if not (isinstance(filepath_or_buffer, str) and "*" in filepath_or_buffer):
             return cls.single_worker_read(
                 filepath_or_buffer,
-                "Buffers and wildcard file names are not supported",
                 single_worker_read=True,
+                reason="Buffers and wildcard file names are not supported",
                 **kwargs,
             )
         filepath_or_buffer = sorted(glob.glob(filepath_or_buffer))

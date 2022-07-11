@@ -50,14 +50,16 @@ class ExcelDispatcher(TextFileDispatcher):
         ):
             return cls.single_worker_read(
                 io,
-                "Modin only implements parallel `read_excel` with `openpyxl` engine, "
+                reason="Modin only implements parallel `read_excel` with `openpyxl` engine, "
                 + 'please specify `engine=None` or `engine="openpyxl"` to '
                 + "use Modin's parallel implementation.",
                 **kwargs
             )
         if sys.version_info < (3, 7):
             return cls.single_worker_read(
-                io, "Python 3.7 or higher required for parallel `read_excel`.", **kwargs
+                io,
+                reason="Python 3.7 or higher required for parallel `read_excel`.",
+                **kwargs
             )
 
         from zipfile import ZipFile
@@ -70,7 +72,7 @@ class ExcelDispatcher(TextFileDispatcher):
         if sheet_name is None or isinstance(sheet_name, list):
             return cls.single_worker_read(
                 io,
-                "`read_excel` functionality is only implemented for a single sheet at a "
+                reason="`read_excel` functionality is only implemented for a single sheet at a "
                 + "time. Multiple sheet reading coming soon!",
                 **kwargs
             )

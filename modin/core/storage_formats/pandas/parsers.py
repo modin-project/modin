@@ -249,7 +249,7 @@ class PandasParser(ClassLogger):
         return frame_dtypes
 
     @classmethod
-    def single_worker_read(cls, fname, reason: str, **kwargs):
+    def single_worker_read(cls, fname, *, reason: str, **kwargs):
         """
         Perform reading by single worker (default-to-pandas implementation).
 

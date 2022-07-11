@@ -66,14 +66,14 @@ class CSVGlobDispatcher(CSVDispatcher):
             if not cls.file_exists(filepath_or_buffer, kwargs.get("storage_options")):
                 return cls.single_worker_read(
                     filepath_or_buffer,
-                    cls._file_not_found_msg(filepath_or_buffer),
+                    reason=cls._file_not_found_msg(filepath_or_buffer),
                     **kwargs,
                 )
             filepath_or_buffer = cls.get_path(filepath_or_buffer)
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return cls.single_worker_read(
                 filepath_or_buffer,
-                cls._buffer_unsupported_msg(),
+                reason=cls.BUFFER_UNSUPPORTED_MSG,
                 **kwargs,
             )
 
@@ -102,21 +102,23 @@ class CSVGlobDispatcher(CSVDispatcher):
             else:
                 return cls.single_worker_read(
                     filepath_or_buffer,
-                    f"Unsupported compression type {compression_type}",
+                    reason=f"Unsupported compression type {compression_type}",
                     **kwargs,
                 )
 
         chunksize = kwargs.get("chunksize")
         if chunksize is not None:
             return cls.single_worker_read(
-                filepath_or_buffer, "`chunksize` parameter is not supported", **kwargs
+                filepath_or_buffer,
+                reason="`chunksize` parameter is not supported",
+                **kwargs,
             )
 
         skiprows = kwargs.get("skiprows")
         if skiprows is not None and not isinstance(skiprows, int):
             return cls.single_worker_read(
                 filepath_or_buffer,
-                "Non-integer `skiprows` value not supported",
+                reason="Non-integer `skiprows` value not supported",
                 **kwargs,
             )
 

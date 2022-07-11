@@ -644,7 +644,7 @@ class TextFileDispatcher(FileDispatcher):
             if not cls.file_exists(filepath_or_buffer):
                 return (False, cls._file_not_found_msg(filepath_or_buffer))
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
-            return (False, cls._buffer_unsupported_msg())
+            return (False, cls.BUFFER_UNSUPPORTED_MSG)
 
         if read_kwargs["chunksize"] is not None:
             return (False, "`chunksize` parameter is not supported")
@@ -996,8 +996,8 @@ class TextFileDispatcher(FileDispatcher):
         if not use_modin_impl:
             return cls.single_worker_read(
                 filepath_or_buffer,
-                fallback_reason,
                 callback=cls.read_callback,
+                reason=fallback_reason,
                 **kwargs,
             )
 

@@ -57,14 +57,14 @@ class SQLDispatcher(FileDispatcher):
         if not isinstance(con, ModinDatabaseConnection):
             return cls.single_worker_read(
                 sql,
-                "To use parallel implementation of `read_sql`, pass either "
+                con=con,
+                index_col=index_col,
+                read_sql_engine=ReadSqlEngine.get(),
+                reason="To use parallel implementation of `read_sql`, pass either "
                 + "the SQL connection string or a ModinDatabaseConnection "
                 + "with the arguments required to make a connection, instead "
                 + f"of {type(con)}. For documentation of ModinDatabaseConnection, see "
                 + "https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html#connecting-to-a-database-for-read-sql",
-                con=con,
-                index_col=index_col,
-                read_sql_engine=ReadSqlEngine.get(),
                 **kwargs,
             )
         row_count_query = con.row_count_query(sql)
