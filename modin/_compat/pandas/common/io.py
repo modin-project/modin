@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Functions common for all compatibility branches in io, placed here to make _compat more 'hermetic'."""
+"""Functions common for all compatibility branches in IO, placed here to make ``_compat`` more 'hermetic'."""
 
 import pandas
 

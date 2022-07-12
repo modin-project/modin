@@ -8,6 +8,9 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 dask_deps = ["dask>=2.22.0,<2022.2.0", "distributed>=2.22.0,<2022.2.0"]
+if sys.version_info() < (3, 8):
+    dask_deps.append("pickle5")
+
 ray_deps = [
     "ray[default]>=1.4.0",
     "pyarrow>=4.0.1",
@@ -62,7 +65,5 @@ setup(
         "sql": sql_deps,
         "all": all_deps,
     },
-    # there's no OR operator for python_requires, so declare that we support from
-    # 3.6 onwards but don't support 3.7, which would mean either 3.6 or >=3.8
-    python_requires=">=3.6, !=3.7",
+    python_requires=">=3.6",
 )

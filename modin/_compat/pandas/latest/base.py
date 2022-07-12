@@ -13,8 +13,6 @@
 
 """Module for 'latest pandas' compatibility layer for Dataset (common DataFrame/Series)."""
 
-from ..abc import BaseCompatibilityBasePandasDataset
-
 import pandas
 from pandas.core.dtypes.common import is_datetime_or_timedelta_dtype
 from pandas.util._validators import validate_bool_kwarg, validate_ascending
@@ -24,6 +22,7 @@ import pickle as pkl
 from numpy import nan
 from typing import Sequence, Hashable, Optional
 
+from ..abc import BaseCompatibilityBasePandasDataset
 from .utils import create_stat_method
 from modin.utils import _inherit_docstrings
 

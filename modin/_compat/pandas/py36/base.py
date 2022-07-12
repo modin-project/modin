@@ -14,12 +14,12 @@
 """Module for 'Python 3.6 pandas' compatibility layer for Dataset (common DataFrame/Series)."""
 
 import pandas
-from ..abc import BaseCompatibilityBasePandasDataset
 from pandas.util._validators import validate_bool_kwarg
 import pickle as pkl
 from numpy import nan
 from typing import Sequence, Hashable
 
+from ..abc import BaseCompatibilityBasePandasDataset
 from .utils import create_stat_method
 from modin.utils import _inherit_docstrings
 

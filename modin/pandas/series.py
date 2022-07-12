@@ -1179,10 +1179,10 @@ class Series(SeriesCompat, BasePandasDataset):
 
     def _kurt(
         self,
-        axis=None,
-        skipna=None,
-        level=None,
-        numeric_only=None,
+        axis,
+        skipna,
+        level,
+        numeric_only,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
@@ -1231,12 +1231,12 @@ class Series(SeriesCompat, BasePandasDataset):
     def _mask(
         self,
         cond,
-        other=np.nan,
-        inplace=False,
-        axis=None,
-        level=None,
-        errors="raise",
-        try_cast=False,
+        other,
+        inplace,
+        axis,
+        level,
+        errors,
+        try_cast,
     ):
         return self._default_to_pandas(
             pandas.Series.mask,
@@ -1396,11 +1396,11 @@ class Series(SeriesCompat, BasePandasDataset):
     @_inherit_docstrings(pandas.Series.prod, apilink="pandas.Series.prod")
     def _prod(
         self,
-        axis=None,
-        skipna=True,
-        level=None,
-        numeric_only=None,
-        min_count=0,
+        axis,
+        skipna,
+        level,
+        numeric_only,
+        min_count,
         **kwargs,
     ):
         axis = self._get_axis_number(axis)
@@ -1534,9 +1534,7 @@ class Series(SeriesCompat, BasePandasDataset):
 
         return self.__constructor__(query_compiler=self._query_compiler.repeat(repeats))
 
-    def _reset_index(
-        self, level=None, drop=False, name=None, inplace=False
-    ):  # noqa: PR01, RT01, D200
+    def _reset_index(self, level, drop, name, inplace):  # noqa: PR01, RT01, D200
         """
         Generate a new Series with the index reset.
         """
@@ -1647,12 +1645,12 @@ class Series(SeriesCompat, BasePandasDataset):
 
     def _replace(
         self,
-        to_replace=None,
-        value=None,
-        inplace=False,
-        limit=None,
-        regex=False,
-        method="pad",
+        to_replace,
+        value,
+        inplace,
+        limit,
+        regex,
+        method,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -1764,11 +1762,11 @@ class Series(SeriesCompat, BasePandasDataset):
 
     def _sum(
         self,
-        axis=None,
-        skipna=True,
-        level=None,
-        numeric_only=None,
-        min_count=0,
+        axis,
+        skipna,
+        level,
+        numeric_only,
+        min_count,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
@@ -1836,9 +1834,7 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         return self._default_to_pandas("to_dict", into=into)
 
-    def _to_frame(
-        self, name: "Hashable" = no_default
-    ) -> "DataFrame":  # noqa: PR01, RT01, D200
+    def _to_frame(self, name: "Hashable") -> "DataFrame":  # noqa: PR01, RT01, D200
         """
         Convert Series to {label -> value} dict or dict-like object.
         """
@@ -1971,7 +1967,7 @@ class Series(SeriesCompat, BasePandasDataset):
         self._update_inplace(new_query_compiler=query_compiler)
 
     def _value_counts(
-        self, normalize=False, sort=True, ascending=False, bins=None, dropna=True
+        self, normalize, sort, ascending, bins, dropna
     ):  # noqa: PR01, RT01, D200
         """
         Return a Series containing counts of unique values.
@@ -2010,12 +2006,12 @@ class Series(SeriesCompat, BasePandasDataset):
     def _where(
         self,
         cond,
-        other=no_default,
-        inplace=False,
-        axis=None,
-        level=None,
-        errors=no_default,
-        try_cast=no_default,
+        other,
+        inplace,
+        axis,
+        level,
+        errors,
+        try_cast,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values where the condition is False.

@@ -810,13 +810,13 @@ class BasePandasDataset(BasePandasDatasetCompat):
     def _apply(
         self,
         func,
-        axis=0,
-        broadcast=None,
-        raw=False,
-        reduce=None,
-        result_type=None,
-        convert_dtype=True,
-        args=(),
+        axis,
+        broadcast,
+        raw,
+        reduce,
+        result_type,
+        convert_dtype,
+        args,
         **kwds,
     ):  # noqa: PR01, RT01, D200
         """
@@ -1626,7 +1626,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         return _iLocIndexer(self)
 
     @_inherit_docstrings(pandas.DataFrame.kurt, apilink="pandas.DataFrame.kurt")
-    def _kurt(self, axis, skipna=None, level=None, numeric_only=None, **kwargs):
+    def _kurt(self, axis, skipna, level, numeric_only, **kwargs):
         self._validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis = self._get_axis_number(axis)
         if level is not None:
@@ -1695,7 +1695,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         return _LocIndexer(self)
 
     @_inherit_docstrings(pandas.DataFrame.mad, apilink="pandas.DataFrame.mad")
-    def _mad(self, axis=None, skipna=True, level=None):
+    def _mad(self, axis, skipna, level):
         self._validate_bool_kwarg(skipna, "skipna", none_allowed=True)
         axis = self._get_axis_number(axis)
         if level is not None:
@@ -1717,7 +1717,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         return self._default_to_pandas("mask", *args, **kwargs)
 
     @_inherit_docstrings(pandas.DataFrame.max, apilink="pandas.DataFrame.max")
-    def _max(self, axis=None, skipna=True, level=None, numeric_only=None, **kwargs):
+    def _max(self, axis, skipna, level, numeric_only, **kwargs):
         self._validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             return self._default_to_pandas(
@@ -1825,10 +1825,10 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     def _min(
         self,
-        axis=None,
-        skipna=True,
-        level=None,
-        numeric_only=None,
+        axis,
+        skipna,
+        level,
+        numeric_only,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
@@ -2016,12 +2016,12 @@ class BasePandasDataset(BasePandasDatasetCompat):
     @_inherit_docstrings(pandas.DataFrame.rank, apilink="pandas.DataFrame.rank")
     def _rank(
         self,
-        axis=0,
-        method="average",
-        numeric_only=None,
-        na_option="keep",
-        ascending=True,
-        pct=False,
+        axis,
+        method,
+        numeric_only,
+        na_option,
+        ascending,
+        pct,
     ):
         axis = self._get_axis_number(axis)
         return self.__constructor__(
@@ -2065,9 +2065,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     def _reindex(
         self,
-        index=None,
-        columns=None,
-        copy=True,
+        index,
+        columns,
+        copy,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
@@ -2284,13 +2284,13 @@ class BasePandasDataset(BasePandasDatasetCompat):
     def _rolling(
         self,
         window,
-        min_periods=None,
-        center=False,
-        win_type=None,
-        on=None,
-        axis=0,
-        closed=None,
-        method="single",
+        min_periods,
+        center,
+        win_type,
+        on,
+        axis,
+        closed,
+        method,
     ):  # noqa: PR01, RT01, D200
         """
         Provide rolling window calculations.
@@ -2367,12 +2367,12 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     def _sample(
         self,
-        n=None,
-        frac=None,
-        replace=False,
-        weights=None,
-        random_state=None,
-        axis=None,
+        n,
+        frac,
+        replace,
+        weights,
+        random_state,
+        axis,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
@@ -2492,11 +2492,11 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     def _sem(
         self,
-        axis=None,
-        skipna=True,
-        level=None,
-        ddof=1,
-        numeric_only=None,
+        axis,
+        skipna,
+        level,
+        ddof,
+        numeric_only,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
@@ -2527,9 +2527,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             obj.set_axis(labels, axis=axis, inplace=True)
             return obj
 
-    def _shift(
-        self, periods=1, freq=None, axis=0, fill_value=None
-    ):  # noqa: PR01, RT01, D200
+    def _shift(self, periods, freq, axis, fill_value):  # noqa: PR01, RT01, D200
         """
         Shift index by desired number of periods with an optional time `freq`.
         """
@@ -2604,10 +2602,10 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     def _skew(
         self,
-        axis=None,
-        skipna=True,
-        level=None,
-        numeric_only=None,
+        axis,
+        skipna,
+        level,
+        numeric_only,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
@@ -2689,11 +2687,11 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     def _std(
         self,
-        axis=None,
-        skipna=True,
-        level=None,
-        ddof=1,
-        numeric_only=None,
+        axis,
+        skipna,
+        level,
+        ddof,
+        numeric_only,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
@@ -2996,11 +2994,11 @@ class BasePandasDataset(BasePandasDatasetCompat):
     )
     def _value_counts(
         self,
-        subset: Sequence[Hashable] = None,
-        normalize: bool = False,
-        sort: bool = True,
-        ascending: bool = False,
-        dropna: bool = True,
+        subset: Sequence[Hashable],
+        normalize: bool,
+        sort: bool,
+        ascending: bool,
+        dropna: bool,
     ):
         if subset is None:
             subset = self._query_compiler.columns
@@ -3018,7 +3016,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         return counted_values
 
     def _var(
-        self, axis=None, skipna=True, level=None, ddof=1, numeric_only=None, **kwargs
+        self, axis, skipna, level, ddof, numeric_only, **kwargs
     ):  # noqa: PR01, RT01, D200
         """
         Return unbiased variance over requested axis.

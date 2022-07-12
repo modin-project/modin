@@ -14,7 +14,7 @@
 """
 Module houses `Py36BaseIOCompat` class.
 
-`Py36BaseIOCompat` is base mixin for IO classes relying on older pandas.
+`Py36BaseIOCompat` is base mixin for IO classes relying on older pandas backed by Python 3.6.
 """
 
 from typing import Optional, Any

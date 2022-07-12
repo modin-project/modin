@@ -14,7 +14,8 @@
 """Module for interface for class compatibility layer for Series."""
 
 from modin.logging import ClassLogger
+from .base import BaseCompatibilityBasePandasDataset
 
 
-class BaseCompatibilitySeries(ClassLogger):
+class BaseCompatibilitySeries(BaseCompatibilityBasePandasDataset, ClassLogger):
     """Module for interface for class compatibility layer for Series."""

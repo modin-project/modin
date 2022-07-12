@@ -356,7 +356,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         return DataFrame(query_compiler=self._query_compiler.applymap(func, **kwargs))
 
     def _apply(
-        self, func, axis=0, raw=False, result_type=None, args=(), **kwargs
+        self, func, axis, raw, result_type, args, **kwargs
     ):  # noqa: PR01, RT01, D200
         """
         Apply a function along an axis of the ``DataFrame``.
@@ -984,12 +984,12 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
     def _info(
         self,
-        verbose: Optional[bool] = None,
-        buf: Optional[IO[str]] = None,
-        max_cols: Optional[int] = None,
-        memory_usage: Optional[Union[bool, str]] = None,
-        show_counts: Optional[bool] = None,
-        null_counts: Optional[bool] = None,
+        verbose: bool,
+        buf: IO[str],
+        max_cols: int,
+        memory_usage: Union[bool, str],
+        show_counts: bool,
+        null_counts: bool,
     ):  # noqa: PR01, D200
         """
         Print a concise summary of the ``DataFrame``.
@@ -1533,15 +1533,15 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
     def _pivot_table(
         self,
-        values=None,
-        index=None,
-        columns=None,
-        aggfunc="mean",
-        fill_value=None,
-        margins=False,
-        dropna=True,
-        margins_name="All",
-        observed=False,
+        values,
+        index,
+        columns,
+        aggfunc,
+        fill_value,
+        margins,
+        dropna,
+        margins_name,
+        observed,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
@@ -1623,11 +1623,11 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
     def _prod(
         self,
-        axis=None,
-        skipna=True,
-        level=None,
-        numeric_only=None,
-        min_count=0,
+        axis,
+        skipna,
+        level,
+        numeric_only,
+        min_count,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
@@ -1745,12 +1745,12 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
     def _replace(
         self,
-        to_replace=None,
-        value=None,
-        inplace=False,
-        limit=None,
-        regex=False,
-        method=None,
+        to_replace,
+        value,
+        inplace,
+        limit,
+        regex,
+        method,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -2003,11 +2003,11 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
     def _sum(
         self,
-        axis=None,
-        skipna=True,
-        level=None,
-        numeric_only=None,
-        min_count=0,
+        axis,
+        skipna,
+        level,
+        numeric_only,
+        min_count,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """

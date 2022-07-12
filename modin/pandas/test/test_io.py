@@ -1096,7 +1096,7 @@ class TestCsv:
     )
     def test_to_csv(self, header, mode):
         if "b" in mode and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-            pytest.xfail(reason="older pandas do not support to_csv with binary mode")
+            pytest.xfail(reason="older pandas does not support to_csv with binary mode")
 
         pandas_df = generate_dataframe()
         modin_df = pd.DataFrame(pandas_df)

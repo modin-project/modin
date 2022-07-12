@@ -14,8 +14,9 @@
 """
 Module houses ``LatestBaseIOCompat`` class.
 
-``LatestBaseIOCompat`` is base mixin for IO classes relying on older pandas.
+``LatestBaseIOCompat`` is base mixin for IO classes relying on modern pandas.
 """
+
 from typing import Optional, Any
 import pickle
 

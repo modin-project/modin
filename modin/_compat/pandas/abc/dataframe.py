@@ -14,9 +14,10 @@
 """Module for interface for class compatibility layer for DataFrame."""
 
 from modin.logging import ClassLogger
+from .base import BaseCompatibilityBasePandasDataset
 
 
-class BaseCompatibilityDataFrame(ClassLogger):
+class BaseCompatibilityDataFrame(BaseCompatibilityBasePandasDataset, ClassLogger):
     """Interface for compatibility layer for DataFrame."""
 
     def applymap(self, *args, **kwargs):  # noqa: GL08
