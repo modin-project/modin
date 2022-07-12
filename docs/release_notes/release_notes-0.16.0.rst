@@ -50,6 +50,8 @@ Key Features and Updates
   * FEAT-#4619: Integrate mypy static type checking (#4620)
 * New Features
   * FEAT-4463: Add experimental fuzzydata integration for testing against a randomized dataframe workflow (#4556)
+  * FEAT-#4419: Extend virtual partitioning API to pandas on Dask (#4420)
+
 
 Contributors
 ------------
