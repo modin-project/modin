@@ -125,7 +125,7 @@ def initialize_ray(
             "env_vars": {
                 "__MODIN_AUTOIMPORT_PANDAS__": "1",
                 "MODIN_LOG_MODE": LogMode.get(),
-                "MODIN_LOG_FILE_SIZE": LogFileSize.get(),
+                "MODIN_LOG_FILE_SIZE": str(LogFileSize.get()),
             }
         }
     }
