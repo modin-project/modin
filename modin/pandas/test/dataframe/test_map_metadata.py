@@ -575,10 +575,17 @@ def test_convert_dtypes(
         "e": pd.Series([10, np.nan, 20], dtype=np.dtype("float")),
         "f": pd.Series([np.nan, 100.5, 200], dtype=np.dtype("float")),
     }
+    kwargs = {
+        "infer_objects": infer_objects,
+        "convert_string": convert_string,
+        "convert_integer": convert_integer,
+        "convert_boolean": convert_boolean,
+        "convert_floating": convert_floating,
+    }
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
-    modin_result = modin_df.convert_dtypes()
-    pandas_result = pandas_df.convert_dtypes()
+    modin_result = modin_df.convert_dtypes(**kwargs)
+    pandas_result = pandas_df.convert_dtypes(**kwargs)
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
