@@ -1330,20 +1330,15 @@ class PandasDataframePartitionManager(ABC):
         np.ndarray
             A list of row-partitions that have been shuffled.
         """
-        # Convert our partitions into row partitions
-        row_partitions = cls.row_partitions(partitions)
         # Sample each partition
-        samples = [
-            partition.apply(sample_func, _impure=True) for partition in row_partitions
-        ]
+        ptn_and_samples = cls.map_axis_partitions(
+            1, partitions, sample_func, _impure=True
+        ).T
+        # Get row partitions from the samples
+        row_partitions = ptn_and_samples[0]
         # Get each sample to pass in to the pivot function
-        samples = [row.get() for frame in samples for row in frame]
+        samples = [sample.get() for sample in ptn_and_samples[1]]
         pivots = pivot_func(samples)
-        # Get each ``partition_cls`` wrapped by the ``axis_partition_cls`` (should be 1 per axis
-        # partition since  we set ``num_splits`` to 1 earlier).
-        row_partitions = [
-            partition.list_of_partitions_to_combine[0] for partition in row_partitions
-        ]
         # Gather together all of the sub-partitions
         split_row_partitions = np.array(
             [

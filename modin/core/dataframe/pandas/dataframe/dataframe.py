@@ -1747,7 +1747,6 @@ class PandasDataframe(ClassLogger):
             self._dtypes,
         )
 
-    @lazy_metadata_decorator(apply_axis="both")
     def sort_by(
         self,
         axis: Union[int, Axis],
@@ -1814,11 +1813,11 @@ class PandasDataframe(ClassLogger):
                 ]
                 # Heuristic for a "small" df we will compute quantiles over entirety of.
                 if len(df) <= A:
-                    return np.quantile(df[columns[0]], quantiles, method=method)
+                    return df, np.quantile(df[columns[0]], quantiles, method=method)
                 # Heuristic for a "medium" df where we will include first 100 (A) rows, and sample
                 # of remaining rows when computing quantiles.
                 if len(df) <= A * (1 - k) / (1 - q):
-                    return np.quantile(
+                    return df, np.quantile(
                         np.concatenate(
                             (
                                 df[columns[0]][:100].values,
@@ -1830,7 +1829,7 @@ class PandasDataframe(ClassLogger):
                     )
                 # Heuristic for a "large" df where we will sample 10% (q) of all rows to compute quantiles
                 # over.
-                return np.quantile(
+                return df, np.quantile(
                     df[columns[0]].sample(frac=q), quantiles, method=method
                 )
 
@@ -1865,6 +1864,9 @@ class PandasDataframe(ClassLogger):
                 dataframes, with the elements in the i-th split belonging to the i-th partition, as determined
                 by the quantiles we're using.
                 """
+                if not ascending and self.dtypes[columns[0]] != object:
+                    pivots = pivots[::-1]
+                na_rows = df[df[columns[0]].isna()]
                 if self.dtypes[columns[0]] != object:
                     groupby_col = np.digitize(df[columns[0]].squeeze(), pivots) - 1
                 else:
@@ -1872,6 +1874,8 @@ class PandasDataframe(ClassLogger):
                         np.searchsorted(pivots, df[columns[0]].squeeze(), side="right")
                         - 1
                     )
+                    if not ascending:
+                        groupby_col = (len(pivots) - 1) - groupby_col
                 grouped = df.groupby(groupby_col)
                 groups = [
                     grouped.get_group(i)
@@ -1879,8 +1883,12 @@ class PandasDataframe(ClassLogger):
                     else pandas.DataFrame(columns=df.columns)
                     for i in range(len(pivots))
                 ]
-                if not ascending:
-                    groups = groups[::-1]
+                index_to_insert_na_vals = (
+                    -1 if kwargs.get("na_position", "last") == "last" else 0
+                )
+                groups[index_to_insert_na_vals] = pandas.concat(
+                    [groups[index_to_insert_na_vals], na_rows]
+                )
                 return tuple(groups)
 
             new_partitions = self._partition_mgr_cls.shuffle_partitions(
@@ -1890,22 +1898,30 @@ class PandasDataframe(ClassLogger):
                 new_partitions,
                 lambda df: df.sort_values(by=columns, ascending=ascending, **kwargs),
             )
-            new_axes = [0, 0]
-            new_axes[axis.value] = self._compute_axis_labels(0, new_partitions)
+            new_axes = self.axes
+            if kwargs.get("ignore_index", False):
+                new_axes[axis.value] = RangeIndex(len(new_axes[axis.value]))
+            else:
+                new_axes[axis.value] = self._compute_axis_labels(0, new_partitions)
             new_axes[axis.value ^ 1] = self.axes[axis.value ^ 1]
             new_lengths = [0, 0]
             new_lengths = [None, None]
             new_partitions = self._partition_mgr_cls.rebalance_partitions(
                 new_partitions
             )
-            return self.__constructor__(
+            new_modin_frame = self.__constructor__(
                 new_partitions, *new_axes, *new_lengths, self.dtypes
             )
+            if kwargs.get("ignore_index", False):
+                new_modin_frame._propagate_index_objs(axis=0)
+            return new_modin_frame
         # The elif selects the case where we are only sorting by index. All partitions maintain
         # a copy of the index for their data, so if we are just sorting by index, we can make
         # column partitions, and sort each by their index in parallel, which should be faster than
         # shuffling our data and sorting.
         elif axis == Axis.ROW_WISE and len(columns) == 1 and columns[0] == "__index__":
+            # Need to ensure that index is materialized correctly.
+            self._propagate_index_objs(axis=0)
             new_partitions = self._partition_mgr_cls.map_axis_partitions(
                 axis.value,
                 self._partitions,

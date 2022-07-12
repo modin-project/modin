@@ -172,8 +172,11 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         """
         lengths = kwargs.get("_lengths", None)
         max_retries = kwargs.pop("max_retries", None)
+        num_returns = (num_splits if lengths is None else len(lengths)) * 4
+        if kwargs.get("_impure", False):
+            num_returns = 8
         return deploy_ray_func.options(
-            num_returns=(num_splits if lengths is None else len(lengths)) * 4,
+            num_returns=num_returns,
             **({"max_retries": max_retries} if max_retries is not None else {}),
         ).remote(
             PandasDataframeAxisPartition.deploy_axis_func,
