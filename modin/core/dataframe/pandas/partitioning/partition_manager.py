@@ -53,7 +53,7 @@ def wait_computations_if_benchmark_mode(func):
     if BenchmarkMode.get():
 
         @wraps(func)
-        def wait(*args, **kwargs):
+        def wait(cls, *args, **kwargs):
             """Wait for computation results."""
             result = func(*args, **kwargs)
             if isinstance(result, tuple):
@@ -69,8 +69,7 @@ def wait_computations_if_benchmark_mode(func):
             [part.drain_call_queue() for part in partitions.flatten()]
             # The partition manager invokes the relevant .wait() method under
             # the hood, which should wait in parallel for all computations to finish
-            partition_mgr_cls = args[0]
-            partition_mgr_cls.wait_partitions(partitions.flatten())
+            cls.wait_partitions(partitions.flatten())
             return result
 
         return wait
@@ -811,7 +810,7 @@ class PandasDataframePartitionManager(ABC):
     @classmethod
     def wait_partitions(cls, partitions):
         """
-        Wait on the objects wrapped by `partitions` in parallel, without materializing them.
+        Wait on the objects wrapped by `partitions`, without materializing them.
 
         This method will block until all computations in the list have completed.
 
