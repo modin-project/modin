@@ -236,7 +236,7 @@ class FileDispatcher(ClassLogger):
         return size
 
     @classmethod
-    def file_exists(cls, file_path):
+    def file_exists(cls, file_path, storage_options=None):
         """
         Check if `file_path` exists.
 
@@ -245,6 +245,8 @@ class FileDispatcher(ClassLogger):
         file_path : str
             String that represents the path to the file (paths to S3 buckets
             are also acceptable).
+        storage_options : dict, optional
+            Keyword from `read_*` functions.
 
         Returns
         -------
@@ -261,13 +263,19 @@ class FileDispatcher(ClassLogger):
                 )
                 from botocore.exceptions import NoCredentialsError
 
-                s3fs = S3FS.S3FileSystem(anon=False)
+                if storage_options is not None:
+                    new_storage_options = dict(storage_options)
+                    new_storage_options.pop("anon", None)
+                else:
+                    new_storage_options = {}
+
+                s3fs = S3FS.S3FileSystem(anon=False, **new_storage_options)
                 exists = False
                 try:
                     exists = s3fs.exists(file_path) or exists
-                except NoCredentialsError:
+                except (NoCredentialsError, PermissionError):
                     pass
-                s3fs = S3FS.S3FileSystem(anon=True)
+                s3fs = S3FS.S3FileSystem(anon=True, **new_storage_options)
                 return exists or s3fs.exists(file_path)
         return os.path.exists(file_path)
 

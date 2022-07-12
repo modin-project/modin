@@ -13,7 +13,7 @@
 
 import modin.pandas as pd
 from modin.pandas.test.utils import create_test_dfs, test_data_values, df_equals
-from modin.config import NPartitions
+from modin.config import NPartitions, Engine
 
 import pytest
 
@@ -110,3 +110,102 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
     md_df._query_compiler._modin_frame = new_modin_frame
 
     df_equals(md_df, pd_df)
+
+
+@pytest.mark.skipif(
+    Engine.get() not in ("Dask", "Ray"),
+    reason="Rebalancing partitions is only supported for Dask and Ray engines",
+)
+@pytest.mark.parametrize(
+    "test_type",
+    [
+        "many_small_dfs",
+        "concatted_df_with_small_dfs",
+        "large_df_plus_small_dfs",
+    ],
+)
+def test_rebalance_partitions(test_type):
+    if test_type == "many_small_dfs":
+        small_dfs = [
+            pd.DataFrame(
+                [[i + j for j in range(0, 1000)]],
+                columns=[f"col{j}" for j in range(0, 1000)],
+                index=pd.Index([i]),
+            )
+            for i in range(1, 100001, 1000)
+        ]
+        large_df = pd.concat(small_dfs)
+        col_length = 100
+    elif test_type == "concatted_df_with_small_dfs":
+        small_dfs = [
+            pd.DataFrame(
+                [[i + j for j in range(0, 1000)]],
+                columns=[f"col{j}" for j in range(0, 1000)],
+                index=pd.Index([i]),
+            )
+            for i in range(1, 100001, 1000)
+        ]
+        large_df = pd.concat([pd.concat(small_dfs)] + small_dfs[:3])
+        col_length = 103
+    else:
+        large_df = pd.DataFrame(
+            [[i + j for j in range(1, 1000)] for i in range(0, 100000, 1000)],
+            columns=[f"col{j}" for j in range(1, 1000)],
+            index=pd.Index(list(range(0, 100000, 1000))),
+        )
+        small_dfs = [
+            pd.DataFrame(
+                [[i + j for j in range(0, 1000)]],
+                columns=[f"col{j}" for j in range(0, 1000)],
+                index=pd.Index([i]),
+            )
+            for i in range(1, 4001, 1000)
+        ]
+        large_df = pd.concat([large_df] + small_dfs[:3])
+        col_length = 103
+    large_modin_frame = large_df._query_compiler._modin_frame
+    assert large_modin_frame._partitions.shape == (
+        NPartitions.get(),
+        NPartitions.get(),
+    ), "Partitions were not rebalanced after concat."
+    assert all(
+        isinstance(ptn, large_modin_frame._partition_mgr_cls._column_partitions_class)
+        for ptn in large_modin_frame._partitions.flatten()
+    )
+    # The following check tests that we can correctly form full-axis virtual partitions
+    # over the orthogonal axis from non-full-axis virtual partitions.
+
+    def col_apply_func(col):
+        assert len(col) == col_length, "Partial axis partition detected."
+        return col + 1
+
+    large_df = large_df.apply(col_apply_func)
+    new_large_modin_frame = large_df._query_compiler._modin_frame
+    assert new_large_modin_frame._partitions.shape == (
+        NPartitions.get(),
+        NPartitions.get(),
+    ), "Partitions list shape is incorrect."
+    assert all(
+        isinstance(ptn, new_large_modin_frame._partition_mgr_cls._partition_class)
+        for ptn in new_large_modin_frame._partitions.flatten()
+    ), "Partitions are not block partitioned after apply."
+    large_df = pd.DataFrame(
+        query_compiler=large_df._query_compiler.__constructor__(large_modin_frame)
+    )
+    # The following check tests that we can correctly form full-axis virtual partitions
+    # over the same axis from non-full-axis virtual partitions.
+
+    def row_apply_func(row):
+        assert len(row) == 1000, "Partial axis partition detected."
+        return row + 1
+
+    large_df = large_df.apply(row_apply_func, axis=1)
+    new_large_modin_frame = large_df._query_compiler._modin_frame
+    assert new_large_modin_frame._partitions.shape == (
+        4,
+        4,
+    ), "Partitions list shape is incorrect."
+    assert all(
+        isinstance(ptn, new_large_modin_frame._partition_mgr_cls._partition_class)
+        for ptn in new_large_modin_frame._partitions.flatten()
+    ), "Partitions are not block partitioned after apply."

@@ -22,6 +22,10 @@ from .rpyc_proxy import WrappingConnection, WrappingService
 from .tracing.tracing_connection import TracingWrappingConnection
 from modin.config import DoTraceRpyc
 
+_IS_PYTEST_DEBUG = (
+    any(arg.endswith("pytest") for arg in sys.argv) and "--pdb" in sys.argv
+)
+
 
 class LocalWrappingConnection(
     TracingWrappingConnection if DoTraceRpyc.get() else WrappingConnection
@@ -57,9 +61,9 @@ class LocalConnection(Connection):
             redirect.write(f"Running: {cmd}\n")
         return subprocess.Popen(
             cmd,
-            stdin=subprocess.DEVNULL,
-            stdout=redirect,
-            stderr=redirect,
+            stdin=None if _IS_PYTEST_DEBUG and not capture_out else subprocess.DEVNULL,
+            stdout=None if _IS_PYTEST_DEBUG and not capture_out else redirect,
+            stderr=None if _IS_PYTEST_DEBUG and not capture_out else redirect,
         )
 
     @staticmethod
