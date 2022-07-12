@@ -1747,6 +1747,7 @@ class PandasDataframe(ClassLogger):
             self._dtypes,
         )
 
+    # @lazy_metadata_decorator(apply_axis="both")
     def sort_by(
         self,
         axis: Union[int, Axis],
@@ -1782,6 +1783,9 @@ class PandasDataframe(ClassLogger):
         if axis == Axis.ROW_WISE and not (
             len(columns) == 1 and columns[0] == "__index__"
         ):
+            # If this df is empty, we don't want to try and shuffle or sort.
+            if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
+                return self.copy()
             if self.dtypes[columns[0]] == object:
                 # This means we are not sorting numbers, so we need our quantiles to not try
                 # arithmetic on the values.
@@ -1903,6 +1907,9 @@ class PandasDataframe(ClassLogger):
                 new_axes[axis.value] = RangeIndex(len(new_axes[axis.value]))
             else:
                 new_axes[axis.value] = self._compute_axis_labels(0, new_partitions)
+            new_axes[axis.value] = new_axes[axis.value].set_names(
+                self.axes[axis.value].names
+            )
             new_axes[axis.value ^ 1] = self.axes[axis.value ^ 1]
             new_lengths = [0, 0]
             new_lengths = [None, None]
