@@ -55,7 +55,8 @@ def get_handle(
                 pass
 
 
-def pd_pivot_table(df, **kwargs):
+def pd_pivot_table(df, **kwargs):  # noqa: PR01, RT01
+    """Perform pandas pivot_table against a dataframe ignoring unsupported args."""
     unsupported_sort = kwargs.pop("sort", None)
     assert unsupported_sort is None
     return df.pivot_table(**kwargs)

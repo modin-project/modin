@@ -16,7 +16,8 @@
 from pandas.io.common import get_handle
 
 
-def pd_pivot_table(df, **kwargs):
+def pd_pivot_table(df, **kwargs):  # noqa: PR01, RT01
+    """Perform pandas pivot_table against a dataframe."""
     return df.pivot_table(**kwargs)
 
 
