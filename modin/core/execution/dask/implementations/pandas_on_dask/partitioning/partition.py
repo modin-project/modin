@@ -342,8 +342,8 @@ def _concat_splits(*splits):
 
     Parameters
     ----------
-    splits : List[Future]
-        List of ObjectIDs that correspond to splits to concatenate
+    *splits : List[Future]
+        List of ObjectIDs that correspond to splits to concatenate.
 
     Returns
     -------
