@@ -1024,7 +1024,7 @@ class TestCsv:
     def test_read_csv_default_to_pandas_url(self):
         # We haven't implemented read_csv from https, but if it's implemented, then this needs to change
         if self._has_pandas_fallback_reason():
-            warning_match = "No file with name"
+            warning_match = "No such file"
         else:
             warning_match = ""
         eval_io(
