@@ -1747,6 +1747,7 @@ class PandasDataframe(ClassLogger):
             self._dtypes,
         )
 
+    @lazy_metadata_decorator(apply_axis="both")
     def sort_by(
         self,
         axis: Union[int, Axis],
@@ -1910,12 +1911,14 @@ class PandasDataframe(ClassLogger):
                 self._partitions,
                 lambda df: df.sort_index(ascending=ascending, **kwargs),
             )
-            new_axes = [0, 0]
-            new_axes[axis.value] = self._compute_axis_labels(0, new_partitions).rename(
-                self.axes[axis.value].names[0]
+            new_axes = self.axes
+            new_axes[axis.value] = self.axes[axis.value].sort_values(
+                ascending=ascending,
+                return_indexer=False,
+                na_position=kwargs.pop("na_position", "last"),
+                key=kwargs.pop("key", None),
             )
             new_axes[axis.value ^ 1] = self.axes[axis.value ^ 1]
-            new_lengths = [0, 0]
             new_lengths = [None, None]
             return self.__constructor__(
                 new_partitions, *new_axes, *new_lengths, self.dtypes
