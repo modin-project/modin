@@ -47,9 +47,6 @@ class LatestCompatibleDataFrame(BaseCompatibilityDataFrame):  # noqa: PR01
     def applymap(
         self, func, na_action: Optional[str] = None, **kwargs
     ):  # noqa: PR01, RT01, D200
-        """
-        Apply a function to a ``DataFrame`` elementwise.
-        """
         return self._applymap(func, na_action=na_action, **kwargs)
 
     def apply(
@@ -135,9 +132,6 @@ class LatestCompatibleDataFrame(BaseCompatibilityDataFrame):  # noqa: PR01
         limit=None,
         tolerance=None,
     ):  # noqa: PR01, RT01, D200
-        """
-        Conform ``DataFrame`` to new index with optional filling logic.
-        """
         axis = self._get_axis_number(axis)
         if axis == 0 and labels is not None:
             index = labels

@@ -363,7 +363,15 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         """
         axis = self._get_axis_number(axis)
         query_compiler = super(DataFrame, self)._apply(
-            func, axis=axis, raw=raw, result_type=result_type, args=args, **kwargs
+            func,
+            axis=axis,
+            broadcast=None,
+            raw=raw,
+            reduce=None,
+            result_type=result_type,
+            convert_dtype=None,
+            args=args,
+            **kwargs,
         )
         if not isinstance(query_compiler, type(self._query_compiler)):
             # A scalar was returned

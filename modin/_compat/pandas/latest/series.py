@@ -28,9 +28,6 @@ class LatestCompatibleSeries(BaseCompatibilitySeries):
         return self._apply(func, convert_dtype=convert_dtype, args=args, **kwargs)
 
     def between(self, left, right, inclusive="both"):  # noqa: PR01, RT01, D200
-        """
-        Return boolean Series equivalent to left <= series <= right.
-        """
         return self._between(left, right, inclusive=inclusive)
 
     def info(

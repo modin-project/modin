@@ -30,9 +30,6 @@ class Python36CompatibilitySeries(BaseCompatibilitySeries):
         return self._apply(func, convert_dtype=convert_dtype, args=args, **kwds)
 
     def between(self, left, right, inclusive=True):  # noqa: PR01, RT01, D200
-        """
-        Return boolean Series equivalent to left <= series <= right.
-        """
         return self._between(left, right, inclusive=inclusive)
 
     def kurt(

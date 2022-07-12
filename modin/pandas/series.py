@@ -1485,6 +1485,7 @@ class Series(SeriesCompat, BasePandasDataset):
             )
         return super(Series, self)._reindex(
             index=index,
+            columns=None,
             method=method,
             level=level,
             copy=copy,

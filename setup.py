@@ -2,13 +2,13 @@ from setuptools import setup, find_packages
 import versioneer
 import sys
 
-PANDAS_VERSION = "1.4.3" if sys.version_info() >= (3, 8) else "1.1.5"
+PANDAS_VERSION = "1.4.3" if sys.version_info >= (3, 8) else "1.1.5"
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 dask_deps = ["dask>=2.22.0,<2022.2.0", "distributed>=2.22.0,<2022.2.0"]
-if sys.version_info() < (3, 8):
+if sys.version_info < (3, 8):
     dask_deps.append("pickle5")
 
 ray_deps = [
