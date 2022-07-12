@@ -3016,7 +3016,6 @@ class DataFrame(BasePandasDataset):
         elif isinstance(key, DataFrame):
             return self.where(key)
         elif is_mi_columns:
-            print("we are here???")
             return self._default_to_pandas(pandas.DataFrame.__getitem__, key)
             # return self._getitem_multilevel(key)
         else:
