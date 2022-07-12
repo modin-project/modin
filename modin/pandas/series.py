@@ -654,7 +654,18 @@ class Series(SeriesCompat, BasePandasDataset):
             or return_type not in ["DataFrame", "Series"]
         ):
             # use the explicit non-Compat parent to avoid infinite recursion
-            result = BasePandasDataset._apply(self, func, *args, **kwargs)
+            result = BasePandasDataset._apply(
+                self,
+                func,
+                axis=0,
+                broadcast=None,
+                raw=False,
+                reduce=None,
+                result_type=None,
+                convert_dtype=convert_dtype,
+                args=args,
+                **kwargs,
+            )
         else:
             # handle ufuncs and lambdas
             if kwargs or args and not isinstance(func, np.ufunc):
