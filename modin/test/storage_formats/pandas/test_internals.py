@@ -111,6 +111,7 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
 
     df_equals(md_df, pd_df)
 
+
 @pytest.mark.skipif(
     Engine.get() not in ("Dask", "Ray"),
     reason="Rebalancing partitions is only supported for Dask and Ray engines",

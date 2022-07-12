@@ -1296,7 +1296,7 @@ class PandasDataframePartitionManager(ABC):
     @classmethod
     def rebalance_partitions(cls, partitions):
         """
-        Rebalance a 2-d array of partitions if we are using PandasOnRay or PandasOnDask executions.
+        Rebalance a 2-d array of partitions if we are using ``PandasOnRay`` or ``PandasOnDask`` executions.
 
         For all other executions, the partitions are returned unchanged.
 
