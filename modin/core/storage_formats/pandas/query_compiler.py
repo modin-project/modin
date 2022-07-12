@@ -55,7 +55,7 @@ from modin.core.dataframe.algebra import (
     is_reduce_function,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
-from modin._compat.methods import pd_pivot_table
+from modin._compat.core.pd_common import pd_pivot_table
 
 
 def _get_axis(axis):

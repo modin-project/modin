@@ -21,7 +21,7 @@ from modin.utils import _inherit_docstrings
 
 
 @_inherit_docstrings(pandas.Series)
-class Python36CompatibilitySeries(BaseCompatibilitySeries):
+class Python36CompatibleSeries(BaseCompatibilitySeries):
     """Compatibility layer for 'Python 3.6 pandas' for Series."""
 
     def apply(

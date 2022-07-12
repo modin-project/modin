@@ -1,5 +1,11 @@
+===================================
+Pandas backwards compatibility mode
+===================================
+
+Modin has certain limited support for running with legacy pandas versions.
+
 Motivation for compatibility mode
-=================================
+---------------------------------
 
 Modin aims to keep compatibility with latest pandas release, hopefully catching up each release
 within a few days.
@@ -13,7 +19,7 @@ works, but please note that the support is "best possible effort" (e.g. not all 
 are worth fixing).
 
 Known issues with pandas 1.1.x
-==============================
+------------------------------
 
 * ``pd.append()`` does not preserve the order of columns in older pandas while Modin does
 * ``.astype()`` produces different error type on incompatible dtypes
@@ -25,5 +31,7 @@ Known issues with pandas 1.1.x
 * ``.agg(int-value)`` produces TypeError in older pandas but Modin raises AssertionError
 * ``Series.reset_index(drop=True)`` does not ignore ``name`` in older pandas while Modin ignores it
 * ``.sort_index(ascending=None)`` does not raise ValueError in older pandas while Modin raises it
+
+Please keep in mind that there are probably more issues which are not yet uncovered!
 
 .. _`pandas-dev#10261`: https://github.com/pandas-dev/pandas/issues/10261

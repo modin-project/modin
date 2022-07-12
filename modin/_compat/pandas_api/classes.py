@@ -20,7 +20,7 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
         Python36CompatibleBasePandasDataset as BasePandasDatasetCompat,
     )
     from .py36 import Python36CompatibleDataFrame as DataFrameCompat
-    from .py36 import Python36CompatibilitySeries as SeriesCompat
+    from .py36 import Python36CompatibleSeries as SeriesCompat
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
     from .latest import (
         LatestCompatibleBasePandasDataset as BasePandasDatasetCompat,

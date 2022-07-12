@@ -15,4 +15,9 @@
 
 from pandas.io.common import get_handle
 
-__all__ = ["get_handle"]
+
+def pd_pivot_table(df, **kwargs):
+    return df.pivot_table(**kwargs)
+
+
+__all__ = ["get_handle", "pd_pivot_table"]

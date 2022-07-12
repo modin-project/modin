@@ -55,4 +55,10 @@ def get_handle(
                 pass
 
 
-__all__ = ["get_handle"]
+def pd_pivot_table(df, **kwargs):
+    unsupported_sort = kwargs.pop("sort", None)
+    assert unsupported_sort is None
+    return df.pivot_table(**kwargs)
+
+
+__all__ = ["get_handle", "pd_pivot_table"]

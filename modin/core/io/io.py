@@ -28,7 +28,7 @@ from modin.error_message import ErrorMessage
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
 
-from modin._compat.io.base_io import (
+from modin._compat.core.base_io import (
     BaseIOCompat,
     _doc_default_io_method,
     _doc_returns_qc,

@@ -48,7 +48,7 @@ from .series import Series
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .groupby import DataFrameGroupBy
 from .accessor import CachedAccessor, SparseFrameAccessor
-from modin._compat.pandas.classes import DataFrameCompat
+from modin._compat.pandas_api.classes import DataFrameCompat
 
 
 @_inherit_docstrings(

@@ -11,11 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module for interface for class compatibility layer for Series."""
+from .base import Python36CompatibleBasePandasDataset
+from .dataframe import Python36CompatibleDataFrame
+from .series import Python36CompatibleSeries
 
-from modin.logging import ClassLogger
-from .base import BaseCompatibilityBasePandasDataset
-
-
-class BaseCompatibilitySeries(BaseCompatibilityBasePandasDataset, ClassLogger):
-    """Module for interface for class compatibility layer for Series."""
+__all__ = [
+    "Python36CompatibleBasePandasDataset",
+    "Python36CompatibleDataFrame",
+    "Python36CompatibleSeries",
+]
