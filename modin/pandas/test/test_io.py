@@ -2328,7 +2328,7 @@ class TestFeather:
     )
     @pytest.mark.skipif(
         PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
-        reason="older pandas read_faether does not support storage_options",
+        reason="older pandas read_feather does not support storage_options",
     )
     def test_read_feather_s3(self, storage_options):
         eval_io(

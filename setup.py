@@ -1,5 +1,8 @@
 from setuptools import setup, find_packages
 import versioneer
+import sys
+
+PANDAS_VERSION = "1.4.3" if sys.version_info() >= (3, 8) else "1.1.5"
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
@@ -49,7 +52,7 @@ setup(
     url="https://github.com/modin-project/modin",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    install_requires=["pandas==1.4.3", "packaging", "numpy>=1.18.5", "fsspec", "psutil"],
+    install_requires=[f"pandas=={PANDAS_VERSION}", "packaging", "numpy>=1.18.5", "fsspec", "psutil"],
     extras_require={
         # can be installed by pip install modin[dask]
         "dask": dask_deps,
@@ -59,5 +62,7 @@ setup(
         "sql": sql_deps,
         "all": all_deps,
     },
-    python_requires=">=3.8",
+    # there's no OR operator for python_requires, so declare that we support from
+    # 3.6 onwards but don't support 3.7, which would mean either 3.6 or >=3.8
+    python_requires=">=3.6, !=3.7",
 )
