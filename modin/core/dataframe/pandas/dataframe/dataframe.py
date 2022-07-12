@@ -20,8 +20,7 @@ for pandas storage format.
 from collections import OrderedDict
 import numpy as np
 import pandas
-import datetime
-from pandas.core.indexes.api import ensure_index, Index, RangeIndex
+from pandas.core.indexes.api import ensure_index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 from pandas._libs.lib import no_default
 from typing import List, Hashable, Optional, Callable, Union, Dict
@@ -1747,7 +1746,7 @@ class PandasDataframe(ClassLogger):
             self._dtypes,
         )
 
-    # @lazy_metadata_decorator(apply_axis="both")
+    @lazy_metadata_decorator(apply_axis="both")
     def sort_by(
         self,
         axis: Union[int, Axis],
@@ -1906,12 +1905,17 @@ class PandasDataframe(ClassLogger):
             if kwargs.get("ignore_index", False):
                 new_axes[axis.value] = RangeIndex(len(new_axes[axis.value]))
             else:
-                new_axes[axis.value] = self._compute_axis_labels(0, new_partitions)
+                new_axes[axis.value] = self._compute_axis_labels(
+                    axis.value, new_partitions
+                )
+            if isinstance(self.axes[axis.value], pandas.MultiIndex):
+                new_axes[axis.value] = pandas.MultiIndex.from_tuples(
+                    new_axes[axis.value].values
+                )
             new_axes[axis.value] = new_axes[axis.value].set_names(
                 self.axes[axis.value].names
             )
             new_axes[axis.value ^ 1] = self.axes[axis.value ^ 1]
-            new_lengths = [0, 0]
             new_lengths = [None, None]
             new_partitions = self._partition_mgr_cls.rebalance_partitions(
                 new_partitions
@@ -1927,8 +1931,6 @@ class PandasDataframe(ClassLogger):
         # column partitions, and sort each by their index in parallel, which should be faster than
         # shuffling our data and sorting.
         elif axis == Axis.ROW_WISE and len(columns) == 1 and columns[0] == "__index__":
-            # Need to ensure that index is materialized correctly.
-            self._propagate_index_objs(axis=0)
             new_partitions = self._partition_mgr_cls.map_axis_partitions(
                 axis.value,
                 self._partitions,
@@ -1943,9 +1945,10 @@ class PandasDataframe(ClassLogger):
             )
             new_axes[axis.value ^ 1] = self.axes[axis.value ^ 1]
             new_lengths = [None, None]
-            return self.__constructor__(
+            new_modin_frame = self.__constructor__(
                 new_partitions, *new_axes, *new_lengths, self.dtypes
             )
+            return new_modin_frame
 
     @lazy_metadata_decorator(apply_axis="both")
     def filter(self, axis: Union[Axis, int], condition: Callable) -> "PandasDataframe":
