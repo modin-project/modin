@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.8.x"
           architecture: "x64"
@@ -52,7 +52,7 @@ jobs:
       # install test dependencies
       - run: pip install pytest pytest-cov black flake8 flake8-print flake8-no-implicit-concat
         if: matrix.execution != 'omnisci_on_native'
-      - run: conda install black flake8 flake8-print jupyter nbformat nbconvert -c conda-forge
+      - run: conda install flake8-print jupyter nbformat nbconvert -c conda-forge
         if: matrix.execution == 'omnisci_on_native'
       - run: pip list
         if: matrix.execution != 'omnisci_on_native'

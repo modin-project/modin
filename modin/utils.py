@@ -36,9 +36,6 @@ from modin.config import Engine, StorageFormat, IsExperimental
 from modin._version import get_versions
 
 MIN_RAY_VERSION = version.parse("1.4.0")
-# TODO(https://github.com/modin-project/modin/issues/4564):
-# once ray can go past 1.13.0, remove this constant and stop checking it.
-MAX_RAY_VERSION_EXCLUSIVE = version.parse("1.13.0")
 MIN_DASK_VERSION = version.parse("2.22.0")
 
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"

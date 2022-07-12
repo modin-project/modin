@@ -136,6 +136,7 @@ class DataFrameGroupBy(ClassLogger):
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_mean,
                 numeric_only=numeric_only,
+                agg_kwargs=dict(numeric_only=numeric_only),
             )
         )
 
@@ -513,6 +514,13 @@ class DataFrameGroupBy(ClassLogger):
                 func, **kwargs
             )
             func_dict = {col: try_get_str_func(fn) for col, fn in func_dict.items()}
+            if any(isinstance(fn, list) for fn in func_dict.values()):
+                # multicolumn case
+                # putting functions in a `list` allows to achieve multicolumn in each partition
+                func_dict = {
+                    col: fn if isinstance(fn, list) else [fn]
+                    for col, fn in func_dict.items()
+                }
             if (
                 relabeling_required
                 and not self._as_index

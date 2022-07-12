@@ -291,5 +291,41 @@ or
     df = pd.DataFrame([0, 1, 2, 3])
     print(df)
 
+Spurious error "cannot import partially initialised pandas module" on custom Ray cluster
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+If you're using some pre-configured Ray cluster to run Modin, it's possible you would
+be seeing spurious errors like
+
+.. code-block::
+
+  ray.exceptions.RaySystemError: System error: partially initialized module 'pandas' has no attribute 'core' (most likely due to a circular import)
+  traceback: Traceback (most recent call last):
+    File "/usr/share/miniconda/envs/modin/lib/python3.8/site-packages/ray/serialization.py", line 340, in deserialize_objects
+      obj = self._deserialize_object(data, metadata, object_ref)
+    File "/usr/share/miniconda/envs/modin/lib/python3.8/site-packages/ray/serialization.py", line 237, in _deserialize_object
+      return self._deserialize_msgpack_data(data, metadata_fields)
+    File "/usr/share/miniconda/envs/modin/lib/python3.8/site-packages/ray/serialization.py", line 192, in _deserialize_msgpack_data
+      python_objects = self._deserialize_pickle5_data(pickle5_data)
+    File "/usr/share/miniconda/envs/modin/lib/python3.8/site-packages/ray/serialization.py", line 180, in _deserialize_pickle5_data
+      obj = pickle.loads(in_band, buffers=buffers)
+    File "/usr/share/miniconda/envs/modin/lib/python3.8/site-packages/pandas/__init__.py", line 135, in <module>
+      from pandas import api, arrays, errors, io, plotting, testing, tseries
+    File "/usr/share/miniconda/envs/modin/lib/python3.8/site-packages/pandas/testing.py", line 6, in <module>
+      from pandas._testing import (
+    File "/usr/share/miniconda/envs/modin/lib/python3.8/site-packages/pandas/_testing/__init__.py", line 979, in <module>
+      cython_table = pd.core.common._cython_table.items()
+  AttributeError: partially initialized module 'pandas' has no attribute 'core' (most likely due to a circular import)
+
+**Solution**
+
+Modin contains a workaround that should automatically do ``import pandas`` upon worker process starts.
+
+It is triggered by the presence of non-empty ``__MODIN_AUTOIMPORT_PANDAS__`` environment variable which
+Modin sets up automatically on the Ray clusters it spawns, but it might be missing on pre-configured clusters.
+
+So if you're seeing the issue like shown above, please make sure you set this environment variable on all
+worker nodes of your cluster before actually spawning the workers.
+
 .. _issue: https://github.com/modin-project/modin/issues
 .. _Slack: https://modin.org/slack.html

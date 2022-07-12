@@ -1,11 +1,9 @@
-pandas==1.4.2
+pandas==1.4.3
 numpy>=1.18.5
 pyarrow>=4.0.1
 dask[complete]>=2.22.0,<2022.2.0
 distributed>=2.22.0,<2022.2.0
-# Pin ray to < 1.13.0 to work around GH#4564
-# TODO(https://github.com/modin-project/modin/issues/4564): let ray go past 1.13.0.
-ray[default]>=1.4.0,<1.13.0
+ray[default]>=1.4.0
 redis>=3.5.0,<4.0.0
 psutil
 fsspec
@@ -41,3 +39,7 @@ black
 flake8
 # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
 numpydoc==1.1.0
+# experimental version of fuzzydata requires at least 0.0.6 to successfully resolve all dependencies
+fuzzydata>=0.0.6
+mypy
+pandas-stubs

@@ -222,10 +222,7 @@ class BasePandasDataset(ClassLogger):
         self,
         other,
         axis,
-        numeric_only=False,
-        numeric_or_time_only=False,
-        numeric_or_object_only=False,
-        comparison_dtypes_only=False,
+        dtype_check=False,
         compare_index=False,
     ):
         """
@@ -239,14 +236,8 @@ class BasePandasDataset(ClassLogger):
             Specifies axis along which to do validation. When `1` or `None`
             is specified, validation is done along `index`, if `0` is specified
             validation is done along `columns` of `other` frame.
-        numeric_only : bool, default: False
-            Validates that both frames have only numeric dtypes.
-        numeric_or_time_only : bool, default: False
-            Validates that both frames have either numeric or time dtypes.
-        numeric_or_object_only : bool, default: False
-            Validates that both frames have either numeric or object dtypes.
-        comparison_dtypes_only : bool, default: False
-            Validates that both frames have either numeric or time or equal dtypes.
+        dtype_check : bool, default: False
+            Validates that both frames have compatible dtypes.
         compare_index : bool, default: False
             Compare Index if True.
 
@@ -300,22 +291,10 @@ class BasePandasDataset(ClassLogger):
             if not self.index.equals(other.index):
                 raise TypeError("Cannot perform operation with non-equal index")
         # Do dtype checking.
-        if numeric_only:
-            if not all(
-                is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype)
-                for self_dtype, other_dtype in zip(self._get_dtypes(), other_dtypes)
-            ):
-                raise TypeError("Cannot do operation on non-numeric dtypes")
-        elif numeric_or_object_only:
+        if dtype_check:
             if not all(
                 (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
                 or (is_object_dtype(self_dtype) and is_object_dtype(other_dtype))
-                for self_dtype, other_dtype in zip(self._get_dtypes(), other_dtypes)
-            ):
-                raise TypeError("Cannot do operation non-numeric dtypes")
-        elif comparison_dtypes_only:
-            if not all(
-                (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
                 or (
                     is_datetime_or_timedelta_dtype(self_dtype)
                     and is_datetime_or_timedelta_dtype(other_dtype)
@@ -323,21 +302,7 @@ class BasePandasDataset(ClassLogger):
                 or is_dtype_equal(self_dtype, other_dtype)
                 for self_dtype, other_dtype in zip(self._get_dtypes(), other_dtypes)
             ):
-                raise TypeError(
-                    "Cannot do operation non-numeric objects with numeric objects"
-                )
-        elif numeric_or_time_only:
-            if not all(
-                (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
-                or (
-                    is_datetime_or_timedelta_dtype(self_dtype)
-                    and is_datetime_or_timedelta_dtype(other_dtype)
-                )
-                for self_dtype, other_dtype in zip(self._get_dtypes(), other_dtypes)
-            ):
-                raise TypeError(
-                    "Cannot do operation non-numeric objects with numeric objects"
-                )
+                raise TypeError("Cannot do operation with improper dtypes")
         return result
 
     def _validate_function(self, func, on_invalid=None):
@@ -416,7 +381,7 @@ class BasePandasDataset(ClassLogger):
             return self._default_to_pandas(
                 getattr(self._pandas_class, op), other, **kwargs
             )
-        other = self._validate_other(other, axis, numeric_or_object_only=True)
+        other = self._validate_other(other, axis, dtype_check=True)
         exclude_list = [
             "__add__",
             "__radd__",

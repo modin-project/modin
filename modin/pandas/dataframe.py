@@ -41,6 +41,7 @@ from modin.config import Engine, IsExperimental, PersistentPickle
 from .utils import (
     from_pandas,
     from_non_pandas,
+    broadcast_item,
 )
 from . import _update_engine
 from .iterator import PartitionIterator
@@ -2498,7 +2499,11 @@ class DataFrame(BasePandasDataset):
             pass
         elif key in self and key not in dir(self):
             self.__setitem__(key, value)
-        elif isinstance(value, pandas.Series):
+            # Note: return immediately so we don't keep this `key` as dataframe state.
+            # `__getattr__` will return the columns not present in `dir(self)`, so we do not need
+            # to manually track this state in the `dir`.
+            return
+        elif is_list_like(value):
             warnings.warn(
                 "Modin doesn't allow columns to be created via a new attribute name - see "
                 + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
@@ -2544,6 +2549,26 @@ class DataFrame(BasePandasDataset):
                         raise ValueError("Array must be same shape as DataFrame")
                     key = DataFrame(key, columns=self.columns)
                 return self.mask(key, value, inplace=True)
+
+            if isinstance(key, list) and all((x in self.columns for x in key)):
+                if is_list_like(value):
+                    if not (hasattr(value, "shape") and hasattr(value, "ndim")):
+                        value = np.array(value)
+                    if len(key) != value.shape[-1]:
+                        raise ValueError("Columns must be same length as key")
+                item = broadcast_item(
+                    self,
+                    slice(None),
+                    key,
+                    value,
+                    need_columns_reindex=False,
+                )
+                new_qc = self._query_compiler.write_items(
+                    slice(None), self.columns.get_indexer_for(key), item
+                )
+                self._update_inplace(new_qc)
+                # self.loc[:, key] = value
+                return
 
             def setitem_unhashable_key(df, value):
                 df[key] = value
