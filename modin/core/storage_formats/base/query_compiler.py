@@ -1394,6 +1394,23 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, dtype=col_dtypes, **kwargs
         )
 
+    def convert_dtypes(
+        self,
+        infer_objects: bool = True,
+        convert_objects: bool = True,
+        convert_integer: bool = True,
+        convert_boolean: bool = True,
+        convert_floating: bool = True,
+    ):
+        return DataFrameDefault.register(pandas.DataFrame.convert_dtypes)(
+            self,
+            infer_objects=infer_objects,
+            convert_objects=convert_objects,
+            convert_integer=convert_integer,
+            convert_boolean=convert_boolean,
+            convert_floating=convert_floating,
+        )
+
     @property
     def dtypes(self):
         """

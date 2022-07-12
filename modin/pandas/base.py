@@ -1669,12 +1669,13 @@ class BasePandasDataset(ClassLogger):
         """
         Convert columns to best possible dtypes using dtypes supporting ``pd.NA``.
         """
-        return self._default_to_pandas(
-            "convert_dtypes",
-            infer_objects=infer_objects,
-            convert_string=convert_string,
-            convert_integer=convert_integer,
-            convert_boolean=convert_boolean,
+        return self.__constructor__(
+            query_compiler=self._query_compiler.convert_dtypes(
+                infer_objects=infer_objects,
+                convert_string=convert_string,
+                convert_integer=convert_integer,
+                convert_boolean=convert_boolean,
+            )
         )
 
     def isin(self, values):  # noqa: PR01, RT01, D200

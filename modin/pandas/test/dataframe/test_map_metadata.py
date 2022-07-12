@@ -557,6 +557,31 @@ def test_astype_category_large():
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
+@pytest.mark.parametrize("infer_objects", (True, False))
+@pytest.mark.parametrize("convert_string", (True, False))
+@pytest.mark.parametrize("convert_integer", (True, False))
+@pytest.mark.parametrize("convert_boolean", (True, False))
+@pytest.mark.parametrize("convert_floating", (True, False))
+def test_convert_dtypes(
+    infer_objects, convert_string, convert_integer, convert_boolean, convert_floating
+):
+    # Sanity check, copied from pandas documentation:
+    # https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.convert_dtypes.html
+    data = {
+        "a": pd.Series([1, 2, 3], dtype=np.dtype("int32")),
+        "b": pd.Series(["x", "y", "z"], dtype=np.dtype("O")),
+        "c": pd.Series([True, False, np.nan], dtype=np.dtype("O")),
+        "d": pd.Series(["h", "i", np.nan], dtype=np.dtype("O")),
+        "e": pd.Series([10, np.nan, 20], dtype=np.dtype("float")),
+        "f": pd.Series([np.nan, 100.5, 200], dtype=np.dtype("float")),
+    }
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+    modin_result = modin_df.convert_dtypes()
+    pandas_result = pandas_df.convert_dtypes()
+    assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("bound_type", ["list", "series"], ids=["list", "series"])
