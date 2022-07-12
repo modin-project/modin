@@ -53,7 +53,7 @@ def wait_computations_if_benchmark_mode(func):
     if BenchmarkMode.get():
 
         @wraps(func)
-        def wait(cls, *args, **kwargs):
+        def wait(*args, **kwargs):
             """Wait for computation results."""
             result = func(*args, **kwargs)
             if isinstance(result, tuple):
@@ -69,7 +69,10 @@ def wait_computations_if_benchmark_mode(func):
             [part.drain_call_queue() for part in partitions.flatten()]
             # The partition manager invokes the relevant .wait() method under
             # the hood, which should wait in parallel for all computations to finish
-            cls.wait_partitions(partitions.flatten())
+            # (We can't just add a `cls` argument to this `wait` function, since doing so
+            # seems to be incompatible with the way function decorators work)
+            partition_mgr_cls = args[0]
+            partition_mgr_cls.wait_partitions(partitions.flatten())
             return result
 
         return wait
