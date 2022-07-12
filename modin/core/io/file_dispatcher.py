@@ -80,12 +80,11 @@ class OpenFile:
             The opened file.
         """
         try:
-            from botocore.exceptions import NoCredentialsError, EndpointConnectionError
+            from botocore.exceptions import NoCredentialsError
 
             credential_error_type = (
                 NoCredentialsError,
                 PermissionError,
-                EndpointConnectionError,
             )
         except ModuleNotFoundError:
             credential_error_type = ()
