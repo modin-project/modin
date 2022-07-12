@@ -121,10 +121,10 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
     [
         "many_small_dfs",
         "concatted_df_with_small_dfs",
-        "large_df_plust_small_dfs",
+        "large_df_plus_small_dfs",
     ],
 )
-def test_rebalance_partitions(test_type, large_df, col_length):
+def test_rebalance_partitions(test_type):
     if test_type == "many_small_dfs":
         small_dfs = [
             pd.DataFrame(

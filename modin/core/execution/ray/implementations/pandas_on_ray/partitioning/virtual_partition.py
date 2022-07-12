@@ -77,7 +77,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         # extend and combine the lists of physical partitions.
         if (
             next(
-                o
+                obj
                 for obj in list_of_blocks
                 if isinstance(obj, PandasOnRayDataframeVirtualPartition)
             ).axis
@@ -90,7 +90,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
                 ) if isinstance(
                     obj, PandasOnRayDataframeVirtualPartition
                 ) else new_list_of_blocks.append(
-                    o
+                    obj
                 )
             self.list_of_partitions_to_combine = new_list_of_blocks
         # Materialize partitions if the axis of this virtual does not match the virtual partitions
