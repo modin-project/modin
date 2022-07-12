@@ -55,7 +55,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         # partition are themselves virtual partition. The partitions that will
         # be combined are just the partitions as given to the constructor.
         if not any(
-            isinstance(o, PandasOnRayDataframeVirtualPartition) for o in list_of_blocks
+            isinstance(obj, PandasOnRayDataframeVirtualPartition)
+            for obj in list_of_blocks
         ):
             self.list_of_partitions_to_combine = list_of_blocks
             return
@@ -65,9 +66,9 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         assert (
             len(
                 set(
-                    o.axis
-                    for o in list_of_blocks
-                    if isinstance(o, PandasOnRayDataframeVirtualPartition)
+                    obj.axis
+                    for obj in list_of_blocks
+                    if isinstance(obj, PandasOnRayDataframeVirtualPartition)
                 )
             )
             == 1
@@ -76,20 +77,20 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         # extend and combine the lists of physical partitions.
         if (
             next(
-                o
-                for o in list_of_blocks
-                if isinstance(o, PandasOnRayDataframeVirtualPartition)
+                obj
+                for obj in list_of_blocks
+                if isinstance(obj, PandasOnRayDataframeVirtualPartition)
             ).axis
             == self.axis
         ):
             new_list_of_blocks = []
-            for o in list_of_blocks:
+            for obj in list_of_blocks:
                 new_list_of_blocks.extend(
-                    o.list_of_partitions_to_combine
+                    obj.list_of_partitions_to_combine
                 ) if isinstance(
-                    o, PandasOnRayDataframeVirtualPartition
+                    obj, PandasOnRayDataframeVirtualPartition
                 ) else new_list_of_blocks.append(
-                    o
+                    obj
                 )
             self.list_of_partitions_to_combine = new_list_of_blocks
         # Materialize partitions if the axis of this virtual does not match the virtual partitions
@@ -377,7 +378,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         if self._length_cache is None:
             if self.axis == 0:
                 self._length_cache = sum(
-                    o.length() for o in self.list_of_partitions_to_combine
+                    obj.length() for obj in self.list_of_partitions_to_combine
                 )
             else:
                 self._length_cache = self.list_of_partitions_to_combine[0].length()
@@ -397,7 +398,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         if self._width_cache is None:
             if self.axis == 1:
                 self._width_cache = sum(
-                    o.width() for o in self.list_of_partitions_to_combine
+                    obj.width() for obj in self.list_of_partitions_to_combine
                 )
             else:
                 self._width_cache = self.list_of_partitions_to_combine[0].width()

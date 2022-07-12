@@ -27,7 +27,7 @@ import warnings
 from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.core.dataframe.pandas.utils import concatenate
-from modin.config import NPartitions, ProgressBar, BenchmarkMode
+from modin.config import NPartitions, ProgressBar, BenchmarkMode, Engine, StorageFormat
 
 import os
 
@@ -615,11 +615,15 @@ class PandasDataframePartitionManager(ABC):
             to_concat = (
                 [left_parts] + right_parts if left_parts.size != 0 else right_parts
             )
-            return (
+            result = (
                 np.concatenate(to_concat, axis=axis) if len(to_concat) else left_parts
             )
         else:
-            return np.append(left_parts, right_parts, axis=axis)
+            result = np.append(left_parts, right_parts, axis=axis)
+        if axis == 0:
+            return cls.rebalance_partitions(result)
+        else:
+            return result
 
     @classmethod
     def to_pandas(cls, partitions):
@@ -1292,7 +1296,15 @@ class PandasDataframePartitionManager(ABC):
     @classmethod
     def rebalance_partitions(cls, partitions):
         """
-        Return the provided array of partitions without rebalancing it.
+        Rebalance a 2-d array of partitions if we are using ``PandasOnRay`` or ``PandasOnDask`` executions.
+
+        For all other executions, the partitions are returned unchanged.
+
+        Rebalance the partitions by building a new array
+        of partitions out of the original ones so that:
+
+        - If all partitions have a length, each new partition has roughly the same number of rows.
+        - Otherwise, each new partition spans roughly the same number of old partitions.
 
         Parameters
         ----------
@@ -1302,6 +1314,103 @@ class PandasDataframePartitionManager(ABC):
         Returns
         -------
         np.ndarray
-            The same 2-d array.
+            A NumPy array with the same; or new, rebalanced, partitions, depending on the execution
+            engine and storage format.
         """
+        if Engine.get() in ["Ray", "Dask"] and StorageFormat.get() == "Pandas":
+            # Rebalancing partitions is currently only implemented for PandasOnRay and PandasOnDask.
+            # We rebalance when the ratio of the number of existing partitions to
+            # the ideal number of partitions is larger than this threshold. The
+            # threshold is a heuristic that may need to be tuned for performance.
+            max_excess_of_num_partitions = 1.5
+            num_existing_partitions = partitions.shape[0]
+            ideal_num_new_partitions = NPartitions.get()
+            if (
+                num_existing_partitions
+                <= ideal_num_new_partitions * max_excess_of_num_partitions
+            ):
+                return partitions
+            # If any partition has an unknown length, give each axis partition
+            # roughly the same number of row partitions. We use `_length_cache` here
+            # to avoid materializing any unmaterialized lengths.
+            if any(
+                partition._length_cache is None
+                for row in partitions
+                for partition in row
+            ):
+                # We need each partition to go into an axis partition, but the
+                # number of axis partitions may not evenly divide the number of
+                # partitions.
+                chunk_size = compute_chunksize(
+                    num_existing_partitions, ideal_num_new_partitions, min_block_size=1
+                )
+                return np.array(
+                    [
+                        cls.column_partitions(
+                            partitions[i : i + chunk_size],
+                            full_axis=False,
+                        )
+                        for i in range(
+                            0,
+                            num_existing_partitions,
+                            chunk_size,
+                        )
+                    ]
+                )
+
+            # If we know the number of rows in every partition, then we should try
+            # instead to give each new partition roughly the same number of rows.
+            new_partitions = []
+            # `start` is the index of the first existing partition that we want to
+            # put into the current new partition.
+            start = 0
+            total_rows = sum(part.length() for part in partitions[:, 0])
+            ideal_partition_size = compute_chunksize(
+                total_rows, ideal_num_new_partitions, min_block_size=1
+            )
+            for _ in range(ideal_num_new_partitions):
+                # We might pick up old partitions too quickly and exhaust all of them.
+                if start >= len(partitions):
+                    break
+                # `stop` is the index of the last existing partition so far that we
+                # want to put into the current new partition.
+                stop = start
+                partition_size = partitions[start][0].length()
+                # Add existing partitions into the current new partition until the
+                # number of rows in the new partition hits `ideal_partition_size`.
+                while stop < len(partitions) and partition_size < ideal_partition_size:
+                    stop += 1
+                    if stop < len(partitions):
+                        partition_size += partitions[stop][0].length()
+                # If the new partition is larger than we want, split the last
+                # current partition that it contains into two partitions, where
+                # the first partition has just enough rows to make the current
+                # new partition have length `ideal_partition_size`, and the second
+                # partition has the remainder.
+                if partition_size > ideal_partition_size * max_excess_of_num_partitions:
+                    new_last_partition_size = ideal_partition_size - sum(
+                        row[0].length() for row in partitions[start:stop]
+                    )
+                    partitions = np.insert(
+                        partitions,
+                        stop + 1,
+                        [
+                            obj.mask(slice(new_last_partition_size, None), slice(None))
+                            for obj in partitions[stop]
+                        ],
+                        0,
+                    )
+                    partitions[stop, :] = [
+                        obj.mask(slice(None, new_last_partition_size), slice(None))
+                        for obj in partitions[stop]
+                    ]
+                    partition_size = ideal_partition_size
+                new_partitions.append(
+                    cls.column_partitions(
+                        (partitions[start : stop + 1]),
+                        full_axis=partition_size == total_rows,
+                    )
+                )
+                start = stop + 1
+            return np.array(new_partitions)
         return partitions
