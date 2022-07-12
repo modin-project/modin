@@ -21,7 +21,7 @@ from collections import OrderedDict
 import numpy as np
 import datetime
 import pandas
-from pandas.core.indexes.api import ensure_index, RangeIndex
+from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 from pandas._libs.lib import no_default
 from typing import List, Hashable, Optional, Callable, Union, Dict
