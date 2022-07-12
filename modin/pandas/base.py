@@ -1675,6 +1675,7 @@ class BasePandasDataset(ClassLogger):
                 convert_string=convert_string,
                 convert_integer=convert_integer,
                 convert_boolean=convert_boolean,
+                convert_floating=convert_floating,
             )
         )
 

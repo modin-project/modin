@@ -561,7 +561,9 @@ def test_astype_category_large():
 @pytest.mark.parametrize("convert_string", (True, False), ids=("convert_string", ""))
 @pytest.mark.parametrize("convert_integer", (True, False), ids=("convert_integer", ""))
 @pytest.mark.parametrize("convert_boolean", (True, False), ids=("convert_boolean", ""))
-@pytest.mark.parametrize("convert_floating", (True, False), ids=("convert_floating", ""))
+@pytest.mark.parametrize(
+    "convert_floating", (True, False), ids=("convert_floating", "")
+)
 def test_convert_dtypes(
     infer_objects, convert_string, convert_integer, convert_boolean, convert_floating
 ):
