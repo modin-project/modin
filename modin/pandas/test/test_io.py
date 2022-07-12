@@ -1595,7 +1595,7 @@ class TestJson:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_json_string_bytes(self, data):
-        with warns_that_defaulting_to_pandas(prefix="read_json"):
+        with warns_that_defaulting_to_pandas():
             modin_df = pd.read_json(data)
         # For I/O objects we need to rewind to reuse the same object.
         if hasattr(data, "seek"):

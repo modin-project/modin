@@ -60,10 +60,10 @@ class SQLDispatcher(FileDispatcher):
                 con=con,
                 index_col=index_col,
                 read_sql_engine=ReadSqlEngine.get(),
-                reason="To use parallel implementation of `read_sql`, pass either "
+                reason="To use the parallel implementation of `read_sql`, pass either "
                 + "the SQL connection string or a ModinDatabaseConnection "
                 + "with the arguments required to make a connection, instead "
-                + f"of {type(con)}. For documentation of ModinDatabaseConnection, see "
+                + f"of {type(con)}. For documentation on the ModinDatabaseConnection, see "
                 + "https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html#connecting-to-a-database-for-read-sql",
                 **kwargs,
             )

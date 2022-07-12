@@ -348,4 +348,4 @@ class FileDispatcher(ClassLogger):
 
     @classmethod
     def _file_not_found_msg(cls, filename: str):  # noqa: GL08
-        return f"No file with name '{filename}'"
+        return f"No such file: '{filename}'"

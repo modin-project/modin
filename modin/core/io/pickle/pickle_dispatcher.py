@@ -50,7 +50,7 @@ class PickleExperimentalDispatcher(FileDispatcher):
             return cls.single_worker_read(
                 filepath_or_buffer,
                 single_worker_read=True,
-                reason="Buffers and wildcard file names are not supported",
+                reason="Buffers and single files are not supported",
                 **kwargs,
             )
         filepath_or_buffer = sorted(glob.glob(filepath_or_buffer))
