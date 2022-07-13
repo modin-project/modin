@@ -206,6 +206,13 @@ def test_fillna_downcast():
     df_equals(modin_df, result)
 
 
+def test_fillna_4660():
+    eval_general(
+        *create_test_dfs({"a": ["a"], "b": ["b"], "c": [pd.NA]}, index=["row1"]),
+        lambda df: df["c"].fillna(df["b"]),
+    )
+
+
 def test_fillna_inplace():
     frame_data = random_state.randn(10, 4)
     df = pandas.DataFrame(frame_data)
