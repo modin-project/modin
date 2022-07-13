@@ -562,6 +562,7 @@ def test_loc_multi_index():
     df_equals(modin_df.loc[modin_df.index[:7]], pandas_df.loc[pandas_df.index[:7]])
 
 
+# Better name suggestions?
 def test_loc_4358():
     arrays = [
         ["bar", "bar", "baz", "baz", "foo", "foo", "qux", "qux"],
@@ -574,14 +575,20 @@ def test_loc_4358():
     df_equals(modin_df.loc[:, ("bar", "two")], pandas_df.loc[:, ("bar", "two")])
 
 
-def test_loc_multiindex_duplicate():
+def test_loc_multi_index_duplicate_keys():
     modin_df = pd.DataFrame([1, 2], index=[["a", "a"], ["b", "b"]])
     pandas_df = pd.DataFrame([1, 2], index=[["a", "a"], ["b", "b"]])
     df_equals(modin_df.loc[("a", "b"), 0], pandas_df.loc[("a", "b"), 0])
     df_equals(modin_df.loc[("a", "b"), :], pandas_df.loc[("a", "b"), :])
 
 
-def test_loc_multiindex_both_axes():
+def test_loc_multi_index_one_level():
+    modin_df = pd.DataFrame([1, 2], index=[["a", "b"], ["c", "c"]])
+    pandas_df = pd.DataFrame([1, 2], index=[["a", "b"], ["c", "c"]])
+    df_equals(modin_df.loc["a"], pandas_df.loc["a"])
+
+
+def test_loc_multi_index_both_axes():
     multi_index = pd.MultiIndex.from_tuples(
         [("r0", "rA"), ("r1", "rB")], names=["Courses", "Fee"]
     )
@@ -597,6 +604,11 @@ def test_loc_multiindex_both_axes():
     df = pd.DataFrame(data, columns=cols, index=multi_index)
     pdf = pandas.DataFrame(data, columns=cols, index=multi_index)
     df_equals(df.loc[("r0", "rA"), :], pdf.loc[("r0", "rA"), :])
+    df_equals(df.loc[("r0"), :], pdf.loc[("r0"), :])
+    df_equals(df.loc[:, ("Gasoline")], pdf.loc[:, ("Gasoline")])
+    df_equals(df.loc[:, ("Gasoline", "Toyota")], pdf.loc[:, ("Gasoline", "Toyota")])
+    # Test below fails
+    # df_equals(df.loc[("r0"), ("Gasoline", "Toyota")], pdf.loc[("r0"), ("Gasoline", "Toyota")])
 
 
 def test_loc_empty():
