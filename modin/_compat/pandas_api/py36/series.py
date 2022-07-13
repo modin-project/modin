@@ -16,12 +16,12 @@
 import numpy as np
 import pandas
 
-from ..abc.series import BaseCompatibilitySeries
+from ..abc.series import BaseCompatibleSeries
 from modin.utils import _inherit_docstrings
 
 
 @_inherit_docstrings(pandas.Series)
-class Python36CompatibleSeries(BaseCompatibilitySeries):
+class Python36CompatibleSeries(BaseCompatibleSeries):
     """Compatibility layer for 'Python 3.6 pandas' for Series."""
 
     def apply(

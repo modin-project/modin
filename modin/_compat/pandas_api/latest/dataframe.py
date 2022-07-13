@@ -20,10 +20,10 @@ from pandas._libs.lib import no_default
 from pandas._typing import StorageOptions
 from numpy import nan
 
-from ..abc import BaseCompatibilityDataFrame
+from ..abc import BaseCompatibleDataFrame
 
 
-class LatestCompatibleDataFrame(BaseCompatibilityDataFrame):  # noqa: PR01
+class LatestCompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
     """Compatibility layer for 'latest pandas' for DataFrame."""
 
     def __init__(

@@ -16,7 +16,7 @@
 from modin.logging import ClassLogger
 
 
-class BaseCompatibilityBasePandasDataset(ClassLogger):
+class BaseCompatibleBasePandasDataset(ClassLogger):
     """Interface for compatibility layer for Dataset."""
 
     def max(self, *args, **kwargs):  # noqa: GL08

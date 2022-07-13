@@ -18,10 +18,10 @@ import pandas
 from pandas.util._validators import validate_bool_kwarg
 from pandas._libs.lib import no_default
 
-from ..abc.series import BaseCompatibilitySeries
+from ..abc.series import BaseCompatibleSeries
 
 
-class LatestCompatibleSeries(BaseCompatibilitySeries):
+class LatestCompatibleSeries(BaseCompatibleSeries):
     """Compatibility layer for 'latest pandas' for Series."""
 
     def apply(self, func, convert_dtype=True, args=(), **kwargs):

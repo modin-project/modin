@@ -22,12 +22,12 @@ import pickle as pkl
 from numpy import nan
 from typing import Sequence, Hashable, Optional
 
-from ..abc import BaseCompatibilityBasePandasDataset
+from ..abc import BaseCompatibleBasePandasDataset
 from .utils import create_stat_method
 from modin.utils import _inherit_docstrings
 
 
-class LatestCompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
+class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
     """Compatibility layer for 'latest pandas' for Dataset."""
 
     @_inherit_docstrings(validate_ascending)

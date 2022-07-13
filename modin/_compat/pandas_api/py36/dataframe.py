@@ -17,12 +17,12 @@ from typing import Union, Tuple, Mapping
 import pandas
 from numpy import nan
 
-from ..abc import BaseCompatibilityDataFrame
+from ..abc import BaseCompatibleDataFrame
 from modin.utils import _inherit_docstrings
 
 
 @_inherit_docstrings(pandas.DataFrame)
-class Python36CompatibleDataFrame(BaseCompatibilityDataFrame):  # noqa: PR01
+class Python36CompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
     """Compatibility layer for 'Python 3.6 pandas' for DataFrame."""
 
     def __init__(

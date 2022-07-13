@@ -11,7 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .base import BaseCompatibilityBasePandasDataset
-from .dataframe import BaseCompatibilityDataFrame
+from .base import BaseCompatibleBasePandasDataset
+from .dataframe import BaseCompatibleDataFrame
+from .series import BaseCompatibleSeries
 
-__all__ = ["BaseCompatibilityBasePandasDataset", "BaseCompatibilityDataFrame"]
+__all__ = [
+    "BaseCompatibleBasePandasDataset",
+    "BaseCompatibleDataFrame",
+    "BaseCompatibleSeries",
+]

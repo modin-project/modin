@@ -19,13 +19,13 @@ import pickle as pkl
 from numpy import nan
 from typing import Sequence, Hashable
 
-from ..abc import BaseCompatibilityBasePandasDataset
+from ..abc import BaseCompatibleBasePandasDataset
 from .utils import create_stat_method
 from modin.utils import _inherit_docstrings
 
 
 @_inherit_docstrings(pandas.DataFrame)
-class Python36CompatibleBasePandasDataset(BaseCompatibilityBasePandasDataset):
+class Python36CompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
     """Compatibility layer for 'Python 3.6 pandas' for Dataset."""
 
     def _validate_ascending(self, ascending):  # noqa: PR01, RT01
