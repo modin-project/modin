@@ -1866,11 +1866,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 else:
 
                     def fillna_builder(df, value_arg):
-                        # this's no longer true.
-                        # Both arguments for this function are 1-column `DataFrames` which denote `Series` type.
-                        # Because they are both of the same type, it is not necessary to convert either of them into
-                        # `Series` by squeezing since `fillna` works perfectly in the same way on 1-column `DataFrame`
-                        # objects (when `limit` parameter is absent) as it works on two `Series`.
                         if isinstance(value_arg, pandas.DataFrame):
                             value_arg = value_arg.squeeze(axis=1)
                         res = df.squeeze(axis=1).fillna(value=value_arg, **kwargs)
