@@ -570,7 +570,10 @@ class _LocIndexer(_LocationIndexerBase):
         row_loc, col_loc, ndim = self._parse_row_and_column_locators(key)
         self.row_scalar = is_scalar(row_loc)
         self.col_scalar = is_scalar(col_loc)
-        # Check to see if the lookup is with a tuple key and see if the full lookup exists
+        # The thought process here is that we should check to see that we have a full key lookup
+        # for a MultiIndex DataFrame. If that's the case, then we should not drop any levels
+        # since our resulting intermediate dataframe will have dropped these for us already.
+        # Thus, we need to make sure we don't try to drop these levels again.
         self.row_multiindex = (
             True
             if self.qc.has_multiindex()
@@ -585,7 +588,7 @@ class _LocIndexer(_LocationIndexerBase):
             and col_loc in self.df.columns.tolist()
             else False
         )
-        lookup_in_multiindex = (
+        levels_already_dropped = (
             True if self.row_multiindex or self.col_multiindex else False
         )
         if isinstance(row_loc, Series) and is_boolean_array(row_loc):
@@ -602,7 +605,7 @@ class _LocIndexer(_LocationIndexerBase):
         if (
             isinstance(result, (Series, DataFrame))
             and result._query_compiler.has_multiindex()
-            and not lookup_in_multiindex
+            and not levels_already_dropped
         ):
             if (
                 isinstance(result, Series)
@@ -622,7 +625,7 @@ class _LocIndexer(_LocationIndexerBase):
         if (
             hasattr(result, "columns")
             and not isinstance(col_loc_as_list, slice)
-            and not lookup_in_multiindex
+            and not levels_already_dropped
             and result._query_compiler.has_multiindex(axis=1)
             and all(
                 col_loc_as_list[i] in result.columns.levels[i]
