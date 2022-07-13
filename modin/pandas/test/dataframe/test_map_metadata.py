@@ -16,9 +16,10 @@ import numpy as np
 import pandas
 from pandas.testing import assert_index_equal, assert_series_equal
 import matplotlib
+
+from modin.config.envvars import MinPartitionSize
 import modin.pandas as pd
 from modin.utils import get_current_execution
-
 from modin.pandas.test.utils import (
     random_state,
     RAND_LOW,
@@ -588,6 +589,23 @@ def test_convert_dtypes(
     pandas_df = pandas.DataFrame(data)
     modin_result = modin_df.convert_dtypes(**kwargs)
     pandas_result = pandas_df.convert_dtypes(**kwargs)
+    assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+
+def test_convert_dtypes_row_partition():
+    # Tests `convert_dtypes` when values in the same column may come from different
+    # row partitions.
+    part_col_size = MinPartitionSize.get()
+    # Column 0 should have string dtype
+    modin_part1 = pd.DataFrame(["a"] * part_col_size).convert_dtypes()
+    # Column 0 should have an int dtype
+    modin_part2 = pd.DataFrame([1] * part_col_size).convert_dtypes()
+    modin_result = pd.concat([modin_part1, modin_part2]).convert_dtypes()
+    pandas_part1 = pandas.DataFrame(["a"] * part_col_size).convert_dtypes()
+    pandas_part2 = pandas.DataFrame([1] * part_col_size).convert_dtypes()
+    pandas_result = pandas.concat([pandas_part1, pandas_part2]).convert_dtypes()
+    # After exceeding MinPartitionSize, the dataframe should have 2 row partitions
+    # (though this is not guaranteed)
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
