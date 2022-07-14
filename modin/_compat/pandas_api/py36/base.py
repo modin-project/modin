@@ -255,35 +255,33 @@ class Python36CompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
         decimal=".",
         errors: str = "strict",
     ):  # pragma: no cover
-        kwargs = {
-            "path_or_buf": path_or_buf,
-            "sep": sep,
-            "na_rep": na_rep,
-            "float_format": float_format,
-            "columns": columns,
-            "header": header,
-            "index": index,
-            "index_label": index_label,
-            "mode": mode,
-            "encoding": encoding,
-            "compression": compression,
-            "quoting": quoting,
-            "quotechar": quotechar,
-            "line_terminator": line_terminator,
-            "chunksize": chunksize,
-            "date_format": date_format,
-            "doublequote": doublequote,
-            "escapechar": escapechar,
-            "decimal": decimal,
-            "errors": errors,
-        }
-        new_query_compiler = self._query_compiler
-
         from modin.core.execution.dispatching.factories.dispatcher import (
             FactoryDispatcher,
         )
 
-        return FactoryDispatcher.to_csv(new_query_compiler, **kwargs)
+        return FactoryDispatcher.to_csv(
+            self._query_compiler,
+            path_or_buf=path_or_buf,
+            sep=sep,
+            na_rep=na_rep,
+            float_format=float_format,
+            columns=columns,
+            header=header,
+            index=index,
+            index_label=index_label,
+            mode=mode,
+            encoding=encoding,
+            compression=compression,
+            quoting=quoting,
+            quotechar=quotechar,
+            line_terminator=line_terminator,
+            chunksize=chunksize,
+            date_format=date_format,
+            doublequote=doublequote,
+            escapechar=escapechar,
+            decimal=decimal,
+            errors=errors,
+        )
 
     def to_excel(
         self,
