@@ -642,11 +642,7 @@ def test_value_counts(normalize, bins, dropna):
     )
     df_equals(modin_result, pandas_result)
 
-    with (
-        warns_that_defaulting_to_pandas()
-        if Engine.get() not in ["Ray"]
-        else contextlib.nullcontext()
-    ):
+    with warns_that_defaulting_to_pandas():
         modin_result = sort_index_for_equal_values(
             pd.value_counts(values, bins=bins, ascending=False), False
         )
