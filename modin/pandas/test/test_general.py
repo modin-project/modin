@@ -19,6 +19,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from modin.utils import get_current_execution, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.config import Engine
 from pandas.testing import assert_frame_equal
 
 from .utils import (
@@ -628,25 +629,40 @@ def test_unique():
 def test_value_counts(normalize, bins, dropna):
     # We sort indices for Modin and pandas result because of issue #1650
     values = np.array([3, 1, 2, 3, 4, np.nan])
-    modin_result = sort_index_for_equal_values(
-        pd.value_counts(values, normalize=normalize, ascending=False), False
-    )
+    with (
+        warns_that_defaulting_to_pandas()
+        if Engine.get() not in ["Ray"]
+        else contextlib.nullcontext()
+    ):
+        modin_result = sort_index_for_equal_values(
+            pd.value_counts(values, normalize=normalize, ascending=False), False
+        )
     pandas_result = sort_index_for_equal_values(
         pandas.value_counts(values, normalize=normalize, ascending=False), False
     )
     df_equals(modin_result, pandas_result)
 
-    modin_result = sort_index_for_equal_values(
-        pd.value_counts(values, bins=bins, ascending=False), False
-    )
+    with (
+        warns_that_defaulting_to_pandas()
+        if Engine.get() not in ["Ray"]
+        else contextlib.nullcontext()
+    ):
+        modin_result = sort_index_for_equal_values(
+            pd.value_counts(values, bins=bins, ascending=False), False
+        )
     pandas_result = sort_index_for_equal_values(
         pandas.value_counts(values, bins=bins, ascending=False), False
     )
     df_equals(modin_result, pandas_result)
 
-    modin_result = sort_index_for_equal_values(
-        pd.value_counts(values, dropna=dropna, ascending=True), True
-    )
+    with (
+        warns_that_defaulting_to_pandas()
+        if Engine.get() not in ["Ray"]
+        else contextlib.nullcontext()
+    ):
+        modin_result = sort_index_for_equal_values(
+            pd.value_counts(values, dropna=dropna, ascending=True), True
+        )
     pandas_result = sort_index_for_equal_values(
         pandas.value_counts(values, dropna=dropna, ascending=True), True
     )
