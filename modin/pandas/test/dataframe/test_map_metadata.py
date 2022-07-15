@@ -558,14 +558,22 @@ def test_astype_category_large():
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
-@pytest.mark.parametrize("infer_objects", (True, False), ids=("infer_objects", ""))
-@pytest.mark.parametrize("convert_string", (True, False), ids=("convert_string", ""))
-@pytest.mark.parametrize("convert_integer", (True, False), ids=("convert_integer", ""))
-@pytest.mark.parametrize("convert_boolean", (True, False), ids=("convert_boolean", ""))
 @pytest.mark.parametrize(
-    "convert_floating", (True, False), ids=("convert_floating", "")
+    "infer_objects", bool_arg_values, ids=arg_keys("infer_objects", bool_arg_keys)
 )
-def test_convert_dtypes(
+@pytest.mark.parametrize(
+    "convert_string", bool_arg_values, ids=arg_keys("convert_string", bool_arg_keys)
+)
+@pytest.mark.parametrize(
+    "convert_integer", bool_arg_values, ids=arg_keys("convert_integer", bool_arg_keys)
+)
+@pytest.mark.parametrize(
+    "convert_boolean", bool_arg_values, ids=arg_keys("convert_boolean", bool_arg_keys)
+)
+@pytest.mark.parametrize(
+    "convert_floating", bool_arg_values, ids=arg_keys("convert_floating", bool_arg_keys)
+)
+def test_convert_dtypes_single_partition(
     infer_objects, convert_string, convert_integer, convert_boolean, convert_floating
 ):
     # Sanity check, copied from pandas documentation:
@@ -592,20 +600,22 @@ def test_convert_dtypes(
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
-def test_convert_dtypes_row_partition():
-    # Tests `convert_dtypes` when values in the same column may come from different
-    # row partitions.
-    part_col_size = MinPartitionSize.get()
+def test_convert_dtypes_multiple_row_partitions():
     # Column 0 should have string dtype
-    modin_part1 = pd.DataFrame(["a"] * part_col_size).convert_dtypes()
+    modin_part1 = pd.DataFrame(["a"]).convert_dtypes()
     # Column 0 should have an int dtype
-    modin_part2 = pd.DataFrame([1] * part_col_size).convert_dtypes()
-    modin_result = pd.concat([modin_part1, modin_part2]).convert_dtypes()
-    pandas_part1 = pandas.DataFrame(["a"] * part_col_size).convert_dtypes()
-    pandas_part2 = pandas.DataFrame([1] * part_col_size).convert_dtypes()
-    pandas_result = pandas.concat([pandas_part1, pandas_part2]).convert_dtypes()
-    # After exceeding MinPartitionSize, the dataframe should have 2 row partitions
-    # (though this is not guaranteed)
+    modin_part2 = pd.DataFrame([1]).convert_dtypes()
+    modin_df = pd.concat([modin_part1, modin_part2])
+    pandas_df = pandas.concat([pandas.DataFrame(["a"]), pandas.DataFrame([1])])
+    # The initial dataframes should be the same
+    df_equals(modin_df, pandas_df)
+    # TODO(https://github.com/modin-project/modin/pull/3805): delete
+    # this assert once df_equals checks dtypes
+    assert modin_df.dtypes.equals(pandas_df.dtypes)
+    modin_result = modin_df.convert_dtypes()
+    pandas_result = pandas_df.convert_dtypes()
+    df_equals(modin_result, pandas_result)
+    assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
