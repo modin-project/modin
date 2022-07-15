@@ -17,7 +17,6 @@ import pandas
 from pandas.testing import assert_index_equal, assert_series_equal
 import matplotlib
 
-from modin.config.envvars import MinPartitionSize
 import modin.pandas as pd
 from modin.utils import get_current_execution
 from modin.pandas.test.utils import (
@@ -606,7 +605,7 @@ def test_convert_dtypes_multiple_row_partitions():
     # Column 0 should have an int dtype
     modin_part2 = pd.DataFrame([1]).convert_dtypes()
     modin_df = pd.concat([modin_part1, modin_part2])
-    pandas_df = pandas.concat([pandas.DataFrame(["a"]), pandas.DataFrame([1])])
+    pandas_df = pandas.DataFrame(["a", 1], index=[0, 0])
     # The initial dataframes should be the same
     df_equals(modin_df, pandas_df)
     # TODO(https://github.com/modin-project/modin/pull/3805): delete
