@@ -629,6 +629,16 @@ class _LocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.loc
         """
+        if self.df.empty:
+
+            def _loc(df):
+                df.loc[key] = item
+                return df
+
+            self.df._update_inplace(
+                new_query_compiler=self.df._default_to_pandas(_loc)._query_compiler
+            )
+            return
         row_loc, col_loc, _ = self._parse_row_and_column_locators(key)
         if isinstance(row_loc, list) and len(row_loc) == 1:
             if row_loc[0] not in self.qc.index:
@@ -843,6 +853,16 @@ class _iLocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.iloc
         """
+        if self.df.empty:
+
+            def _iloc(df):
+                df.iloc[key] = item
+                return df
+
+            self.df._update_inplace(
+                new_query_compiler=self.df._default_to_pandas(_iloc)._query_compiler
+            )
+            return
         row_loc, col_loc, _ = self._parse_row_and_column_locators(key)
         row_scalar = is_scalar(row_loc)
         col_scalar = is_scalar(col_loc)
