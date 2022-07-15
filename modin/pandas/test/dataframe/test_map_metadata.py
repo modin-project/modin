@@ -605,6 +605,7 @@ def test_convert_dtypes_multiple_row_partitions():
     # Column 0 should have an int dtype
     modin_part2 = pd.DataFrame([1]).convert_dtypes()
     modin_df = pd.concat([modin_part1, modin_part2])
+    assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
     pandas_df = pandas.DataFrame(["a", 1], index=[0, 0])
     # The initial dataframes should be the same
     df_equals(modin_df, pandas_df)
@@ -614,7 +615,6 @@ def test_convert_dtypes_multiple_row_partitions():
     modin_result = modin_df.convert_dtypes()
     pandas_result = pandas_df.convert_dtypes()
     df_equals(modin_result, pandas_result)
-    assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
