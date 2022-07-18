@@ -21,6 +21,7 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
 )
+from pandas.core.indexes.frozen import FrozenList
 from pandas.util._validators import validate_bool_kwarg
 from pandas.io.formats.printing import pprint_thing
 from pandas._libs.lib import no_default
@@ -439,7 +440,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
         if callable(by):
             by = self.index.map(by)
-        elif hashable(by) and not isinstance(by, pandas.Grouper):
+        elif hashable(by) and not isinstance(by, (pandas.Grouper, FrozenList)):
             drop = by in self.columns
             idx_name = by
             if by is not None and by in self._query_compiler.get_index_names(axis):

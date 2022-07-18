@@ -53,9 +53,9 @@ def wait_computations_if_benchmark_mode(func):
     if BenchmarkMode.get():
 
         @wraps(func)
-        def wait(*args, **kwargs):
+        def wait(cls, *args, **kwargs):
             """Wait for computation results."""
-            result = func(*args, **kwargs)
+            result = func(cls, *args, **kwargs)
             if isinstance(result, tuple):
                 partitions = result[0]
             else:
@@ -67,12 +67,11 @@ def wait_computations_if_benchmark_mode(func):
             # serially kick off all the deferred computations so that they can
             # all run asynchronously, then wait on all the results.
             [part.drain_call_queue() for part in partitions.flatten()]
-            # need to go through all the values of the map iterator
-            # since `wait` does not return anything, we need to explicitly add
-            # the return `True` value from the lambda
-            # TODO(https://github.com/modin-project/modin/issues/4491): Wait
-            # for all the partitions in parallel.
-            all(map(lambda partition: partition.wait() or True, partitions.flatten()))
+            # The partition manager invokes the relevant .wait() method under
+            # the hood, which should wait in parallel for all computations to finish
+            # (We can't just add a `cls` argument to this `wait` function, since doing so
+            # seems to be incompatible with the way function decorators work)
+            cls.wait_partitions(partitions.flatten())
             return result
 
         return wait
@@ -809,6 +808,26 @@ class PandasDataframePartitionManager(ABC):
         getting objects in parallel.
         """
         return [partition.get() for partition in partitions]
+
+    @classmethod
+    def wait_partitions(cls, partitions):
+        """
+        Wait on the objects wrapped by `partitions`, without materializing them.
+
+        This method will block until all computations in the list have completed.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            NumPy array with ``PandasDataframePartition``-s.
+
+        Notes
+        -----
+        This method should be implemented in a more efficient way for engines that supports
+        waiting on objects in parallel.
+        """
+        for partition in partitions:
+            partition.wait()
 
     @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
