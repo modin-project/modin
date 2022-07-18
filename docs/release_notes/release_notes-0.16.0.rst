@@ -35,6 +35,7 @@ Key Features and Updates
   * PERF-#4705: Improve perf of arithmetic operations between `Series` objects with shared `.index` (#4689)
   * PERF-#4703: Improve performance in accessing `ser.cat.categories`, `ser.cat.ordered`, and `ser.__array_priority__` (#4704)
   * PERF-#4305: Parallelize `read_parquet` over row groups (#4700)
+  * PERF-#4268: Implement partition-parallel __getitem__ for bool Series masks (#4753)
 * Benchmarking enhancements
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
 * Refactor Codebase
