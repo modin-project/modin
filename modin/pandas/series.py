@@ -1470,7 +1470,8 @@ class Series(SeriesCompat, BasePandasDataset):
 
         return data
 
-    def _reindex(self, *args, **kwargs):  # noqa: PR01, RT01, D200
+    @_inherit_docstrings(pandas.Series.reindex, apilink="pandas.Series.reindex")
+    def _reindex(self, *args, **kwargs):
         """
         Conform Series to new index with optional filling logic.
         """

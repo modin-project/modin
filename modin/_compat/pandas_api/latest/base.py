@@ -17,7 +17,7 @@ import pandas
 from pandas.core.dtypes.common import is_datetime_or_timedelta_dtype
 from pandas.util._validators import validate_bool_kwarg, validate_ascending
 from pandas._libs.lib import no_default
-from pandas._typing import StorageOptions, CompressionOptions
+from pandas._typing import StorageOptions, CompressionOptions, IndexLabel
 import pickle as pkl
 from numpy import nan
 from typing import Sequence, Hashable, Optional
@@ -76,7 +76,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
     @_inherit_docstrings(
         parent=pandas.DataFrame.explode, apilink="pandas.DataFrame.explode"
     )
-    def explode(self, column, ignore_index: bool = False):
+    def explode(self, column: IndexLabel, ignore_index: bool = False):
         exploded = self.__constructor__(
             query_compiler=self._query_compiler.explode(column)
         )

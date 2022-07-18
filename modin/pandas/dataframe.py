@@ -102,12 +102,12 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
     @append_to_docstring(__doc__)
     def _init(
         self,
-        data=None,
-        index=None,
-        columns=None,
-        dtype=None,
-        copy=None,
-        query_compiler=None,
+        data,
+        index,
+        columns,
+        dtype,
+        copy,
+        query_compiler,
     ):
         # Siblings are other dataframes that share the same query compiler. We
         # use this list to update inplace when there is a shallow copy.
