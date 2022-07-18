@@ -1472,9 +1472,6 @@ class Series(SeriesCompat, BasePandasDataset):
 
     @_inherit_docstrings(pandas.Series.reindex, apilink="pandas.Series.reindex")
     def _reindex(self, *args, **kwargs):
-        """
-        Conform Series to new index with optional filling logic.
-        """
         if args:
             if len(args) > 1:
                 raise TypeError("Only one positional argument ('index') is allowed")
