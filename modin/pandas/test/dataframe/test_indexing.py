@@ -597,8 +597,6 @@ def test_loc_multi_index_both_axes():
     df = pd.DataFrame(data, columns=cols, index=multi_index)
     pdf = pandas.DataFrame(data, columns=cols, index=multi_index)
     df_equals(df.loc[("r0", "rA"), :], pdf.loc[("r0", "rA"), :])
-    df_equals(df.loc[("r0"), :], pdf.loc[("r0"), :])
-    df_equals(df.loc[:, ("Gasoline")], pdf.loc[:, ("Gasoline")])
     df_equals(df.loc[:, ("Gasoline", "Toyota")], pdf.loc[:, ("Gasoline", "Toyota")])
     # Test below fails b/c of mismatch return value from qc.view()
     # df_equals(df.loc[("r0"), ("Gasoline", "Toyota")], pdf.loc[("r0"), ("Gasoline", "Toyota")])
