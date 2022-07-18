@@ -76,6 +76,49 @@ class PandasOnRayDataframe(PandasDataframe):
             ]
         return [partition.list_of_partitions_to_combine[0].apply(len_fn)._data]
 
+    def _ray_get_nested(self, ray_list):
+        """
+        Asynchronously gets the result of computations of a nested list of ray object IDs,
+        and returns a nested same dimension. That is, calling
+        `_ray_get_nested([id1, [id2], id3])` would return a list of the form `[val1, [val2], val3]`.
+
+        This function does not work for lists that are nested more than 3 layers (e.g. `[[[id]]]`).
+
+        Parameters
+        ----------
+        ray_list : list
+            A 2D list of ray object IDs.
+
+        Returns
+        -------
+        list
+            A 2D list of computed values corresponding to the passed in object IDs, with the same
+            structure as the list that was passed in.
+        """
+        # Lengths of lists in original `ray_list`, or -1 if just a single item and not a list
+        lens = []
+        flat_obj_ids = []
+        for lst_or_id in ray_list:
+            if isinstance(lst_or_id, list):
+                lens.append(len(lst_or_id))
+                flat_obj_ids.extend(lst_or_id)
+            else:
+                lens.append(-1)
+                flat_obj_ids.append(lst_or_id)
+        flat_values = ray.get(flat_obj_ids)
+        nested_values = []
+        flat_index = 0
+        for length in lens:
+            if length == -1:
+                # Original list had a single element here
+                nested_values.append(flat_values[flat_index])
+                flat_index += 1
+            else:
+                # Original list had a nested list here
+                nested_values.append(flat_values[flat_index:flat_index + length])
+                flat_index += length
+        return nested_values
+
     @property
     def _row_lengths(self):
         """
@@ -87,10 +130,10 @@ class PandasOnRayDataframe(PandasDataframe):
             A list of row partitions lengths.
         """
         if self._row_lengths_cache is None:
-            row_lengths_list = [
-                ray.get(self._get_partition_size_along_axis(obj, axis=0))
+            row_lengths_list = self._ray_get_nested([
+                self._get_partition_size_along_axis(obj, axis=0)
                 for obj in self._partitions.T[0]
-            ]
+            ])
             self._row_lengths_cache = [sum(len_list) for len_list in row_lengths_list]
         return self._row_lengths_cache
 
@@ -105,10 +148,10 @@ class PandasOnRayDataframe(PandasDataframe):
             A list of column partitions widths.
         """
         if self._column_widths_cache is None:
-            col_widths_list = [
-                ray.get(self._get_partition_size_along_axis(obj, axis=1))
+            col_widths_list = self._ray_get_nested([
+                self._get_partition_size_along_axis(obj, axis=1)
                 for obj in self._partitions[0]
-            ]
+            ])
             self._column_widths_cache = [
                 sum(width_list) for width_list in col_widths_list
             ]
