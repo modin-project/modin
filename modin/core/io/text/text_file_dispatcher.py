@@ -68,7 +68,12 @@ class TextFileDispatcher(FileDispatcher):
         use it without having to fall back to pandas and share file objects between
         workers. Given a filepath, return it immediately.
         """
-        if hasattr(filepath_or_buffer, "name"):
+        if (
+            hasattr(filepath_or_buffer, "name")
+            and hasattr(filepath_or_buffer, "seekable")
+            and filepath_or_buffer.seekable()
+            and filepath_or_buffer.tell() == 0
+        ):
             buffer_filepath = filepath_or_buffer.name
             if cls.file_exists(buffer_filepath):
                 warnings.warn(

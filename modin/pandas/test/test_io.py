@@ -1152,14 +1152,15 @@ class TestCsv:
             ),
         ],
     )
-    def test_read_csv_file_handle(self, read_mode, make_csv_file):
-
+    @pytest.mark.parametrize("buffer_start_pos", [0, 10])
+    def test_read_csv_file_handle(self, read_mode, make_csv_file, buffer_start_pos):
         unique_filename = get_unique_filename()
         make_csv_file(filename=unique_filename)
 
         with open(unique_filename, mode=read_mode) as buffer:
+            buffer.seek(buffer_start_pos)
             df_pandas = pandas.read_csv(buffer)
-            buffer.seek(0)
+            buffer.seek(buffer_start_pos)
             df_modin = pd.read_csv(buffer)
             df_equals(df_modin, df_pandas)
 
