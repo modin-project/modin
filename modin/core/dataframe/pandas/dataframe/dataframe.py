@@ -1223,10 +1223,6 @@ class PandasDataframe(ClassLogger):
                 else np.array(indices, dtype=np.int64)
             )
             indices[negative_mask] = indices[negative_mask] % len(self.axes[axis])
-        # If the `indices` array was modified because of the negative indices conversion
-        # then the original order was broken and so we have to sort anyway:
-        if has_negative or not are_indices_sorted:
-            indices = np.sort(indices)
         if axis == 0:
             bins = np.array(self._row_lengths)
         else:
@@ -1236,6 +1232,8 @@ class PandasDataframe(ClassLogger):
 
         def internal(block_idx, global_index):
             """Transform global index to internal one for given block (identified by its index)."""
+            if len(global_index) == 0:
+                return None
             return (
                 global_index
                 if not block_idx
@@ -1245,35 +1243,14 @@ class PandasDataframe(ClassLogger):
             )
 
         partition_ids = np.digitize(indices, cumulative)
-        count_for_each_partition = np.array(
-            [(partition_ids == i).sum() for i in range(len(cumulative))]
-        ).cumsum()
-        # Compute the internal indices and pair those with the partition index.
-        # If the first partition has any values we need to return, compute those
-        # first to make the list comprehension easier. Otherwise, just append the
-        # rest of the values to an empty list.
-        if count_for_each_partition[0] > 0:
-            first_partition_indices = [
-                (0, internal(0, indices[slice(count_for_each_partition[0])]))
-            ]
-        else:
-            first_partition_indices = []
-        partition_ids_with_indices = first_partition_indices + [
-            (
-                i,
-                internal(
-                    i,
-                    indices[
-                        slice(
-                            count_for_each_partition[i - 1],
-                            count_for_each_partition[i],
-                        )
-                    ],
-                ),
-            )
-            for i in range(1, len(count_for_each_partition))
-            if count_for_each_partition[i] > count_for_each_partition[i - 1]
+
+        partition_ids_with_indices = [
+            (i, internal(i, indices[partition_ids == i]))
+            for i in range(len(cumulative))
         ]
+        partition_ids_with_indices = list(
+            filter(lambda tup: tup[1] is not None, partition_ids_with_indices)
+        )
         return OrderedDict(partition_ids_with_indices)
 
     @staticmethod

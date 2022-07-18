@@ -598,11 +598,6 @@ def loc_iter_dfs():
 @pytest.mark.parametrize("reverse_order", [False, True])
 @pytest.mark.parametrize("axis", [0, 1])
 def test_loc_iter_assignment(loc_iter_dfs, reverse_order, axis):
-    if reverse_order and axis:
-        pytest.xfail(
-            "Due to internal sorting of lookup values assignment order is lost, see GH-#2552"
-        )
-
     md_df, pd_df = loc_iter_dfs
 
     select = [slice(None), slice(None)]
