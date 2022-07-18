@@ -564,11 +564,12 @@ def test_loc_multi_index():
 
 def test_loc_multi_index_with_tuples():
     arrays = [
-        ["bar", "bar", "baz", "baz", "foo", "foo", "qux", "qux"],
-        ["one", "two", "one", "two", "one", "two", "one", "two"],
+        ["bar", "bar", "baz", "baz"],
+        ["one", "two", "one", "two"],
     ]
+    nrows = 5
     columns = pd.MultiIndex.from_tuples(zip(*arrays), names=["a", "b"])
-    data = [np.random.randint(10, 50, len(columns)) for _ in range(30)]
+    data = np.arange(0, nrows * len(columns)).reshape(nrows, len(columns))
     modin_df, pandas_df = create_test_dfs(data, columns=columns)
     df_equals(modin_df.loc[:, ("bar", "two")], pandas_df.loc[:, ("bar", "two")])
 
