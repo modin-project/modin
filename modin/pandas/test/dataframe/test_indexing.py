@@ -569,14 +569,12 @@ def test_loc_multi_index_with_tuples():
     ]
     columns = pd.MultiIndex.from_tuples(zip(*arrays), names=["a", "b"])
     data = [np.random.randint(10, 50, len(columns)) for _ in range(30)]
-    modin_df = pd.DataFrame(data, columns=columns)
-    pandas_df = pandas.DataFrame(data, columns=columns)
+    modin_df, pandas_df = create_test_dfs(data, columns=columns)
     df_equals(modin_df.loc[:, ("bar", "two")], pandas_df.loc[:, ("bar", "two")])
 
 
 def test_loc_multi_index_duplicate_keys():
-    modin_df = pd.DataFrame([1, 2], index=[["a", "a"], ["b", "b"]])
-    pandas_df = pd.DataFrame([1, 2], index=[["a", "a"], ["b", "b"]])
+    modin_df, pandas_df = create_test_dfs([1, 2], index=[["a", "a"], ["b", "b"]])
     df_equals(modin_df.loc[("a", "b"), 0], pandas_df.loc[("a", "b"), 0])
     df_equals(modin_df.loc[("a", "b"), :], pandas_df.loc[("a", "b"), :])
 
@@ -594,8 +592,7 @@ def test_loc_multi_index_both_axes():
         ]
     )
     data = [[100, 300, 900, 400], [200, 500, 300, 600]]
-    df = pd.DataFrame(data, columns=cols, index=multi_index)
-    pdf = pandas.DataFrame(data, columns=cols, index=multi_index)
+    df, pdf = create_test_dfs(data, columns=cols, index=multi_index)
     df_equals(df.loc[("r0", "rA"), :], pdf.loc[("r0", "rA"), :])
     df_equals(df.loc[:, ("Gasoline", "Toyota")], pdf.loc[:, ("Gasoline", "Toyota")])
     # Test below fails b/c of mismatch return value from qc.view()

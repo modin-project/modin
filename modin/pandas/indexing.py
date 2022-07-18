@@ -558,10 +558,12 @@ class _LocationIndexerBase(ClassLogger):
         since we only check the length of the tuple to match the number of levels
         in the MultiIndex row/colunmn.
         """
+        if not self.qc.has_multiindex(axis=axis):
+            return False
+
         multiindex = self.df.index if axis == 0 else self.df.columns
         return (
-            self.qc.has_multiindex(axis=axis)
-            and isinstance(key, tuple)
+            isinstance(key, tuple)
             and len(key) == len(multiindex.levels)
         )
 
@@ -612,11 +614,8 @@ class _LocIndexer(_LocationIndexerBase):
         self.col_multiindex_full_lookup = self._multiindex_possibly_contains_key(
             axis=1, key=col_loc
         )
-        levels_already_dropped = (
-            True
-            if self.row_multiindex_full_lookup or self.col_multiindex_full_lookup
-            else False
-        )
+        levels_already_dropped = self.row_multiindex_full_lookup or self.col_multiindex_full_lookup
+
         if isinstance(row_loc, Series) and is_boolean_array(row_loc):
             return self._handle_boolean_masking(row_loc, col_loc)
 
