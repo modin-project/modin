@@ -14,7 +14,6 @@
 """Module houses ``Parameter`` class - base class for all configs."""
 
 import collections
-from subprocess import call
 from typing import Any, Callable, NamedTuple, Optional, Sequence, Union
 
 
@@ -71,7 +70,7 @@ _TYPE_PARAMS = {
     ),
     int: TypeDescriptor(
         decode=lambda value: int(value.strip()),
-        normalize=int, # type: ignore
+        normalize=int,  # type: ignore
         verify=lambda value: isinstance(value, int)
         or (isinstance(value, str) and value.strip().isdigit()),
         help="an integer value",
@@ -179,7 +178,7 @@ class Parameter(object):
         """
         raise NotImplementedError()
 
-    def __init_subclass__(cls, type: Any, abstract: bool=False, **kw: dict):
+    def __init_subclass__(cls, type: Any, abstract: bool = False, **kw: dict):
         """
         Initialize subclass.
 

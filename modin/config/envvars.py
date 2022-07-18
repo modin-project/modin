@@ -43,6 +43,8 @@ class EnvironmentVariable(Parameter, type=str, abstract=True):
         KeyError
             If value is absent.
         """
+        if cls.varname is None:
+            raise KeyError("varname is None")
         return os.environ[cls.varname]
 
     @classmethod
