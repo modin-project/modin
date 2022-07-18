@@ -20,6 +20,7 @@ Key Features and Updates
   * FIX-#4564: Workaround import issues in Ray: auto-import pandas on python start if env var is set (#4603)
   * FIX-#4641: Reindex pandas partitions in `df.describe()` (#4651)
   * FIX-#4634: Check for FrozenList as `by` in `df.groupby()` (#4667)
+  * FIX-#4680: Fix `read_csv` that started defaulting to pandas again in case of reading from buffer (#4681)
   * FIX-#4491: Wait for all partitions in parallel in benchmark mode (#4656)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)

@@ -987,7 +987,7 @@ class TextFileDispatcher(FileDispatcher):
         )
 
         use_modin_impl = cls.check_parameters_support(
-            filepath_or_buffer,
+            filepath_or_buffer_md,
             kwargs,
             skiprows_md,
             header_size,
@@ -1003,7 +1003,7 @@ class TextFileDispatcher(FileDispatcher):
         )
 
         pd_df_metadata = cls.read_callback(
-            filepath_or_buffer,
+            filepath_or_buffer_md,
             **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
         )
         column_names = pd_df_metadata.columns
