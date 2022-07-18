@@ -562,10 +562,7 @@ class _LocationIndexerBase(ClassLogger):
             return False
 
         multiindex = self.df.index if axis == 0 else self.df.columns
-        return (
-            isinstance(key, tuple)
-            and len(key) == len(multiindex.levels)
-        )
+        return isinstance(key, tuple) and len(key) == len(multiindex.levels)
 
 
 class _LocIndexer(_LocationIndexerBase):
@@ -614,7 +611,9 @@ class _LocIndexer(_LocationIndexerBase):
         self.col_multiindex_full_lookup = self._multiindex_possibly_contains_key(
             axis=1, key=col_loc
         )
-        levels_already_dropped = self.row_multiindex_full_lookup or self.col_multiindex_full_lookup
+        levels_already_dropped = (
+            self.row_multiindex_full_lookup or self.col_multiindex_full_lookup
+        )
 
         if isinstance(row_loc, Series) and is_boolean_array(row_loc):
             return self._handle_boolean_masking(row_loc, col_loc)
