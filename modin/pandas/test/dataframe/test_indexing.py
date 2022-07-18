@@ -581,12 +581,6 @@ def test_loc_multi_index_duplicate_keys():
     df_equals(modin_df.loc[("a", "b"), :], pandas_df.loc[("a", "b"), :])
 
 
-def test_loc_multi_index_one_level():
-    modin_df = pd.DataFrame([1, 2], index=[["a", "b"], ["c", "c"]])
-    pandas_df = pd.DataFrame([1, 2], index=[["a", "b"], ["c", "c"]])
-    df_equals(modin_df.loc["a"], pandas_df.loc["a"])
-
-
 def test_loc_multi_index_both_axes():
     multi_index = pd.MultiIndex.from_tuples(
         [("r0", "rA"), ("r1", "rB")], names=["Courses", "Fee"]

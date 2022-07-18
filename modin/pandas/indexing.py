@@ -332,10 +332,6 @@ class _LocationIndexerBase(ClassLogger):
             axis = 0
         elif ndim == 0:
             axis = None
-        elif (self.qc.has_multiindex() and self.row_scalar) or (
-            self.qc.has_multiindex(axis=1) and self.col_scalar
-        ):
-            return self.df.__constructor__(query_compiler=qc_view)
         else:
             axis = (
                 None
