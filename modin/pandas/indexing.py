@@ -283,8 +283,8 @@ class _LocationIndexerBase(ClassLogger):
         self.qc = modin_df._query_compiler
         self.row_scalar = False
         self.col_scalar = False
-        self.row_multiindex = False
-        self.col_multiindex = False
+        self.row_multiindex_full_lookup = False
+        self.col_multiindex_full_lookup = False
 
     def __getitem__(self, row_lookup, col_lookup, ndim):
         """
@@ -340,12 +340,11 @@ class _LocationIndexerBase(ClassLogger):
             axis = (
                 None
                 if (self.col_scalar and self.row_scalar)
-                or (self.row_multiindex and self.col_multiindex)
+                or (self.row_multiindex_full_lookup and self.col_multiindex_full_lookup)
                 else 1
-                if self.col_scalar or self.col_multiindex
+                if self.col_scalar or self.col_multiindex_full_lookup
                 else 0
             )
-
         return self.df.__constructor__(query_compiler=qc_view).squeeze(axis=axis)
 
     def __setitem__(self, row_lookup, col_lookup, item, axis=None):
@@ -536,6 +535,37 @@ class _LocationIndexerBase(ClassLogger):
         # Passing `slice(None)` as a row indexer since we've just applied it
         return type(self)(masked_df)[(slice(None), col_loc)]
 
+    def _multiindex_possibly_contains_key(self, axis, key):
+        """
+        Determine if a DataFrame has a MultiIndex row/column and if it does,
+        check to see whether a given key possibly exists
+
+        Parameters
+        ----------
+        axis : int
+            0 or 1 for row/column.
+        key : Any
+            Lookup key for MultiIndex row/column.
+
+        Returns
+        -------
+        bool
+            If the MultiIndex possibly contains the given key.
+
+        Notes
+        -----
+        This function only returns False if we have a partial key lookup. It's
+        possibly that this function returns True for a key that does NOT exist
+        since we only check the length of the tuple to match the number of levels
+        in the MultiIndex row/colunmn.
+        """
+        multiindex = self.df.index if axis == 0 else self.df.columns
+        return (
+            self.qc.has_multiindex(axis=axis)
+            and isinstance(key, tuple)
+            and len(key) == len(multiindex.levels)
+        )
+
 
 class _LocIndexer(_LocationIndexerBase):
     """
@@ -570,26 +600,23 @@ class _LocIndexer(_LocationIndexerBase):
         row_loc, col_loc, ndim = self._parse_row_and_column_locators(key)
         self.row_scalar = is_scalar(row_loc)
         self.col_scalar = is_scalar(col_loc)
+
         # The thought process here is that we should check to see that we have a full key lookup
         # for a MultiIndex DataFrame. If that's the case, then we should not drop any levels
         # since our resulting intermediate dataframe will have dropped these for us already.
-        # Thus, we need to make sure we don't try to drop these levels again.
-        self.row_multiindex = (
-            True
-            if self.qc.has_multiindex()
-            and isinstance(row_loc, tuple)
-            and row_loc in self.df.index.tolist()
-            else False
+        # Thus, we need to make sure we don't try to drop these levels again. The logic here is
+        # kind of hacked together. Ideally, we should handle this properly in the lower-level
+        # implementations, but this will have to be engineering properly later.
+        self.row_multiindex_full_lookup = self._multiindex_possibly_contains_key(
+            axis=0, key=row_loc
         )
-        self.col_multiindex = (
-            True
-            if self.qc.has_multiindex(axis=1)
-            and isinstance(col_loc, tuple)
-            and col_loc in self.df.columns.tolist()
-            else False
+        self.col_multiindex_full_lookup = self._multiindex_possibly_contains_key(
+            axis=1, key=col_loc
         )
         levels_already_dropped = (
-            True if self.row_multiindex or self.col_multiindex else False
+            True
+            if self.row_multiindex_full_lookup or self.col_multiindex_full_lookup
+            else False
         )
         if isinstance(row_loc, Series) and is_boolean_array(row_loc):
             return self._handle_boolean_masking(row_loc, col_loc)
@@ -599,8 +626,8 @@ class _LocIndexer(_LocationIndexerBase):
         if isinstance(result, Series):
             result._parent = self.df
             result._parent_axis = 0
-        row_loc_as_list = [row_loc] if self.row_scalar else row_loc
         col_loc_as_list = [col_loc] if self.col_scalar else col_loc
+        row_loc_as_list = [row_loc] if self.row_scalar else row_loc
         # Pandas drops the levels that are in the `loc`, so we have to as well.
         if (
             isinstance(result, (Series, DataFrame))

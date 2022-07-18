@@ -562,8 +562,7 @@ def test_loc_multi_index():
     df_equals(modin_df.loc[modin_df.index[:7]], pandas_df.loc[pandas_df.index[:7]])
 
 
-# Better name suggestions?
-def test_loc_4358():
+def test_loc_multi_index_with_tuples():
     arrays = [
         ["bar", "bar", "baz", "baz", "foo", "foo", "qux", "qux"],
         ["one", "two", "one", "two", "one", "two", "one", "two"],
@@ -607,7 +606,7 @@ def test_loc_multi_index_both_axes():
     df_equals(df.loc[("r0"), :], pdf.loc[("r0"), :])
     df_equals(df.loc[:, ("Gasoline")], pdf.loc[:, ("Gasoline")])
     df_equals(df.loc[:, ("Gasoline", "Toyota")], pdf.loc[:, ("Gasoline", "Toyota")])
-    # Test below fails
+    # Test below fails b/c of mismatch return value from qc.view()
     # df_equals(df.loc[("r0"), ("Gasoline", "Toyota")], pdf.loc[("r0"), ("Gasoline", "Toyota")])
 
 
