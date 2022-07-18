@@ -21,6 +21,7 @@ Key Features and Updates
   * FIX-#4641: Reindex pandas partitions in `df.describe()` (#4651)
   * FIX-#4634: Check for FrozenList as `by` in `df.groupby()` (#4667)
   * FIX-#4491: Wait for all partitions in parallel in benchmark mode (#4656)
+  * FIX-#4358: MultiIndex `loc`` shouldn't drop levels for full-key lookups (#4608)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
