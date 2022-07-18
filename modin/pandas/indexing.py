@@ -533,8 +533,11 @@ class _LocationIndexerBase(ClassLogger):
 
     def _multiindex_possibly_contains_key(self, axis, key):
         """
-        Determine if a DataFrame has a MultiIndex row/column and if it does,
-        check to see whether a given key possibly exists
+        Determine if a MultiIndex row/column possibly contains a key.
+
+        Check to see if the current DataFrame has a MultiIndex row/column and if it does,
+        check to see if the key is potentially a full key-lookup such that the number of
+        levels match up with the length of the tuple key.
 
         Parameters
         ----------
