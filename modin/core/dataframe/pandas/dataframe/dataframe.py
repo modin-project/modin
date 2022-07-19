@@ -630,21 +630,8 @@ class PandasDataframe(ClassLogger):
         if row_labels is not None:
             row_positions = self.index.get_indexer_for(row_labels)
         if row_positions is not None:
-            sorted_row_positions = (
-                row_positions
-                if (
-                    (is_range_like(row_positions) and row_positions.step > 0)
-                    # `np.sort` of empty list returns an array with `float` dtype,
-                    # which doesn't work well as an indexer
-                    or len(row_positions) == 0
-                )
-                else np.sort(row_positions)
-            )
             # Get dict of row_parts as {row_index: row_internal_indices}
-            # TODO: Rename `row_partitions_list`->`row_partitions_dict`
-            row_partitions_list = self._get_dict_of_block_index(
-                0, sorted_row_positions, are_indices_sorted=True
-            )
+            row_partitions_dict = self._get_dict_of_block_index(0, row_positions)
             new_row_lengths = [
                 len(
                     # Row lengths for slice are calculated as the length of the slice
@@ -654,19 +641,19 @@ class PandasDataframe(ClassLogger):
                     if isinstance(part_indexer, slice)
                     else part_indexer
                 )
-                for part_idx, part_indexer in row_partitions_list.items()
+                for part_idx, part_indexer in row_partitions_dict.items()
             ]
             new_index = self.index[
                 # pandas Index is more likely to preserve its metadata if the indexer is slice
                 slice(row_positions.start, row_positions.stop, row_positions.step)
                 # TODO: Fast range processing of non-positive-step ranges is not yet supported
                 if is_range_like(row_positions) and row_positions.step > 0
-                else sorted_row_positions
+                else row_positions
             ]
         else:
-            row_partitions_list = {
-                i: slice(None) for i in range(len(self._row_lengths))
-            }
+            row_partitions_dict = OrderedDict(
+                [(i, slice(None)) for i in range(len(self._row_lengths))]
+            )
             new_row_lengths = self._row_lengths
             new_index = self.index
 
@@ -674,20 +661,8 @@ class PandasDataframe(ClassLogger):
         if col_labels is not None:
             col_positions = self.columns.get_indexer_for(col_labels)
         if col_positions is not None:
-            sorted_col_positions = (
-                col_positions
-                if (
-                    (is_range_like(col_positions) and col_positions.step > 0)
-                    # `np.sort` of empty list returns an array with `float` dtype,
-                    # which doesn't work well as an indexer
-                    or len(col_positions) == 0
-                )
-                else np.sort(col_positions)
-            )
             # Get dict of col_parts as {col_index: col_internal_indices}
-            col_partitions_list = self._get_dict_of_block_index(
-                1, sorted_col_positions, are_indices_sorted=True
-            )
+            col_partitions_dict = self._get_dict_of_block_index(1, col_positions)
             new_col_widths = [
                 len(
                     # Column widths for slice are calculated as the length of the slice
@@ -697,30 +672,30 @@ class PandasDataframe(ClassLogger):
                     if isinstance(part_indexer, slice)
                     else part_indexer
                 )
-                for part_idx, part_indexer in col_partitions_list.items()
+                for part_idx, part_indexer in col_partitions_dict.items()
             ]
             # Use the slice to calculate the new columns
             # TODO: Support fast processing of negative-step ranges
             if is_range_like(col_positions) and col_positions.step > 0:
                 # pandas Index is more likely to preserve its metadata if the indexer is slice
-                monotonic_col_idx = slice(
+                maybe_slice_col_idx = slice(
                     col_positions.start, col_positions.stop, col_positions.step
                 )
             else:
-                monotonic_col_idx = sorted_col_positions
-            new_columns = self.columns[monotonic_col_idx]
+                maybe_slice_col_idx = col_positions
+            new_columns = self.columns[maybe_slice_col_idx]
             ErrorMessage.catch_bugs_and_request_email(
                 failure_condition=sum(new_col_widths) != len(new_columns),
-                extra_log=f"{sum(new_col_widths)} != {len(new_columns)}.\n{col_positions}\n{self._column_widths}\n{col_partitions_list}",
+                extra_log=f"{sum(new_col_widths)} != {len(new_columns)}.\n{col_positions}\n{self._column_widths}\n{col_partitions_dict}",
             )
             if self._dtypes is not None:
-                new_dtypes = self.dtypes.iloc[monotonic_col_idx]
+                new_dtypes = self.dtypes.iloc[maybe_slice_col_idx]
             else:
                 new_dtypes = None
         else:
-            col_partitions_list = {
-                i: slice(None) for i in range(len(self._column_widths))
-            }
+            col_partitions_dict = OrderedDict(
+                [(i, slice(None)) for i in range(len(self._column_widths))]
+            )
             new_col_widths = self._column_widths
             new_columns = self.columns
             if self._dtypes is not None:
@@ -733,11 +708,11 @@ class PandasDataframe(ClassLogger):
                     self._partitions[row_idx][col_idx].mask(
                         row_internal_indices, col_internal_indices
                     )
-                    for col_idx, col_internal_indices in col_partitions_list.items()
+                    for col_idx, col_internal_indices in col_partitions_dict.items()
                     if isinstance(col_internal_indices, slice)
                     or len(col_internal_indices) > 0
                 ]
-                for row_idx, row_internal_indices in row_partitions_list.items()
+                for row_idx, row_internal_indices in row_partitions_dict.items()
                 if isinstance(row_internal_indices, slice)
                 or len(row_internal_indices) > 0
             ]
@@ -773,16 +748,12 @@ class PandasDataframe(ClassLogger):
         # to all others, then recreate that order by mapping the new order values from
         # the old. This information is sent to `_reorder_labels`.
         if row_positions is not None:
-            row_order_mapping = dict(
-                zip(sorted_row_positions, range(len(row_positions)))
-            )
+            row_order_mapping = dict(zip(row_positions, range(len(row_positions))))
             new_row_order = [row_order_mapping[idx] for idx in row_positions]
         else:
             new_row_order = None
         if col_positions is not None:
-            col_order_mapping = dict(
-                zip(sorted_col_positions, range(len(col_positions)))
-            )
+            col_order_mapping = dict(zip(col_positions, range(len(col_positions))))
             new_col_order = [col_order_mapping[idx] for idx in col_positions]
         else:
             new_col_order = None
@@ -1120,7 +1091,7 @@ class PandasDataframe(ClassLogger):
                 columns.append(col)
         return columns
 
-    def _get_dict_of_block_index(self, axis, indices, are_indices_sorted=False):
+    def _get_dict_of_block_index(self, axis, indices):
         """
         Convert indices to an ordered dict mapping partition (or block) index to internal indices in said partition.
 
@@ -1130,12 +1101,6 @@ class PandasDataframe(ClassLogger):
             The axis along which to get the indices (0 - rows, 1 - columns).
         indices : list of int, slice
             A list of global indices to convert.
-        are_indices_sorted : bool, default: False
-            Flag indicating whether the `indices` sequence is sorted by ascending or not.
-            Note: the internal algorithm requires for the `indices` to be sorted, this
-            flag is used for optimization in order to not sort already sorted data.
-            Be careful when passing ``True`` for this flag, if the data appears to be unsorted
-            with the flag set to ``True`` this would lead to undefined behavior.
 
         Returns
         -------
@@ -1194,11 +1159,10 @@ class PandasDataframe(ClassLogger):
                 else:
                     if last_part - first_part == 1:
                         return OrderedDict(
-                            # FIXME: this dictionary creation feels wrong - it might not maintain the order
-                            {
-                                first_part: slice(first_idx[0], None),
-                                last_part: slice(None, last_idx[0]),
-                            }
+                            [
+                                (first_part, slice(first_idx[0], None)),
+                                (last_part, slice(None, last_idx[0])),
+                            ]
                         )
                     else:
                         dict_of_slices = OrderedDict(
@@ -2037,13 +2001,14 @@ class PandasDataframe(ClassLogger):
             assert row_labels is not None and col_labels is not None
             assert keep_remaining
             assert item_to_distribute is not no_default
-            row_partitions_list = self._get_dict_of_block_index(0, row_labels).items()
-            col_partitions_list = self._get_dict_of_block_index(1, col_labels).items()
+            # Does the following work correctly, for example, with list[str]?
+            row_partitions_dict = self._get_dict_of_block_index(0, row_labels).items()
+            col_partitions_dict = self._get_dict_of_block_index(1, col_labels).items()
             new_partitions = self._partition_mgr_cls.apply_func_to_indices_both_axis(
                 self._partitions,
                 func,
-                row_partitions_list,
-                col_partitions_list,
+                row_partitions_dict,
+                col_partitions_dict,
                 item_to_distribute,
                 # Passing caches instead of values in order to not trigger shapes recomputation
                 # if they are not used inside this function.
