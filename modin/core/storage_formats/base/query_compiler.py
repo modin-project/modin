@@ -1414,7 +1414,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         convert_integer : bool, default: True
             Whether, if possbile, conversion should be done to integer extension types.
         convert_boolean : bool, default: True
-            Whether  object dtypes should be converted to ``pd.BooleanDtype()``.
+            Whether object dtypes should be converted to ``pd.BooleanDtype()``.
         convert_floating : bool, default: True
             Whether, if possible, conversion can be done to floating extension types.
             If `convert_integer` is also True, preference will be give to integer dtypes
