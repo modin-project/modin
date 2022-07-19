@@ -263,23 +263,19 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
 
     def build_length_cache(self):
         """
-        Get a future representing the length of the object wrapped by this partition if it
-        has not yet been cached, or else the concrete value from the cache.
+        Get a future representing the length of the object wrapped by this partition if it has not yet been cached, or else the concrete value from the cache.
 
         Returns
         -------
         distributed.Future | int
-            Either a dask future representing the length of the object wrapped by this partition,
+            Either a Dask future representing the length of the object wrapped by this partition,
             or the concrete value of the length if it was already cached.
         """
-        if self._length_cache is none:
+        if self._length_cache is None:
             self._length_cache = self.apply(lambda df: len(df))._data
         return self._length_cache
 
-    def set_length_cache(self, length: int):
-        """
-        Set the width cache to the specified value.
-        """
+    def set_length_cache(self, length: int):  # noqa: GL08
         self._length_cache = length
 
     def width(self):
@@ -298,23 +294,19 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
 
     def build_width_cache(self):
         """
-        Get a future representing the length of the object wrapped by this partition if it
-        has not yet been cached, or else the concrete value from the cache.
+        Get a future representing the length of the object wrapped by this partition if it has not yet been cached, or else the concrete value from the cache.
 
         Returns
         -------
         distributed.Future | int
-            Either a dask future representing the length of the object wrapped by this partition,
+            Either a Dask future representing the length of the object wrapped by this partition,
             or the concrete value of the length if it was already cached.
         """
         if self._width_cache is None:
             self._width_cache = self.apply(lambda df: len(df.columns))._data
         return self._width_cache
 
-    def set_width_cache(self, width: int):
-        """
-        Set the width cache to the specified value.
-        """
+    def set_width_cache(self, width: int):  # noqa: GL08
         self._width_cache = width
 
     def ip(self):
