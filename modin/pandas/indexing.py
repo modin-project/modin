@@ -333,6 +333,11 @@ class _LocationIndexerBase(ClassLogger):
         elif ndim == 0:
             axis = None
         else:
+            # We are in the case where ndim == 1
+            # The axis we squeeze on depends on whether we are looking for an exact
+            # value or a subset of rows and columns. Knowing if we have a full MultiIndex
+            # lookup or scalar lookup can help us figure out whether we need to squeeze
+            # on the row or column index.
             axis = (
                 None
                 if (self.col_scalar and self.row_scalar)
