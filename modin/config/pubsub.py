@@ -13,7 +13,7 @@
 
 """Module houses ``Parameter`` class - base class for all configs."""
 
-import collections
+from collections import defaultdict
 from typing import Any, Callable, NamedTuple, Optional, Sequence, Union
 
 
@@ -140,6 +140,9 @@ class Parameter(object):
     default: Optional[Any] = None
     is_abstract = True
     _value_source: Optional[int] = None
+    _value: Any = _UNSET
+    _subs: list = []
+    _once: defaultdict[Any, list] = defaultdict(list)
 
     @classmethod
     def _get_raw_from_config(cls) -> str:
@@ -196,7 +199,7 @@ class Parameter(object):
         cls.is_abstract = abstract
         cls._value = _UNSET
         cls._subs = []
-        cls._once = collections.defaultdict(list)
+        cls._once = defaultdict(list)
         super().__init_subclass__(**kw)
 
     @classmethod

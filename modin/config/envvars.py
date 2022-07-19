@@ -23,6 +23,7 @@ import secrets
 from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
 from typing import Optional
 
+
 class EnvironmentVariable(Parameter, type=str, abstract=True):
     """Base class for environment variables-based configuration."""
 
