@@ -115,7 +115,7 @@ class PandasOnRayDataframe(PandasDataframe):
                 flat_index += 1
             else:
                 # Original list had a nested list here
-                nested_values.append(flat_values[flat_index:flat_index + length])
+                nested_values.append(flat_values[flat_index : flat_index + length])
                 flat_index += length
         return nested_values
 
@@ -130,10 +130,12 @@ class PandasOnRayDataframe(PandasDataframe):
             A list of row partitions lengths.
         """
         if self._row_lengths_cache is None:
-            row_lengths_list = self._ray_get_nested([
-                self._get_partition_size_along_axis(obj, axis=0)
-                for obj in self._partitions.T[0]
-            ])
+            row_lengths_list = self._ray_get_nested(
+                [
+                    self._get_partition_size_along_axis(obj, axis=0)
+                    for obj in self._partitions.T[0]
+                ]
+            )
             self._row_lengths_cache = [sum(len_list) for len_list in row_lengths_list]
         return self._row_lengths_cache
 
@@ -148,10 +150,12 @@ class PandasOnRayDataframe(PandasDataframe):
             A list of column partitions widths.
         """
         if self._column_widths_cache is None:
-            col_widths_list = self._ray_get_nested([
-                self._get_partition_size_along_axis(obj, axis=1)
-                for obj in self._partitions[0]
-            ])
+            col_widths_list = self._ray_get_nested(
+                [
+                    self._get_partition_size_along_axis(obj, axis=1)
+                    for obj in self._partitions[0]
+                ]
+            )
             self._column_widths_cache = [
                 sum(width_list) for width_list in col_widths_list
             ]

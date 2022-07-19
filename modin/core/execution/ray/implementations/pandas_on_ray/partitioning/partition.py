@@ -285,6 +285,24 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         int
             The length of the object.
         """
+        self.build_length_cache()
+        if isinstance(self._length_cache, ObjectIDType):
+            self._length_cache = ray.get(self._length_cache)
+        return self._length_cache
+
+    def build_length_cache(self):
+        """
+        Get a future representing the length of the object wrapped by this partition if it
+        has not yet been cached, or else the concrete value from the cache.
+
+        The call queue is always drained synchronously when this method is called.
+
+        Returns
+        -------
+        ray.ObjectRef | int
+            Either a ray object ID representing the length of the object wrapped by this partition,
+            or the concrete value of the length if it was already cached.
+        """
         if self._length_cache is None:
             if len(self.call_queue):
                 self.drain_call_queue()
@@ -292,9 +310,13 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache, self._width_cache = _get_index_and_columns.remote(
                     self._data
                 )
-        if isinstance(self._length_cache, ObjectIDType):
-            self._length_cache = ray.get(self._length_cache)
         return self._length_cache
+
+    def set_length_cache(self, length: int):
+        """
+        Set the width cache to the specified value.
+        """
+        self._length_cache = length
 
     def width(self):
         """
@@ -305,6 +327,24 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         int
             The width of the object.
         """
+        self.build_width_cache()
+        if isinstance(self._width_cache, ObjectIDType):
+            self._width_cache = ray.get(self._width_cache)
+        return self._width_cache
+
+    def build_width_cache(self):
+        """
+        Get a future representing the width of the object wrapped by this partition if it
+        has not yet been cached, or else the concrete value from the cache.
+
+        The call queue is always drained synchronously when this method is called.
+
+        Returns
+        -------
+        ray.ObjectRef | int
+            Either a ray object ID representing the width of the object wrapped by this partition,
+            or the concrete value of the width if it was already cached.
+        """
         if self._width_cache is None:
             if len(self.call_queue):
                 self.drain_call_queue()
@@ -312,9 +352,13 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache, self._width_cache = _get_index_and_columns.remote(
                     self._data
                 )
-        if isinstance(self._width_cache, ObjectIDType):
-            self._width_cache = ray.get(self._width_cache)
         return self._width_cache
+
+    def set_width_cache(self, width: int):
+        """
+        Set the width cache to the specified value.
+        """
+        self._width_cache = width
 
     def ip(self):
         """

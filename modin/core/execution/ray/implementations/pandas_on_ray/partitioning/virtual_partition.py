@@ -20,7 +20,7 @@ from ray.util import get_node_ip_address
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-from modin.core.execution.ray.common.utils import deserialize
+from modin.core.execution.ray.common.utils import deserialize, ObjectIDType
 from .partition import PandasOnRayDataframePartition
 
 
@@ -388,6 +388,20 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         """
         if self._length_cache is None:
             if self.axis == 0:
+                caches = [
+                    obj.build_length_cache()
+                    for obj in self.list_of_partitions_to_combine
+                ]
+                new_lengths = ray.get(
+                    [cache for cache in caches if isinstance(promise, ObjectIDType)]
+                )
+                ray_idx = 0
+                for i, cache in enumerate(caches):
+                    if isinstance(cache, ObjectIDType):
+                        self.list_of_partitions_to_combine[i].set_length_cache(
+                            new_lengths[ray_idx]
+                        )
+                        ray_idx += 1
                 self._length_cache = sum(
                     obj.length() for obj in self.list_of_block_partitions
                 )
@@ -408,6 +422,20 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         """
         if self._width_cache is None:
             if self.axis == 1:
+                caches = [
+                    obj.build_width_cache()
+                    for obj in self.list_of_partitions_to_combine
+                ]
+                new_widths = ray.get(
+                    [cache for cache in caches if isinstance(promise, ObjectIDType)]
+                )
+                ray_idx = 0
+                for i, cache in enumerate(caches):
+                    if isinstance(cache, ObjectIDType):
+                        self.list_of_partitions_to_combine[i].set_width_cache(
+                            new_widths[ray_idx]
+                        )
+                        ray_idx += 1
                 self._width_cache = sum(
                     obj.width() for obj in self.list_of_block_partitions
                 )
