@@ -572,6 +572,18 @@ def test_loc_empty():
     df_equals(pandas_df, modin_df)
 
 
+@pytest.mark.parametrize("locator_name", ["iloc", "loc"])
+def test_loc_iloc_2064(locator_name):
+    modin_df, pandas_df = create_test_dfs(columns=["col1", "col2"])
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: getattr(df, locator_name).__setitem__([1], [11, 22]),
+        __inplace__=True,
+    )
+
+
 @pytest.mark.parametrize("index", [["row1", "row2", "row3"]])
 @pytest.mark.parametrize("columns", [["col1", "col2"]])
 def test_loc_assignment(index, columns):
