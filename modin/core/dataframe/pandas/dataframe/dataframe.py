@@ -591,6 +591,14 @@ class PandasDataframe(ClassLogger):
         If both `row_labels` and `row_positions` are provided, a ValueError is raised.
         The same rule applies for `col_labels` and `col_positions`.
         """
+        if (
+            col_labels is None
+            and col_positions is None
+            and row_labels is None
+            and row_positions is None
+        ):
+            return self.copy()
+
         if check_both_not_none(row_labels, row_positions):
             raise ValueError(
                 "Both row_labels and row_positions were provided - please provide only one of row_labels and row_positions."
@@ -607,7 +615,7 @@ class PandasDataframe(ClassLogger):
                     indexer = None
                 elif indexer is not None and not isinstance(indexer, pandas.RangeIndex):
                     # Pure python's range is not fully compatible with a list of ints,
-                    # converting it to ``pandas.RangeIndex``` that is compatible.
+                    # converting it to ``pandas.RangeIndex`` that is compatible.
                     indexer = pandas.RangeIndex(
                         indexer.start, indexer.stop, indexer.step
                     )
@@ -619,18 +627,12 @@ class PandasDataframe(ClassLogger):
             indexers.append(indexer)
         row_positions, col_positions = indexers
 
-        if (
-            col_labels is None
-            and col_positions is None
-            and row_labels is None
-            and row_positions is None
-        ):
-            return self.copy()
         # Get numpy array of positions of values from `row_labels`
         if row_labels is not None:
             row_positions = self.index.get_indexer_for(row_labels)
         if row_positions is not None:
             # Get dict of row_parts as {row_index: row_internal_indices}
+            # This hurts row_positions order
             row_partitions_dict = self._get_dict_of_block_index(0, row_positions)
             new_row_lengths = [
                 len(
@@ -643,25 +645,30 @@ class PandasDataframe(ClassLogger):
                 )
                 for part_idx, part_indexer in row_partitions_dict.items()
             ]
-            new_index = self.index[
-                # pandas Index is more likely to preserve its metadata if the indexer is slice
-                slice(row_positions.start, row_positions.stop, row_positions.step)
-                # TODO: Fast range processing of non-positive-step ranges is not yet supported
-                if is_range_like(row_positions) and row_positions.step > 0
-                else row_positions
+            bins = np.array(self._row_lengths)
+            cumulative = np.append(bins[:-1].cumsum(), np.iinfo(bins.dtype).max)
+            new_row_positions = [
+                np.add(part_indexer, cumulative[part_idx - 1])
+                if part_idx != 0
+                else part_indexer
+                for part_idx, part_indexer in row_partitions_dict.items()
             ]
+            new_row_positions = np.concatenate(new_row_positions, axis=None)
+            new_index = self.index[new_row_positions]
         else:
             row_partitions_dict = OrderedDict(
                 [(i, slice(None)) for i in range(len(self._row_lengths))]
             )
             new_row_lengths = self._row_lengths
             new_index = self.index
+            new_row_positions = row_positions
 
         # Get numpy array of positions of values from `col_labels`
         if col_labels is not None:
             col_positions = self.columns.get_indexer_for(col_labels)
         if col_positions is not None:
             # Get dict of col_parts as {col_index: col_internal_indices}
+            # This hurts col_positions order
             col_partitions_dict = self._get_dict_of_block_index(1, col_positions)
             new_col_widths = [
                 len(
@@ -683,7 +690,16 @@ class PandasDataframe(ClassLogger):
                 )
             else:
                 maybe_slice_col_idx = col_positions
-            new_columns = self.columns[maybe_slice_col_idx]
+            bins = np.array(self._column_widths)
+            cumulative = np.append(bins[:-1].cumsum(), np.iinfo(bins.dtype).max)
+            new_col_positions = [
+                np.add(part_indexer, cumulative[part_idx - 1])
+                if part_idx != 0
+                else part_indexer
+                for part_idx, part_indexer in col_partitions_dict.items()
+            ]
+            new_col_positions = np.concatenate(new_col_positions, axis=None)
+            new_columns = self.columns[new_col_positions]
             ErrorMessage.catch_bugs_and_request_email(
                 failure_condition=sum(new_col_widths) != len(new_columns),
                 extra_log=f"{sum(new_col_widths)} != {len(new_columns)}.\n{col_positions}\n{self._column_widths}\n{col_partitions_dict}",
@@ -702,6 +718,7 @@ class PandasDataframe(ClassLogger):
                 new_dtypes = self.dtypes
             else:
                 new_dtypes = None
+            new_col_positions = col_positions
         new_partitions = np.array(
             [
                 [
@@ -747,14 +764,25 @@ class PandasDataframe(ClassLogger):
         # We create a dictionary mapping the position of the numeric index with respect
         # to all others, then recreate that order by mapping the new order values from
         # the old. This information is sent to `_reorder_labels`.
+        if (
+            (col_positions == new_col_positions).all()
+            if hasattr(col_positions, "all")
+            else col_positions == new_col_positions
+            and (row_positions == new_row_positions).all()
+            if hasattr(row_positions, "all")
+            else row_positions == new_row_positions
+        ):
+            return intermediate
         if row_positions is not None:
-            row_order_mapping = dict(zip(row_positions, range(len(row_positions))))
-            new_row_order = [row_order_mapping[idx] for idx in row_positions]
+            new_row_order = pandas.Index(new_row_positions).get_indexer_for(
+                row_positions
+            )
         else:
             new_row_order = None
         if col_positions is not None:
-            col_order_mapping = dict(zip(col_positions, range(len(col_positions))))
-            new_col_order = [col_order_mapping[idx] for idx in col_positions]
+            new_col_order = pandas.Index(new_col_positions).get_indexer_for(
+                col_positions
+            )
         else:
             new_col_order = None
         return intermediate._reorder_labels(
@@ -1107,6 +1135,10 @@ class PandasDataframe(ClassLogger):
         OrderedDict
             A mapping from partition index to list of internal indices which correspond to `indices` in each
             partition.
+
+        Notes
+        -----
+        * Doesn't preserve order between partitions.
         """
         # TODO: Support handling of slices with specified 'step'. For now, converting them into a range
         if isinstance(indices, slice) and (
