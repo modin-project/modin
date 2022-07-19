@@ -30,7 +30,8 @@ Key Features and Updates
   * REFACTOR-#4530: Standardize access to physical data in partitions (#4563)
   * REFACTOR-#4534: Replace logging meta class with class decorator (#4535)
 * Pandas API implementations and improvements
-  *
+  * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
+
 * OmniSci enhancements
   *
 * XGBoost enhancements
@@ -52,7 +53,6 @@ Key Features and Updates
 * New Features
   * FEAT-4463: Add experimental fuzzydata integration for testing against a randomized dataframe workflow (#4556)
   * FEAT-#4419: Extend virtual partitioning API to pandas on Dask (#4420)
-  * FEAT-#4670:  Implement convert_dtypes by mapping across partitions (#4671)
 
 
 Contributors
