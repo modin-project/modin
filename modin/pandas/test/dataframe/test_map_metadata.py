@@ -599,6 +599,10 @@ def test_convert_dtypes_single_partition(
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
+@pytest.mark.skipif(
+    get_current_execution() == "BaseOnPython",
+    reason="BaseOnPython cannot not have multiple partitions.",
+)
 def test_convert_dtypes_multiple_row_partitions():
     # Column 0 should have string dtype
     modin_part1 = pd.DataFrame(["a"]).convert_dtypes()
