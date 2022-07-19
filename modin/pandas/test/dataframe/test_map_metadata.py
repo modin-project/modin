@@ -16,9 +16,9 @@ import numpy as np
 import pandas
 from pandas.testing import assert_index_equal, assert_series_equal
 import matplotlib
-
 import modin.pandas as pd
 from modin.utils import get_current_execution
+
 from modin.pandas.test.utils import (
     random_state,
     RAND_LOW,
