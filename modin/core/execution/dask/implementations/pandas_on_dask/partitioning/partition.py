@@ -263,7 +263,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
 
     def build_length_cache(self):
         """
-        Get a future representing the length of the object wrapped by this partition if it has not yet been cached, or else the concrete value from the cache.
+        Attempt to set this partition's length cache, and return it.
 
         Returns
         -------
@@ -294,7 +294,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
 
     def build_width_cache(self):
         """
-        Get a future representing the length of the object wrapped by this partition if it has not yet been cached, or else the concrete value from the cache.
+        Attempt to set this partition's width cache, and return it.
 
         Returns
         -------

@@ -55,7 +55,7 @@ class PandasOnRayDataframe(PandasDataframe):
         Returns
         -------
         list
-            A list of ray object IDs representing lengths along the specified axis that sum to the overall length of the partition
+            A list of Ray object IDs representing lengths along the specified axis that sum to the overall length of the partition
             along the specified axis.
 
         Notes
@@ -78,16 +78,16 @@ class PandasOnRayDataframe(PandasDataframe):
 
     def _ray_get_nested(self, ray_list):
         """
-        Asynchronously gets the result of computations of a nested list of ray object IDs,
-        and returns a nested same dimension. That is, calling
-        `_ray_get_nested([id1, [id2], id3])` would return a list of the form `[val1, [val2], val3]`.
+        Get the result of computations of a nested list of Ray object IDs, and returns a nested same dimension.
+
+        For example, calling `_ray_get_nested([id1, [id2], id3])` would return a list of the form `[val1, [val2], val3]`.
 
         This function does not work for lists that are nested more than 3 layers (e.g. `[[[id]]]`).
 
         Parameters
         ----------
         ray_list : list
-            A 2D list of ray object IDs.
+            A 2D list of Ray object IDs.
 
         Returns
         -------
