@@ -14,7 +14,7 @@
 """Module houses ``Parameter`` class - base class for all configs."""
 
 from collections import defaultdict
-from typing import Any, Callable, NamedTuple, Optional, Sequence, Union
+from typing import Any, Callable, DefaultDict, NamedTuple, Optional, Sequence, Union
 
 
 class TypeDescriptor(NamedTuple):
@@ -142,7 +142,7 @@ class Parameter(object):
     _value_source: Optional[int] = None
     _value: Any = _UNSET
     _subs: list = []
-    _once: defaultdict[Any, list] = defaultdict(list)
+    _once: DefaultDict[Any, list] = defaultdict(list)
 
     @classmethod
     def _get_raw_from_config(cls) -> str:
