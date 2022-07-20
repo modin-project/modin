@@ -546,8 +546,8 @@ class _LocationIndexerBase(ClassLogger):
 
         Parameters
         ----------
-        axis : int
-            0 or 1 for row/column.
+        axis : {0, 1}
+            0 for row, 1 for column.
         key : Any
             Lookup key for MultiIndex row/column.
 
@@ -559,9 +559,9 @@ class _LocationIndexerBase(ClassLogger):
         Notes
         -----
         This function only returns False if we have a partial key lookup. It's
-        possibly that this function returns True for a key that does NOT exist
-        since we only check the length of the tuple to match the number of levels
-        in the MultiIndex row/colunmn.
+        possible that this function returns True for a key that does NOT exist
+        since we only check the length of the `key` tuple to match the number
+        of levels in the MultiIndex row/colunmn.
         """
         if not self.qc.has_multiindex(axis=axis):
             return False
@@ -609,7 +609,7 @@ class _LocIndexer(_LocationIndexerBase):
         # since our resulting intermediate dataframe will have dropped these for us already.
         # Thus, we need to make sure we don't try to drop these levels again. The logic here is
         # kind of hacked together. Ideally, we should handle this properly in the lower-level
-        # implementations, but this will have to be engineering properly later.
+        # implementations, but this will have to be engineered properly later.
         self.row_multiindex_full_lookup = self._multiindex_possibly_contains_key(
             axis=0, key=row_loc
         )

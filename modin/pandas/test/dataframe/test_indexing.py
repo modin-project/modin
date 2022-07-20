@@ -596,8 +596,6 @@ def test_loc_multi_index_both_axes():
     modin_df, pandas_df = create_test_dfs(data, columns=cols, index=multi_index)
     eval_general(modin_df, pandas_df, lambda df: df.loc[("r0", "rA"), :])
     eval_general(modin_df, pandas_df, lambda df: df.loc[:, ("Gasoline", "Toyota")])
-    # Test below bc of issue #4684
-    # df_equals(df.loc[("r0"), ("Gasoline", "Toyota")], pdf.loc[("r0"), ("Gasoline", "Toyota")])
 
 
 def test_loc_empty():
