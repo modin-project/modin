@@ -2363,7 +2363,7 @@ class PandasDataframe(ClassLogger):
         return result
 
     def _copartition(
-        self, axis, other, how, sort, force_repartition=False, make_reindex=True
+        self, axis, other, how, sort, force_repartition=False, perform_reindex=True
     ):
         """
         Copartition two Modin DataFrames.
@@ -2385,7 +2385,7 @@ class PandasDataframe(ClassLogger):
             this method will skip repartitioning if it is possible. This is because
             reindexing is extremely inefficient. Because this method is used to
             `join` or `append`, it is vital that the internal indices match.
-        make_reindex : bool, default: True
+        perform_reindex : bool, default: True
             For some ops, for example `fillna`, column reindexing of right operand isn't needed.
 
         Returns
@@ -2404,7 +2404,7 @@ class PandasDataframe(ClassLogger):
 
         self_index = self.axes[axis]
         others_index = [o.axes[axis] for o in other]
-        if make_reindex:
+        if perform_reindex:
             joined_index, make_reindexer = self._join_index_objects(
                 axis, [self_index] + others_index, how, sort
             )
@@ -2419,7 +2419,7 @@ class PandasDataframe(ClassLogger):
             return (
                 self._partitions,
                 [o._partitions for o in other],
-                joined_index if make_reindex else None,
+                joined_index if perform_reindex else None,
                 # There are no partition sizes because the resulting dataframe
                 # has no partitions.
                 [],
@@ -2433,9 +2433,7 @@ class PandasDataframe(ClassLogger):
         base_index = base_frame.axes[axis]
 
         # define conditions for reindexing and repartitioning `self` frame
-        do_reindex_base = False
-        if make_reindex:
-            do_reindex_base = not base_index.equals(joined_index)
+        do_reindex_base = perform_reindex and not base_index.equals(joined_index)
         do_repartition_base = force_repartition or do_reindex_base
 
         # Perform repartitioning and reindexing for `base_frame` if needed.
@@ -2446,7 +2444,7 @@ class PandasDataframe(ClassLogger):
                 axis,
                 base_frame._partitions,
                 make_reindexer(do_reindex_base, base_frame_idx)
-                if make_reindex
+                if perform_reindex
                 else lambda df: df,
             )
             if axis:
@@ -2461,7 +2459,7 @@ class PandasDataframe(ClassLogger):
 
         # define conditions for reindexing and repartitioning `other` frames
         do_reindex_others = [False] * len(other_frames)
-        if make_reindex:
+        if perform_reindex:
             do_reindex_others = [
                 not o.axes[axis].equals(joined_index) for o in other_frames
             ]
@@ -2485,7 +2483,7 @@ class PandasDataframe(ClassLogger):
                     axis,
                     other_frames[i]._partitions,
                     make_reindexer(do_repartition_others[i], base_frame_idx + 1 + i)
-                    if make_reindex
+                    if perform_reindex
                     else lambda df: df,
                     lengths=base_lengths,
                 )
@@ -2499,12 +2497,14 @@ class PandasDataframe(ClassLogger):
         return (
             reindexed_frames[0],
             reindexed_frames[1:],
-            joined_index if make_reindex else None,
+            joined_index if perform_reindex else None,
             base_lengths,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
-    def binary_op(self, op, right_frame, join_type="outer", make_column_reindex=True):
+    def binary_op(
+        self, op, right_frame, join_type="outer", perform_column_reindex=True
+    ):
         """
         Perform an operation that requires joining with another Modin DataFrame.
 
@@ -2516,7 +2516,7 @@ class PandasDataframe(ClassLogger):
             Modin DataFrame to join with.
         join_type : str, default: "outer"
             Type of join to apply.
-        make_column_reindex : bool, default: True
+        perform_column_reindex : bool, default: True
             For some ops, for example `fillna`, column reindexing of right operand isn't needed.
 
         Returns
@@ -2544,7 +2544,11 @@ class PandasDataframe(ClassLogger):
             joined_columns,
             column_widths,
         ) = new_left_frame._copartition(
-            1, new_right_frame, join_type, sort=True, make_reindex=make_column_reindex
+            1,
+            new_right_frame,
+            join_type,
+            sort=True,
+            perform_reindex=perform_column_reindex,
         )
 
         new_frame = (
@@ -2554,12 +2558,12 @@ class PandasDataframe(ClassLogger):
                 left_parts, op, right_parts[0]
             )
         )
-        if not make_column_reindex:
+        if not perform_column_reindex:
             joined_columns = self.columns.join(right_frame.columns, how=join_type)
         return self.__constructor__(
             new_frame,
             joined_index,
-            joined_columns if make_column_reindex else joined_columns,
+            joined_columns,
             row_lengths,
             column_widths,
         )
