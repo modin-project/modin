@@ -31,7 +31,6 @@ Key Features and Updates
   * REFACTOR-#4534: Replace logging meta class with class decorator (#4535)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
-
 * OmniSci enhancements
   *
 * XGBoost enhancements
