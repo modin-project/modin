@@ -335,7 +335,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         if self._width_cache is None:
             cls = type(self)
-            func = cls._length_extraction_fn()
+            func = cls._width_extraction_fn()
             preprocessed_func = cls.preprocess_func(func)
             self._width_cache = self.apply(preprocessed_func)
         return self._width_cache
