@@ -2404,10 +2404,9 @@ class PandasDataframe(ClassLogger):
 
         self_index = self.axes[axis]
         others_index = [o.axes[axis] for o in other]
-        if perform_reindex:
-            joined_index, make_reindexer = self._join_index_objects(
-                axis, [self_index] + others_index, how, sort
-            )
+        joined_index, make_reindexer = self._join_index_objects(
+            axis, [self_index] + others_index, how, sort
+        )
 
         frames = [self] + other
         non_empty_frames_idx = [
@@ -2419,7 +2418,7 @@ class PandasDataframe(ClassLogger):
             return (
                 self._partitions,
                 [o._partitions for o in other],
-                joined_index if perform_reindex else None,
+                joined_index,
                 # There are no partition sizes because the resulting dataframe
                 # has no partitions.
                 [],
@@ -2494,12 +2493,7 @@ class PandasDataframe(ClassLogger):
             + [reindexed_base]
             + reindexed_other_list
         )
-        return (
-            reindexed_frames[0],
-            reindexed_frames[1:],
-            joined_index if perform_reindex else None,
-            base_lengths,
-        )
+        return (reindexed_frames[0], reindexed_frames[1:], joined_index, base_lengths)
 
     @lazy_metadata_decorator(apply_axis="both")
     def binary_op(
@@ -2558,8 +2552,7 @@ class PandasDataframe(ClassLogger):
                 left_parts, op, right_parts[0]
             )
         )
-        if not perform_column_reindex:
-            joined_columns = self.columns.join(right_frame.columns, how=join_type)
+
         return self.__constructor__(
             new_frame,
             joined_index,
