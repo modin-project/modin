@@ -2393,8 +2393,9 @@ class Series(SeriesCompat, BasePandasDataset):
             Prepared `other`.
         """
         if isinstance(other, Series):
-            new_self = self.copy()
-            new_other = other.copy()
+            # NB: deep=False is important for performance bc it retains obj.index._id
+            new_self = self.copy(deep=False)
+            new_other = other.copy(deep=False)
             if self.name == other.name:
                 new_self.name = new_other.name = self.name
             else:

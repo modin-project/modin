@@ -29,6 +29,7 @@ Key Features and Updates
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
   * PERF-#4325: Improve perf of multi-column assignment in `__setitem__` when no new column names are assigning (#4455)
   * PERF-#3844: Improve perf of `drop` operation (#4694)
+  * PERF-#4705: Improve perf of arithmetic operations between `Series` objects with shared `.index` (#4689)
 * Benchmarking enhancements
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
 * Refactor Codebase
@@ -77,3 +78,4 @@ Contributors
 @devin-petersohn
 @YarShev
 @naren-ponder
+@jbrockmendel
