@@ -41,6 +41,8 @@ class EnvironmentVariable(Parameter, type=str, abstract=True):
 
         Raises
         ------
+        TypeError
+            If `varname` is None.
         KeyError
             If value is absent.
         """

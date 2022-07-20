@@ -122,15 +122,15 @@ class Parameter(object):
 
     Attributes
     ----------
-    choices : sequence of str
+    choices : Optional[Sequence[str]]
         Array with possible options of ``Parameter`` values.
     type : str
         String that denotes ``Parameter`` type.
-    default : Any
+    default : Optional[Any]
         ``Parameter`` default value.
     is_abstract : bool, default: True
         Whether or not ``Parameter`` is abstract.
-    _value_source : int
+    _value_source : Optional[int]
         Source of the ``Parameter`` value, should be set by
         ``ValueSource``.
     """
