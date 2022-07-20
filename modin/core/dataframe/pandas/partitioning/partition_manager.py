@@ -867,6 +867,25 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         return total_idx, new_idx
 
     @classmethod
+    def _update_partition_dimension_caches(cls, partitions: np.ndarray):
+        """
+        Build and set the length and width caches of each _physical_ partition in the given list of partitions.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            The partitions for which to update length caches.
+
+        Notes
+        -----
+        For backends that support parallel computations, these caches should be computed asynchronously.
+        The naive implementation computes the length and width caches in serial.
+        """
+        for part in partitions:
+            part.try_build_width_cache()
+            part.try_build_length_cache()
+
+    @classmethod
     def _apply_func_to_list_of_partitions_broadcast(
         cls, func, partitions, other, **kwargs
     ):
@@ -1209,6 +1228,19 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             row_lengths = [None] * len(row_partitions_list)
         if col_widths is None:
             col_widths = [None] * len(col_partitions_list)
+
+        if row_lengths is None and col_widths is None:
+            # Before anything else, compute length/widths of each partition (possibly in parallel)
+            all_parts = np.array(
+                [
+                    [
+                        partitions_copy[row_blk_idx, col_blk_idx]
+                        for row_blk_idx, _ in row_partitions
+                    ]
+                    for col_blk_idx, _ in col_partitions_list
+                ]
+            ).flatten()
+            self._update_partition_dimension_caches(all_parts)
 
         def compute_part_size(indexer, remote_part, part_idx, axis):
             """Compute indexer length along the specified axis for the passed partition."""

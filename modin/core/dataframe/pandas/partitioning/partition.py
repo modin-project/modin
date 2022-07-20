@@ -15,6 +15,7 @@
 
 from abc import ABC
 from copy import copy
+from typing import Union, Any
 
 import pandas
 from pandas.api.types import is_scalar
@@ -273,12 +274,41 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         int
             The length of the object.
         """
+        self.try_build_length_cache()
+        return self._length_cache
+
+    def try_build_length_cache(self) -> Union[Any, int]:
+        """
+        Attempt to set this partition's length cache, and return it.
+
+        Returns
+        -------
+        Any | int
+            Either a future-like object representing the length of the object wrapped by this
+            partition, or the concrete value of the length if it was already cached or was
+            just computed.
+        """
         if self._length_cache is None:
             cls = type(self)
             func = cls._length_extraction_fn()
             preprocessed_func = cls.preprocess_func(func)
             self._length_cache = self.apply(preprocessed_func)
         return self._length_cache
+
+    def try_set_length_cache(self, length: int):
+        """
+        Attempt to set this partition's length cache field.
+
+        This should be used in situations where the futures returned by ``try_build_length_cache``
+        for multiple partitions were computed in parallel, and the value now needs to be
+        propagated back to this partition.
+
+        Parameters
+        ----------
+        length : int
+            The new value of the length cache.
+        """
+        self._length_cache = length
 
     def width(self):
         """
@@ -289,12 +319,41 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         int
             The width of the object.
         """
+        self.try_build_width_cache()
+        return self._width_cache
+
+    def try_build_width_cache(self) -> Union[Any, int]:
+        """
+        Attempt to set this partition's width cache, and return it.
+
+        Returns
+        -------
+        Any | int
+            Either a future-like object representing the width of the object wrapped by this
+            partition, or the concrete value of the width if it was already cached or was
+            just computed.
+        """
         if self._width_cache is None:
             cls = type(self)
-            func = cls._width_extraction_fn()
+            func = cls._length_extraction_fn()
             preprocessed_func = cls.preprocess_func(func)
             self._width_cache = self.apply(preprocessed_func)
         return self._width_cache
+
+    def try_set_width_cache(self, width: int):
+        """
+        Attempt to set this partition's width cache field.
+
+        This should be used in situations where the futures returned by ``try_build_width_cache``
+        for multiple partitions were computed in parallel, and the value now needs to be
+        propagated back to this partition.
+
+        Parameters
+        ----------
+        width : int
+            The new value of the width cache.
+        """
+        self._width_cache = width
 
     @classmethod
     def empty(cls):

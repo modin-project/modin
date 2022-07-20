@@ -287,12 +287,12 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         int
             The length of the object.
         """
-        self.build_length_cache()
+        self.try_build_length_cache()
         if isinstance(self._length_cache, ObjectIDType):
             self._length_cache = ray.get(self._length_cache)
         return self._length_cache
 
-    def build_length_cache(self) -> Union[ray.ObjectRef, int]:
+    def try_build_length_cache(self) -> Union[ray.ObjectRef, int]:
         """
         Attempt to set this partition's length cache, and return it.
 
@@ -313,9 +313,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 )
         return self._length_cache
 
-    def set_length_cache(self, length: int):  # noqa: GL08
-        self._length_cache = length
-
     def width(self):
         """
         Get the width of the object wrapped by the partition.
@@ -325,12 +322,12 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         int
             The width of the object.
         """
-        self.build_width_cache()
+        self.try_build_width_cache()
         if isinstance(self._width_cache, ObjectIDType):
             self._width_cache = ray.get(self._width_cache)
         return self._width_cache
 
-    def build_width_cache(self) -> Union[ray.ObjectRef, int]:
+    def try_build_width_cache(self) -> Union[ray.ObjectRef, int]:
         """
         Attempt to set this partition's width cache, and return it.
 
@@ -350,9 +347,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                     self._data
                 )
         return self._width_cache
-
-    def set_width_cache(self, width: int):  # noqa: GL08
-        self._width_cache = width
 
     def ip(self):
         """

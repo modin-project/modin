@@ -383,7 +383,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         if self._length_cache is None:
             if self.axis == 0:
                 caches = [
-                    obj.build_length_cache()
+                    obj.try_build_length_cache()
                     for obj in self.list_of_partitions_to_combine
                 ]
                 new_lengths = DaskWrapper.materialize(
@@ -392,7 +392,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
                 dask_idx = 0
                 for i, cache in enumerate(caches):
                     if isinstance(cache, Future):
-                        self.list_of_partitions_to_combine[i].set_length_cache(
+                        self.list_of_partitions_to_combine[i].try_set_length_cache(
                             new_lengths[dask_idx]
                         )
                         dask_idx += 1
@@ -417,7 +417,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         if self._width_cache is None:
             if self.axis == 1:
                 caches = [
-                    obj.build_width_cache()
+                    obj.try_build_width_cache()
                     for obj in self.list_of_partitions_to_combine
                 ]
                 new_lengths = DaskWrapper.materialize(
@@ -426,7 +426,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
                 dask_idx = 0
                 for i, cache in enumerate(caches):
                     if isinstance(cache, Future):
-                        self.list_of_partitions_to_combine[i].set_width_cache(
+                        self.list_of_partitions_to_combine[i].try_set_width_cache(
                             new_lengths[dask_idx]
                         )
                         dask_idx += 1

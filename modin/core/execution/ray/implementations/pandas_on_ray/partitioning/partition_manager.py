@@ -16,9 +16,11 @@
 import inspect
 import threading
 
+import numpy as np
 import ray
 
 from modin.config import ProgressBar
+from modin.core.execution.ray.common.utils import ObjectIDType
 from modin.core.execution.ray.generic.partitioning import (
     GenericRayDataframePartitionManager,
 )
@@ -222,6 +224,42 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             enumerate_partitions,
             **kwargs,
         )
+
+    @classmethod
+    def _update_partition_dimension_caches(cls, partitions: np.ndarray):
+        """
+        Build and set the length and width caches of each _physical_ partition in the given list of partitions.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            The partitions for which to update length caches.
+        """
+        promises = []
+        # If `ray_idxs[i] = j`, that means `promises[i]` represents a computation corresponding
+        # to a dimension of `partitions[j]`.
+        part_idxs = []
+        # If `is_lens[i] = True`, then `promises[i]` is a computation for a length; otherwise
+        # it is for a width
+        is_lens = []
+        for i, part in enumerate(partitions):
+            l_cache = part.try_build_length_cache()
+            if isinstance(l_cache, ObjectIDType):
+                promises.append(l_cache)
+                part_idxs.append(i)
+                is_lens.append(True)
+            w_cache = part.try_build_width_cache()
+            if isinstance(w_cache, ObjectIDType):
+                promises.append(w_cache)
+                part_idxs.append(i)
+                is_lens.append(False)
+        new_dims = ray.get(promises)
+        for i, new_cache in enumerate(new_dims):
+            part = partitions[part_idxs[i]]
+            if is_lens[i]:
+                part.try_set_length_cache(new_dims[i])
+            else:
+                part.try_set_width_cache(new_dims[i])
 
     @classmethod
     @progress_bar_wrapper
