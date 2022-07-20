@@ -557,6 +557,71 @@ def test_astype_category_large():
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
+@pytest.mark.parametrize(
+    "infer_objects", bool_arg_values, ids=arg_keys("infer_objects", bool_arg_keys)
+)
+@pytest.mark.parametrize(
+    "convert_string", bool_arg_values, ids=arg_keys("convert_string", bool_arg_keys)
+)
+@pytest.mark.parametrize(
+    "convert_integer", bool_arg_values, ids=arg_keys("convert_integer", bool_arg_keys)
+)
+@pytest.mark.parametrize(
+    "convert_boolean", bool_arg_values, ids=arg_keys("convert_boolean", bool_arg_keys)
+)
+@pytest.mark.parametrize(
+    "convert_floating", bool_arg_values, ids=arg_keys("convert_floating", bool_arg_keys)
+)
+def test_convert_dtypes_single_partition(
+    infer_objects, convert_string, convert_integer, convert_boolean, convert_floating
+):
+    # Sanity check, copied from pandas documentation:
+    # https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.convert_dtypes.html
+    data = {
+        "a": pd.Series([1, 2, 3], dtype=np.dtype("int32")),
+        "b": pd.Series(["x", "y", "z"], dtype=np.dtype("O")),
+        "c": pd.Series([True, False, np.nan], dtype=np.dtype("O")),
+        "d": pd.Series(["h", "i", np.nan], dtype=np.dtype("O")),
+        "e": pd.Series([10, np.nan, 20], dtype=np.dtype("float")),
+        "f": pd.Series([np.nan, 100.5, 200], dtype=np.dtype("float")),
+    }
+    kwargs = {
+        "infer_objects": infer_objects,
+        "convert_string": convert_string,
+        "convert_integer": convert_integer,
+        "convert_boolean": convert_boolean,
+        "convert_floating": convert_floating,
+    }
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+    modin_result = modin_df.convert_dtypes(**kwargs)
+    pandas_result = pandas_df.convert_dtypes(**kwargs)
+    assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+
+@pytest.mark.skipif(
+    get_current_execution() == "BaseOnPython",
+    reason="BaseOnPython cannot not have multiple partitions.",
+)
+def test_convert_dtypes_multiple_row_partitions():
+    # Column 0 should have string dtype
+    modin_part1 = pd.DataFrame(["a"]).convert_dtypes()
+    # Column 0 should have an int dtype
+    modin_part2 = pd.DataFrame([1]).convert_dtypes()
+    modin_df = pd.concat([modin_part1, modin_part2])
+    assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
+    pandas_df = pandas.DataFrame(["a", 1], index=[0, 0])
+    # The initial dataframes should be the same
+    df_equals(modin_df, pandas_df)
+    # TODO(https://github.com/modin-project/modin/pull/3805): delete
+    # this assert once df_equals checks dtypes
+    assert modin_df.dtypes.equals(pandas_df.dtypes)
+    modin_result = modin_df.convert_dtypes()
+    pandas_result = pandas_df.convert_dtypes()
+    df_equals(modin_result, pandas_result)
+    assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("bound_type", ["list", "series"], ids=["list", "series"])
