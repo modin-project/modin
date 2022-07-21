@@ -18,8 +18,9 @@ To be used as a piece of building a Ray-based engine.
 """
 
 import asyncio
-from modin.logging import ClassLogger, enable_remote_logging
 import ray
+
+from modin.logging import ClassLogger, enable_remote_logging
 
 
 @ray.remote

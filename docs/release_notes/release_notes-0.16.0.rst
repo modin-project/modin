@@ -28,6 +28,7 @@ Key Features and Updates
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
   * PERF-#4325: Improve perf of multi-column assignment in `__setitem__` when no new column names are assigning (#4455)
 * Benchmarking enhancements
+  *
 * Refactor Codebase
   * REFACTOR-#4530: Standardize access to physical data in partitions (#4563)
   * REFACTOR-#4534: Replace logging meta class with class decorator (#4535)
