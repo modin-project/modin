@@ -18,7 +18,6 @@ import sys
 import psutil
 from packaging import version
 import warnings
-from modin.config.envvars import LogMemoryInterval
 
 import ray
 
@@ -34,6 +33,7 @@ from modin.config import (
     ValueSource,
     LogMode,
     LogFileSize,
+    LogMemoryInterval,
 )
 from modin.error_message import ErrorMessage
 
@@ -67,13 +67,8 @@ def initialize_ray(
         What password to use when connecting to Redis.
         If not specified, ``modin.config.RayRedisPassword`` is used.
     """
-    extra_init_kw = {
-        "runtime_env": {
-            "env_vars": {
-                "__MODIN_AUTOIMPORT_PANDAS__": "1",
-            }
-        }
-    }
+    extra_init_kw = {"runtime_env": {"env_vars": {"__MODIN_AUTOIMPORT_PANDAS__": "1"}}}
+
     # Set Modin logging envvars if not default (if set).
     if LogMode.get() != LogMode._get_default():
         extra_init_kw["runtime_env"]["env_vars"]["MODIN_LOG_MODE"] = LogMode.get()
