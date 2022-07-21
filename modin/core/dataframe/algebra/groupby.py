@@ -215,13 +215,14 @@ class GroupByReduce(TreeReduce):
         )
 
         if not as_index:
+            idx = df.index
             GroupBy.handle_as_index_for_dataframe(
                 result,
                 by_part,
                 by_cols_dtypes=(
-                    df.index.dtypes.values
-                    if isinstance(df.index, pandas.MultiIndex)
-                    else (df.index.dtype,)
+                    idx.dtypes.values
+                    if isinstance(idx, pandas.MultiIndex) and hasattr(idx, "dtypes")
+                    else (idx.dtype,)
                 ),
                 by_length=len(by_part),
                 selection=reduce_func.keys() if isinstance(reduce_func, dict) else None,

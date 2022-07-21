@@ -17,7 +17,6 @@ import numpy as np
 import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
-from pandas.core.apply import reconstruct_func
 from pandas._libs.lib import no_default
 import pandas.core.common as com
 from types import BuiltinFunctionType
@@ -37,6 +36,7 @@ from modin.config import IsExperimental
 from modin.logging import ClassLogger
 from .series import Series
 from .utils import is_label
+from modin._compat.core.pd_common import reconstruct_func
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)

@@ -31,7 +31,7 @@ from modin.core.dataframe.algebra.default2pandas import (
     GroupByDefault,
 )
 from modin.error_message import ErrorMessage
-import modin.core.storage_formats.base.doc_utils as doc_utils
+from . import doc_utils
 from modin.logging import ClassLogger
 
 from pandas.core.dtypes.common import is_scalar

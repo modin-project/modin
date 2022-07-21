@@ -53,21 +53,10 @@ def test_top_level_api_equality():
         "utils",
         "dataframe",
         "groupby",
-        "threading",
         "general",
-        "datetimes",
-        "reshape",
-        "types",
-        "sys",
-        "initialize_ray",
         "datetime",
-        "ray",
-        "num_cpus",
         "warnings",
         "os",
-        "multiprocessing",
-        "Client",
-        "get_client",
     ]
 
     assert not len(

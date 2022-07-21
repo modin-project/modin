@@ -24,7 +24,7 @@ CachedAccessor implements API of pandas.core.accessor.CachedAccessor
 import pandas
 from pandas.core.arrays.sparse.dtype import SparseDtype
 
-import modin.pandas as pd
+from modin import pandas as pd
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings
 from modin.logging import ClassLogger
