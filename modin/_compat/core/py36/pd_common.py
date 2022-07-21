@@ -62,4 +62,11 @@ def pd_pivot_table(df, **kwargs):  # noqa: PR01, RT01
     return df.pivot_table(**kwargs)
 
 
-__all__ = ["get_handle", "pd_pivot_table"]
+def pd_convert_dtypes(df, **kwargs):  # noqa: PR01, RT01
+    """Perform pandas convert_dtypes against a dataframe or series ignoring unsupported args."""
+    unsupported_convert = kwargs.pop("convert_floating", None)
+    assert unsupported_convert is None
+    return df.convert_dtypes(**kwargs)
+
+
+__all__ = ["get_handle", "pd_pivot_table", "pd_convert_dtypes"]

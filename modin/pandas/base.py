@@ -1600,13 +1600,13 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         return self._default_to_pandas("infer_objects")
 
-    def convert_dtypes(
+    def _convert_dtypes(
         self,
-        infer_objects: bool = True,
-        convert_string: bool = True,
-        convert_integer: bool = True,
-        convert_boolean: bool = True,
-        convert_floating: bool = True,
+        infer_objects: bool,
+        convert_string: bool,
+        convert_integer: bool,
+        convert_boolean: bool,
+        convert_floating: bool,
     ):  # noqa: PR01, RT01, D200
         """
         Convert columns to best possible dtypes using dtypes supporting ``pd.NA``.

@@ -35,7 +35,6 @@ from collections.abc import Iterable
 from typing import List, Hashable
 import warnings
 
-
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.utils import (
@@ -55,7 +54,7 @@ from modin.core.dataframe.algebra import (
     is_reduce_function,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
-from modin._compat.core.pd_common import pd_pivot_table
+from modin._compat.core.pd_common import pd_pivot_table, pd_convert_dtypes
 
 
 def _get_axis(axis):
@@ -1348,7 +1347,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     abs = Map.register(pandas.DataFrame.abs, dtypes="copy")
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
-    convert_dtypes = Map.register(pandas.DataFrame.convert_dtypes)
+    convert_dtypes = Map.register(pd_convert_dtypes)
     invert = Map.register(pandas.DataFrame.__invert__)
     isin = Map.register(pandas.DataFrame.isin, dtypes=np.bool_)
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)

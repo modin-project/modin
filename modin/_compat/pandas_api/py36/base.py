@@ -54,12 +54,12 @@ class Python36CompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
         convert_integer: bool = True,
         convert_boolean: bool = True,
     ):
-        return self._default_to_pandas(
-            "convert_dtypes",
+        return self._convert_dtypes(
             infer_objects=infer_objects,
             convert_string=convert_string,
             convert_integer=convert_integer,
             convert_boolean=convert_boolean,
+            convert_floating=None,
         )
 
     def ewm(

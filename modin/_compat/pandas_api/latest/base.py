@@ -64,8 +64,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
         convert_boolean: bool = True,
         convert_floating: bool = True,
     ):
-        return self._default_to_pandas(
-            "convert_dtypes",
+        return self._convert_dtypes(
             infer_objects=infer_objects,
             convert_string=convert_string,
             convert_integer=convert_integer,

@@ -603,6 +603,8 @@ def test_convert_dtypes_single_partition(
         "convert_boolean": convert_boolean,
         "convert_floating": convert_floating,
     }
+    if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+        del kwargs["convert_floating"]  # pandas 1.1 does not have this argument
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
     modin_result = modin_df.convert_dtypes(**kwargs)

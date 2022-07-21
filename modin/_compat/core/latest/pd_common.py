@@ -21,4 +21,9 @@ def pd_pivot_table(df, **kwargs):  # noqa: PR01, RT01
     return df.pivot_table(**kwargs)
 
 
-__all__ = ["get_handle", "pd_pivot_table"]
+def pd_convert_dtypes(df, **kwargs):  # noqa: PR01, RT01
+    """Perform pandas convert_dtypes against a dataframe or series."""
+    return df.convert_dtypes(**kwargs)
+
+
+__all__ = ["get_handle", "pd_pivot_table", "pd_convert_dtypes"]
