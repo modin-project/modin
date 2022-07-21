@@ -239,8 +239,10 @@ def test_making_virtual_partition_out_of_virtual_partitions_with_call_queue():
     else:
         # initialize modin dataframe to initialize dask
         pd.DataFrame()
+
         def put(x):
-            DaskWrapper.put(x)
+            return DaskWrapper.put(x)
+
         block_partition_class = PandasOnDaskDataframePartition
         virtual_partition_class = PandasOnDaskDataframeColumnPartition
 
