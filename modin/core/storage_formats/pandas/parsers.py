@@ -708,8 +708,6 @@ class PandasParquetParser(PandasParser):
             columns = [
                 c for c in columns if c not in chunk.index.names and c in chunk.columns
             ]
-            if columns is not None:
-                chunk = chunk[columns]
             chunks.append(chunk)
         df = pandas.concat(chunks)
         return df, df.dtypes, len(df)
