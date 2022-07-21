@@ -23,6 +23,7 @@ from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partiti
 from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition import (
     PandasOnDaskDataframePartition,
 )
+from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
 import modin.pandas as pd
 from modin.pandas.test.utils import create_test_dfs, test_data_values, df_equals
 from modin.config import NPartitions, Engine
@@ -234,17 +235,21 @@ def test_making_virtual_partition_out_of_virtual_partitions_with_call_queue():
     if Engine.get() == "Ray":
         block_partition_class = PandasOnRayDataframePartition
         virtual_partition_class = PandasOnRayDataframeColumnPartition
+        put = ray.put
     else:
+        # initialize modin dataframe to initialize dask
+        pd.DataFrame()
+        def put(x):
+            DaskWrapper.put(x)
         block_partition_class = PandasOnDaskDataframePartition
         virtual_partition_class = PandasOnDaskDataframeColumnPartition
+
     blocks = [
-        PandasOnRayDataframePartition(ray.put(pandas.DataFrame([0]))),
-        PandasOnRayDataframePartition(ray.put(pandas.DataFrame([1]))),
+        block_partition_class(put(pandas.DataFrame([0]))),
+        block_partition_class(put(pandas.DataFrame([1]))),
     ]
-    level_one_virtual = PandasOnRayDataframeColumnPartition(blocks, full_axis=False)
+    level_one_virtual = virtual_partition_class(blocks, full_axis=False)
     level_one_virtual = level_one_virtual.add_to_apply_calls(lambda df: df[::-1])
-    level_two_virtual = PandasOnRayDataframeColumnPartition(
-        [level_one_virtual], full_axis=True
-    )
+    level_two_virtual = virtual_partition_class([level_one_virtual], full_axis=True)
     level_two_virtual_result = level_two_virtual.apply(lambda df: df, num_splits=1)[0]
     df_equals(level_two_virtual_result.to_pandas(), pd.DataFrame([1, 0], index=[0, 0]))
