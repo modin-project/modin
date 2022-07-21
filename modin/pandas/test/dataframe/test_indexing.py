@@ -562,6 +562,42 @@ def test_loc_multi_index():
     df_equals(modin_df.loc[modin_df.index[:7]], pandas_df.loc[pandas_df.index[:7]])
 
 
+def test_loc_multi_index_with_tuples():
+    arrays = [
+        ["bar", "bar", "baz", "baz"],
+        ["one", "two", "one", "two"],
+    ]
+    nrows = 5
+    columns = pd.MultiIndex.from_tuples(zip(*arrays), names=["a", "b"])
+    data = np.arange(0, nrows * len(columns)).reshape(nrows, len(columns))
+    modin_df, pandas_df = create_test_dfs(data, columns=columns)
+    eval_general(modin_df, pandas_df, lambda df: df.loc[:, ("bar", "two")])
+
+
+def test_loc_multi_index_duplicate_keys():
+    modin_df, pandas_df = create_test_dfs([1, 2], index=[["a", "a"], ["b", "b"]])
+    eval_general(modin_df, pandas_df, lambda df: df.loc[("a", "b"), 0])
+    eval_general(modin_df, pandas_df, lambda df: df.loc[("a", "b"), :])
+
+
+def test_loc_multi_index_both_axes():
+    multi_index = pd.MultiIndex.from_tuples(
+        [("r0", "rA"), ("r1", "rB")], names=["Courses", "Fee"]
+    )
+    cols = pd.MultiIndex.from_tuples(
+        [
+            ("Gasoline", "Toyota"),
+            ("Gasoline", "Ford"),
+            ("Electric", "Tesla"),
+            ("Electric", "Nio"),
+        ]
+    )
+    data = [[100, 300, 900, 400], [200, 500, 300, 600]]
+    modin_df, pandas_df = create_test_dfs(data, columns=cols, index=multi_index)
+    eval_general(modin_df, pandas_df, lambda df: df.loc[("r0", "rA"), :])
+    eval_general(modin_df, pandas_df, lambda df: df.loc[:, ("Gasoline", "Toyota")])
+
+
 def test_loc_empty():
     pandas_df = pandas.DataFrame(index=range(5))
     modin_df = pd.DataFrame(index=range(5))
