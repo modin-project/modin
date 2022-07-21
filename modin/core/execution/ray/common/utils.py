@@ -73,13 +73,13 @@ def initialize_ray(
     if LogMode.get() != LogMode._get_default():
         extra_init_kw["runtime_env"]["env_vars"]["MODIN_LOG_MODE"] = LogMode.get()
     if LogFileSize.get() != LogFileSize._get_default():
-        extra_init_kw["runtime_env"]["env_vars"][
-            "MODIN_LOG_FILE_SIZE"
-        ] = LogFileSize.get()
+        extra_init_kw["runtime_env"]["env_vars"]["MODIN_LOG_FILE_SIZE"] = str(
+            LogFileSize.get()
+        )
     if LogMemoryInterval.get() != LogMemoryInterval._get_default():
-        extra_init_kw["runtime_env"]["env_vars"][
-            "MODIN_LOG_MEMORY_INTERVAL"
-        ] = LogMemoryInterval.get()
+        extra_init_kw["runtime_env"]["env_vars"]["MODIN_LOG_MEMORY_INTERVAL"] = str(
+            LogMemoryInterval.get()
+        )
 
     if not ray.is_initialized() or override_is_cluster:
         cluster = override_is_cluster or IsRayCluster.get()
