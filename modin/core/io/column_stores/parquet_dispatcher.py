@@ -44,16 +44,16 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         Parameters
         ----------
         path : str, path object or file-like object
-            Path.
+            Path to dataset.
         storage_options : dict
-            Parameters for specific storage engine
+            Parameters for specific storage engine.
 
         Returns
         -------
         filesystem: Any
-            Protocol implementation of registry
+            Protocol implementation of registry.
         files: list
-            List of files from path
+            List of files from path.
         """
         if isinstance(path, io.IOBase):
             return path.fs, [path]
@@ -78,8 +78,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         col_partitions : list
             List of arrays with columns names that should be read
             by each partition.
-        storage_options: dict
-            Paramters for specific storage engine
+        storage_options : dict
+            Paramters for specific storage engine.
         **kwargs : dict
             Parameters of deploying read_* function.
 
@@ -210,7 +210,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         Parameters
         ----------
         path : Pathlike
-            Path to dataset
+            Path to dataset.
+        storage_options : dict
+            Paramters for specific storage engine.
 
         Returns
         -------
@@ -221,7 +223,6 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             index because there's no index column, or at least one
             index column is a RangeIndex.
         """
-
         fs, path_ = (
             fsspec.core.url_to_fs(path, **storage_options)
             if is_fsspec_url(path)

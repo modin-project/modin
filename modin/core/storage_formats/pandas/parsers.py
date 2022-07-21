@@ -679,7 +679,13 @@ class PandasParquetParser(PandasParser):
         return _split_result_for_readers(0, num_splits, df) + [idx, df.dtypes]
 
     @staticmethod
-    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
+    @doc(
+        _doc_parse_func,
+        parameters="""files_for_parser : list
+    List of files to be read.
+storage_options : dict
+    Parameters for specific storage engine.""",
+    )
     def parse_fsspec_files(files_for_parser, storage_options, **kwargs):
         from pyarrow.parquet import ParquetFile
 
