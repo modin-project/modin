@@ -964,6 +964,10 @@ class TestCsv:
             storage_options=storage_options,
         )
 
+    @pytest.mark.skipif(
+        PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+        reason="storage_options not supported for older pandas",
+    )
     def test_read_csv_s3_issue4658(self):
         eval_io(
             fn_name="read_csv",
