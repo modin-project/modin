@@ -305,13 +305,16 @@ class CSVGlobDispatcher(CSVDispatcher):
                 S3FS = import_optional_dependency(
                     "s3fs", "Module s3fs is required to read S3FS files."
                 )
-                from botocore.exceptions import NoCredentialsError
+                from botocore.exceptions import (
+                    NoCredentialsError,
+                    EndpointConnectionError,
+                )
 
                 s3fs = S3FS.S3FileSystem(anon=False)
                 exists = False
                 try:
                     exists = len(s3fs.glob(file_path)) > 0 or exists
-                except NoCredentialsError:
+                except (NoCredentialsError, EndpointConnectionError):
                     pass
                 s3fs = S3FS.S3FileSystem(anon=True)
                 return exists or len(s3fs.glob(file_path)) > 0
@@ -340,7 +343,7 @@ class CSVGlobDispatcher(CSVDispatcher):
             S3FS = import_optional_dependency(
                 "s3fs", "Module s3fs is required to read S3FS files."
             )
-            from botocore.exceptions import NoCredentialsError
+            from botocore.exceptions import NoCredentialsError, EndpointConnectionError
 
             def get_file_path(fs_handle) -> List[str]:
                 file_paths = fs_handle.glob(file_path)
@@ -350,7 +353,7 @@ class CSVGlobDispatcher(CSVDispatcher):
             s3fs = S3FS.S3FileSystem(anon=False)
             try:
                 return get_file_path(s3fs)
-            except NoCredentialsError:
+            except (NoCredentialsError, EndpointConnectionError):
                 pass
             s3fs = S3FS.S3FileSystem(anon=True)
             return get_file_path(s3fs)
