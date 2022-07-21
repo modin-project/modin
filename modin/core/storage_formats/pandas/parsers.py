@@ -49,7 +49,7 @@ from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
 from pandas.util._decorators import doc
-from typing import NamedTuple
+from typing import Any, NamedTuple
 import warnings
 
 from modin.core.io.file_dispatcher import OpenFile
@@ -641,7 +641,19 @@ class PandasJSONParser(PandasParser):
 
 
 class ParquetFileToRead(NamedTuple):
-    path: str
+    """
+    Class to store path and row group information for parquet reads.
+
+    Parameters
+    ----------
+    path : str, path object or file-like object
+        Name of the file to read.
+    row_group_start : int
+        Row group to start read from.
+    row_group_end : int
+        Row group to stop read.
+    """
+    path: Any
     row_group_start: int
     row_group_end: int
 

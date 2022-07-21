@@ -38,6 +38,23 @@ class ParquetDispatcher(ColumnStoreDispatcher):
 
     @classmethod
     def get_fsspec_files(cls, path, storage_options):
+        """
+        Retrieve filesystem interface and list of files from path.
+
+        Parameters
+        ----------
+        path : str, path object or file-like object
+            Path.
+        storage_options : dict
+            Parameters for specific storage engine
+
+        Returns
+        -------
+        filesystem: Any
+            Protocol implementation of registry
+        files: list
+            List of files from path
+        """
         if isinstance(path, io.IOBase):
             return path.fs, [path]
         protocol, path = split_protocol(path)
@@ -61,6 +78,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         col_partitions : list
             List of arrays with columns names that should be read
             by each partition.
+        storage_options: dict
+            Paramters for specific storage engine
         **kwargs : dict
             Parameters of deploying read_* function.
 
@@ -77,11 +96,15 @@ class ParquetDispatcher(ColumnStoreDispatcher):
 
         row_groups_per_file = []
         num_row_groups = 0
+        # Count up the total number of row groups across all files and
+        # keep track of row groups per file to use later.
         for file in parquet_files:
             with filesystem.open(file) as f:
                 row_groups = ParquetFile(f).num_row_groups
                 row_groups_per_file.append(row_groups)
                 num_row_groups += row_groups
+
+        # step determines how many row groups are going to be in a partition
         step = compute_chunksize(
             num_row_groups,
             NPartitions.get(),
@@ -89,51 +112,56 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         )
         current_partition_size = 0
         file_index = 0
-        partition_files = []
-        groups_used_in_current_file = 0
-        total_groups_added = 0
+        partition_files = []  # 2D array - each element contains list of chunks to read
+        row_groups_used_in_current_file = 0
+        total_row_groups_added = 0
         # On each iteration, we add a chunk of one file. That will
         # take us either to the end of a partition, or to the end
         # of a file.
-        while total_groups_added != num_row_groups:
+        while total_row_groups_added < num_row_groups:
             if current_partition_size == 0:
                 partition_files.append([])
             partition_file = partition_files[-1]
-            row_group_start = groups_used_in_current_file
             file_path = parquet_files[file_index]
+            row_group_start = row_groups_used_in_current_file
             row_groups_left_in_file = (
-                row_groups_per_file[file_index] - groups_used_in_current_file
+                row_groups_per_file[file_index] - row_groups_used_in_current_file
             )
-            groups_remaining_for_this_partition = step - current_partition_size
-            if groups_remaining_for_this_partition <= row_groups_left_in_file:
+            row_groups_left_for_this_partition = step - current_partition_size
+            if row_groups_left_for_this_partition <= row_groups_left_in_file:
                 # File has at least what we need to finish partition
                 # So finish this partition and start a new one.
-                num_groups_to_add = groups_remaining_for_this_partition
+                num_row_groups_to_add = row_groups_left_for_this_partition
                 current_partition_size = 0
             else:
                 # File doesn't have enough to complete this partition. Add
                 # it into current partition and go to next file.
-                num_groups_to_add = row_groups_left_in_file
-                current_partition_size += num_groups_to_add
-            if num_groups_to_add == row_groups_left_in_file:
+                num_row_groups_to_add = row_groups_left_in_file
+                current_partition_size += num_row_groups_to_add
+            if num_row_groups_to_add == row_groups_left_in_file:
                 file_index += 1
-                groups_used_in_current_file = 0
+                row_groups_used_in_current_file = 0
             else:
-                groups_used_in_current_file += num_groups_to_add
+                row_groups_used_in_current_file += num_row_groups_to_add
             partition_file.append(
                 ParquetFileToRead(
-                    file_path, row_group_start, row_group_start + num_groups_to_add
+                    file_path, row_group_start, row_group_start + num_row_groups_to_add
                 )
             )
-            total_groups_added += num_groups_to_add
+            total_row_groups_added += num_row_groups_to_add
+
+        assert (
+            total_row_groups_added == num_row_groups
+        ), "row groups added does not match total num of row groups across parquet files"
+
         all_partitions = []
-        for partition_files in partition_files:
+        for files_to_read in partition_files:
             all_partitions.append([])
             for cols in col_partitions:
                 all_partitions[-1].append(
                     cls.deploy(
                         cls.parse_fsspec_files,
-                        files_for_parser=partition_files,
+                        files_for_parser=files_to_read,
                         columns=cols,
                         num_returns=3,
                         storage_options=storage_options,
@@ -221,7 +249,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
     @classmethod
     def build_columns(cls, columns):
         """
-        Split columns into chunks, that should be read be workers.
+        Split columns into chunks that should be read be workers.
 
         Parameters
         ----------
