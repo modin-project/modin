@@ -653,6 +653,7 @@ class ParquetFileToRead(NamedTuple):
     row_group_end : int
         Row group to stop read.
     """
+
     path: Any
     row_group_start: int
     row_group_end: int
