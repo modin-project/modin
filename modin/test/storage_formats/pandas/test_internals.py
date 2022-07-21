@@ -15,6 +15,7 @@ import modin.pandas as pd
 from modin.pandas.test.utils import create_test_dfs, test_data_values, df_equals
 from modin.config import NPartitions, Engine
 
+import pandas
 import pytest
 
 NPartitions.put(4)
@@ -209,3 +210,29 @@ def test_rebalance_partitions(test_type):
         isinstance(ptn, new_large_modin_frame._partition_mgr_cls._partition_class)
         for ptn in new_large_modin_frame._partitions.flatten()
     ), "Partitions are not block partitioned after apply."
+
+
+@pytest.mark.skipif(
+    Engine.get() not in ("Dask", "Ray"),
+    reason="Only Dask and Ray engines have virtual partitions.",
+)
+def test_making_virtual_partition_out_of_virtual_partitions_with_call_queue():
+    df_small = pd.DataFrame(list(range(1000)))
+    df = pd.concat([df_small] * 3)
+    # The concat should cause a rebalance that results in virtual partitions
+    assert all(
+        isinstance(
+            ptn,
+            df._query_compiler._modin_frame._partition_mgr_cls._column_partitions_class,
+        )
+        for ptn in df._query_compiler._modin_frame._partitions.flatten()
+    )
+    # the modin frame should defer the reindex from reset_index
+    last_partition = df._query_compiler._modin_frame._partitions[0,0]
+    last_partition = first_partition.add_to_apply_calls(lambda df: df.reindex(['a', 'a']))
+
+    def check_column_has_reset_index(col: pandas.Series):
+        assert col.index.equals(reset)
+        return col
+
+    reset.apply(check_column_has_reset_index)._to_pandas()

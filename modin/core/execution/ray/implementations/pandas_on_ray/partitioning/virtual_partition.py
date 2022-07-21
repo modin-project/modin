@@ -85,13 +85,22 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         ):
             new_list_of_blocks = []
             for obj in list_of_blocks:
-                new_list_of_blocks.extend(
-                    obj.list_of_partitions_to_combine
-                ) if isinstance(
-                    obj, PandasOnRayDataframeVirtualPartition
-                ) else new_list_of_blocks.append(
-                    obj
-                )
+                if isinstance(obj, PandasOnRayDataframeVirtualPartition):
+                    # We are building a virtual partition out of another
+                    # virtual partition `obj` that contains its own list of
+                    # block partitions, obj.list_of_partitions_to_combine.
+                    # `obj` may have its own call queue, which has to be
+                    # applied to the entire `obj` before we execute any
+                    # further operations on its block parittions. We could
+                    # make this object hold `obj` instead of `obj`'s list
+                    # of block partitions, and then defer draining the call
+                    # queue and getting the new block partitions to whenever
+                    # we need to use self.list_of_partitions_to_combine, but
+                    # that would complicate this class's code quite a bit.
+                    obj.drain_call_queue()
+                    new_list_of_blocks.extend(obj.list_of_partitions_to_combine)
+                else:
+                    new_list_of_blocks.append(obj)
             self.list_of_partitions_to_combine = new_list_of_blocks
         # Materialize partitions if the axis of this virtual does not match the virtual partitions
         else:
