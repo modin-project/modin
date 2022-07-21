@@ -11,12 +11,26 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.virtual_partition import (
+    PandasOnRayDataframeColumnPartition,
+)
+from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.virtual_partition import (
+    PandasOnDaskDataframeColumnPartition,
+)
+from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
+    PandasOnRayDataframePartition,
+)
+from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition import (
+    PandasOnDaskDataframePartition,
+)
 import modin.pandas as pd
 from modin.pandas.test.utils import create_test_dfs, test_data_values, df_equals
 from modin.config import NPartitions, Engine
 
 import pandas
 import pytest
+
+import ray
 
 NPartitions.put(4)
 
@@ -217,22 +231,20 @@ def test_rebalance_partitions(test_type):
     reason="Only Dask and Ray engines have virtual partitions.",
 )
 def test_making_virtual_partition_out_of_virtual_partitions_with_call_queue():
-    df_small = pd.DataFrame(list(range(1000)))
-    df = pd.concat([df_small] * 3)
-    # The concat should cause a rebalance that results in virtual partitions
-    assert all(
-        isinstance(
-            ptn,
-            df._query_compiler._modin_frame._partition_mgr_cls._column_partitions_class,
-        )
-        for ptn in df._query_compiler._modin_frame._partitions.flatten()
+    if Engine.get() == "Ray":
+        block_partition_class = PandasOnRayDataframePartition
+        virtual_partition_class = PandasOnRayDataframeColumnPartition
+    else:
+        block_partition_class = PandasOnDaskDataframePartition
+        virtual_partition_class = PandasOnDaskDataframeColumnPartition
+    blocks = [
+        PandasOnRayDataframePartition(ray.put(pandas.DataFrame([0]))),
+        PandasOnRayDataframePartition(ray.put(pandas.DataFrame([1]))),
+    ]
+    level_one_virtual = PandasOnRayDataframeColumnPartition(blocks, full_axis=False)
+    level_one_virtual = level_one_virtual.add_to_apply_calls(lambda df: df[::-1])
+    level_two_virtual = PandasOnRayDataframeColumnPartition(
+        [level_one_virtual], full_axis=True
     )
-    # the modin frame should defer the reindex from reset_index
-    last_partition = df._query_compiler._modin_frame._partitions[0,0]
-    last_partition = first_partition.add_to_apply_calls(lambda df: df.reindex(['a', 'a']))
-
-    def check_column_has_reset_index(col: pandas.Series):
-        assert col.index.equals(reset)
-        return col
-
-    reset.apply(check_column_has_reset_index)._to_pandas()
+    level_two_virtual_result = level_two_virtual.apply(lambda df: df, num_splits=1)[0]
+    df_equals(level_two_virtual_result.to_pandas(), pd.DataFrame([1, 0], index=[0, 0]))
