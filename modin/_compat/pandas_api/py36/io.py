@@ -139,11 +139,11 @@ def read_table(
     memory_map=False,
     float_precision=None,
 ):
-    _pd_read_csv_signature = {
+    _pd_read_table_signature = {
         val.name for val in inspect.signature(pandas.read_table).parameters.values()
     }
     _, _, _, f_locals = inspect.getargvalues(inspect.currentframe())
-    kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_csv_signature}
+    kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_table_signature}
     return _read(**kwargs)
 
 

@@ -17,6 +17,7 @@ from contextlib import contextmanager
 from collections import namedtuple
 
 from pandas.io.common import get_handle as pd_get_handle
+from pandas.core.aggregation import reconstruct_func
 
 from modin.utils import _inherit_docstrings
 
@@ -69,4 +70,4 @@ def pd_convert_dtypes(df, **kwargs):  # noqa: PR01, RT01
     return df.convert_dtypes(**kwargs)
 
 
-__all__ = ["get_handle", "pd_pivot_table", "pd_convert_dtypes"]
+__all__ = ["get_handle", "pd_pivot_table", "pd_convert_dtypes", "reconstruct_func"]

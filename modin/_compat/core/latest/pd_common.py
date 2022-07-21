@@ -14,6 +14,7 @@
 """Module that houses compat functions and objects for `pandas.io.common`."""
 
 from pandas.io.common import get_handle
+from pandas.core.apply import reconstruct_func
 
 
 def pd_pivot_table(df, **kwargs):  # noqa: PR01, RT01
@@ -26,4 +27,4 @@ def pd_convert_dtypes(df, **kwargs):  # noqa: PR01, RT01
     return df.convert_dtypes(**kwargs)
 
 
-__all__ = ["get_handle", "pd_pivot_table", "pd_convert_dtypes"]
+__all__ = ["get_handle", "pd_pivot_table", "pd_convert_dtypes", "reconstruct_func"]

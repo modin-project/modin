@@ -16,12 +16,20 @@
 from modin._compat import PandasCompatVersion
 
 if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-    from .py36.pd_common import get_handle, pd_pivot_table, pd_convert_dtypes
-    from pandas.core.aggregation import reconstruct_func
+    from .py36.pd_common import (
+        get_handle,
+        pd_pivot_table,
+        pd_convert_dtypes,
+        reconstruct_func,
+    )
 
 
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
-    from .latest.pd_common import get_handle, pd_pivot_table, pd_convert_dtypes
-    from pandas.core.apply import reconstruct_func
+    from .latest.pd_common import (
+        get_handle,
+        pd_pivot_table,
+        pd_convert_dtypes,
+        reconstruct_func,
+    )
 
-__all__ = ["get_handle", "reconstruct_func", "pd_pivot_table", "pd_convert_dtypes"]
+__all__ = ["get_handle", "pd_pivot_table", "pd_convert_dtypes", "reconstruct_func"]

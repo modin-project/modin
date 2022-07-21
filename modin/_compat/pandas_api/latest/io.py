@@ -182,13 +182,13 @@ def read_table(
     storage_options: "StorageOptions" = None,
 ):
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
-    _pd_read_csv_signature = {
+    _pd_read_table_signature = {
         val.name for val in inspect.signature(pandas.read_table).parameters.values()
     }
     _, _, _, f_locals = inspect.getargvalues(inspect.currentframe())
     if f_locals.get("sep", sep) is False or f_locals.get("sep", sep) is no_default:
         f_locals["sep"] = "\t"
-    kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_csv_signature}
+    kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_table_signature}
     return _read(**kwargs)
 
 

@@ -243,10 +243,6 @@ from .general import (
 from modin._compat.pandas_api.namespace import pivot_table
 from modin._compat import PandasCompatVersion
 
-if PandasCompatVersion.CURRENT != PandasCompatVersion.PY36:
-    from modin._compat.pandas_api.namespace import Flags, Float32Dtype, Float64Dtype
-del PandasCompatVersion
-
 from .plotting import Plotting as plotting
 from modin.utils import show_versions
 
@@ -357,5 +353,11 @@ __all__ = [  # noqa: F405
     "api",
     "read_xml",
 ]
+
+if PandasCompatVersion.CURRENT != PandasCompatVersion.PY36:
+    from modin._compat.pandas_api.namespace import Flags, Float32Dtype, Float64Dtype
+
+    __all__.extend(["Flags", "Float32Dtype", "Float64Dtype"])
+del PandasCompatVersion
 
 del pandas, Engine, Parameter
