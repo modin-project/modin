@@ -50,28 +50,24 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
             f"Only API Layer objects may be passed in here, got {type(api_layer_object)} instead."
         )
 
+    modin_frame = api_layer_object._query_compiler._modin_frame
     if axis is None:
 
         def _unwrap_partitions():
-            api_layer_object._query_compiler._modin_frame._propagate_index_objs(None)
-            [
-                p.drain_call_queue()
-                for p in api_layer_object._query_compiler._modin_frame._partitions.flatten()
-            ]
+            modin_frame._propagate_index_objs(None)
+            [p.drain_call_queue() for p in modin_frame._partitions.flatten()]
             if get_ip:
                 return [
                     [(partition._ip_cache, partition._data) for partition in row]
-                    for row in api_layer_object._query_compiler._modin_frame._partitions
+                    for row in modin_frame._partitions
                 ]
             else:
                 return [
                     [partition._data for partition in row]
-                    for row in api_layer_object._query_compiler._modin_frame._partitions
+                    for row in modin_frame._partitions
                 ]
 
-        actual_engine = type(
-            api_layer_object._query_compiler._modin_frame._partitions[0][0]
-        ).__name__
+        actual_engine = type(modin_frame._partitions[0][0]).__name__
         if actual_engine in (
             "PandasOnRayDataframePartition",
             "PandasOnDaskDataframePartition",
@@ -81,9 +77,9 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
             f"Do not know how to unwrap '{actual_engine}' underlying partitions"
         )
     else:
-        api_layer_object._query_compiler._modin_frame._propagate_index_objs(None)
-        partitions = api_layer_object._query_compiler._modin_frame._partition_mgr_cls.axis_partition(
-            api_layer_object._query_compiler._modin_frame._partitions, axis ^ 1
+        modin_frame._propagate_index_objs(None)
+        partitions = modin_frame._partition_mgr_cls.axis_partition(
+            modin_frame._partitions, axis ^ 1
         )
         return [
             part.force_materialization(get_ip=get_ip).unwrap(
