@@ -33,6 +33,7 @@ import pandas.core.generic
 from pandas.core.indexing import convert_to_index_sliceable
 from pandas.util._validators import validate_percentile
 from pandas._libs.lib import no_default
+from pandas.util._decorators import cache_readonly
 from pandas._typing import (
     IndexKeyFunc,
     TimedeltaConvertibleTypes,
@@ -934,8 +935,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         new_query_compiler = self._query_compiler.astype(col_dtypes)
         return self._create_or_update_from_compiler(new_query_compiler, not copy)
 
-    @property
-    def at(self, axis=None):  # noqa: PR01, RT01, D200
+    @cache_readonly
+    def at(self):
         """
         Get a single value for a row/column label pair.
         """
@@ -1544,8 +1545,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         return self.iloc[:n]
 
-    @property
-    def iat(self, axis=None):  # noqa: PR01, RT01, D200
+    @cache_readonly
+    def iat(self):
         """
         Get a single value for a row/column pair by integer position.
         """
@@ -1618,8 +1619,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     isnull = isna
 
-    @property
-    def iloc(self):  # noqa: RT01, D200
+    @cache_readonly
+    def iloc(self):
         """
         Purely integer-location based indexing for selection by position.
         """
@@ -1687,8 +1688,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         return self._binary_op("lt", other, axis=axis, level=level, dtypes=np.bool_)
 
-    @property
-    def loc(self):  # noqa: RT01, D200
+    @cache_readonly
+    def loc(self):
         """
         Get a group of rows and columns by label(s) or a boolean array.
         """
