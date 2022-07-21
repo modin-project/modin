@@ -32,7 +32,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
 
     Parameters
     ----------
-    list_of_blocks : Union[list, PandasOnDaskDataframePartition]
+    list_of_partitions : Union[list, PandasOnDaskDataframePartition]
         List of ``PandasOnDaskDataframePartition`` and
         ``PandasOnDaskDataframeVirtualPartition`` objects, or a single
         ``PandasOnDaskDataframePartition``.

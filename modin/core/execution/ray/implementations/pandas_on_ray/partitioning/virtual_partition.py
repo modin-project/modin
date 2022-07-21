@@ -30,7 +30,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
 
     Parameters
     ----------
-    list_of_blocks : Union[list, PandasOnRayDataframePartition]
+    list_of_partitions : Union[list, PandasOnRayDataframePartition]
         List of ``PandasOnRayDataframePartition`` and
         ``PandasOnRayDataframeVirtualPartition`` objects, or a single
         ``PandasOnRayDataframePartition``.
