@@ -14,6 +14,7 @@
 """Module houses ``Parameter`` class - base class for all configs."""
 
 from collections import defaultdict
+from enum import IntEnum
 from typing import Any, Callable, DefaultDict, NamedTuple, Optional, Sequence
 
 
@@ -105,7 +106,7 @@ _TYPE_PARAMS = {
 _UNSET = object()
 
 
-class ValueSource:
+class ValueSource(IntEnum):
     """Class that describes the method of getting the value for a parameter."""
 
     # got from default, i.e. neither user nor configuration source had the value
@@ -130,7 +131,7 @@ class Parameter(object):
         ``Parameter`` default value.
     is_abstract : bool, default: True
         Whether or not ``Parameter`` is abstract.
-    _value_source : Optional[int]
+    _value_source : Optional[ValueSource]
         Source of the ``Parameter`` value, should be set by
         ``ValueSource``.
     """
@@ -139,7 +140,7 @@ class Parameter(object):
     type = str
     default: Optional[Any] = None
     is_abstract = True
-    _value_source: Optional[int] = None
+    _value_source: Optional[ValueSource] = None
     _value: Any = _UNSET
     _subs: list = []
     _once: DefaultDict[Any, list] = defaultdict(list)
@@ -227,13 +228,13 @@ class Parameter(object):
         return cls.default
 
     @classmethod
-    def get_value_source(cls) -> Optional[int]:
+    def get_value_source(cls) -> Optional[ValueSource]:
         """
         Get value source of the config.
 
         Returns
         -------
-        int
+        Optional[ValueSource]
         """
         if cls._value_source is None:
             # dummy call to .get() to initialize the value
