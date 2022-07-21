@@ -964,6 +964,15 @@ class TestCsv:
             storage_options=storage_options,
         )
 
+    def test_read_csv_s3_issue4658(self):
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer="s3://dask-data/nyc-taxi/2015/yellow_tripdata_2015-01.csv",
+            nrows=10,
+            storage_options={"anon": True},
+        )
+
     @pytest.mark.parametrize("names", [list("XYZ"), None])
     @pytest.mark.parametrize("skiprows", [1, 2, 3, 4, None])
     def test_read_csv_skiprows_names(self, names, skiprows):

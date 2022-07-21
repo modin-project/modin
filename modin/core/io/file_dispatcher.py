@@ -261,7 +261,10 @@ class FileDispatcher(ClassLogger):
                 S3FS = import_optional_dependency(
                     "s3fs", "Module s3fs is required to read S3FS files."
                 )
-                from botocore.exceptions import NoCredentialsError
+                from botocore.exceptions import (
+                    NoCredentialsError,
+                    EndpointConnectionError,
+                )
 
                 if storage_options is not None:
                     new_storage_options = dict(storage_options)
@@ -273,7 +276,7 @@ class FileDispatcher(ClassLogger):
                 exists = False
                 try:
                     exists = s3fs.exists(file_path) or exists
-                except (NoCredentialsError, PermissionError):
+                except (NoCredentialsError, PermissionError, EndpointConnectionError):
                     pass
                 s3fs = S3FS.S3FileSystem(anon=True, **new_storage_options)
                 return exists or s3fs.exists(file_path)
