@@ -16,6 +16,7 @@
 from distributed import Future
 from distributed.utils import get_ip
 from dask.distributed import wait
+from typing import List
 
 import pandas
 
@@ -75,7 +76,15 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
     instance_type = Future
 
     @property
-    def list_of_block_partitions(self):
+    def list_of_block_partitions(self) -> List[partition_type]:
+        """
+        Get the list of block partitions that compose this partition.
+
+        Returns
+        -------
+        List
+            A list of ``PandasOnDaskDataframePartition``.
+        """
         if self._list_of_block_partitions is None:
             self._list_of_block_partitions = []
             # Extract block partitions from the block and virtual partitions
@@ -469,7 +478,7 @@ class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeVirtualPartition
 
     Parameters
     ----------
-    list_of_blocks : list
+    list_of_partitions : list
         List of ``PandasOnDaskDataframePartition`` objects.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
@@ -491,7 +500,7 @@ class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeVirtualPartition):
 
     Parameters
     ----------
-    list_of_blocks : list
+    list_of_partitions : list
         List of ``PandasOnDaskDataframePartition`` objects.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
