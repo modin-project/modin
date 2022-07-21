@@ -19,6 +19,7 @@ Key Features and Updates
   * FIX-#4584: Enable pdb debug when running cloud tests (#4585)
   * FIX-#4564: Workaround import issues in Ray: auto-import pandas on python start if env var is set (#4603)
   * FIX-#4641: Reindex pandas partitions in `df.describe()` (#4651)
+  * FIX-#2064: Fix `iloc`/`loc` assignment when dataframe is empty (#4677)
   * FIX-#4634: Check for FrozenList as `by` in `df.groupby()` (#4667)
   * FIX-#4491: Wait for all partitions in parallel in benchmark mode (#4656)
 * Performance enhancements
@@ -31,7 +32,7 @@ Key Features and Updates
   * REFACTOR-#4530: Standardize access to physical data in partitions (#4563)
   * REFACTOR-#4534: Replace logging meta class with class decorator (#4535)
 * Pandas API implementations and improvements
-  *
+  * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements
   *
 * XGBoost enhancements

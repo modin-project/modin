@@ -1600,6 +1600,27 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         return self._default_to_pandas("infer_objects")
 
+    def convert_dtypes(
+        self,
+        infer_objects: bool = True,
+        convert_string: bool = True,
+        convert_integer: bool = True,
+        convert_boolean: bool = True,
+        convert_floating: bool = True,
+    ):  # noqa: PR01, RT01, D200
+        """
+        Convert columns to best possible dtypes using dtypes supporting ``pd.NA``.
+        """
+        return self.__constructor__(
+            query_compiler=self._query_compiler.convert_dtypes(
+                infer_objects=infer_objects,
+                convert_string=convert_string,
+                convert_integer=convert_integer,
+                convert_boolean=convert_boolean,
+                convert_floating=convert_floating,
+            )
+        )
+
     def isin(self, values):  # noqa: PR01, RT01, D200
         """
         Whether elements in `BasePandasDataset` are contained in `values`.
