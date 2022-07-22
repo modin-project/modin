@@ -28,6 +28,7 @@ from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.core.dataframe.pandas.utils import concatenate
 from modin.config import NPartitions, ProgressBar, BenchmarkMode, Engine, StorageFormat
+from modin.logging import ClassLogger
 
 import os
 
@@ -78,7 +79,7 @@ def wait_computations_if_benchmark_mode(func):
     return func
 
 
-class PandasDataframePartitionManager(ABC):
+class PandasDataframePartitionManager(ClassLogger, ABC):
     """
     Base class for managing the dataframe data layout and operators across the distribution of partitions.
 
