@@ -15,10 +15,10 @@
 
 import os
 
+import io
 import fsspec
 import fsspec.core
 from fsspec.core import split_protocol
-import io
 from fsspec.registry import get_filesystem_class
 import numpy as np
 import pandas
@@ -156,9 +156,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
 
         all_partitions = []
         for files_to_read in partition_files:
-            all_partitions.append([])
-            for cols in col_partitions:
-                all_partitions[-1].append(
+            all_partitions.append(
+                [
                     cls.deploy(
                         cls.parse_fsspec_files,
                         files_for_parser=files_to_read,
@@ -167,7 +166,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                         storage_options=storage_options,
                         **kwargs,
                     )
-                )
+                    for cols in col_partitions
+                ]
+            )
         return all_partitions
 
     @classmethod
@@ -192,13 +193,13 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             [
                 [
                     cls.frame_partition_cls(
-                        partition_ids[i][j][0],
-                        length=partition_ids[i][j][2],
-                        width=column_widths[j],
+                        part_id[0],
+                        length=part_id[2],
+                        width=col_width,
                     )
-                    for j in range(len(partition_ids[i]))
+                    for part_id, col_width in zip(part_ids, column_widths)
                 ]
-                for i in range(len(partition_ids))
+                for part_ids in partition_ids
             ]
         )
 
@@ -231,9 +232,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         pandas_metadata = ParquetDataset(
             path_, filesystem=fs, use_legacy_dataset=False
         ).schema.pandas_metadata
-        index_columns = []
-        if pandas_metadata is not None:
-            index_columns = pandas_metadata.get("index_columns", index_columns)
+        index_columns = (
+            [] if not pandas_metadata else pandas_metadata.get("index_columns", [])
+        )
         column_names_to_read = []
         for column in index_columns:
             if isinstance(column, str):
@@ -342,10 +343,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             column_widths=column_widths,
             dtypes=dtypes,
         )
-        new_query_compiler = cls.query_compiler_cls(frame)
         if needs_index_sync:
             frame.synchronize_labels(axis=0)
-        return new_query_compiler
+        return cls.query_compiler_cls(frame)
 
     @classmethod
     def _read(cls, path, engine, columns, **kwargs):

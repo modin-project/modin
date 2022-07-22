@@ -210,8 +210,7 @@ def make_parquet_dir():
     ):
         if os.path.exists(path):
             shutil.rmtree(path)
-        else:
-            os.makedirs(path)
+        os.makedirs(path)
         for filename, df in dfs_by_filename.items():
             df.to_parquet(os.path.join(path, filename), row_group_size=row_group_size)
         list_of_path.append(path)
