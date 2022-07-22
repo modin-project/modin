@@ -1236,13 +1236,11 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 if not is_list_like(axes[axis]):
                     axes[axis] = [axes[axis]]
                 if errors == "raise":
-                    non_existant = pandas.Index(axes[axis]).difference(
+                    non_existent = pandas.Index(axes[axis]).difference(
                         getattr(self, axis)
                     )
-                    if len(non_existant):
-                        raise ValueError(
-                            "labels {} not contained in axis".format(non_existant)
-                        )
+                    if len(non_existent):
+                        raise ValueError(f"labels {non_existent} not contained in axis")
                 else:
                     axes[axis] = [
                         obj for obj in axes[axis] if obj in getattr(self, axis)
