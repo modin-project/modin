@@ -70,6 +70,7 @@ class Series(SeriesCompat, BasePandasDataset):
     """
 
     _pandas_class = pandas.Series
+    __array_priority__ = pandas.Series.__array_priority__
 
     def __init__(
         self,
@@ -185,34 +186,6 @@ class Series(SeriesCompat, BasePandasDataset):
         Return the values as a NumPy array.
         """
         return super(Series, self).__array__(dtype).flatten()
-
-    @property
-    def __array_priority__(self):  # pragma: no cover
-        """
-        Return pandas `__array_priority__` Series internal parameter.
-
-        Returns
-        -------
-        int
-            Internal pandas parameter ``__array_priority__`` used during interaction with NumPy.
-        """
-        return self._to_pandas().__array_priority__
-
-    # FIXME: __bytes__ was removed in newer pandas versions, so Modin
-    # can remove it too.
-    def __bytes__(self):
-        """
-        Return bytes representation of the Series.
-
-        Returns
-        -------
-        bytes
-
-        Notes
-        -----
-        Method is deprecated.
-        """
-        return self._default_to_pandas(pandas.Series.__bytes__)
 
     def __contains__(self, key):
         """
