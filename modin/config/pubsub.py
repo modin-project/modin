@@ -106,7 +106,7 @@ _TYPE_PARAMS = {
 _UNSET = object()
 
 
-class ValueSource(IntEnum):
+class ValueSource(IntEnum):  # noqa: PR01
     """Class that describes the method of getting the value for a parameter."""
 
     # got from default, i.e. neither user nor configuration source had the value
