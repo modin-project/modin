@@ -327,13 +327,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         index, needs_index_sync = cls.build_index(path, kwargs["storage_options"])
         remote_parts = cls.build_partition(partition_ids, column_widths)
         if len(partition_ids) > 0 and len(partition_ids[0]) > 0:
-            first_row = partition_ids[0]
-            dtypes = cls.build_dtypes(
-                [dtype_and_partition[1] for dtype_and_partition in first_row], columns
-            )
             row_lengths = [part.length() for part in remote_parts.T[0]]
         else:
-            dtypes = None
             row_lengths = None
         frame = cls.frame_cls(
             remote_parts,
@@ -341,7 +336,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             columns,
             row_lengths=row_lengths,
             column_widths=column_widths,
-            dtypes=dtypes,
+            dtypes=None,
         )
         if needs_index_sync:
             frame.synchronize_labels(axis=0)
