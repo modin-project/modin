@@ -125,7 +125,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         Returns
         -------
         List
-            A list of ``ray.ObjectRef``.
+            A list of ``distributed.Future``.
         """
         # Defer draining call queue until we get the partitions
         # TODO Look into draining call queue at the same time as the task
