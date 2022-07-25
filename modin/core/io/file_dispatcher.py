@@ -277,11 +277,11 @@ class FileDispatcher(ClassLogger):
                 try:
                     exists = fs.exists(path)
                 except (NoCredentialsError, PermissionError, EndpointConnectionError):
-                    fs, path = fsspec.core.url_to_fs(
-                        file_path, anon=True, **new_storage_options
-                    )
-                    exists = fs.exists(path)
-                return exists
+                    pass
+                fs, path = fsspec.core.url_to_fs(
+                    file_path, anon=True, **new_storage_options
+                )
+                return exists or fs.exists(path)
         return os.path.exists(file_path)
 
     @classmethod
