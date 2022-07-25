@@ -571,6 +571,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             actual_index = kwargs.pop("_reset_index")
 
         def _reindex(df):
+            kwargs["copy"] = False
             df = df.reindex(labels=labels, axis=axis, **kwargs)
             if actual_index is not None:
                 df.index = actual_index
