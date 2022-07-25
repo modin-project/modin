@@ -2291,16 +2291,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def drop(self, index=None, columns=None):
         if index is not None:
-            # The unique here is to avoid duplicating rows with the same name
-            index = np.sort(
-                self.index.get_indexer_for(self.index[~self.index.isin(index)].unique())
-            )
+            index = np.sort(self.index.get_indexer_for(self.index.difference(index)))
         if columns is not None:
-            # The unique here is to avoid duplicating columns with the same name
             columns = np.sort(
-                self.columns.get_indexer_for(
-                    self.columns[~self.columns.isin(columns)].unique()
-                )
+                self.columns.get_indexer_for(self.columns.difference(columns))
             )
         new_modin_frame = self._modin_frame.mask(
             row_positions=index, col_positions=columns

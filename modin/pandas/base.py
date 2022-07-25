@@ -1229,44 +1229,25 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 "Need to specify at least one of 'labels', 'index' or 'columns'"
             )
 
-        # TODO Clean up this error checking
-        if "index" not in axes:
-            axes["index"] = None
-        elif axes["index"] is not None:
-            if not is_list_like(axes["index"]):
-                axes["index"] = [axes["index"]]
-            if errors == "raise":
-                non_existant = [obj for obj in axes["index"] if obj not in self.index]
-                if len(non_existant):
-                    raise ValueError(
-                        "labels {} not contained in axis".format(non_existant)
+        for axis in ["index", "columns"]:
+            if axis not in axes:
+                axes[axis] = None
+            elif axes[axis] is not None:
+                if not is_list_like(axes[axis]):
+                    axes[axis] = [axes[axis]]
+                if errors == "raise":
+                    non_existent = pandas.Index(axes[axis]).difference(
+                        getattr(self, axis)
                     )
-            else:
-                axes["index"] = [obj for obj in axes["index"] if obj in self.index]
-                # If the length is zero, we will just do nothing
-                if not len(axes["index"]):
-                    axes["index"] = None
-
-        if "columns" not in axes:
-            axes["columns"] = None
-        elif axes["columns"] is not None:
-            if not is_list_like(axes["columns"]):
-                axes["columns"] = [axes["columns"]]
-            if errors == "raise":
-                non_existant = [
-                    obj for obj in axes["columns"] if obj not in self.columns
-                ]
-                if len(non_existant):
-                    raise ValueError(
-                        "labels {} not contained in axis".format(non_existant)
-                    )
-            else:
-                axes["columns"] = [
-                    obj for obj in axes["columns"] if obj in self.columns
-                ]
-                # If the length is zero, we will just do nothing
-                if not len(axes["columns"]):
-                    axes["columns"] = None
+                    if len(non_existent):
+                        raise ValueError(f"labels {non_existent} not contained in axis")
+                else:
+                    axes[axis] = [
+                        obj for obj in axes[axis] if obj in getattr(self, axis)
+                    ]
+                    # If the length is zero, we will just do nothing
+                    if not len(axes[axis]):
+                        axes[axis] = None
 
         new_query_compiler = self._query_compiler.drop(
             index=axes["index"], columns=axes["columns"]
