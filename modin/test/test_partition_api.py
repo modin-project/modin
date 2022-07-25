@@ -54,33 +54,25 @@ pd.DataFrame([])
 
 
 @pytest.mark.parametrize("axis", [None, 0, 1])
-@pytest.mark.parametrize("reset_index", [True, False])
-@pytest.mark.parametrize("reset_columns", [True, False])
-def test_unwrap_partitions(axis, reset_index, reset_columns):
+@pytest.mark.parametrize("reverse_index", [True, False])
+@pytest.mark.parametrize("reverse_columns", [True, False])
+def test_unwrap_partitions(axis, reverse_index, reverse_columns):
     data = test_data["int_data"]
 
-    # Create the dataframe twice-- once to get expected partitions,
-    # and another time to get the partition with unwrap_partitions.
-    # Both the test and the code under test should mutate the dataframe
-    # by calling _propagate_index_objs, so we should use two separate
-    # dataframes.
-    def get_df(data):
-        df = pd.DataFrame(data)
-        if reset_index:
+    def get_df(lib, data):
+        df = lib.DataFrame(data)
+        if reverse_index:
             df.index = df.index[::-1]
-        if reset_columns:
+        if reverse_columns:
             df.columns = df.columns[::-1]
         return df
 
-    df = get_df(data)
-    # Propagate any deferred updates to the partitions and drain call
-    # queues before getting the data.
-    expected_df = get_df(data)
-    expected_df._query_compiler._modin_frame._propagate_index_objs(None)
-    [
-        p.drain_call_queue()
-        for p in expected_df._query_compiler._modin_frame._partitions.flatten()
-    ]
+    df = get_df(pd, data)
+    # `df` should not have propagatated the index and column updates to its
+    # partitions yet. The partitions of `expected_df` should have the updated
+    # metadata because we construct `expected_df` directly from the updated
+    # pandas dataframe.
+    expected_df = pd.DataFrame(get_df(pandas, data))
     expected_partitions = expected_df._query_compiler._modin_frame._partitions
     if axis is None:
         actual_partitions = np.array(unwrap_partitions(df, axis=axis))
