@@ -535,7 +535,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                                 on_in_columns
                             ).to_pandas()
                         if frame1 is not None and frame2 is not None:
-                            frame = pandas.concat([frame1, frame2], axis=1)
+                            frame = pandas.concat([frame1, frame2], axis=1, copy=False)
                         else:
                             frame = frame2 if frame1 is None else frame1
                         if len(frame.columns) > 1:
