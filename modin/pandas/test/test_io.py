@@ -982,13 +982,6 @@ class TestCsv:
             storage_options=storage_options,
         )
 
-    def test_read_csv_s3_http_path(self):
-        eval_io(
-            fn_name="read_csv",
-            filepath_or_buffer="https://modin-test.s3.us-west-1.amazonaws.com/yellow_tripdata_2015-01.csv",
-            nrows=10,
-        )
-
     @pytest.mark.skipif(
         PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
         reason="storage_options not supported for older pandas",

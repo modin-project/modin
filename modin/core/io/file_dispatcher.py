@@ -282,7 +282,6 @@ class FileDispatcher(ClassLogger):
                     )
                     exists = fs.exists(path)
                 return exists
-
         return os.path.exists(file_path)
 
     @classmethod
