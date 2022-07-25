@@ -203,21 +203,18 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
 
 @pytest.fixture
 def make_parquet_dir():
-    list_of_path: list[str] = []
+    path: str = ""
 
     def _make_parquet_dir(
-        path: str, dfs_by_filename: Dict[str, pandas.DataFrame], row_group_size: int
+        dfs_by_filename: Dict[str, pandas.DataFrame], row_group_size: int
     ):
-        if os.path.exists(path):
-            shutil.rmtree(path)
-        os.makedirs(path)
         for filename, df in dfs_by_filename.items():
             df.to_parquet(os.path.join(path, filename), row_group_size=row_group_size)
-        list_of_path.append(path)
+        return path
 
-    yield _make_parquet_dir
-
-    shutil.rmtree(list_of_path[0])
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        path = tmp_dir
+        yield _make_parquet_dir
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
@@ -1400,8 +1397,6 @@ class TestParquet:
     def test_read_parquet_directory(
         self, make_parquet_dir, columns, row_group_size, rows_per_file
     ):
-        path = get_unique_filename(extension=None)
-
         num_cols = DATASET_SIZE_DICT.get(
             TestDatasetSize.get(), DATASET_SIZE_DICT["Small"]
         )
@@ -1413,7 +1408,7 @@ class TestParquet:
                 {f"col{x + 1}": np.arange(start_row, end_row) for x in range(num_cols)}
             )
             start_row = end_row
-        make_parquet_dir(path, dfs_by_filename, row_group_size)
+        path = make_parquet_dir(dfs_by_filename, row_group_size)
         eval_io(
             fn_name="read_parquet",
             # read_parquet kwargs
