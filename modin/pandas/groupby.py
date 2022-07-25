@@ -17,7 +17,6 @@ import numpy as np
 import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
-from pandas.core.apply import reconstruct_func
 from pandas._libs.lib import no_default
 import pandas.core.common as com
 from types import BuiltinFunctionType
@@ -34,12 +33,14 @@ from modin.utils import (
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.config import IsExperimental
+from modin.logging import ClassLogger
 from .series import Series
 from .utils import is_label
+from modin._compat.core.pd_common import reconstruct_func
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
-class DataFrameGroupBy(object):
+class DataFrameGroupBy(ClassLogger):
     def __init__(
         self,
         df,
@@ -135,6 +136,7 @@ class DataFrameGroupBy(object):
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_mean,
                 numeric_only=numeric_only,
+                agg_kwargs=dict(numeric_only=numeric_only),
             )
         )
 
@@ -293,8 +295,16 @@ class DataFrameGroupBy(object):
         self._indices_cache = self._compute_index_grouped(numerical=True)
         return self._indices_cache
 
-    def pct_change(self):
-        return self._default_to_pandas(lambda df: df.pct_change())
+    def pct_change(self, periods=1, fill_method="ffill", limit=None, freq=None, axis=0):
+        return self._default_to_pandas(
+            lambda df: df.pct_change(
+                periods=periods,
+                fill_method=fill_method,
+                limit=limit,
+                freq=freq,
+                axis=axis,
+            )
+        )
 
     def filter(self, func, dropna=True, *args, **kwargs):
         return self._default_to_pandas(
@@ -504,6 +514,13 @@ class DataFrameGroupBy(object):
                 func, **kwargs
             )
             func_dict = {col: try_get_str_func(fn) for col, fn in func_dict.items()}
+            if any(isinstance(fn, list) for fn in func_dict.values()):
+                # multicolumn case
+                # putting functions in a `list` allows to achieve multicolumn in each partition
+                func_dict = {
+                    col: fn if isinstance(fn, list) else [fn]
+                    for col, fn in func_dict.items()
+                }
             if (
                 relabeling_required
                 and not self._as_index
@@ -1044,7 +1061,7 @@ class DataFrameGroupBy(object):
         agg_kwargs = dict() if agg_kwargs is None else agg_kwargs
 
         if numeric_only is None:
-            # pandas behaviour: if `numeric_only` wasn't explicitly specified then
+            # pandas behavior: if `numeric_only` wasn't explicitly specified then
             # the parameter is considered to be `False` if there are no numeric types
             # in the frame and `True` otherwise.
             numeric_only = any(

@@ -43,13 +43,13 @@ Restart your interpreter or notebook kernel.
 Avoid starting many Modin notebooks or interpreters in quick succession. Wait 2-3
 seconds before starting the next one.
 
-Importing heterogeneous data by ``read_csv``
-""""""""""""""""""""""""""""""""""""""""""""
+Importing heterogeneous data using ``read_csv``
+"""""""""""""""""""""""""""""""""""""""""""""""
 
-Since Modin ``read_csv`` imports data in parallel, it can occur that data read by
-different partitions can have different type (this happens when columns contains
-heterogeneous data, i.e. column values are of different types), which are handled
-differntly. Example of such behaviour is shown below.
+Since Modin's ``read_csv`` imports data in parallel, it is possible for data across
+partitions to be heterogeneously typed (this can happen when columns contain
+heterogeneous data, i.e. values in the same column are of different types). An example
+of how this is handled is shown below.
 
 .. code-block:: python
 
@@ -110,31 +110,30 @@ differntly. Example of such behaviour is shown below.
   4  9.0    10
 
 
-In this case `DataFrame` read by pandas in the column ``col1`` contain only ``str`` data
-because of the first string value ("one"), that forced pandas to handle full column
-data as strings. Modin the fisrt partition (the first three rows) read data similary
-to pandas, but the second partition (the last two rows) doesn't contain any strings
-in the first column and it's data is read as floats because of the last column
-value and as a result `7` value was read as `7.0`, that differs from pandas output.
+In this case, ``col1`` of the `DataFrame` read by pandas contains only ``str`` data
+because the first value ("one") is inferred to have type ``str``, which forces pandas to handle the rest of the values in the column
+as strings. The first Modin partition (the first three rows) handles the data as pandas does,
+but the second partition (the last two rows) reads the data as floats. This is because the
+second column contains an int and a float, and thus the column type is inferred to be float. As a
+result, `7` is interpreted as `7.0`, which differs from the pandas output.
 
-The above example showed the mechanism of occurence of pandas and Modin ``read_csv``
-outputs discrepancy during heterogeneous data import. Please note, that similar
-situations can occur during different data/parameters combinations.
+The above example demonstrates heterogenous data import with str, int, and float types,
+but heterogeneous data consisting of other data/parameter combinations can also result in 
+data type mismatches with pandas.
 
 **Solution**
 
-In the case if heterogeneous data is detected, corresponding warning will be showed in
-the user's console. Currently, the discrepancies of such type doesn't properly handled
-by Modin, and to avoid this issue, it is needed to set ``dtype`` parameter of ``read_csv``
-function manually to force correct data type definition during data import by
-partitions. Note, that to avoid excessive performance degradation, ``dtype`` value should
-be set fine-grained as it possible (specify ``dtype`` parameter only for columns with
-heterogeneous data).
+When heterogeneous data is detected, a warning will be raised.
+Currently, these discrepancies aren't properly handled
+by Modin, so to avoid this issue, you need to set the ``dtype`` parameter of ``read_csv``
+manually to force the correct data type coercion during data import. Note that 
+to avoid excessive performance degradation, the ``dtype`` value should only be set for columns that may contain heterogenous data.
+as possible (specify ``dtype`` parameter only for columns with heterogeneous data).
 
-Setting of ``dtype`` parameter works well for most of the cases, but, unfortunetely, it is
-ineffective if data file contain column which should be interpreted as index
-(``index_col`` parameter is used) since ``dtype`` parameter is responsible only for data
-fields. For example, if in the above example, ``kwargs`` will be set in the next way:
+Specifying the ``dtype`` parameter will work well in most cases. If the file
+contains a column that should be interpreted as the index
+(the ``index_col`` parameter is specified) there may still be type discrepancies in the index, since the ``dtype`` parameter is only responsible for data
+fields. If in the above example, ``kwargs`` was set like so:
 
 .. code-block:: python
 
@@ -144,8 +143,8 @@ fields. For example, if in the above example, ``kwargs`` will be set in the next
       "index_col": "col1",
   }
 
-Resulting Modin DataFrame will contain incorrect value as in the case if ``dtype``
-is not set:
+The resulting Modin DataFrame will contain incorrect values - just as if ``dtype``
+had not been specified:
 
 .. code-block:: python
 
@@ -156,9 +155,9 @@ is not set:
   7.0      8
   9.0     10
 
-In this case data should be imported without setting of ``index_col`` parameter
-and only then index column should be set as index (by using ``DataFrame.set_index``
-funcion for example) as it is shown in the example below:
+One workaround is to import the data without setting the ``index_col`` parameter, and then 
+set the index column using the ``DataFrame.set_index`` function as shown in
+the example below:
 
 .. code-block:: python
 
@@ -170,9 +169,9 @@ funcion for example) as it is shown in the example below:
 Using Modin with python multiprocessing
 """""""""""""""""""""""""""""""""""""""
 
-We strongly recommend not to mix the use of Modin with Ray or Dask engine selected
-in conjunction with python multiprocessing because that can lead to undefined behavior.
-One of such examples is shown below:
+We strongly recommend against using a distributed execution engine (e.g. Ray or Dask)
+in conjunction with Python multiprocessing because that can lead to undefined behavior.
+One such example is shown below:
 
 .. code-block:: python
 
@@ -190,9 +189,9 @@ One of such examples is shown below:
     with Pool(5) as p:
         print(p.map(f, [1]))
 
-Even if this example may work on your machine, we do not recommend similar scenarios.
-The python multiprocessing will cause conflicts with excessive resource use
-by launching duplicated Ray clusters on the same machine.
+Although this example may work on your machine, we do not recommend it, because
+the Python multiprocessing library will duplicate Ray clusters, causing both
+excessive resource usage and conflict over the available resources.
 
 Common errors
 -------------
@@ -260,7 +259,7 @@ to start processes.
 
 **Solution**
 
-To avoid the problem Dask Client creation needs to be moved into ``__main__`` scope of the module.
+To avoid the problem the Dask Client creation code needs to be moved into the ``__main__`` scope of the module.
 
 The corrected `script.py` would look like:
 
@@ -291,6 +290,42 @@ or
     client = Client() # Explicit Dask Client creation.
     df = pd.DataFrame([0, 1, 2, 3])
     print(df)
+
+Spurious error "cannot import partially initialised pandas module" on custom Ray cluster
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+If you're using some pre-configured Ray cluster to run Modin, it's possible you would
+be seeing spurious errors like
+
+.. code-block::
+
+  ray.exceptions.RaySystemError: System error: partially initialized module 'pandas' has no attribute 'core' (most likely due to a circular import)
+  traceback: Traceback (most recent call last):
+    File "/usr/share/miniconda/envs/modin/lib/python3.8/site-packages/ray/serialization.py", line 340, in deserialize_objects
+      obj = self._deserialize_object(data, metadata, object_ref)
+    File "/usr/share/miniconda/envs/modin/lib/python3.8/site-packages/ray/serialization.py", line 237, in _deserialize_object
+      return self._deserialize_msgpack_data(data, metadata_fields)
+    File "/usr/share/miniconda/envs/modin/lib/python3.8/site-packages/ray/serialization.py", line 192, in _deserialize_msgpack_data
+      python_objects = self._deserialize_pickle5_data(pickle5_data)
+    File "/usr/share/miniconda/envs/modin/lib/python3.8/site-packages/ray/serialization.py", line 180, in _deserialize_pickle5_data
+      obj = pickle.loads(in_band, buffers=buffers)
+    File "/usr/share/miniconda/envs/modin/lib/python3.8/site-packages/pandas/__init__.py", line 135, in <module>
+      from pandas import api, arrays, errors, io, plotting, testing, tseries
+    File "/usr/share/miniconda/envs/modin/lib/python3.8/site-packages/pandas/testing.py", line 6, in <module>
+      from pandas._testing import (
+    File "/usr/share/miniconda/envs/modin/lib/python3.8/site-packages/pandas/_testing/__init__.py", line 979, in <module>
+      cython_table = pd.core.common._cython_table.items()
+  AttributeError: partially initialized module 'pandas' has no attribute 'core' (most likely due to a circular import)
+
+**Solution**
+
+Modin contains a workaround that should automatically do ``import pandas`` upon worker process starts.
+
+It is triggered by the presence of non-empty ``__MODIN_AUTOIMPORT_PANDAS__`` environment variable which
+Modin sets up automatically on the Ray clusters it spawns, but it might be missing on pre-configured clusters.
+
+So if you're seeing the issue like shown above, please make sure you set this environment variable on all
+worker nodes of your cluster before actually spawning the workers.
 
 .. _issue: https://github.com/modin-project/modin/issues
 .. _Slack: https://modin.org/slack.html

@@ -40,7 +40,7 @@ class DaskWrapper:
         Returns
         -------
         list
-            The result of ``func`` splitted into parts in accordance with ``num_returns``.
+            The result of ``func`` split into parts in accordance with ``num_returns``.
         """
         client = default_client()
         remote_task_future = client.submit(func, *args, pure=pure, **kwargs)

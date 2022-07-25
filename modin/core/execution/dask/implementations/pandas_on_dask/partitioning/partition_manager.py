@@ -13,6 +13,8 @@
 
 """Module houses class that implements ``PandasDataframePartitionManager``."""
 
+from dask.distributed import wait
+
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
@@ -47,4 +49,18 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         list
             The objects wrapped by `partitions`.
         """
-        return DaskWrapper.materialize([partition.future for partition in partitions])
+        return DaskWrapper.materialize([partition._data for partition in partitions])
+
+    @classmethod
+    def wait_partitions(cls, partitions):
+        """
+        Wait on the objects wrapped by `partitions` in parallel, without materializing them.
+
+        This method will block until all computations in the list have completed.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            NumPy array with ``PandasDataframePartition``-s.
+        """
+        wait([partition._data for partition in partitions], return_when="ALL_COMPLETED")

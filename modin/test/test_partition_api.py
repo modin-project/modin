@@ -18,7 +18,7 @@ import pytest
 import modin.pandas as pd
 from modin.distributed.dataframe.pandas import unwrap_partitions, from_partitions
 from modin.config import Engine, NPartitions
-from modin.pandas.test.utils import df_equals
+from modin.pandas.test.utils import df_equals, test_data
 from modin.pandas.indexing import compute_sliced_len
 from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
@@ -55,7 +55,7 @@ pd.DataFrame([])
 
 @pytest.mark.parametrize("axis", [None, 0, 1])
 def test_unwrap_partitions(axis):
-    data = np.random.randint(0, 100, size=(2**16, 2**8))
+    data = test_data["int_data"]
     df = pd.DataFrame(data)
 
     if axis is None:
@@ -67,16 +67,10 @@ def test_unwrap_partitions(axis):
         )
         for row_idx in range(expected_partitions.shape[0]):
             for col_idx in range(expected_partitions.shape[1]):
-                if Engine.get() == "Ray":
-                    assert (
-                        expected_partitions[row_idx][col_idx].oid
-                        == actual_partitions[row_idx][col_idx]
-                    )
-                if Engine.get() == "Dask":
-                    assert (
-                        expected_partitions[row_idx][col_idx].future
-                        == actual_partitions[row_idx][col_idx]
-                    )
+                assert (
+                    expected_partitions[row_idx][col_idx]._data
+                    == actual_partitions[row_idx][col_idx]
+                )
     else:
         expected_axis_partitions = (
             df._query_compiler._modin_frame._partition_mgr_cls.axis_partition(
@@ -103,10 +97,9 @@ def test_unwrap_partitions(axis):
 @pytest.mark.parametrize("index", [None, "index"])
 @pytest.mark.parametrize("axis", [None, 0, 1])
 def test_from_partitions(axis, index, columns, row_lengths, column_widths):
-    num_rows = 2**16
-    num_cols = 2**8
-    data = np.random.randint(0, 100, size=(num_rows, num_cols))
+    data = test_data["int_data"]
     df1, df2 = pandas.DataFrame(data), pandas.DataFrame(data)
+    num_rows, num_cols = df1.shape
     expected_df = pandas.concat([df1, df2], axis=1 if axis is None else axis)
 
     index = expected_df.index if index == "index" else None
@@ -151,9 +144,7 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
 @pytest.mark.parametrize("index", ["original_idx", "new_idx"])
 @pytest.mark.parametrize("axis", [None, 0, 1])
 def test_from_partitions_mismatched_labels(axis, index, columns):
-    num_rows = 2**16
-    num_cols = 2**8
-    expected_df = pd.DataFrame(np.random.randint(0, 100, size=(num_rows, num_cols)))
+    expected_df = pd.DataFrame(test_data["int_data"])
     partitions = unwrap_partitions(expected_df, axis=axis)
 
     index = (

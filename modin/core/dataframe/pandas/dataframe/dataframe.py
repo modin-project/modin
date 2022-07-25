@@ -38,6 +38,7 @@ from modin.core.dataframe.base.dataframe.utils import (
 )
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
+from modin.logging import ClassLogger
 
 
 def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
@@ -132,7 +133,7 @@ def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
     return decorator
 
 
-class PandasDataframe(object):
+class PandasDataframe(ClassLogger):
     """
     An abstract class that represents the parent class for any pandas storage format dataframe class.
 
@@ -186,24 +187,32 @@ class PandasDataframe(object):
         self._index_cache = ensure_index(index)
         self._columns_cache = ensure_index(columns)
         if row_lengths is not None and len(self.index) > 0:
-            ErrorMessage.catch_bugs_and_request_email(
-                sum(row_lengths) != len(self._index_cache),
-                "Row lengths: {} != {}".format(
-                    sum(row_lengths), len(self._index_cache)
-                ),
-            )
+            # An empty frame can have 0 rows but a nonempty index. If the frame
+            # does have rows, the number of rows must equal the size of the
+            # index.
+            num_rows = sum(row_lengths)
+            if num_rows > 0:
+                ErrorMessage.catch_bugs_and_request_email(
+                    num_rows != len(self._index_cache),
+                    "Row lengths: {} != {}".format(num_rows, len(self._index_cache)),
+                )
             ErrorMessage.catch_bugs_and_request_email(
                 any(val < 0 for val in row_lengths),
                 "Row lengths cannot be negative: {}".format(row_lengths),
             )
         self._row_lengths_cache = row_lengths
         if column_widths is not None and len(self.columns) > 0:
-            ErrorMessage.catch_bugs_and_request_email(
-                sum(column_widths) != len(self._columns_cache),
-                "Column widths: {} != {}".format(
-                    sum(column_widths), len(self._columns_cache)
-                ),
-            )
+            # An empty frame can have 0 column but a nonempty column index. If
+            # the frame does have columns, the number of columns must equal the
+            # size of the columns.
+            num_columns = sum(column_widths)
+            if num_columns > 0:
+                ErrorMessage.catch_bugs_and_request_email(
+                    num_columns != len(self._columns_cache),
+                    "Column widths: {} != {}".format(
+                        num_columns, len(self._columns_cache)
+                    ),
+                )
             ErrorMessage.catch_bugs_and_request_email(
                 any(val < 0 for val in column_widths),
                 "Column widths cannot be negative: {}".format(column_widths),
@@ -323,7 +332,7 @@ class PandasDataframe(object):
         if old_len != new_len:
             raise ValueError(
                 f"Length mismatch: Expected axis has {old_len} elements, "
-                + "new values have {new_len} elements"
+                + f"new values have {new_len} elements"
             )
         return new_labels
 
@@ -2108,7 +2117,12 @@ class PandasDataframe(object):
             New Modin DataFrame.
         """
         # Only sort the indices if they do not match
-        left_parts, right_parts, joined_index = self._copartition(
+        (
+            left_parts,
+            right_parts,
+            joined_index,
+            partition_sizes_along_axis,
+        ) = self._copartition(
             axis, other, join_type, sort=not self.axes[axis].equals(other.axes[axis])
         )
         # unwrap list returned by `copartition`.
@@ -2120,13 +2134,24 @@ class PandasDataframe(object):
             dtypes = self._dtypes
         new_index = self.index
         new_columns = self.columns
+        # Pass shape caches instead of values in order to not trigger shape
+        # computation.
+        new_row_lengths = self._row_lengths_cache
+        new_column_widths = self._column_widths_cache
         if not preserve_labels:
             if axis == 1:
                 new_columns = joined_index
+                new_column_widths = partition_sizes_along_axis
             else:
                 new_index = joined_index
+                new_row_lengths = partition_sizes_along_axis
         return self.__constructor__(
-            new_frame, new_index, new_columns, None, None, dtypes=dtypes
+            new_frame,
+            new_index,
+            new_columns,
+            new_row_lengths,
+            new_column_widths,
+            dtypes=dtypes,
         )
 
     def _prepare_frame_to_broadcast(self, axis, indices, broadcast_all):
@@ -2156,17 +2181,8 @@ class PandasDataframe(object):
         broadcast [self[key1], self[key2]] partitions and internal indices for `self` must be [[0, 1], [5]]
         """
         if broadcast_all:
-
-            def get_len(part):
-                return part.width() if not axis else part.length()
-
-            parts = self._partitions if not axis else self._partitions.T
-            return {
-                key: {
-                    i: np.arange(get_len(parts[0][i])) for i in np.arange(len(parts[0]))
-                }
-                for key in indices.keys()
-            }
+            sizes = self._row_lengths if axis else self._column_widths
+            return {key: dict(enumerate(sizes)) for key in indices.keys()}
         passed_len = 0
         result_dict = {}
         for part_num, internal in indices.items():
@@ -2387,16 +2403,16 @@ class PandasDataframe(object):
         Returns
         -------
         tuple
-            Tuple of (left data, right data list, joined index).
+            Tuple containing:
+                1) 2-d NumPy array of aligned left partitions
+                2) list of 2-d NumPy arrays of aligned right partitions
+                3) joined index along ``axis``
+                4) List with sizes of partitions along axis that partitioning
+                   was done on. This list will be empty if and only if all
+                   the frames are empty.
         """
         if isinstance(other, type(self)):
             other = [other]
-
-        # define helper functions
-        def get_axis_lengths(partitions, axis):
-            if axis:
-                return [obj.width() for obj in partitions[0]]
-            return [obj.length() for obj in partitions.T[0]]
 
         self_index = self.axes[axis]
         others_index = [o.axes[axis] for o in other]
@@ -2411,7 +2427,14 @@ class PandasDataframe(object):
 
         # If all frames are empty
         if len(non_empty_frames_idx) == 0:
-            return self._partitions, [o._partitions for o in other], joined_index
+            return (
+                self._partitions,
+                [o._partitions for o in other],
+                joined_index,
+                # There are no partition sizes because the resulting dataframe
+                # has no partitions.
+                [],
+            )
 
         base_frame_idx = non_empty_frames_idx[0]
         other_frames = frames[base_frame_idx + 1 :]
@@ -2424,18 +2447,23 @@ class PandasDataframe(object):
         do_reindex_base = not base_index.equals(joined_index)
         do_repartition_base = force_repartition or do_reindex_base
 
-        # perform repartitioning and reindexing for `base_frame` if needed
+        # Perform repartitioning and reindexing for `base_frame` if needed.
+        # Also define length of base and frames. We will need to know the
+        # lengths for alignment.
         if do_repartition_base:
             reindexed_base = base_frame._partition_mgr_cls.map_axis_partitions(
                 axis,
                 base_frame._partitions,
                 make_reindexer(do_reindex_base, base_frame_idx),
             )
+            if axis:
+                base_lengths = [obj.width() for obj in reindexed_base[0]]
+            else:
+                base_lengths = [obj.length() for obj in reindexed_base.T[0]]
         else:
             reindexed_base = base_frame._partitions
+            base_lengths = self._column_widths if axis else self._row_lengths
 
-        # define length of base and `other` frames to aligning purpose
-        base_lengths = get_axis_lengths(reindexed_base, axis)
         others_lengths = [o._axes_lengths[axis] for o in other_frames]
 
         # define conditions for reindexing and repartitioning `other` frames
@@ -2471,7 +2499,7 @@ class PandasDataframe(object):
             + [reindexed_base]
             + reindexed_other_list
         )
-        return reindexed_frames[0], reindexed_frames[1:], joined_index
+        return (reindexed_frames[0], reindexed_frames[1:], joined_index, base_lengths)
 
     @lazy_metadata_decorator(apply_axis="both")
     def binary_op(self, op, right_frame, join_type="outer"):
@@ -2492,16 +2520,42 @@ class PandasDataframe(object):
         PandasDataframe
             New Modin DataFrame.
         """
-        left_parts, right_parts, joined_index = self._copartition(
+        left_parts, right_parts, joined_index, row_lengths = self._copartition(
             0, right_frame, join_type, sort=True
         )
-        # unwrap list returned by `copartition`.
-        right_parts = right_parts[0]
-        new_frame = self._partition_mgr_cls.binary_operation(
-            1, left_parts, lambda l, r: op(l, r), right_parts
+        new_left_frame = self.__constructor__(
+            left_parts, joined_index, self.columns, row_lengths, self._column_widths
         )
-        new_columns = self.columns.join(right_frame.columns, how=join_type)
-        return self.__constructor__(new_frame, joined_index, new_columns, None, None)
+        new_right_frame = self.__constructor__(
+            right_parts[0],
+            joined_index,
+            right_frame.columns,
+            row_lengths,
+            right_frame._column_widths,
+        )
+
+        (
+            left_parts,
+            right_parts,
+            joined_columns,
+            column_widths,
+        ) = new_left_frame._copartition(1, new_right_frame, join_type, sort=True)
+
+        new_frame = (
+            np.array([])
+            if len(left_parts) == 0 or len(right_parts[0]) == 0
+            else self._partition_mgr_cls.binary_operation(
+                left_parts, op, right_parts[0]
+            )
+        )
+
+        return self.__constructor__(
+            new_frame,
+            joined_index,
+            joined_columns,
+            row_lengths,
+            column_widths,
+        )
 
     @lazy_metadata_decorator(apply_axis="both")
     def concat(
@@ -2540,8 +2594,7 @@ class PandasDataframe(object):
             joined_index = self.columns
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
-            new_lengths = None
-            new_widths = self._column_widths
+            new_widths = self._column_widths_cache
         elif (
             axis == Axis.COL_WISE
             and all(o.index.equals(self.index) for o in others)
@@ -2550,16 +2603,20 @@ class PandasDataframe(object):
             joined_index = self.index
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
-            new_lengths = self._row_lengths
-            new_widths = self._column_widths + [
-                length for o in others for length in o._column_widths
-            ]
+            new_lengths = self._row_lengths_cache
         else:
-            left_parts, right_parts, joined_index = self._copartition(
+            (
+                left_parts,
+                right_parts,
+                joined_index,
+                partition_sizes_along_axis,
+            ) = self._copartition(
                 axis.value ^ 1, others, how, sort, force_repartition=False
             )
-            new_lengths = None
-            new_widths = None
+            if axis == Axis.COL_WISE:
+                new_lengths = partition_sizes_along_axis
+            else:
+                new_widths = partition_sizes_along_axis
         new_partitions = self._partition_mgr_cls.concat(
             axis.value, left_parts, right_parts
         )
@@ -2568,6 +2625,19 @@ class PandasDataframe(object):
             new_columns = joined_index
             # TODO: Can optimize by combining if all dtypes are materialized
             new_dtypes = None
+            # If we have already cached the length of each row in at least one
+            # of the row's partitions, we can build new_lengths for the new
+            # frame. Typically, if we know the length for any partition in a
+            # row, we know the length for the first partition in the row. So
+            # just check the lengths of the first column of partitions.
+            new_lengths = []
+            if new_partitions.size > 0:
+                for part in new_partitions.T[0]:
+                    if part._length_cache is not None:
+                        new_lengths.append(part.length())
+                    else:
+                        new_lengths = None
+                        break
         else:
             new_columns = self.columns.append([other.columns for other in others])
             new_index = joined_index
@@ -2575,6 +2645,20 @@ class PandasDataframe(object):
                 new_dtypes = self.dtypes.append([o.dtypes for o in others])
             else:
                 new_dtypes = None
+            # If we have already cached the width of each column in at least one
+            # of the column's partitions, we can build new_widths for the new
+            # frame. Typically, if we know the width for any partition in a
+            # column, we know the width for the first partition in the column.
+            # So just check the widths of the first row of partitions.
+            new_widths = []
+            if new_partitions.size > 0:
+                for part in new_partitions[0]:
+                    if part._width_cache is not None:
+                        new_widths.append(part.width())
+                    else:
+                        new_widths = None
+                        break
+
         return self.__constructor__(
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )

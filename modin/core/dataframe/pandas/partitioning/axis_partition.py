@@ -83,7 +83,6 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     num_splits,
                     len(self.list_of_blocks),
                     other_shape,
-                    kwargs,
                     *tuple(
                         self.list_of_blocks
                         + [
@@ -92,11 +91,12 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                             for part in axis_partition.list_of_blocks
                         ]
                     ),
+                    **kwargs,
                 )
             )
-        args = [self.axis, func, num_splits, kwargs, maintain_partitioning]
+        args = [self.axis, func, num_splits, maintain_partitioning]
         args.extend(self.list_of_blocks)
-        return self._wrap_partitions(self.deploy_axis_func(*args))
+        return self._wrap_partitions(self.deploy_axis_func(*args, **kwargs))
 
     def shuffle(self, func, lengths, **kwargs):
         """
@@ -120,13 +120,13 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         # We add these to kwargs and will pop them off before performing the operation.
         kwargs["manual_partition"] = True
         kwargs["_lengths"] = lengths
-        args = [self.axis, func, num_splits, kwargs, False]
+        args = [self.axis, func, num_splits, False]
         args.extend(self.list_of_blocks)
-        return self._wrap_partitions(self.deploy_axis_func(*args))
+        return self._wrap_partitions(self.deploy_axis_func(*args, **kwargs))
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+        cls, axis, func, num_splits, maintain_partitioning, *partitions, **kwargs
     ):
         """
         Deploy a function along a full axis.
@@ -139,13 +139,13 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             The function to perform.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).
-        kwargs : dict
-            Additional keywords arguments to be passed in `func`.
         maintain_partitioning : bool
             If True, keep the old partitioning if possible.
             If False, create a new partition layout.
         *partitions : iterable
             All partitions that make up the full axis (row or column).
+        **kwargs : dict
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -157,7 +157,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         lengths = kwargs.pop("_lengths", None)
 
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
-        result = func(dataframe, **kwargs)
+        # To not mix the args for deploy_axis_func and args for func, we fold
+        # args into kwargs. This is a bit of a hack, but it works.
+        result = func(dataframe, *kwargs.pop("args", ()), **kwargs)
 
         if manual_partition:
             # The split function is expecting a list
@@ -180,7 +182,14 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
-        cls, axis, func, num_splits, len_of_left, other_shape, kwargs, *partitions
+        cls,
+        axis,
+        func,
+        num_splits,
+        len_of_left,
+        other_shape,
+        *partitions,
+        **kwargs,
     ):
         """
         Deploy a function along a full axis between two data sets.
@@ -198,10 +207,10 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         other_shape : np.ndarray
             The shape of right frame in terms of partitions, i.e.
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
-        kwargs : dict
-            Additional keywords arguments to be passed in `func`.
         *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
+        **kwargs : dict
+            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -222,6 +231,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             for i in range(1, len(other_shape))
         ]
         rt_frame = pandas.concat(combined_axis, axis=axis ^ 1, copy=False)
-
-        result = func(lt_frame, rt_frame, **kwargs)
+        # To not mix the args for deploy_func_between_two_axis_partitions and args
+        # for func, we fold args into kwargs. This is a bit of a hack, but it works.
+        result = func(lt_frame, rt_frame, *kwargs.pop("args", ()), **kwargs)
         return split_result_of_axis_func_pandas(axis, num_splits, result)

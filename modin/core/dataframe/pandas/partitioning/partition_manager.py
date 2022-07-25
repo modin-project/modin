@@ -27,7 +27,8 @@ import warnings
 from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.core.dataframe.pandas.utils import concatenate
-from modin.config import NPartitions, ProgressBar, BenchmarkMode
+from modin.config import NPartitions, ProgressBar, BenchmarkMode, Engine, StorageFormat
+from modin.logging import ClassLogger
 
 import os
 
@@ -53,24 +54,32 @@ def wait_computations_if_benchmark_mode(func):
     if BenchmarkMode.get():
 
         @wraps(func)
-        def wait(*args, **kwargs):
+        def wait(cls, *args, **kwargs):
             """Wait for computation results."""
-            result = func(*args, **kwargs)
+            result = func(cls, *args, **kwargs)
             if isinstance(result, tuple):
                 partitions = result[0]
             else:
                 partitions = result
-            # need to go through all the values of the map iterator
-            # since `wait` does not return anything, we need to explicitly add
-            # the return `True` value from the lambda
-            all(map(lambda partition: partition.wait() or True, partitions.flatten()))
+            # When partitions have a deferred call queue, calling
+            # partition.wait() on each partition serially will serially kick
+            # off each deferred computation and wait for each partition to
+            # finish before kicking off the next one. Instead, we want to
+            # serially kick off all the deferred computations so that they can
+            # all run asynchronously, then wait on all the results.
+            [part.drain_call_queue() for part in partitions.flatten()]
+            # The partition manager invokes the relevant .wait() method under
+            # the hood, which should wait in parallel for all computations to finish
+            # (We can't just add a `cls` argument to this `wait` function, since doing so
+            # seems to be incompatible with the way function decorators work)
+            cls.wait_partitions(partitions.flatten())
             return result
 
         return wait
     return func
 
 
-class PandasDataframePartitionManager(ABC):
+class PandasDataframePartitionManager(ClassLogger, ABC):
     """
     Base class for managing the dataframe data layout and operators across the distribution of partitions.
 
@@ -118,7 +127,7 @@ class PandasDataframePartitionManager(ABC):
     @classmethod
     def column_partitions(cls, partitions, full_axis=True):
         """
-        Get the list of `BaseDataframeAxisPartition` objects representing column-wise paritions.
+        Get the list of `BaseDataframeAxisPartition` objects representing column-wise partitions.
 
         Parameters
         ----------
@@ -606,11 +615,15 @@ class PandasDataframePartitionManager(ABC):
             to_concat = (
                 [left_parts] + right_parts if left_parts.size != 0 else right_parts
             )
-            return (
+            result = (
                 np.concatenate(to_concat, axis=axis) if len(to_concat) else left_parts
             )
         else:
-            return np.append(left_parts, right_parts, axis=axis)
+            result = np.append(left_parts, right_parts, axis=axis)
+        if axis == 0:
+            return cls.rebalance_partitions(result)
+        else:
+            return result
 
     @classmethod
     def to_pandas(cls, partitions):
@@ -796,6 +809,26 @@ class PandasDataframePartitionManager(ABC):
         getting objects in parallel.
         """
         return [partition.get() for partition in partitions]
+
+    @classmethod
+    def wait_partitions(cls, partitions):
+        """
+        Wait on the objects wrapped by `partitions`, without materializing them.
+
+        This method will block until all computations in the list have completed.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            NumPy array with ``PandasDataframePartition``-s.
+
+        Notes
+        -----
+        This method should be implemented in a more efficient way for engines that supports
+        waiting on objects in parallel.
+        """
+        for partition in partitions:
+            partition.wait()
 
     @classmethod
     def get_indices(cls, axis, partitions, index_func=None):
@@ -1233,44 +1266,39 @@ class PandasDataframePartitionManager(ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def binary_operation(cls, axis, left, func, right):
+    def binary_operation(cls, left, func, right):
         """
-        Apply a function that requires two PandasDataframe objects.
+        Apply a function that requires two ``PandasDataframe`` objects.
 
         Parameters
         ----------
-        axis : {0, 1}
-            The axis to apply the function over (0 - rows, 1 - columns).
         left : np.ndarray
-            The partitions of left PandasDataframe.
+            The partitions of left ``PandasDataframe``.
         func : callable
             The function to apply.
         right : np.ndarray
-            The partitions of right PandasDataframe.
+            The partitions of right ``PandasDataframe``.
 
         Returns
         -------
         np.ndarray
             A NumPy array with new partitions.
         """
-        if axis:
-            left_partitions = cls.row_partitions(left)
-            right_partitions = cls.row_partitions(right)
-        else:
-            left_partitions = cls.column_partitions(left)
-            right_partitions = cls.column_partitions(right)
+        [part.drain_call_queue() for part in right.flatten()]
+
         func = cls.preprocess_func(func)
-        result = np.array(
+        return np.array(
             [
-                left_partitions[i].apply(
-                    func,
-                    num_splits=NPartitions.get(),
-                    other_axis_partition=right_partitions[i],
-                )
-                for i in range(len(left_partitions))
+                [
+                    part.apply(
+                        func,
+                        right[row_idx][col_idx]._data,
+                    )
+                    for col_idx, part in enumerate(left[row_idx])
+                ]
+                for row_idx in range(len(left))
             ]
         )
-        return result if axis else result.T
 
     @classmethod
     @wait_computations_if_benchmark_mode
@@ -1288,7 +1316,15 @@ class PandasDataframePartitionManager(ABC):
     @classmethod
     def rebalance_partitions(cls, partitions):
         """
-        Return the provided array of partitions without rebalancing it.
+        Rebalance a 2-d array of partitions if we are using ``PandasOnRay`` or ``PandasOnDask`` executions.
+
+        For all other executions, the partitions are returned unchanged.
+
+        Rebalance the partitions by building a new array
+        of partitions out of the original ones so that:
+
+        - If all partitions have a length, each new partition has roughly the same number of rows.
+        - Otherwise, each new partition spans roughly the same number of old partitions.
 
         Parameters
         ----------
@@ -1298,6 +1334,103 @@ class PandasDataframePartitionManager(ABC):
         Returns
         -------
         np.ndarray
-            The same 2-d array.
+            A NumPy array with the same; or new, rebalanced, partitions, depending on the execution
+            engine and storage format.
         """
+        if Engine.get() in ["Ray", "Dask"] and StorageFormat.get() == "Pandas":
+            # Rebalancing partitions is currently only implemented for PandasOnRay and PandasOnDask.
+            # We rebalance when the ratio of the number of existing partitions to
+            # the ideal number of partitions is larger than this threshold. The
+            # threshold is a heuristic that may need to be tuned for performance.
+            max_excess_of_num_partitions = 1.5
+            num_existing_partitions = partitions.shape[0]
+            ideal_num_new_partitions = NPartitions.get()
+            if (
+                num_existing_partitions
+                <= ideal_num_new_partitions * max_excess_of_num_partitions
+            ):
+                return partitions
+            # If any partition has an unknown length, give each axis partition
+            # roughly the same number of row partitions. We use `_length_cache` here
+            # to avoid materializing any unmaterialized lengths.
+            if any(
+                partition._length_cache is None
+                for row in partitions
+                for partition in row
+            ):
+                # We need each partition to go into an axis partition, but the
+                # number of axis partitions may not evenly divide the number of
+                # partitions.
+                chunk_size = compute_chunksize(
+                    num_existing_partitions, ideal_num_new_partitions, min_block_size=1
+                )
+                return np.array(
+                    [
+                        cls.column_partitions(
+                            partitions[i : i + chunk_size],
+                            full_axis=False,
+                        )
+                        for i in range(
+                            0,
+                            num_existing_partitions,
+                            chunk_size,
+                        )
+                    ]
+                )
+
+            # If we know the number of rows in every partition, then we should try
+            # instead to give each new partition roughly the same number of rows.
+            new_partitions = []
+            # `start` is the index of the first existing partition that we want to
+            # put into the current new partition.
+            start = 0
+            total_rows = sum(part.length() for part in partitions[:, 0])
+            ideal_partition_size = compute_chunksize(
+                total_rows, ideal_num_new_partitions, min_block_size=1
+            )
+            for _ in range(ideal_num_new_partitions):
+                # We might pick up old partitions too quickly and exhaust all of them.
+                if start >= len(partitions):
+                    break
+                # `stop` is the index of the last existing partition so far that we
+                # want to put into the current new partition.
+                stop = start
+                partition_size = partitions[start][0].length()
+                # Add existing partitions into the current new partition until the
+                # number of rows in the new partition hits `ideal_partition_size`.
+                while stop < len(partitions) and partition_size < ideal_partition_size:
+                    stop += 1
+                    if stop < len(partitions):
+                        partition_size += partitions[stop][0].length()
+                # If the new partition is larger than we want, split the last
+                # current partition that it contains into two partitions, where
+                # the first partition has just enough rows to make the current
+                # new partition have length `ideal_partition_size`, and the second
+                # partition has the remainder.
+                if partition_size > ideal_partition_size * max_excess_of_num_partitions:
+                    new_last_partition_size = ideal_partition_size - sum(
+                        row[0].length() for row in partitions[start:stop]
+                    )
+                    partitions = np.insert(
+                        partitions,
+                        stop + 1,
+                        [
+                            obj.mask(slice(new_last_partition_size, None), slice(None))
+                            for obj in partitions[stop]
+                        ],
+                        0,
+                    )
+                    partitions[stop, :] = [
+                        obj.mask(slice(None, new_last_partition_size), slice(None))
+                        for obj in partitions[stop]
+                    ]
+                    partition_size = ideal_partition_size
+                new_partitions.append(
+                    cls.column_partitions(
+                        (partitions[start : stop + 1]),
+                        full_axis=partition_size == total_rows,
+                    )
+                )
+                start = stop + 1
+            return np.array(new_partitions)
         return partitions

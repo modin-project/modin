@@ -81,7 +81,10 @@ class Engine(EnvironmentVariable, type=str):
         -------
         str
         """
-        from modin.utils import MIN_RAY_VERSION, MIN_DASK_VERSION
+        from modin.utils import (
+            MIN_RAY_VERSION,
+            MIN_DASK_VERSION,
+        )
 
         if IsDebug.get():
             return "Python"
@@ -93,7 +96,9 @@ class Engine(EnvironmentVariable, type=str):
         else:
             if version.parse(ray.__version__) < MIN_RAY_VERSION:
                 raise ImportError(
-                    "Please `pip install modin[ray]` to install compatible Ray version (>={MIN_RAY_VERSION})."
+                    "Please `pip install modin[ray]` to install compatible Ray "
+                    + "version "
+                    + f"(>={MIN_RAY_VERSION})."
                 )
             return "Ray"
         try:
@@ -108,7 +113,7 @@ class Engine(EnvironmentVariable, type=str):
                 or version.parse(distributed.__version__) < MIN_DASK_VERSION
             ):
                 raise ImportError(
-                    "Please `pip install modin[dask]` to install compatible Dask version (>={MIN_DASK_VERSION})."
+                    f"Please `pip install modin[dask]` to install compatible Dask version (>={MIN_DASK_VERSION})."
                 )
             return "Dask"
         try:
@@ -358,8 +363,99 @@ class BenchmarkMode(EnvironmentVariable, type=bool):
         super().put(value)
 
 
+class LogMode(EnvironmentVariable, type=ExactStr):
+    """Set ``LogMode`` value if users want to opt-in."""
+
+    varname = "MODIN_LOG_MODE"
+    choices = ("enable", "disable", "enable_api_only")
+    default = "disable"
+
+    @classmethod
+    def enable(cls):
+        """Enable all logging levels."""
+        cls.put("enable")
+
+    @classmethod
+    def disable(cls):
+        """Disable logging feature."""
+        cls.put("disable")
+
+    @classmethod
+    def enable_api_only(cls):
+        """Enable API level logging."""
+        cls.put("enable_api_only")
+
+
+class LogMemoryInterval(EnvironmentVariable, type=int):
+    """Interval (in seconds) to profile memory utilization for logging."""
+
+    varname = "MODIN_LOG_MEMORY_INTERVAL"
+    default = 5
+
+    @classmethod
+    def put(cls, value):
+        """
+        Set ``LogMemoryInterval`` with extra checks.
+
+        Parameters
+        ----------
+        value : int
+            Config value to set.
+        """
+        if value <= 0:
+            raise ValueError(f"Log memory Interval should be > 0, passed value {value}")
+        super().put(value)
+
+    @classmethod
+    def get(cls) -> int:
+        """
+        Get ``LogMemoryInterval`` with extra checks.
+
+        Returns
+        -------
+        int
+        """
+        log_memory_interval = super().get()
+        assert log_memory_interval > 0, "`LogMemoryInterval` should be > 0"
+        return log_memory_interval
+
+
+class LogFileSize(EnvironmentVariable, type=int):
+    """Max size of logs (in MBs) to store per Modin job."""
+
+    varname = "MODIN_LOG_FILE_SIZE"
+    default = 10
+
+    @classmethod
+    def put(cls, value):
+        """
+        Set ``LogFileSize`` with extra checks.
+
+        Parameters
+        ----------
+        value : int
+            Config value to set.
+        """
+        if value <= 0:
+            raise ValueError(f"Log file size should be > 0 MB, passed value {value}")
+        super().put(value)
+
+    @classmethod
+    def get(cls) -> int:
+        """
+        Get ``LogFileSize`` with extra checks.
+
+        Returns
+        -------
+        int
+        """
+        log_file_size = super().get()
+        assert log_file_size > 0, "`LogFileSize` should be > 0"
+        return log_file_size
+
+
 class PersistentPickle(EnvironmentVariable, type=bool):
-    """Wheather serialization should be persistent."""
+    """Whether serialization should be persistent."""
 
     varname = "MODIN_PERSISTENT_PICKLE"
     # When set to off, it allows faster serialization which is only

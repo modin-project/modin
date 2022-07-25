@@ -14,10 +14,12 @@
 import pytest
 import numpy as np
 import pandas
-from pandas.testing import assert_index_equal
+from pandas.testing import assert_index_equal, assert_series_equal
 import matplotlib
 import modin.pandas as pd
 from modin.utils import get_current_execution
+
+from modin._compat import PandasCompatVersion
 
 from modin.pandas.test.utils import (
     random_state,
@@ -71,6 +73,7 @@ def eval_insert(modin_df, pandas_df, **kwargs):
         modin_df,
         pandas_df,
         operation=lambda df, **kwargs: df.insert(**kwargs),
+        __inplace__=True,
         **_kwargs,
     )
 
@@ -206,22 +209,17 @@ def test_add_prefix(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("testfunc", test_func_values, ids=test_func_keys)
-def test_applymap(request, data, testfunc):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
+@pytest.mark.parametrize(
+    "na_action", [None, "ignore"], ids=["no_na_action", "ignore_na"]
+)
+def test_applymap(data, testfunc, na_action):
+    modin_df, pandas_df = create_test_dfs(data)
 
     with pytest.raises(ValueError):
         x = 2
         modin_df.applymap(x)
 
-    try:
-        pandas_result = pandas_df.applymap(testfunc)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_df.applymap(testfunc)
-    else:
-        modin_result = modin_df.applymap(testfunc)
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_df, pandas_df, lambda df: df.applymap(testfunc, na_action))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -410,6 +408,13 @@ def test_append(data):
             modin_df.append(list(modin_df.iloc[-1]))
     else:
         modin_result = modin_df.append(list(modin_df.iloc[-1]))
+        if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+            # Note: older pandas does not preserve order of columns when
+            # inserting something which columns don't already belong to original frame.
+            # For now just disable this particular edge case test.
+            # Hence we sort both frames to compare them.
+            pandas_result = pandas_result[sorted(pandas_result.columns, key=str)]
+            modin_result = modin_result[sorted(modin_result.columns, key=str)]
         df_equals(modin_result, pandas_result)
 
     verify_integrity_values = [True, False]
@@ -492,6 +497,8 @@ def test_astype():
             if isinstance(df, pd.DataFrame)
             else pandas.Series([str, str], index=["col1", "col1"])
         ),
+        # NOTE: older pandas gives different error, so we ignore it here
+        check_exception_type=PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST,
     )
 
 
@@ -561,9 +568,77 @@ def test_astype_category_large():
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
+@pytest.mark.parametrize(
+    "infer_objects", bool_arg_values, ids=arg_keys("infer_objects", bool_arg_keys)
+)
+@pytest.mark.parametrize(
+    "convert_string", bool_arg_values, ids=arg_keys("convert_string", bool_arg_keys)
+)
+@pytest.mark.parametrize(
+    "convert_integer", bool_arg_values, ids=arg_keys("convert_integer", bool_arg_keys)
+)
+@pytest.mark.parametrize(
+    "convert_boolean", bool_arg_values, ids=arg_keys("convert_boolean", bool_arg_keys)
+)
+@pytest.mark.parametrize(
+    "convert_floating", bool_arg_values, ids=arg_keys("convert_floating", bool_arg_keys)
+)
+def test_convert_dtypes_single_partition(
+    infer_objects, convert_string, convert_integer, convert_boolean, convert_floating
+):
+    # Sanity check, copied from pandas documentation:
+    # https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.convert_dtypes.html
+    data = {
+        "a": pd.Series([1, 2, 3], dtype=np.dtype("int32")),
+        "b": pd.Series(["x", "y", "z"], dtype=np.dtype("O")),
+        "c": pd.Series([True, False, np.nan], dtype=np.dtype("O")),
+        "d": pd.Series(["h", "i", np.nan], dtype=np.dtype("O")),
+        "e": pd.Series([10, np.nan, 20], dtype=np.dtype("float")),
+        "f": pd.Series([np.nan, 100.5, 200], dtype=np.dtype("float")),
+    }
+    kwargs = {
+        "infer_objects": infer_objects,
+        "convert_string": convert_string,
+        "convert_integer": convert_integer,
+        "convert_boolean": convert_boolean,
+        "convert_floating": convert_floating,
+    }
+    if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+        del kwargs["convert_floating"]  # pandas 1.1 does not have this argument
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+    modin_result = modin_df.convert_dtypes(**kwargs)
+    pandas_result = pandas_df.convert_dtypes(**kwargs)
+    assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+
+@pytest.mark.skipif(
+    get_current_execution() == "BaseOnPython",
+    reason="BaseOnPython cannot not have multiple partitions.",
+)
+def test_convert_dtypes_multiple_row_partitions():
+    # Column 0 should have string dtype
+    modin_part1 = pd.DataFrame(["a"]).convert_dtypes()
+    # Column 0 should have an int dtype
+    modin_part2 = pd.DataFrame([1]).convert_dtypes()
+    modin_df = pd.concat([modin_part1, modin_part2])
+    assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
+    pandas_df = pandas.DataFrame(["a", 1], index=[0, 0])
+    # The initial dataframes should be the same
+    df_equals(modin_df, pandas_df)
+    # TODO(https://github.com/modin-project/modin/pull/3805): delete
+    # this assert once df_equals checks dtypes
+    assert modin_df.dtypes.equals(pandas_df.dtypes)
+    modin_result = modin_df.convert_dtypes()
+    pandas_result = pandas_df.convert_dtypes()
+    df_equals(modin_result, pandas_result)
+    assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-def test_clip(request, data, axis):
+@pytest.mark.parametrize("bound_type", ["list", "series"], ids=["list", "series"])
+def test_clip(request, data, axis, bound_type):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
@@ -575,8 +650,6 @@ def test_clip(request, data, axis):
         )
         # set bounds
         lower, upper = np.sort(random_state.random_integers(RAND_LOW, RAND_HIGH, 2))
-        lower_list = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
-        upper_list = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
 
         # test only upper scalar bound
         modin_result = modin_df.clip(None, upper, axis=axis)
@@ -588,14 +661,26 @@ def test_clip(request, data, axis):
         pandas_result = pandas_df.clip(lower, upper, axis=axis)
         df_equals(modin_result, pandas_result)
 
+        lower = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
+        upper = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
+
+        if bound_type == "series":
+            modin_lower = pd.Series(lower)
+            pandas_lower = pandas.Series(lower)
+            modin_upper = pd.Series(upper)
+            pandas_upper = pandas.Series(upper)
+        else:
+            modin_lower = pandas_lower = lower
+            modin_upper = pandas_upper = upper
+
         # test lower and upper list bound on each column
-        modin_result = modin_df.clip(lower_list, upper_list, axis=axis)
-        pandas_result = pandas_df.clip(lower_list, upper_list, axis=axis)
+        modin_result = modin_df.clip(modin_lower, modin_upper, axis=axis)
+        pandas_result = pandas_df.clip(pandas_lower, pandas_upper, axis=axis)
         df_equals(modin_result, pandas_result)
 
         # test only upper list bound on each column
-        modin_result = modin_df.clip(np.nan, upper_list, axis=axis)
-        pandas_result = pandas_df.clip(np.nan, upper_list, axis=axis)
+        modin_result = modin_df.clip(np.nan, modin_upper, axis=axis)
+        pandas_result = pandas_df.clip(np.nan, pandas_upper, axis=axis)
         df_equals(modin_result, pandas_result)
 
         with pytest.raises(ValueError):
@@ -745,30 +830,43 @@ def test_droplevel():
     [None, "col1", "name", ("col1", "col3"), ["col1", "col3", "col7"]],
     ids=["None", "string", "name", "tuple", "list"],
 )
-def test_drop_duplicates(data, keep, subset):
+@pytest.mark.parametrize("ignore_index", [True, False], ids=["True", "False"])
+def test_drop_duplicates(data, keep, subset, ignore_index):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
     try:
-        pandas_df.drop_duplicates(keep=keep, inplace=False, subset=subset)
+        pandas_df.drop_duplicates(
+            keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
+        )
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_df.drop_duplicates(keep=keep, inplace=False, subset=subset)
+            modin_df.drop_duplicates(
+                keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
+            )
     else:
         df_equals(
-            pandas_df.drop_duplicates(keep=keep, inplace=False, subset=subset),
-            modin_df.drop_duplicates(keep=keep, inplace=False, subset=subset),
+            pandas_df.drop_duplicates(
+                keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
+            ),
+            modin_df.drop_duplicates(
+                keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
+            ),
         )
 
     try:
         pandas_results = pandas_df.drop_duplicates(
-            keep=keep, inplace=True, subset=subset
+            keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
         )
     except Exception as e:
         with pytest.raises(type(e)):
-            modin_df.drop_duplicates(keep=keep, inplace=True, subset=subset)
+            modin_df.drop_duplicates(
+                keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
+            )
     else:
-        modin_results = modin_df.drop_duplicates(keep=keep, inplace=True, subset=subset)
+        modin_results = modin_df.drop_duplicates(
+            keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
+        )
         df_equals(modin_results, pandas_results)
 
 
@@ -863,6 +961,14 @@ def test_drop_duplicates_after_sort():
     modin_result = modin_df.sort_values(["value", "time"]).drop_duplicates(["value"])
     pandas_result = pandas_df.sort_values(["value", "time"]).drop_duplicates(["value"])
     df_equals(modin_result, pandas_result)
+
+
+def test_drop_duplicates_with_repeated_index_values():
+    # This tests for issue #4467: https://github.com/modin-project/modin/issues/4467
+    data = [[0], [1], [0]]
+    index = [0, 0, 0]
+    modin_df, pandas_df = create_test_dfs(data, index=index)
+    eval_general(modin_df, pandas_df, lambda df: df.drop_duplicates())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1030,6 +1136,31 @@ def test_insert(data):
         col="Bad Loc",
         value=100,
     )
+
+
+@pytest.mark.skipif(
+    PandasCompatVersion.CURRENT != PandasCompatVersion.LATEST,
+    reason="assert_series_equal() does not have check_index in older pandas",
+)
+def test_insert_4407():
+    data = {"col1": [1, 2, 3], "col2": [2, 3, 4]}
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+
+    def comparator(df1, df2):
+        assert_series_equal(df1.dtypes, df2.dtypes, check_index=False)
+        return df_equals(df1, df2)
+
+    for idx, value in enumerate(
+        (pandas_df.to_numpy(), np.array([[1]] * 3), np.array([[1, 2, 3], [4, 5, 6]]))
+    ):
+        eval_insert(
+            modin_df,
+            pandas_df,
+            loc=0,
+            col=f"test_col{idx}",
+            value=value,
+            comparator=lambda df1, df2: comparator(df1, df2),
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1224,18 +1355,27 @@ def test_transpose(data):
         ({"A": [1, 2, 3], "B": [400, 500, 600]}, {"B": [4, np.nan, 6]}),
     ],
 )
-def test_update(data, other_data):
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    other_modin_df, other_pandas_df = (
-        pd.DataFrame(other_data),
-        pandas.DataFrame(other_data),
-    )
-    modin_df.update(other_modin_df)
-    pandas_df.update(other_pandas_df)
-    df_equals(modin_df, pandas_df)
+@pytest.mark.parametrize(
+    "raise_errors", bool_arg_values, ids=arg_keys("raise_errors", bool_arg_keys)
+)
+def test_update(data, other_data, raise_errors):
+    modin_df, pandas_df = create_test_dfs(data)
+    other_modin_df, other_pandas_df = create_test_dfs(other_data)
 
-    with pytest.raises(ValueError):
-        modin_df.update(other_modin_df, errors="raise")
+    if raise_errors:
+        kwargs = {"errors": "raise"}
+    else:
+        kwargs = {}
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.update(other_modin_df)
+        if isinstance(df, pd.DataFrame)
+        else df.update(other_pandas_df),
+        __inplace__=True,
+        **kwargs,
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

@@ -26,9 +26,11 @@ from .series import Series
 from modin.utils import to_pandas
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
+from modin.logging import enable_logging
 
 
 @_inherit_docstrings(pandas.isna, apilink="pandas.isna")
+@enable_logging
 def isna(obj):  # noqa: PR01, RT01, D200
     """
     Detect missing values for an array-like object.
@@ -43,6 +45,7 @@ isnull = isna
 
 
 @_inherit_docstrings(pandas.notna, apilink="pandas.notna")
+@enable_logging
 def notna(obj):  # noqa: PR01, RT01, D200
     """
     Detect non-missing values for an array-like object.
@@ -57,6 +60,7 @@ notnull = notna
 
 
 @_inherit_docstrings(pandas.merge, apilink="pandas.merge")
+@enable_logging
 def merge(
     left,
     right,
@@ -103,6 +107,7 @@ def merge(
 
 
 @_inherit_docstrings(pandas.merge_ordered, apilink="pandas.merge_ordered")
+@enable_logging
 def merge_ordered(
     left,
     right,
@@ -142,6 +147,7 @@ def merge_ordered(
 
 
 @_inherit_docstrings(pandas.merge_asof, apilink="pandas.merge_asof")
+@enable_logging
 def merge_asof(
     left,
     right,
@@ -188,6 +194,11 @@ def merge_asof(
         or not isinstance(by, (str, type(None)))
         or not isinstance(left_by, (str, type(None)))
         or not isinstance(right_by, (str, type(None)))
+        # The implementation below assumes that the right index is unique
+        # because it uses merge_asof to map each position in the merged
+        # index to the label of the one right row that should be merged
+        # at that row position.
+        or not right.index.is_unique
     ):
         if isinstance(right, DataFrame):
             right = to_pandas(right)
@@ -307,42 +318,8 @@ def merge_asof(
     return result
 
 
-@_inherit_docstrings(pandas.pivot_table, apilink="pandas.pivot_table")
-def pivot_table(
-    data,
-    values=None,
-    index=None,
-    columns=None,
-    aggfunc="mean",
-    fill_value=None,
-    margins=False,
-    dropna=True,
-    margins_name="All",
-    observed=False,
-    sort=True,
-):  # noqa: PR01, RT01, D200
-    """
-    Create a spreadsheet-style pivot table as a DataFrame.
-    """
-    if not isinstance(data, DataFrame):
-        raise ValueError(
-            "can not create pivot table with instance of type {}".format(type(data))
-        )
-
-    return data.pivot_table(
-        values=values,
-        index=index,
-        columns=columns,
-        aggfunc=aggfunc,
-        fill_value=fill_value,
-        margins=margins,
-        dropna=dropna,
-        margins_name=margins_name,
-        sort=sort,
-    )
-
-
 @_inherit_docstrings(pandas.pivot, apilink="pandas.pivot")
+@enable_logging
 def pivot(data, index=None, columns=None, values=None):  # noqa: PR01, RT01, D200
     """
     Return reshaped DataFrame organized by given index / column values.
@@ -353,6 +330,7 @@ def pivot(data, index=None, columns=None, values=None):  # noqa: PR01, RT01, D20
 
 
 @_inherit_docstrings(pandas.to_numeric, apilink="pandas.to_numeric")
+@enable_logging
 def to_numeric(arg, errors="raise", downcast=None):  # noqa: PR01, RT01, D200
     """
     Convert argument to a numeric type.
@@ -363,6 +341,7 @@ def to_numeric(arg, errors="raise", downcast=None):  # noqa: PR01, RT01, D200
 
 
 @_inherit_docstrings(pandas.unique, apilink="pandas.unique")
+@enable_logging
 def unique(values):  # noqa: PR01, RT01, D200
     """
     Return unique values based on a hash table.
@@ -371,6 +350,7 @@ def unique(values):  # noqa: PR01, RT01, D200
 
 
 # Adding docstring since pandas docs don't have web section for this function.
+@enable_logging
 def value_counts(
     values, sort=True, ascending=False, normalize=False, bins=None, dropna=True
 ):
@@ -407,6 +387,7 @@ def value_counts(
 
 
 @_inherit_docstrings(pandas.concat, apilink="pandas.concat")
+@enable_logging
 def concat(
     objs: "Iterable[DataFrame | Series] | Mapping[Hashable, DataFrame | Series]",
     axis=0,
@@ -546,6 +527,7 @@ def concat(
 
 
 @_inherit_docstrings(pandas.to_datetime, apilink="pandas.to_datetime")
+@enable_logging
 def to_datetime(
     arg,
     errors="raise",
@@ -591,6 +573,7 @@ def to_datetime(
 
 
 @_inherit_docstrings(pandas.get_dummies, apilink="pandas.get_dummies")
+@enable_logging
 def get_dummies(
     data,
     prefix=None,
@@ -639,6 +622,7 @@ def get_dummies(
 
 
 @_inherit_docstrings(pandas.melt, apilink="pandas.melt")
+@enable_logging
 def melt(
     frame,
     id_vars=None,
@@ -662,6 +646,7 @@ def melt(
 
 
 @_inherit_docstrings(pandas.crosstab, apilink="pandas.crosstab")
+@enable_logging
 def crosstab(
     index,
     columns,
@@ -694,6 +679,7 @@ def crosstab(
 
 
 # Adding docstring since pandas docs don't have web section for this function.
+@enable_logging
 def lreshape(data: DataFrame, groups, dropna=True, label=None):
     """
     Reshape wide-format data to long. Generalized inverse of ``DataFrame.pivot``.
@@ -727,6 +713,7 @@ def lreshape(data: DataFrame, groups, dropna=True, label=None):
 
 
 @_inherit_docstrings(pandas.wide_to_long, apilink="pandas.wide_to_long")
+@enable_logging
 def wide_to_long(
     df: DataFrame, stubnames, i, j, sep: str = "", suffix: str = r"\d+"
 ) -> DataFrame:  # noqa: PR01, RT01, D200

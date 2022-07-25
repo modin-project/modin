@@ -16,6 +16,7 @@
 import os
 import sys
 import psutil
+from packaging import version
 import warnings
 
 import ray
@@ -31,60 +32,13 @@ from modin.config import (
     NPartitions,
     ValueSource,
 )
+from modin.error_message import ErrorMessage
 
+ObjectIDType = ray.ObjectRef
+if version.parse(ray.__version__) >= version.parse("1.2.0"):
+    from ray.util.client.common import ClientObjectRef
 
-def _move_stdlib_ahead_of_site_packages(*args):
-    """
-    Ensure packages from stdlib have higher import priority than from site-packages.
-
-    Parameters
-    ----------
-    *args : tuple
-        Ignored, added for compatibility with Ray.
-
-    Notes
-    -----
-    This function is expected to be run on all workers including the driver.
-    This is a hack solution to fix GH-#647, GH-#746.
-    """
-    site_packages_path = None
-    site_packages_path_index = -1
-    for i, path in enumerate(sys.path):
-        if sys.exec_prefix in path and path.endswith("site-packages"):
-            site_packages_path = path
-            site_packages_path_index = i
-            # break on first found
-            break
-
-    if site_packages_path is not None:
-        # stdlib packages layout as follows:
-        # - python3.x
-        #   - typing.py
-        #   - site-packages/
-        #     - pandas
-        # So extracting the dirname of the site_packages can point us
-        # to the directory containing standard libraries.
-        sys.path.insert(site_packages_path_index, os.path.dirname(site_packages_path))
-
-
-def _import_pandas(*args):
-    """
-    Import pandas to make sure all its machinery is ready.
-
-    This prevents a race condition between two threads deserializing functions
-    and trying to import pandas at the same time.
-
-    Parameters
-    ----------
-    *args : tuple
-        Ignored, added for compatibility with Ray.
-
-    Notes
-    -----
-    This function is expected to be run on all workers before any
-    serialization or deserialization starts.
-    """
-    import pandas  # noqa F401
+    ObjectIDType = (ray.ObjectRef, ClientObjectRef)
 
 
 def initialize_ray(
@@ -110,6 +64,7 @@ def initialize_ray(
         What password to use when connecting to Redis.
         If not specified, ``modin.config.RayRedisPassword`` is used.
     """
+    extra_init_kw = {"runtime_env": {"env_vars": {"__MODIN_AUTOIMPORT_PANDAS__": "1"}}}
     if not ray.is_initialized() or override_is_cluster:
         cluster = override_is_cluster or IsRayCluster.get()
         redis_address = override_redis_address or RayRedisAddress.get()
@@ -131,17 +86,16 @@ def initialize_ray(
                 include_dashboard=False,
                 ignore_reinit_error=True,
                 _redis_password=redis_password,
+                **extra_init_kw,
             )
         else:
-            from modin.error_message import ErrorMessage
-
             # This string is intentionally formatted this way. We want it indented in
             # the warning message.
             ErrorMessage.not_initialized(
                 "Ray",
-                """
+                f"""
     import ray
-    ray.init()
+    ray.init({', '.join([f'{k}={v}' for k,v in extra_init_kw.items()])})
 """,
             )
             object_store_memory = Memory.get()
@@ -199,6 +153,7 @@ def initialize_ray(
                 "object_store_memory": object_store_memory,
                 "_redis_password": redis_password,
                 "_memory": object_store_memory,
+                **extra_init_kw,
             }
             ray.init(**ray_init_kwargs)
 
@@ -212,14 +167,48 @@ def initialize_ray(
             if not GPU_MANAGERS:
                 for i in range(GpuCount.get()):
                     GPU_MANAGERS.append(GPUManager.remote(i))
-    _move_stdlib_ahead_of_site_packages()
-    ray.worker.global_worker.run_function_on_all_workers(
-        _move_stdlib_ahead_of_site_packages
-    )
-    ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
+
+    # Now ray is initialized, check runtime env config - especially useful if we join
+    # an externally pre-configured cluster
+    env_vars = ray.get_runtime_context().runtime_env.get("env_vars", {})
+    for varname, varvalue in extra_init_kw["runtime_env"]["env_vars"].items():
+        if str(env_vars.get(varname, "")) != str(varvalue):
+            ErrorMessage.single_warning(
+                "When using a pre-initialized Ray cluster, please ensure that the runtime env "
+                + f"sets environment variable {varname} to {varvalue}"
+            )
+
     num_cpus = int(ray.cluster_resources()["CPU"])
     num_gpus = int(ray.cluster_resources().get("GPU", 0))
     if StorageFormat.get() == "Cudf":
         NPartitions._put(num_gpus)
     else:
         NPartitions._put(num_cpus)
+
+
+def deserialize(obj):
+    """
+    Deserialize a Ray object.
+
+    Parameters
+    ----------
+    obj : ObjectIDType, iterable of ObjectIDType, or mapping of keys to ObjectIDTypes
+        Object(s) to deserialize.
+
+    Returns
+    -------
+    obj
+        The deserialized object.
+    """
+    if isinstance(obj, ObjectIDType):
+        return ray.get(obj)
+    elif isinstance(obj, (tuple, list)) and any(
+        isinstance(o, ObjectIDType) for o in obj
+    ):
+        return ray.get(list(obj))
+    elif isinstance(obj, dict) and any(
+        isinstance(val, ObjectIDType) for val in obj.values()
+    ):
+        return dict(zip(obj.keys(), ray.get(list(obj.values()))))
+    else:
+        return obj

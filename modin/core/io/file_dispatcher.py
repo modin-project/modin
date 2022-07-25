@@ -23,6 +23,7 @@ import os
 import re
 from modin.config import StorageFormat
 from modin.utils import import_optional_dependency
+from modin.logging import ClassLogger
 import numpy as np
 
 S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
@@ -110,7 +111,7 @@ class OpenFile:
         self.file.close()
 
 
-class FileDispatcher:
+class FileDispatcher(ClassLogger):
     """
     Class handles util functions for reading data from different kinds of files.
 
@@ -235,7 +236,7 @@ class FileDispatcher:
         return size
 
     @classmethod
-    def file_exists(cls, file_path):
+    def file_exists(cls, file_path, storage_options=None):
         """
         Check if `file_path` exists.
 
@@ -244,6 +245,8 @@ class FileDispatcher:
         file_path : str
             String that represents the path to the file (paths to S3 buckets
             are also acceptable).
+        storage_options : dict, optional
+            Keyword from `read_*` functions.
 
         Returns
         -------
@@ -258,15 +261,24 @@ class FileDispatcher:
                 S3FS = import_optional_dependency(
                     "s3fs", "Module s3fs is required to read S3FS files."
                 )
-                from botocore.exceptions import NoCredentialsError
+                from botocore.exceptions import (
+                    NoCredentialsError,
+                    EndpointConnectionError,
+                )
 
-                s3fs = S3FS.S3FileSystem(anon=False)
+                if storage_options is not None:
+                    new_storage_options = dict(storage_options)
+                    new_storage_options.pop("anon", None)
+                else:
+                    new_storage_options = {}
+
+                s3fs = S3FS.S3FileSystem(anon=False, **new_storage_options)
                 exists = False
                 try:
                     exists = s3fs.exists(file_path) or exists
-                except NoCredentialsError:
+                except (NoCredentialsError, PermissionError, EndpointConnectionError):
                     pass
-                s3fs = S3FS.S3FileSystem(anon=True)
+                s3fs = S3FS.S3FileSystem(anon=True, **new_storage_options)
                 return exists or s3fs.exists(file_path)
         return os.path.exists(file_path)
 
