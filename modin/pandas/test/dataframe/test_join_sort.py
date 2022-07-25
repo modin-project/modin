@@ -169,7 +169,7 @@ def test_join_4427():
     pandas_df1 = pandas.DataFrame(data, columns=left_columns)
     pandas_df2 = pandas.DataFrame(data, columns=right_columns)
 
-    for on in (left_columns[0], left_columns[:2]):
+    for on in (None, left_columns[0], left_columns[:2]):
         # check general `join` code branch
         eval_general(
             modin_df1,

@@ -490,6 +490,31 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             return self.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
 
+    def _create_index_from_on(self, query_compiler, on, index, columns):
+        on = pandas.Index(on)
+        on_in_columns = on.intersection(columns)
+        on_in_index = on.intersection(index.names)
+        frame1, frame2 = None, None
+        if len(on_in_index) == len(on) == len(index.names):
+            # fast path
+            new_index = index
+        else:
+            if not on_in_index.empty:
+                frame1 = index.to_frame()[on_in_index]
+            if not on_in_columns.empty:
+                frame2 = query_compiler.getitem_array(
+                    on_in_columns
+                ).to_pandas()
+            if frame1 is not None and frame2 is not None:
+                frame = pandas.concat([frame1, frame2], axis=1, copy=False)
+            else:
+                frame = frame2 if frame1 is None else frame1
+            if len(frame.columns) > 1:
+                new_index = pandas.MultiIndex.from_frame(frame)
+            else:
+                new_index = pandas.Index(frame.squeeze(axis=1))
+        return new_index
+
     def join(self, right, **kwargs):
         on = kwargs.get("on", None)
         how = kwargs.get("how", "left")
@@ -519,32 +544,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         f"'{intersected[0]}' is both an index level and a column label, which is ambiguous."
                     )
 
-                def _create_index(query_compiler, on, index, columns):
-                    on = pandas.Index(on)
-                    on_in_columns = on.intersection(columns)
-                    on_in_index = on.intersection(index.names)
-                    frame1, frame2 = None, None
-                    if len(on_in_index) == len(on) == len(index.names):
-                        # fast path
-                        new_index = index
-                    else:
-                        if not on_in_index.empty:
-                            frame1 = index.to_frame()[on_in_index]
-                        if not on_in_columns.empty:
-                            frame2 = query_compiler.getitem_array(
-                                on_in_columns
-                            ).to_pandas()
-                        if frame1 is not None and frame2 is not None:
-                            frame = pandas.concat([frame1, frame2], axis=1, copy=False)
-                        else:
-                            frame = frame2 if frame1 is None else frame1
-                        if len(frame.columns) > 1:
-                            new_index = pandas.MultiIndex.from_frame(frame)
-                        else:
-                            new_index = pandas.Index(frame.squeeze(axis=1))
-                    return new_index
-
-                labels = _create_index(self, on, self.index, self.columns)
+                labels = self._create_index_from_on(self, on, self.index, self.columns)
                 right = right.reindex(axis=0, labels=labels, _reset_index=self.index)
                 new_self = self.concat(1, right, join="left")
             else:
