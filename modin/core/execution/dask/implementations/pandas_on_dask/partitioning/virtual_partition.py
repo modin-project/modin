@@ -54,7 +54,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             list_of_partitions = [list_of_partitions]
         self.call_queue = call_queue or []
         self.full_axis = full_axis
-        # Check that all avirtual partition axes are the same in `list_of_partitions`
+        # Check that all virtual partition axes are the same in `list_of_partitions`
         # We should never have mismatching axis in the current implementation. We add this
         # defensive assertion to ensure that undefined behavior does not happen.
         assert (
