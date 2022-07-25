@@ -224,13 +224,14 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             index because there's no index column, or at least one
             index column is a RangeIndex.
         """
-        fs, path_ = (
+        # url_to_fs returns the fs and path formatted for the specific fs
+        fs, fs_path = (
             fsspec.core.url_to_fs(path, **storage_options)
             if is_fsspec_url(path)
             else (None, path)
         )
         pandas_metadata = ParquetDataset(
-            path_, filesystem=fs, use_legacy_dataset=False
+            fs_path, filesystem=fs, use_legacy_dataset=False
         ).schema.pandas_metadata
         index_columns = (
             [] if not pandas_metadata else pandas_metadata.get("index_columns", [])
@@ -281,27 +282,6 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ]
         column_widths = [len(c) for c in col_partitions]
         return col_partitions, column_widths
-
-    @classmethod
-    def build_dtypes(cls, partition_ids, columns):
-        """
-        Compute common for all partitions `dtypes` for each of the DataFrame column.
-
-        Parameters
-        ----------
-        partition_ids : list
-            Array with references to the partitions data.
-        columns : list
-            List of columns that should be read from file.
-
-        Returns
-        -------
-        dtypes : pandas.Series
-            Series with dtypes for columns.
-        """
-        dtypes = pandas.concat(cls.materialize(list(partition_ids)), axis=0)
-        dtypes.index = columns
-        return dtypes
 
     @classmethod
     def build_query_compiler(cls, path, columns, **kwargs):
@@ -381,7 +361,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             # parquet directories have a unique column at each directory level.
             # Thus, we can use os.walk(), which does a dfs search, to walk
             # through the different columns that the data is partitioned on
-            for (root, dir_names, files) in os.walk(path):
+            for (_, dir_names, files) in os.walk(path):
                 if dir_names:
                     partitioned_columns.add(dir_names[0].split("=")[0])
                 if files:
@@ -400,14 +380,14 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                 )
 
         if not columns:
-
-            fs, path_ = (
+            # url_to_fs returns the fs and path formatted for the specific fs
+            fs, fs_path = (
                 fsspec.core.url_to_fs(path, **(kwargs.get("storage_options") or {}))
                 if is_fsspec_url(path)
                 else (None, path)
             )
 
-            dataset = ParquetDataset(path_, filesystem=fs, use_legacy_dataset=False)
+            dataset = ParquetDataset(fs_path, filesystem=fs, use_legacy_dataset=False)
             column_names = dataset.schema.names
 
             if dataset.schema.pandas_metadata is not None:
