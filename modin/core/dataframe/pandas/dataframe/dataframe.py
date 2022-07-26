@@ -38,7 +38,6 @@ from modin.core.dataframe.base.dataframe.utils import (
 )
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
-from modin.config import NPartitions
 from modin.logging import ClassLogger
 
 
@@ -1783,6 +1782,8 @@ class PandasDataframe(ClassLogger):
         if axis == Axis.ROW_WISE and not (
             len(columns) == 1 and columns[0] == "__index__"
         ):
+            if not isinstance(ascending, list):
+                ascending = [ascending]
             # If this df is empty, we don't want to try and shuffle or sort.
             if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
                 return self.copy()
@@ -1792,111 +1793,16 @@ class PandasDataframe(ClassLogger):
                 method = "inverted_cdf"
             else:
                 method = "linear"
+            from .utils import build_sort_functions
 
-            def sample_func(df, A=100, k=0.05, q=0.1):
-                """
-                Sample the given partition.
-
-                This function is applied to each row-axis partition in parallel to select samples
-                from each. It samples using the following algorithm:
-                    * If there are <= 100 rows in the dataframe, we pick quantiles over the entire dataframe.
-                    * If there are 100 < # of rows <= 1900, we pick quantiles over the first 100 rows, plus a sample
-                    of 5% of the remaining rows.
-                    * If there are > 1900 rows, we pick quantiles over a sample of 10% of all of the rows.
-
-                These numbers are a heuristic. They were picked such that the size of the sample
-                in scenario 2 scales well. In other words, we picked A, k, and q such that:
-                    A + (len(df) - A)*k = q*len(df)
-                Where q is the proportion we sample in scenario 3, k is the proportion we sample
-                of remaining rows in scenario 2, and A is the threshold below which we just return
-                the entire dataframe, instead of sampling (scenario 1).
-                q = 0.1 and k = 0.05 were picked such that this formula holds for A = 100.
-                """
-                quantiles = [
-                    i / (NPartitions.get() * 2) for i in range(NPartitions.get() * 2)
-                ]
-                # Heuristic for a "small" df we will compute quantiles over entirety of.
-                if len(df) <= A:
-                    return df, np.quantile(df[columns[0]], quantiles, method=method)
-                # Heuristic for a "medium" df where we will include first 100 (A) rows, and sample
-                # of remaining rows when computing quantiles.
-                if len(df) <= A * (1 - k) / (1 - q):
-                    return df, np.quantile(
-                        np.concatenate(
-                            (
-                                df[columns[0]][:100].values,
-                                df[columns[0]][100:].sample(frac=k),
-                            )
-                        ),
-                        quantiles,
-                        method=method,
-                    )
-                # Heuristic for a "large" df where we will sample 10% (q) of all rows to compute quantiles
-                # over.
-                return df, np.quantile(
-                    df[columns[0]].sample(frac=q), quantiles, method=method
-                )
-
-            def pivot_func(samples):
-                """
-                Determine quantiles from the given samples.
-
-                This function takes as input the quantiles calculated over all partitions from
-                `sample_func` defined above, and determines a final NPartitions.get() * 2 quantiles
-                to use to roughly sort the entire dataframe. It does so by collating all the samples
-                and computing NPartitions.get() * 2 quantiles for the overall set.
-                """
-                # We don't call `np.unique` on the samples, since if a quantile shows up in multiple
-                # partition's samples, this is probably an indicator of skew in the dataset, and we
-                # want our final partitions to take this into account.
-                all_pivots = np.array(samples).flatten()
-                quantiles = [
-                    i / (NPartitions.get() * 2) for i in range(NPartitions.get() * 2)
-                ]
-                overall_quantiles = np.quantile(all_pivots, quantiles, method=method)
-                if self.dtypes[columns[0]] != object:
-                    overall_quantiles[0] = np.NINF
-                    overall_quantiles[-1] = np.inf
-                return overall_quantiles
-
-            def split_func(df, pivots):
-                """
-                Split the given dataframe into the partitions specified by `pivots`.
-
-                This function takes as input a row-axis partition, as well as the quantiles determined
-                by the `pivot_func` defined above. It then splits the input dataframe into NPartitions.get() * 2
-                dataframes, with the elements in the i-th split belonging to the i-th partition, as determined
-                by the quantiles we're using.
-                """
-                if not ascending and self.dtypes[columns[0]] != object:
-                    pivots = pivots[::-1]
-                na_rows = df[df[columns[0]].isna()]
-                if self.dtypes[columns[0]] != object:
-                    groupby_col = np.digitize(df[columns[0]].squeeze(), pivots) - 1
-                else:
-                    groupby_col = (
-                        np.searchsorted(pivots, df[columns[0]].squeeze(), side="right")
-                        - 1
-                    )
-                    if not ascending:
-                        groupby_col = (len(pivots) - 1) - groupby_col
-                grouped = df.groupby(groupby_col)
-                groups = [
-                    grouped.get_group(i)
-                    if i in grouped.keys
-                    else pandas.DataFrame(columns=df.columns)
-                    for i in range(len(pivots))
-                ]
-                index_to_insert_na_vals = (
-                    -1 if kwargs.get("na_position", "last") == "last" else 0
-                )
-                groups[index_to_insert_na_vals] = pandas.concat(
-                    [groups[index_to_insert_na_vals], na_rows]
-                )
-                return tuple(groups)
-
+            shuffling_functions = build_sort_functions(
+                self, columns, method, ascending, **kwargs
+            )
             new_partitions = self._partition_mgr_cls.shuffle_partitions(
-                self._partitions, sample_func, pivot_func, split_func
+                self._partitions,
+                shuffling_functions["sample_function"],
+                shuffling_functions["pivot_function"],
+                shuffling_functions["split_function"],
             )
             new_partitions = self._partition_mgr_cls.lazy_map_partitions(
                 new_partitions,
