@@ -584,7 +584,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             if actual_index is not None and axis == 0
             else new_index,
             new_columns=new_columns,
-            sync_axes=False,
+            check_axes_sync=False,
         )
         return self.__constructor__(new_modin_frame)
 
