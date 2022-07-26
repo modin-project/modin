@@ -360,7 +360,7 @@ class CSVGlobDispatcher(CSVDispatcher):
                 fs, path = fsspec.core.url_to_fs(
                     file_path, anon=True, **new_storage_options
                 )
-                return exists or fs.exists(path)
+                return exists or len(fs.glob(path)) > 0
         return len(glob.glob(file_path)) > 0
 
     @classmethod
