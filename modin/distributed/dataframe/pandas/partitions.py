@@ -177,11 +177,15 @@ def from_partitions(
     labels_axis_to_sync = None
     if index is None:
         labels_axis_to_sync = 1
-        index = partition_mgr_class.get_indices(0, parts, lambda df: df.axes[0])
+        index, internal_indices = partition_mgr_class.get_indices(0, parts)
+        if row_lengths is None:
+            row_lengths = [len(idx) for idx in internal_indices]
 
     if columns is None:
         labels_axis_to_sync = 0 if labels_axis_to_sync is None else -1
-        columns = partition_mgr_class.get_indices(1, parts, lambda df: df.axes[1])
+        columns, internal_indices = partition_mgr_class.get_indices(1, parts)
+        if column_widths is None:
+            column_widths = [len(idx) for idx in internal_indices]
 
     frame = partition_frame_class(
         parts,

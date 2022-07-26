@@ -356,40 +356,30 @@ class PandasQueryPipeline(object):
                 outs.append(output_partitions)
             else:
                 outs[node.output_id] = output_partitions
-        if not self.is_output_id_specified:
-            final_results = []
-            for df in outs:
-                partitions = []
-                for row_partition in df:
-                    partitions.append(row_partition.list_of_partitions_to_combine)
-                partitions = np.array(partitions)
-                partition_mgr_class = PandasOnRayDataframe._partition_mgr_cls
-                index = partition_mgr_class.get_indices(
-                    0, partitions, lambda df: df.axes[0]
-                )
-                columns = partition_mgr_class.get_indices(
-                    1, partitions, lambda df: df.axes[1]
-                )
-                result_modin_frame = PandasOnRayDataframe(partitions, index, columns)
-                query_compiler = PandasQueryCompiler(result_modin_frame)
-                result_df = pd.DataFrame(query_compiler=query_compiler)
-                final_results.append(result_df)
-        else:
+        if self.is_output_id_specified:
             final_results = {}
-            for id, df in outs.items():
-                partitions = []
-                for row_partition in df:
-                    partitions.append(row_partition.list_of_partitions_to_combine)
-                partitions = np.array(partitions)
-                partition_mgr_class = PandasOnRayDataframe._partition_mgr_cls
-                index = partition_mgr_class.get_indices(
-                    0, partitions, lambda df: df.axes[0]
-                )
-                columns = partition_mgr_class.get_indices(
-                    1, partitions, lambda df: df.axes[1]
-                )
-                result_modin_frame = PandasOnRayDataframe(partitions, index, columns)
-                query_compiler = PandasQueryCompiler(result_modin_frame)
-                result_df = pd.DataFrame(query_compiler=query_compiler)
-                final_results[id] = result_df
+            id_df_iter = outs.items()
+        else:
+            final_results = [None] * len(outs)
+            id_df_iter = enumerate(outs)
+
+        for id, df in id_df_iter:
+            partitions = []
+            for row_partition in df:
+                partitions.append(row_partition.list_of_partitions_to_combine)
+            partitions = np.array(partitions)
+            partition_mgr_class = PandasOnRayDataframe._partition_mgr_cls
+            index, internal_rows = partition_mgr_class.get_indices(0, partitions)
+            columns, internal_cols = partition_mgr_class.get_indices(1, partitions)
+            result_modin_frame = PandasOnRayDataframe(
+                partitions,
+                index,
+                columns,
+                row_lengths=tuple(map(len, internal_rows)),
+                column_widths=tuple(map(len, internal_cols)),
+            )
+            query_compiler = PandasQueryCompiler(result_modin_frame)
+            result_df = pd.DataFrame(query_compiler=query_compiler)
+            final_results[id] = result_df
+
         return final_results

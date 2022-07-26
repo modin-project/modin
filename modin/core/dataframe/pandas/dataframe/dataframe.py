@@ -426,9 +426,8 @@ class PandasDataframe(ClassLogger):
         """
         if partitions is None:
             partitions = self._partitions
-        return self._partition_mgr_cls.get_indices(
-            axis, partitions, lambda df: df.axes[axis]
-        )
+        new_index, _ = self._partition_mgr_cls.get_indices(axis, partitions)
+        return new_index
 
     def _filter_empties(self):
         """Remove empty partitions from `self._partitions` to avoid triggering excess computation."""
