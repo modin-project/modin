@@ -236,7 +236,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             The partitions for which to update length caches.
         """
         promises = []
-        # If `ray_idxs[i] = j`, that means `promises[i]` represents a computation corresponding
+        # If `part_idxs[i] = j`, that means `promises[i]` represents a computation corresponding
         # to a dimension of `partitions[j]`.
         part_idxs = []
         # If `is_lens[i] = True`, then `promises[i]` is a computation for a length; otherwise

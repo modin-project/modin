@@ -393,7 +393,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
                     for obj in self.list_of_partitions_to_combine
                 ]
                 new_lengths = ray.get(
-                    [cache for cache in caches if isinstance(promise, ObjectIDType)]
+                    [cache for cache in caches if isinstance(cache, ObjectIDType)]
                 )
                 ray_idx = 0
                 for i, cache in enumerate(caches):
