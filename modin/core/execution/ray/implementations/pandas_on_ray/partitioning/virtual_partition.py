@@ -389,7 +389,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         if self._length_cache is None:
             if self.axis == 0:
                 caches = [
-                    obj.try_build_length_cache()
+                    obj.build_length_cache()
                     for obj in self.list_of_partitions_to_combine
                 ]
                 new_lengths = ray.get(
@@ -398,7 +398,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
                 ray_idx = 0
                 for i, cache in enumerate(caches):
                     if isinstance(cache, ObjectIDType):
-                        self.list_of_partitions_to_combine[i].try_set_length_cache(
+                        self.list_of_partitions_to_combine[i].set_length_cache(
                             new_lengths[ray_idx]
                         )
                         ray_idx += 1
@@ -423,7 +423,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         if self._width_cache is None:
             if self.axis == 1:
                 caches = [
-                    obj.try_build_width_cache()
+                    obj.build_width_cache()
                     for obj in self.list_of_partitions_to_combine
                 ]
                 new_widths = ray.get(
@@ -432,7 +432,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
                 ray_idx = 0
                 for i, cache in enumerate(caches):
                     if isinstance(cache, ObjectIDType):
-                        self.list_of_partitions_to_combine[i].try_set_width_cache(
+                        self.list_of_partitions_to_combine[i].set_width_cache(
                             new_widths[ray_idx]
                         )
                         ray_idx += 1

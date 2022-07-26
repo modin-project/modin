@@ -273,11 +273,15 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         -------
         int
             The length of the object.
-        """
-        self.try_build_length_cache()
-        return self._length_cache
 
-    def try_build_length_cache(self) -> Union[Any, int]:
+        Notes
+        -----
+        Subclasses where `build_length_cache` returns a future-like object instead of a concrete
+        value should override this method to force the future's materialization.
+        """
+        return self.build_length_cache()
+
+    def build_length_cache(self) -> Union[Any, int]:
         """
         Attempt to set this partition's length cache, and return it.
 
@@ -295,11 +299,11 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             self._length_cache = self.apply(preprocessed_func)
         return self._length_cache
 
-    def try_set_length_cache(self, length: int):
+    def set_length_cache(self, length: int):
         """
         Attempt to set this partition's length cache field.
 
-        This should be used in situations where the futures returned by ``try_build_length_cache``
+        This should be used in situations where the futures returned by ``build_length_cache``
         for multiple partitions were computed in parallel, and the value now needs to be
         propagated back to this partition.
 
@@ -318,11 +322,15 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         -------
         int
             The width of the object.
-        """
-        self.try_build_width_cache()
-        return self._width_cache
 
-    def try_build_width_cache(self) -> Union[Any, int]:
+        Notes
+        -----
+        Subclasses where `build_width_cache` returns a future-like object instead of a concrete
+        int should override this method to force the future's materialization.
+        """
+        return self.build_width_cache()
+
+    def build_width_cache(self) -> Union[Any, int]:
         """
         Attempt to set this partition's width cache, and return it.
 
@@ -340,11 +348,11 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             self._width_cache = self.apply(preprocessed_func)
         return self._width_cache
 
-    def try_set_width_cache(self, width: int):
+    def set_width_cache(self, width: int):
         """
         Attempt to set this partition's width cache field.
 
-        This should be used in situations where the futures returned by ``try_build_width_cache``
+        This should be used in situations where the futures returned by ``build_width_cache``
         for multiple partitions were computed in parallel, and the value now needs to be
         propagated back to this partition.
 

@@ -878,12 +878,12 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
         Notes
         -----
-        For backends that support parallel computations, these caches should be computed asynchronously.
+        For backends that support parallel computations, these caches are be computed asynchronously.
         The naive implementation computes the length and width caches in serial.
         """
         for part in partitions:
-            part.try_build_width_cache()
-            part.try_build_length_cache()
+            part.build_width_cache()
+            part.build_length_cache()
 
     @classmethod
     def _apply_func_to_list_of_partitions_broadcast(

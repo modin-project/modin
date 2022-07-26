@@ -287,12 +287,12 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         int
             The length of the object.
         """
-        self.try_build_length_cache()
+        self.build_length_cache()
         if isinstance(self._length_cache, ObjectIDType):
             self._length_cache = ray.get(self._length_cache)
         return self._length_cache
 
-    def try_build_length_cache(self) -> Union[ray.ObjectRef, int]:
+    def build_length_cache(self) -> Union[ray.ObjectRef, int]:
         """
         Attempt to set this partition's length cache, and return it.
 
@@ -307,10 +307,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         if self._length_cache is None:
             if len(self.call_queue):
                 self.drain_call_queue()
-            else:
-                self._length_cache, self._width_cache = _get_index_and_columns.remote(
-                    self._data
-                )
+            self._length_cache, self._width_cache = _get_index_and_columns.remote(
+                self._data
+            )
         return self._length_cache
 
     def width(self):
@@ -322,12 +321,12 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         int
             The width of the object.
         """
-        self.try_build_width_cache()
+        self.build_width_cache()
         if isinstance(self._width_cache, ObjectIDType):
             self._width_cache = ray.get(self._width_cache)
         return self._width_cache
 
-    def try_build_width_cache(self) -> Union[ray.ObjectRef, int]:
+    def build_width_cache(self) -> Union[ray.ObjectRef, int]:
         """
         Attempt to set this partition's width cache, and return it.
 
@@ -342,10 +341,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         if self._width_cache is None:
             if len(self.call_queue):
                 self.drain_call_queue()
-            else:
-                self._length_cache, self._width_cache = _get_index_and_columns.remote(
-                    self._data
-                )
+            self._length_cache, self._width_cache = _get_index_and_columns.remote(
+                self._data
+            )
         return self._width_cache
 
     def ip(self):

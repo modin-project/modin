@@ -258,12 +258,12 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         int
             The length of the object.
         """
-        self.try_build_length_cache()
+        self.build_length_cache()
         if isinstance(self._length_cache, Future):
             self._length_cache = DaskWrapper.materialize(self._length_cache)
         return self._length_cache
 
-    def try_build_length_cache(self) -> Union[Future, int]:
+    def build_length_cache(self) -> Union[Future, int]:
         """
         Attempt to set this partition's length cache, and return it.
 
@@ -286,12 +286,12 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         int
             The width of the object.
         """
-        self.try_build_width_cache()
+        self.build_width_cache()
         if isinstance(self._width_cache, Future):
             self._width_cache = DaskWrapper.materialize(self._width_cache)
         return self._width_cache
 
-    def try_build_width_cache(self) -> Union[Future, int]:
+    def build_width_cache(self) -> Union[Future, int]:
         """
         Attempt to set this partition's width cache, and return it.
 

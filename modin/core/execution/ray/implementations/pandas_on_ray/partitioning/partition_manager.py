@@ -235,31 +235,31 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         partitions : np.ndarray
             The partitions for which to update length caches.
         """
-        promises = []
-        # If `part_idxs[i] = j`, that means `promises[i]` represents a computation corresponding
+        futures = []
+        # If `part_idxs[i] = j`, that means `futures[i]` represents a computation corresponding
         # to a dimension of `partitions[j]`.
         part_idxs = []
-        # If `is_lens[i] = True`, then `promises[i]` is a computation for a length; otherwise
+        # If `is_lens[i] = True`, then `futures[i]` is a computation for a length; otherwise
         # it is for a width
         is_lens = []
         for i, part in enumerate(partitions):
-            l_cache = part.try_build_length_cache()
+            l_cache = part.build_length_cache()
             if isinstance(l_cache, ObjectIDType):
-                promises.append(l_cache)
+                futures.append(l_cache)
                 part_idxs.append(i)
                 is_lens.append(True)
-            w_cache = part.try_build_width_cache()
+            w_cache = part.build_width_cache()
             if isinstance(w_cache, ObjectIDType):
-                promises.append(w_cache)
+                futures.append(w_cache)
                 part_idxs.append(i)
                 is_lens.append(False)
-        new_dims = ray.get(promises)
+        new_dims = ray.get(futures)
         for i, new_cache in enumerate(new_dims):
             part = partitions[part_idxs[i]]
             if is_lens[i]:
-                part.try_set_length_cache(new_dims[i])
+                part.set_length_cache(new_cache)
             else:
-                part.try_set_width_cache(new_dims[i])
+                part.set_width_cache(new_cache)
 
     @classmethod
     @progress_bar_wrapper
