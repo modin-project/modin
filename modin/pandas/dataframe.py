@@ -136,6 +136,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
                     self._query_compiler = data.loc[index]._query_compiler
             elif columns is None and index is None:
                 data._add_sibling(self)
+            elif len(self.columns) == 0 or len(self.index) == 0:
+                self._query_compiler = small_query_compiler
             else:
                 if columns is not None and any(i not in data.columns for i in columns):
                     raise NotImplementedError(
