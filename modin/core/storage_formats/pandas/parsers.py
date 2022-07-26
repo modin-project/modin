@@ -717,7 +717,7 @@ storage_options : dict
             ]
             chunks.append(chunk)
         df = pandas.concat(chunks)
-        return df, df.dtypes, len(df)
+        return df, df.index, len(df)
 
 
 @doc(_doc_pandas_parser_class, data_type="HDF data")

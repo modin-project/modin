@@ -21,9 +21,7 @@ import fsspec.core
 from fsspec.core import split_protocol
 from fsspec.registry import get_filesystem_class
 import numpy as np
-import pandas
 from pandas.io.common import is_fsspec_url
-from pyarrow.parquet import ParquetFile, ParquetDataset, read_table
 
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.config import NPartitions
@@ -88,6 +86,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         np.ndarray
             Array with references to the task deploy result for each partition.
         """
+        from pyarrow.parquet import ParquetFile
         from modin.core.storage_formats.pandas.parsers import ParquetFileToRead
 
         storage_options = storage_options or {}
@@ -204,7 +203,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         )
 
     @classmethod
-    def build_index(cls, path, storage_options):
+    def build_index(cls, path, partition_ids, storage_options):
         """
         Compute index and its split sizes of resulting Modin DataFrame.
 
@@ -212,6 +211,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ----------
         path : Pathlike
             Path to dataset.
+        partition_ids : list
+            Array with references to the partitions data.
         storage_options : dict
             Paramters for specific storage engine.
 
@@ -224,6 +225,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             index because there's no index column, or at least one
             index column is a RangeIndex.
         """
+        from pyarrow.parquet import ParquetDataset, read_table
+
         # url_to_fs returns the fs and path formatted for the specific fs
         fs, fs_path = (
             fsspec.core.url_to_fs(path, **storage_options)
@@ -236,52 +239,32 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         index_columns = (
             [] if not pandas_metadata else pandas_metadata.get("index_columns", [])
         )
+        range_index = True
         column_names_to_read = []
         for column in index_columns:
+            # According to https://arrow.apache.org/docs/python/generated/pyarrow.Schema.html,
+            # only RangeIndex will be stored as metadata. Otherwise, the default behavior is
+            # to store the index as a column.
             if isinstance(column, str):
                 column_names_to_read.append(column)
+                range_index = False
             elif column["name"] is not None:
                 column_names_to_read.append(column["name"])
-        complete_index = (
-            read_table(path, columns=column_names_to_read).to_pandas().index
-        )
+
+        if range_index:
+            complete_index = (
+                read_table(path, columns=column_names_to_read).to_pandas().index
+            )
+        # Empty DataFrame case
+        elif len(partition_ids[0]) == 0:
+            return [], False
+        else:
+            index_ids = [part_id[0][1] for part_id in partition_ids if len(part_id) > 0]
+            index_objs = cls.materialize(index_ids)
+            complete_index = index_objs[0].append(index_objs[1:])
         return complete_index, len(index_columns) == 0 or any(
             not isinstance(c, str) for c in index_columns
         )
-
-    @classmethod
-    def build_columns(cls, columns):
-        """
-        Split columns into chunks that should be read be workers.
-
-        Parameters
-        ----------
-        columns : list
-            List of columns that should be read from file.
-
-        Returns
-        -------
-        col_partitions : list
-            List of lists with columns for reading by workers.
-        column_widths : list
-            List with lengths of `col_partitions` subarrays
-            (number of columns that should be read by workers).
-        """
-        columns_length = len(columns)
-        if columns_length == 0:
-            return [], []
-        num_partitions = NPartitions.get()
-        column_splits = (
-            columns_length // num_partitions
-            if columns_length % num_partitions == 0
-            else columns_length // num_partitions + 1
-        )
-        col_partitions = [
-            columns[i : i + column_splits]
-            for i in range(0, columns_length, column_splits)
-        ]
-        column_widths = [len(c) for c in col_partitions]
-        return col_partitions, column_widths
 
     @classmethod
     def build_query_compiler(cls, path, columns, **kwargs):
@@ -304,7 +287,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         """
         col_partitions, column_widths = cls.build_columns(columns)
         partition_ids = cls.call_deploy(path, col_partitions, **kwargs)
-        index, needs_index_sync = cls.build_index(path, kwargs["storage_options"])
+        index, needs_index_sync = cls.build_index(
+            path, partition_ids, kwargs["storage_options"]
+        )
         remote_parts = cls.build_partition(partition_ids, column_widths)
         if len(partition_ids) > 0 and len(partition_ids[0]) > 0:
             row_lengths = [part.length() for part in remote_parts.T[0]]

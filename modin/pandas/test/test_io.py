@@ -1442,17 +1442,29 @@ class TestParquet:
         pandas_df = pandas.DataFrame(
             {
                 "idx": np.random.randint(0, 100_000, size=2000),
+                "idx_categorical": pandas.Categorical(["y", "z"] * 1000),
+                # Can't do interval index right now because of this bug fix that is planned
+                # to be apart of the pandas 1.5.0 release: https://github.com/pandas-dev/pandas/pull/46034
+                # "idx_interval": pandas.interval_range(start=0, end=2000),
+                "idx_datetime": pandas.date_range(start="1/1/2018", periods=2000),
+                "idx_timedelta": pandas.timedelta_range(start="1 day", periods=2000),
+                "idx_periodrange": pandas.period_range(
+                    start="2017-01-01", periods=2000
+                ),
                 "A": np.random.randint(0, 100_000, size=2000),
                 "B": ["a", "b"] * 1000,
                 "C": ["c"] * 2000,
             }
         )
         try:
-            pandas_df.set_index("idx").to_parquet(unique_filename)
-            # read the same parquet using modin.pandas
-            df_equals(
-                pd.read_parquet(unique_filename), pandas.read_parquet(unique_filename)
-            )
+            for col in pandas_df.columns:
+                if col.startswith("idx"):
+                    pandas_df.set_index(col).to_parquet(unique_filename)
+                    # read the same parquet using modin.pandas
+                    df_equals(
+                        pd.read_parquet(unique_filename),
+                        pandas.read_parquet(unique_filename),
+                    )
 
             pandas_df.set_index(["idx", "A"]).to_parquet(unique_filename)
             df_equals(
