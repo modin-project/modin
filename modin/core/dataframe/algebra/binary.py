@@ -84,7 +84,7 @@ class Binary(Operator):
                             lambda l, r: func(l, r.squeeze(), *args, **kwargs),
                             other._modin_frame,
                             join_type=join_type,
-                            preserve_labels=preserve_labels,
+                            labels="keep" if preserve_labels else "replace",
                         )
                     )
                 else:

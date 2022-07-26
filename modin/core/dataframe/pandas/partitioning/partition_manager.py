@@ -365,7 +365,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         """
 
         def map_func(df, *others):
-            other = pandas.concat(others, axis=axis ^ 1)
+            other = (
+                pandas.concat(others, axis=axis ^ 1) if len(others) > 1 else others[0]
+            )
             return apply_func(df, **{other_name: other})
 
         map_func = cls.preprocess_func(map_func)

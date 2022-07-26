@@ -2098,7 +2098,7 @@ class PandasDataframe(ClassLogger):
 
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply(
-        self, axis, func, other, join_type="left", preserve_labels=True, dtypes=None
+        self, axis, func, other, join_type="left", labels="keep", dtypes=None
     ):
         """
         Broadcast axis partitions of `other` to partitions of `self` and apply a function.
@@ -2113,8 +2113,9 @@ class PandasDataframe(ClassLogger):
             Modin DataFrame to broadcast.
         join_type : str, default: "left"
             Type of join to apply.
-        preserve_labels : bool, default: True
-            Whether keep labels from `self` Modin DataFrame or not.
+        labels : {"keep", "replace", "drop"}, default: "keep"
+            Whether keep labels from `self` Modin DataFrame, replace them with labels
+            from joined DataFrame or drop altogether to make them be computed lazily later.
         dtypes : "copy" or None, default: None
             Whether keep old dtypes or infer new dtypes from data.
 
@@ -2139,19 +2140,26 @@ class PandasDataframe(ClassLogger):
         )
         if dtypes == "copy":
             dtypes = self._dtypes
-        new_index = self.index
-        new_columns = self.columns
-        # Pass shape caches instead of values in order to not trigger shape
-        # computation.
-        new_row_lengths = self._row_lengths_cache
-        new_column_widths = self._column_widths_cache
-        if not preserve_labels:
-            if axis == 1:
-                new_columns = joined_index
-                new_column_widths = partition_sizes_along_axis
-            else:
-                new_index = joined_index
-                new_row_lengths = partition_sizes_along_axis
+
+        def _pick_axis(getter, sizes_cache):
+            if labels == "keep":
+                return getter(), sizes_cache
+            if labels == "replace":
+                return joined_index, partition_sizes_along_axis
+            return None, None  # labels == "drop"
+
+        if axis == 0:
+            # Pass shape caches instead of values in order to not trigger shape computation.
+            new_index, new_row_lengths = _pick_axis(
+                self._get_index, self._row_lengths_cache
+            )
+            new_columns, new_column_widths = self.columns, self._column_widths_cache
+        else:
+            new_index, new_row_lengths = self.index, self._row_lengths_cache
+            new_columns, new_column_widths = _pick_axis(
+                self._get_columns, self._column_widths_cache
+            )
+
         return self.__constructor__(
             new_frame,
             new_index,
