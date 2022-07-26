@@ -81,12 +81,8 @@ class PickleExperimentalDispatcher(FileDispatcher):
         # while num_splits is 1, need only one value
         partition_ids = cls.build_partition(partition_ids, lengths, [widths[0]])
 
-        new_index = cls.frame_cls._partition_mgr_cls.get_indices(
-            0, partition_ids, lambda df: df.axes[0]
-        )
-        new_columns = cls.frame_cls._partition_mgr_cls.get_indices(
-            1, partition_ids, lambda df: df.axes[1]
-        )
+        new_index, _ = cls.frame_cls._partition_mgr_cls.get_indices(0, partition_ids)
+        new_columns, _ = cls.frame_cls._partition_mgr_cls.get_indices(1, partition_ids)
 
         return cls.query_compiler_cls(
             cls.frame_cls(partition_ids, new_index, new_columns)

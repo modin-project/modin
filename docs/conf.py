@@ -124,11 +124,14 @@ html_favicon = "img/MODIN_ver2.ico"
 
 html_logo = "img/MODIN_ver2.png"
 
+html_context = {"default_mode": "light"}
+
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
 html_theme_options = {
+    "navbar_end": ["navbar-icon-links"],
     "sidebarwidth": 270,
     "collapse_navigation": False,
     "navigation_depth": 4,
