@@ -86,24 +86,27 @@ class CSVGlobDispatcher(CSVDispatcher):
             filepath_or_buffer, kwargs.get("compression")
         )
         if compression_type is not None:
+            # need python3.7 to .seek and .tell ZipExtFile
+            supports_zip = sys.version_info[0] == 3 and sys.version_info[1] >= 7
             if (
                 compression_type == "gzip"
                 or compression_type == "bz2"
                 or compression_type == "xz"
             ):
                 kwargs["compression"] = compression_type
-            elif (
-                compression_type == "zip"
-                and sys.version_info[0] == 3
-                and sys.version_info[1] >= 7
-            ):
-                # need python3.7 to .seek and .tell ZipExtFile
+            elif compression_type == "zip" and supports_zip:
                 kwargs["compression"] = compression_type
             else:
+                supported_types = ["gzip", "bz2", "xz"]
+                if supports_zip:
+                    supported_types.append("zip")
+                supported_str = ", ".join(f"'{s}'" for s in supported_types)
+                if compression_type == "zip" and not supports_zip:
+                    reason_str = "zip compression requires python version >=3.7"
+                else:
+                    reason_str = f"Unsupported compression type '{compression_type}' (supported types are {supported_str})"
                 return cls.single_worker_read(
-                    filepath_or_buffer,
-                    reason=f"Unsupported compression type {compression_type}",
-                    **kwargs,
+                    filepath_or_buffer, reason=reason_str, **kwargs
                 )
 
         chunksize = kwargs.get("chunksize")
