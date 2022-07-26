@@ -24,6 +24,7 @@ Key Features and Updates
   * FIX-#4491: Wait for all partitions in parallel in benchmark mode (#4656)
   * FIX-#4358: MultiIndex `loc` shouldn't drop levels for full-key lookups (#4608)
   * FIX-#4658: Expand exception handling for `read_*` functions from s3 storages (#4659)
+  * FIX-#4672: Fix incorrect warning when setting `frame.index` or `frame.columns` (#4721)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
