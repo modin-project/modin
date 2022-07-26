@@ -29,11 +29,13 @@ Key Features and Updates
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
   * PERF-#4325: Improve perf of multi-column assignment in `__setitem__` when no new column names are assigning (#4455)
   * PERF-#3844: Improve perf of `drop` operation (#4694)
+  * PERF-#4705: Improve perf of arithmetic operations between `Series` objects with shared `.index` (#4689)
 * Benchmarking enhancements
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
 * Refactor Codebase
   * REFACTOR-#4530: Standardize access to physical data in partitions (#4563)
   * REFACTOR-#4534: Replace logging meta class with class decorator (#4535)
+  * REFACTOR-#4708: Delete combine dtypes (#4709)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements
@@ -77,3 +79,4 @@ Contributors
 @devin-petersohn
 @YarShev
 @naren-ponder
+@jbrockmendel
