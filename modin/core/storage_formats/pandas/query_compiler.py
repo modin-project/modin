@@ -502,9 +502,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             if not on_in_index.empty:
                 frame1 = index.to_frame()[on_in_index]
             if not on_in_columns.empty:
-                frame2 = query_compiler.getitem_array(
-                    on_in_columns
-                ).to_pandas()
+                frame2 = query_compiler.getitem_array(on_in_columns).to_pandas()
             if frame1 is not None and frame2 is not None:
                 frame = pandas.concat([frame1, frame2], axis=1, copy=False)
             else:
