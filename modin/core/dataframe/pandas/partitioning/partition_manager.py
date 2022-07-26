@@ -848,6 +848,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         -------
         pandas.Index
             A pandas Index object.
+        list of pandas.Index
+            The list of internal indices for each partition.
 
         Notes
         -----
@@ -855,21 +857,16 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         when you have deleted rows/columns internally, but do not know
         which ones were deleted.
         """
+        if index_func is None:
+            index_func = lambda df: df.axes[axis]  # noqa: E731
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
         func = cls.preprocess_func(index_func)
-        if axis == 0:
-            new_idx = (
-                [idx.apply(func) for idx in partitions.T[0]]
-                if len(partitions.T)
-                else []
-            )
-        else:
-            new_idx = (
-                [idx.apply(func) for idx in partitions[0]] if len(partitions) else []
-            )
+        target = partitions.T if axis == 0 else partitions
+        new_idx = [idx.apply(func) for idx in target[0]] if len(target) else []
         new_idx = cls.get_objects_from_partitions(new_idx)
         # TODO FIX INFORMATION LEAK!!!!1!!1!!
-        return new_idx[0].append(new_idx[1:]) if len(new_idx) else new_idx
+        total_idx = new_idx[0].append(new_idx[1:]) if new_idx else new_idx
+        return total_idx, new_idx
 
     @classmethod
     def _apply_func_to_list_of_partitions_broadcast(
