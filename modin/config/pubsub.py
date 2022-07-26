@@ -228,17 +228,20 @@ class Parameter(object):
         return cls.default
 
     @classmethod
-    def get_value_source(cls) -> Optional[ValueSource]:
+    def get_value_source(cls) -> ValueSource:
         """
         Get value source of the config.
 
         Returns
         -------
-        Optional[ValueSource]
+        ValueSource
         """
         if cls._value_source is None:
             # dummy call to .get() to initialize the value
             cls.get()
+        assert (
+            cls._value_source is not None
+        ), "_value_source must be initialized by now in get()"
         return cls._value_source
 
     @classmethod
