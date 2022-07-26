@@ -25,6 +25,7 @@ from modin.pandas.test.utils import (
     get_unique_filename,
     teardown_test_files,
     test_data,
+    eval_general,
 )
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.pandas.test.utils import parse_dates_values_by_id, time_parsing_csv_path
@@ -197,19 +198,27 @@ test_default_to_pickle_filename = "test_default_to_pickle.pkl"
 )
 def test_read_multiple_csv_s3_storage_opts(storage_options):
     path = "s3://modin-datasets/testing/multiple_csv/"
-    # Test the fact of handling of `storage_options`
-    modin_df = pd.read_csv_glob(path, storage_options=storage_options)
-    pandas_df = pd.concat(
-        [
-            pandas.read_csv(
-                f"{path}test_data{i}.csv",
-                storage_options=storage_options,
-            )
-            for i in range(2)
-        ],
-    ).reset_index(drop=True)
 
-    df_equals(modin_df, pandas_df)
+    def pandas_read_csv_glob(path, storage_options):
+        pandas_df = pandas.concat(
+            [
+                pandas.read_csv(
+                    f"{path}test_data{i}.csv",
+                    storage_options=storage_options,
+                )
+                for i in range(2)
+            ],
+        ).reset_index(drop=True)
+        return pandas_df
+
+    eval_general(
+        pd,
+        pandas,
+        lambda module, **kwargs: pd.read_csv_glob(path, **kwargs)
+        if hasattr(module, "read_csv_glob")
+        else pandas_read_csv_glob(path, **kwargs),
+        storage_options=storage_options,
+    )
 
 
 @pytest.mark.skipif(

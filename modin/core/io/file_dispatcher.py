@@ -20,13 +20,11 @@ for direct files processing.
 
 import fsspec
 import os
-import re
 from modin.config import StorageFormat
 from modin.logging import ClassLogger
 import numpy as np
 from pandas.io.common import is_fsspec_url, is_url
 
-S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
 
 
@@ -261,9 +259,13 @@ class FileDispatcher(ClassLogger):
         """
         if isinstance(file_path, str):
             if is_fsspec_url(file_path) or is_url(file_path):
+                if file_path.startswith("S"):
+                    file_path = f"s{file_path[1:]}"
+
                 from botocore.exceptions import (
                     NoCredentialsError,
                     EndpointConnectionError,
+                    ConnectTimeoutError,
                 )
 
                 if storage_options is not None:
@@ -272,16 +274,21 @@ class FileDispatcher(ClassLogger):
                 else:
                     new_storage_options = {}
 
-                fs, path = fsspec.core.url_to_fs(file_path, **new_storage_options)
+                fs, _ = fsspec.core.url_to_fs(file_path, **new_storage_options)
                 exists = False
                 try:
-                    exists = fs.exists(path)
-                except (NoCredentialsError, PermissionError, EndpointConnectionError):
+                    exists = fs.exists(file_path)
+                except (
+                    NoCredentialsError,
+                    PermissionError,
+                    EndpointConnectionError,
+                    ConnectTimeoutError,
+                ):
                     pass
-                fs, path = fsspec.core.url_to_fs(
+                fs, _ = fsspec.core.url_to_fs(
                     file_path, anon=True, **new_storage_options
                 )
-                return exists or fs.exists(path)
+                return exists or fs.exists(file_path)
         return os.path.exists(file_path)
 
     @classmethod

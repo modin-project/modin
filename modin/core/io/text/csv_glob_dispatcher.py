@@ -20,15 +20,15 @@ import os
 import sys
 from typing import List, Tuple
 import warnings
+import fsspec
 
 import pandas
 import pandas._libs.lib as lib
+from pandas.io.common import is_fsspec_url, is_url
 
 from modin.config import NPartitions
 from modin.core.io.file_dispatcher import OpenFile
-from modin.core.io.file_dispatcher import S3_ADDRESS_REGEX
 from modin.core.io.text.csv_dispatcher import CSVDispatcher
-from modin.utils import import_optional_dependency
 
 
 class CSVGlobDispatcher(CSVDispatcher):
@@ -330,16 +330,14 @@ class CSVGlobDispatcher(CSVDispatcher):
             True if the path is valid.
         """
         if isinstance(file_path, str):
-            match = S3_ADDRESS_REGEX.search(file_path)
-            if match is not None:
-                if file_path[0] == "S":
-                    file_path = "{}{}".format("s", file_path[1:])
-                S3FS = import_optional_dependency(
-                    "s3fs", "Module s3fs is required to read S3FS files."
-                )
+            if is_fsspec_url(file_path) or is_url(file_path):
+                if file_path.startswith("S"):
+                    file_path = f"s{file_path[1:]}"
+
                 from botocore.exceptions import (
                     NoCredentialsError,
                     EndpointConnectionError,
+                    ConnectTimeoutError,
                 )
 
                 if storage_options is not None:
@@ -348,14 +346,21 @@ class CSVGlobDispatcher(CSVDispatcher):
                 else:
                     new_storage_options = {}
 
-                s3fs = S3FS.S3FileSystem(anon=False, **new_storage_options)
+                fs, path = fsspec.core.url_to_fs(file_path, **new_storage_options)
                 exists = False
                 try:
-                    exists = len(s3fs.glob(file_path)) > 0 or exists
-                except (NoCredentialsError, PermissionError, EndpointConnectionError):
+                    exists = fs.exists(path)
+                except (
+                    NoCredentialsError,
+                    PermissionError,
+                    EndpointConnectionError,
+                    ConnectTimeoutError,
+                ):
                     pass
-                s3fs = S3FS.S3FileSystem(anon=True, **new_storage_options)
-                return exists or len(s3fs.glob(file_path)) > 0
+                fs, path = fsspec.core.url_to_fs(
+                    file_path, anon=True, **new_storage_options
+                )
+                return exists or fs.exists(path)
         return len(glob.glob(file_path)) > 0
 
     @classmethod
@@ -373,28 +378,32 @@ class CSVGlobDispatcher(CSVDispatcher):
         list
             List of strings of absolute file paths.
         """
-        if S3_ADDRESS_REGEX.search(file_path):
-            # S3FS does not allow captial S in s3 addresses.
-            if file_path[0] == "S":
-                file_path = "{}{}".format("s", file_path[1:])
+        if is_fsspec_url(file_path) or is_url(file_path):
+            if file_path.startswith("S"):
+                file_path = f"s{file_path[1:]}"
 
-            S3FS = import_optional_dependency(
-                "s3fs", "Module s3fs is required to read S3FS files."
+            from botocore.exceptions import (
+                NoCredentialsError,
+                EndpointConnectionError,
+                ConnectTimeoutError,
             )
-            from botocore.exceptions import NoCredentialsError, EndpointConnectionError
 
             def get_file_path(fs_handle) -> List[str]:
-                file_paths = fs_handle.glob(file_path)
+                file_paths = (
+                    fs_handle.glob(file_path)
+                    if fs_handle.exists(file_path)
+                    else [file_path]
+                )
                 s3_addresses = ["{}{}".format("s3://", path) for path in file_paths]
                 return s3_addresses
 
-            s3fs = S3FS.S3FileSystem(anon=False)
+            fs, _ = fsspec.core.url_to_fs(file_path)
             try:
-                return get_file_path(s3fs)
-            except (NoCredentialsError, EndpointConnectionError):
+                return get_file_path(fs)
+            except (NoCredentialsError, EndpointConnectionError, ConnectTimeoutError):
                 pass
-            s3fs = S3FS.S3FileSystem(anon=True)
-            return get_file_path(s3fs)
+            fs, _ = fsspec.core.url_to_fs(file_path, anon=True)
+            return get_file_path(fs)
         else:
             relative_paths = glob.glob(file_path)
             abs_paths = [os.path.abspath(path) for path in relative_paths]
