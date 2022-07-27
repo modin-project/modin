@@ -222,7 +222,7 @@ def split_partitions_using_pivots_for_sort(
     if not ascending[0] and modin_frame.dtypes[columns[0]] != object:
         pivots = pivots[::-1]
     na_rows = df[df[columns[0]].isna()]
-    if self.dtypes[columns[0]] != object:
+    if modin_frame.dtypes[columns[0]] != object:
         groupby_col = np.digitize(df[columns[0]].squeeze(), pivots) - 1
     else:
         groupby_col = (
