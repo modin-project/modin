@@ -68,7 +68,7 @@ def test_unwrap_partitions(axis, reverse_index, reverse_columns):
         return df
 
     df = get_df(pd, data)
-    # `df` should not have propagatated the index and column updates to its
+    # `df` should not have propagated the index and column updates to its
     # partitions yet. The partitions of `expected_df` should have the updated
     # metadata because we construct `expected_df` directly from the updated
     # pandas dataframe.
