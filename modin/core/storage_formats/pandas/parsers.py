@@ -662,23 +662,6 @@ class ParquetFileToRead(NamedTuple):
 @doc(_doc_pandas_parser_class, data_type="PARQUET data")
 class PandasParquetParser(PandasParser):
     @staticmethod
-    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
-    def parse(fname, **kwargs):
-        num_splits = kwargs.pop("num_splits", None)
-        if num_splits is None:
-            return pandas.read_parquet(fname, **kwargs)
-        kwargs["use_pandas_metadata"] = True
-        df = pandas.read_parquet(fname, **kwargs)
-        if isinstance(df.index, pandas.RangeIndex):
-            idx = len(df.index)
-        else:
-            idx = df.index
-        columns = [c for c in columns if c not in df.index.names and c in df.columns]
-        if columns is not None:
-            df = df[columns]
-        return _split_result_for_readers(0, num_splits, df) + [idx, df.dtypes]
-
-    @staticmethod
     @doc(
         _doc_parse_func,
         parameters="""files_for_parser : list
@@ -686,12 +669,16 @@ class PandasParquetParser(PandasParser):
 storage_options : dict
     Parameters for specific storage engine.""",
     )
-    def parse_fsspec_files(files_for_parser, storage_options, **kwargs):
+    def parse(files_for_parser, storage_options, **kwargs):
         from pyarrow.parquet import ParquetFile
 
         columns = kwargs.get("columns", None)
 
         chunks = []
+        # `single_worker_read` just passes in a string path
+        if isinstance(files_for_parser, str):
+            return pandas.read_parquet(files_for_parser, **kwargs)
+
         for file_for_parser in files_for_parser:
             if isinstance(file_for_parser.path, IOBase):
                 context = nullcontext(file_for_parser.path)
@@ -712,9 +699,6 @@ storage_options : dict
                     )
                     .to_pandas()
                 )
-            columns = [
-                c for c in columns if c not in chunk.index.names and c in chunk.columns
-            ]
             chunks.append(chunk)
         df = pandas.concat(chunks)
         return df, df.index, len(df)

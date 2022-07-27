@@ -158,7 +158,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             all_partitions.append(
                 [
                     cls.deploy(
-                        cls.parse_fsspec_files,
+                        cls.parse,
                         files_for_parser=files_to_read,
                         columns=cols,
                         num_returns=3,
@@ -349,7 +349,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     engine=engine,
                     columns=columns,
                     reason="Mixed partitioning columns in Parquet",
-                    **kwargs
+                    **kwargs,
                 )
         # url_to_fs returns the fs and path formatted for the specific fs
         fs, fs_path = (
