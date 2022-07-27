@@ -13,7 +13,6 @@
 
 """Module for 'latest pandas' compatibility layer for Dataset (common DataFrame/Series)."""
 
-import numpy as np
 import pandas
 from pandas.core.dtypes.common import is_datetime_or_timedelta_dtype
 from pandas.core.window.ewm import ExponentialMovingWindow
@@ -27,7 +26,7 @@ from pandas._typing import (
     Axis,
 )
 import pickle as pkl
-from numpy import nan
+import numpy as np
 from typing import Sequence, Hashable, Optional, TYPE_CHECKING
 
 from ..abc import BaseCompatibleBasePandasDataset
@@ -36,6 +35,8 @@ from modin.utils import _inherit_docstrings
 
 if TYPE_CHECKING:
     from modin.pandas.base import BasePandasDataset
+
+nan = np.nan
 
 
 class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
