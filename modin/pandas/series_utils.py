@@ -40,7 +40,7 @@ class CategoryMethods(ClassLogger):
 
     @property
     def categories(self):
-        return self._series._default_to_pandas(pandas.Series.cat).categories
+        return self._series.dtype.categories
 
     @categories.setter
     def categories(self, categories):
@@ -51,7 +51,7 @@ class CategoryMethods(ClassLogger):
 
     @property
     def ordered(self):
-        return self._series._default_to_pandas(pandas.Series.cat).ordered
+        return self._series.dtype.ordered
 
     @property
     def codes(self):
