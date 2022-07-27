@@ -1891,10 +1891,10 @@ class PandasDataframe(ClassLogger):
 
         #print("INSIDE WINDOW FUNCTION")
 
-        print(reduce_fn)
-        print(axis)
-        print(window_size)
-        print(result_schema)
+        #print(reduce_fn)
+        #print(axis)
+        #print(window_size)
+        #print(result_schema)
 
         def window_function_complete(virtual_partition):
             #print("INSIDE WINDOW FUNCTION")
@@ -1955,8 +1955,8 @@ class PandasDataframe(ClassLogger):
             else:
                 reduce_result = [virtual_partition.apply(window_function_partition) for virtual_partition in virtual_partitions]   
 
-            for result in reduce_result:
-                print(result.to_pandas())
+            #for result in reduce_result:
+                #print(result.to_pandas())
                 
             if axis == Axis.ROW_WISE:
                 results.append(reduce_result)
@@ -1971,8 +1971,8 @@ class PandasDataframe(ClassLogger):
             results,
             self.index,
             self.columns,
-            None,
-            None,
+            self._row_lengths,
+            self._column_widths,
             result_schema
         )                    
 
