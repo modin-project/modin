@@ -265,7 +265,7 @@ class TestBuildVirtualPartition:
     ):
         # reverse the dataframe along the virtual partition axis.
         def reverse(df):
-                return df.iloc[::-1, :] if axis == 0 else df.iloc[:, ::-1]
+            return df.iloc[::-1, :] if axis == 0 else df.iloc[:, ::-1]
 
         level_zero_blocks_first = [
             block_partition_class(put(pandas.DataFrame([0]))),
@@ -298,18 +298,19 @@ class TestBuildVirtualPartition:
             expected_df,
         )
 
-    def test_from_block_partition_and_virtual_partition_with_call_queues(
+    def test_from_block_and_virtual_partition_with_call_queues(
         self,
         axis,
         virtual_partition_class,
     ):
-        # make function the dataframe along the virtual partition axis.
+        # make a function that reverses the dataframe along the virtual
+        # partition axis.
         # for testing axis == 0, start with two 2-rows-by-1-column blocks. for
         # axis == 1, start with two 1-rows-by-2-column blocks.
         def reverse(df):
-           return df.iloc[::-1, :] if axis == 0 else df.iloc[:, ::-1]
-        
-        block_data = [[0, 1], [2, 3]] if axis ==0 else [[[0, 1]], [[2, 3]]]
+            return df.iloc[::-1, :] if axis == 0 else df.iloc[:, ::-1]
+
+        block_data = [[0, 1], [2, 3]] if axis == 0 else [[[0, 1]], [[2, 3]]]
         level_zero_blocks = [
             block_partition_class(put(pandas.DataFrame(block_data[0]))),
             block_partition_class(put(pandas.DataFrame(block_data[1]))),
