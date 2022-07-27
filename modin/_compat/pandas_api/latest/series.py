@@ -13,10 +13,13 @@
 
 """Module for 'latest pandas' compatibility layer for Series."""
 
+from typing import IO, Hashable
+
 import numpy as np
 import pandas
 from pandas.util._validators import validate_bool_kwarg
 from pandas._libs.lib import no_default
+from pandas._typing import Axis
 
 from ..abc.series import BaseCompatibleSeries
 

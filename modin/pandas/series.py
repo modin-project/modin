@@ -23,7 +23,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas._libs.lib import no_default
 from pandas._typing import IndexKeyFunc
-from typing import Union, Optional
+from typing import Union, Optional, Hashable
 import warnings
 
 from modin.utils import _inherit_docstrings, to_pandas, Engine
