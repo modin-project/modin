@@ -45,12 +45,18 @@ class JSONDispatcher(TextFileDispatcher):
         path_or_buf = cls.get_path_or_buffer(path_or_buf)
         if isinstance(path_or_buf, str):
             if not cls.file_exists(path_or_buf):
-                return cls.single_worker_read(path_or_buf, **kwargs)
+                return cls.single_worker_read(
+                    path_or_buf, reason=cls._file_not_found_msg(path_or_buf), **kwargs
+                )
             path_or_buf = cls.get_path(path_or_buf)
         elif not cls.pathlib_or_pypath(path_or_buf):
-            return cls.single_worker_read(path_or_buf, **kwargs)
+            return cls.single_worker_read(
+                path_or_buf, reason=cls.BUFFER_UNSUPPORTED_MSG, **kwargs
+            )
         if not kwargs.get("lines", False):
-            return cls.single_worker_read(path_or_buf, **kwargs)
+            return cls.single_worker_read(
+                path_or_buf, reason="`lines` argument not supported", **kwargs
+            )
         with OpenFile(path_or_buf, "rb") as f:
             columns = pandas.read_json(BytesIO(b"" + f.readline()), lines=True).columns
         kwargs["columns"] = columns

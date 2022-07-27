@@ -48,15 +48,19 @@ class ExcelDispatcher(TextFileDispatcher):
             kwargs.get("engine", None) is not None
             and kwargs.get("engine") != "openpyxl"
         ):
-            warnings.warn(
-                "Modin only implements parallel `read_excel` with `openpyxl` engine, "
+            return cls.single_worker_read(
+                io,
+                reason="Modin only implements parallel `read_excel` with `openpyxl` engine, "
                 + 'please specify `engine=None` or `engine="openpyxl"` to '
-                + "use Modin's parallel implementation."
+                + "use Modin's parallel implementation.",
+                **kwargs
             )
-            return cls.single_worker_read(io, **kwargs)
         if sys.version_info < (3, 7):
-            warnings.warn("Python 3.7 or higher required for parallel `read_excel`.")
-            return cls.single_worker_read(io, **kwargs)
+            return cls.single_worker_read(
+                io,
+                reason="Python 3.7 or higher required for parallel `read_excel`.",
+                **kwargs
+            )
 
         from zipfile import ZipFile
         from openpyxl.worksheet.worksheet import Worksheet
@@ -66,11 +70,12 @@ class ExcelDispatcher(TextFileDispatcher):
 
         sheet_name = kwargs.get("sheet_name", 0)
         if sheet_name is None or isinstance(sheet_name, list):
-            warnings.warn(
-                "`read_excel` functionality is only implemented for a single sheet at a "
-                + "time. Multiple sheet reading coming soon!"
+            return cls.single_worker_read(
+                io,
+                reason="`read_excel` functionality is only implemented for a single sheet at a "
+                + "time. Multiple sheet reading coming soon!",
+                **kwargs
             )
-            return cls.single_worker_read(io, **kwargs)
 
         warnings.warn(
             "Parallel `read_excel` is a new feature! If you run into any "

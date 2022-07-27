@@ -995,12 +995,21 @@ class TestCsv:
             skiprows=skiprows,
         )
 
+    def _has_pandas_fallback_reason(self):
+        # The Python engine does not use custom IO dispatchers, so specialized error messages
+        # won't appear
+        return Engine.get() != "Python" and StorageFormat.get() != "Omnisci"
+
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
     def test_read_csv_default_to_pandas(self):
-        with warns_that_defaulting_to_pandas():
+        if self._has_pandas_fallback_reason():
+            warning_suffix = "buffers"
+        else:
+            warning_suffix = ""
+        with warns_that_defaulting_to_pandas(suffix=warning_suffix):
             # This tests that we default to pandas on a buffer
             from io import StringIO
 
@@ -1014,9 +1023,14 @@ class TestCsv:
     )
     def test_read_csv_default_to_pandas_url(self):
         # We haven't implemented read_csv from https, but if it's implemented, then this needs to change
+        if self._has_pandas_fallback_reason():
+            warning_match = "No such file"
+        else:
+            warning_match = ""
         eval_io(
             fn_name="read_csv",
             modin_warning=UserWarning,
+            modin_warning_str_match=warning_match,
             # read_csv kwargs
             filepath_or_buffer="https://raw.githubusercontent.com/modin-project/modin/master/modin/pandas/test/data/blah.csv",
             # It takes about ~17Gb of RAM for Omnisci to import the whole table from this test

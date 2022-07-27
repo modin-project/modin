@@ -16,7 +16,6 @@
 import os
 
 from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
-from modin.error_message import ErrorMessage
 from modin.utils import import_optional_dependency
 
 
@@ -72,9 +71,12 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     break
             partitioned_columns = list(partitioned_columns)
             if len(partitioned_columns):
-                ErrorMessage.default_to_pandas("Mixed Partitioning Columns in Parquet")
                 return cls.single_worker_read(
-                    path, engine=engine, columns=columns, **kwargs
+                    path,
+                    engine=engine,
+                    columns=columns,
+                    reason="Mixed partitioning columns in Parquet",
+                    **kwargs
                 )
 
         if not columns:
