@@ -88,7 +88,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         # Extract block partitions from the block and virtual partitions that
         # constitute this partition.
         for partition in self._list_of_constituent_partitions:
-            if isinstance(partition, PandasOnRayDataframeColumnPartition):
+            if isinstance(partition, PandasOnRayDataframeVirtualPartition):
                 if partition.axis == self.axis:
                     # We are building a virtual partition out of another
                     # virtual partition `partition` that contains its own list
