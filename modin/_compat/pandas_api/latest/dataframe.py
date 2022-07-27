@@ -23,7 +23,7 @@ from typing import (
 )
 import pandas
 from pandas.util._validators import validate_bool_kwarg
-from pandas._libs.lib import no_default
+from pandas._libs.lib import no_default, NoDefault
 from pandas._typing import (
     CompressionOptions,
     FilePath,
