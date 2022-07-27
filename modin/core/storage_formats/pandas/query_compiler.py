@@ -3252,7 +3252,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Cat operations
     def cat_codes(self):
-        return self.default_to_pandas(lambda df: df[df.columns[0]].cat.codes)
+
+        def func(df) -> np.ndarray:
+            # equiv: df.iloc[:, 0]
+            ser = df._ixs(0, axis=1)
+            return ser.cat.codes
+
+        res = self._modin_frame.apply_full_axis(axis=0, func=func)
+        return self.__constructor__(res)
 
     # END Cat operations
 
