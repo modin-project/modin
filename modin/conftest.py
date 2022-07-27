@@ -446,7 +446,6 @@ def make_parquet_file():
         nrows=NROWS,
         ncols=2,
         force=True,
-        directory=False,
         partitioned_columns=[],
         row_group_size: Optional[int] = None,
     ):
@@ -457,9 +456,7 @@ def make_parquet_file():
             nrows: Number of rows for the dataframe.
             ncols: Number of cols for the dataframe.
             force: Create a new file/directory even if one already exists.
-            directory: Create a partitioned directory using pyarrow.
             partitioned_columns: Create a partitioned directory using pandas.
-            Will be ignored if directory=True.
         """
         if force or not os.path.exists(filename):
             df = pandas.DataFrame(
