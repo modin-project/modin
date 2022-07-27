@@ -15,6 +15,12 @@
 
 import numpy as np
 
+from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
+    PandasOnRayDataframePartition,
+)
+from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition import (
+    PandasOnDaskDataframePartition,
+)
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.pandas.dataframe import DataFrame
 
@@ -67,14 +73,14 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
                     for row in modin_frame._partitions
                 ]
 
-        actual_engine = type(modin_frame._partitions[0][0]).__name__
-        if actual_engine in (
-            "PandasOnRayDataframePartition",
-            "PandasOnDaskDataframePartition",
+        partition_type = modin_frame._partitions[0][0]
+        if isinstance(
+            modin_frame._partitions[0][0],
+            (PandasOnRayDataframePartition, PandasOnDaskDataframePartition),
         ):
             return _unwrap_partitions()
         raise ValueError(
-            f"Do not know how to unwrap '{actual_engine}' underlying partitions"
+            f"Do not know how to unwrap '{partition_type}' underlying partitions"
         )
     else:
         modin_frame._propagate_index_objs(None)
