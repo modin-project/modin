@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import contextlib
 import pytest
 import numpy as np
 import pandas
@@ -192,6 +193,12 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
         assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
     finally:
         teardown_test_files([unique_filename_modin, unique_filename_pandas])
+
+
+@contextlib.contextmanager
+def _nullcontext():
+    """Replacement for contextlib.nullcontext missing in older Python."""
+    yield
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
@@ -1306,10 +1313,11 @@ def test_read_csv_relative_to_user_home(make_csv_file):
     make_csv_file(unique_filename)
 
     with mock.patch.dict(os.environ, {"HOME": os.path.dirname(unique_filename)}):
-        eval_io(
-            fn_name="read_csv",
-            filepath_or_buffer=f"~/{os.path.basename(unique_filename)}",
-        )
+        with warns_that_defaulting_to_pandas() if Engine.get() == "Python" else _nullcontext():
+            eval_io(
+                fn_name="read_csv",
+                filepath_or_buffer=f"~/{os.path.basename(unique_filename)}",
+            )
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
@@ -1583,7 +1591,10 @@ def test_read_parquet_relative_to_user_home(make_parquet_file):
     unique_filename = get_unique_filename(extension="parquet")
     make_parquet_file(filename=unique_filename)
     with mock.patch.dict(os.environ, {"HOME": os.path.dirname(unique_filename)}):
-        eval_io(fn_name="read_parquet", path=f"~/{os.path.basename(unique_filename)}")
+        with warns_that_defaulting_to_pandas() if Engine.get() == "Python" else _nullcontext():
+            eval_io(
+                fn_name="read_parquet", path=f"~/{os.path.basename(unique_filename)}"
+            )
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
@@ -2505,21 +2516,25 @@ def test_from_spmatrix():
     condition="config.getoption('--simulate-cloud').lower() != 'off'",
     reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
 )
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_to_dense():
     modin_df, pandas_df = create_test_dfs({"col1": pandas.SparseArray([0, 1, 0])})
     df_equals(modin_df.sparse.to_dense(), pandas_df.sparse.to_dense())
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_to_dict():
     modin_df, _ = create_test_dfs(TEST_DATA)
     assert modin_df.to_dict() == to_pandas(modin_df).to_dict()
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_to_latex():
     modin_df, _ = create_test_dfs(TEST_DATA)
     assert modin_df.to_latex() == to_pandas(modin_df).to_latex()
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_to_period():
     index = pandas.DatetimeIndex(
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
