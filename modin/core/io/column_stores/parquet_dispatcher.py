@@ -55,8 +55,6 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         from pyarrow.parquet import ParquetDataset
         from modin.pandas.io import PQ_INDEX_REGEX
 
-        path = cls.get_path(path)
-
         if isinstance(path, str) and os.path.isdir(path):
             partitioned_columns = set()
             # We do a tree walk of the path directory because partitioned
