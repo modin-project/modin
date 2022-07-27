@@ -346,10 +346,10 @@ class CSVGlobDispatcher(CSVDispatcher):
                 else:
                     new_storage_options = {}
 
-                fs, path = fsspec.core.url_to_fs(file_path, **new_storage_options)
+                fs, _ = fsspec.core.url_to_fs(file_path, **new_storage_options)
                 is_exist = False
                 try:
-                    is_exist = fs.exists(path)
+                    is_exist = fs.exists(file_path)
                 except (
                     NoCredentialsError,
                     PermissionError,
@@ -357,10 +357,10 @@ class CSVGlobDispatcher(CSVDispatcher):
                     ConnectTimeoutError,
                 ):
                     pass
-                fs, path = fsspec.core.url_to_fs(
+                fs, _ = fsspec.core.url_to_fs(
                     file_path, anon=True, **new_storage_options
                 )
-                return is_exist or len(fs.glob(path)) > 0
+                return is_exist or len(fs.glob(file_path)) > 0
 
             if is_url(file_path):
                 raise NotImplementedError(
@@ -397,7 +397,7 @@ class CSVGlobDispatcher(CSVDispatcher):
             def get_file_path(fs_handle) -> List[str]:
                 file_paths = fs_handle.glob(file_path)
                 if len(file_paths) == 0 and not fs_handle.exists(file_path):
-                    return [file_path]
+                    raise FileNotFoundError(f"Path <{file_path}> isn't available.")
                 s3_addresses = [f"s3://{path}" for path in file_paths]
                 return s3_addresses
 
