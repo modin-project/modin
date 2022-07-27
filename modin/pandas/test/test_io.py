@@ -90,13 +90,6 @@ except ImportError:
 
 from modin.config import NPartitions
 
-# Our configuration in pytest.ini requires that we explicitly catch all
-# instances of defaulting to pandas, but some test modules, like this one,
-# have too many such instances.
-# TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
-# of defaulting to pandas.
-pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
-
 NPartitions.put(4)
 
 DATASET_SIZE_DICT = {
@@ -200,11 +193,34 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
         teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
 
+def patch_expanduser(input_path_to_fake, fake_expansion, monkeypatch):
+    original_expanduser = os.path.expanduser
+
+    def patched_expanduser(path):
+        print(f"calling patched expanduser with path {path}")
+        if path == input_path_to_fake:
+            return fake_expansion
+        else:
+            return original_expanduser(path)
+
+    monkeypatch.setattr(os.path, "expanduser", patched_expanduser)
+
+
 @pytest.mark.usefixtures("TestReadCSVFixture")
 @pytest.mark.skipif(
     IsExperimental.get() and StorageFormat.get() == "Pyarrow",
     reason="Segmentation fault; see PR #2347 ffor details",
 )
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances. Normally we would mark ignore warnings
+# throughout the file with a single "pytestmark =", but some test cases
+# in this file need to check that we are NOT defaulting to pandas,
+# and the only way to do that is to use distinct markers for each test:
+# https://stackoverflow.com/a/53363394/17554722
+# TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
+# of defaulting to pandas.
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestCsv:
     # delimiter tests
     @pytest.mark.parametrize("sep", [None, "_", ",", ".", "\n"])
@@ -1291,6 +1307,20 @@ class TestCsv:
         eval_to_file(modin_df, pandas_df, "to_csv", "csv")
 
 
+# Check that we are NOT defaulting to pandas for a path relative to user home.
+# TODO(https://github.com/modin-project/modin/issues/3655): Get rid of this
+# check once we turn all default to pandas messages into errors.
+@pytest.mark.filterwarnings("error:.*defaulting to pandas.*:UserWarning")
+def test_read_csv_relative_to_user_home(monkeypatch, make_csv_file):
+    unique_filename = get_unique_filename()
+
+    patch_expanduser("~/testfile.csv", unique_filename, monkeypatch)
+
+    make_csv_file(unique_filename)
+    eval_io(fn_name="read_csv", filepath_or_buffer="~/testfile.csv")
+
+
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestTable:
     def test_read_table(self, make_csv_file):
         unique_filename = get_unique_filename()
@@ -1331,6 +1361,7 @@ class TestTable:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestParquet:
     @pytest.mark.parametrize("columns", [None, ["col1"]])
     @pytest.mark.xfail(
@@ -1551,6 +1582,15 @@ class TestParquet:
             df_equals(test_df, read_df)
 
 
+@pytest.mark.filterwarnings("error:.*defaulting to pandas.*:UserWarning")
+def test_read_parquet_relative_to_user_home(monkeypatch, make_parquet_file):
+    unique_filename = get_unique_filename(extension="parquet")
+    make_parquet_file(filename=unique_filename)
+    patch_expanduser("~/testfile.parquet", unique_filename, monkeypatch)
+    eval_io(fn_name="read_parquet", path="~/testfile.parquet")
+
+
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestJson:
     @pytest.mark.parametrize("lines", [False, True])
     def test_read_json(self, make_json_file, lines):
@@ -1648,6 +1688,7 @@ class TestJson:
         assert parts_width_cached == parts_width_actual
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestExcel:
     @check_file_leaks
     def test_read_excel(self, make_excel_file):
@@ -1842,6 +1883,7 @@ class TestExcel:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestHdf:
     @pytest.mark.parametrize("format", [None, "table"])
     @pytest.mark.xfail(
@@ -1917,6 +1959,7 @@ class TestHdf:
             teardown_test_files([filename])
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestSql:
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -2065,6 +2108,7 @@ class TestSql:
         assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestHtml:
     @pytest.mark.xfail(reason="read_html is not yet implemented properly - issue #1296")
     def test_read_html(self, make_html_file):
@@ -2078,6 +2122,7 @@ class TestHtml:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestFwf:
     def test_fwf_file(self, make_fwf_file):
         fwf_data = (
@@ -2299,6 +2344,7 @@ class TestFwf:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestGbq:
     @pytest.mark.xfail(reason="Need to verify GBQ access")
     def test_read_gbq(self):
@@ -2318,6 +2364,7 @@ class TestGbq:
             modin_df.to_gbq("modin.table")
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestStata:
     def test_read_stata(self, make_stata_file):
         eval_io(
@@ -2333,6 +2380,7 @@ class TestStata:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestFeather:
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -2384,6 +2432,7 @@ class TestFeather:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestClipboard:
     @pytest.mark.skip(reason="No clipboard in CI")
     def test_read_clipboard(self):
@@ -2404,6 +2453,7 @@ class TestClipboard:
         assert modin_as_clip.equals(pandas_as_clip)
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestPickle:
     def test_read_pickle(self, make_pickle_file):
         eval_io(

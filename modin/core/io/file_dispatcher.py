@@ -216,7 +216,7 @@ class FileDispatcher(ClassLogger):
         if isinstance(file_path, str) and S3_ADDRESS_REGEX.search(file_path):
             return file_path
         else:
-            return os.path.abspath(file_path)
+            return os.path.abspath(os.path.expanduser(file_path))
 
     @classmethod
     def file_size(cls, f):
@@ -284,7 +284,7 @@ class FileDispatcher(ClassLogger):
                     pass
                 s3fs = S3FS.S3FileSystem(anon=True, **new_storage_options)
                 return exists or s3fs.exists(file_path)
-        return os.path.exists(file_path)
+        return os.path.exists(os.path.expanduser(file_path))
 
     @classmethod
     def deploy(cls, func, *args, num_returns=1, **kwargs):  # noqa: PR01
