@@ -22,7 +22,6 @@ used as base class for dipatchers of SQL queries.
 import math
 import numpy as np
 import pandas
-import warnings
 
 from modin.core.io.file_dispatcher import FileDispatcher
 from modin.db_conn import ModinDatabaseConnection
@@ -56,18 +55,16 @@ class SQLDispatcher(FileDispatcher):
         if isinstance(con, str):
             con = ModinDatabaseConnection("sqlalchemy", con)
         if not isinstance(con, ModinDatabaseConnection):
-            warnings.warn(
-                "To use parallel implementation of `read_sql`, pass either "
-                + "the SQL connection string or a ModinDatabaseConnection "
-                + "with the arguments required to make a connection, instead "
-                + f"of {type(con)}. For documentation of ModinDatabaseConnection, see "
-                + "https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html#connecting-to-a-database-for-read-sql"
-            )
             return cls.single_worker_read(
                 sql,
                 con=con,
                 index_col=index_col,
                 read_sql_engine=ReadSqlEngine.get(),
+                reason="To use the parallel implementation of `read_sql`, pass either "
+                + "the SQL connection string or a ModinDatabaseConnection "
+                + "with the arguments required to make a connection, instead "
+                + f"of {type(con)}. For documentation on the ModinDatabaseConnection, see "
+                + "https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html#connecting-to-a-database-for-read-sql",
                 **kwargs,
             )
         row_count_query = con.row_count_query(sql)

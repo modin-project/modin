@@ -19,20 +19,29 @@ Key Features and Updates
   * FIX-#4584: Enable pdb debug when running cloud tests (#4585)
   * FIX-#4564: Workaround import issues in Ray: auto-import pandas on python start if env var is set (#4603)
   * FIX-#4641: Reindex pandas partitions in `df.describe()` (#4651)
+  * FIX-#2064: Fix `iloc`/`loc` assignment when dataframe is empty (#4677)
   * FIX-#4634: Check for FrozenList as `by` in `df.groupby()` (#4667)
   * FIX-#4680: Fix `read_csv` that started defaulting to pandas again in case of reading from a buffer and when a buffer has a non-zero starting position (#4681)
   * FIX-#4491: Wait for all partitions in parallel in benchmark mode (#4656)
+  * FIX-#4358: MultiIndex `loc` shouldn't drop levels for full-key lookups (#4608)
+  * FIX-#4658: Expand exception handling for `read_*` functions from s3 storages (#4659)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
   * PERF-#4325: Improve perf of multi-column assignment in `__setitem__` when no new column names are assigning (#4455)
+  * PERF-#3844: Improve perf of `drop` operation (#4694)
+  * PERF-#4705: Improve perf of arithmetic operations between `Series` objects with shared `.index` (#4689)
+  * PERF-#4703: Improve performance in accessing `ser.cat.categories`, `ser.cat.ordered`, and `ser.__array_priority__` (#4704)
 * Benchmarking enhancements
-  *
+  * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
 * Refactor Codebase
   * REFACTOR-#4530: Standardize access to physical data in partitions (#4563)
   * REFACTOR-#4534: Replace logging meta class with class decorator (#4535)
+  * REFACTOR-#4708: Delete combine dtypes (#4709)
+  * REFACTOR-#4629: Add type annotations to modin/config (#4685)
+  * REFACTOR-#4717: Improve PartitionMgr.get_indices() usage (#4718)
 * Pandas API implementations and improvements
-  *
+  * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements
   *
 * XGBoost enhancements
@@ -45,16 +54,19 @@ Key Features and Updates
   * TEST-#4610: Remove explicit installation of `black`/`flake8` for omnisci ci-notebooks (#4609)
   * TEST-#2564: Add caching and use mamba for conda setups in GH (#4607)
   * TEST-#4557: Delete multiindex sorts instead of xfailing (#4559)  
+  * TEST-#4698: Stop passing invalid storage_options param (#4699)
 * Documentation improvements
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
   * DOCS-#4628: Add to_parquet partial support notes (#4648)
+  * DOCS-#4668: Set light theme for readthedocs page, remove theme switcher (#4669)
 * Dependencies
   * FEAT-#4598: Add support for pandas 1.4.3 (#4599)
   * FEAT-#4619: Integrate mypy static type checking (#4620)
 * New Features
   * FEAT-4463: Add experimental fuzzydata integration for testing against a randomized dataframe workflow (#4556)
   * FEAT-#4419: Extend virtual partitioning API to pandas on Dask (#4420)
-
+  * FEAT-#4147: Add partial compatibility with Python 3.6 and pandas 1.1 (#4301)
+  * FEAT-#4569: Add error message when `read_` function defaults to pandas (#4647)
 
 Contributors
 ------------
@@ -69,3 +81,7 @@ Contributors
 @anmyachev
 @d33bs
 @noloerino
+@devin-petersohn
+@YarShev
+@naren-ponder
+@jbrockmendel

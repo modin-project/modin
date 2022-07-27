@@ -426,9 +426,8 @@ class PandasDataframe(ClassLogger):
         """
         if partitions is None:
             partitions = self._partitions
-        return self._partition_mgr_cls.get_indices(
-            axis, partitions, lambda df: df.axes[axis]
-        )
+        new_index, _ = self._partition_mgr_cls.get_indices(axis, partitions)
+        return new_index
 
     def _filter_empties(self):
         """Remove empty partitions from `self._partitions` to avoid triggering excess computation."""
@@ -960,35 +959,6 @@ class PandasDataframe(ClassLogger):
             self._column_widths,
             self._dtypes,
         )
-
-    @classmethod
-    def combine_dtypes(cls, list_of_dtypes, column_names):
-        """
-        Describe how data types should be combined when they do not match.
-
-        Parameters
-        ----------
-        list_of_dtypes : list
-            A list of pandas Series with the data types.
-        column_names : list
-            The names of the columns that the data types map to.
-
-        Returns
-        -------
-        pandas.Series
-             A pandas Series containing the finalized data types.
-        """
-        # Compute dtypes by getting collecting and combining all of the partitions. The
-        # reported dtypes from differing rows can be different based on the inference in
-        # the limited data seen by each worker. We use pandas to compute the exact dtype
-        # over the whole column for each column.
-        dtypes = (
-            pandas.concat(list_of_dtypes, axis=1)
-            .apply(lambda row: find_common_type(row.values), axis=1)
-            .squeeze(axis=0)
-        )
-        dtypes.index = column_names
-        return dtypes
 
     @lazy_metadata_decorator(apply_axis="both")
     def astype(self, col_dtypes):

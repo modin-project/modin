@@ -21,12 +21,13 @@ from packaging import version
 import secrets
 
 from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
+from typing import Optional
 
 
 class EnvironmentVariable(Parameter, type=str, abstract=True):
     """Base class for environment variables-based configuration."""
 
-    varname: str = None
+    varname: Optional[str] = None
 
     @classmethod
     def _get_raw_from_config(cls) -> str:
@@ -40,9 +41,13 @@ class EnvironmentVariable(Parameter, type=str, abstract=True):
 
         Raises
         ------
+        TypeError
+            If `varname` is None.
         KeyError
             If value is absent.
         """
+        if cls.varname is None:
+            raise TypeError("varname should not be None")
         return os.environ[cls.varname]
 
     @classmethod
@@ -73,7 +78,7 @@ class Engine(EnvironmentVariable, type=str):
     choices = ("Ray", "Dask", "Python", "Native")
 
     @classmethod
-    def _get_default(cls):
+    def _get_default(cls) -> str:
         """
         Get default value of the config.
 
@@ -170,7 +175,7 @@ class CpuCount(EnvironmentVariable, type=int):
     varname = "MODIN_CPUS"
 
     @classmethod
-    def _get_default(cls):
+    def _get_default(cls) -> int:
         """
         Get default value of the config.
 
@@ -208,7 +213,7 @@ class NPartitions(EnvironmentVariable, type=int):
     varname = "MODIN_NPARTITIONS"
 
     @classmethod
-    def _put(cls, value):
+    def _put(cls, value: int) -> None:
         """
         Put specific value if NPartitions wasn't set by a user yet.
 
@@ -226,7 +231,7 @@ class NPartitions(EnvironmentVariable, type=int):
             cls.put(value)
 
     @classmethod
-    def _get_default(cls):
+    def _get_default(cls) -> int:
         """
         Get default value of the config.
 
@@ -318,17 +323,17 @@ class ProgressBar(EnvironmentVariable, type=bool):
     default = False
 
     @classmethod
-    def enable(cls):
+    def enable(cls) -> None:
         """Enable ``ProgressBar`` feature."""
         cls.put(True)
 
     @classmethod
-    def disable(cls):
+    def disable(cls) -> None:
         """Disable ``ProgressBar`` feature."""
         cls.put(False)
 
     @classmethod
-    def put(cls, value):
+    def put(cls, value: bool) -> None:
         """
         Set ``ProgressBar`` value only if synchronous benchmarking is disabled.
 
@@ -349,7 +354,7 @@ class BenchmarkMode(EnvironmentVariable, type=bool):
     default = False
 
     @classmethod
-    def put(cls, value):
+    def put(cls, value: bool) -> None:
         """
         Set ``BenchmarkMode`` value only if progress bar feature is disabled.
 
@@ -371,17 +376,17 @@ class LogMode(EnvironmentVariable, type=ExactStr):
     default = "disable"
 
     @classmethod
-    def enable(cls):
+    def enable(cls) -> None:
         """Enable all logging levels."""
         cls.put("enable")
 
     @classmethod
-    def disable(cls):
+    def disable(cls) -> None:
         """Disable logging feature."""
         cls.put("disable")
 
     @classmethod
-    def enable_api_only(cls):
+    def enable_api_only(cls) -> None:
         """Enable API level logging."""
         cls.put("enable_api_only")
 
@@ -393,7 +398,7 @@ class LogMemoryInterval(EnvironmentVariable, type=int):
     default = 5
 
     @classmethod
-    def put(cls, value):
+    def put(cls, value: int) -> None:
         """
         Set ``LogMemoryInterval`` with extra checks.
 
@@ -427,7 +432,7 @@ class LogFileSize(EnvironmentVariable, type=int):
     default = 10
 
     @classmethod
-    def put(cls, value):
+    def put(cls, value: int) -> None:
         """
         Set ``LogFileSize`` with extra checks.
 
@@ -484,7 +489,7 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
     }
 
     @classmethod
-    def get(self):
+    def get(self) -> dict:
         """
         Get the resulted command-line options.
 
@@ -515,7 +520,7 @@ class MinPartitionSize(EnvironmentVariable, type=int):
     default = 32
 
     @classmethod
-    def put(cls, value):
+    def put(cls, value: int) -> None:
         """
         Set ``MinPartitionSize`` with extra checks.
 
@@ -529,7 +534,7 @@ class MinPartitionSize(EnvironmentVariable, type=int):
         super().put(value)
 
     @classmethod
-    def get(cls):
+    def get(cls) -> int:
         """
         Get ``MinPartitionSize`` with extra checks.
 
@@ -564,7 +569,7 @@ class ReadSqlEngine(EnvironmentVariable, type=str):
     choices = ("Pandas", "Connectorx")
 
 
-def _check_vars():
+def _check_vars() -> None:
     """
     Check validity of environment variables.
 

@@ -31,7 +31,7 @@ from modin.core.dataframe.algebra.default2pandas import (
     GroupByDefault,
 )
 from modin.error_message import ErrorMessage
-import modin.core.storage_formats.base.doc_utils as doc_utils
+from . import doc_utils
 from modin.logging import ClassLogger
 
 from pandas.core.dtypes.common import is_scalar
@@ -1392,6 +1392,46 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return DataFrameDefault.register(pandas.DataFrame.astype)(
             self, dtype=col_dtypes, **kwargs
+        )
+
+    def convert_dtypes(
+        self,
+        infer_objects: bool = True,
+        convert_string: bool = True,
+        convert_integer: bool = True,
+        convert_boolean: bool = True,
+        convert_floating: bool = True,
+    ):
+        """
+        Convert columns to best possible dtypes using dtypes supporting ``pd.NA``.
+
+        Parameters
+        ----------
+        infer_objects : bool, default: True
+            Whether object dtypes should be converted to the best possible types.
+        convert_string : bool, default: True
+            Whether object dtypes should be converted to ``pd.StringDtype()``.
+        convert_integer : bool, default: True
+            Whether, if possbile, conversion should be done to integer extension types.
+        convert_boolean : bool, default: True
+            Whether object dtypes should be converted to ``pd.BooleanDtype()``.
+        convert_floating : bool, default: True
+            Whether, if possible, conversion can be done to floating extension types.
+            If `convert_integer` is also True, preference will be give to integer dtypes
+            if the floats can be faithfully casted to integers.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler with updated dtypes.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.convert_dtypes)(
+            self,
+            infer_objects=infer_objects,
+            convert_string=convert_string,
+            convert_integer=convert_integer,
+            convert_boolean=convert_boolean,
+            convert_floating=convert_floating,
         )
 
     @property
