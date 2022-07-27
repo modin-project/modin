@@ -122,6 +122,10 @@ class FileDispatcher(ClassLogger):
     classes).
     """
 
+    BUFFER_UNSUPPORTED_MSG = (
+        "Reading from buffers or other non-path-like objects is not supported"
+    )
+
     frame_cls = None
     frame_partition_cls = None
     query_compiler_cls = None
@@ -341,3 +345,7 @@ class FileDispatcher(ClassLogger):
                 for i in range(len(partition_ids))
             ]
         )
+
+    @classmethod
+    def _file_not_found_msg(cls, filename: str):  # noqa: GL08
+        return f"No such file: '{filename}'"

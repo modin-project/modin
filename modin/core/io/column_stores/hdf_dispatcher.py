@@ -16,7 +16,6 @@
 import pandas
 
 from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
-from modin.error_message import ErrorMessage
 
 
 class HDFDispatcher(ColumnStoreDispatcher):  # pragma: no cover
@@ -69,11 +68,12 @@ class HDFDispatcher(ColumnStoreDispatcher):  # pragma: no cover
             Query compiler with imported data for further processing.
         """
         if cls._validate_hdf_format(path_or_buf=path_or_buf) is None:
-            ErrorMessage.default_to_pandas(
-                "File format seems to be `fixed`. For better distribution consider "
-                + "saving the file in `table` format. df.to_hdf(format=`table`)."
+            return cls.single_worker_read(
+                path_or_buf,
+                reason="File format seems to be `fixed`. For better distribution consider "
+                + "saving the file in `table` format. df.to_hdf(format=`table`).",
+                **kwargs
             )
-            return cls.single_worker_read(path_or_buf, **kwargs)
 
         columns = kwargs.pop("columns", None)
         # Have to do this because of Dask's keyword arguments
