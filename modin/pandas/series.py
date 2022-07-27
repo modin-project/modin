@@ -23,7 +23,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas._libs.lib import no_default
 from pandas._typing import IndexKeyFunc
-from typing import Union, Optional, Hashable
+from typing import Union, Optional, Hashable, TYPE_CHECKING
 import warnings
 
 from modin.utils import _inherit_docstrings, to_pandas, Engine
@@ -34,6 +34,10 @@ from .utils import from_pandas, is_scalar, _doc_binary_op
 from .accessor import CachedAccessor, SparseAccessor
 from . import _update_engine
 from modin._compat.pandas_api.classes import SeriesCompat
+
+
+if TYPE_CHECKING:
+    from .dataframe import DataFrame
 
 
 @_inherit_docstrings(

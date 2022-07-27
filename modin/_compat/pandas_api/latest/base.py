@@ -16,6 +16,7 @@
 import numpy as np
 import pandas
 from pandas.core.dtypes.common import is_datetime_or_timedelta_dtype
+from pandas.core.window.ewm import ExponentialMovingWindow
 from pandas.util._validators import validate_bool_kwarg, validate_ascending
 from pandas._libs.lib import no_default
 from pandas._typing import (
