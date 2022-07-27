@@ -275,9 +275,9 @@ class FileDispatcher(ClassLogger):
                     new_storage_options = {}
 
                 fs, _ = fsspec.core.url_to_fs(file_path, **new_storage_options)
-                exists = False
+                is_exist = False
                 try:
-                    exists = fs.exists(file_path)
+                    is_exist = fs.exists(file_path)
                 except (
                     NoCredentialsError,
                     PermissionError,
@@ -288,7 +288,7 @@ class FileDispatcher(ClassLogger):
                 fs, _ = fsspec.core.url_to_fs(
                     file_path, anon=True, **new_storage_options
                 )
-                return exists or fs.exists(file_path)
+                return is_exist or fs.exists(file_path)
         return os.path.exists(file_path)
 
     @classmethod

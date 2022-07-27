@@ -330,7 +330,7 @@ class CSVGlobDispatcher(CSVDispatcher):
             True if the path is valid.
         """
         if isinstance(file_path, str):
-            if is_fsspec_url(file_path) or is_url(file_path):
+            if is_fsspec_url(file_path):
                 if file_path.startswith("S"):
                     file_path = f"s{file_path[1:]}"
 
@@ -347,9 +347,9 @@ class CSVGlobDispatcher(CSVDispatcher):
                     new_storage_options = {}
 
                 fs, path = fsspec.core.url_to_fs(file_path, **new_storage_options)
-                exists = False
+                is_exist = False
                 try:
-                    exists = fs.exists(path)
+                    is_exist = fs.exists(path)
                 except (
                     NoCredentialsError,
                     PermissionError,
@@ -360,7 +360,13 @@ class CSVGlobDispatcher(CSVDispatcher):
                 fs, path = fsspec.core.url_to_fs(
                     file_path, anon=True, **new_storage_options
                 )
-                return exists or len(fs.glob(path)) > 0
+                return is_exist or len(fs.glob(path)) > 0
+
+            if is_url(file_path):
+                raise NotImplementedError(
+                    "`read_csv_glob` supports only s3-like paths."
+                )
+
         return len(glob.glob(file_path)) > 0
 
     @classmethod
@@ -391,8 +397,8 @@ class CSVGlobDispatcher(CSVDispatcher):
             def get_file_path(fs_handle) -> List[str]:
                 file_paths = fs_handle.glob(file_path)
                 if len(file_paths) == 0 and not fs_handle.exists(file_path):
-                    file_paths = [file_path]
-                s3_addresses = ["{}{}".format("s3://", path) for path in file_paths]
+                    return [file_path]
+                s3_addresses = [f"s3://{path}" for path in file_paths]
                 return s3_addresses
 
             fs, _ = fsspec.core.url_to_fs(file_path)
