@@ -45,6 +45,7 @@ import shutil
 import sqlalchemy as sa
 import csv
 import tempfile
+from unittest import mock
 
 from .utils import (
     check_file_leaks,
@@ -191,18 +192,6 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
         assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
     finally:
         teardown_test_files([unique_filename_modin, unique_filename_pandas])
-
-
-def patch_expanduser(input_path_to_fake, fake_expansion, monkeypatch):
-    original_expanduser = os.path.expanduser
-
-    def patched_expanduser(path):
-        if path == input_path_to_fake:
-            return fake_expansion
-        else:
-            return original_expanduser(path)
-
-    monkeypatch.setattr(os.path, "expanduser", patched_expanduser)
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
@@ -1311,13 +1300,16 @@ class TestCsv:
 # path relative to user home.
 # TODO(https://github.com/modin-project/modin/issues/3655): Get rid of this
 # commment once we turn all default to pandas messages into errors.
-def test_read_csv_relative_to_user_home(monkeypatch, make_csv_file):
+def test_read_csv_relative_to_user_home(make_csv_file):
     unique_filename = get_unique_filename()
 
-    patch_expanduser("~/testfile.csv", unique_filename, monkeypatch)
-
     make_csv_file(unique_filename)
-    eval_io(fn_name="read_csv", filepath_or_buffer="~/testfile.csv")
+
+    with mock.patch.dict(os.environ, {"HOME": os.path.dirname(unique_filename)}):
+        eval_io(
+            fn_name="read_csv",
+            filepath_or_buffer=f"~/{os.path.basename(unique_filename)}",
+        )
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
@@ -1587,11 +1579,11 @@ class TestParquet:
 # path relative to user home.
 # TODO(https://github.com/modin-project/modin/issues/3655): Get rid of this
 # commment once we turn all default to pandas messages into errors.
-def test_read_parquet_relative_to_user_home(monkeypatch, make_parquet_file):
+def test_read_parquet_relative_to_user_home(make_parquet_file):
     unique_filename = get_unique_filename(extension="parquet")
     make_parquet_file(filename=unique_filename)
-    patch_expanduser("~/testfile.parquet", unique_filename, monkeypatch)
-    eval_io(fn_name="read_parquet", path="~/testfile.parquet")
+    with mock.patch.dict(os.environ, {"HOME": os.path.dirname(unique_filename)}):
+        eval_io(fn_name="read_parquet", path=f"~/{os.path.basename(unique_filename)}")
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
