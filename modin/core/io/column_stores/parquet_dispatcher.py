@@ -83,11 +83,16 @@ class ParquetDispatcher(ColumnStoreDispatcher):
 
         Returns
         -------
-        np.ndarray
+        List
             Array with references to the task deploy result for each partition.
         """
         from pyarrow.parquet import ParquetFile
         from modin.core.storage_formats.pandas.parsers import ParquetFileToRead
+
+        # If we don't have any columns to read, we should just return an empty
+        # set of references.
+        if len(col_partitions) == 0:
+            return []
 
         storage_options = storage_options or {}
 
@@ -239,12 +244,14 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             elif column["name"] is not None:
                 column_names_to_read.append(column["name"])
 
-        if range_index:
+        # For the second check, let us consider the case where we have an empty dataframe,
+        # that has a valid index.
+        if range_index or (len(partition_ids) == 0 and len(column_names_to_read) != 0):
             complete_index = (
                 read_table(path, columns=column_names_to_read).to_pandas().index
             )
         # Empty DataFrame case
-        elif len(partition_ids[0]) == 0:
+        elif len(partition_ids) == 0:
             return [], False
         else:
             index_ids = [part_id[0][1] for part_id in partition_ids if len(part_id) > 0]
@@ -279,7 +286,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         partition_ids = cls.call_deploy(path, col_partitions, **kwargs)
         index, needs_index_sync = cls.build_index(path, partition_ids, index_columns)
         remote_parts = cls.build_partition(partition_ids, column_widths)
-        if len(partition_ids) > 0 and len(partition_ids[0]) > 0:
+        if len(partition_ids) > 0:
             row_lengths = [part.length() for part in remote_parts.T[0]]
         else:
             row_lengths = None
@@ -363,6 +370,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             if dataset.schema.pandas_metadata
             else []
         )
+        # If we have columns as None, then we default to reading in all the columns
         column_names = dataset.schema.names if not columns else columns
         columns = [
             c
