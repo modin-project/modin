@@ -1752,8 +1752,6 @@ class PandasDataframe(ClassLogger):
         if axis == Axis.ROW_WISE and not (
             len(columns) == 1 and columns[0] == "__index__"
         ):
-            if not isinstance(ascending, list):
-                ascending = [ascending]
             # If this df is empty, we don't want to try and shuffle or sort.
             if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
                 return self.copy()

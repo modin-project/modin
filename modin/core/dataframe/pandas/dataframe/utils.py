@@ -15,7 +15,7 @@
 
 import numpy as np
 import pandas
-from typing import Callable
+from typing import Callable, Union
 
 from modin.config import NPartitions
 
@@ -24,7 +24,7 @@ def build_sort_functions(
     modin_frame: "PandasDataframe",
     columns: list,
     method: str,
-    ascending: list,
+    ascending: Union[list, bool],
     **kwargs: dict
 ) -> "dict[str, Callable]":
     """
@@ -38,8 +38,8 @@ def build_sort_functions(
         The list of column names to sort by.
     method : str
         The method to use for picking quantiles.
-    ascending : list[bool]
-        The list of ascending flags for each column.
+    ascending : list[bool] or bool
+        The ascending flag (or a list of ascending flags for each column).
     **kwargs : dict
         Additional keyword arguments.
 
@@ -188,7 +188,7 @@ def split_partitions_using_pivots_for_sort(
     df: pandas.DataFrame,
     columns: list,
     pivots: np.ndarray,
-    ascending: list,
+    ascending: Union[list, bool],
     **kwargs: dict
 ) -> "tuple[pandas.DataFrame]":
     """
@@ -209,8 +209,8 @@ def split_partitions_using_pivots_for_sort(
         The columns to sort by.
     pivots : np.ndarray
         The quantiles to use to split the data.
-    ascending : list[bool]
-        The list of ascending flags for each column to sort by.
+    ascending : list[bool] or bool
+        The ascending flag (or a list of ascending flags for each column).
     **kwargs : dict
         Additional keyword arguments.
 
@@ -219,7 +219,9 @@ def split_partitions_using_pivots_for_sort(
     list[pandas.DataFrame]
         A list of the splits from this partition.
     """
-    if not ascending[0] and modin_frame.dtypes[columns[0]] != object:
+    if isinstance(ascending, list):
+        ascending = ascending[0]
+    if not ascending and modin_frame.dtypes[columns[0]] != object:
         pivots = pivots[::-1]
     na_rows = df[df[columns[0]].isna()]
     if modin_frame.dtypes[columns[0]] != object:
@@ -228,7 +230,7 @@ def split_partitions_using_pivots_for_sort(
         groupby_col = (
             np.searchsorted(pivots, df[columns[0]].squeeze(), side="right") - 1
         )
-        if not ascending[0]:
+        if not ascending:
             groupby_col = (len(pivots) - 1) - groupby_col
     grouped = df.groupby(groupby_col)
     groups = [
