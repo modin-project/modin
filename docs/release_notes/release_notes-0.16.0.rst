@@ -32,6 +32,7 @@ Key Features and Updates
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
   * PERF-#4325: Improve perf of multi-column assignment in `__setitem__` when no new column names are assigning (#4455)
   * PERF-#3844: Improve perf of `drop` operation (#4694)
+  * PERF-#4727: Improve perf of `concat` operation (#4728)
   * PERF-#4705: Improve perf of arithmetic operations between `Series` objects with shared `.index` (#4689)
   * PERF-#4703: Improve performance in accessing `ser.cat.categories`, `ser.cat.ordered`, and `ser.__array_priority__` (#4704)
   * PERF-#4305: Parallelize `read_parquet` over row groups (#4700)

@@ -2581,6 +2581,7 @@ class PandasDataframe(ClassLogger):
             New Modin DataFrame.
         """
         axis = Axis(axis)
+        new_widths = None
         # Fast path for equivalent columns and partitioning
         if (
             axis == Axis.ROW_WISE
@@ -2600,6 +2601,11 @@ class PandasDataframe(ClassLogger):
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
             new_lengths = self._row_lengths_cache
+            other_widths = [width for o in others for width in o._column_widths_cache]
+            if self._column_widths_cache is not None and all(
+                width is not None for width in other_widths
+            ):
+                new_widths = self._column_widths_cache + other_widths
         else:
             (
                 left_parts,
@@ -2646,15 +2652,15 @@ class PandasDataframe(ClassLogger):
             # frame. Typically, if we know the width for any partition in a
             # column, we know the width for the first partition in the column.
             # So just check the widths of the first row of partitions.
-            new_widths = []
-            if new_partitions.size > 0:
-                for part in new_partitions[0]:
-                    if part._width_cache is not None:
-                        new_widths.append(part.width())
-                    else:
-                        new_widths = None
-                        break
-
+            if not new_widths:
+                new_widths = []
+                if new_partitions.size > 0:
+                    for part in new_partitions[0]:
+                        if part._width_cache is not None:
+                            new_widths.append(part.width())
+                        else:
+                            new_widths = None
+                            break
         return self.__constructor__(
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
