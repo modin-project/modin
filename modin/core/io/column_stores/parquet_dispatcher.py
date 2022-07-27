@@ -77,7 +77,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             List of arrays with columns names that should be read
             by each partition.
         storage_options : dict
-            Paramters for specific storage engine.
+            Parameters for specific storage engine.
         **kwargs : dict
             Parameters of deploying read_* function.
 
@@ -203,7 +203,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         )
 
     @classmethod
-    def build_index(cls, path, partition_ids, storage_options):
+    def build_index(cls, path, partition_ids, index_columns):
         """
         Compute index and its split sizes of resulting Modin DataFrame.
 
@@ -213,8 +213,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             Path to dataset.
         partition_ids : list
             Array with references to the partitions data.
-        storage_options : dict
-            Paramters for specific storage engine.
+        index_columns : list
+            List of index columns specified by pandas metadata.
 
         Returns
         -------
@@ -225,20 +225,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             index because there's no index column, or at least one
             index column is a RangeIndex.
         """
-        from pyarrow.parquet import ParquetDataset, read_table
+        from pyarrow.parquet import read_table
 
-        # url_to_fs returns the fs and path formatted for the specific fs
-        fs, fs_path = (
-            fsspec.core.url_to_fs(path, **storage_options)
-            if is_fsspec_url(path)
-            else (None, path)
-        )
-        pandas_metadata = ParquetDataset(
-            fs_path, filesystem=fs, use_legacy_dataset=False
-        ).schema.pandas_metadata
-        index_columns = (
-            [] if not pandas_metadata else pandas_metadata.get("index_columns", [])
-        )
         range_index = True
         column_names_to_read = []
         for column in index_columns:
@@ -267,7 +255,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         )
 
     @classmethod
-    def build_query_compiler(cls, path, columns, **kwargs):
+    def build_query_compiler(cls, path, columns, index_columns, **kwargs):
         """
         Build query compiler from deployed tasks outputs.
 
@@ -277,6 +265,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             Path to the file to read.
         columns : list
             List of columns that should be read from file.
+        index_columns : list
+            List of index columns specified by pandas metadata.
         **kwargs : dict
             Parameters of deploying read_* function.
 
@@ -287,9 +277,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         """
         col_partitions, column_widths = cls.build_columns(columns)
         partition_ids = cls.call_deploy(path, col_partitions, **kwargs)
-        index, needs_index_sync = cls.build_index(
-            path, partition_ids, kwargs["storage_options"]
-        )
+        index, needs_index_sync = cls.build_index(path, partition_ids, index_columns)
         remote_parts = cls.build_partition(partition_ids, column_widths)
         if len(partition_ids) > 0 and len(partition_ids[0]) > 0:
             row_lengths = [part.length() for part in remote_parts.T[0]]
@@ -363,20 +351,23 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     reason="Mixed partitioning columns in Parquet",
                     **kwargs
                 )
+        # url_to_fs returns the fs and path formatted for the specific fs
+        fs, fs_path = (
+            fsspec.core.url_to_fs(path, **(kwargs.get("storage_options") or {}))
+            if is_fsspec_url(path)
+            else (None, path)
+        )
+        dataset = ParquetDataset(fs_path, filesystem=fs, use_legacy_dataset=False)
+        index_columns = (
+            dataset.schema.pandas_metadata.get("index_columns", [])
+            if dataset.schema.pandas_metadata
+            else []
+        )
+        column_names = dataset.schema.names if not columns else columns
+        columns = [
+            c
+            for c in column_names
+            if c not in index_columns and not PQ_INDEX_REGEX.match(c)
+        ]
 
-        if not columns:
-            # url_to_fs returns the fs and path formatted for the specific fs
-            fs, fs_path = (
-                fsspec.core.url_to_fs(path, **(kwargs.get("storage_options") or {}))
-                if is_fsspec_url(path)
-                else (None, path)
-            )
-
-            dataset = ParquetDataset(fs_path, filesystem=fs, use_legacy_dataset=False)
-            column_names = dataset.schema.names
-
-            if dataset.schema.pandas_metadata is not None:
-                index_columns = dataset.schema.pandas_metadata.get("index_columns", [])
-                column_names = [c for c in column_names if c not in index_columns]
-            columns = [name for name in column_names if not PQ_INDEX_REGEX.match(name)]
-        return cls.build_query_compiler(path, columns, **kwargs)
+        return cls.build_query_compiler(path, columns, index_columns, **kwargs)
