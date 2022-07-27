@@ -18,6 +18,24 @@ import numpy as np
 import pandas
 
 
+class NullContextManager(object):  # noqa: PR01
+    """
+    Dummy context manager that tries to mimic `nullcontext` for older Python versions.
+
+    Python 3.6 currently does not support `nullcontext` which is used in parsers.py.
+    This class tries provide some backwards compatibility.
+    """
+
+    def __init__(self, resource=None):
+        self.resource = resource
+
+    def __enter__(self):  # noqa: GL08
+        return self.resource
+
+    def __exit__(self, *args):  # noqa: GL08
+        pass
+
+
 def compute_chunksize(axis_len, num_splits, min_block_size=None):
     """
     Compute the number of elements (rows/columns) to include in each partition.

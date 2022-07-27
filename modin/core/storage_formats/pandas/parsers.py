@@ -40,7 +40,6 @@ Data parsing mechanism differs depending on the data format type:
 """
 
 from collections import OrderedDict
-from contextlib import nullcontext
 from io import BytesIO, TextIOWrapper, IOBase
 import fsspec
 import numpy as np
@@ -50,11 +49,15 @@ from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
 from pandas.util._decorators import doc
 from typing import Any, NamedTuple
+import sys
 import warnings
 
 from modin.core.io.file_dispatcher import OpenFile
 from modin.db_conn import ModinDatabaseConnection
-from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
+from modin.core.storage_formats.pandas.utils import (
+    split_result_of_axis_func_pandas,
+    NullContextManager,
+)
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
 
@@ -681,7 +684,11 @@ storage_options : dict
 
         for file_for_parser in files_for_parser:
             if isinstance(file_for_parser.path, IOBase):
-                context = nullcontext(file_for_parser.path)
+                if sys.version_info < (3, 7):
+                    context = NullContextManager(file_for_parser.path)
+                else:
+                    from contextlib import nullcontext
+                    context = nullcontext(file_for_parser.path)
             else:
                 context = fsspec.open(file_for_parser.path, **storage_options)
             with context as f:
