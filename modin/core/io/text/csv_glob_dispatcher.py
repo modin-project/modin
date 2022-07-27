@@ -389,11 +389,9 @@ class CSVGlobDispatcher(CSVDispatcher):
             )
 
             def get_file_path(fs_handle) -> List[str]:
-                file_paths = (
-                    fs_handle.glob(file_path)
-                    if fs_handle.exists(file_path)
-                    else [file_path]
-                )
+                file_paths = fs_handle.glob(file_path)
+                if len(file_paths) == 0 and not fs_handle.exists(file_path):
+                    file_paths = [file_path]
                 s3_addresses = ["{}{}".format("s3://", path) for path in file_paths]
                 return s3_addresses
 
