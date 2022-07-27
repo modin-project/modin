@@ -16,9 +16,7 @@
 import os
 
 import io
-import fsspec
-import fsspec.core
-from fsspec.core import split_protocol
+from fsspec.core import split_protocol, url_to_fs
 from fsspec.registry import get_filesystem_class
 import numpy as np
 from pandas.io.common import is_fsspec_url
@@ -360,7 +358,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                 )
         # url_to_fs returns the fs and path formatted for the specific fs
         fs, fs_path = (
-            fsspec.core.url_to_fs(path, **(kwargs.get("storage_options") or {}))
+            url_to_fs(path, **(kwargs.get("storage_options") or {}))
             if is_fsspec_url(path)
             else (None, path)
         )

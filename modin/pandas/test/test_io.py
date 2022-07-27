@@ -1447,7 +1447,6 @@ class TestParquet:
                 # to be apart of the pandas 1.5.0 release: https://github.com/pandas-dev/pandas/pull/46034
                 # "idx_interval": pandas.interval_range(start=0, end=2000),
                 "idx_datetime": pandas.date_range(start="1/1/2018", periods=2000),
-                "idx_timedelta": pandas.timedelta_range(start="1 day", periods=2000),
                 "idx_periodrange": pandas.period_range(
                     start="2017-01-01", periods=2000
                 ),
@@ -1456,6 +1455,13 @@ class TestParquet:
                 "C": ["c"] * 2000,
             }
         )
+        # Older version of pyarrow do not support Arrow to Parquet
+        # schema conversion for duration[ns]
+        if sys.version_info >= (3, 7):
+            pandas_df["idx_timedelta"] = pandas.timedelta_range(
+                start="1 day", periods=2000
+            )
+
         try:
             for col in pandas_df.columns:
                 if col.startswith("idx"):

@@ -688,6 +688,7 @@ storage_options : dict
                     context = NullContextManager(file_for_parser.path)
                 else:
                     from contextlib import nullcontext
+
                     context = nullcontext(file_for_parser.path)
             else:
                 context = fsspec.open(file_for_parser.path, **storage_options)
