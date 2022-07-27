@@ -1306,10 +1306,11 @@ class TestCsv:
         eval_to_file(modin_df, pandas_df, "to_csv", "csv")
 
 
-# Check that we are NOT defaulting to pandas for a path relative to user home.
+# Leave this test apart from the test classes, which skip the default to pandas
+# warning check. We want to make sure we are NOT defaulting to pandas for a
+# path relative to user home.
 # TODO(https://github.com/modin-project/modin/issues/3655): Get rid of this
-# check once we turn all default to pandas messages into errors.
-@pytest.mark.filterwarnings("error:.*defaulting to pandas.*:UserWarning")
+# commment once we turn all default to pandas messages into errors.
 def test_read_csv_relative_to_user_home(monkeypatch, make_csv_file):
     unique_filename = get_unique_filename()
 
@@ -1581,7 +1582,11 @@ class TestParquet:
             df_equals(test_df, read_df)
 
 
-@pytest.mark.filterwarnings("error:.*defaulting to pandas.*:UserWarning")
+# Leave this test apart from the test classes, which skip the default to pandas
+# warning check. We want to make sure we are NOT defaulting to pandas for a
+# path relative to user home.
+# TODO(https://github.com/modin-project/modin/issues/3655): Get rid of this
+# commment once we turn all default to pandas messages into errors.
 def test_read_parquet_relative_to_user_home(monkeypatch, make_parquet_file):
     unique_filename = get_unique_filename(extension="parquet")
     make_parquet_file(filename=unique_filename)
