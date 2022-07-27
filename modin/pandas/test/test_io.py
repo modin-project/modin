@@ -197,7 +197,6 @@ def patch_expanduser(input_path_to_fake, fake_expansion, monkeypatch):
     original_expanduser = os.path.expanduser
 
     def patched_expanduser(path):
-        print(f"calling patched expanduser with path {path}")
         if path == input_path_to_fake:
             return fake_expansion
         else:
