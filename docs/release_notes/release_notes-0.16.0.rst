@@ -42,6 +42,7 @@ Key Features and Updates
   * REFACTOR-#4708: Delete combine dtypes (#4709)
   * REFACTOR-#4629: Add type annotations to modin/config (#4685)
   * REFACTOR-#4717: Improve PartitionMgr.get_indices() usage (#4718)
+  * REFACTOR-#4722: Stop suppressing undefined name lint (#4723)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements
