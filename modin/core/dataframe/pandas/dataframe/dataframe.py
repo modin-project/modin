@@ -1856,8 +1856,8 @@ class PandasDataframe(ClassLogger):
     def window(
         self,
         axis: Union[int, Axis],
-        reduce_fn: Callable,
         window_size: int,
+        reduce_fn: Callable,
         result_schema: Optional[Dict[Hashable, type]] = None,
     ) -> "PandasDataframe":
         """
@@ -1889,14 +1889,23 @@ class PandasDataframe(ClassLogger):
         
         axis = Axis(axis)
 
+        #print("INSIDE WINDOW FUNCTION")
+
+        print(reduce_fn)
+        print(axis)
+        print(window_size)
+        print(result_schema)
+
         def window_function_complete(virtual_partition):
+            #print("INSIDE WINDOW FUNCTION")
             virtual_partition_copy = virtual_partition.copy()
-            window_result = virtual_partition_copy.rolling(window=window_size, axis=axis.value).sum() # hardcode a reduction function for now
+            window_result = reduce_fn(virtual_partition_copy)#virtual_partition_copy.rolling(window=window_size, axis=axis.value).sum() # hardcode a reduction function for now
             return window_result
 
         def window_function_partition(virtual_partition):
+            #print("INSIDE WINDOW FUNCTION")
             virtual_partition_copy = virtual_partition.copy()
-            window_result = virtual_partition_copy.rolling(window=window_size, axis=axis.value).sum() # hardcode a reduction function for now
+            window_result = reduce_fn(virtual_partition_copy)#virtual_partition_copy.rolling(window=window_size, axis=axis.value).sum() # hardcode a reduction function for now
             return window_result.iloc[:, window_size - 1 : ] if axis == Axis.COL_WISE else window_result.iloc[window_size - 1: , :]
 
         num_parts = len(self._partitions[0]) if axis == Axis.COL_WISE else len(self._partitions)
@@ -1946,6 +1955,9 @@ class PandasDataframe(ClassLogger):
             else:
                 reduce_result = [virtual_partition.apply(window_function_partition) for virtual_partition in virtual_partitions]   
 
+            for result in reduce_result:
+                print(result.to_pandas())
+                
             if axis == Axis.ROW_WISE:
                 results.append(reduce_result)
             else:
@@ -1959,8 +1971,8 @@ class PandasDataframe(ClassLogger):
             results,
             self.index,
             self.columns,
-            self._row_lengths,
-            self._column_widths,
+            None,
+            None,
             result_schema
         )                    
 

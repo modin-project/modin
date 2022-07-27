@@ -1160,16 +1160,27 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def resample_quantile(self, resample_kwargs, q, **kwargs):
         return self._resample_func(resample_kwargs, "quantile", q=q, **kwargs)
 
+
     window_mean = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).mean(*args, **kwargs)
         )
     )
+
+    """
+    def window_sum(self, *args, **kwargs):
+        return self._modin_frame.window(
+            *args, **kwargs,
+            reduce_fn = lambda df, rolling_args, *args, **kwargs: df.rolling(*rolling_args).sum(*args, **kwargs)
+        )
+    """
+
     window_sum = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).sum(*args, **kwargs)
         )
     )
+
     window_var = Fold.register(
         lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
@@ -1183,11 +1194,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
     rolling_count = Fold.register(
         lambda df, rolling_args: pandas.DataFrame(df.rolling(*rolling_args).count())
     )
+
+    def rolling_sum(self, axis, window, rolling_args, *args, **kwargs):
+        return self.__constructor__(self._modin_frame.window(
+            axis=axis, window_size=window, 
+            reduce_fn=lambda df: df.rolling(*rolling_args).sum(*args, **kwargs))
+        )
+
+    """
     rolling_sum = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).sum(*args, **kwargs)
         )
     )
+    """
+
     rolling_mean = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).mean(*args, **kwargs)
