@@ -63,7 +63,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         return filesystem, [filesystem.unstrip_protocol(path)]
 
     @classmethod
-    def call_deploy(cls, fname, col_partitions, storage_options, **kwargs):
+    def call_deploy(cls, fname, col_partitions, **kwargs):
         """
         Deploy remote tasks to the workers with passed parameters.
 
@@ -74,8 +74,6 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         col_partitions : list
             List of arrays with columns names that should be read
             by each partition.
-        storage_options : dict
-            Parameters for specific storage engine.
         **kwargs : dict
             Parameters of deploying read_* function.
 
@@ -92,7 +90,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         if len(col_partitions) == 0:
             return []
 
-        storage_options = storage_options or {}
+        storage_options = kwargs.pop("storage_options", {}) or {}
 
         filesystem, parquet_files = cls.get_fsspec_files(fname, storage_options)
 
