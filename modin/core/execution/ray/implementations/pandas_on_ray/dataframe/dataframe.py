@@ -13,6 +13,8 @@
 
 """Module houses class that implements ``PandasDataframe`` using Ray."""
 
+import ray
+
 from ..partitioning.partition_manager import PandasOnRayDataframePartitionManager
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
