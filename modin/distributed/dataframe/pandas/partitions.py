@@ -51,10 +51,10 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
         )
 
     modin_frame = api_layer_object._query_compiler._modin_frame
+    modin_frame._propagate_index_objs(None)
     if axis is None:
 
         def _unwrap_partitions():
-            modin_frame._propagate_index_objs(None)
             [p.drain_call_queue() for p in modin_frame._partitions.flatten()]
             if get_ip:
                 return [
@@ -79,7 +79,6 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
             f"Do not know how to unwrap '{actual_engine}' underlying partitions"
         )
     else:
-        modin_frame._propagate_index_objs(None)
         partitions = modin_frame._partition_mgr_cls.axis_partition(
             modin_frame._partitions, axis ^ 1
         )
