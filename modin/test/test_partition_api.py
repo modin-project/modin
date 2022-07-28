@@ -76,10 +76,7 @@ def test_unwrap_partitions(axis, reverse_index, reverse_columns):
     expected_partitions = expected_df._query_compiler._modin_frame._partitions
     if axis is None:
         actual_partitions = np.array(unwrap_partitions(df, axis=axis))
-        assert (
-            expected_partitions.shape[0] == actual_partitions.shape[0]
-            and expected_partitions.shape[1] == expected_partitions.shape[1]
-        )
+        expected_partitions.shape == expected_partitions.shape
         for row_idx in range(expected_partitions.shape[0]):
             for col_idx in range(expected_partitions.shape[1]):
                 df_equals(
