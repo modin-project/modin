@@ -222,7 +222,7 @@ class PandasDataframe(ClassLogger):
                 any(val < 0 for val in column_widths),
                 "Column widths cannot be negative: {}".format(column_widths),
             )
-        self._filter_empties(compute=False)
+        self._filter_empties(compute_lengths=False)
 
     @property
     def _row_lengths(self):
@@ -436,7 +436,7 @@ class PandasDataframe(ClassLogger):
         -------
         pandas.Index
             Labels for the specified `axis`.
-        tuple of int
+        List of int
             Size of partitions alongsize specified `axis`.
         """
         if partitions is None:
@@ -444,16 +444,16 @@ class PandasDataframe(ClassLogger):
         new_index, internal_idx = self._partition_mgr_cls.get_indices(axis, partitions)
         return new_index, list(map(len, internal_idx))
 
-    def _filter_empties(self, compute=True):
+    def _filter_empties(self, compute_lengths=True):
         """
         Remove empty partitions from `self._partitions` to avoid triggering excess computation.
 
         Parameters
         ----------
-        compute : bool, default: True
+        compute_lengths : bool, default: True
             Trigger the computations for partition sizes if they're not done already.
         """
-        if not compute and (
+        if not compute_lengths and (
             self._index_cache is None
             or self._columns_cache is None
             or self._row_lengths_cache is None
