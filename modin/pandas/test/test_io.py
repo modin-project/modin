@@ -13,6 +13,7 @@
 
 import pytest
 import numpy as np
+from packaging import version
 import pandas
 from pandas.errors import ParserWarning
 import pandas._libs.lib as lib
@@ -203,17 +204,17 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
 
 @pytest.fixture
 def make_parquet_dir():
-    path: str = ""
-
-    def _make_parquet_dir(
-        dfs_by_filename: Dict[str, pandas.DataFrame], row_group_size: int
-    ):
-        for filename, df in dfs_by_filename.items():
-            df.to_parquet(os.path.join(path, filename), row_group_size=row_group_size)
-        return path
-
     with tempfile.TemporaryDirectory() as tmp_dir:
-        path = tmp_dir
+
+        def _make_parquet_dir(
+            dfs_by_filename: Dict[str, pandas.DataFrame], row_group_size: int
+        ):
+            for filename, df in dfs_by_filename.items():
+                df.to_parquet(
+                    os.path.join(tmp_dir, filename), row_group_size=row_group_size
+                )
+            return tmp_dir
+
         yield _make_parquet_dir
 
 
@@ -1455,9 +1456,10 @@ class TestParquet:
                 "C": ["c"] * 2000,
             }
         )
-        # Older version of pyarrow do not support Arrow to Parquet
+        # Older versions of pyarrow do not support Arrow to Parquet
         # schema conversion for duration[ns]
-        if sys.version_info >= (3, 7):
+        # https://issues.apache.org/jira/browse/ARROW-6780
+        if version.parse(pa.__version__) >= version.parse("8.0.0"):
             pandas_df["idx_timedelta"] = pandas.timedelta_range(
                 start="1 day", periods=2000
             )

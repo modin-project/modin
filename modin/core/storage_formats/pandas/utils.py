@@ -14,26 +14,19 @@
 """Contains utility functions for frame partitioning."""
 
 from modin.config import MinPartitionSize
+import contextlib
 import numpy as np
 import pandas
 
 
-class NullContextManager(object):  # noqa: PR01
+@contextlib.contextmanager
+def _nullcontext(dummy_value=None):  # noqa: PR01
     """
-    Dummy context manager that tries to mimic `nullcontext` for older Python versions.
+    Act as a replacement for contextlib.nullcontext missing in older Python.
 
-    Python 3.6 currently does not support `nullcontext` which is used in parsers.py.
-    This class tries provide some backwards compatibility.
+    contextlib.nullcontext is only available from Python 3.7.
     """
-
-    def __init__(self, resource=None):
-        self.resource = resource
-
-    def __enter__(self):  # noqa: GL08
-        return self.resource
-
-    def __exit__(self, *args):  # noqa: GL08
-        pass
+    yield dummy_value
 
 
 def compute_chunksize(axis_len, num_splits, min_block_size=None):
