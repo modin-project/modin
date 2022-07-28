@@ -669,13 +669,13 @@ class PandasParquetParser(PandasParser):
         _doc_parse_func,
         parameters="""files_for_parser : list
     List of files to be read.
-storage_options : dict
-    Parameters for specific storage engine.""",
+""",
     )
-    def parse(files_for_parser, storage_options, **kwargs):
+    def parse(files_for_parser, **kwargs):
         from pyarrow.parquet import ParquetFile
 
         columns = kwargs.get("columns", None)
+        storage_options = kwargs.pop("storage_options", {}) or {}
 
         chunks = []
         # `single_worker_read` just passes in a string path
