@@ -16,10 +16,12 @@
 import os
 
 import io
+import fsspec
 from fsspec.core import split_protocol, url_to_fs
 from fsspec.registry import get_filesystem_class
 import numpy as np
 from pandas.io.common import is_fsspec_url
+from packaging import version
 
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.config import NPartitions
@@ -51,16 +53,34 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         files: list
             List of files from path.
         """
+        # Older versions of fsspec doesn't support unstrip_protocol(). It
+        # was only added relatively recently:
+        # https://github.com/fsspec/filesystem_spec/pull/828
+        def _unstrip_protocol(protocol, path):
+            protos = (protocol,) if isinstance(protocol, str) else protocol
+            for protocol in protos:
+                if path.startswith(f"{protocol}://"):
+                    return path
+            return f"{protos[0]}://{path}"
+
         if isinstance(path, io.IOBase):
             return path.fs, [path]
         protocol, path = split_protocol(path)
         filesystem = get_filesystem_class(protocol)(**storage_options)
         if filesystem.stat(path)["type"] == "directory":
-            return filesystem, [
-                filesystem.unstrip_protocol(path)
-                for path in sorted(filesystem.find(path))
-            ]
-        return filesystem, [filesystem.unstrip_protocol(path)]
+            files = []
+            for path in sorted(filesystem.find(path)):
+                if version.parse(fsspec.__version__) < version.parse("2022.5.0"):
+                    files.append(_unstrip_protocol(filesystem.protocol, path))
+                else:
+                    files.append(filesystem.unstrip_protocol(path))
+            return filesystem, files
+
+        return filesystem, [
+            _unstrip_protocol(filesystem.protocol, path)
+            if version.parse(fsspec.__version__) < version.parse("2022.5.0")
+            else filesystem.unstrip_protocol(path)
+        ]
 
     @classmethod
     def call_deploy(cls, fname, col_partitions, **kwargs):
