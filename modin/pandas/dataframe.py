@@ -2367,7 +2367,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             # `__getattr__` will return the columns not present in `dir(self)`, so we do not need
             # to manually track this state in the `dir`.
             return
-        elif is_list_like(value):
+        elif is_list_like(value) and key not in ["index", "columns"]:
             warnings.warn(
                 "Modin doesn't allow columns to be created via a new attribute name - see "
                 + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
