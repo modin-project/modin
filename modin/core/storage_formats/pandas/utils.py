@@ -24,6 +24,8 @@ def _nullcontext(dummy_value=None):  # noqa: PR01
     """
     Act as a replacement for contextlib.nullcontext missing in older Python.
 
+    Notes
+    -----
     contextlib.nullcontext is only available from Python 3.7.
     """
     yield dummy_value

@@ -208,6 +208,12 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         np.ndarray
             array with shape equals to the shape of `partition_ids` and
             filed with partition objects.
+
+        Notes
+        -----
+        The second level of partitions_ids contains a list of object references
+        for each read call:
+        partition_ids[i][j] -> [ObjectRef(df), ObjectRef(df.index), ObjectRef(len(df))].
         """
         return np.array(
             [
@@ -245,6 +251,10 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             Whether the partition indices need to be synced with frame
             index because there's no index column, or at least one
             index column is a RangeIndex.
+
+        Notes
+        -----
+        See `build_partition` for more detail on the contents of partitions_ids.
         """
         from pyarrow.parquet import read_table
 
