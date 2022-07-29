@@ -257,7 +257,12 @@ class FileDispatcher(ClassLogger):
             Whether file exists or not.
         """
         if isinstance(file_path, str):
-            if fsspec.core.split_protocol(file_path)[0] in ("s3", "S3", "https", "http"):
+            if fsspec.core.split_protocol(file_path)[0] in (
+                "s3",
+                "S3",
+                "https",
+                "http",
+            ):
                 if file_path.startswith("S"):
                     file_path = f"s{file_path[1:]}"
 
