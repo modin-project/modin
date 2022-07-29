@@ -13,10 +13,6 @@
 
 """Module houses classes responsible for storing a virtual partition and applying a function to it."""
 
-# Only python 3.9+  can parametrize standard collections like list:
-# https://peps.python.org/pep-0585/#implementation
-from __future__ import annotations
-
 from distributed import Future
 from distributed.utils import get_ip
 from dask.distributed import wait
@@ -78,7 +74,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         self._list_of_block_partitions = None
 
     @property
-    def list_of_block_partitions(self) -> list[partition_type]:
+    def list_of_block_partitions(self) -> list:
         """
         Get the list of block partitions that compose this partition.
 
