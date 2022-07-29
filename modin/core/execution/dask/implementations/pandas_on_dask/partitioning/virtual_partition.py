@@ -74,7 +74,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         self._list_of_block_partitions = None
 
     @property
-    def list_of_block_partitions(self) -> List[partition_type]:
+    def list_of_block_partitions(self) -> list[partition_type]:
         """
         Get the list of block partitions that compose this partition.
 
