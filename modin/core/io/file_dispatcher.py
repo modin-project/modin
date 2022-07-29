@@ -23,7 +23,6 @@ import os
 from modin.config import StorageFormat
 from modin.logging import ClassLogger
 import numpy as np
-from pandas.io.common import is_fsspec_url, is_url
 
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
 
@@ -212,7 +211,7 @@ class FileDispatcher(ClassLogger):
         absolute path will be returned.
         """
         if isinstance(file_path, str) and (
-            is_fsspec_url(file_path) or is_url(file_path)
+            fsspec.core.split_protocol(file_path)[0] in ("s3", "S3", "https", "http")
         ):
             return file_path
         else:
@@ -258,7 +257,7 @@ class FileDispatcher(ClassLogger):
             Whether file exists or not.
         """
         if isinstance(file_path, str):
-            if is_fsspec_url(file_path) or is_url(file_path):
+            if fsspec.core.split_protocol(file_path)[0] in ("s3", "S3", "https", "http"):
                 if file_path.startswith("S"):
                     file_path = f"s{file_path[1:]}"
 
