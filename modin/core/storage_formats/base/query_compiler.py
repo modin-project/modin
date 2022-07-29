@@ -3008,9 +3008,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return self.index if axis == 0 else self.columns
 
-    def view(self, index=None, columns=None):
+    def take_2d(self, index=None, columns=None):
         """
-        Mask QueryCompiler with passed keys.
+        Index QueryCompiler with passed keys.
 
         Parameters
         ----------
@@ -3027,10 +3027,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         index = slice(None) if index is None else index
         columns = slice(None) if columns is None else columns
 
-        def applyier(df):
+        def applyer(df):
             return df.iloc[index, columns]
 
-        return DataFrameDefault.register(applyier)(self)
+        return DataFrameDefault.register(applyer)(self)
 
     def insert_item(self, axis, loc, value, how="inner", replace=False):
         """
