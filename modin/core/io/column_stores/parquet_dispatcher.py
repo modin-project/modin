@@ -15,10 +15,10 @@
 
 import os
 
-import io
 import fsspec
 from fsspec.core import split_protocol, url_to_fs
 from fsspec.registry import get_filesystem_class
+from fsspec.spec import AbstractBufferedFile
 import numpy as np
 from pandas.io.common import is_fsspec_url
 from packaging import version
@@ -63,7 +63,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     return path
             return f"{protos[0]}://{path}"
 
-        if isinstance(path, io.IOBase):
+        if isinstance(path, AbstractBufferedFile):
             return path.fs, [path]
         protocol, path = split_protocol(path)
         filesystem = get_filesystem_class(protocol)(**storage_options)
@@ -273,9 +273,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             index_ids = [part_id[0][1] for part_id in partition_ids if len(part_id) > 0]
             index_objs = cls.materialize(index_ids)
             complete_index = index_objs[0].append(index_objs[1:])
-        return complete_index, len(index_columns) == 0 or any(
-            not isinstance(c, str) for c in index_columns
-        )
+        return complete_index, range_index or (len(index_columns) == 0)
 
     @classmethod
     def build_query_compiler(cls, path, columns, index_columns, **kwargs):
@@ -300,7 +298,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         """
         col_partitions, column_widths = cls.build_columns(columns)
         partition_ids = cls.call_deploy(path, col_partitions, **kwargs)
-        index, needs_index_sync = cls.build_index(path, partition_ids, index_columns)
+        index, sync_index = cls.build_index(path, partition_ids, index_columns)
         remote_parts = cls.build_partition(partition_ids, column_widths)
         if len(partition_ids) > 0:
             row_lengths = [part.length() for part in remote_parts.T[0]]
@@ -314,7 +312,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             column_widths=column_widths,
             dtypes=None,
         )
-        if needs_index_sync:
+        if sync_index:
             frame.synchronize_labels(axis=0)
         return cls.query_compiler_cls(frame)
 

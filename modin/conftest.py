@@ -457,6 +457,7 @@ def make_parquet_file():
             ncols: Number of cols for the dataframe.
             force: Create a new file/directory even if one already exists.
             partitioned_columns: Create a partitioned directory using pandas.
+            row_group_size: Maximum size of each row group.
         """
         if force or not os.path.exists(filename):
             df = pandas.DataFrame(
