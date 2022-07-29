@@ -482,7 +482,9 @@ class PandasOnRayDataframeColumnPartition(PandasOnRayDataframeVirtualPartition):
     Parameters
     ----------
     list_of_partitions : Union[list, PandasOnRayDataframePartition]
-        List of ``PandasOnRayDataframePartition`` objects.
+        List of ``PandasOnRayDataframePartition`` and
+        ``PandasOnRayDataframeColumnPartition`` objects, or a single
+        ``PandasOnRayDataframePartition``.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
     full_axis : bool, default: True
@@ -504,7 +506,9 @@ class PandasOnRayDataframeRowPartition(PandasOnRayDataframeVirtualPartition):
     Parameters
     ----------
     list_of_partitions : Union[list, PandasOnRayDataframePartition]
-        List of ``PandasOnRayDataframePartition`` objects.
+        List of ``PandasOnRayDataframePartition`` and
+        ``PandasOnRayDataframeRowPartition`` objects, or a single
+        ``PandasOnRayDataframePartition``.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
     full_axis : bool, default: True

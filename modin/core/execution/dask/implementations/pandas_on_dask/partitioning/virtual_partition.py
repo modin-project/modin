@@ -473,8 +473,9 @@ class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeVirtualPartition
 
     Parameters
     ----------
-    list_of_partitions : Union[list, PandasOnDaskDataframePartition]
-        List of ``PandasOnDaskDataframePartition`` objects.
+        List of ``PandasOnDaskDataframePartition`` and
+        ``PandasOnDaskDataframeColumnPartition`` objects, or a single
+        ``PandasOnDaskDataframePartition``.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
     full_axis : bool, default: True
@@ -495,8 +496,9 @@ class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeVirtualPartition):
 
     Parameters
     ----------
-    list_of_partitions : Union[list, PandasOnDaskDataframePartition]
-        List of ``PandasOnDaskDataframePartition`` objects.
+        List of ``PandasOnDaskDataframePartition`` and
+        ``PandasOnDaskDataframeRowPartition`` objects, or a single
+        ``PandasOnDaskDataframePartition``.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
     full_axis : bool, default: True
