@@ -351,9 +351,9 @@ class PandasDataframe(ClassLogger):
             An index object containing the row labels.
         """
         if self._index_cache is None:
-            self._index_cache, internal_sizes = self._compute_axis_labels(0)
+            self._index_cache, row_lengths = self._compute_axis_labels(0)
             if self._row_lengths_cache is None:
-                self._row_lengths_cache = internal_sizes
+                self._row_lengths_cache = row_lengths
         return self._index_cache
 
     def _get_columns(self):
@@ -366,9 +366,9 @@ class PandasDataframe(ClassLogger):
             An index object containing the column labels.
         """
         if self._columns_cache is None:
-            self._columns_cache, internal_sizes = self._compute_axis_labels(1)
+            self._columns_cache, column_widths = self._compute_axis_labels(1)
             if self._column_widths_cache is None:
-                self._column_widths_cache = internal_sizes
+                self._column_widths_cache = column_widths
         return self._columns_cache
 
     def _set_index(self, new_index):
