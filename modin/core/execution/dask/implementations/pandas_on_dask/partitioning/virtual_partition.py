@@ -473,6 +473,7 @@ class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeVirtualPartition
 
     Parameters
     ----------
+    list_of_partitions : Union[list, PandasOnDaskDataframePartition]
         List of ``PandasOnDaskDataframePartition`` and
         ``PandasOnDaskDataframeColumnPartition`` objects, or a single
         ``PandasOnDaskDataframePartition``.
@@ -496,6 +497,7 @@ class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeVirtualPartition):
 
     Parameters
     ----------
+    list_of_partitions : Union[list, PandasOnDaskDataframePartition]
         List of ``PandasOnDaskDataframePartition`` and
         ``PandasOnDaskDataframeRowPartition`` objects, or a single
         ``PandasOnDaskDataframePartition``.
