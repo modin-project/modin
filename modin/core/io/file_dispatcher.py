@@ -263,8 +263,8 @@ class FileDispatcher(ClassLogger):
                 "https",
                 "http",
             ):
-                if file_path.startswith("S"):
-                    file_path = f"s{file_path[1:]}"
+                # `file_path` may start with a capital letter, which isn't supported by `fsspec.core.url_to_fs` used below.
+                file_path = file_path[0].lower() + file_path[1:]
 
                 from botocore.exceptions import (
                     NoCredentialsError,
