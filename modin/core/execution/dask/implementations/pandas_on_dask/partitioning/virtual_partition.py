@@ -16,7 +16,6 @@
 from distributed import Future
 from distributed.utils import get_ip
 from dask.distributed import wait
-from typing import List
 
 import pandas
 
@@ -46,6 +45,8 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
     """
 
     axis = None
+    partition_type = PandasOnDaskDataframePartition
+    instance_type = Future
 
     def __init__(
         self, list_of_partitions, get_ip=False, full_axis=True, call_queue=None
@@ -72,11 +73,8 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         # drain call queues for that.
         self._list_of_block_partitions = None
 
-    partition_type = PandasOnDaskDataframePartition
-    instance_type = Future
-
     @property
-    def list_of_block_partitions(self) -> List[partition_type]:
+    def list_of_block_partitions(self) -> list[partition_type]:
         """
         Get the list of block partitions that compose this partition.
 

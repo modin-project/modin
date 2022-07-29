@@ -16,7 +16,6 @@
 import pandas
 import ray
 from ray.util import get_node_ip_address
-from typing import List
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
@@ -73,7 +72,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         self._list_of_block_partitions = None
 
     @property
-    def list_of_block_partitions(self) -> List[partition_type]:
+    def list_of_block_partitions(self) -> list[partition_type]:
         """
         Get the list of block partitions that compose this partition.
 
