@@ -19,8 +19,7 @@ from modin.pandas.test.utils import df_equals, test_data
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 
-def test_simple_import():
-    modin_df_producer = pd.DataFrame(test_data["int_data"])
+def eval_df_protocol(modin_df_producer):
     internal_modin_df_producer = modin_df_producer.__dataframe__()
     # Our configuration in pytest.ini requires that we explicitly catch all
     # instances of defaulting to pandas, this one raises a warning on `.from_dataframe`
@@ -43,3 +42,13 @@ def test_simple_import():
 
     df_equals(modin_df_producer, modin_df_consumer)
     df_equals(modin_df_producer, internal_modin_df_consumer)
+
+
+def test_simple_import():
+    modin_df = pd.DataFrame(test_data["int_data"])
+    eval_df_protocol(modin_df)
+
+
+def test_categorical_from_dataframe():
+    modin_df = pd.DataFrame({"foo": pd.Series([0, 1, 2, 3], dtype="category")})
+    eval_df_protocol(modin_df)
