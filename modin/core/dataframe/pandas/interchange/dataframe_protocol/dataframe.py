@@ -103,20 +103,26 @@ class PandasProtocolDataframe(ProtocolDataframe):
 
     def get_column(self, i: int) -> PandasProtocolColumn:
         return PandasProtocolColumn(
-            self._df.mask(row_positions=None, col_positions=[i]),
+            self._df.take_2d_labels_or_positional(
+                row_positions=None, col_positions=[i]
+            ),
             allow_copy=self._allow_copy,
         )
 
     def get_column_by_name(self, name: str) -> PandasProtocolColumn:
         return PandasProtocolColumn(
-            self._df.mask(row_positions=None, col_labels=[name]),
+            self._df.take_2d_labels_or_positional(
+                row_positions=None, col_labels=[name]
+            ),
             allow_copy=self._allow_copy,
         )
 
     def get_columns(self) -> Iterable[PandasProtocolColumn]:
         for name in self._df.columns:
             yield PandasProtocolColumn(
-                self._df.mask(row_positions=None, col_labels=[name]),
+                self._df.take_2d_labels_or_positional(
+                    row_positions=None, col_labels=[name]
+                ),
                 allow_copy=self._allow_copy,
             )
 
@@ -125,7 +131,9 @@ class PandasProtocolDataframe(ProtocolDataframe):
             raise ValueError("`indices` is not a sequence")
 
         return PandasProtocolDataframe(
-            self._df.mask(row_positions=None, col_positions=indices),
+            self._df.take_2d_labels_or_positional(
+                row_positions=None, col_positions=indices
+            ),
             allow_copy=self._allow_copy,
         )
 
@@ -134,7 +142,7 @@ class PandasProtocolDataframe(ProtocolDataframe):
             raise ValueError("`names` is not a sequence")
 
         return PandasProtocolDataframe(
-            self._df.mask(row_positions=None, col_labels=names),
+            self._df.take_2d_labels_or_positional(row_positions=None, col_labels=names),
             allow_copy=self._allow_copy,
         )
 
@@ -147,7 +155,7 @@ class PandasProtocolDataframe(ProtocolDataframe):
             cum_row_lengths = np.cumsum([0] + self._df._row_lengths)
             for i in range(len(cum_row_lengths) - 1):
                 yield PandasProtocolDataframe(
-                    self._df.mask(
+                    self._df.take_2d_labels_or_positional(
                         row_positions=range(cum_row_lengths[i], cum_row_lengths[i + 1]),
                         col_positions=None,
                     ),
@@ -185,7 +193,7 @@ class PandasProtocolDataframe(ProtocolDataframe):
         cum_row_lengths = np.cumsum([0] + new_df._row_lengths)
         for i in range(len(cum_row_lengths) - 1):
             yield PandasProtocolDataframe(
-                new_df.mask(
+                new_df.take_2d_labels_or_positional(
                     row_positions=range(cum_row_lengths[i], cum_row_lengths[i + 1]),
                     col_positions=None,
                 ),

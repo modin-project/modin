@@ -117,7 +117,7 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
             ]
         )
 
-    def mask(
+    def take_2d_labels_or_positional(
         self,
         row_labels: Optional[List[Hashable]] = None,
         row_positions: Optional[List[int]] = None,

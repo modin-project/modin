@@ -222,7 +222,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
     def get_column(self, i: int) -> OmnisciProtocolColumn:
         return OmnisciProtocolColumn(
             OmnisciProtocolDataframe(
-                self._df.mask(col_positions=[i]),
+                self._df.take_2d_labels_or_positional(col_positions=[i]),
                 allow_copy=self._allow_copy,
             ),
         )
@@ -230,7 +230,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
     def get_column_by_name(self, name: str) -> OmnisciProtocolColumn:
         return OmnisciProtocolColumn(
             OmnisciProtocolDataframe(
-                self._df.mask(col_labels=[name]),
+                self._df.take_2d_labels_or_positional(col_labels=[name]),
                 allow_copy=self._allow_copy,
             ),
         )
@@ -239,7 +239,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         for name in self._df.columns:
             yield OmnisciProtocolColumn(
                 OmnisciProtocolDataframe(
-                    self._df.mask(col_labels=[name]),
+                    self._df.take_2d_labels_or_positional(col_labels=[name]),
                     nan_as_null=self._nan_as_null,
                     allow_copy=self._allow_copy,
                 ),
@@ -250,7 +250,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
             raise ValueError("`indices` is not a sequence")
 
         return OmnisciProtocolDataframe(
-            self._df.mask(col_positions=list(indices)),
+            self._df.take_2d_labels_or_positional(col_positions=list(indices)),
             nan_as_null=self._nan_as_null,
             allow_copy=self._allow_copy,
         )
@@ -262,7 +262,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
             raise ValueError("`names` is not a sequence")
 
         return OmnisciProtocolDataframe(
-            self._df.mask(col_labels=list(names)),
+            self._df.take_2d_labels_or_positional(col_labels=list(names)),
             nan_as_null=self._nan_as_null,
             allow_copy=self._allow_copy,
         )
@@ -381,7 +381,7 @@ class OmnisciProtocolDataframe(ProtocolDataframe):
         """
         for i in range(len(chunk_slices) - 1):
             yield OmnisciProtocolDataframe(
-                df=self._df.mask(
+                df=self._df.take_2d_labels_or_positional(
                     row_positions=range(chunk_slices[i], chunk_slices[i + 1])
                 ),
                 nan_as_null=self._nan_as_null,

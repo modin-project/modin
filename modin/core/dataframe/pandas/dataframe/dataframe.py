@@ -608,7 +608,7 @@ class PandasDataframe(ClassLogger):
             )
 
     @lazy_metadata_decorator(apply_axis=None)
-    def mask(
+    def take_2d_labels_or_positional(
         self,
         row_labels: Optional[List[Hashable]] = None,
         row_positions: Optional[List[int]] = None,
@@ -944,12 +944,16 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             A new PandasDataframe that has the updated labels.
         """
-        extracted_columns = self.mask(col_labels=column_list).to_pandas()
+        extracted_columns = self.take_2d_labels_or_positional(
+            col_labels=column_list
+        ).to_pandas()
         if len(column_list) == 1:
             new_labels = pandas.Index(extracted_columns.squeeze(axis=1))
         else:
             new_labels = pandas.MultiIndex.from_frame(extracted_columns)
-        result = self.mask(col_labels=[i for i in self.columns if i not in column_list])
+        result = self.take_2d_labels_or_positional(
+            col_labels=[i for i in self.columns if i not in column_list]
+        )
         result.index = new_labels
         return result
 
@@ -1849,7 +1853,7 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
              A new PandasDataframe from the filter provided.
         """
-        return self.mask(
+        return self.take_2d_labels_or_positional(
             col_positions=[i for i, dtype in enumerate(self.dtypes) if dtype in types]
         )
 
