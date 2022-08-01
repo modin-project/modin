@@ -192,10 +192,10 @@ class PandasDataframe(ClassLogger):
         self._column_widths_cache = column_widths
         self._dtypes = dtypes
 
-        self._validate_axes_splits()
+        self._validate_axes_lengths()
         self._filter_empties(compute_metadata=False)
 
-    def _validate_axes_splits(self):
+    def _validate_axes_lengths(self):
         """Validate that labels are split correctly if split is known."""
         if self._row_lengths_cache is not None and len(self.index) > 0:
             # An empty frame can have 0 rows but a nonempty index. If the frame
@@ -238,9 +238,10 @@ class PandasDataframe(ClassLogger):
         """
         if self._row_lengths_cache is None:
             if len(self._partitions) > 0:
-                index, self._row_lengths_cache = self._compute_axis_labels_and_lengths(
-                    0
-                )
+                (
+                    index,
+                    self._row_lengths_cache,
+                ) = self._compute_axis_labels_and_lengths(0)
                 if self._index_cache is None:
                     self._index_cache = index
             else:
@@ -446,7 +447,7 @@ class PandasDataframe(ClassLogger):
         pandas.Index
             Labels for the specified `axis`.
         List of int
-            Size of partitions alongsize specified `axis`.
+            Size of partitions alongside specified `axis`.
         """
         if partitions is None:
             partitions = self._partitions
@@ -2198,7 +2199,7 @@ class PandasDataframe(ClassLogger):
             passed_len += len(internal)
         return result_dict
 
-    def __make_constructor_args(self, partitions, index, columns) -> dict:
+    def __make_init_labels_args(self, partitions, index, columns) -> dict:
         kw = {}
         kw["index"], kw["row_lengths"] = (
             self._compute_axis_labels_and_lengths(0, partitions)
@@ -2291,7 +2292,7 @@ class PandasDataframe(ClassLogger):
             keep_remaining,
         )
 
-        kw = self.__make_constructor_args(new_partitions, new_index, new_columns)
+        kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
         return self.__constructor__(new_partitions, **kw)
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -2359,7 +2360,7 @@ class PandasDataframe(ClassLogger):
             keep_partitioning=True,
         )
         # Index objects for new object creation. This is shorter than if..else
-        kw = self.__make_constructor_args(new_partitions, new_index, new_columns)
+        kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
         if dtypes == "copy":
             kw["dtypes"] = self._dtypes
         elif dtypes is not None:
@@ -2751,7 +2752,7 @@ class PandasDataframe(ClassLogger):
         new_partitions = self._partition_mgr_cls.groupby_reduce(
             axis, self._partitions, by_parts, map_func, reduce_func, apply_indices
         )
-        kw = self.__make_constructor_args(new_partitions, new_index, new_columns)
+        kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
         return self.__constructor__(new_partitions, **kw)
 
     @classmethod
