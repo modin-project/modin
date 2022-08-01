@@ -13,6 +13,7 @@
 
 import pytest
 import numpy as np
+from packaging import version
 import pandas
 from pandas.errors import ParserWarning
 import pandas._libs.lib as lib
@@ -45,6 +46,7 @@ import shutil
 import sqlalchemy as sa
 import csv
 import tempfile
+from typing import Dict
 
 from .utils import (
     check_file_leaks,
@@ -198,6 +200,22 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
         assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
     finally:
         teardown_test_files([unique_filename_modin, unique_filename_pandas])
+
+
+@pytest.fixture
+def make_parquet_dir():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+
+        def _make_parquet_dir(
+            dfs_by_filename: Dict[str, pandas.DataFrame], row_group_size: int
+        ):
+            for filename, df in dfs_by_filename.items():
+                df.to_parquet(
+                    os.path.join(tmp_dir, filename), row_group_size=row_group_size
+                )
+            return tmp_dir
+
+        yield _make_parquet_dir
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
@@ -1333,13 +1351,14 @@ class TestTable:
 
 class TestParquet:
     @pytest.mark.parametrize("columns", [None, ["col1"]])
+    @pytest.mark.parametrize("row_group_size", [None, 100, 1000, 10_000])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet(self, make_parquet_file, columns):
+    def test_read_parquet(self, make_parquet_file, columns, row_group_size):
         unique_filename = get_unique_filename(extension="parquet")
-        make_parquet_file(filename=unique_filename)
+        make_parquet_file(filename=unique_filename, row_group_size=row_group_size)
 
         eval_io(
             fn_name="read_parquet",
@@ -1368,18 +1387,33 @@ class TestParquet:
             parquet_df[col]
 
     @pytest.mark.parametrize("columns", [None, ["col1"]])
+    @pytest.mark.parametrize("row_group_size", [None, 100, 1000, 10_000])
+    @pytest.mark.parametrize(
+        "rows_per_file", [[1000] * 40, [0, 0, 40_000], [10_000, 10_000] + [100] * 200]
+    )
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet_directory(self, make_parquet_file, columns):  #
-
-        unique_filename = get_unique_filename(extension=None)
-        make_parquet_file(filename=unique_filename, directory=True)
+    def test_read_parquet_directory(
+        self, make_parquet_dir, columns, row_group_size, rows_per_file
+    ):
+        num_cols = DATASET_SIZE_DICT.get(
+            TestDatasetSize.get(), DATASET_SIZE_DICT["Small"]
+        )
+        dfs_by_filename = {}
+        start_row = 0
+        for i, length in enumerate(rows_per_file):
+            end_row = start_row + length
+            dfs_by_filename[f"{i}.parquet"] = pandas.DataFrame(
+                {f"col{x + 1}": np.arange(start_row, end_row) for x in range(num_cols)}
+            )
+            start_row = end_row
+        path = make_parquet_dir(dfs_by_filename, row_group_size)
         eval_io(
             fn_name="read_parquet",
             # read_parquet kwargs
-            path=unique_filename,
+            path=path,
             columns=columns,
         )
 
@@ -1409,17 +1443,36 @@ class TestParquet:
         pandas_df = pandas.DataFrame(
             {
                 "idx": np.random.randint(0, 100_000, size=2000),
+                "idx_categorical": pandas.Categorical(["y", "z"] * 1000),
+                # Can't do interval index right now because of this bug fix that is planned
+                # to be apart of the pandas 1.5.0 release: https://github.com/pandas-dev/pandas/pull/46034
+                # "idx_interval": pandas.interval_range(start=0, end=2000),
+                "idx_datetime": pandas.date_range(start="1/1/2018", periods=2000),
+                "idx_periodrange": pandas.period_range(
+                    start="2017-01-01", periods=2000
+                ),
                 "A": np.random.randint(0, 100_000, size=2000),
                 "B": ["a", "b"] * 1000,
                 "C": ["c"] * 2000,
             }
         )
-        try:
-            pandas_df.set_index("idx").to_parquet(unique_filename)
-            # read the same parquet using modin.pandas
-            df_equals(
-                pd.read_parquet(unique_filename), pandas.read_parquet(unique_filename)
+        # Older versions of pyarrow do not support Arrow to Parquet
+        # schema conversion for duration[ns]
+        # https://issues.apache.org/jira/browse/ARROW-6780
+        if version.parse(pa.__version__) >= version.parse("8.0.0"):
+            pandas_df["idx_timedelta"] = pandas.timedelta_range(
+                start="1 day", periods=2000
             )
+
+        try:
+            for col in pandas_df.columns:
+                if col.startswith("idx"):
+                    pandas_df.set_index(col).to_parquet(unique_filename)
+                    # read the same parquet using modin.pandas
+                    df_equals(
+                        pd.read_parquet(unique_filename),
+                        pandas.read_parquet(unique_filename),
+                    )
 
             pandas_df.set_index(["idx", "A"]).to_parquet(unique_filename)
             df_equals(

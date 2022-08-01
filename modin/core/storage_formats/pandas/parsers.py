@@ -40,18 +40,23 @@ Data parsing mechanism differs depending on the data format type:
 """
 
 from collections import OrderedDict
-from io import BytesIO, TextIOWrapper
+from io import BytesIO, TextIOWrapper, IOBase
+import fsspec
 import numpy as np
 import pandas
 from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
 from pandas.util._decorators import doc
+from typing import Any, NamedTuple
 import warnings
 
 from modin.core.io.file_dispatcher import OpenFile
 from modin.db_conn import ModinDatabaseConnection
-from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
+from modin.core.storage_formats.pandas.utils import (
+    split_result_of_axis_func_pandas,
+    _nullcontext,
+)
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
 
@@ -637,26 +642,68 @@ class PandasJSONParser(PandasParser):
         ]
 
 
+class ParquetFileToRead(NamedTuple):
+    """
+    Class to store path and row group information for parquet reads.
+
+    Parameters
+    ----------
+    path : str, path object or file-like object
+        Name of the file to read.
+    row_group_start : int
+        Row group to start read from.
+    row_group_end : int
+        Row group to stop read.
+    """
+
+    path: Any
+    row_group_start: int
+    row_group_end: int
+
+
 @doc(_doc_pandas_parser_class, data_type="PARQUET data")
 class PandasParquetParser(PandasParser):
     @staticmethod
-    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
-    def parse(fname, **kwargs):
-        num_splits = kwargs.pop("num_splits", None)
+    @doc(
+        _doc_parse_func,
+        parameters="""files_for_parser : list
+    List of files to be read.
+""",
+    )
+    def parse(files_for_parser, **kwargs):
+        from pyarrow.parquet import ParquetFile
+
         columns = kwargs.get("columns", None)
-        if num_splits is None:
-            return pandas.read_parquet(fname, **kwargs)
-        kwargs["use_pandas_metadata"] = True
-        df = pandas.read_parquet(fname, **kwargs)
-        if isinstance(df.index, pandas.RangeIndex):
-            idx = len(df.index)
-        else:
-            idx = df.index
-        columns = [c for c in columns if c not in df.index.names and c in df.columns]
-        if columns is not None:
-            df = df[columns]
-        # Append the length of the index here to build it externally
-        return _split_result_for_readers(0, num_splits, df) + [idx, df.dtypes]
+        storage_options = kwargs.pop("storage_options", {}) or {}
+
+        chunks = []
+        # `single_worker_read` just passes in a string path
+        if isinstance(files_for_parser, str):
+            return pandas.read_parquet(files_for_parser, **kwargs)
+
+        for file_for_parser in files_for_parser:
+            if isinstance(file_for_parser.path, IOBase):
+                context = _nullcontext(file_for_parser.path)
+            else:
+                context = fsspec.open(file_for_parser.path, **storage_options)
+            with context as f:
+                chunk = (
+                    ParquetFile(f)
+                    .read_row_groups(
+                        list(
+                            range(
+                                file_for_parser.row_group_start,
+                                file_for_parser.row_group_end,
+                            )
+                        ),
+                        columns=columns,
+                        use_pandas_metadata=True,
+                    )
+                    .to_pandas()
+                )
+            chunks.append(chunk)
+        df = pandas.concat(chunks)
+        return df, df.index, len(df)
 
 
 @doc(_doc_pandas_parser_class, data_type="HDF data")
