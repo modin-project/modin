@@ -3,9 +3,7 @@ numpy>=1.18.5
 pyarrow>=4.0.1
 dask[complete]>=2.22.0,<2022.2.0
 distributed>=2.22.0,<2022.2.0
-ray==2.0.0rc0
-# needed for ray 2.0.0
-pydantic
+ray[default]==2.0.0rc0
 redis>=3.5.0,<4.0.0
 psutil
 fsspec

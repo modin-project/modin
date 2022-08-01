@@ -41,9 +41,7 @@ dependencies:
   - pip:
       - modin-spreadsheet>=0.1.1
       - tqdm
-      - ray==2.0.0rc0
-      # Needed for Ray 2.0.0
-      - pydantic
+      - ray[default]==2.0.0rc0
       # TODO: remove when resolving GH#4398
       - redis>=3.5.0,<4.0.0
       - black
