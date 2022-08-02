@@ -25,7 +25,8 @@ Key Features and Updates
   * FIX-#4358: MultiIndex `loc` shouldn't drop levels for full-key lookups (#4608)
   * FIX-#4658: Expand exception handling for `read_*` functions from s3 storages (#4659)
   * FIX-#4672: Fix incorrect warning when setting `frame.index` or `frame.columns` (#4721)
-  * FIX-#4686: Propagate metadata and drain call queue in unwrap_partitions (#4697)  
+  * FIX-#4686: Propagate metadata and drain call queue in unwrap_partitions (#4697)
+  * FIX-#4652: Support categorical data in `from_dataframe` (#4737) 
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
@@ -42,6 +43,7 @@ Key Features and Updates
   * REFACTOR-#4708: Delete combine dtypes (#4709)
   * REFACTOR-#4629: Add type annotations to modin/config (#4685)
   * REFACTOR-#4717: Improve PartitionMgr.get_indices() usage (#4718)
+  * REFACTOR-#4750: Delete BaseDataframeAxisPartition.shuffle (#4751)
   * REFACTOR-#4722: Stop suppressing undefined name lint (#4723)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
@@ -58,6 +60,7 @@ Key Features and Updates
   * TEST-#2564: Add caching and use mamba for conda setups in GH (#4607)
   * TEST-#4557: Delete multiindex sorts instead of xfailing (#4559)  
   * TEST-#4698: Stop passing invalid storage_options param (#4699)
+  * TEST-#4745: Pin flake8 to <5 to workaround installation conflict (#4752)
 * Documentation improvements
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
   * DOCS-#4628: Add to_parquet partial support notes (#4648)
@@ -70,6 +73,7 @@ Key Features and Updates
   * FEAT-#4419: Extend virtual partitioning API to pandas on Dask (#4420)
   * FEAT-#4147: Add partial compatibility with Python 3.6 and pandas 1.1 (#4301)
   * FEAT-#4569: Add error message when `read_` function defaults to pandas (#4647)
+  * FEAT-#4725: Make index and columns lazy in Modin DataFrame (#4726)
 
 Contributors
 ------------

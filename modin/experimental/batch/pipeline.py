@@ -375,8 +375,8 @@ class PandasQueryPipeline(object):
                 partitions,
                 index,
                 columns,
-                row_lengths=tuple(map(len, internal_rows)),
-                column_widths=tuple(map(len, internal_cols)),
+                row_lengths=list(map(len, internal_rows)),
+                column_widths=list(map(len, internal_cols)),
             )
             query_compiler = PandasQueryCompiler(result_modin_frame)
             result_df = pd.DataFrame(query_compiler=query_compiler)
