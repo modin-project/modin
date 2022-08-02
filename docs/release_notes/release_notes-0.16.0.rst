@@ -58,6 +58,7 @@ Key Features and Updates
   * TEST-#2564: Add caching and use mamba for conda setups in GH (#4607)
   * TEST-#4557: Delete multiindex sorts instead of xfailing (#4559)  
   * TEST-#4698: Stop passing invalid storage_options param (#4699)
+  * TEST-#4745: Pin flake8 to <5 to workaround installation conflict (#4752)
 * Documentation improvements
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
   * DOCS-#4628: Add to_parquet partial support notes (#4648)
