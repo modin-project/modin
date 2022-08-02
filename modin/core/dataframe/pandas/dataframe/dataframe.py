@@ -2146,7 +2146,7 @@ class PandasDataframe(ClassLogger):
                 return getter(), sizes_cache
             if labels == "replace":
                 return joined_index, partition_sizes_along_axis
-            assert labels == "drop", f"Unexpected {labels=}"
+            assert labels == "drop", f"Unexpected `labels`: {labels}"
             return None, None
 
         if axis == 0:
