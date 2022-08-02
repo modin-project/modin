@@ -26,12 +26,25 @@ jobs:
           python-version: "3.8.x"
           architecture: "x64"
         if: matrix.execution != 'omnisci_on_native'
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('requirements/env_omnisci.yml') }}
+        if: matrix.execution == 'omnisci_on_native'
       - uses: conda-incubator/setup-miniconda@v2
         with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
           activate-environment: modin_on_omnisci
           environment-file: requirements/env_omnisci.yml
           python-version: 3.8
           channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
         if: matrix.execution == 'omnisci_on_native'
       - name: Cache datasets
         uses: actions/cache@v2
@@ -50,9 +63,10 @@ jobs:
       - run: pip install .
         if: matrix.execution == 'omnisci_on_native'
       # install test dependencies
-      - run: pip install pytest pytest-cov black flake8 flake8-print flake8-no-implicit-concat
+      # TODO: remove pin when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
+      - run: pip install pytest pytest-cov black "flake8<5" flake8-print flake8-no-implicit-concat
         if: matrix.execution != 'omnisci_on_native'
-      - run: conda install flake8-print jupyter nbformat nbconvert -c conda-forge
+      - run: pip install flake8-print jupyter nbformat nbconvert
         if: matrix.execution == 'omnisci_on_native'
       - run: pip list
         if: matrix.execution != 'omnisci_on_native'
