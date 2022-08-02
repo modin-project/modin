@@ -2146,7 +2146,8 @@ class PandasDataframe(ClassLogger):
                 return getter(), sizes_cache
             if labels == "replace":
                 return joined_index, partition_sizes_along_axis
-            return None, None  # labels == "drop"
+            assert labels == "drop", f"Unexpected {labels=}"
+            return None, None
 
         if axis == 0:
             # Pass shape caches instead of values in order to not trigger shape computation.
