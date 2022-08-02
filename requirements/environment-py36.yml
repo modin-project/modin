@@ -45,6 +45,7 @@ dependencies:
       # TODO: remove when resolving GH#4398
       - redis>=3.5.0,<4.0.0
       - black
-      - flake8
+      # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
+      - flake8<5
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
       - numpydoc==1.1.0
