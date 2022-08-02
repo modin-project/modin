@@ -24,6 +24,7 @@ import fsspec
 
 import pandas
 import pandas._libs.lib as lib
+from pandas.io.common import is_url
 
 from modin.config import NPartitions
 from modin.core.io.file_dispatcher import OpenFile
@@ -361,7 +362,7 @@ class CSVGlobDispatcher(CSVDispatcher):
                 )
                 return exists or len(fs.glob(file_path)) > 0
 
-            if fsspec.core.split_protocol(file_path)[0] in ("http", "https"):
+            if is_url(file_path):
                 raise NotImplementedError(
                     "`read_csv_glob` supports only s3-like paths."
                 )
