@@ -259,17 +259,24 @@ def test_rebalance_partitions(test_type):
     ((0, virtual_column_partition_class), (1, virtual_row_partition_class)),
     ids=["partitions_spanning_all_columns", "partitions_spanning_all_rows"],
 )
-@pytest.mark.parametrize("full_axis", [True, False], ids=["full_axis", "not_full_axis"])
 class TestDrainVirtualPartitionCallQueue:
     """Test draining virtual partition call queues.
 
     Test creating a virtual partition made of block partitions and/or one or
     more layers of virtual partitions, draining the top-level partition's
     call queue, and getting the result.
+
+    In all these test cases, the full_axis argument doesn't matter for
+    correctness because it only affects `apply`, which is not used here.
+    Still, virtual partition users are not supposed to create full-axis
+    virtual partitions out of other full-axis virtual partitions, so
+    set full_axis to False everywhere.
     """
 
     def test_from_virtual_partitions_with_call_queues(
-        self, axis, virtual_partition_class, full_axis
+        self,
+        axis,
+        virtual_partition_class,
     ):
         # reverse the dataframe along the virtual partition axis.
         def reverse(df):
@@ -280,7 +287,7 @@ class TestDrainVirtualPartitionCallQueue:
             block_partition_class(put(pandas.DataFrame([1]))),
         ]
         level_one_virtual_first = virtual_partition_class(
-            level_zero_blocks_first, full_axis=full_axis
+            level_zero_blocks_first, full_axis=False
         )
         level_one_virtual_first = level_one_virtual_first.add_to_apply_calls(reverse)
         level_zero_blocks_second = [
@@ -288,11 +295,11 @@ class TestDrainVirtualPartitionCallQueue:
             block_partition_class(put(pandas.DataFrame([3]))),
         ]
         level_one_virtual_second = virtual_partition_class(
-            level_zero_blocks_second, full_axis=full_axis
+            level_zero_blocks_second, full_axis=False
         )
         level_one_virtual_second = level_one_virtual_second.add_to_apply_calls(reverse)
         level_two_virtual = virtual_partition_class(
-            [level_one_virtual_first, level_one_virtual_second], full_axis=full_axis
+            [level_one_virtual_first, level_one_virtual_second], full_axis=False
         )
         level_two_virtual.drain_call_queue()
         if axis == 0:
@@ -305,7 +312,7 @@ class TestDrainVirtualPartitionCallQueue:
         )
 
     def test_from_block_and_virtual_partition_with_call_queues(
-        self, axis, virtual_partition_class, full_axis
+        self, axis, virtual_partition_class
     ):
         # make a function that reverses the dataframe along the virtual
         # partition axis.
@@ -321,11 +328,11 @@ class TestDrainVirtualPartitionCallQueue:
         ]
         level_zero_blocks[0] = level_zero_blocks[0].add_to_apply_calls(reverse)
         level_one_virtual = virtual_partition_class(
-            level_zero_blocks[1], full_axis=full_axis
+            level_zero_blocks[1], full_axis=False
         )
         level_one_virtual = level_one_virtual.add_to_apply_calls(reverse)
         level_two_virtual = virtual_partition_class(
-            [level_zero_blocks[0], level_one_virtual], full_axis=full_axis
+            [level_zero_blocks[0], level_one_virtual], full_axis=False
         )
         level_two_virtual.drain_call_queue()
         if axis == 0:
@@ -335,22 +342,22 @@ class TestDrainVirtualPartitionCallQueue:
         df_equals(level_two_virtual.to_pandas(), expected_df)
 
     def test_virtual_partition_call_queues_at_three_levels(
-        self, axis, virtual_partition_class, full_axis
+        self, axis, virtual_partition_class
     ):
 
         block = block_partition_class(put(pandas.DataFrame([1])))
-        level_one_virtual = virtual_partition_class([block], full_axis=full_axis)
+        level_one_virtual = virtual_partition_class([block], full_axis=False)
         level_one_virtual = level_one_virtual.add_to_apply_calls(
             lambda df: pandas.concat([df, pandas.DataFrame([2])])
         )
         level_two_virtual = virtual_partition_class(
-            [level_one_virtual], full_axis=full_axis
+            [level_one_virtual], full_axis=False
         )
         level_two_virtual = level_two_virtual.add_to_apply_calls(
             lambda df: pandas.concat([df, pandas.DataFrame([3])])
         )
         level_three_virtual = virtual_partition_class(
-            [level_two_virtual], full_axis=full_axis
+            [level_two_virtual], full_axis=False
         )
         level_three_virtual = level_three_virtual.add_to_apply_calls(
             lambda df: pandas.concat([df, pandas.DataFrame([4])])
