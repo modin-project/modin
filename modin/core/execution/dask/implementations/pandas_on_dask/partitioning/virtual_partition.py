@@ -15,7 +15,7 @@
 
 from distributed import Future
 from distributed.utils import get_ip
-from dask.distributed import wait as dask_wait
+from dask.distributed import wait
 
 import pandas
 
@@ -27,11 +27,25 @@ from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
 
 
 class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
+    """
+    The class implements the interface in ``PandasDataframeAxisPartition``.
+
+    Parameters
+    ----------
+    list_of_blocks : Union[list, PandasOnDaskDataframePartition]
+        List of ``PandasOnDaskDataframePartition`` and
+        ``PandasOnDaskDataframeVirtualPartition`` objects, or a single
+        ``PandasOnDaskDataframePartition``.
+    get_ip : bool, default: False
+        Whether to get node IP addresses of conforming partitions or not.
+    full_axis : bool, default: True
+        Whether or not the virtual partition encompasses the whole axis.
+    call_queue : list, optional
+        A list of tuples (callable, args, kwargs) that contains deferred calls.
+    """
 
     block_partition_type = PandasOnDaskDataframePartition
     instance_type = Future
-    wait = dask_wait
-    axis = None
 
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""

@@ -22,15 +22,10 @@ from modin.core.dataframe.base.partitioning.axis_partition import (
 
 
 class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
-
-    block_partition_type = None
-    wait = None
-
     """
     An abstract class is created to simplify and consolidate the code for axis partition that run pandas.
 
     Because much of the code is similar, this allows us to reuse this code.
-
 
     Parameters
     ----------
@@ -45,6 +40,10 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
     call_queue : list, optional
         A list of tuples (callable, args, kwargs) that contains deferred calls.
     """
+
+    block_partition_type = None
+    wait = None
+    axis = None
 
     def __init__(self, list_of_blocks, get_ip=False, full_axis=True, call_queue=None):
         if isinstance(list_of_blocks, self.block_partition_type):
@@ -342,7 +341,6 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         num_splits : int, default: None
             The number of times to split the result object.
         """
-
         # Copy the original call queue and set it to empty so we don't try to
         # drain it again when we apply().
         call_queue = self.call_queue
@@ -355,6 +353,11 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
 
         drained = self.apply(drain, num_splits=num_splits)
         if not self.full_axis:
+            # `apply` gives a partition instead of a list of splits
+            # when this is not a full-axis partition.
+            # TODO(https://github.com/modin-project/modin/issues/4757):
+            # stop making full_axis a property of the object and instead
+            # control the splitting behavior with an argument to `apply`.
             drained = [drained]
         self.list_of_partitions_to_combine = drained
 

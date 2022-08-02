@@ -44,8 +44,6 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
 
     block_partition_type = PandasOnRayDataframePartition
     instance_type = ray.ObjectRef
-    wait = ray.wait
-    axis = None
 
     @classmethod
     def deploy_axis_func(
