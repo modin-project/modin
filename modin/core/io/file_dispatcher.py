@@ -25,6 +25,7 @@ from modin.logging import ClassLogger
 import numpy as np
 
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
+_SUPPORTED_PROTOCOLS = {"s3", "S3", "http", "https"}
 
 
 class OpenFile:
@@ -211,7 +212,7 @@ class FileDispatcher(ClassLogger):
         absolute path will be returned.
         """
         if isinstance(file_path, str) and (
-            fsspec.core.split_protocol(file_path)[0] in ("s3", "S3", "https", "http")
+            fsspec.core.split_protocol(file_path)[0] in _SUPPORTED_PROTOCOLS
         ):
             return file_path
         else:
@@ -257,12 +258,7 @@ class FileDispatcher(ClassLogger):
             Whether file exists or not.
         """
         if isinstance(file_path, str):
-            if fsspec.core.split_protocol(file_path)[0] in (
-                "s3",
-                "S3",
-                "https",
-                "http",
-            ):
+            if fsspec.core.split_protocol(file_path)[0] in _SUPPORTED_PROTOCOLS:
                 # `file_path` may start with a capital letter, which isn't supported by `fsspec.core.url_to_fs` used below.
                 file_path = file_path[0].lower() + file_path[1:]
 

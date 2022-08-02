@@ -30,6 +30,8 @@ from modin.config import NPartitions
 from modin.core.io.file_dispatcher import OpenFile
 from modin.core.io.text.csv_dispatcher import CSVDispatcher
 
+_SUPPORTED_PROTOCOLS = {"s3", "S3"}
+
 
 class CSVGlobDispatcher(CSVDispatcher):
     """Class contains utils for reading multiple `.csv` files simultaneously."""
@@ -330,7 +332,7 @@ class CSVGlobDispatcher(CSVDispatcher):
             True if the path is valid.
         """
         if isinstance(file_path, str):
-            if fsspec.core.split_protocol(file_path)[0] in ("s3", "S3"):
+            if fsspec.core.split_protocol(file_path)[0] in _SUPPORTED_PROTOCOLS:
                 # `file_path` may start with a capital letter, which isn't supported by `fsspec.core.url_to_fs` used below.
                 file_path = file_path[0].lower() + file_path[1:]
 
@@ -384,7 +386,7 @@ class CSVGlobDispatcher(CSVDispatcher):
         list
             List of strings of absolute file paths.
         """
-        if fsspec.core.split_protocol(file_path)[0] in ("s3", "S3"):
+        if fsspec.core.split_protocol(file_path)[0] in _SUPPORTED_PROTOCOLS:
             # `file_path` may start with a capital letter, which isn't supported by `fsspec.core.url_to_fs` used below.
             file_path = file_path[0].lower() + file_path[1:]
 
