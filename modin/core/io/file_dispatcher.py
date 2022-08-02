@@ -284,11 +284,12 @@ class FileDispatcher(ClassLogger):
                     EndpointConnectionError,
                     ConnectTimeoutError,
                 ):
-                    pass
-                fs, _ = fsspec.core.url_to_fs(
-                    file_path, anon=True, **new_storage_options
-                )
-                return exists or fs.exists(file_path)
+                    fs, _ = fsspec.core.url_to_fs(
+                        file_path, anon=True, **new_storage_options
+                    )
+                    exists = fs.exists(file_path)
+
+                return exists
         return os.path.exists(file_path)
 
     @classmethod

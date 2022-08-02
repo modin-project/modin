@@ -358,10 +358,10 @@ class CSVGlobDispatcher(CSVDispatcher):
                     EndpointConnectionError,
                     ConnectTimeoutError,
                 ):
-                    pass
-                fs, _ = fsspec.core.url_to_fs(
-                    file_path, anon=True, **new_storage_options
-                )
+                    fs, _ = fsspec.core.url_to_fs(
+                        file_path, anon=True, **new_storage_options
+                    )
+                    exists = len(fs.glob(file_path)) > 0
                 return exists or len(fs.glob(file_path)) > 0
 
             if is_url(file_path):
@@ -407,8 +407,7 @@ class CSVGlobDispatcher(CSVDispatcher):
             try:
                 return get_file_path(fs)
             except (NoCredentialsError, EndpointConnectionError, ConnectTimeoutError):
-                pass
-            fs, _ = fsspec.core.url_to_fs(file_path, anon=True)
+                fs, _ = fsspec.core.url_to_fs(file_path, anon=True)
             return get_file_path(fs)
         else:
             relative_paths = glob.glob(file_path)
