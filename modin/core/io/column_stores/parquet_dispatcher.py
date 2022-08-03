@@ -101,7 +101,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         fs_path: list
             Filesystem's specific path.
         """
-        return url_to_fs(path, storage_options) if is_fsspec_url(path) else (None, path)
+        return (
+            url_to_fs(path, **storage_options) if is_fsspec_url(path) else (None, path)
+        )
 
     @classmethod
     def call_deploy(cls, fname, col_partitions, storage_options, **kwargs):
