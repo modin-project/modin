@@ -331,45 +331,44 @@ class CSVGlobDispatcher(CSVDispatcher):
         bool
             True if the path is valid.
         """
-        if isinstance(file_path, str):
-            if fsspec.core.split_protocol(file_path)[0] in _SUPPORTED_PROTOCOLS:
-                # `file_path` may start with a capital letter, which isn't supported by `fsspec.core.url_to_fs` used below.
-                file_path = file_path[0].lower() + file_path[1:]
+        if isinstance(file_path, str) and is_url(file_path):
+            raise NotImplementedError("`read_csv_glob` supports only s3-like paths.")
+        elif (
+            isinstance(file_path, str)
+            and fsspec.core.split_protocol(file_path)[0] in _SUPPORTED_PROTOCOLS
+        ):
+            # `file_path` may start with a capital letter, which isn't supported by `fsspec.core.url_to_fs` used below.
+            file_path = file_path[0].lower() + file_path[1:]
 
-                from botocore.exceptions import (
-                    NoCredentialsError,
-                    EndpointConnectionError,
-                    ConnectTimeoutError,
+            from botocore.exceptions import (
+                NoCredentialsError,
+                EndpointConnectionError,
+                ConnectTimeoutError,
+            )
+
+            if storage_options is not None:
+                new_storage_options = dict(storage_options)
+                new_storage_options.pop("anon", None)
+            else:
+                new_storage_options = {}
+
+            fs, _ = fsspec.core.url_to_fs(file_path, **new_storage_options)
+            exists = False
+            try:
+                exists = fs.exists(file_path)
+            except (
+                NoCredentialsError,
+                PermissionError,
+                EndpointConnectionError,
+                ConnectTimeoutError,
+            ):
+                fs, _ = fsspec.core.url_to_fs(
+                    file_path, anon=True, **new_storage_options
                 )
-
-                if storage_options is not None:
-                    new_storage_options = dict(storage_options)
-                    new_storage_options.pop("anon", None)
-                else:
-                    new_storage_options = {}
-
-                fs, _ = fsspec.core.url_to_fs(file_path, **new_storage_options)
-                exists = False
-                try:
-                    exists = fs.exists(file_path)
-                except (
-                    NoCredentialsError,
-                    PermissionError,
-                    EndpointConnectionError,
-                    ConnectTimeoutError,
-                ):
-                    fs, _ = fsspec.core.url_to_fs(
-                        file_path, anon=True, **new_storage_options
-                    )
-                    exists = fs.exists(file_path)
-                return exists or len(fs.glob(file_path)) > 0
-
-            if is_url(file_path):
-                raise NotImplementedError(
-                    "`read_csv_glob` supports only s3-like paths."
-                )
-
-        return len(glob.glob(file_path)) > 0
+                exists = fs.exists(file_path)
+            return exists or len(fs.glob(file_path)) > 0
+        else:
+            return len(glob.glob(file_path)) > 0
 
     @classmethod
     def get_path(cls, file_path: str) -> list:
