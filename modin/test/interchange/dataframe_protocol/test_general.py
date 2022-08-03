@@ -46,7 +46,7 @@ def test_only_one_dtype(test_data, df_from_dict):
     column_size = len(test_data[columns[0]])
     for column in columns:
         assert dfX.get_column_by_name(column).null_count == 0
-        assert dfX.get_column_by_name(column).size == column_size
+        assert dfX.get_column_by_name(column).size() == column_size
         assert dfX.get_column_by_name(column).offset == 0
 
 
@@ -67,7 +67,7 @@ def test_float_int(df_from_dict):
     for column, kind in columns.items():
         colX = dfX.get_column_by_name(column)
         assert colX.null_count == 0
-        assert colX.size == 3
+        assert colX.size() == 3
         assert colX.offset == 0
 
         assert colX.dtype[0] == kind
@@ -86,7 +86,7 @@ def test_noncategorical(df_from_dict):
     df = df_from_dict({"a": [1, 2, 3]})
     dfX = df.__dataframe__()
     colX = dfX.get_column_by_name("a")
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TypeError):
         colX.describe_categorical
 
 
@@ -132,14 +132,14 @@ def test_column_get_chunks(size, n_chunks, df_from_dict):
     dfX = df.__dataframe__()
     chunks = list(dfX.get_column(0).get_chunks(n_chunks))
     assert len(chunks) == n_chunks
-    assert sum(chunk.size for chunk in chunks) == size
+    assert sum(chunk.size() for chunk in chunks) == size
 
 
 def test_get_columns(df_from_dict):
     df = df_from_dict({"a": [0, 1], "b": [2.5, 3.5]})
     dfX = df.__dataframe__()
     for colX in dfX.get_columns():
-        assert colX.size == 2
+        assert colX.size() == 2
         assert colX.num_chunks() == 1
     assert dfX.get_column(0).dtype[0] == 0
     assert dfX.get_column(1).dtype[0] == 2

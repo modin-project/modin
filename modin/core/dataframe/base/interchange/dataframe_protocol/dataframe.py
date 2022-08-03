@@ -23,7 +23,7 @@ from typing import Optional, Iterable, Sequence, Any, Tuple, Dict, TypedDict
 from .utils import DlpackDeviceType, DTypeKind, ColumnNullType
 
 
-class ColumnBuffers(TypedDict):
+class ColumnBuffers(TypedDict):  # noqa: GL08
     # first element is a buffer containing the column data;
     # second element is the data buffer's associated dtype
     data: Tuple["ProtocolBuffer", Any]
@@ -40,7 +40,7 @@ class ColumnBuffers(TypedDict):
     offsets: Optional[Tuple["ProtocolBuffer", Any]]
 
 
-class CategoricalDescription(TypedDict):
+class CategoricalDescription(TypedDict):  # noqa: GL08
     # whether the ordering of dictionary indices is semantically meaningful
     is_ordered: bool
     # whether a dictionary-style mapping of categorical values to other objects exists
