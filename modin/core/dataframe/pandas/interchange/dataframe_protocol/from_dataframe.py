@@ -193,15 +193,40 @@ def categorical_column_to_series(col: ProtocolColumn) -> Tuple[pandas.Series, An
     codes = buffer_to_ndarray(codes_buff, codes_dtype, col.offset, col.size())
 
     # Doing module in order to not get ``IndexError`` for out-of-bounds sentinel values in `codes`
-    values, categories_buf = unpack_protocol_column(categories)
-    buffers = [buffers, categories_buf]
-    values = values[codes % len(values)]
+    cat_values, categories_buf = unpack_protocol_column(categories)
+    values = cat_values[codes % len(cat_values)]
 
-    cat = pandas.Categorical(values, categories=categories, ordered=ordered)
+    cat = pandas.Categorical(values, categories=cat_values, ordered=ordered)
     data = pandas.Series(cat)
 
     data = set_nulls(data, col, buffers["validity"])
-    return data, buffers
+    return data, [buffers, categories_buf]
+
+
+def _inverse_null_buf(buf: np.ndarray, null_kind: ColumnNullType) -> np.ndarray:
+    """
+    Inverse the boolean value of buffer storing either bit- or bytemask.
+
+    Parameters
+    ----------
+    buf : np.ndarray
+        Buffer to inverse the boolean value for.
+    null_kind : {ColumnNullType.USE_BYTEMASK, ColumnNullType.USE_BITMASK}
+        How to treat the buffer.
+
+    Returns
+    -------
+    np.ndarray
+        Logically inversed buffer.
+    """
+    if null_kind == ColumnNullType.USE_BITMASK:
+        return ~buf
+    assert (
+        null_kind == ColumnNullType.USE_BYTEMASK
+    ), f"Unexpected null kind: {null_kind}"
+    # bytemasks use 0 for `False` and anything else for `True`, so convert to bool
+    # by direct comparison instead of bitwise reversal like we do for bitmasks
+    return buf == 0
 
 
 def string_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
@@ -260,7 +285,7 @@ def string_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
         valid_buff, valid_dtype = buffers["validity"]
         null_pos = buffer_to_ndarray(valid_buff, valid_dtype, col.offset, col.size())
         if sentinel_val == 0:
-            null_pos = ~null_pos
+            null_pos = _inverse_null_buf(null_pos, null_kind)
 
     # Assemble the strings from the code units
     str_list = [None] * col.size()
@@ -496,7 +521,7 @@ def set_nulls(
         valid_buff, valid_dtype = validity
         null_pos = buffer_to_ndarray(valid_buff, valid_dtype, col.offset, col.size())
         if sentinel_val == 0:
-            null_pos = ~null_pos
+            null_pos = _inverse_null_buf(null_pos, null_kind)
     elif null_kind in (ColumnNullType.NON_NULLABLE, ColumnNullType.USE_NAN):
         pass
     else:
