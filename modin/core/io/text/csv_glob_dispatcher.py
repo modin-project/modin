@@ -408,7 +408,12 @@ class CSVGlobDispatcher(CSVDispatcher):
         fs, _ = fsspec.core.url_to_fs(file_path)
         try:
             return get_file_path(fs)
-        except (NoCredentialsError, EndpointConnectionError, ConnectTimeoutError):
+        except (
+            NoCredentialsError,
+            PermissionError,
+            EndpointConnectionError,
+            ConnectTimeoutError,
+        ):
             fs, _ = fsspec.core.url_to_fs(file_path, anon=True)
         return get_file_path(fs)
 
