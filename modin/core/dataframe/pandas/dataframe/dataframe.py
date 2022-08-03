@@ -2613,7 +2613,7 @@ class PandasDataframe(ClassLogger):
             right_parts = [o._partitions for o in others]
             new_lengths = self._row_lengths_cache
             # we can only do this for COL_WISE because `concat` might rebalance partitions for ROW_WISE
-            new_widths = _compute_new_width()
+            new_widths = _compute_new_widths()
         else:
             (
                 left_parts,
@@ -2625,7 +2625,7 @@ class PandasDataframe(ClassLogger):
             )
             if axis == Axis.COL_WISE:
                 new_lengths = partition_sizes_along_axis
-                new_widths = _compute_new_width()
+                new_widths = _compute_new_widths()
             else:
                 new_widths = partition_sizes_along_axis
         new_partitions = self._partition_mgr_cls.concat(
