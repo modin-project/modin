@@ -2141,9 +2141,9 @@ class PandasDataframe(ClassLogger):
         if dtypes == "copy":
             dtypes = self._dtypes
 
-        def _pick_axis(getter, sizes_cache):
+        def _pick_axis(get_axis, sizes_cache):
             if labels == "keep":
-                return getter(), sizes_cache
+                return get_axis(), sizes_cache
             if labels == "replace":
                 return joined_index, partition_sizes_along_axis
             assert labels == "drop", f"Unexpected `labels`: {labels}"

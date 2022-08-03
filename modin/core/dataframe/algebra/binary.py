@@ -59,10 +59,10 @@ class Binary(Operator):
                 If `other` is a one-column query compiler, indicates whether it is a Series or not.
                 Frames and Series have to be processed differently, however we can't distinguish them
                 at the query compiler level, so this parameter is a hint that passed from a high level API.
-            dtypes : "copy" or None, default: None
-                Whether keep old dtypes or infer new dtypes from data.
             *args : args,
                 Arguments that will be passed to `func`.
+            dtypes : "copy" or None, default: None
+                Whether to keep old dtypes or infer new dtypes from data.
             **kwargs : kwargs,
                 Arguments that will be passed to `func`.
 
