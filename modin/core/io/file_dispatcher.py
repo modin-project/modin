@@ -258,42 +258,40 @@ class FileDispatcher(ClassLogger):
             Whether file exists or not.
         """
         if (
-            isinstance(file_path, str)
-            and fsspec.core.split_protocol(file_path)[0] in _SUPPORTED_PROTOCOLS
+            not isinstance(file_path, str)
+            or fsspec.core.split_protocol(file_path)[0] not in _SUPPORTED_PROTOCOLS
         ):
-            # `file_path` may start with a capital letter, which isn't supported by `fsspec.core.url_to_fs` used below.
-            file_path = file_path[0].lower() + file_path[1:]
-
-            from botocore.exceptions import (
-                NoCredentialsError,
-                EndpointConnectionError,
-                ConnectTimeoutError,
-            )
-
-            if storage_options is not None:
-                new_storage_options = dict(storage_options)
-                new_storage_options.pop("anon", None)
-            else:
-                new_storage_options = {}
-
-            fs, _ = fsspec.core.url_to_fs(file_path, **new_storage_options)
-            exists = False
-            try:
-                exists = fs.exists(file_path)
-            except (
-                NoCredentialsError,
-                PermissionError,
-                EndpointConnectionError,
-                ConnectTimeoutError,
-            ):
-                fs, _ = fsspec.core.url_to_fs(
-                    file_path, anon=True, **new_storage_options
-                )
-                exists = fs.exists(file_path)
-
-            return exists
-        else:
             return os.path.exists(file_path)
+
+        # `file_path` may start with a capital letter, which isn't supported by `fsspec.core.url_to_fs` used below.
+        file_path = file_path[0].lower() + file_path[1:]
+
+        from botocore.exceptions import (
+            NoCredentialsError,
+            EndpointConnectionError,
+            ConnectTimeoutError,
+        )
+
+        if storage_options is not None:
+            new_storage_options = dict(storage_options)
+            new_storage_options.pop("anon", None)
+        else:
+            new_storage_options = {}
+
+        fs, _ = fsspec.core.url_to_fs(file_path, **new_storage_options)
+        exists = False
+        try:
+            exists = fs.exists(file_path)
+        except (
+            NoCredentialsError,
+            PermissionError,
+            EndpointConnectionError,
+            ConnectTimeoutError,
+        ):
+            fs, _ = fsspec.core.url_to_fs(file_path, anon=True, **new_storage_options)
+            exists = fs.exists(file_path)
+
+        return exists
 
     @classmethod
     def deploy(cls, func, *args, num_returns=1, **kwargs):  # noqa: PR01
