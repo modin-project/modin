@@ -18,9 +18,36 @@ See more in https://data-apis.org/dataframe-protocol/latest/index.html.
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, Iterable, Sequence, Any, Tuple, Dict
+from typing import Optional, Iterable, Sequence, Any, Tuple, Dict, TypedDict
 
 from .utils import DlpackDeviceType, DTypeKind, ColumnNullType
+
+
+class ColumnBuffers(TypedDict):
+    # first element is a buffer containing the column data;
+    # second element is the data buffer's associated dtype
+    data: Tuple["ProtocolBuffer", Any]
+
+    # first element is a buffer containing mask values indicating missing data;
+    # second element is the mask value buffer's associated dtype.
+    # None if the null representation is not a bit or byte mask
+    validity: Optional[Tuple["ProtocolBuffer", Any]]
+
+    # first element is a buffer containing the offset values for
+    # variable-size binary data (e.g., variable-length strings);
+    # second element is the offsets buffer's associated dtype.
+    # None if the data buffer does not have an associated offsets buffer
+    offsets: Optional[Tuple["ProtocolBuffer", Any]]
+
+
+class CategoricalDescription(TypedDict):
+    # whether the ordering of dictionary indices is semantically meaningful
+    is_ordered: bool
+    # whether a dictionary-style mapping of categorical values to other objects exists
+    is_dictionary: bool
+    # Python-level only (e.g. ``{int: str}``).
+    # None if not a column-style categorical.
+    categories: Optional["ProtocolColumn"]
 
 
 class ProtocolBuffer(ABC):
@@ -82,7 +109,7 @@ class ProtocolBuffer(ABC):
         pass
 
     @abstractmethod
-    def __dlpack_device__(self) -> Tuple[DlpackDeviceType, int]:
+    def __dlpack_device__(self) -> Tuple[DlpackDeviceType, Optional[int]]:
         """
         Device type and device ID for where the data in the buffer resides.
 
@@ -148,7 +175,6 @@ class ProtocolColumn(ABC):
     so doesn't need its own version or ``__column__`` protocol.
     """
 
-    @property
     @abstractmethod
     def size(self) -> int:
         """
@@ -156,6 +182,9 @@ class ProtocolColumn(ABC):
 
         Corresponds to `DataFrame.num_rows()` if column is a single chunk;
         equal to size of this current chunk otherwise.
+
+        Is a method rather than a property because it may cause a (potentially
+        expensive) computation for some dataframe implementations.
 
         Returns
         -------
@@ -220,12 +249,12 @@ class ProtocolColumn(ABC):
 
     @property
     @abstractmethod
-    def describe_categorical(self) -> Dict[str, Any]:
+    def describe_categorical(self) -> CategoricalDescription:
         """
         If the dtype is categorical, there are two options.
 
         - There are only values in the data buffer.
-        - There is a separate dictionary-style encoding for categorical values.
+        - There is a separate non-categorical Column encoding categorical values.
 
         TBD: are there any other in-memory representations that are needed?
 
@@ -235,14 +264,15 @@ class ProtocolColumn(ABC):
             Content of returned dict:
             - "is_ordered" : bool, whether the ordering of dictionary indices is
                              semantically meaningful.
-            - "is_dictionary" : bool, whether a dictionary-style mapping of
+            - "is_dictionary" : bool, whether a mapping of
                                 categorical values to other objects exists
-            - "mapping" : dict, Python-level only (e.g. ``{int: str}``).
-                          None if not a dictionary-style categorical.
+            - "categories" : Column representing the (implicit) mapping of indices to
+                             category values (e.g. an array of cat1, cat2, ...).
+                             None if not a dictionary-style categorical.
 
         Raises
         ------
-        ``RuntimeError`` if the dtype is not categorical.
+        ``TypeError`` if the dtype is not categorical.
         """
         pass
 
@@ -253,12 +283,7 @@ class ProtocolColumn(ABC):
         Return the missing value (or "null") representation the column dtype uses.
 
         Return as a tuple ``(kind, value)``.
-        * Kind:
-            - 0 : non-nullable
-            - 1 : NaN/NaT
-            - 2 : sentinel value
-            - 3 : bit mask
-            - 4 : byte mask
+        * Kind: ColumnNullType
         * Value : if kind is "sentinel value", the actual value. If kind is a bit
           mask or a byte mask, the value (0 or 1) indicating a missing value. None
           otherwise.
@@ -338,7 +363,7 @@ class ProtocolColumn(ABC):
         pass
 
     @abstractmethod
-    def get_buffers(self) -> Dict[str, Any]:
+    def get_buffers(self) -> ColumnBuffers:
         """
         Return a dictionary containing the underlying buffers.
 
@@ -376,10 +401,14 @@ class ProtocolDataframe(ABC):
     to the dataframe interchange protocol specification.
     """
 
+    version = 0  # version of the protocol
+
     @abstractmethod
-    def __dataframe__(self, nan_as_null: bool = False, allow_copy: bool = True):
+    def __dataframe__(
+        self, nan_as_null: bool = False, allow_copy: bool = True
+    ) -> "ProtocolDataframe":
         """
-        Get a new dataframe exchange object.
+        Construct a new dataframe interchange object, potentially changing the parameters.
 
         See more about the protocol in https://data-apis.org/dataframe-protocol/latest/index.html.
 
@@ -387,7 +416,7 @@ class ProtocolDataframe(ABC):
         ----------
         nan_as_null : bool, default: False
             A keyword intended for the consumer to tell the producer
-            to overwrite null values in the data with ``NaN`` (or ``NaT``).
+            to overwrite null values in the data with ``NaN``.
             This currently has no effect; once support for nullable extension
             dtypes is added, this value should be propagated to columns.
         allow_copy : bool, default: True
@@ -405,7 +434,7 @@ class ProtocolDataframe(ABC):
 
     @property
     @abstractmethod
-    def metadata(self):
+    def metadata(self) -> Dict[str, Any]:
         """
         Get the metadata for the data frame, as a dictionary with string keys.
 
@@ -435,7 +464,7 @@ class ProtocolDataframe(ABC):
         pass
 
     @abstractmethod
-    def num_rows(self) -> int:
+    def num_rows(self) -> Optional[int]:
         """
         Return the number of rows in the ProtocolDataframe, if available.
 
