@@ -2583,15 +2583,15 @@ class PandasDataframe(ClassLogger):
         axis = Axis(axis)
         new_widths = None
 
-        def compute_new_width():
-            new_width = None
+        def _compute_new_widths():
+            widths = None
             if self._column_widths_cache is not None and all(
                 o._column_widths_cache is not None for o in others
             ):
-                new_width = self._column_widths_cache + [
+                widths = self._column_widths_cache + [
                     width for o in others for width in o._column_widths_cache
                 ]
-            return new_width
+            return widths
 
         # Fast path for equivalent columns and partitioning
         if (
@@ -2613,7 +2613,7 @@ class PandasDataframe(ClassLogger):
             right_parts = [o._partitions for o in others]
             new_lengths = self._row_lengths_cache
             # we can only do this for COL_WISE because `concat` might rebalance partitions for ROW_WISE
-            new_widths = compute_new_width()
+            new_widths = _compute_new_width()
         else:
             (
                 left_parts,
@@ -2625,7 +2625,7 @@ class PandasDataframe(ClassLogger):
             )
             if axis == Axis.COL_WISE:
                 new_lengths = partition_sizes_along_axis
-                new_widths = compute_new_width()
+                new_widths = _compute_new_width()
             else:
                 new_widths = partition_sizes_along_axis
         new_partitions = self._partition_mgr_cls.concat(
