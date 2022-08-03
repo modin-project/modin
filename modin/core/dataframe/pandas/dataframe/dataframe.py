@@ -2581,6 +2581,18 @@ class PandasDataframe(ClassLogger):
             New Modin DataFrame.
         """
         axis = Axis(axis)
+        new_widths = None
+
+        def _compute_new_widths():
+            widths = None
+            if self._column_widths_cache is not None and all(
+                o._column_widths_cache is not None for o in others
+            ):
+                widths = self._column_widths_cache + [
+                    width for o in others for width in o._column_widths_cache
+                ]
+            return widths
+
         # Fast path for equivalent columns and partitioning
         if (
             axis == Axis.ROW_WISE
@@ -2600,6 +2612,8 @@ class PandasDataframe(ClassLogger):
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
             new_lengths = self._row_lengths_cache
+            # we can only do this for COL_WISE because `concat` might rebalance partitions for ROW_WISE
+            new_widths = _compute_new_widths()
         else:
             (
                 left_parts,
@@ -2611,6 +2625,7 @@ class PandasDataframe(ClassLogger):
             )
             if axis == Axis.COL_WISE:
                 new_lengths = partition_sizes_along_axis
+                new_widths = _compute_new_widths()
             else:
                 new_widths = partition_sizes_along_axis
         new_partitions = self._partition_mgr_cls.concat(
@@ -2646,15 +2661,15 @@ class PandasDataframe(ClassLogger):
             # frame. Typically, if we know the width for any partition in a
             # column, we know the width for the first partition in the column.
             # So just check the widths of the first row of partitions.
-            new_widths = []
-            if new_partitions.size > 0:
-                for part in new_partitions[0]:
-                    if part._width_cache is not None:
-                        new_widths.append(part.width())
-                    else:
-                        new_widths = None
-                        break
-
+            if not new_widths:
+                new_widths = []
+                if new_partitions.size > 0:
+                    for part in new_partitions[0]:
+                        if part._width_cache is not None:
+                            new_widths.append(part.width())
+                        else:
+                            new_widths = None
+                            break
         return self.__constructor__(
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
