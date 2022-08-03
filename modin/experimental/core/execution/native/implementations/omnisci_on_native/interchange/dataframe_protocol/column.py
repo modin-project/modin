@@ -19,7 +19,7 @@ import numpy as np
 from typing import Any, Optional, Tuple, Dict, Iterable
 from math import ceil
 
-from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
     DTypeKind,
     ColumnNullType,
     ArrowCTypes,
@@ -27,7 +27,7 @@ from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
     pandas_dtype_to_arrow_c,
     raise_copy_alert,
 )
-from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolColumn,
 )
 from modin.utils import _inherit_docstrings

@@ -2953,7 +2953,7 @@ class PandasDataframe(ClassLogger):
         ProtocolDataframe
             A dataframe object following the dataframe protocol specification.
         """
-        from modin.core.dataframe.pandas.exchange.dataframe_protocol.dataframe import (
+        from modin.core.dataframe.pandas.interchange.dataframe_protocol.dataframe import (
             PandasProtocolDataframe,
         )
 
@@ -2986,7 +2986,7 @@ class PandasDataframe(ClassLogger):
                 "`df` does not support DataFrame exchange protocol, i.e. `__dataframe__` method"
             )
 
-        from modin.core.dataframe.pandas.exchange.dataframe_protocol.from_dataframe import (
+        from modin.core.dataframe.pandas.interchange.dataframe_protocol.from_dataframe import (
             from_dataframe_to_pandas,
         )
 

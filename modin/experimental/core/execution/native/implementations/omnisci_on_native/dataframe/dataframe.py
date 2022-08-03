@@ -2070,7 +2070,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 + "that are unsupported by OmniSci."
             )
 
-        from ..exchange.dataframe_protocol.dataframe import OmnisciProtocolDataframe
+        from ..interchange.dataframe_protocol.dataframe import OmnisciProtocolDataframe
 
         return OmnisciProtocolDataframe(
             self, nan_as_null=nan_as_null, allow_copy=allow_copy
@@ -2101,7 +2101,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 "`df` does not support DataFrame exchange protocol, i.e. `__dataframe__` method"
             )
 
-        from modin.core.dataframe.pandas.exchange.dataframe_protocol.from_dataframe import (
+        from modin.core.dataframe.pandas.interchange.dataframe_protocol.from_dataframe import (
             from_dataframe_to_pandas,
         )
 

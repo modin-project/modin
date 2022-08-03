@@ -29,7 +29,7 @@ import enum
 import numpy as np
 from typing import Tuple
 
-from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolBuffer,
 )
 from modin.utils import _inherit_docstrings

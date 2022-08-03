@@ -139,7 +139,7 @@ jobs:
             modin/experimental/core/execution/native/implementations/omnisci_on_native/expr.py \
             modin/experimental/core/execution/native/implementations/omnisci_on_native/omnisci_worker.py \
       - run: python scripts/doc_checker.py modin/experimental/core/storage_formats/omnisci
-      - run: python scripts/doc_checker.py modin/experimental/core/execution/native/implementations/omnisci_on_native/exchange/dataframe_protocol
+      - run: python scripts/doc_checker.py modin/experimental/core/execution/native/implementations/omnisci_on_native/interchange/dataframe_protocol
       - run: python scripts/doc_checker.py modin/experimental/batch/pipeline.py
       - run: python scripts/doc_checker.py modin/logging
 
@@ -317,7 +317,7 @@ jobs:
       - run: python -m pytest modin/test/test_partition_api.py
       - run: python -m pytest modin/test/test_utils.py
       - run: python -m pytest asv_bench/test/test_utils.py
-      - run: python -m pytest modin/test/exchange/dataframe_protocol/base
+      - run: python -m pytest modin/test/interchange/dataframe_protocol/base
       - run: python -m pytest modin/test/test_logging.py
       - uses: codecov/codecov-action@v2
 
@@ -423,8 +423,8 @@ jobs:
       - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv --verbose
-      - run: pytest modin/test/exchange/dataframe_protocol/test_general.py
-      - run: pytest modin/test/exchange/dataframe_protocol/omnisci
+      - run: pytest modin/test/interchange/dataframe_protocol/test_general.py
+      - run: pytest modin/test/interchange/dataframe_protocol/omnisci
       - uses: codecov/codecov-action@v2
 
   test-asv-benchmarks:
@@ -577,8 +577,8 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && pytest modin/experimental/sql/test/test_sql.py
-      - run: pytest modin/test/exchange/dataframe_protocol/test_general.py
-      - run: pytest modin/test/exchange/dataframe_protocol/pandas/test_protocol.py
+      - run: pytest modin/test/interchange/dataframe_protocol/test_general.py
+      - run: pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
       - uses: codecov/codecov-action@v2
 
   test-experimental:

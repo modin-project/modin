@@ -19,13 +19,13 @@ import ctypes
 import re
 from typing import Optional, Tuple, Any, Union
 
-from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
     DTypeKind,
     ColumnNullType,
     ArrowCTypes,
     Endianness,
 )
-from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
     ProtocolColumn,
     ProtocolBuffer,
