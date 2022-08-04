@@ -124,7 +124,7 @@ setup_commands:
 
         pip install colorful cloudpickle
         # ray now executes "ray stop" which expects "ray" to be in $PATH
-        # so place a symlink to current "ray"binary to /usr/local/bin
+        # so place a symlink to current "ray" binary to /usr/local/bin
         sudo ln -s `which ray` /usr/local/bin/ray
         echo 'export MODIN_RAY_CLUSTER=True' >> ~/.bashrc
 
