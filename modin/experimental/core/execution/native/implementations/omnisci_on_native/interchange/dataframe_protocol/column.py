@@ -196,11 +196,16 @@ class OmnisciProtocolColumn(ProtocolColumn):
 
         col = col.chunks[0]
         cat_frame = Series(col.dictionary.tolist())._query_compiler._modin_frame
+        from .dataframe import OmnisciProtocolDataframe
 
         return {
             "is_ordered": ordered,
             "is_dictionary": True,
-            "categories": OmnisciProtocolColumn(cat_frame),
+            "categories": OmnisciProtocolColumn(
+                OmnisciProtocolDataframe(
+                    cat_frame, self._col._nan_as_null, self._col._allow_copy
+                )
+            ),
         }
 
     @property
