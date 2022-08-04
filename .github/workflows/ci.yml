@@ -504,7 +504,7 @@ jobs:
         engine: ["python", "ray", "dask"]
         memory: ""
         include:
-          memory: null
+          memory: [null]
           engine: "python"
     env:
       MODIN_ENGINE: ${{matrix.engine}}
@@ -635,7 +635,7 @@ jobs:
       matrix:
         python-version: ["3.6"]
         engine: ["python", "ray", "dask"]
-        memory: null
+        memory: [null]
         include:
           memory: 1000000000
           engine: "ray"
@@ -685,7 +685,7 @@ jobs:
       matrix:
         python-version: ["3.6"]
         engine: ["python", "ray", "dask"]
-        memory: null
+        memory: [null]
         include:
           memory: 1000000000
           engine: "ray"
@@ -779,7 +779,7 @@ jobs:
       matrix:
         python-version: ["3.8"]
         engine: ["ray", "dask"]
-        memory: null
+        memory: [null]
         include:
           memory: 1000000000
           engine: "ray"
