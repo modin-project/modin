@@ -641,7 +641,13 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         pandas.DataFrame
             A pandas DataFrame
         """
-        retrieved_objects = [[obj.to_pandas() for obj in part] for part in partitions]
+        old_shape = partitions.shape
+        retrieved_objects = cls.get_objects_from_partitions(partitions.flatten())
+        # restore 2d array
+        retrieved_objects = [
+            [retrieved_objects[i * old_shape[1] + j] for j in range(old_shape[1])]
+            for i in range(old_shape[0])
+        ]
         if all(
             isinstance(part, pandas.Series) for row in retrieved_objects for part in row
         ):
