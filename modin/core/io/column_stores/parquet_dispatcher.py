@@ -96,9 +96,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
 
         Returns
         -------
-        filesystem: Any
+        filesystem : Any
             Protocol implementation of registry.
-        fs_path: list
+        fs_path : list
             Filesystem's specific path.
         """
         return (
