@@ -158,6 +158,7 @@ jobs:
         run: |
           if [${{matrix.engine}} = "ray"]; then
             echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
+          fi
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
