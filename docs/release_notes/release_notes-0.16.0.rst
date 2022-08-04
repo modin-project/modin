@@ -67,6 +67,7 @@ Key Features and Updates
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
   * DOCS-#4628: Add to_parquet partial support notes (#4648)
   * DOCS-#4668: Set light theme for readthedocs page, remove theme switcher (#4669)
+  * DOCS-#4748: Apply the Triage label to new issues.   
 * Dependencies
   * FEAT-#4598: Add support for pandas 1.4.3 (#4599)
   * FEAT-#4619: Integrate mypy static type checking (#4620)
