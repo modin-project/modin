@@ -987,11 +987,9 @@ class TestCsv:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
-    def test_read_csv_default_to_pandas_url(self):
-        # We haven't implemented read_csv from https, but if it's implemented, then this needs to change
+    def test_read_csv_url(self):
         eval_io(
             fn_name="read_csv",
-            modin_warning=UserWarning,
             # read_csv kwargs
             filepath_or_buffer="https://raw.githubusercontent.com/modin-project/modin/master/modin/pandas/test/data/blah.csv",
             # It takes about ~17Gb of RAM for Omnisci to import the whole table from this test

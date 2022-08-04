@@ -25,6 +25,7 @@ from modin.pandas.test.utils import (
     get_unique_filename,
     teardown_test_files,
     test_data,
+    eval_general,
 )
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.pandas.test.utils import parse_dates_values_by_id, time_parsing_csv_path
@@ -125,7 +126,10 @@ class TestCsvGlob:
     def test_read_csv_without_glob(self):
         with pytest.warns(UserWarning, match=r"Shell-style wildcard"):
             with pytest.raises(FileNotFoundError):
-                pd.read_csv_glob("s3://dask-data/nyc-taxi/2015/yellow_tripdata_2015-")
+                pd.read_csv_glob(
+                    "s3://dask-data/nyc-taxi/2015/yellow_tripdata_2015-",
+                    storage_options={"anon": True},
+                )
 
     def test_read_csv_glob_4373(self):
         columns, filename = ["col0"], "1x1.csv"
@@ -164,24 +168,25 @@ class TestCsvGlob:
     Engine.get() != "Ray", reason="Currently only support Ray engine for glob paths."
 )
 def test_read_multiple_csv_s3():
-    modin_df = pd.read_csv_glob("S3://noaa-ghcn-pds/csv/178*.csv")
+    path = "S3://modin-datasets/testing/multiple_csv/test_data*.csv"
 
-    # We have to specify the columns because the column names are not identical. Since we specified the column names, we also have to skip the original column names.
-    pandas_dfs = [
-        pandas.read_csv(
-            "s3://noaa-ghcn-pds/csv/178{}.csv".format(i),
-            names=modin_df.columns,
-            skiprows=[0],
-        )
-        for i in range(10)
-    ]
-    pandas_df = pd.concat(pandas_dfs)
+    def _pandas_read_csv_glob(path, storage_options):
+        pandas_dfs = [
+            pandas.read_csv(
+                f"{path.lower().split('*')[0]}{i}.csv", storage_options=storage_options
+            )
+            for i in range(2)
+        ]
+        return pandas.concat(pandas_dfs).reset_index(drop=True)
 
-    # Indexes get messed up when concatting so we reset both.
-    pandas_df = pandas_df.reset_index(drop=True)
-    modin_df = modin_df.reset_index(drop=True)
-
-    df_equals(modin_df, pandas_df)
+    eval_general(
+        pd,
+        pandas,
+        lambda module, **kwargs: pd.read_csv_glob(path, **kwargs).reset_index(drop=True)
+        if hasattr(module, "read_csv_glob")
+        else _pandas_read_csv_glob(path, **kwargs),
+        storage_options={"anon": True},
+    )
 
 
 test_default_to_pickle_filename = "test_default_to_pickle.pkl"
@@ -197,19 +202,27 @@ test_default_to_pickle_filename = "test_default_to_pickle.pkl"
 )
 def test_read_multiple_csv_s3_storage_opts(storage_options):
     path = "s3://modin-datasets/testing/multiple_csv/"
-    # Test the fact of handling of `storage_options`
-    modin_df = pd.read_csv_glob(path, storage_options=storage_options)
-    pandas_df = pd.concat(
-        [
-            pandas.read_csv(
-                f"{path}test_data{i}.csv",
-                storage_options=storage_options,
-            )
-            for i in range(2)
-        ],
-    ).reset_index(drop=True)
 
-    df_equals(modin_df, pandas_df)
+    def _pandas_read_csv_glob(path, storage_options):
+        pandas_df = pandas.concat(
+            [
+                pandas.read_csv(
+                    f"{path}test_data{i}.csv",
+                    storage_options=storage_options,
+                )
+                for i in range(2)
+            ],
+        ).reset_index(drop=True)
+        return pandas_df
+
+    eval_general(
+        pd,
+        pandas,
+        lambda module, **kwargs: pd.read_csv_glob(path, **kwargs)
+        if hasattr(module, "read_csv_glob")
+        else _pandas_read_csv_glob(path, **kwargs),
+        storage_options=storage_options,
+    )
 
 
 @pytest.mark.skipif(
