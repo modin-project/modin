@@ -504,8 +504,8 @@ jobs:
         engine: ["python", "ray", "dask"]
         memory: ""
         include:
-          memory: [null]
-          engine: "python"
+          - memory: [null]
+            engine: "python"
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: ${{matrix.memory}}
@@ -637,8 +637,8 @@ jobs:
         engine: ["python", "ray", "dask"]
         memory: [null]
         include:
-          memory: 1000000000
-          engine: "ray"
+          - memory: 1000000000
+            engine: "ray"
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: ${{matrix.memory}}
@@ -687,8 +687,8 @@ jobs:
         engine: ["python", "ray", "dask"]
         memory: [null]
         include:
-          memory: 1000000000
-          engine: "ray"
+          - memory: 1000000000
+            engine: "ray"
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       MODIN_MEMORY: ${{matrix.memory}}
@@ -781,8 +781,8 @@ jobs:
         engine: ["ray", "dask"]
         memory: [null]
         include:
-          memory: 1000000000
-          engine: "ray"
+          - memory: 1000000000
+            engine: "ray"
         test-task:
           - modin/pandas/test/dataframe/test_binary.py
           - modin/pandas/test/dataframe/test_default.py
