@@ -351,6 +351,15 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             self._ip_cache = ray.get(self._ip_cache)
         return self._ip_cache
 
+    def getitem_iat(self, x: int, y: int):
+        res = _getitem_iat.remote(self._data,x, y)
+        return ray.get(res)
+
+
+@ray.remote(num_returns=1)
+def _getitem_iat(df, x: int, y: int):
+    return df.iat[x, y]
+
 
 @ray.remote(num_returns=2)
 def _get_index_and_columns(df):

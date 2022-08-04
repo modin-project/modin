@@ -20,6 +20,8 @@ from pandas.util._validators import validate_bool_kwarg
 from pandas.core.dtypes.common import (
     is_dict_like,
     is_list_like,
+    is_integer,
+    is_scalar,
 )
 from pandas._libs.lib import no_default
 from pandas._typing import IndexKeyFunc
@@ -2433,6 +2435,18 @@ class Series(SeriesCompat, BasePandasDataset):
                     pandas.RangeIndex(len(self.index))[key]
                 )
             )
+
+        qc = self._query_compiler
+        mf = qc._modin_frame
+        index = self.index
+        if is_integer(key) and index._should_fallback_to_positional:
+            loc = key
+            return mf.getitem_iat(loc, 0)
+        elif is_scalar(key):
+            loc = index.get_loc(key)
+            if is_integer(loc):
+                return mf.getitem_iat(loc, 0)
+
         # TODO: More efficiently handle `tuple` case for `Series.__getitem__`
         if isinstance(key, tuple):
             return self._default_to_pandas(pandas.Series.__getitem__, key)

@@ -17,6 +17,7 @@ Module contains class PandasDataframe.
 PandasDataframe is a parent abstract class for any dataframe class
 for pandas storage format.
 """
+from pandas.util._decorators import cache_readonly
 from collections import OrderedDict
 import numpy as np
 import pandas
@@ -1249,6 +1250,74 @@ class PandasDataframe(ClassLogger):
             ):
                 columns.append(col)
         return columns
+
+    @cache_readonly
+    def _col_bins(self) -> np.ndarray:
+        """
+        The bins that we use for determing which partition column j is in.
+
+        To find which partition column j is in, we use `np.digitize(j, self._col_bins)`.
+
+        See also
+        --------
+        pandas.core.internals.BlockManager.blknos
+            Analogous to np.digitize(np.arange(ncols), self._col_bins)
+        """
+        widths = np.asarray(self._column_widths)
+
+        # INT_MAX to make sure we don't try to compute on partitions that don't exist.
+        bins = np.append(widths[:-1].cumsum(), np.iinfo(widths.dtype).max)
+        return bins
+
+    @cache_readonly
+    def _row_bins(self) -> np.ndarray:
+        """
+        The bins that we use for determing which partition row i is in.
+
+        To find which partition row i is in, we use `np.digitize(i, self._row_bins)`.
+
+        See also
+        --------
+        pandas.core.internals.BlockManager.blknos
+            Analogous to np.digitize(np.arange(nrows), self._row_bins)
+        """
+        lengths = np.asarray(self._row_lengths)
+
+        # INT_MAX to make sure we don't try to compute on partitions that don't exist.
+        bins = np.append(lengths[:-1].cumsum(), np.iinfo(lengths.dtype).max)
+        return bins
+
+    def _get_row_blklocs(self, x: int, blkno: int, axis: int):
+        """
+        For a row position x, we use _row_blknos to find the partition N
+        containing row x. We now want to find what row position _within_
+        partition N corresponds to row x.
+
+        See also
+        --------
+        pandas.core.internals.BlockManager.blklocs
+        """
+        # TODO: vectorize this function
+        if blkno == 0:
+            return x
+
+        if axis == 0:
+            prev = self._row_bins[blkno - 1]
+        else:
+            prev = self._col_bins[blkno - 1]
+        return x - prev
+
+    def getitem_iat(self, x, y):
+        row_blkno = np.digitize(x, self._row_bins)
+        # TODO: searchsorted is marginally faster than digitize
+        col_blkno = np.digitize(y, self._col_bins)
+
+        part = self._partitions[row_blkno, col_blkno]
+
+        row_blkloc = self._get_row_blklocs(x, row_blkno, 0)
+        col_blkloc = self._get_row_blklocs(y, col_blkno, 1)
+
+        return part.getitem_iat(row_blkloc, col_blkloc)
 
     def _get_dict_of_block_index(self, axis, indices, are_indices_sorted=False):
         """
