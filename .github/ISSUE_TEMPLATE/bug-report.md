@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: You ran into an behavior that doesn't match pandas
+about: You ran into a behavior that doesn't match pandas
 title: ''
 labels: 'Triage 🩹'
 assignees: ''
