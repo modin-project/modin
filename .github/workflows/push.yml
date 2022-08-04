@@ -155,10 +155,8 @@ jobs:
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - name: Limit ray memory
-        run: |
-          if [ "${{matrix.engine}}" = "ray" ]; then
-            echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
-          fi
+        run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
+        if: matrix.engine == 'ray'
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
@@ -256,10 +254,8 @@ jobs:
     name: test-windows
     steps:
       - name: Limit ray memory
-        run: |
-          if [ "${{matrix.engine}}" = "ray" ]; then
-            echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
-          fi
+        run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
+        if: matrix.engine == 'ray'
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
