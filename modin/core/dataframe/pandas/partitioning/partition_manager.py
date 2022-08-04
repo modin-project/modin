@@ -755,7 +755,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             )
 
         df_rows = [
-            pandas.concat([part for part in row], axis=axis)
+            pandas.concat([part for part in row], axis=axis, copy=False)
             for row in retrieved_objects
             if not all(is_part_empty(part) for part in row)
         ]

@@ -43,4 +43,4 @@ def concatenate(dfs):
             df.isetitem(
                 i, pandas.Categorical(df.iloc[:, i], categories=union.categories)
             )
-    return pandas.concat(dfs)
+    return pandas.concat(dfs, copy=False)
