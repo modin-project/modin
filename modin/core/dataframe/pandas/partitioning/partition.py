@@ -322,3 +322,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             New `PandasDataframePartition` object.
         """
         return cls.put(pandas.DataFrame(), 0, 0)
+
+    def getitem_iat(self, x: int, y: int):
+        df = self.get()
+        return df.iat[x, y]
