@@ -502,18 +502,16 @@ jobs:
       matrix:
         python-version: ["3.8"]
         engine: ["python", "ray", "dask"]
-        memory: [null]
-        include:
-          - memory: 1000000000
-            engine: "ray"
     env:
       MODIN_ENGINE: ${{matrix.engine}}
-      MODIN_MEMORY: ${{matrix.memory}}
       # Only test reading from SQL server and postgres on ubuntu for now.
       # Eventually, we should test on Windows, too, but we will have to set up
       # the servers differently.
       MODIN_TEST_READ_FROM_SQL_SERVER: true
       MODIN_TEST_READ_FROM_POSTGRES: true
+    - env:
+      MODIN_MEMORY: 1000000000
+      if: matrix.engine == 'ray'
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
@@ -635,13 +633,11 @@ jobs:
       matrix:
         python-version: ["3.6"]
         engine: ["python", "ray", "dask"]
-        memory: [null]
-        include:
-          - memory: 1000000000
-            engine: "ray"
     env:
       MODIN_ENGINE: ${{matrix.engine}}
-      MODIN_MEMORY: ${{matrix.memory}}
+    - env:
+      MODIN_MEMORY: 1000000000
+      if: matrix.engine == 'ray'
     name: test-compat-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
@@ -685,13 +681,11 @@ jobs:
       matrix:
         python-version: ["3.6"]
         engine: ["python", "ray", "dask"]
-        memory: [null]
-        include:
-          - memory: 1000000000
-            engine: "ray"
     env:
       MODIN_ENGINE: ${{matrix.engine}}
-      MODIN_MEMORY: ${{matrix.memory}}
+    - env:
+      MODIN_MEMORY: 1000000000
+      if: matrix.engine == 'ray'
     name: test-compat-win (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v2
@@ -779,10 +773,6 @@ jobs:
       matrix:
         python-version: ["3.8"]
         engine: ["ray", "dask"]
-        memory: [null]
-        include:
-          - memory: 1000000000
-            engine: "ray"
         test-task:
           - modin/pandas/test/dataframe/test_binary.py
           - modin/pandas/test/dataframe/test_default.py
@@ -803,7 +793,9 @@ jobs:
           - modin/pandas/test/test_io.py
     env:
       MODIN_ENGINE: ${{matrix.engine}}
-      MODIN_MEMORY: ${{matrix.memory}}
+    - env:
+      MODIN_MEMORY: 1000000000
+      if: matrix.engine == 'ray'
     name: test-windows
     steps:
       - uses: actions/checkout@v2
