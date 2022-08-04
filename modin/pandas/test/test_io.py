@@ -1963,9 +1963,6 @@ class TestHdf:
             teardown_test_files([filename])
 
 
-@pytest.mark.skipif(
-    Engine.get() == "Dask", reason="Dask seems to hang forever on these tests"
-)
 class TestSql:
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
