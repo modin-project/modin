@@ -26,7 +26,8 @@ Key Features and Updates
   * FIX-#4658: Expand exception handling for `read_*` functions from s3 storages (#4659)
   * FIX-#4672: Fix incorrect warning when setting `frame.index` or `frame.columns` (#4721)
   * FIX-#4686: Propagate metadata and drain call queue in unwrap_partitions (#4697)
-  * FIX-#4652: Support categorical data in `from_dataframe` (#4737) 
+  * FIX-#4652: Support categorical data in `from_dataframe` (#4737)
+  * FIX-#4756: Correctly propagate `storage_options` in `read_parquet` (#4764)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
