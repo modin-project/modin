@@ -70,6 +70,7 @@ class Python36CompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             max_cols=max_cols,
             memory_usage=memory_usage,
             null_counts=null_counts,
+            show_counts=None,
         )
 
     def pivot_table(
