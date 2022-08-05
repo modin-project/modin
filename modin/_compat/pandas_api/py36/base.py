@@ -29,8 +29,8 @@ class Python36CompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
     """Compatibility layer for 'Python 3.6 pandas' for Dataset."""
 
     def _validate_ascending(self, ascending):  # noqa: PR01, RT01
-        """Validate that `ascending` is a boolean."""
-        return bool(ascending)
+        """Skip validation because pandas 1.1.x allowed anything."""
+        return ascending
 
     @_inherit_docstrings(validate_bool_kwarg)
     def _validate_bool_kwarg(self, value, arg_name, **kwargs):

@@ -15,6 +15,8 @@ import pytest
 import numpy as np
 import pandas
 import matplotlib
+
+from modin._compat import PandasCompatVersion
 import modin.pandas as pd
 from modin.utils import to_pandas
 
@@ -333,6 +335,9 @@ def test_merge(test_data, test_data2):
 )
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 def test_sort_index(axis, ascending, na_position):
+    if ascending is None and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+        pytest.skip("pandas 1.1 did not raise on ascending=None but Modin does")
+
     data = test_data["float_nan_data"]
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
