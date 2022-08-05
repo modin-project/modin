@@ -184,8 +184,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         """
         lengths = kwargs.get("_lengths", None)
         max_retries = kwargs.pop("max_retries", None)
-        return deploy_ray_func.options(
-            num_returns=(num_splits if lengths is None else len(lengths)) * 4,
+        remote_task_future = deploy_ray_func.options(
+            num_returns=1,
             **({"max_retries": max_retries} if max_retries is not None else {}),
         ).remote(
             PandasDataframeAxisPartition.deploy_axis_func,
@@ -196,6 +196,22 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             *partitions,
             **kwargs,
         )
+        num_returns = (num_splits if lengths is None else len(lengths)) * 4
+
+        @ray.remote(num_returns=4)
+        def fetch(task_future, i):
+            return task_future[i : i + 4]
+
+        if num_returns != 1:
+            remote_task_future_old = [
+                fetch.remote(remote_task_future, i) for i in range(0, num_returns, 4)
+            ]
+            # reshape to initial
+            remote_task_future = []
+            for i in range(len(remote_task_future_old)):
+                remote_task_future.extend(remote_task_future_old[i])
+
+        return remote_task_future
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
