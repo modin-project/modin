@@ -737,17 +737,50 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             )
         else:
             pbar = None
+
+        parts = [
+            [
+                df.iloc[i : i + row_chunksize, j : j + col_chunksize]
+                for j in range(0, len(df.columns), col_chunksize)
+            ]
+            for i in range(0, len(df), row_chunksize)
+        ]
+        count_rows, count_cols = len(parts), len(parts[0])
+        all_count = count_rows * count_cols
+        shapes = [
+            [(parts[i][j]).shape for j in range(count_cols)] for i in range(count_rows)
+        ]
+        new_parts = []
+        for row in parts:
+            new_parts.extend(row)
+        parts = new_parts
+
+        import ray
+
+        parts = ray.put(parts)
+
+        @ray.remote
+        def fetch(parts, i):
+            return parts[i]
+
+        ids = [None] * all_count
+        for i in range(all_count):
+            ids[i] = fetch.remote(parts, i)
+
+        parts = [
+            [ids[i * count_cols + j] for j in range(count_cols)]
+            for i in range(count_rows)
+        ]
+
         parts = [
             [
                 update_bar(
                     pbar,
-                    put_func(
-                        df.iloc[i : i + row_chunksize, j : j + col_chunksize].copy()
-                    ),
+                    put_func((parts[i][j], shapes[i][j])),
                 )
-                for j in range(0, len(df.columns), col_chunksize)
+                for j in range(count_cols)
             ]
-            for i in range(0, len(df), row_chunksize)
+            for i in range(count_rows)
         ]
         if ProgressBar.get():
             pbar.close()

@@ -247,7 +247,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
         Parameters
         ----------
-        obj : any
+        obj : any or tuple[any, int, int]
             An object to be put.
 
         Returns
@@ -255,6 +255,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         PandasOnRayDataframePartition
             A new ``PandasOnRayDataframePartition`` object.
         """
+        if isinstance(obj, tuple):
+            return PandasOnRayDataframePartition(*obj)
         return PandasOnRayDataframePartition(
             ray.put(obj), len(obj.index), len(obj.columns)
         )
