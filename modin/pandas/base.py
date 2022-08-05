@@ -2284,15 +2284,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
     rmul = mul
 
     def _rolling(
-        self,
-        window,
-        min_periods,
-        center,
-        win_type,
-        on,
-        axis,
-        closed,
-        method,
+        self, window, min_periods, center, win_type, *args, **kw
     ):  # noqa: PR01, RT01, D200
         """
         Provide rolling window calculations.
@@ -2306,10 +2298,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 min_periods=min_periods,
                 center=center,
                 win_type=win_type,
-                on=on,
-                axis=axis,
-                closed=closed,
-                method=method,
+                *args,
+                **kw,
             )
         from .window import Rolling
 
@@ -2319,10 +2309,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
             min_periods=min_periods,
             center=center,
             win_type=win_type,
-            on=on,
-            axis=axis,
-            closed=closed,
-            method=method,
+            *args,
+            **kw,
         )
 
     def round(self, decimals=0, *args, **kwargs):  # noqa: PR01, RT01, D200

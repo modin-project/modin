@@ -23,6 +23,8 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
     from .py36 import Python36CompatibleSeries as SeriesCompat
     from .py36 import Python36CompatibleDataFrameGroupBy as DataFrameGroupByCompat
     from .py36 import Python36CompatibleSeriesGroupBy as SeriesGroupByCompat
+    from .py36 import Python36CompatibleWindow as WindowCompat
+    from .py36 import Python36CompatibleRolling as RollingCompat
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
     from .latest import (
         LatestCompatibleBasePandasDataset as BasePandasDatasetCompat,
@@ -31,6 +33,8 @@ elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
     from .latest import LatestCompatibleSeries as SeriesCompat
     from .latest import LatestCompatibleDataFrameGroupBy as DataFrameGroupByCompat
     from .latest import LatestCompatibleSeriesGroupBy as SeriesGroupByCompat
+    from .latest import LatestCompatibleWindow as WindowCompat
+    from .latest import LatestCompatibleRolling as RollingCompat
 
 __all__ = [
     "BasePandasDatasetCompat",
@@ -38,4 +42,6 @@ __all__ = [
     "SeriesCompat",
     "DataFrameGroupByCompat",
     "SeriesGroupByCompat",
+    "WindowCompat",
+    "RollingCompat",
 ]
