@@ -75,6 +75,7 @@ Key Features and Updates
 * Dependencies
   * FEAT-#4598: Add support for pandas 1.4.3 (#4599)
   * FEAT-#4619: Integrate mypy static type checking (#4620)
+  * FEAT-#4202: Allow dask past 2022.2.0 (#4769)
 * New Features
   * FEAT-4463: Add experimental fuzzydata integration for testing against a randomized dataframe workflow (#4556)
   * FEAT-#4419: Extend virtual partitioning API to pandas on Dask (#4420)
