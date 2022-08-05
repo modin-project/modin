@@ -37,10 +37,11 @@ from modin.logging import ClassLogger
 from .series import Series
 from .utils import is_label
 from modin._compat.core.pd_common import reconstruct_func
+from modin._compat.pandas_api.classes import DataFrameGroupByCompat, SeriesGroupByCompat
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
-class DataFrameGroupBy(ClassLogger):
+class DataFrameGroupBy(DataFrameGroupByCompat):
     def __init__(
         self,
         df,
@@ -295,16 +296,8 @@ class DataFrameGroupBy(ClassLogger):
         self._indices_cache = self._compute_index_grouped(numerical=True)
         return self._indices_cache
 
-    def pct_change(self, periods=1, fill_method="ffill", limit=None, freq=None, axis=0):
-        return self._default_to_pandas(
-            lambda df: df.pct_change(
-                periods=periods,
-                fill_method=fill_method,
-                limit=limit,
-                freq=freq,
-                axis=axis,
-            )
-        )
+    def _pct_change(self, *args, **kw):
+        return self._default_to_pandas(lambda df: df.pct_change(*args, **kw))
 
     def filter(self, func, dropna=True, *args, **kwargs):
         return self._default_to_pandas(
@@ -1188,7 +1181,7 @@ class DataFrameGroupBy(ClassLogger):
 
 
 @_inherit_docstrings(pandas.core.groupby.SeriesGroupBy)
-class SeriesGroupBy(DataFrameGroupBy):
+class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
     @property
     def ndim(self):
         """
