@@ -228,7 +228,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         PandasOnDaskDataframePartition
             A new ``PandasOnDaskDataframePartition`` object.
         """
-        return cls(DaskWrapper.put(obj, hash=False))
+        return cls(DaskWrapper.put(obj, hash=False), len(obj.index), len(obj.columns))
 
     @classmethod
     def preprocess_func(cls, func):
