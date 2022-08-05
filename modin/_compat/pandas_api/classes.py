@@ -21,11 +21,21 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
     )
     from .py36 import Python36CompatibleDataFrame as DataFrameCompat
     from .py36 import Python36CompatibleSeries as SeriesCompat
+    from .py36 import Python36CompatibleDataFrameGroupBy as DataFrameGroupByCompat
+    from .py36 import Python36CompatibleSeriesGroupBy as SeriesGroupByCompat
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
     from .latest import (
         LatestCompatibleBasePandasDataset as BasePandasDatasetCompat,
     )
     from .latest import LatestCompatibleDataFrame as DataFrameCompat
     from .latest import LatestCompatibleSeries as SeriesCompat
+    from .latest import LatestCompatibleDataFrameGroupBy as DataFrameGroupByCompat
+    from .latest import LatestCompatibleSeriesGroupBy as SeriesGroupByCompat
 
-__all__ = ["BasePandasDatasetCompat", "DataFrameCompat", "SeriesCompat"]
+__all__ = [
+    "BasePandasDatasetCompat",
+    "DataFrameCompat",
+    "SeriesCompat",
+    "DataFrameGroupByCompat",
+    "SeriesGroupByCompat",
+]

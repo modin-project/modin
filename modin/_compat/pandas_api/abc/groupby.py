@@ -11,15 +11,20 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .base import LatestCompatibleBasePandasDataset
-from .dataframe import LatestCompatibleDataFrame
-from .series import LatestCompatibleSeries
-from .groupby import LatestCompatibleDataFrameGroupBy, LatestCompatibleSeriesGroupBy
+"""Module for interface for class compatibility layer for GroupBy."""
 
-__all__ = [
-    "LatestCompatibleBasePandasDataset",
-    "LatestCompatibleDataFrame",
-    "LatestCompatibleSeries",
-    "LatestCompatibleDataFrameGroupBy",
-    "LatestCompatibleSeriesGroupBy",
-]
+from modin.logging.class_logger import ClassLogger
+
+
+class BaseCompatibleDataFrameGroupBy(ClassLogger):
+    """Interface for class compatibility layer for DataFrameGroupBy."""
+
+    def pct_change(self, *args, **kwargs):  # noqa: GL08
+        pass
+
+
+class BaseCompatibleSeriesGroupBy(ClassLogger):
+    """Interface for class compatibility layer for SeriesGroupBy."""
+
+    def pct_change(self, *args, **kwargs):  # noqa: GL08
+        pass
