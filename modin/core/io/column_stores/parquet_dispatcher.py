@@ -65,16 +65,15 @@ class ParquetDispatcher(ColumnStoreDispatcher):
 
         if isinstance(path, AbstractBufferedFile):
             return path.fs, [path]
-        filesystem = get_filesystem_class(split_protocol(path)[0])(**storage_options)
+        fs = get_filesystem_class(split_protocol(path)[0])(**storage_options)
         dataset = cls._get_dataset(path, storage_options)
-        files = []
-        for fpath in dataset.files:
-            if version.parse(fsspec.__version__) < version.parse("2022.5.0"):
-                files.append(_unstrip_protocol(filesystem.protocol, fpath))
-            else:
-                files.append(filesystem.unstrip_protocol(fpath))
+        # version.parse() is expensive, so we can split this into two separate loops
+        if version.parse(fsspec.__version__) < version.parse("2022.5.0"):
+            files = [_unstrip_protocol(fs.protocol, fpath) for fpath in dataset.files]
+        else:
+            files = [fs.unstrip_protocol(fpath) for fpath in dataset.files]
 
-        return filesystem, files
+        return fs, files
 
     @classmethod
     def _get_dataset(cls, path, storage_options):
