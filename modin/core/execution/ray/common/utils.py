@@ -98,53 +98,7 @@ def initialize_ray(
     ray.init({', '.join([f'{k}={v}' for k,v in extra_init_kw.items()])})
 """,
             )
-            object_store_memory = Memory.get()
-            # In case anything failed above, we can still improve the memory for Modin.
-            if object_store_memory is None:
-                virtual_memory = psutil.virtual_memory().total
-                if sys.platform.startswith("linux"):
-                    shm_fd = os.open("/dev/shm", os.O_RDONLY)
-                    try:
-                        shm_stats = os.fstatvfs(shm_fd)
-                        system_memory = shm_stats.f_bsize * shm_stats.f_bavail
-                        if system_memory / (virtual_memory / 2) < 0.99:
-                            warnings.warn(
-                                f"The size of /dev/shm is too small ({system_memory} bytes). The required size "
-                                + f"at least half of RAM ({virtual_memory // 2} bytes). Please, delete files in /dev/shm or "
-                                + "increase size of /dev/shm with --shm-size in Docker. Also, you can set "
-                                + "the required memory size for each Ray worker in bytes to MODIN_MEMORY environment variable."
-                            )
-                    finally:
-                        os.close(shm_fd)
-                else:
-                    system_memory = virtual_memory
-                object_store_memory = int(0.6 * system_memory // 1e9 * 1e9)
-                # If the memory pool is smaller than 2GB, just use the default in ray.
-                if object_store_memory == 0:
-                    object_store_memory = None
-            else:
-                object_store_memory = int(object_store_memory)
-
-            mac_size_limit = getattr(
-                ray.ray_constants, "MAC_DEGRADED_PERF_MMAP_SIZE_LIMIT", None
-            )
-            if (
-                sys.platform == "darwin"
-                and mac_size_limit is not None
-                and object_store_memory > mac_size_limit
-            ):
-                warnings.warn(
-                    "On Macs, Ray's performance is known to degrade with "
-                    + "object store size greater than "
-                    + f"{mac_size_limit / 2 ** 30:.4} GiB. Ray by default does "
-                    + "not allow setting an object store size greater than "
-                    + "that. Modin is overriding that default limit because "
-                    + "it would rather have a larger, slower object store "
-                    + "than spill to disk more often. To override Modin's "
-                    + "behavior, you can initialize Ray yourself."
-                )
-                os.environ["RAY_ENABLE_MAC_LARGE_OBJECT_STORE"] = "1"
-
+            object_store_memory = _object_store_memory()
             ray_init_kwargs = {
                 "num_cpus": CpuCount.get(),
                 "num_gpus": GpuCount.get(),
@@ -184,6 +138,45 @@ def initialize_ray(
         NPartitions._put(num_gpus)
     else:
         NPartitions._put(num_cpus)
+
+
+def _object_store_memory() -> int:
+    object_store_memory = Memory.get()
+    if object_store_memory is not None:
+        return object_store_memory
+    # If the user doesn't want a particular memory size, figure out the
+    virtual_memory = psutil.virtual_memory().total
+    if sys.platform.startswith("linux"):
+        shm_fd = os.open("/dev/shm", os.O_RDONLY)
+        try:
+            shm_stats = os.fstatvfs(shm_fd)
+            system_memory = shm_stats.f_bsize * shm_stats.f_bavail
+            if system_memory / (virtual_memory / 2) < 0.99:
+                warnings.warn(
+                    f"The size of /dev/shm is too small ({system_memory} bytes). The required size "
+                    + f"at least half of RAM ({virtual_memory // 2} bytes). Please, delete files in /dev/shm or "
+                    + "increase size of /dev/shm with --shm-size in Docker. Also, you can set "
+                    + "the required memory size for each Ray worker in bytes to MODIN_MEMORY environment variable."
+                )
+        finally:
+            os.close(shm_fd)
+    else:
+        system_memory = virtual_memory
+    object_store_memory = int(0.6 * system_memory // 1e9 * 1e9)
+    # If the memory pool is smaller than 2GB, just use the default in ray.
+    if object_store_memory == 0:
+        object_store_memory = None
+    else:
+        mac_size_limit = getattr(
+            ray.ray_constants, "MAC_DEGRADED_PERF_MMAP_SIZE_LIMIT", None
+        )
+        if (
+            sys.platform == "darwin"
+            and mac_size_limit is not None
+            and object_store_memory > mac_size_limit
+        ):
+            object_store_memory = mac_size_limit
+    return object_store_memory
 
 
 def deserialize(obj):
