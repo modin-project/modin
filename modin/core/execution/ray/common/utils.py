@@ -153,7 +153,8 @@ def _object_store_memory() -> Optional[int]:
     object_store_memory = Memory.get()
     if object_store_memory is not None:
         return object_store_memory
-    # If the user doesn't want a particular memory size, figure out the
+    # If the user doesn't want a particular object store size, choose an object
+    # store size according to the amount of available memory.
     virtual_memory = psutil.virtual_memory().total
     if sys.platform.startswith("linux"):
         shm_fd = os.open("/dev/shm", os.O_RDONLY)
