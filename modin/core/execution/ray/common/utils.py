@@ -17,6 +17,7 @@ import os
 import sys
 import psutil
 from packaging import version
+from typing import Optional
 import warnings
 
 import ray
@@ -140,7 +141,15 @@ def initialize_ray(
         NPartitions._put(num_cpus)
 
 
-def _object_store_memory() -> int:
+def _object_store_memory() -> Optional[int]:
+    """
+    Get the object store memory we should start Ray with, in bytes.
+
+    Returns
+    -------
+    Optional[int]
+        The object store memory size in bytes.
+    """
     object_store_memory = Memory.get()
     if object_store_memory is not None:
         return object_store_memory
