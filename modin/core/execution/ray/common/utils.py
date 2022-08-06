@@ -167,6 +167,9 @@ def _object_store_memory() -> int:
     if object_store_memory == 0:
         object_store_memory = None
     else:
+        # Versions of ray with MAC_DEGRADED_PERF_MMAP_SIZE_LIMIT don't allow us
+        # to initialize ray with object store size larger than that constant.
+        # For background see https://github.com/ray-project/ray/issues/20388
         mac_size_limit = getattr(
             ray.ray_constants, "MAC_DEGRADED_PERF_MMAP_SIZE_LIMIT", None
         )
