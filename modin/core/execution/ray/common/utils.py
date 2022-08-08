@@ -154,8 +154,8 @@ def _object_store_memory() -> Optional[int]:
         system_memory is available memory in /dev/shm
       otherwise:
         system_memory is psutil.virtual_memory().total
-      desired_memory = floor(_OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO *
-                             system_memory / 1e9) * 1e9
+      desired_memory = ((_OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO * system_memory)
+                        rounded down to the nearest GB)
       if desired_memory == 0:
         return None
       else if (on Mac and desired_memory > the Ray mac object store size
@@ -183,31 +183,34 @@ def _object_store_memory() -> Optional[int]:
                 warnings.warn(
                     f"The size of /dev/shm is too small ({system_memory} bytes). The required size "
                     + f"at least half of RAM ({virtual_memory // 2} bytes). Please, delete files in /dev/shm or "
-                    + "increase size of /dev/shm with --shm-size in Docker. Also, you can set "
-                    + "the required memory size for each Ray worker in bytes to MODIN_MEMORY environment variable."
+                    + "increase size of /dev/shm with --shm-size in Docker. Also, you can can override the memory "
+                    + "size for each Ray worker (in bytes) to the MODIN_MEMORY environment variable."
                 )
         finally:
             os.close(shm_fd)
     else:
         system_memory = virtual_memory
+    bytes_per_gb = 1e9
     object_store_memory = int(
-        _OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO * system_memory // 1e9 * 1e9
+        _OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO
+        * system_memory
+        // bytes_per_gb
+        * bytes_per_gb
     )
     if object_store_memory == 0:
         return None
-    else:
-        # Versions of ray with MAC_DEGRADED_PERF_MMAP_SIZE_LIMIT don't allow us
-        # to initialize ray with object store size larger than that constant.
-        # For background see https://github.com/ray-project/ray/issues/20388
-        mac_size_limit = getattr(
-            ray.ray_constants, "MAC_DEGRADED_PERF_MMAP_SIZE_LIMIT", None
-        )
-        if (
-            sys.platform == "darwin"
-            and mac_size_limit is not None
-            and object_store_memory > mac_size_limit
-        ):
-            object_store_memory = mac_size_limit
+    # Versions of ray with MAC_DEGRADED_PERF_MMAP_SIZE_LIMIT don't allow us
+    # to initialize ray with object store size larger than that constant.
+    # For background see https://github.com/ray-project/ray/issues/20388
+    mac_size_limit = getattr(
+        ray.ray_constants, "MAC_DEGRADED_PERF_MMAP_SIZE_LIMIT", None
+    )
+    if (
+        sys.platform == "darwin"
+        and mac_size_limit is not None
+        and object_store_memory > mac_size_limit
+    ):
+        object_store_memory = mac_size_limit
     return object_store_memory
 
 
