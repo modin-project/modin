@@ -14,6 +14,7 @@
 import pytest
 import numpy as np
 import pandas
+from modin._compat import PandasCompatVersion
 import modin.pandas as pd
 
 from .utils import (
@@ -91,7 +92,10 @@ def test_dataframe(data, window, min_periods, win_type, axis):
         df_equals(modin_rolled.max(), pandas_rolled.max())
         df_equals(modin_rolled.skew(), pandas_rolled.skew())
         df_equals(modin_rolled.kurt(), pandas_rolled.kurt())
-        df_equals(modin_rolled.apply(np.sum), pandas_rolled.apply(np.sum))
+        if PandasCompatVersion.CURRENT != PandasCompatVersion.PY36:
+            # skip this on pandas 1.1 as pandas raise an exception in there
+
+            df_equals(modin_rolled.apply(np.sum), pandas_rolled.apply(np.sum))
         df_equals(modin_rolled.aggregate(np.sum), pandas_rolled.aggregate(np.sum))
         # TODO(https://github.com/modin-project/modin/issues/4260): Once pandas
         # allows us to rolling aggregate a list of functions over axis 1, test
