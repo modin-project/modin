@@ -2,7 +2,7 @@
 name: Bug report
 about: You ran into a behavior that doesn't match pandas
 title: ''
-labels: 'Triage 🩹'
+labels: 'bug 🦗, Triage 🩹'
 assignees: ''
 
 ---
