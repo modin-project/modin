@@ -129,11 +129,14 @@ class Python36CompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
         limit=None,
         tolerance=None,
     ):
-        return self._reindex(
-            labels=labels,
+        axis = self._get_axis_number(axis)
+        if axis == 0 and labels is not None:
+            index = labels
+        elif labels is not None:
+            columns = labels
+        return super(Python36CompatibleDataFrame, self).reindex(
             index=index,
             columns=columns,
-            axis=axis,
             method=method,
             copy=copy,
             level=level,

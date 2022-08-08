@@ -2085,6 +2085,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             if columns is not None:
                 kwargs["columns"] = columns
             return self._default_to_pandas("reindex", copy=copy, **kwargs)
+
         new_query_compiler = None
         if index is not None:
             if not isinstance(index, pandas.Index):

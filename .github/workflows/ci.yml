@@ -668,6 +668,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_default.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
       - run: python -m pytest -n 2 modin/pandas/test/test_api.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
@@ -719,6 +720,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_default.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
       - run: python -m pytest -n 2 modin/pandas/test/test_api.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
