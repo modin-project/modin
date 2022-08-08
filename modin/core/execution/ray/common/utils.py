@@ -150,6 +150,10 @@ def _object_store_memory() -> Optional[int]:
     If object store memory is set in the ``Memory`` Modin config variable:
       return ``Memory``
     else:
+      if on linux:
+        system_memory is available memory in /dev/shm
+      otherwise:
+        system_memory is psutil.virtual_memory().total
       desired_memory = floor(_OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO *
                              system_memory / 1e9) * 1e9
       if desired_memory == 0:
