@@ -143,7 +143,7 @@ class ColumnStoreDispatcher(FileDispatcher):
     @classmethod
     def build_columns(cls, columns):
         """
-        Split columns into chunks, that should be read be workers.
+        Split columns into chunks that should be read by workers.
 
         Parameters
         ----------

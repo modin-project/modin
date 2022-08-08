@@ -54,27 +54,39 @@ pd.DataFrame([])
 
 
 @pytest.mark.parametrize("axis", [None, 0, 1])
-def test_unwrap_partitions(axis):
+@pytest.mark.parametrize("reverse_index", [True, False])
+@pytest.mark.parametrize("reverse_columns", [True, False])
+def test_unwrap_partitions(axis, reverse_index, reverse_columns):
     data = test_data["int_data"]
-    df = pd.DataFrame(data)
 
+    def get_df(lib, data):
+        df = lib.DataFrame(data)
+        if reverse_index:
+            df.index = df.index[::-1]
+        if reverse_columns:
+            df.columns = df.columns[::-1]
+        return df
+
+    df = get_df(pd, data)
+    # `df` should not have propagated the index and column updates to its
+    # partitions yet. The partitions of `expected_df` should have the updated
+    # metadata because we construct `expected_df` directly from the updated
+    # pandas dataframe.
+    expected_df = pd.DataFrame(get_df(pandas, data))
+    expected_partitions = expected_df._query_compiler._modin_frame._partitions
     if axis is None:
-        expected_partitions = df._query_compiler._modin_frame._partitions
         actual_partitions = np.array(unwrap_partitions(df, axis=axis))
-        assert (
-            expected_partitions.shape[0] == actual_partitions.shape[0]
-            and expected_partitions.shape[1] == expected_partitions.shape[1]
-        )
+        assert expected_partitions.shape == actual_partitions.shape
         for row_idx in range(expected_partitions.shape[0]):
             for col_idx in range(expected_partitions.shape[1]):
-                assert (
-                    expected_partitions[row_idx][col_idx]._data
-                    == actual_partitions[row_idx][col_idx]
+                df_equals(
+                    get_func(expected_partitions[row_idx][col_idx]._data),
+                    get_func(actual_partitions[row_idx][col_idx]),
                 )
     else:
         expected_axis_partitions = (
-            df._query_compiler._modin_frame._partition_mgr_cls.axis_partition(
-                df._query_compiler._modin_frame._partitions, axis ^ 1
+            expected_df._query_compiler._modin_frame._partition_mgr_cls.axis_partition(
+                expected_partitions, axis ^ 1
             )
         )
         expected_axis_partitions = [

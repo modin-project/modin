@@ -68,26 +68,6 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         """
         pass
 
-    def shuffle(self, func, lengths, **kwargs):
-        """
-        Shuffle the order of the data in this axis partition based on the `lengths`.
-
-        Parameters
-        ----------
-        func : callable
-            The function to apply before splitting.
-        lengths : list
-            The list of partition lengths to split the result into.
-        **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
-
-        Returns
-        -------
-        list
-            A list of `BaseDataframePartition` objects split by `lengths`.
-        """
-        pass
-
     # Child classes must have these in order to correctly subclass.
     instance_type = None
     partition_type = None
