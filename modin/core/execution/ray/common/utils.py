@@ -194,7 +194,7 @@ def _object_store_memory() -> Optional[int]:
         _OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO * system_memory // 1e9 * 1e9
     )
     if object_store_memory == 0:
-        object_store_memory = None
+        return None
     else:
         # Versions of ray with MAC_DEGRADED_PERF_MMAP_SIZE_LIMIT don't allow us
         # to initialize ray with object store size larger than that constant.
