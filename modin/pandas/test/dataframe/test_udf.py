@@ -15,6 +15,7 @@ import pytest
 import numpy as np
 import pandas
 import matplotlib
+from modin._compat import PandasCompatVersion
 from modin.config import MinPartitionSize
 import modin.pandas as pd
 
@@ -79,6 +80,7 @@ def test_agg_apply(axis, func, op):
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: getattr(df, op)(func, axis),
+        check_exception_type=PandasCompatVersion.CURRENT != PandasCompatVersion.PY36,
     )
 
 
@@ -93,6 +95,7 @@ def test_agg_apply_axis_names(axis, func, op):
     eval_general(
         *create_test_dfs(test_data["int_data"]),
         lambda df: getattr(df, op)(func, axis),
+        check_exception_type=PandasCompatVersion.CURRENT != PandasCompatVersion.PY36,
     )
 
 
@@ -399,4 +402,5 @@ def test_transform(data, func):
     eval_general(
         *create_test_dfs(data),
         lambda df: df.transform(func),
+        check_exception_type=PandasCompatVersion.CURRENT != PandasCompatVersion.PY36,
     )
