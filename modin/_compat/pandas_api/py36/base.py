@@ -420,7 +420,11 @@ class Python36CompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
         ascending: bool = False,
     ):
         return self._value_counts(
-            subset=subset, normalize=normalize, sort=sort, ascending=ascending
+            subset=subset,
+            normalize=normalize,
+            sort=sort,
+            ascending=ascending,
+            dropna=True,
         )
 
     def var(
