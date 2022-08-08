@@ -116,6 +116,32 @@ class Python36CompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             **kwargs,
         )
 
+    def reindex(
+        self,
+        labels=None,
+        index=None,
+        columns=None,
+        axis=None,
+        method=None,
+        copy=True,
+        level=None,
+        fill_value=nan,
+        limit=None,
+        tolerance=None,
+    ):
+        return self._reindex(
+            labels=labels,
+            index=index,
+            columns=columns,
+            axis=axis,
+            method=method,
+            copy=copy,
+            level=level,
+            fill_value=fill_value,
+            limit=limit,
+            tolerance=tolerance,
+        )
+
     def replace(
         self,
         to_replace=None,
