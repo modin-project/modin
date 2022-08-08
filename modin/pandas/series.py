@@ -803,12 +803,6 @@ class Series(SeriesCompat, BasePandasDataset):
             )
         )
 
-    def count(self, level=None):  # noqa: PR01, RT01, D200
-        """
-        Return number of non-NA/null observations in the Series.
-        """
-        return super(Series, self).count(level=level)
-
     def cov(
         self, other, min_periods=None, ddof: Optional[int] = 1
     ):  # noqa: PR01, RT01, D200
@@ -910,12 +904,6 @@ class Series(SeriesCompat, BasePandasDataset):
         return self._reduce_dimension(
             query_compiler=self._query_compiler.dot(other, squeeze_self=True)
         )
-
-    def drop_duplicates(self, keep="first", inplace=False):  # noqa: PR01, RT01, D200
-        """
-        Return Series with duplicate values removed.
-        """
-        return super(Series, self).drop_duplicates(keep=keep, inplace=inplace)
 
     def dropna(self, axis=0, inplace=False, how=None):  # noqa: PR01, RT01, D200
         """
@@ -1815,12 +1803,6 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         return self._default_to_pandas("swaplevel", i=i, j=j, copy=copy)
 
-    def take(self, indices, axis=0, is_copy=None, **kwargs):  # noqa: PR01, RT01, D200
-        """
-        Return the elements in the given positional indices along an axis.
-        """
-        return super(Series, self).take(indices, axis=axis, is_copy=is_copy, **kwargs)
-
     def to_dict(self, into=dict):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Convert Series to {label -> value} dict or dict-like object.
@@ -2136,12 +2118,6 @@ class Series(SeriesCompat, BasePandasDataset):
         Return the number of dimensions of the underlying data, by definition 1.
         """
         return 1
-
-    def nunique(self, dropna=True):  # noqa: PR01, RT01, D200
-        """
-        Return number of unique elements in the object.
-        """
-        return super(Series, self).nunique(dropna=dropna)
 
     @property
     def shape(self):  # noqa: RT01, D200
