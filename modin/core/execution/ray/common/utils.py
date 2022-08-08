@@ -35,6 +35,8 @@ from modin.config import (
 )
 from modin.error_message import ErrorMessage
 
+_OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO = 0.6
+
 ObjectIDType = ray.ObjectRef
 if version.parse(ray.__version__) >= version.parse("1.2.0"):
     from ray.util.client.common import ClientObjectRef
@@ -145,16 +147,28 @@ def _object_store_memory() -> Optional[int]:
     """
     Get the object store memory we should start Ray with, in bytes.
 
+    If object store memory is set in the ``Memory`` Modin config variable:
+      return ``Memory``
+    else:
+      desired_memory = floor(_OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO *
+                             system_memory / 1e9) * 1e9
+      if desired_memory == 0:
+        return None
+      else if (on Mac and desired_memory > the Ray mac object store size
+               limit L):
+        return L
+      else:
+        return desired_memory
+
     Returns
     -------
     Optional[int]
-        The object store memory size in bytes.
+        The object store memory size in bytes, or None if we should use the Ray
+        default.
     """
     object_store_memory = Memory.get()
     if object_store_memory is not None:
         return object_store_memory
-    # If the user doesn't want a particular object store size, choose an object
-    # store size according to the amount of available memory.
     virtual_memory = psutil.virtual_memory().total
     if sys.platform.startswith("linux"):
         shm_fd = os.open("/dev/shm", os.O_RDONLY)
@@ -172,8 +186,9 @@ def _object_store_memory() -> Optional[int]:
             os.close(shm_fd)
     else:
         system_memory = virtual_memory
-    object_store_memory = int(0.6 * system_memory // 1e9 * 1e9)
-    # If the memory pool is smaller than 2GB, just use the default in ray.
+    object_store_memory = int(
+        _OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO * system_memory // 1e9 * 1e9
+    )
     if object_store_memory == 0:
         object_store_memory = None
     else:
