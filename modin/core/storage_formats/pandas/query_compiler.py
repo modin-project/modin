@@ -499,6 +499,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # fast path
             new_index = index
         else:
+            if not on_in_index.empty and on_in_columns.empty:
+                # fast path
+                # converting multi-index to dataframe and back takes a long time
+                # so just drop extra levels if needed
+                level_names = index.names
+                for level_name in level_names:
+                    if level_name not in on_in_index:
+                        index = index.droplevel(level_name)
+                return index
             if not on_in_index.empty:
                 frame1 = index.to_frame()[on_in_index]
             if not on_in_columns.empty:
