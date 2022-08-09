@@ -40,6 +40,11 @@ MIN_DASK_VERSION = version.parse("2.22.0")
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
 
 MODIN_UNNAMED_SERIES_LABEL = "__reduced__"
+"""
+The '__reduced__' name is used internally by the query compiler as a column name to
+represent pandas Series objects that are not explicitly assigned a name, so as to
+distinguish between an N-element series and 1xN dataframe.
+"""
 
 
 def _make_api_url(token):
