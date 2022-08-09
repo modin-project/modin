@@ -1403,6 +1403,14 @@ class TestParquet:
             )
             start_row = end_row
         path = make_parquet_dir(dfs_by_filename, row_group_size)
+
+        # There are specific files that PyArrow will try to ignore by default
+        # in a parquet directory. One example are files that start with '_'. Our
+        # previous implementation tried to read all files in a parquet directory,
+        # but we now make use of PyArrow to ensure the directory is valid.
+        with open(os.path.join(path, "_committed_file"), "w+") as f:
+            f.write("testingtesting")
+
         eval_io(
             fn_name="read_parquet",
             # read_parquet kwargs
