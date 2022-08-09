@@ -674,6 +674,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_api.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - uses: codecov/codecov-action@v2
@@ -729,6 +730,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_api.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
+      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - uses: codecov/codecov-action@v2
