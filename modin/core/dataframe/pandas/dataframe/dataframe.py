@@ -36,6 +36,9 @@ from modin.core.dataframe.base.dataframe.utils import (
     Axis,
     JoinType,
 )
+from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+    ProtocolDataframe,
+)
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
 from modin.logging import ClassLogger

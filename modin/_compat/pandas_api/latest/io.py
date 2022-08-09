@@ -16,8 +16,28 @@
 import inspect
 import pandas
 from pandas._libs.lib import no_default
+from pandas._typing import (
+    CompressionOptions,
+    CSVEngine,
+    DtypeArg,
+    ReadCsvBuffer,
+    FilePath,
+    StorageOptions,
+    IntStrT,
+)
 import pickle
-from typing import Optional, Dict, Any, OrderedDict, List
+from typing import (
+    Optional,
+    Dict,
+    Any,
+    OrderedDict,
+    List,
+    Sequence,
+    Literal,
+    Hashable,
+    Callable,
+    Iterable,
+)
 
 from modin.utils import _inherit_docstrings, Engine
 from modin.error_message import ErrorMessage
