@@ -26,7 +26,12 @@ from pandas._typing import IndexKeyFunc
 from typing import Union, Optional
 import warnings
 
-from modin.utils import _inherit_docstrings, to_pandas, Engine
+from modin.utils import (
+    _inherit_docstrings,
+    to_pandas,
+    Engine,
+    MODIN_UNNAMED_SERIES_LABEL,
+)
 from modin.config import IsExperimental, PersistentPickle
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
@@ -101,7 +106,7 @@ class Series(SeriesCompat, BasePandasDataset):
                 "Distributing {} object. This may take some time.".format(type(data))
             )
             if name is None:
-                name = "__reduced__"
+                name = MODIN_UNNAMED_SERIES_LABEL
                 if isinstance(data, pandas.Series) and data.name is not None:
                     name = data.name
 
@@ -131,7 +136,7 @@ class Series(SeriesCompat, BasePandasDataset):
         hashable
         """
         name = self._query_compiler.columns[0]
-        if name == "__reduced__":
+        if name == MODIN_UNNAMED_SERIES_LABEL:
             return None
         return name
 
@@ -145,7 +150,7 @@ class Series(SeriesCompat, BasePandasDataset):
             Name value to set.
         """
         if name is None:
-            name = "__reduced__"
+            name = MODIN_UNNAMED_SERIES_LABEL
         self._query_compiler.columns = [name]
 
     name = property(_get_name, _set_name)
@@ -942,7 +947,8 @@ class Series(SeriesCompat, BasePandasDataset):
         Transform each element of a list-like to a row.
         """
         return super(Series, self).explode(
-            "__reduced__" if self.name is None else self.name, ignore_index=ignore_index
+            MODIN_UNNAMED_SERIES_LABEL if self.name is None else self.name,
+            ignore_index=ignore_index,
         )
 
     def factorize(self, sort=False, na_sentinel=-1):  # noqa: PR01, RT01, D200
@@ -2159,7 +2165,7 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         df = self._query_compiler.to_pandas()
         series = df[df.columns[0]]
-        if self._query_compiler.columns[0] == "__reduced__":
+        if self._query_compiler.columns[0] == MODIN_UNNAMED_SERIES_LABEL:
             series.name = None
         return series
 
@@ -2372,7 +2378,7 @@ class Series(SeriesCompat, BasePandasDataset):
             if self.name == other.name:
                 new_self.name = new_other.name = self.name
             else:
-                new_self.name = new_other.name = "__reduced__"
+                new_self.name = new_other.name = MODIN_UNNAMED_SERIES_LABEL
         else:
             new_self = self
             new_other = other

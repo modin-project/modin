@@ -36,7 +36,13 @@ import warnings
 
 from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
-from modin.utils import _inherit_docstrings, to_pandas, hashable, append_to_docstring
+from modin.utils import (
+    _inherit_docstrings,
+    to_pandas,
+    hashable,
+    append_to_docstring,
+    MODIN_UNNAMED_SERIES_LABEL,
+)
 from modin.config import Engine, IsExperimental, PersistentPickle
 from .utils import (
     from_pandas,
@@ -385,7 +391,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         # the 'else' branch also handles 'result_type == "expand"' since it makes the output type
         # depend on the `func` result (Series for a scalar, DataFrame for list-like)
         else:
-            reduced_index = pandas.Index(["__reduced__"])
+            reduced_index = pandas.Index([MODIN_UNNAMED_SERIES_LABEL])
             if query_compiler.get_axis(axis).equals(
                 reduced_index
             ) or query_compiler.get_axis(axis ^ 1).equals(reduced_index):

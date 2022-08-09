@@ -18,7 +18,7 @@ import pandas
 
 from .tree_reduce import TreeReduce
 from .default2pandas.groupby import GroupBy
-from modin.utils import try_cast_to_pandas, hashable
+from modin.utils import try_cast_to_pandas, hashable, MODIN_UNNAMED_SERIES_LABEL
 from modin.error_message import ErrorMessage
 
 
@@ -350,7 +350,7 @@ class GroupByReduce(TreeReduce):
         )
 
         result = query_compiler.__constructor__(new_modin_frame)
-        if result.index.name == "__reduced__":
+        if result.index.name == MODIN_UNNAMED_SERIES_LABEL:
             result.index.name = None
         return result
 

@@ -24,6 +24,7 @@ from pandas.core.indexes.api import ensure_index, Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
 from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 import pandas as pd
 from typing import List, Hashable, Optional, Tuple, Union
 
@@ -2320,7 +2321,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         match = re.search("__index__\\d+_(.*)", col)
         if match:
             name = match.group(1)
-            if name in ("__None__", "__reduced__"):
+            if name in ("__None__", MODIN_UNNAMED_SERIES_LABEL):
                 return None
             return name
 

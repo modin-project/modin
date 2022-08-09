@@ -39,6 +39,7 @@ from modin.core.dataframe.base.dataframe.utils import (
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
 from modin.logging import ClassLogger
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 
 def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
@@ -1414,11 +1415,11 @@ class PandasDataframe(ClassLogger):
                 # line up with the index of the data based on how pandas creates a
                 # DataFrame from a Series.
                 result = pandas.DataFrame(series_result).T
-                result.index = ["__reduced__"]
+                result.index = [MODIN_UNNAMED_SERIES_LABEL]
             else:
                 result = pandas.DataFrame(series_result)
                 if isinstance(series_result, pandas.Series):
-                    result.columns = ["__reduced__"]
+                    result.columns = [MODIN_UNNAMED_SERIES_LABEL]
             return result
 
         return _tree_reduce_func
@@ -1441,7 +1442,7 @@ class PandasDataframe(ClassLogger):
         """
         new_axes, new_axes_lengths = [0, 0], [0, 0]
 
-        new_axes[axis] = ["__reduced__"]
+        new_axes[axis] = [MODIN_UNNAMED_SERIES_LABEL]
         new_axes[axis ^ 1] = self.axes[axis ^ 1]
 
         new_axes_lengths[axis] = [1]

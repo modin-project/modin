@@ -39,6 +39,8 @@ MIN_DASK_VERSION = version.parse("2.22.0")
 
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
 
+MODIN_UNNAMED_SERIES_LABEL = "__reduced__"
+
 
 def _make_api_url(token):
     """
@@ -445,7 +447,7 @@ def try_cast_to_pandas(obj, squeeze=False):
         # Query compiler case, it doesn't have logic about convertion to Series
         if (
             isinstance(getattr(result, "name", None), str)
-            and result.name == "__reduced__"
+            and result.name == MODIN_UNNAMED_SERIES_LABEL
         ):
             result.name = None
         return result
