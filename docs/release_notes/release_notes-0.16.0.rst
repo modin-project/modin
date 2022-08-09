@@ -85,6 +85,7 @@ Key Features and Updates
   * FEAT-#4147: Add partial compatibility with Python 3.6 and pandas 1.1 (#4301)
   * FEAT-#4569: Add error message when `read_` function defaults to pandas (#4647)
   * FEAT-#4725: Make index and columns lazy in Modin DataFrame (#4726)
+  * FEAT-#4664: Finalize compatibility support for Python 3.6 (#4800)
 
 Contributors
 ------------
