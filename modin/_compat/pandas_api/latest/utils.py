@@ -13,7 +13,7 @@
 
 """Module for utility functions used by 'latest pandas' compatibility layer."""
 
-from pandas._libs.lib import no_default
+from pandas._libs.lib import no_default, NoDefault
 
 
 def create_stat_method(name):

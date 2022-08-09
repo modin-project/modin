@@ -52,6 +52,7 @@ Key Features and Updates
   * REFACTOR-#4717: Improve PartitionMgr.get_indices() usage (#4718)
   * REFACTOR-#4774: remove `_build_treereduce_func` call from `_compute_dtypes` (#4775)
   * REFACTOR-#4750: Delete BaseDataframeAxisPartition.shuffle (#4751)
+  * REFACTOR-#4722: Stop suppressing undefined name lint (#4723)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements
