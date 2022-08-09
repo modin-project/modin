@@ -72,14 +72,9 @@ class PandasOnDaskDataframe(PandasDataframe):
             return [partition.apply(len_fn)._data]
         elif partition.axis == axis:
             return [
-                ptn.apply(len_fn)._data
-                for ptn in partition.list_of_block_partitions
+                ptn.apply(len_fn)._data for ptn in partition.list_of_block_partitions
             ]
-        return [
-            partition.list_of_block_partitions[0]
-            .apply(len_fn)
-            ._data
-        ]
+        return [partition.list_of_block_partitions[0].apply(len_fn)._data]
 
     @property
     def _row_lengths(self):

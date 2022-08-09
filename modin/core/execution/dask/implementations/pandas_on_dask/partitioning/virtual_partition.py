@@ -421,7 +421,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
                     for obj in self.list_of_partitions_to_combine
                 ]
                 new_widths = DaskWrapper.materialize(
-                    [cache for cache in caches if isinstance(promise, Future)]
+                    [cache for cache in caches if isinstance(cache, Future)]
                 )
                 dask_idx = 0
                 for i, cache in enumerate(caches):

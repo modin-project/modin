@@ -1234,13 +1234,13 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             all_parts = np.array(
                 [
                     [
-                        partitions_copy[row_blk_idx, col_blk_idx]
-                        for row_blk_idx, _ in row_partitions
+                        partition_copy[row_blk_idx, col_blk_idx]
+                        for row_blk_idx, _ in row_partitions_list
                     ]
                     for col_blk_idx, _ in col_partitions_list
                 ]
             ).flatten()
-            self._update_partition_dimension_caches(all_parts)
+            cls._update_partition_dimension_caches(all_parts)
 
         def compute_part_size(indexer, remote_part, part_idx, axis):
             """Compute indexer length along the specified axis for the passed partition."""
