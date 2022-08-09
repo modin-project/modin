@@ -13,12 +13,15 @@
 
 """Module for 'latest pandas' compatibility layer for window objects."""
 
+import pandas.core.window.rolling
+
 from ..abc.window import BaseCompatibleWindow, BaseCompatibleRolling
+from modin.utils import _inherit_docstrings, append_to_docstring
 
 
+@append_to_docstring("Compatibility layer for 'latest pandas' for Window.")
+@_inherit_docstrings(pandas.core.window.rolling.Window)
 class LatestCompatibleWindow(BaseCompatibleWindow):
-    """Compatibility layer for 'latest pandas' for Window."""
-
     def __init__(
         self,
         dataframe,
@@ -47,9 +50,9 @@ class LatestCompatibleWindow(BaseCompatibleWindow):
         )
 
 
+@append_to_docstring("Compatibility layer for 'latest pandas' for Rolling.")
+@_inherit_docstrings(pandas.core.window.rolling.Rolling)
 class LatestCompatibleRolling(BaseCompatibleRolling):
-    """Compatibility layer for 'latest pandas' for Rolling."""
-
     def __init__(
         self,
         dataframe,

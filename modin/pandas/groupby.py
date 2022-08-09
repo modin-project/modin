@@ -33,7 +33,6 @@ from modin.utils import (
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.config import IsExperimental
-from modin.logging import ClassLogger
 from .series import Series
 from .utils import is_label
 from modin._compat import PandasCompatVersion
@@ -301,6 +300,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
         self._indices_cache = self._compute_index_grouped(numerical=True)
         return self._indices_cache
 
+    @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy.pct_change)
     def _pct_change(self, *args, **kw):
         return self._default_to_pandas(lambda df: df.pct_change(*args, **kw))
 

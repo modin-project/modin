@@ -13,12 +13,15 @@
 
 """Module for 'Python 3.6 pandas' compatibility layer for window objects."""
 
+import pandas.core.window.rolling
+
 from ..abc.window import BaseCompatibleWindow, BaseCompatibleRolling
+from modin.utils import _inherit_docstrings, append_to_docstring
 
 
+@append_to_docstring("Compatibility layer for 'Python 3.6 pandas' for Window.")
+@_inherit_docstrings(pandas.core.window.rolling.Window)
 class Python36CompatibleWindow(BaseCompatibleWindow):
-    """Compatibility layer for 'Python 3.6 pandas' for Window."""
-
     def __init__(
         self,
         dataframe,
@@ -45,9 +48,9 @@ class Python36CompatibleWindow(BaseCompatibleWindow):
         )
 
 
+@append_to_docstring("Compatibility layer for 'Python 3.6 pandas' for Rolling.")
+@_inherit_docstrings(pandas.core.window.rolling.Rolling)
 class Python36CompatibleRolling(BaseCompatibleRolling):
-    """Compatibility layer for 'Python 3.6 pandas' for Rolling."""
-
     def __init__(
         self,
         dataframe,

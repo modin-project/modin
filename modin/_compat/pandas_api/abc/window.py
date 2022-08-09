@@ -20,6 +20,20 @@ class BaseCompatibleWindow(ClassLogger):
     """Interface for class compatibility layer for Window."""
 
     def _init(self, dataframe, window_args, axis):
+        """
+        Initialize the Window object for real.
+
+        Utilize translated potentially pandas-specific arguments.
+
+        Parameters
+        ----------
+        dataframe : DataFrame
+            The dataframe object to apply window functions against.
+        window_args : sequence
+            The arguments to be passed to .Window() except dataframe.
+        axis : {0, 1}
+            The axis to build Window against.
+        """
         pass
 
 
@@ -27,4 +41,18 @@ class BaseCompatibleRolling(ClassLogger):
     """Interface for class compatibility layer for Rolling."""
 
     def _init(self, dataframe, rolling_args, axis):
+        """
+        Initialize the Rolling object for real.
+
+        Utilize translated potentially pandas-specific arguments.
+
+        Parameters
+        ----------
+        dataframe : DataFrame
+            The dataframe object to apply rolling functions against.
+        rolling_args : sequence
+            The arguments to be passed to .Rolling() except dataframe.
+        axis : {0, 1}
+            The axis to build Rolling against.
+        """
         pass

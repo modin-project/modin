@@ -18,7 +18,6 @@ import pandas.core.window.rolling
 from pandas.core.dtypes.common import is_list_like
 
 from modin.utils import _inherit_docstrings
-from modin.logging import ClassLogger
 from modin._compat.pandas_api.classes import WindowCompat, RollingCompat
 
 
