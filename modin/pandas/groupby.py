@@ -36,6 +36,7 @@ from modin.config import IsExperimental
 from modin.logging import ClassLogger
 from .series import Series
 from .utils import is_label
+from modin._compat import PandasCompatVersion
 from modin._compat.core.pd_common import reconstruct_func
 from modin._compat.pandas_api.classes import DataFrameGroupByCompat, SeriesGroupByCompat
 
@@ -235,8 +236,12 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                 and DataFrame(query_compiler=self._by.isna()).any(axis=None)
             ):
                 mask_nan_rows = data[self._by.columns].isna().any(axis=1)
-                # drop NaN groups
-                result = result.loc[~mask_nan_rows]
+                if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+                    # older pandas filled invalid rows with NaN-s
+                    result.loc[mask_nan_rows] = np.nan
+                else:
+                    # drop NaN groups
+                    result = result.loc[~mask_nan_rows]
             return result
 
         if freq is None and axis == 1 and self._axis == 0:
