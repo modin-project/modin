@@ -60,14 +60,14 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
 
     def _copy_pandas_groupby_if_needed(func):
         @functools.wraps(func)
-        def wrapped(*args, **kw):
+        def wrapped(*args, **kwargs):
             args = [
                 copy.deepcopy(arg)
                 if isinstance(arg, pandas.core.groupby.generic.DataFrameGroupBy)
                 else arg
                 for arg in args
             ]
-            return func(*args, **kw)
+            return func(*args, **kwargs)
 
         return wrapped
 

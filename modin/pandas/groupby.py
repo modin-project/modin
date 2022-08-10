@@ -301,8 +301,8 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
         return self._indices_cache
 
     @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy.pct_change)
-    def _pct_change(self, *args, **kw):
-        return self._default_to_pandas(lambda df: df.pct_change(*args, **kw))
+    def _pct_change(self, *args, **kwargs):
+        return self._default_to_pandas(lambda df: df.pct_change(*args, **kwargs))
 
     def filter(self, func, dropna=True, *args, **kwargs):
         return self._default_to_pandas(

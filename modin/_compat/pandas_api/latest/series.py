@@ -17,7 +17,6 @@ from typing import IO, Hashable, TYPE_CHECKING
 
 import numpy as np
 import pandas
-import pandas.core.groupby.generic
 from pandas.util._validators import validate_bool_kwarg
 from pandas._libs.lib import no_default, NoDefault
 from pandas._typing import Axis
