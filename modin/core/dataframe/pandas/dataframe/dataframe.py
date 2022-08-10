@@ -2394,7 +2394,7 @@ class PandasDataframe(ClassLogger):
         ):
             new_row_lengths = self._row_lengths_cache
             new_column_widths = self._column_widths_cache
-            new_axes = (kw["index"], kw["column"])
+            new_axes = (kw["index"], kw["columns"])
             cum_lengths = np.cumsum(new_row_lengths)
             if cum_lengths[-1] != len(new_axes[0]):
                 bins_idx = np.digitize(len(new_axes[0]), cum_lengths, right=True)
