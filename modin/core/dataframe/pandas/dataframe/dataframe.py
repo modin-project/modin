@@ -2392,21 +2392,21 @@ class PandasDataframe(ClassLogger):
             and self._row_lengths_cache is not None
             and self._column_widths_cache is not None
         ):
-            new_row_lengths = self._row_lengths_cache
-            new_column_widths = self._column_widths_cache
+            from modin.core.storage_formats.pandas.utils import compute_chunksize
+
+            new_row_lengths = None
+            new_column_widths = None
             new_axes = (kw["index"], kw["columns"])
-            cum_lengths = np.cumsum(new_row_lengths)
-            if cum_lengths[-1] != len(new_axes[0]):
-                bins_idx = np.digitize(len(new_axes[0]), cum_lengths, right=True)
-                new_row_lengths = new_row_lengths[:bins_idx] + [
-                    len(new_axes[0]) - cum_lengths[bins_idx - 1]
+            if axis == 0:
+                length = compute_chunksize(len(new_axes[0]), len(new_row_lengths))
+                last_length = len(new_axes[0]) % length
+                new_row_lengths = [length] * (len(new_axes[0]) // length) + [
+                    last_length
                 ]
-            cum_widths = np.cumsum(new_column_widths)
-            if cum_widths[-1] != len(new_axes[1]):
-                bins_idx = np.digitize(len(new_axes[1]), cum_widths, right=True)
-                new_column_widths = new_column_widths[:bins_idx] + [
-                    len(new_axes[1]) - cum_widths[bins_idx]
-                ]
+            elif axis == 1:
+                width = compute_chunksize(len(new_axes[1]), len(new_column_widths))
+                last_width = len(new_axes[1]) % width
+                new_column_widths = [width] * (len(new_axes[1]) // width) + [last_width]
             kw["row_lengths"] = new_row_lengths
             kw["column_widths"] = new_column_widths
 
