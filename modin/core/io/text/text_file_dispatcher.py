@@ -70,7 +70,12 @@ class TextFileDispatcher(FileDispatcher):
         use it without having to fall back to pandas and share file objects between
         workers. Given a filepath, return it immediately.
         """
-        if hasattr(filepath_or_buffer, "name"):
+        if (
+            hasattr(filepath_or_buffer, "name")
+            and hasattr(filepath_or_buffer, "seekable")
+            and filepath_or_buffer.seekable()
+            and filepath_or_buffer.tell() == 0
+        ):
             buffer_filepath = filepath_or_buffer.name
             if cls.file_exists(buffer_filepath):
                 warnings.warn(
@@ -1007,7 +1012,7 @@ class TextFileDispatcher(FileDispatcher):
         )
 
         use_modin_impl = cls.check_parameters_support(
-            filepath_or_buffer,
+            filepath_or_buffer_md,
             kwargs,
             skiprows_md,
             header_size,
@@ -1025,7 +1030,7 @@ class TextFileDispatcher(FileDispatcher):
         )
 
         pd_df_metadata = cls.read_callback(
-            filepath_or_buffer,
+            filepath_or_buffer_md,
             **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
         )
         column_names = pd_df_metadata.columns
