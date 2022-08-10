@@ -50,18 +50,21 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
             f"Only API Layer objects may be passed in here, got {type(api_layer_object)} instead."
         )
 
+    modin_frame = api_layer_object._query_compiler._modin_frame
+    modin_frame._propagate_index_objs(None)
     if axis is None:
 
         def _unwrap_partitions():
+            [p.drain_call_queue() for p in modin_frame._partitions.flatten()]
             if get_ip:
                 return [
                     [(partition._ip_cache, partition._data) for partition in row]
-                    for row in api_layer_object._query_compiler._modin_frame._partitions
+                    for row in modin_frame._partitions
                 ]
             else:
                 return [
                     [partition._data for partition in row]
-                    for row in api_layer_object._query_compiler._modin_frame._partitions
+                    for row in modin_frame._partitions
                 ]
 
         actual_engine = type(
@@ -76,8 +79,8 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
             f"Do not know how to unwrap '{actual_engine}' underlying partitions"
         )
     else:
-        partitions = api_layer_object._query_compiler._modin_frame._partition_mgr_cls.axis_partition(
-            api_layer_object._query_compiler._modin_frame._partitions, axis ^ 1
+        partitions = modin_frame._partition_mgr_cls.axis_partition(
+            modin_frame._partitions, axis ^ 1
         )
         return [
             part.force_materialization(get_ip=get_ip).unwrap(
@@ -177,11 +180,15 @@ def from_partitions(
     labels_axis_to_sync = None
     if index is None:
         labels_axis_to_sync = 1
-        index = partition_mgr_class.get_indices(0, parts, lambda df: df.axes[0])
+        index, internal_indices = partition_mgr_class.get_indices(0, parts)
+        if row_lengths is None:
+            row_lengths = [len(idx) for idx in internal_indices]
 
     if columns is None:
         labels_axis_to_sync = 0 if labels_axis_to_sync is None else -1
-        columns = partition_mgr_class.get_indices(1, parts, lambda df: df.axes[1])
+        columns, internal_indices = partition_mgr_class.get_indices(1, parts)
+        if column_widths is None:
+            column_widths = [len(idx) for idx in internal_indices]
 
     frame = partition_frame_class(
         parts,

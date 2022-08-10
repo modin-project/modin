@@ -24,6 +24,7 @@ from modin.experimental.core.execution.native.implementations.omnisci_on_native.
 from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
+from modin.pandas.indexing import is_range_like
 from modin.utils import _inherit_docstrings
 from modin.error_message import ErrorMessage
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.df_algebra import (

@@ -20,15 +20,17 @@ import os
 import sys
 from typing import List, Tuple
 import warnings
+import fsspec
 
 import pandas
 import pandas._libs.lib as lib
+from pandas.io.common import is_url
 
 from modin.config import NPartitions
 from modin.core.io.file_dispatcher import OpenFile
-from modin.core.io.file_dispatcher import S3_ADDRESS_REGEX
 from modin.core.io.text.csv_dispatcher import CSVDispatcher
-from modin.utils import import_optional_dependency
+
+_SUPPORTED_PROTOCOLS = {"s3", "S3"}
 
 
 class CSVGlobDispatcher(CSVDispatcher):
@@ -64,10 +66,18 @@ class CSVGlobDispatcher(CSVDispatcher):
                     + f"files at once. Did you forget it? Passed filename: '{filepath_or_buffer}'"
                 )
             if not cls.file_exists(filepath_or_buffer, kwargs.get("storage_options")):
-                return cls.single_worker_read(filepath_or_buffer, **kwargs)
+                return cls.single_worker_read(
+                    filepath_or_buffer,
+                    reason=cls._file_not_found_msg(filepath_or_buffer),
+                    **kwargs,
+                )
             filepath_or_buffer = cls.get_path(filepath_or_buffer)
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
-            return cls.single_worker_read(filepath_or_buffer, **kwargs)
+            return cls.single_worker_read(
+                filepath_or_buffer,
+                reason=cls.BUFFER_UNSUPPORTED_MSG,
+                **kwargs,
+            )
 
         # We read multiple csv files when the file path is a list of absolute file paths. We assume that all of the files will be essentially replicas of the
         # first file but with different data values.
@@ -78,29 +88,44 @@ class CSVGlobDispatcher(CSVDispatcher):
             filepath_or_buffer, kwargs.get("compression")
         )
         if compression_type is not None:
+            # need python3.7 to .seek and .tell ZipExtFile
+            supports_zip = sys.version_info[0] == 3 and sys.version_info[1] >= 7
             if (
                 compression_type == "gzip"
                 or compression_type == "bz2"
                 or compression_type == "xz"
             ):
                 kwargs["compression"] = compression_type
-            elif (
-                compression_type == "zip"
-                and sys.version_info[0] == 3
-                and sys.version_info[1] >= 7
-            ):
-                # need python3.7 to .seek and .tell ZipExtFile
+            elif compression_type == "zip" and supports_zip:
                 kwargs["compression"] = compression_type
             else:
-                return cls.single_worker_read(filepath_or_buffer, **kwargs)
+                supported_types = ["gzip", "bz2", "xz"]
+                if supports_zip:
+                    supported_types.append("zip")
+                supported_str = ", ".join(f"'{s}'" for s in supported_types)
+                if compression_type == "zip" and not supports_zip:
+                    reason_str = "zip compression requires python version >=3.7"
+                else:
+                    reason_str = f"Unsupported compression type '{compression_type}' (supported types are {supported_str})"
+                return cls.single_worker_read(
+                    filepath_or_buffer, reason=reason_str, **kwargs
+                )
 
         chunksize = kwargs.get("chunksize")
         if chunksize is not None:
-            return cls.single_worker_read(filepath_or_buffer, **kwargs)
+            return cls.single_worker_read(
+                filepath_or_buffer,
+                reason="`chunksize` parameter is not supported",
+                **kwargs,
+            )
 
         skiprows = kwargs.get("skiprows")
         if skiprows is not None and not isinstance(skiprows, int):
-            return cls.single_worker_read(filepath_or_buffer, **kwargs)
+            return cls.single_worker_read(
+                filepath_or_buffer,
+                reason="Non-integer `skiprows` value not supported",
+                **kwargs,
+            )
 
         nrows = kwargs.pop("nrows", None)
         names = kwargs.get("names", lib.no_default)
@@ -306,31 +331,43 @@ class CSVGlobDispatcher(CSVDispatcher):
         bool
             True if the path is valid.
         """
-        if isinstance(file_path, str):
-            match = S3_ADDRESS_REGEX.search(file_path)
-            if match is not None:
-                if file_path[0] == "S":
-                    file_path = "{}{}".format("s", file_path[1:])
-                S3FS = import_optional_dependency(
-                    "s3fs", "Module s3fs is required to read S3FS files."
-                )
-                from botocore.exceptions import NoCredentialsError
+        if isinstance(file_path, str) and is_url(file_path):
+            raise NotImplementedError("`read_csv_glob` supports only s3-like paths.")
 
-                if storage_options is not None:
-                    new_storage_options = dict(storage_options)
-                    new_storage_options.pop("anon", None)
-                else:
-                    new_storage_options = {}
+        if (
+            not isinstance(file_path, str)
+            or fsspec.core.split_protocol(file_path)[0] not in _SUPPORTED_PROTOCOLS
+        ):
+            return len(glob.glob(file_path)) > 0
 
-                s3fs = S3FS.S3FileSystem(anon=False, **new_storage_options)
-                exists = False
-                try:
-                    exists = len(s3fs.glob(file_path)) > 0 or exists
-                except (NoCredentialsError, PermissionError):
-                    pass
-                s3fs = S3FS.S3FileSystem(anon=True, **new_storage_options)
-                return exists or len(s3fs.glob(file_path)) > 0
-        return len(glob.glob(file_path)) > 0
+        # `file_path` may start with a capital letter, which isn't supported by `fsspec.core.url_to_fs` used below.
+        file_path = file_path[0].lower() + file_path[1:]
+
+        from botocore.exceptions import (
+            NoCredentialsError,
+            EndpointConnectionError,
+            ConnectTimeoutError,
+        )
+
+        if storage_options is not None:
+            new_storage_options = dict(storage_options)
+            new_storage_options.pop("anon", None)
+        else:
+            new_storage_options = {}
+
+        fs, _ = fsspec.core.url_to_fs(file_path, **new_storage_options)
+        exists = False
+        try:
+            exists = fs.exists(file_path)
+        except (
+            NoCredentialsError,
+            PermissionError,
+            EndpointConnectionError,
+            ConnectTimeoutError,
+        ):
+            fs, _ = fsspec.core.url_to_fs(file_path, anon=True, **new_storage_options)
+            exists = fs.exists(file_path)
+        return exists or len(fs.glob(file_path)) > 0
 
     @classmethod
     def get_path(cls, file_path: str) -> list:
@@ -347,32 +384,38 @@ class CSVGlobDispatcher(CSVDispatcher):
         list
             List of strings of absolute file paths.
         """
-        if S3_ADDRESS_REGEX.search(file_path):
-            # S3FS does not allow captial S in s3 addresses.
-            if file_path[0] == "S":
-                file_path = "{}{}".format("s", file_path[1:])
-
-            S3FS = import_optional_dependency(
-                "s3fs", "Module s3fs is required to read S3FS files."
-            )
-            from botocore.exceptions import NoCredentialsError
-
-            def get_file_path(fs_handle) -> List[str]:
-                file_paths = fs_handle.glob(file_path)
-                s3_addresses = ["{}{}".format("s3://", path) for path in file_paths]
-                return s3_addresses
-
-            s3fs = S3FS.S3FileSystem(anon=False)
-            try:
-                return get_file_path(s3fs)
-            except NoCredentialsError:
-                pass
-            s3fs = S3FS.S3FileSystem(anon=True)
-            return get_file_path(s3fs)
-        else:
+        if fsspec.core.split_protocol(file_path)[0] not in _SUPPORTED_PROTOCOLS:
             relative_paths = glob.glob(file_path)
             abs_paths = [os.path.abspath(path) for path in relative_paths]
             return abs_paths
+
+        # `file_path` may start with a capital letter, which isn't supported by `fsspec.core.url_to_fs` used below.
+        file_path = file_path[0].lower() + file_path[1:]
+
+        from botocore.exceptions import (
+            NoCredentialsError,
+            EndpointConnectionError,
+            ConnectTimeoutError,
+        )
+
+        def get_file_path(fs_handle) -> List[str]:
+            file_paths = fs_handle.glob(file_path)
+            if len(file_paths) == 0 and not fs_handle.exists(file_path):
+                raise FileNotFoundError(f"Path <{file_path}> isn't available.")
+            s3_addresses = [f"s3://{path}" for path in file_paths]
+            return s3_addresses
+
+        fs, _ = fsspec.core.url_to_fs(file_path)
+        try:
+            return get_file_path(fs)
+        except (
+            NoCredentialsError,
+            PermissionError,
+            EndpointConnectionError,
+            ConnectTimeoutError,
+        ):
+            fs, _ = fsspec.core.url_to_fs(file_path, anon=True)
+        return get_file_path(fs)
 
     @classmethod
     def partitioned_file(

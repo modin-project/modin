@@ -35,7 +35,6 @@ from collections.abc import Iterable
 from typing import List, Hashable
 import warnings
 
-
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.utils import (
@@ -55,6 +54,7 @@ from modin.core.dataframe.algebra import (
     is_reduce_function,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
+from modin._compat.core.pd_common import pd_pivot_table, pd_convert_dtypes
 
 
 def _get_axis(axis):
@@ -1347,6 +1347,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     abs = Map.register(pandas.DataFrame.abs, dtypes="copy")
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
+    convert_dtypes = Map.register(pd_convert_dtypes)
     invert = Map.register(pandas.DataFrame.__invert__)
     isin = Map.register(pandas.DataFrame.isin, dtypes=np.bool_)
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
@@ -1577,7 +1578,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         def describe_builder(df, internal_indices=[]):
             """Apply `describe` function to the subset of columns in a single partition."""
-            return df.iloc[:, internal_indices].describe(**kwargs)
+            # The index of the resulting dataframe is the same amongst all partitions
+            # when dealing with the same data type. However, if we work with columns
+            # that contain strings, we can get extra values in our result index such as
+            # 'unique', 'top', and 'freq'. Since we call describe() on each partition,
+            # we can have cases where certain partitions do not contain any of the
+            # object string data leading to an index mismatch between partitions.
+            # Thus, we must reindex each partition with the global new_index.
+            return df.iloc[:, internal_indices].describe(**kwargs).reindex(new_index)
 
         return self.__constructor__(
             self._modin_frame.apply_full_axis_select_indices(
@@ -2283,16 +2291,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def drop(self, index=None, columns=None):
         if index is not None:
-            # The unique here is to avoid duplicating rows with the same name
-            index = np.sort(
-                self.index.get_indexer_for(self.index[~self.index.isin(index)].unique())
-            )
+            index = np.sort(self.index.get_indexer_for(self.index.difference(index)))
         if columns is not None:
-            # The unique here is to avoid duplicating columns with the same name
             columns = np.sort(
-                self.columns.get_indexer_for(
-                    self.columns[~self.columns.isin(columns)].unique()
-                )
+                self.columns.get_indexer_for(self.columns.difference(columns))
             )
         new_modin_frame = self._modin_frame.mask(
             row_positions=index, col_positions=columns
@@ -3020,7 +3022,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 Pivot table for this particular partition.
             """
             concated = pandas.concat([df, other], axis=1, copy=False)
-            result = concated.pivot_table(
+            result = pd_pivot_table(
+                concated,
                 index=index,
                 values=values if len(values) > 0 else None,
                 columns=columns,

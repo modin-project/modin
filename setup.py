@@ -1,10 +1,16 @@
 from setuptools import setup, find_packages
 import versioneer
+import sys
+
+PANDAS_VERSION = "1.4.3" if sys.version_info >= (3, 8) else "1.1.5"
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-dask_deps = ["dask>=2.22.0,<2022.2.0", "distributed>=2.22.0,<2022.2.0"]
+dask_deps = ["dask>=2.22.0", "distributed>=2.22.0"]
+if sys.version_info < (3, 8):
+    dask_deps.append("pickle5")
+
 ray_deps = [
     "ray[default]>=1.4.0",
     "pyarrow>=4.0.1",
@@ -49,7 +55,7 @@ setup(
     url="https://github.com/modin-project/modin",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    install_requires=["pandas==1.4.3", "packaging", "numpy>=1.18.5", "fsspec", "psutil"],
+    install_requires=[f"pandas=={PANDAS_VERSION}", "packaging", "numpy>=1.18.5", "fsspec", "psutil"],
     extras_require={
         # can be installed by pip install modin[dask]
         "dask": dask_deps,
@@ -59,5 +65,5 @@ setup(
         "sql": sql_deps,
         "all": all_deps,
     },
-    python_requires=">=3.8",
+    python_requires=">=3.6",
 )

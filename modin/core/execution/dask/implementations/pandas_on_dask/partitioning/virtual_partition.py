@@ -15,6 +15,8 @@
 
 from distributed import Future
 from distributed.utils import get_ip
+from dask.distributed import wait
+
 import pandas
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
@@ -24,34 +26,129 @@ from .partition import PandasOnDaskDataframePartition
 from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
 
 
-class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
+class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
     """
     The class implements the interface in ``PandasDataframeAxisPartition``.
 
     Parameters
     ----------
-    list_of_blocks : list
-        List of ``PandasOnDaskDataframePartition`` objects.
+    list_of_partitions : Union[list, PandasOnDaskDataframePartition]
+        List of ``PandasOnDaskDataframePartition`` and
+        ``PandasOnDaskDataframeVirtualPartition`` objects, or a single
+        ``PandasOnDaskDataframePartition``.
     get_ip : bool, default: False
         Whether to get node IP addresses of conforming partitions or not.
     full_axis : bool, default: True
         Whether or not the virtual partition encompasses the whole axis.
+    call_queue : list, optional
+        A list of tuples (callable, args, kwargs) that contains deferred calls.
     """
 
-    def __init__(self, list_of_blocks, get_ip=False, full_axis=True):
-        if not full_axis:
-            raise NotImplementedError(
-                "Pandas on Dask execution requires full-axis partitions."
-            )
-        for obj in list_of_blocks:
-            obj.drain_call_queue()
-        # Unwrap from PandasDataframePartition object for ease of use
-        self.list_of_blocks = [obj._data for obj in list_of_blocks]
-        if get_ip:
-            self.list_of_ips = [obj._ip_cache for obj in list_of_blocks]
-
+    axis = None
     partition_type = PandasOnDaskDataframePartition
     instance_type = Future
+
+    def __init__(
+        self, list_of_partitions, get_ip=False, full_axis=True, call_queue=None
+    ):
+        if isinstance(list_of_partitions, PandasOnDaskDataframePartition):
+            list_of_partitions = [list_of_partitions]
+        self.call_queue = call_queue or []
+        self.full_axis = full_axis
+        # Check that all virtual partition axes are the same in `list_of_partitions`
+        # We should never have mismatching axis in the current implementation. We add this
+        # defensive assertion to ensure that undefined behavior does not happen.
+        assert (
+            len(
+                set(
+                    obj.axis
+                    for obj in list_of_partitions
+                    if isinstance(obj, PandasOnDaskDataframeVirtualPartition)
+                )
+            )
+            <= 1
+        )
+        self._list_of_constituent_partitions = list_of_partitions
+        # Defer computing _list_of_block_partitions because we might need to
+        # drain call queues for that.
+        self._list_of_block_partitions = None
+
+    @property
+    def list_of_block_partitions(self) -> list:
+        """
+        Get the list of block partitions that compose this partition.
+
+        Returns
+        -------
+        List
+            A list of ``PandasOnDaskDataframePartition``.
+        """
+        if self._list_of_block_partitions is not None:
+            return self._list_of_block_partitions
+        self._list_of_block_partitions = []
+        # Extract block partitions from the block and virtual partitions that
+        # constitute this partition.
+        for partition in self._list_of_constituent_partitions:
+            if isinstance(partition, PandasOnDaskDataframeVirtualPartition):
+                if partition.axis == self.axis:
+                    # We are building a virtual partition out of another
+                    # virtual partition `partition` that contains its own list
+                    # of block partitions, partition.list_of_block_partitions.
+                    # `partition` may have its own call queue, which has to be
+                    # applied to the entire `partition` before we execute any
+                    # further operations on its block parittions.
+                    partition.drain_call_queue()
+                    self._list_of_block_partitions.extend(
+                        partition.list_of_block_partitions
+                    )
+                else:
+                    # If this virtual partition is made of virtual partitions
+                    # for the other axes, squeeze such partitions into a single
+                    # block so that this partition only holds a one-dimensional
+                    # list of blocks. We could change this implementation to
+                    # hold a 2-d list of blocks, but that would complicate the
+                    # code quite a bit.
+                    self._list_of_block_partitions.append(
+                        partition.force_materialization().list_of_block_partitions[0]
+                    )
+            else:
+                self._list_of_block_partitions.append(partition)
+        return self._list_of_block_partitions
+
+    @property
+    def list_of_blocks(self):
+        """
+        Get the list of physical partition objects that compose this partition.
+
+        Returns
+        -------
+        List
+            A list of ``distributed.Future``.
+        """
+        # Defer draining call queue until we get the partitions
+        # TODO Look into draining call queue at the same time as the task
+        result = [None] * len(self.list_of_block_partitions)
+        for idx, partition in enumerate(self.list_of_block_partitions):
+            partition.drain_call_queue()
+            result[idx] = partition._data
+        return result
+
+    @property
+    def list_of_ips(self):
+        """
+        Get the IPs holding the physical objects composing this partition.
+
+        Returns
+        -------
+        List
+            A list of IPs as ``distributed.Future`` or str.
+        """
+        # Defer draining call queue until we get the ip address
+        result = [None] * len(self.list_of_block_partitions)
+        for idx, partition in enumerate(self.list_of_block_partitions):
+            partition.drain_call_queue()
+            result[idx] = partition._ip_cache
+        return result
 
     @classmethod
     def deploy_axis_func(
@@ -165,8 +262,209 @@ class PandasOnDaskDataframeAxisPartition(PandasDataframeAxisPartition):
             for (future, length, width, ip) in zip(*[iter(partitions)] * 4)
         ]
 
+    def apply(
+        self,
+        func,
+        *args,
+        num_splits=None,
+        other_axis_partition=None,
+        maintain_partitioning=True,
+        **kwargs,
+    ):
+        """
+        Apply a function to this axis partition along full axis.
 
-class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeAxisPartition):
+        Parameters
+        ----------
+        func : callable
+            The function to apply.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
+        num_splits : int, default: None
+            The number of times to split the result object.
+        other_axis_partition : PandasDataframeAxisPartition, default: None
+            Another `PandasDataframeAxisPartition` object to be applied
+            to func. This is for operations that are between two data sets.
+        maintain_partitioning : bool, default: True
+            Whether to keep the partitioning in the same
+            orientation as it was previously or not. This is important because we may be
+            operating on an individual AxisPartition and not touching the rest.
+            In this case, we have to return the partitioning to its previous
+            orientation (the lengths will remain the same). This is ignored between
+            two axis partitions.
+        **kwargs : dict
+            Additional keywords arguments to be passed in `func`.
+
+        Returns
+        -------
+        list
+            A list of `PandasOnDaskDataframeVirtualPartition` objects.
+        """
+        if not self.full_axis:
+            # If this is not a full axis partition, it already contains a subset of
+            # the full axis, so we shouldn't split the result further.
+            num_splits = 1
+        if len(self.call_queue) > 0:
+            self.drain_call_queue()
+        kwargs["args"] = args
+        result = super(PandasOnDaskDataframeVirtualPartition, self).apply(
+            func, num_splits, other_axis_partition, maintain_partitioning, **kwargs
+        )
+        if self.full_axis:
+            return result
+        else:
+            # If this is a full axis partition, just take out the single split in the result.
+            return result[0]
+
+    def force_materialization(self, get_ip=False):
+        """
+        Materialize partitions into a single partition.
+
+        Parameters
+        ----------
+        get_ip : bool, default: False
+            Whether to get node ip address to a single partition or not.
+
+        Returns
+        -------
+        PandasOnDaskDataframeVirtualPartition
+            An axis partition containing only a single materialized partition.
+        """
+        materialized = super(
+            PandasOnDaskDataframeVirtualPartition, self
+        ).force_materialization(get_ip=get_ip)
+        self._list_of_block_partitions = materialized.list_of_block_partitions
+        return materialized
+
+    def mask(self, row_indices, col_indices):
+        """
+        Create (synchronously) a mask that extracts the indices provided.
+
+        Parameters
+        ----------
+        row_indices : list-like, slice or label
+            The row labels for the rows to extract.
+        col_indices : list-like, slice or label
+            The column labels for the columns to extract.
+
+        Returns
+        -------
+        PandasOnDaskDataframeVirtualPartition
+            A new ``PandasOnDaskDataframeVirtualPartition`` object,
+            materialized.
+        """
+        return (
+            self.force_materialization()
+            .list_of_block_partitions[0]
+            .mask(row_indices, col_indices)
+        )
+
+    def to_pandas(self):
+        """
+        Convert the data in this partition to a ``pandas.DataFrame``.
+
+        Returns
+        -------
+        pandas DataFrame.
+        """
+        return self.force_materialization().list_of_block_partitions[0].to_pandas()
+
+    _length_cache = None
+
+    def length(self):
+        """
+        Get the length of this partition.
+
+        Returns
+        -------
+        int
+            The length of the partition.
+        """
+        if self._length_cache is None:
+            if self.axis == 0:
+                self._length_cache = sum(
+                    obj.length() for obj in self.list_of_block_partitions
+                )
+            else:
+                self._length_cache = self.list_of_block_partitions[0].length()
+        return self._length_cache
+
+    _width_cache = None
+
+    def width(self):
+        """
+        Get the width of this partition.
+
+        Returns
+        -------
+        int
+            The width of the partition.
+        """
+        if self._width_cache is None:
+            if self.axis == 1:
+                self._width_cache = sum(
+                    obj.width() for obj in self.list_of_block_partitions
+                )
+            else:
+                self._width_cache = self.list_of_block_partitions[0].width()
+        return self._width_cache
+
+    def drain_call_queue(self, num_splits=None):
+        """
+        Execute all operations stored in this partition's call queue.
+
+        Parameters
+        ----------
+        num_splits : int, default: None
+            The number of times to split the result object.
+        """
+
+        def drain(df):
+            for func, args, kwargs in self.call_queue:
+                df = func(df, *args, **kwargs)
+            return df
+
+        drained = super(PandasOnDaskDataframeVirtualPartition, self).apply(
+            drain, num_splits=num_splits
+        )
+        self._list_of_block_partitions = drained
+        self.call_queue = []
+
+    def wait(self):
+        """Wait completing computations on the object wrapped by the partition."""
+        self.drain_call_queue()
+        wait(self.list_of_blocks)
+
+    def add_to_apply_calls(self, func, *args, **kwargs):
+        """
+        Add a function to the call queue.
+
+        Parameters
+        ----------
+        func : callable
+            Function to be added to the call queue.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
+        **kwargs : dict
+            Additional keyword arguments to be passed in `func`.
+
+        Returns
+        -------
+        PandasOnDaskDataframeVirtualPartition
+            A new ``PandasOnDaskDataframeVirtualPartition`` object.
+
+        Notes
+        -----
+        The keyword arguments are sent as a dictionary.
+        """
+        return type(self)(
+            self.list_of_block_partitions,
+            full_axis=self.full_axis,
+            call_queue=self.call_queue + [(func, args, kwargs)],
+        )
+
+
+class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeVirtualPartition):
     """
     The column partition implementation.
 
@@ -175,18 +473,22 @@ class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeAxisPartition):
 
     Parameters
     ----------
-    list_of_blocks : list
-        List of ``PandasOnDaskDataframePartition`` objects.
+    list_of_partitions : Union[list, PandasOnDaskDataframePartition]
+        List of ``PandasOnDaskDataframePartition`` and
+        ``PandasOnDaskDataframeColumnPartition`` objects, or a single
+        ``PandasOnDaskDataframePartition``.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
     full_axis : bool, default: True
-        Whether or not the virtual partition encompasses the whole axis.
+        Whether this partition spans an entire axis of the dataframe.
+    call_queue : list, optional
+        A list of tuples (callable, args, kwargs) that contains deferred calls.
     """
 
     axis = 0
 
 
-class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeAxisPartition):
+class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeVirtualPartition):
     """
     The row partition implementation.
 
@@ -195,12 +497,16 @@ class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeAxisPartition):
 
     Parameters
     ----------
-    list_of_blocks : list
-        List of ``PandasOnDaskDataframePartition`` objects.
+    list_of_partitions : Union[list, PandasOnDaskDataframePartition]
+        List of ``PandasOnDaskDataframePartition`` and
+        ``PandasOnDaskDataframeRowPartition`` objects, or a single
+        ``PandasOnDaskDataframePartition``.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
     full_axis : bool, default: True
-        Whether or not the virtual partition encompasses the whole axis.
+        Whether this partition spans an entire axis of the dataframe.
+    call_queue : list, optional
+        A list of tuples (callable, args, kwargs) that contains deferred calls.
     """
 
     axis = 1

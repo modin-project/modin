@@ -2012,8 +2012,8 @@ def test_groupby_with_virtual_partitions():
     big_pandas_df = pandas.concat([pandas_df for _ in range(5)])
 
     # Check that the constructed Modin DataFrame has virtual partitions when
-    # using Ray, and doesn't when using another execution engines.
-    if Engine.get() == "Ray":
+    # using Ray or Dask, and doesn't when using another execution engines.
+    if Engine.get() in ["Ray", "Dask"]:
         assert issubclass(
             type(big_modin_df._query_compiler._modin_frame._partitions[0][0]),
             PandasDataframeAxisPartition,
@@ -2063,3 +2063,10 @@ def test_sum_with_level():
     }
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
     eval_general(modin_df, pandas_df, lambda df: df.set_index("C").groupby("C").sum())
+
+
+def test_groupby_with_frozenlist():
+    pandas_df = pandas.DataFrame(data={"a": [1, 2, 3], "b": [1, 2, 3], "c": [1, 2, 3]})
+    pandas_df = pandas_df.set_index(["a", "b"])
+    modin_df = from_pandas(pandas_df)
+    eval_general(modin_df, pandas_df, lambda df: df.groupby(df.index.names).count())

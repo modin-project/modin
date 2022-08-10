@@ -166,7 +166,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         PandasOnPythonDataframePartition
             New ``PandasOnPythonDataframePartition`` object.
         """
-        return cls(obj)
+        return cls(obj.copy())
 
     @classmethod
     def preprocess_func(cls, func):

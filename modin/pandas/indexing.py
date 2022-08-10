@@ -281,10 +281,54 @@ class _LocationIndexerBase(ClassLogger):
     def __init__(self, modin_df):
         self.df = modin_df
         self.qc = modin_df._query_compiler
-        self.row_scalar = False
-        self.col_scalar = False
 
-    def __getitem__(self, row_lookup, col_lookup, ndim):
+    def __getitem__(self, key):  # pragma: no cover
+        """
+        Retrieve dataset according to `key`.
+
+        Parameters
+        ----------
+        key : callable, scalar, or tuple
+            The global row index to retrieve data from.
+
+        Returns
+        -------
+        modin.pandas.DataFrame or modin.pandas.Series
+            Located dataset.
+
+        See Also
+        --------
+        pandas.DataFrame.loc
+        """
+        raise NotImplementedError("Implemented by subclasses")
+
+    def __setitem__(self, key, item):  # pragma: no cover
+        """
+        Assign `item` value to dataset located by `key`.
+
+        Parameters
+        ----------
+        key : callable or tuple
+            The global row numbers to assign data to.
+        item : modin.pandas.DataFrame, modin.pandas.Series or scalar
+            Value that should be assigned to located dataset.
+
+        See Also
+        --------
+        pandas.DataFrame.iloc
+        """
+        raise NotImplementedError("Implemented by subclasses")
+
+    def _getitem_positional(
+        self,
+        row_lookup,
+        col_lookup,
+        row_multiindex_full_lookup: bool,
+        col_multiindex_full_lookup: bool,
+        row_scalar: bool,
+        col_scalar: bool,
+        ndim: int,
+    ):
         """
         Retrieve dataset according to `row_lookup` and `col_lookup`.
 
@@ -294,6 +338,14 @@ class _LocationIndexerBase(ClassLogger):
             The global row index to retrieve data from.
         col_lookup : slice(None), range or np.ndarray
             The global col index to retrieve data from.
+        row_multiindex_full_lookup : bool
+            See _multiindex_possibly_contains_key.__doc__.
+        col_multiindex_full_lookup : bool
+            See _multiindex_possibly_contains_key.__doc__.
+        row_scalar : bool
+            Whether indexer for rows is scalar or not.
+        col_scalar : bool
+            Whether indexer for columns is scalar or not.
         ndim : {0, 1, 2}
             Number of dimensions in dataset to be retrieved.
 
@@ -321,26 +373,37 @@ class _LocationIndexerBase(ClassLogger):
                 extra_log=f"Only None-slices are acceptable as a slice argument in masking, got: {col_lookup}",
             )
             col_lookup = None
+
         qc_view = self.qc.view(row_lookup, col_lookup)
+
         if ndim == 2:
             return self.df.__constructor__(query_compiler=qc_view)
-        if isinstance(self.df, Series) and not self.row_scalar:
+        if isinstance(self.df, Series) and not row_scalar:
             return self.df.__constructor__(query_compiler=qc_view)
+
         if isinstance(self.df, Series):
             axis = 0
         elif ndim == 0:
             axis = None
         else:
+            # We are in the case where ndim == 1
+            # The axis we squeeze on depends on whether we are looking for an exact
+            # value or a subset of rows and columns. Knowing if we have a full MultiIndex
+            # lookup or scalar lookup can help us figure out whether we need to squeeze
+            # on the row or column index.
             axis = (
                 None
-                if self.col_scalar and self.row_scalar
+                if (col_scalar and row_scalar)
+                or (row_multiindex_full_lookup and col_multiindex_full_lookup)
                 else 1
-                if self.col_scalar
+                if col_scalar or col_multiindex_full_lookup
                 else 0
             )
-        return self.df.__constructor__(query_compiler=qc_view).squeeze(axis=axis)
 
-    def __setitem__(self, row_lookup, col_lookup, item, axis=None):
+        res_df = self.df.__constructor__(query_compiler=qc_view)
+        return res_df.squeeze(axis=axis)
+
+    def _setitem_positional(self, row_lookup, col_lookup, item, axis=None):
         """
         Assign `item` value to located dataset.
 
@@ -528,6 +591,39 @@ class _LocationIndexerBase(ClassLogger):
         # Passing `slice(None)` as a row indexer since we've just applied it
         return type(self)(masked_df)[(slice(None), col_loc)]
 
+    def _multiindex_possibly_contains_key(self, axis, key):
+        """
+        Determine if a MultiIndex row/column possibly contains a key.
+
+        Check to see if the current DataFrame has a MultiIndex row/column and if it does,
+        check to see if the key is potentially a full key-lookup such that the number of
+        levels match up with the length of the tuple key.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            0 for row, 1 for column.
+        key : Any
+            Lookup key for MultiIndex row/column.
+
+        Returns
+        -------
+        bool
+            If the MultiIndex possibly contains the given key.
+
+        Notes
+        -----
+        This function only returns False if we have a partial key lookup. It's
+        possible that this function returns True for a key that does NOT exist
+        since we only check the length of the `key` tuple to match the number
+        of levels in the MultiIndex row/colunmn.
+        """
+        if not self.qc.has_multiindex(axis=axis):
+            return False
+
+        multiindex = self.df.index if axis == 0 else self.df.columns
+        return isinstance(key, tuple) and len(key) == len(multiindex.levels)
+
 
 class _LocIndexer(_LocationIndexerBase):
     """
@@ -560,23 +656,51 @@ class _LocIndexer(_LocationIndexerBase):
         if self.df.empty:
             return self.df._default_to_pandas(lambda df: df.loc[key])
         row_loc, col_loc, ndim = self._parse_row_and_column_locators(key)
-        self.row_scalar = is_scalar(row_loc)
-        self.col_scalar = is_scalar(col_loc)
+        row_scalar = is_scalar(row_loc)
+        col_scalar = is_scalar(col_loc)
+
+        # The thought process here is that we should check to see that we have a full key lookup
+        # for a MultiIndex DataFrame. If that's the case, then we should not drop any levels
+        # since our resulting intermediate dataframe will have dropped these for us already.
+        # Thus, we need to make sure we don't try to drop these levels again. The logic here is
+        # kind of hacked together. Ideally, we should handle this properly in the lower-level
+        # implementations, but this will have to be engineered properly later.
+        row_multiindex_full_lookup = self._multiindex_possibly_contains_key(
+            axis=0, key=row_loc
+        )
+        col_multiindex_full_lookup = self._multiindex_possibly_contains_key(
+            axis=1, key=col_loc
+        )
+        levels_already_dropped = (
+            row_multiindex_full_lookup or col_multiindex_full_lookup
+        )
 
         if isinstance(row_loc, Series) and is_boolean_array(row_loc):
             return self._handle_boolean_masking(row_loc, col_loc)
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-        result = super(_LocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
+
+        result = self._getitem_positional(
+            row_lookup,
+            col_lookup,
+            row_multiindex_full_lookup,
+            col_multiindex_full_lookup,
+            row_scalar,
+            col_scalar,
+            ndim,
+        )
+
         if isinstance(result, Series):
             result._parent = self.df
             result._parent_axis = 0
-        col_loc_as_list = [col_loc] if self.col_scalar else col_loc
-        row_loc_as_list = [row_loc] if self.row_scalar else row_loc
+
+        col_loc_as_list = [col_loc] if col_scalar else col_loc
+        row_loc_as_list = [row_loc] if row_scalar else row_loc
         # Pandas drops the levels that are in the `loc`, so we have to as well.
         if (
             isinstance(result, (Series, DataFrame))
             and result._query_compiler.has_multiindex()
+            and not levels_already_dropped
         ):
             if (
                 isinstance(result, Series)
@@ -596,6 +720,7 @@ class _LocIndexer(_LocationIndexerBase):
         if (
             hasattr(result, "columns")
             and not isinstance(col_loc_as_list, slice)
+            and not levels_already_dropped
             and result._query_compiler.has_multiindex(axis=1)
             and all(
                 col_loc_as_list[i] in result.columns.levels[i]
@@ -629,6 +754,16 @@ class _LocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.loc
         """
+        if self.df.empty:
+
+            def _loc(df):
+                df.loc[key] = item
+                return df
+
+            self.df._update_inplace(
+                new_query_compiler=self.df._default_to_pandas(_loc)._query_compiler
+            )
+            return
         row_loc, col_loc, _ = self._parse_row_and_column_locators(key)
         if isinstance(row_loc, list) and len(row_loc) == 1:
             if row_loc[0] not in self.qc.index:
@@ -647,7 +782,7 @@ class _LocIndexer(_LocationIndexerBase):
             self.qc = self.df._query_compiler
         else:
             row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-            super(_LocIndexer, self).__setitem__(
+            self._setitem_positional(
                 row_lookup,
                 col_lookup,
                 item,
@@ -813,8 +948,8 @@ class _iLocIndexer(_LocationIndexerBase):
         if self.df.empty:
             return self.df._default_to_pandas(lambda df: df.iloc[key])
         row_loc, col_loc, ndim = self._parse_row_and_column_locators(key)
-        self.row_scalar = is_scalar(row_loc)
-        self.col_scalar = is_scalar(col_loc)
+        row_scalar = is_scalar(row_loc)
+        col_scalar = is_scalar(col_loc)
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
 
@@ -822,7 +957,17 @@ class _iLocIndexer(_LocationIndexerBase):
             return self._handle_boolean_masking(row_loc, col_loc)
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-        result = super(_iLocIndexer, self).__getitem__(row_lookup, col_lookup, ndim)
+
+        result = self._getitem_positional(
+            row_lookup,
+            col_lookup,
+            row_multiindex_full_lookup=False,
+            col_multiindex_full_lookup=False,
+            row_scalar=row_scalar,
+            col_scalar=col_scalar,
+            ndim=ndim,
+        )
+
         if isinstance(result, Series):
             result._parent = self.df
             result._parent_axis = 0
@@ -843,6 +988,16 @@ class _iLocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.iloc
         """
+        if self.df.empty:
+
+            def _iloc(df):
+                df.iloc[key] = item
+                return df
+
+            self.df._update_inplace(
+                new_query_compiler=self.df._default_to_pandas(_iloc)._query_compiler
+            )
+            return
         row_loc, col_loc, _ = self._parse_row_and_column_locators(key)
         row_scalar = is_scalar(row_loc)
         col_scalar = is_scalar(col_loc)
@@ -850,7 +1005,7 @@ class _iLocIndexer(_LocationIndexerBase):
         self._check_dtypes(col_loc)
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-        super(_iLocIndexer, self).__setitem__(
+        self._setitem_positional(
             row_lookup,
             col_lookup,
             item,

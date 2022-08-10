@@ -15,6 +15,7 @@
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from ..partitioning.partition_manager import PandasOnDaskDataframePartitionManager
+from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
 
 
 class PandasOnDaskDataframe(PandasDataframe):
@@ -41,10 +42,49 @@ class PandasOnDaskDataframe(PandasDataframe):
 
     _partition_mgr_cls = PandasOnDaskDataframePartitionManager
 
+    def _get_partition_size_along_axis(self, partition, axis=0):
+        """
+        Compute the length along the specified axis of the specified partition.
+
+        Parameters
+        ----------
+        partition : ``PandasOnDaskDataframeVirtualPartition`` or ``PandasOnDaskDataframePartition``
+            The partition whose size to compute.
+        axis : int, default: 0
+            The axis along which to compute size.
+
+        Returns
+        -------
+        list
+            A list of lengths along the specified axis that sum to the overall length of the partition
+            along the specified axis.
+
+        Notes
+        -----
+        This utility function is used to ensure that computation occurs asynchronously across all partitions
+        whether the partitions are virtual or physical partitions.
+        """
+        if isinstance(partition, self._partition_mgr_cls._partition_class):
+            return [
+                partition.apply(
+                    lambda df: len(df) if not axis else len(df.columns)
+                )._data
+            ]
+        elif partition.axis == axis:
+            return [
+                ptn.apply(lambda df: len(df) if not axis else len(df.columns))._data
+                for ptn in partition.list_of_block_partitions
+            ]
+        return [
+            partition.list_of_block_partitions[0]
+            .apply(lambda df: len(df) if not axis else (len(df.columns)))
+            ._data
+        ]
+
     @property
     def _row_lengths(self):
         """
-        Compute the row partitions lengths if they are not cached.
+        Compute ther row partitions lengths if they are not cached.
 
         Returns
         -------
@@ -52,11 +92,13 @@ class PandasOnDaskDataframe(PandasDataframe):
             A list of row partitions lengths.
         """
         if self._row_lengths_cache is None:
-            self._row_lengths_cache = (
-                self._partition_mgr_cls.get_objects_from_partitions(
-                    [obj.apply(lambda df: len(df)) for obj in self._partitions.T[0]]
-                )
+            row_lengths_list = DaskWrapper.materialize(
+                [
+                    self._get_partition_size_along_axis(obj, axis=0)
+                    for obj in self._partitions.T[0]
+                ]
             )
+            self._row_lengths_cache = [sum(len_list) for len_list in row_lengths_list]
         return self._row_lengths_cache
 
     @property
@@ -70,12 +112,13 @@ class PandasOnDaskDataframe(PandasDataframe):
             A list of column partitions widths.
         """
         if self._column_widths_cache is None:
-            self._column_widths_cache = (
-                self._partition_mgr_cls.get_objects_from_partitions(
-                    [
-                        obj.apply(lambda df: len(df.columns))
-                        for obj in self._partitions[0]
-                    ]
-                )
+            col_widths_list = DaskWrapper.materialize(
+                [
+                    self._get_partition_size_along_axis(obj, axis=1)
+                    for obj in self._partitions[0]
+                ]
             )
+            self._column_widths_cache = [
+                sum(width_list) for width_list in col_widths_list
+            ]
         return self._column_widths_cache
