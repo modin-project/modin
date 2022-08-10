@@ -2385,6 +2385,31 @@ class PandasDataframe(ClassLogger):
             kw["dtypes"] = pandas.Series(
                 [np.dtype(dtypes)] * len(kw["columns"]), index=kw["columns"]
             )
+        # we can compute lengths and widths when `keep_partitioning=True` and `new_axes` is not none
+        if (
+            kw["row_lengths"] is None
+            and kw["column_widths"] is None
+            and self._row_lengths_cache is not None
+            and self._column_widths_cache is not None
+        ):
+            new_row_lengths = self._row_lengths_cache
+            new_column_widths = self._column_widths_cache
+            new_axes = (kw["index"], kw["column"])
+            cum_lengths = np.cumsum(new_row_lengths)
+            if cum_lengths[-1] != len(new_axes[0]):
+                bins_idx = np.digitize(len(new_axes[0]), cum_lengths, right=True)
+                new_row_lengths = new_row_lengths[:bins_idx] + [
+                    len(new_axes[0]) - cum_lengths[bins_idx - 1]
+                ]
+            cum_widths = np.cumsum(new_column_widths)
+            if cum_widths[-1] != len(new_axes[1]):
+                bins_idx = np.digitize(len(new_axes[1]), cum_widths, right=True)
+                new_column_widths = new_column_widths[:bins_idx] + [
+                    len(new_axes[1]) - cum_widths[bins_idx]
+                ]
+            kw["row_lengths"] = new_row_lengths
+            kw["column_widths"] = new_column_widths
+
         result = self.__constructor__(new_partitions, **kw)
         if new_index is not None:
             result.synchronize_labels(axis=0)
