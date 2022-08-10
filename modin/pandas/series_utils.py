@@ -20,6 +20,7 @@ Accessors: `Series.cat`, `Series.str`, `Series.dt`
 import sys
 import numpy as np
 import pandas
+from pandas._typing import npt
 from modin.logging import ClassLogger
 from modin.utils import _inherit_docstrings
 from .series import Series
@@ -616,10 +617,9 @@ class DatetimeProperties(ClassLogger):
             query_compiler=self._query_compiler.dt_total_seconds(*args, **kwargs)
         )
 
-    def to_pytimedelta(self):
-        return self._query_compiler.default_to_pandas(
-            lambda df: pandas.Series.dt.to_pytimedelta(df.squeeze(axis=1).dt)
-        )
+    def to_pytimedelta(self) -> npt.NDArray[np.object_]:
+        res = self._query_compiler.dt_to_pytimedelta()
+        return res.to_numpy()[:, 0]
 
     @property
     def seconds(self):
