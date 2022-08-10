@@ -1985,7 +1985,7 @@ def test_validate_by():
             df_equals(obj1, obj2)
 
     # This emulates situation when the Series's query compiler being passed as a 'by':
-    #   1. The Series at the QC level is represented as a single-column frame with the "__reduced__" columns.
+    #   1. The Series at the QC level is represented as a single-column frame with the `MODIN_UNNAMED_SERIES_LABEL` columns.
     #   2. The valid representation of such QC is an unnamed Series.
     reduced_frame = pandas.DataFrame({MODIN_UNNAMED_SERIES_LABEL: [1, 2, 3]})
     series_result = GroupBy.validate_by(reduced_frame)

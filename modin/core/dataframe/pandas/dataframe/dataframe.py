@@ -322,7 +322,7 @@ class PandasDataframe(ClassLogger):
             )
         else:
             dtypes = pandas.Series([])
-        # reset name to None because we use "__reduced__" internally
+        # reset name to None because we use MODIN_UNNAMED_SERIES_LABEL internally
         dtypes.name = None
         return dtypes
 

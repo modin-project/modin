@@ -2218,7 +2218,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             - Index of the specified axis contains: the names of the passed functions if multiple
               functions are passed, otherwise: indices of the `func` result if "expand" strategy
               is used, indices of the original frame if "broadcast" strategy is used, a single
-              label "__reduced__" if "reduce" strategy is used.
+              label `MODIN_UNNAMED_SERIES_LABEL` if "reduce" strategy is used.
             - Labels of the opposite axis are preserved.
             - Each element is the result of execution of `func` against
               corresponding row/column.
