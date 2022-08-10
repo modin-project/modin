@@ -203,6 +203,8 @@ class FastParquetDataset(Dataset):
     def pandas_metadata(self):
         import json
 
+        if "pandas" not in self.dataset.key_value_metadata:
+            return {}
         return json.loads(self.dataset.key_value_metadata["pandas"])
 
     @property
