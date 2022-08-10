@@ -664,6 +664,32 @@ class ParquetFileToRead(NamedTuple):
 @doc(_doc_pandas_parser_class, data_type="PARQUET data")
 class PandasParquetParser(PandasParser):
     @staticmethod
+    def read_row_group_chunk(f, row_group_start, row_group_end, columns, engine):
+        if engine == "pyarrow":
+            from pyarrow.parquet import ParquetFile
+
+            return (
+                ParquetFile(f)
+                .read_row_groups(
+                    list(
+                        range(
+                            row_group_start,
+                            row_group_end,
+                        )
+                    ),
+                    columns=columns,
+                    use_pandas_metadata=True,
+                )
+                .to_pandas()
+            )
+        elif engine == "fastparquet":
+            from fastparquet import ParquetFile
+
+            return ParquetFile(f)[row_group_start:row_group_end].to_pandas(
+                columns=columns
+            )
+
+    @staticmethod
     @doc(
         _doc_parse_func,
         parameters="""files_for_parser : list
@@ -671,11 +697,9 @@ class PandasParquetParser(PandasParser):
 """,
     )
     def parse(files_for_parser, **kwargs):
-        from pyarrow.parquet import ParquetFile
-
         columns = kwargs.get("columns", None)
         storage_options = kwargs.pop("storage_options", {}) or {}
-
+        engine = kwargs.pop("engine")
         chunks = []
         # `single_worker_read` just passes in a string path
         if isinstance(files_for_parser, str):
@@ -687,19 +711,12 @@ class PandasParquetParser(PandasParser):
             else:
                 context = fsspec.open(file_for_parser.path, **storage_options)
             with context as f:
-                chunk = (
-                    ParquetFile(f)
-                    .read_row_groups(
-                        list(
-                            range(
-                                file_for_parser.row_group_start,
-                                file_for_parser.row_group_end,
-                            )
-                        ),
-                        columns=columns,
-                        use_pandas_metadata=True,
-                    )
-                    .to_pandas()
+                chunk = PandasParquetParser.read_row_group_chunk(
+                    f,
+                    file_for_parser.row_group_start,
+                    file_for_parser.row_group_end,
+                    columns,
+                    engine,
                 )
             chunks.append(chunk)
         df = pandas.concat(chunks)
