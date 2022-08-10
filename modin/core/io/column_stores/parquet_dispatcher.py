@@ -33,6 +33,13 @@ from modin.utils import import_optional_dependency, _inherit_docstrings
 
 
 class Dataset(ABC):
+    """
+    Abstract class that encapsulates Parquet engine-specific details.
+
+    This class exposes a set of functions that are commonly used in the
+    `read_parquet` implementation.
+    """
+
     @abstractproperty
     def pandas_metadata(self):
         """Return the pandas metadata of the dataset."""
@@ -60,19 +67,20 @@ class Dataset(ABC):
 
     @abstractmethod
     def read_table_as_pandas(columns):
-        """Return a pandas dataframe with the given columns."""
+        """
+        Return a pandas dataframe with the given columns.
+
+        Parameters
+        ----------
+        columns : list
+            List of columns that should be read from file.
+        """
         pass
 
     def _get_fs_and_fs_path(self):
         """
         Retrieve filesystem interface and filesystem-specific path.
 
-        Parameters
-        ----------
-        path : str, path object or file-like object
-            Path to dataset.
-        storage_options : dict
-            Parameters for specific storage engine.
         Returns
         -------
         filesystem : Any
@@ -133,7 +141,7 @@ class PyArrowDataset(Dataset):
         self._row_groups_per_file = None
         self.filesystem, self._files = self._get_files(self.dataset.files)
 
-    def _init_dataset(self):
+    def _init_dataset(self):  # noqa: GL08
         from pyarrow.parquet import ParquetDataset
 
         fs, fs_path = self._get_fs_and_fs_path()
@@ -192,7 +200,7 @@ class FastParquetDataset(Dataset):
         self._row_groups_per_file = None
         self.filesystem, self._files = self._get_files(self._get_fastparquet_files())
 
-    def _init_dataset(self):
+    def _init_dataset(self):  # noqa: GL08
         from fastparquet import ParquetFile
 
         fs, fs_path = self._get_fs_and_fs_path()
@@ -236,7 +244,7 @@ class FastParquetDataset(Dataset):
     def read_table_as_pandas(self, columns):
         return self.dataset.to_pandas(columns=columns)
 
-    def _get_fastparquet_files(self):
+    def _get_fastparquet_files(self):  # noqa: GL08
         # fastparquet doesn't have a nice method like PyArrow, so we
         # have to copy some of their logic here while we work on getting
         # an easier method to get a list of valid files.
@@ -264,6 +272,23 @@ class ParquetDispatcher(ColumnStoreDispatcher):
 
     @classmethod
     def get_dataset(cls, path, engine, storage_options):
+        """
+        Retrieve Parquet engine specific Dataset implementation.
+
+        Parameters
+        ----------
+        path : str, path object or file-like object
+            The filepath of the parquet file in local filesystem or hdfs.
+        engine : str
+            Parquet library to use (only 'PyArrow' is supported for now).
+        storage_options : dict
+            Parameters for specific storage engine.
+
+        Returns
+        -------
+        Dataset
+            Either a PyArrowDataset or FastParquetDataset object.
+        """
         if engine == "auto":
             # We follow in concordance with pandas
             engine_classes = [PyArrowDataset, FastParquetDataset]
@@ -457,7 +482,6 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         -----
         See `build_partition` for more detail on the contents of partitions_ids.
         """
-
         range_index = True
         column_names_to_read = []
         for column in index_columns:
