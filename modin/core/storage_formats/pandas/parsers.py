@@ -664,7 +664,9 @@ class ParquetFileToRead(NamedTuple):
 @doc(_doc_pandas_parser_class, data_type="PARQUET data")
 class PandasParquetParser(PandasParser):
     @staticmethod
-    def read_row_group_chunk(f, row_group_start, row_group_end, columns, engine):
+    def read_row_group_chunk(
+        f, row_group_start, row_group_end, columns, engine
+    ):  # noqa: GL08
         if engine == "pyarrow":
             from pyarrow.parquet import ParquetFile
 
