@@ -1036,7 +1036,6 @@ class TextFileDispatcher(FileDispatcher):
             nrows=None,
             compression=compression_infered,
         )
-
         with OpenFile(
             filepath,
             "rb",
