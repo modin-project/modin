@@ -73,10 +73,10 @@ class PandasOnDaskDataframe(PandasDataframe):
         elif partition.axis == axis:
             return [
                 ptn.apply(lambda df: len(df) if not axis else len(df.columns))._data
-                for ptn in partition.list_of_partitions_to_combine
+                for ptn in partition.list_of_block_partitions
             ]
         return [
-            partition.list_of_partitions_to_combine[0]
+            partition.list_of_block_partitions[0]
             .apply(lambda df: len(df) if not axis else (len(df.columns)))
             ._data
         ]

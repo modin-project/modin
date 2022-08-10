@@ -1039,16 +1039,9 @@ class TestCsv:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
-    def test_read_csv_default_to_pandas_url(self):
-        # We haven't implemented read_csv from https, but if it's implemented, then this needs to change
-        if self._has_pandas_fallback_reason():
-            warning_match = "No such file"
-        else:
-            warning_match = ""
+    def test_read_csv_url(self):
         eval_io(
             fn_name="read_csv",
-            modin_warning=UserWarning,
-            modin_warning_str_match=warning_match,
             # read_csv kwargs
             filepath_or_buffer="https://raw.githubusercontent.com/modin-project/modin/master/modin/pandas/test/data/blah.csv",
             # It takes about ~17Gb of RAM for Omnisci to import the whole table from this test
@@ -1223,14 +1216,15 @@ class TestCsv:
             ),
         ],
     )
-    def test_read_csv_file_handle(self, read_mode, make_csv_file):
-
+    @pytest.mark.parametrize("buffer_start_pos", [0, 10])
+    def test_read_csv_file_handle(self, read_mode, make_csv_file, buffer_start_pos):
         unique_filename = get_unique_filename()
         make_csv_file(filename=unique_filename)
 
         with open(unique_filename, mode=read_mode) as buffer:
+            buffer.seek(buffer_start_pos)
             df_pandas = pandas.read_csv(buffer)
-            buffer.seek(0)
+            buffer.seek(buffer_start_pos)
             df_modin = pd.read_csv(buffer)
             df_equals(df_modin, df_pandas)
 
@@ -1410,6 +1404,14 @@ class TestParquet:
             )
             start_row = end_row
         path = make_parquet_dir(dfs_by_filename, row_group_size)
+
+        # There are specific files that PyArrow will try to ignore by default
+        # in a parquet directory. One example are files that start with '_'. Our
+        # previous implementation tried to read all files in a parquet directory,
+        # but we now make use of PyArrow to ensure the directory is valid.
+        with open(os.path.join(path, "_committed_file"), "w+") as f:
+            f.write("testingtesting")
+
         eval_io(
             fn_name="read_parquet",
             # read_parquet kwargs

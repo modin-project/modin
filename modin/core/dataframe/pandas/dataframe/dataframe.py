@@ -36,6 +36,9 @@ from modin.core.dataframe.base.dataframe.utils import (
     Axis,
     JoinType,
 )
+from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+    ProtocolDataframe,
+)
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
 from modin.logging import ClassLogger
@@ -309,11 +312,13 @@ class PandasDataframe(ClassLogger):
         def dtype_builder(df):
             return df.apply(lambda col: find_common_type(col.values), axis=0)
 
-        map_func = self._build_treereduce_func(0, lambda df: df.dtypes)
-        reduce_func = self._build_treereduce_func(0, dtype_builder)
         # For now we will use a pandas Series for the dtypes.
         if len(self.columns) > 0:
-            dtypes = self.tree_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
+            dtypes = (
+                self.tree_reduce(0, lambda df: df.dtypes, dtype_builder)
+                .to_pandas()
+                .iloc[0]
+            )
         else:
             dtypes = pandas.Series([])
         # reset name to None because we use "__reduced__" internally
@@ -2590,6 +2595,18 @@ class PandasDataframe(ClassLogger):
             New Modin DataFrame.
         """
         axis = Axis(axis)
+        new_widths = None
+
+        def _compute_new_widths():
+            widths = None
+            if self._column_widths_cache is not None and all(
+                o._column_widths_cache is not None for o in others
+            ):
+                widths = self._column_widths_cache + [
+                    width for o in others for width in o._column_widths_cache
+                ]
+            return widths
+
         # Fast path for equivalent columns and partitioning
         if (
             axis == Axis.ROW_WISE
@@ -2609,6 +2626,8 @@ class PandasDataframe(ClassLogger):
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
             new_lengths = self._row_lengths_cache
+            # we can only do this for COL_WISE because `concat` might rebalance partitions for ROW_WISE
+            new_widths = _compute_new_widths()
         else:
             (
                 left_parts,
@@ -2620,6 +2639,7 @@ class PandasDataframe(ClassLogger):
             )
             if axis == Axis.COL_WISE:
                 new_lengths = partition_sizes_along_axis
+                new_widths = _compute_new_widths()
             else:
                 new_widths = partition_sizes_along_axis
         new_partitions = self._partition_mgr_cls.concat(
@@ -2655,15 +2675,15 @@ class PandasDataframe(ClassLogger):
             # frame. Typically, if we know the width for any partition in a
             # column, we know the width for the first partition in the column.
             # So just check the widths of the first row of partitions.
-            new_widths = []
-            if new_partitions.size > 0:
-                for part in new_partitions[0]:
-                    if part._width_cache is not None:
-                        new_widths.append(part.width())
-                    else:
-                        new_widths = None
-                        break
-
+            if not new_widths:
+                new_widths = []
+                if new_partitions.size > 0:
+                    for part in new_partitions[0]:
+                        if part._width_cache is not None:
+                            new_widths.append(part.width())
+                        else:
+                            new_widths = None
+                            break
         return self.__constructor__(
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )

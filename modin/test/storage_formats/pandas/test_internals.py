@@ -12,12 +12,51 @@
 # governing permissions and limitations under the License.
 
 import modin.pandas as pd
-from modin.pandas.test.utils import create_test_dfs, test_data_values, df_equals
+from modin.pandas.test.utils import (
+    create_test_dfs,
+    test_data_values,
+    df_equals,
+)
 from modin.config import NPartitions, Engine
 
+import pandas
 import pytest
 
 NPartitions.put(4)
+
+if Engine.get() == "Ray":
+    import ray
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
+        PandasOnRayDataframePartition,
+    )
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.virtual_partition import (
+        PandasOnRayDataframeColumnPartition,
+        PandasOnRayDataframeRowPartition,
+    )
+
+    block_partition_class = PandasOnRayDataframePartition
+    virtual_column_partition_class = PandasOnRayDataframeColumnPartition
+    virtual_row_partition_class = PandasOnRayDataframeRowPartition
+    put = ray.put
+elif Engine.get() == "Dask":
+    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.virtual_partition import (
+        PandasOnDaskDataframeColumnPartition,
+        PandasOnDaskDataframeRowPartition,
+    )
+    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition import (
+        PandasOnDaskDataframePartition,
+    )
+    from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
+
+    # initialize modin dataframe to initialize dask
+    pd.DataFrame()
+
+    def put(x):
+        return DaskWrapper.put(x, hash=False)
+
+    block_partition_class = PandasOnDaskDataframePartition
+    virtual_column_partition_class = PandasOnDaskDataframeColumnPartition
+    virtual_row_partition_class = PandasOnDaskDataframeRowPartition
 
 
 def test_aligning_blocks():
@@ -209,3 +248,122 @@ def test_rebalance_partitions(test_type):
         isinstance(ptn, new_large_modin_frame._partition_mgr_cls._partition_class)
         for ptn in new_large_modin_frame._partitions.flatten()
     ), "Partitions are not block partitioned after apply."
+
+
+@pytest.mark.skipif(
+    Engine.get() not in ("Dask", "Ray"),
+    reason="Only Dask and Ray engines have virtual partitions.",
+)
+@pytest.mark.parametrize(
+    "axis,virtual_partition_class",
+    ((0, virtual_column_partition_class), (1, virtual_row_partition_class)),
+    ids=["partitions_spanning_all_columns", "partitions_spanning_all_rows"],
+)
+class TestDrainVirtualPartitionCallQueue:
+    """Test draining virtual partition call queues.
+
+    Test creating a virtual partition made of block partitions and/or one or
+    more layers of virtual partitions, draining the top-level partition's
+    call queue, and getting the result.
+
+    In all these test cases, the full_axis argument doesn't matter for
+    correctness because it only affects `apply`, which is not used here.
+    Still, virtual partition users are not supposed to create full-axis
+    virtual partitions out of other full-axis virtual partitions, so
+    set full_axis to False everywhere.
+    """
+
+    def test_from_virtual_partitions_with_call_queues(
+        self,
+        axis,
+        virtual_partition_class,
+    ):
+        # reverse the dataframe along the virtual partition axis.
+        def reverse(df):
+            return df.iloc[::-1, :] if axis == 0 else df.iloc[:, ::-1]
+
+        level_zero_blocks_first = [
+            block_partition_class(put(pandas.DataFrame([0]))),
+            block_partition_class(put(pandas.DataFrame([1]))),
+        ]
+        level_one_virtual_first = virtual_partition_class(
+            level_zero_blocks_first, full_axis=False
+        )
+        level_one_virtual_first = level_one_virtual_first.add_to_apply_calls(reverse)
+        level_zero_blocks_second = [
+            block_partition_class(put(pandas.DataFrame([2]))),
+            block_partition_class(put(pandas.DataFrame([3]))),
+        ]
+        level_one_virtual_second = virtual_partition_class(
+            level_zero_blocks_second, full_axis=False
+        )
+        level_one_virtual_second = level_one_virtual_second.add_to_apply_calls(reverse)
+        level_two_virtual = virtual_partition_class(
+            [level_one_virtual_first, level_one_virtual_second], full_axis=False
+        )
+        level_two_virtual.drain_call_queue()
+        if axis == 0:
+            expected_df = pandas.DataFrame([1, 0, 3, 2], index=[0, 0, 0, 0])
+        else:
+            expected_df = pandas.DataFrame([[1, 0, 3, 2]], columns=[0, 0, 0, 0])
+        df_equals(
+            level_two_virtual.to_pandas(),
+            expected_df,
+        )
+
+    def test_from_block_and_virtual_partition_with_call_queues(
+        self, axis, virtual_partition_class
+    ):
+        # make a function that reverses the dataframe along the virtual
+        # partition axis.
+        # for testing axis == 0, start with two 2-rows-by-1-column blocks. for
+        # axis == 1, start with two 1-rows-by-2-column blocks.
+        def reverse(df):
+            return df.iloc[::-1, :] if axis == 0 else df.iloc[:, ::-1]
+
+        block_data = [[0, 1], [2, 3]] if axis == 0 else [[[0, 1]], [[2, 3]]]
+        level_zero_blocks = [
+            block_partition_class(put(pandas.DataFrame(block_data[0]))),
+            block_partition_class(put(pandas.DataFrame(block_data[1]))),
+        ]
+        level_zero_blocks[0] = level_zero_blocks[0].add_to_apply_calls(reverse)
+        level_one_virtual = virtual_partition_class(
+            level_zero_blocks[1], full_axis=False
+        )
+        level_one_virtual = level_one_virtual.add_to_apply_calls(reverse)
+        level_two_virtual = virtual_partition_class(
+            [level_zero_blocks[0], level_one_virtual], full_axis=False
+        )
+        level_two_virtual.drain_call_queue()
+        if axis == 0:
+            expected_df = pandas.DataFrame([1, 0, 3, 2], index=[1, 0, 1, 0])
+        else:
+            expected_df = pandas.DataFrame([[1, 0, 3, 2]], columns=[1, 0, 1, 0])
+        df_equals(level_two_virtual.to_pandas(), expected_df)
+
+    def test_virtual_partition_call_queues_at_three_levels(
+        self, axis, virtual_partition_class
+    ):
+
+        block = block_partition_class(put(pandas.DataFrame([1])))
+        level_one_virtual = virtual_partition_class([block], full_axis=False)
+        level_one_virtual = level_one_virtual.add_to_apply_calls(
+            lambda df: pandas.concat([df, pandas.DataFrame([2])])
+        )
+        level_two_virtual = virtual_partition_class(
+            [level_one_virtual], full_axis=False
+        )
+        level_two_virtual = level_two_virtual.add_to_apply_calls(
+            lambda df: pandas.concat([df, pandas.DataFrame([3])])
+        )
+        level_three_virtual = virtual_partition_class(
+            [level_two_virtual], full_axis=False
+        )
+        level_three_virtual = level_three_virtual.add_to_apply_calls(
+            lambda df: pandas.concat([df, pandas.DataFrame([4])])
+        )
+        level_three_virtual.drain_call_queue()
+        df_equals(
+            level_three_virtual.to_pandas(),
+            pd.DataFrame([1, 2, 3, 4], index=[0, 0, 0, 0]),
+        )
