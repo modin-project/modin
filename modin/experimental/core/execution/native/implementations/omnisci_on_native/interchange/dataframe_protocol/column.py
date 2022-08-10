@@ -195,7 +195,9 @@ class OmnisciProtocolColumn(ProtocolColumn):
             col = col.combine_chunks()
 
         col = col.chunks[0]
-        cat_frame = Series(col.dictionary.tolist())._query_compiler._modin_frame
+        cat_frame = OmnisciOnNativeDataframe.from_arrow(
+            pyarrow.Table.from_pydict({self._col.column_names[0]: col.dictionary})
+        )
         from .dataframe import OmnisciProtocolDataframe
 
         return {

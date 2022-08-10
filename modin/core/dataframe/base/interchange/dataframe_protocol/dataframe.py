@@ -43,9 +43,8 @@ class ColumnBuffers(TypedDict):  # noqa: GL08
 class CategoricalDescription(TypedDict):  # noqa: GL08
     # whether the ordering of dictionary indices is semantically meaningful
     is_ordered: bool
-    # whether a dictionary-style mapping of categorical values to other objects exists
+    # whether a column-style mapping of categorical values to other objects exists
     is_dictionary: bool
-    # Python-level only (e.g. ``{int: str}``).
     # None if not a column-style categorical.
     categories: Optional["ProtocolColumn"]
 
