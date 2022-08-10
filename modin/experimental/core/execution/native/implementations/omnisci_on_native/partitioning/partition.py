@@ -112,7 +112,7 @@ class OmnisciOnNativeDataframePartition(PandasDataframePartition):
             The new partition.
         """
         return OmnisciOnNativeDataframePartition(
-            pandas_df=obj, length=len(obj.index), width=len(obj.columns)
+            pandas_df=obj.copy(), length=len(obj.index), width=len(obj.columns)
         )
 
     def wait(self):

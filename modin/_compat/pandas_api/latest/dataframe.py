@@ -13,11 +13,23 @@
 
 """Module for 'latest pandas' compatibility layer for DataFrame."""
 
-from typing import Optional, Union, IO
+from datetime import datetime
+from typing import (
+    Optional,
+    Union,
+    IO,
+    Hashable,
+    Sequence,
+)
 import pandas
 from pandas.util._validators import validate_bool_kwarg
-from pandas._libs.lib import no_default
-from pandas._typing import StorageOptions
+from pandas._libs.lib import no_default, NoDefault
+from pandas._typing import (
+    CompressionOptions,
+    FilePath,
+    StorageOptions,
+    WriteBuffer,
+)
 from numpy import nan
 
 from ..abc import BaseCompatibleDataFrame

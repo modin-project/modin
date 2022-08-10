@@ -13,11 +13,16 @@
 
 """Module for 'Python 3.6 pandas' compatibility layer for Series."""
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pandas
 
 from ..abc.series import BaseCompatibleSeries
 from modin.utils import _inherit_docstrings
+
+if TYPE_CHECKING:
+    from modin.pandas import DataFrame
 
 
 @_inherit_docstrings(pandas.Series)

@@ -16,7 +16,7 @@
 import pyarrow as pa
 import pandas
 import numpy as np
-from typing import Any, Optional, Tuple, Dict, Iterable
+from typing import Any, Optional, Tuple, Dict, Iterable, TYPE_CHECKING
 from math import ceil
 
 from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
@@ -35,6 +35,9 @@ from modin.utils import _inherit_docstrings
 from modin.pandas import Series
 from .buffer import OmnisciProtocolBuffer
 from .utils import arrow_dtype_to_arrow_c, arrow_types_map
+
+if TYPE_CHECKING:
+    from .dataframe import OmnisciProtocolDataframe
 
 
 @_inherit_docstrings(ProtocolColumn)
@@ -262,7 +265,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
     def num_chunks(self) -> int:
         return self._col.num_chunks()
 
-    def get_chunks(self, n_chunks: Optional[int] = None) -> Iterable["Column"]:
+    def get_chunks(self, n_chunks: Optional[int] = None) -> Iterable[ProtocolColumn]:
         for chunk in self._col.get_chunks(n_chunks):
             yield OmnisciProtocolColumn(chunk)
 

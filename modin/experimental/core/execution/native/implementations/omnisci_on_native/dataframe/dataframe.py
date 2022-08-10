@@ -15,6 +15,9 @@
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
+from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+    ProtocolDataframe,
+)
 from modin.experimental.core.storage_formats.omnisci.query_compiler import (
     DFAlgQueryCompiler,
 )
@@ -2077,7 +2080,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         )
 
     @classmethod
-    def from_dataframe(cls, df: "ProtocolDataframe") -> "OmnisciOnNativeDataframe":
+    def from_dataframe(cls, df: ProtocolDataframe) -> "OmnisciOnNativeDataframe":
         """
         Convert a DataFrame implementing the dataframe exchange protocol to a Core Modin Dataframe.
 

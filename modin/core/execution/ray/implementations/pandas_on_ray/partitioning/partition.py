@@ -159,8 +159,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             logger.debug(f"SUBMIT::_apply_list_of_funcs::{self._identity}")
             (
                 self._data,
-                self._length_cache,
-                self._width_cache,
+                new_length,
+                new_width,
                 self._ip_cache,
             ) = _apply_list_of_funcs.remote(call_queue, data)
         else:
@@ -170,12 +170,19 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             logger.debug(f"SUBMIT::_apply_func::{self._identity}")
             (
                 self._data,
-                self._length_cache,
-                self._width_cache,
+                new_length,
+                new_width,
                 self._ip_cache,
             ) = _apply_func.remote(data, func, *args, **kwargs)
         logger.debug(f"EXIT::Partition.drain_call_queue::{self._identity}")
         self.call_queue = []
+
+        # GH#4732 if we already have evaluated width/length cached as ints,
+        #  don't overwrite that cache with non-evaluated values.
+        if not isinstance(self._length_cache, int):
+            self._length_cache = new_length
+        if not isinstance(self._width_cache, int):
+            self._width_cache = new_width
 
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""

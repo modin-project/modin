@@ -35,7 +35,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
     """Class handles utils for reading `.parquet` files."""
 
     @classmethod
-    def get_fsspec_files(cls, path, storage_options):
+    def get_fs_and_files(cls, path, storage_options):
         """
         Retrieve filesystem interface and list of files from path.
 
@@ -65,35 +65,76 @@ class ParquetDispatcher(ColumnStoreDispatcher):
 
         if isinstance(path, AbstractBufferedFile):
             return path.fs, [path]
-        protocol, path = split_protocol(path)
-        filesystem = get_filesystem_class(protocol)(**storage_options)
-        if filesystem.stat(path)["type"] == "directory":
-            files = []
-            for path in sorted(filesystem.find(path)):
-                if version.parse(fsspec.__version__) < version.parse("2022.5.0"):
-                    files.append(_unstrip_protocol(filesystem.protocol, path))
-                else:
-                    files.append(filesystem.unstrip_protocol(path))
-            return filesystem, files
+        fs = get_filesystem_class(split_protocol(path)[0])(**storage_options)
+        dataset = cls._get_dataset(path, storage_options)
+        # version.parse() is expensive, so we can split this into two separate loops
+        if version.parse(fsspec.__version__) < version.parse("2022.5.0"):
+            files = [_unstrip_protocol(fs.protocol, fpath) for fpath in dataset.files]
+        else:
+            files = [fs.unstrip_protocol(fpath) for fpath in dataset.files]
 
-        return filesystem, [
-            _unstrip_protocol(filesystem.protocol, path)
-            if version.parse(fsspec.__version__) < version.parse("2022.5.0")
-            else filesystem.unstrip_protocol(path)
-        ]
+        return fs, files
 
     @classmethod
-    def call_deploy(cls, fname, col_partitions, **kwargs):
+    def _get_dataset(cls, path, storage_options):
+        """
+        Retrieve parquet dataset for given path.
+
+        Parameters
+        ----------
+        path : str, path object or file-like object
+            Path to dataset.
+        storage_options : dict
+            Parameters for specific storage engine.
+
+        Returns
+        -------
+        dataset : ParquetDataset
+            Dataset object of given Parquet file-path.
+        """
+        from pyarrow.parquet import ParquetDataset
+
+        fs, fs_path = cls._get_fs_and_fs_path(path, storage_options)
+        dataset = ParquetDataset(fs_path, filesystem=fs, use_legacy_dataset=False)
+        return dataset
+
+    @classmethod
+    def _get_fs_and_fs_path(cls, path, storage_options):
+        """
+        Retrieve filesystem interface and filesystem-specific path.
+
+        Parameters
+        ----------
+        path : str, path object or file-like object
+            Path to dataset.
+        storage_options : dict
+            Parameters for specific storage engine.
+
+        Returns
+        -------
+        filesystem : Any
+            Protocol implementation of registry.
+        fs_path : list
+            Filesystem's specific path.
+        """
+        return (
+            url_to_fs(path, **storage_options) if is_fsspec_url(path) else (None, path)
+        )
+
+    @classmethod
+    def call_deploy(cls, path, col_partitions, storage_options, **kwargs):
         """
         Deploy remote tasks to the workers with passed parameters.
 
         Parameters
         ----------
-        fname : str, path object or file-like object
+        path : str, path object or file-like object
             Name of the file to read.
         col_partitions : list
             List of arrays with columns names that should be read
             by each partition.
+        storage_options : dict
+            Parameters for specific storage engine.
         **kwargs : dict
             Parameters of deploying read_* function.
 
@@ -110,9 +151,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         if len(col_partitions) == 0:
             return []
 
-        storage_options = kwargs.pop("storage_options", {}) or {}
-
-        filesystem, parquet_files = cls.get_fsspec_files(fname, storage_options)
+        filesystem, parquet_files = cls.get_fs_and_files(path, storage_options)
 
         row_groups_per_file = []
         num_row_groups = 0
@@ -230,7 +269,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         )
 
     @classmethod
-    def build_index(cls, path, partition_ids, index_columns):
+    def build_index(cls, path, partition_ids, index_columns, storage_options):
         """
         Compute index and its split sizes of resulting Modin DataFrame.
 
@@ -242,6 +281,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             Array with references to the partitions data.
         index_columns : list
             List of index columns specified by pandas metadata.
+        storage_options : dict
+            Parameters for specific storage engine.
 
         Returns
         -------
@@ -273,8 +314,11 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         # For the second check, let us consider the case where we have an empty dataframe,
         # that has a valid index.
         if range_index or (len(partition_ids) == 0 and len(column_names_to_read) != 0):
+            fs, fs_path = cls._get_fs_and_fs_path(path, storage_options)
             complete_index = (
-                read_table(path, columns=column_names_to_read).to_pandas().index
+                read_table(fs_path, columns=column_names_to_read, filesystem=fs)
+                .to_pandas()
+                .index
             )
         # Empty DataFrame case
         elif len(partition_ids) == 0:
@@ -306,9 +350,12 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         new_query_compiler : BaseQueryCompiler
             Query compiler with imported data for further processing.
         """
+        storage_options = kwargs.pop("storage_options", {}) or {}
         col_partitions, column_widths = cls.build_columns(columns)
-        partition_ids = cls.call_deploy(path, col_partitions, **kwargs)
-        index, sync_index = cls.build_index(path, partition_ids, index_columns)
+        partition_ids = cls.call_deploy(path, col_partitions, storage_options, **kwargs)
+        index, sync_index = cls.build_index(
+            path, partition_ids, index_columns, storage_options
+        )
         remote_parts = cls.build_partition(partition_ids, column_widths)
         if len(partition_ids) > 0:
             row_lengths = [part.length() for part in remote_parts.T[0]]
@@ -356,7 +403,6 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             "pyarrow",
             "pyarrow is required to read parquet files.",
         )
-        from pyarrow.parquet import ParquetDataset
         from modin.pandas.io import PQ_INDEX_REGEX
 
         if isinstance(path, str) and os.path.isdir(path):
@@ -382,13 +428,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     reason="Mixed partitioning columns in Parquet",
                     **kwargs,
                 )
-        # url_to_fs returns the fs and path formatted for the specific fs
-        fs, fs_path = (
-            url_to_fs(path, **(kwargs.get("storage_options") or {}))
-            if is_fsspec_url(path)
-            else (None, path)
-        )
-        dataset = ParquetDataset(fs_path, filesystem=fs, use_legacy_dataset=False)
+        dataset = cls._get_dataset(path, kwargs.get("storage_options") or {})
         index_columns = (
             dataset.schema.pandas_metadata.get("index_columns", [])
             if dataset.schema.pandas_metadata
