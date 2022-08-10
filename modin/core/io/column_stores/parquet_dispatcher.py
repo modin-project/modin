@@ -302,12 +302,12 @@ class ParquetDispatcher(ColumnStoreDispatcher):
 
             raise ImportError(
                 "Unable to find a usable engine; "
-                "tried using: 'pyarrow', 'fastparquet'.\n"
-                "A suitable version of "
-                "pyarrow or fastparquet is required for parquet "
-                "support.\n"
-                "Trying to import the above resulted in these errors:"
-                f"{error_msgs}"
+                + "tried using: 'pyarrow', 'fastparquet'.\n"
+                + "A suitable version of "
+                + "pyarrow or fastparquet is required for parquet "
+                + "support.\n"
+                + "Trying to import the above resulted in these errors:"
+                + f"{error_msgs}"
             )
         elif engine == "pyarrow":
             return PyArrowDataset(path, storage_options)
