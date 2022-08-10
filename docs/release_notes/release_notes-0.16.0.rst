@@ -21,6 +21,7 @@ Key Features and Updates
   * FIX-#4641: Reindex pandas partitions in `df.describe()` (#4651)
   * FIX-#2064: Fix `iloc`/`loc` assignment when dataframe is empty (#4677)
   * FIX-#4634: Check for FrozenList as `by` in `df.groupby()` (#4667)
+  * FIX-#4680: Fix `read_csv` that started defaulting to pandas again in case of reading from a buffer and when a buffer has a non-zero starting position (#4681)
   * FIX-#4491: Wait for all partitions in parallel in benchmark mode (#4656)
   * FIX-#4358: MultiIndex `loc` shouldn't drop levels for full-key lookups (#4608)
   * FIX-#4658: Expand exception handling for `read_*` functions from s3 storages (#4659)
