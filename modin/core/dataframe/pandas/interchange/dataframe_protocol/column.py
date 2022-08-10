@@ -195,7 +195,9 @@ class PandasProtocolColumn(ProtocolColumn):
             )
 
         pandas_series = self._col.to_pandas().squeeze(axis=1)
-        cat_frame = self._col.from_pandas(pandas_series.cat.categories)
+        cat_frame = self._col.from_pandas(
+            pandas.DataFrame({"cat": pandas_series.cat.categories})
+        )
         return {
             "is_ordered": pandas_series.cat.ordered,
             "is_dictionary": True,

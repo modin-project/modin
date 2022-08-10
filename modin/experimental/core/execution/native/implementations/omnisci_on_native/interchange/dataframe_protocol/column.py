@@ -200,7 +200,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
 
         col = col.chunks[0]
         cat_frame = OmnisciOnNativeDataframe.from_arrow(
-            pa.Table.from_pydict({self._col.column_names[0]: col.dictionary})
+            pa.Table.from_pydict({next(iter(self._col.column_names())): col.dictionary})
         )
         from .dataframe import OmnisciProtocolDataframe
 
