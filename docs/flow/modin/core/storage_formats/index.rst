@@ -54,7 +54,7 @@ whole methods can be handled at the API layer with the existing API.
 
 The query compiler is the level where Modin stops distinguishing DataFrame and Series (or column) objects.
 A Series is represented by a `1xN` query compiler, where the Series name is the column label.
-If Series is unnamed, then the label is ``"__reduced__"``. The high-level DataFrame API layer
+If Series is unnamed, then the label is ``MODIN_UNNAMED_SERIES_LABEL``, which is equal to ``"__reduced__"``. The high-level DataFrame API layer
 interprets a one-column query compiler as Series or DataFrame depending on the operation context.
 
 .. note::
