@@ -147,22 +147,10 @@ def _object_store_memory() -> Optional[int]:
     """
     Get the object store memory we should start Ray with, in bytes.
 
-    If object store memory is set in the ``Memory`` Modin config variable:
-      return ``Memory``
-    else:
-      if on linux:
-        system_memory is available memory in /dev/shm
-      otherwise:
-        system_memory is psutil.virtual_memory().total
-      desired_memory = ((_OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO * system_memory)
-                        rounded down to the nearest GB)
-      if desired_memory == 0:
-        return None
-      else if (on Mac and desired_memory > the Ray mac object store size
-               limit L):
-        return L
-      else:
-        return desired_memory
+    - If the ``Memory`` config variable is set, return that.
+    - On Linux, take system memory from /dev/shm. On other systems use total
+      virtual memory.
+    - On Mac, never return more than Ray-specified upper limit.
 
     Returns
     -------
