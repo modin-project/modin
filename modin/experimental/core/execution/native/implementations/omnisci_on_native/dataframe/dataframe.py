@@ -15,7 +15,7 @@
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
-from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
 from modin.experimental.core.storage_formats.omnisci.query_compiler import (

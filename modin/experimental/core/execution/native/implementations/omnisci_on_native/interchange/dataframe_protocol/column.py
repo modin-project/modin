@@ -32,7 +32,6 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolColumn,
 )
 from modin.utils import _inherit_docstrings
-from modin.pandas import Series
 from .buffer import OmnisciProtocolBuffer
 from .utils import arrow_dtype_to_arrow_c, arrow_types_map
 
@@ -197,9 +196,11 @@ class OmnisciProtocolColumn(ProtocolColumn):
                 )
             col = col.combine_chunks()
 
+        from .dataframe import OmnisciOnNativeDataframe
+
         col = col.chunks[0]
         cat_frame = OmnisciOnNativeDataframe.from_arrow(
-            pyarrow.Table.from_pydict({self._col.column_names[0]: col.dictionary})
+            pa.Table.from_pydict({self._col.column_names[0]: col.dictionary})
         )
         from .dataframe import OmnisciProtocolDataframe
 

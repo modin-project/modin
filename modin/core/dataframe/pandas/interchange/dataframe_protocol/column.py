@@ -30,7 +30,6 @@ import numpy as np
 import pandas
 
 from modin.utils import _inherit_docstrings
-from modin.pandas import Series
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     CategoricalDescription,
     ProtocolColumn,

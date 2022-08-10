@@ -36,7 +36,7 @@ from modin.core.dataframe.base.dataframe.utils import (
     Axis,
     JoinType,
 )
-from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
 from modin.pandas.indexing import is_range_like
