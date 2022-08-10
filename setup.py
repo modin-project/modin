@@ -18,7 +18,8 @@ ray_deps = [
 ]
 remote_deps = ["rpyc==4.1.5", "cloudpickle", "boto3"]
 spreadsheet_deps = ["modin-spreadsheet>=0.1.0"]
-sql_deps = ["dfsql>=0.4.2", "pyparsing<=2.4.7"]
+# pin mindsdb-sql to workaround https://github.com/modin-project/modin/issues/4802
+sql_deps = ["dfsql>=0.4.2", "pyparsing<=2.4.7", "mindsdb-sql<0.3.11"]
 all_deps = dask_deps + ray_deps + remote_deps + spreadsheet_deps
 
 # Distribute 'modin-autoimport-pandas.pth' along with binary and source distributions.
