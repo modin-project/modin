@@ -690,22 +690,26 @@ class PandasParquetParser(PandasParser):
             return ParquetFile(f)[row_group_start:row_group_end].to_pandas(
                 columns=columns
             )
+        else:
+            # We shouldn't ever come to this case, so something went wrong
+            raise ValueError("engine must be one of 'pyarrow', 'fastparquet'")
 
     @staticmethod
     @doc(
         _doc_parse_func,
         parameters="""files_for_parser : list
     List of files to be read.
+engine : str
+    Parquet library to use (either pyarrow or fastparquet).
 """,
     )
-    def parse(files_for_parser, **kwargs):
+    def parse(files_for_parser, engine, **kwargs):
         columns = kwargs.get("columns", None)
         storage_options = kwargs.pop("storage_options", {}) or {}
-        engine = kwargs.pop("engine")
         chunks = []
         # `single_worker_read` just passes in a string path
         if isinstance(files_for_parser, str):
-            return pandas.read_parquet(files_for_parser, **kwargs)
+            return pandas.read_parquet(files_for_parser, engine=engine, **kwargs)
 
         for file_for_parser in files_for_parser:
             if isinstance(file_for_parser.path, IOBase):
