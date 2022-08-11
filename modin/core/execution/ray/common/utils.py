@@ -101,7 +101,7 @@ def initialize_ray(
     ray.init({', '.join([f'{k}={v}' for k,v in extra_init_kw.items()])})
 """,
             )
-            object_store_memory = _object_store_memory()
+            object_store_memory = _get_object_store_memory()
             ray_init_kwargs = {
                 "num_cpus": CpuCount.get(),
                 "num_gpus": GpuCount.get(),
@@ -143,7 +143,7 @@ def initialize_ray(
         NPartitions._put(num_cpus)
 
 
-def _object_store_memory() -> Optional[int]:
+def _get_object_store_memory() -> Optional[int]:
     """
     Get the object store memory we should start Ray with, in bytes.
 
