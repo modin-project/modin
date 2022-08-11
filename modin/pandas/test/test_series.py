@@ -2660,8 +2660,6 @@ def test_reindex_like():
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_rename(data):
-    # TODO(https://github.com/modin-project/modin/issues/3804):
-    # make df_equals always check dtypes.
     modin_series, pandas_series = create_test_series(data)
     new_name = "NEW_NAME"
     df_equals(modin_series.rename(new_name), pandas_series.rename(new_name))
