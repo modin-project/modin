@@ -38,6 +38,7 @@ dependencies:
   - psycopg2
   - mypy
   - pandas-stubs
+  - fastparquet
   - pip:
       - xgboost>=1.6.0
       - modin-spreadsheet>=0.1.1
