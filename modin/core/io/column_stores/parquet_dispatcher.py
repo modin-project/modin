@@ -66,7 +66,7 @@ class Dataset(ABC):
         pass
 
     @abstractmethod
-    def read_table_as_pandas(columns):
+    def read_table_as_pandas(self, columns):
         """
         Return a pandas dataframe with the given columns.
 
