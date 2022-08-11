@@ -700,7 +700,7 @@ class PandasParquetParser(PandasParser):
         parameters="""files_for_parser : list
     List of files to be read.
 engine : str
-    Parquet library to use (either pyarrow or fastparquet).
+    Parquet library to use (either PyArrow or fastparquet).
 """,
     )
     def parse(files_for_parser, engine, **kwargs):
