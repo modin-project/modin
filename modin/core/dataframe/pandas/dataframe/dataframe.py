@@ -1754,9 +1754,7 @@ class PandasDataframe(ClassLogger):
             return df.rename(index=new_row_labels, columns=new_col_labels, level=level)
 
         new_parts = self._partition_mgr_cls.map_partitions(self._partitions, map_fn)
-
         new_dtypes = None if self._dtypes is None else self._dtypes.set_axis(new_cols)
-
         return self.__constructor__(
             new_parts,
             new_index,
