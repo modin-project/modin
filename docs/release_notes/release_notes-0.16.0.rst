@@ -32,6 +32,7 @@ Key Features and Updates
   * FIX-#4657: Use `fsspec` for handling s3/http-like paths instead of `s3fs` (#4710)
   * FIX-#4676: drain sub-virtual-partition call queues (#4695)
   * FIX-#4782: Exclude certain non-parquet files in `read_parquet` (#4783)    
+  * FIX-#4808: Set dtypes correctly after column rename (TODO(mvashishtha): add PR number)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
