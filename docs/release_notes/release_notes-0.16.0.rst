@@ -21,6 +21,7 @@ Key Features and Updates
   * FIX-#4641: Reindex pandas partitions in `df.describe()` (#4651)
   * FIX-#2064: Fix `iloc`/`loc` assignment when dataframe is empty (#4677)
   * FIX-#4634: Check for FrozenList as `by` in `df.groupby()` (#4667)
+  * FIX-#4680: Fix `read_csv` that started defaulting to pandas again in case of reading from a buffer and when a buffer has a non-zero starting position (#4681)
   * FIX-#4491: Wait for all partitions in parallel in benchmark mode (#4656)
   * FIX-#4358: MultiIndex `loc` shouldn't drop levels for full-key lookups (#4608)
   * FIX-#4658: Expand exception handling for `read_*` functions from s3 storages (#4659)
@@ -43,6 +44,7 @@ Key Features and Updates
   * PERF-#4305: Parallelize `read_parquet` over row groups (#4700)
   * PERF-#4773: Compute `lengths` and `widths` in `put` method of Dask partition like Ray do (#4780)
   * PERF-#4732: Avoid overwriting already-evaluated `PandasOnRayDataframePartition._length_cache` and `PandasOnRayDataframePartition._width_cache` (#4754)
+  * PERF-#4713: Stop overriding the ray MacOS object store size limit (#4792)
 * Benchmarking enhancements
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
 * Refactor Codebase
@@ -55,6 +57,7 @@ Key Features and Updates
   * REFACTOR-#4774: remove `_build_treereduce_func` call from `_compute_dtypes` (#4775)
   * REFACTOR-#4750: Delete BaseDataframeAxisPartition.shuffle (#4751)
   * REFACTOR-#4722: Stop suppressing undefined name lint (#4723)
+  * REFACTOR-#4796: Introduce constant for __reduced__ column name (#4799)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements
