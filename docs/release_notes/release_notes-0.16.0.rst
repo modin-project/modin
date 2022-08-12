@@ -44,6 +44,7 @@ Key Features and Updates
   * PERF-#4305: Parallelize `read_parquet` over row groups (#4700)
   * PERF-#4773: Compute `lengths` and `widths` in `put` method of Dask partition like Ray do (#4780)
   * PERF-#4732: Avoid overwriting already-evaluated `PandasOnRayDataframePartition._length_cache` and `PandasOnRayDataframePartition._width_cache` (#4754)
+  * PERF-#4713: Stop overriding the ray MacOS object store size limit (#4792)
 * Benchmarking enhancements
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
 * Refactor Codebase
