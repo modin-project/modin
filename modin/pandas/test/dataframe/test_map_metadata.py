@@ -203,6 +203,9 @@ def test_add_prefix(data):
     new_modin_df = modin_df.add_prefix(test_prefix)
     new_pandas_df = pandas_df.add_prefix(test_prefix)
     df_equals(new_modin_df.columns, new_pandas_df.columns)
+    # TODO(https://github.com/modin-project/modin/issues/3804):
+    # make df_equals always check dtypes.
+    df_equals(new_modin_df.dtypes, new_pandas_df.dtypes)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
