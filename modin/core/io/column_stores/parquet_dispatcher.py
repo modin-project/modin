@@ -34,7 +34,8 @@ from modin.utils import import_optional_dependency, _inherit_docstrings
 
 class Dataset(ABC):  # noqa : PR01
     """
-    Abstract class that encapsulates Parquet engine-specific details.
+    Abstract class that encapsulates Parquet engine-specific details for
+    a given Parquet dataset.
 
     This class exposes a set of functions that are commonly used in the
     `read_parquet` implementation.
@@ -81,13 +82,20 @@ class Dataset(ABC):  # noqa : PR01
         pass
 
     @abstractproperty
+    def engine(self):
+        """Return string representing what engine is being used."""
+        pass
+
+    # TODO: make this cache_readonly after docstring inheritance is fixed.
+    @abstractproperty
     def files(self):
         """Return the list of formatted file paths of the dataset."""
         pass
 
+    # TODO: make this cache_readonly after docstring inheritance is fixed.
     @abstractproperty
-    def engine(self):
-        """Return string representing what engine is being used."""
+    def row_groups_per_file(self):
+        """Return a list with the number of row groups per file."""
         pass
 
     @property
@@ -125,11 +133,6 @@ class Dataset(ABC):  # noqa : PR01
             else:
                 _, self._fs_path = url_to_fs(self.path, **self.storage_options)
         return self._fs_path
-
-    @abstractmethod
-    def row_groups_per_file(self):
-        """Return a list with the number of row groups per file."""
-        pass
 
     @abstractmethod
     def to_pandas_dataframe(self, columns):
@@ -199,6 +202,7 @@ class PyArrowDataset(Dataset):
     def engine(self):
         return "pyarrow"
 
+    @property
     def row_groups_per_file(self):
         from pyarrow.parquet import ParquetFile
 
@@ -249,6 +253,7 @@ class FastParquetDataset(Dataset):
     def engine(self):
         return "fastparquet"
 
+    @property
     def row_groups_per_file(self):
         from fastparquet import ParquetFile
 
@@ -366,7 +371,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         if len(col_partitions) == 0:
             return []
 
-        row_groups_per_file = dataset.row_groups_per_file()
+        row_groups_per_file = dataset.row_groups_per_file
         num_row_groups = sum(row_groups_per_file)
         parquet_files = dataset.files
 
