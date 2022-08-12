@@ -22,7 +22,6 @@ from fsspec.core import split_protocol, url_to_fs
 from fsspec.registry import get_filesystem_class
 from fsspec.spec import AbstractBufferedFile
 import numpy as np
-from pandas.io.common import is_fsspec_url
 from packaging import version
 
 from modin.core.storage_formats.pandas.utils import compute_chunksize
@@ -33,13 +32,43 @@ from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispa
 from modin.utils import import_optional_dependency, _inherit_docstrings
 
 
-class Dataset(ABC):
+class Dataset(ABC):  # noqa : PR01
     """
     Abstract class that encapsulates Parquet engine-specific details.
 
     This class exposes a set of functions that are commonly used in the
     `read_parquet` implementation.
+
+    Attributes
+    ----------
+    path : str, path object or file-like object
+        The filepath of the parquet file in local filesystem or hdfs.
+    storage_options : dict
+        Parameters for specific storage engine.
+    _fs_path : str, path object or file-like object
+        The filepath or handle of the parquet dataset specific to the
+        filesystem implementation. E.g. for `s3://test/example`, _fs
+        would be set to S3FileSystem and _fs_path would be `test/example`.
+    _fs : Filesystem
+        Filesystem object specific to the given parquet file/dataset.
+    dataset : ParquetDataset or ParquetFile
+        Underlying dataset implementation for PyArrow and fastparquet
+        respectively.
+    _row_groups_per_file : list
+        List that contains the number of row groups for each file in the
+        given parquet dataset.
+    _files : list
+        List that contains the full paths of the parquet files in the dataset.
     """
+
+    def __init__(self, path, storage_options):
+        self.path = path
+        self.storage_options = storage_options
+        self._fs_path = None
+        self._fs = None
+        self.dataset = self._init_dataset()
+        self._row_groups_per_file = None
+        self._files = None
 
     @abstractproperty
     def pandas_metadata(self):
@@ -61,6 +90,42 @@ class Dataset(ABC):
         """Return string representing what engine is being used."""
         pass
 
+    @property
+    def fs(self):
+        """
+        Return the filesystem object associated with the dataset path.
+
+        Returns
+        -------
+        filesystem
+            Filesystem object.
+        """
+        if self._fs is None:
+            if isinstance(self.path, AbstractBufferedFile):
+                self._fs = self.path.fs
+            else:
+                self._fs = get_filesystem_class(split_protocol(self.path)[0])(
+                    **self.storage_options
+                )
+        return self._fs
+
+    @property
+    def fs_path(self):
+        """
+        Return the filesystem-specific path or file handle.
+
+        Returns
+        -------
+        fs_path : str, path object or file-like object
+            String path specific to filesystem or a file handle.
+        """
+        if self._fs_path is None:
+            if isinstance(self.path, AbstractBufferedFile):
+                self._fs_path = self.path
+            else:
+                _, self._fs_path = url_to_fs(self.path, **self.storage_options)
+        return self._fs_path
+
     @abstractmethod
     def row_groups_per_file(self):
         """Return a list with the number of row groups per file."""
@@ -78,26 +143,6 @@ class Dataset(ABC):
         """
         pass
 
-    def _get_fs_and_fs_path(self):
-        """
-        Retrieve filesystem interface and filesystem-specific path.
-
-        For example, url_to_fs("s3://example/thing/this") would return
-        an S3FileSystem object and a fs_path of 'example/thing/this'.
-
-        Returns
-        -------
-        filesystem : Any
-            Protocol implementation of registry.
-        fs_path : list
-            Filesystem's specific path.
-        """
-        return (
-            url_to_fs(self.path, **self.storage_options)
-            if is_fsspec_url(self.path)
-            else (None, self.path)
-        )
-
     def _get_files(self, files):
         """
         Retrieve list of formatted file names in dataset path.
@@ -109,10 +154,8 @@ class Dataset(ABC):
 
         Returns
         -------
-        filesystem: Any
-            Protocol implementation of registry.
-        files: list
-            List of files from path.
+        fs_files : list
+            List of files from path with fs-protocol prepended.
         """
         # Older versions of fsspec doesn't support unstrip_protocol(). It
         # was only added relatively recently:
@@ -125,32 +168,24 @@ class Dataset(ABC):
             return f"{protos[0]}://{path}"
 
         if isinstance(self.path, AbstractBufferedFile):
-            return self.path.fs, [self.path]
-        fs = get_filesystem_class(split_protocol(self.path)[0])(**self.storage_options)
+            return [self.path]
         # version.parse() is expensive, so we can split this into two separate loops
         if version.parse(fsspec.__version__) < version.parse("2022.5.0"):
-            files = [_unstrip_protocol(fs.protocol, fpath) for fpath in files]
+            fs_files = [_unstrip_protocol(self.fs.protocol, fpath) for fpath in files]
         else:
-            files = [fs.unstrip_protocol(fpath) for fpath in files]
+            fs_files = [self.fs.unstrip_protocol(fpath) for fpath in files]
 
-        return fs, files
+        return fs_files
 
 
 @_inherit_docstrings(Dataset)
 class PyArrowDataset(Dataset):
-    def __init__(self, path, storage_options):
-        self.path = path
-        self.storage_options = storage_options
-        self.dataset = self._init_dataset()
-        self._row_groups_per_file = None
-        self.filesystem, self._files = self._get_files(self.dataset.files)
-
     def _init_dataset(self):  # noqa: GL08
         from pyarrow.parquet import ParquetDataset
 
-        fs, fs_path = self._get_fs_and_fs_path()
-        dataset = ParquetDataset(fs_path, filesystem=fs, use_legacy_dataset=False)
-        return dataset
+        return ParquetDataset(
+            self.fs_path, filesystem=self.fs, use_legacy_dataset=False
+        )
 
     @property
     def pandas_metadata(self):
@@ -172,7 +207,7 @@ class PyArrowDataset(Dataset):
             # Count up the total number of row groups across all files and
             # keep track of row groups per file to use later.
             for file in self.files:
-                with self.filesystem.open(file) as f:
+                with self.fs.open(file) as f:
                     row_groups = ParquetFile(f).num_row_groups
                     row_groups_per_file.append(row_groups)
             self._row_groups_per_file = row_groups_per_file
@@ -190,26 +225,15 @@ class PyArrowDataset(Dataset):
     ):
         from pyarrow.parquet import read_table
 
-        return read_table(
-            self.path, columns=columns, filesystem=self.filesystem
-        ).to_pandas()
+        return read_table(self.path, columns=columns, filesystem=self.fs).to_pandas()
 
 
 @_inherit_docstrings(Dataset)
 class FastParquetDataset(Dataset):
-    def __init__(self, path, storage_options):
-        self.path = path
-        self.storage_options = storage_options
-        self.dataset = self._init_dataset()
-        self._row_groups_per_file = None
-        self.filesystem, self._files = self._get_files(self._get_fastparquet_files())
-
     def _init_dataset(self):  # noqa: GL08
         from fastparquet import ParquetFile
 
-        fs, fs_path = self._get_fs_and_fs_path()
-        dataset = ParquetFile(fs_path, fs=fs)
-        return dataset
+        return ParquetFile(self.fs_path, fs=self.fs)
 
     @property
     def pandas_metadata(self):
@@ -233,7 +257,7 @@ class FastParquetDataset(Dataset):
             # Count up the total number of row groups across all files and
             # keep track of row groups per file to use later.
             for file in self.files:
-                with self.filesystem.open(file) as f:
+                with self.fs.open(file) as f:
                     row_groups = ParquetFile(f).info["row_groups"]
                     row_groups_per_file.append(row_groups)
             self._row_groups_per_file = row_groups_per_file
@@ -241,6 +265,8 @@ class FastParquetDataset(Dataset):
 
     @property
     def files(self):
+        if self._files is None:
+            self._files = self._get_files(self._get_fastparquet_files())
         return self._files
 
     def to_pandas_dataframe(self, columns):
@@ -251,19 +277,12 @@ class FastParquetDataset(Dataset):
         # have to copy some of their logic here while we work on getting
         # an easier method to get a list of valid files.
         # See: https://github.com/dask/fastparquet/issues/795
-        if isinstance(self.path, AbstractBufferedFile):
-            fs = self.path.fs
-        else:
-            fs = get_filesystem_class(split_protocol(self.path)[0])(
-                **self.storage_options
-            )
-
         if "*" in self.path:
-            files = fs.glob(self.path)
+            files = self.fs.glob(self.path)
         else:
             files = [
                 f
-                for f in fs.find(self.path)
+                for f in self.fs.find(self.path)
                 if f.endswith(".parquet") or f.endswith(".parq")
             ]
         return files
@@ -564,8 +583,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ----------
         path : str, path object or file-like object
             The filepath of the parquet file in local filesystem or hdfs.
-        engine : str
-            Parquet library to use (either PyArrow or fastparquet).
+        engine : {"auto", "pyarrow", "fastparquet"}
+            Parquet library to use.
         columns : list
             If not None, only these columns will be read from the file.
         **kwargs : dict
@@ -618,7 +637,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             else []
         )
         # If we have columns as None, then we default to reading in all the columns
-        column_names = dataset.columns if not columns else columns
+        column_names = columns if columns else dataset.columns
         columns = [
             c
             for c in column_names

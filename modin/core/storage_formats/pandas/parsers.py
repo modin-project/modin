@@ -673,11 +673,9 @@ class PandasParquetParser(PandasParser):
             return (
                 ParquetFile(f)
                 .read_row_groups(
-                    list(
-                        range(
-                            row_group_start,
-                            row_group_end,
-                        )
+                    range(
+                        row_group_start,
+                        row_group_end,
                     ),
                     columns=columns,
                     use_pandas_metadata=True,
@@ -692,7 +690,9 @@ class PandasParquetParser(PandasParser):
             )
         else:
             # We shouldn't ever come to this case, so something went wrong
-            raise ValueError("engine must be one of 'pyarrow', 'fastparquet'")
+            raise ValueError(
+                f"engine must be one of 'pyarrow', 'fastparquet', got: {engine}"
+            )
 
     @staticmethod
     @doc(
