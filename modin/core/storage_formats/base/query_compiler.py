@@ -33,6 +33,7 @@ from modin.core.dataframe.algebra.default2pandas import (
 from modin.error_message import ErrorMessage
 from . import doc_utils
 from modin.logging import ClassLogger
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 from pandas.core.dtypes.common import is_scalar
 import pandas.core.resample
@@ -898,7 +899,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Transposed new QueryCompiler or self.
         """
         if len(self.columns) != 1 or (
-            len(self.index) == 1 and self.index[0] == "__reduced__"
+            len(self.index) == 1 and self.index[0] == MODIN_UNNAMED_SERIES_LABEL
         ):
             return self.transpose()
         return self
@@ -2217,7 +2218,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             - Index of the specified axis contains: the names of the passed functions if multiple
               functions are passed, otherwise: indices of the `func` result if "expand" strategy
               is used, indices of the original frame if "broadcast" strategy is used, a single
-              label "__reduced__" if "reduce" strategy is used.
+              label `MODIN_UNNAMED_SERIES_LABEL` if "reduce" strategy is used.
             - Labels of the opposite axis are preserved.
             - Each element is the result of execution of `func` against
               corresponding row/column.

@@ -44,6 +44,7 @@ Key Features and Updates
   * PERF-#4305: Parallelize `read_parquet` over row groups (#4700)
   * PERF-#4773: Compute `lengths` and `widths` in `put` method of Dask partition like Ray do (#4780)
   * PERF-#4732: Avoid overwriting already-evaluated `PandasOnRayDataframePartition._length_cache` and `PandasOnRayDataframePartition._width_cache` (#4754)
+  * PERF-#4713: Stop overriding the ray MacOS object store size limit (#4792)
   * PERF-#4268: Implement partition-parallel __getitem__ for bool Series masks (#4753)
 * Benchmarking enhancements
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
@@ -57,6 +58,7 @@ Key Features and Updates
   * REFACTOR-#4774: remove `_build_treereduce_func` call from `_compute_dtypes` (#4775)
   * REFACTOR-#4750: Delete BaseDataframeAxisPartition.shuffle (#4751)
   * REFACTOR-#4722: Stop suppressing undefined name lint (#4723)
+  * REFACTOR-#4796: Introduce constant for __reduced__ column name (#4799)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements

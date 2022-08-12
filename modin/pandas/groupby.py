@@ -29,6 +29,7 @@ from modin.utils import (
     wrap_udf_function,
     hashable,
     wrap_into_list,
+    MODIN_UNNAMED_SERIES_LABEL,
 )
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
@@ -678,8 +679,8 @@ class DataFrameGroupBy(ClassLogger):
         if not self._kwargs.get("as_index") and not isinstance(result, Series):
             result = result.rename(columns={0: "size"})
             result = (
-                result.rename(columns={"__reduced__": "index"})
-                if "__reduced__" in result.columns
+                result.rename(columns={MODIN_UNNAMED_SERIES_LABEL: "index"})
+                if MODIN_UNNAMED_SERIES_LABEL in result.columns
                 else result
             )
         elif isinstance(self._df, Series):

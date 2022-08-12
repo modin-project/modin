@@ -43,6 +43,7 @@ from modin.utils import (
     wrap_udf_function,
     hashable,
     _inherit_docstrings,
+    MODIN_UNNAMED_SERIES_LABEL,
 )
 from modin.core.dataframe.algebra import (
     Fold,
@@ -247,7 +248,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         result = pandas_op(self.to_pandas(), *args, **kwargs)
         if isinstance(result, pandas.Series):
             if result.name is None:
-                result.name = "__reduced__"
+                result.name = MODIN_UNNAMED_SERIES_LABEL
             result = result.to_frame()
         if isinstance(result, pandas.DataFrame):
             return self.from_pandas(result, type(self._modin_frame))
@@ -675,7 +676,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def columnarize(self):
         if len(self.columns) != 1 or (
-            len(self.index) == 1 and self.index[0] == "__reduced__"
+            len(self.index) == 1 and self.index[0] == MODIN_UNNAMED_SERIES_LABEL
         ):
             return self.transpose()
         return self
@@ -1016,7 +1017,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
     def resample_size(self, resample_kwargs):
-        return self._resample_func(resample_kwargs, "size", new_columns=["__reduced__"])
+        return self._resample_func(
+            resample_kwargs, "size", new_columns=[MODIN_UNNAMED_SERIES_LABEL]
+        )
 
     def resample_sem(self, resample_kwargs, _method, *args, **kwargs):
         return self._resample_func(
@@ -1179,7 +1182,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             and len(level) == self.index.nlevels
         ):
             axis = 1
-            new_columns = ["__reduced__"]
+            new_columns = [MODIN_UNNAMED_SERIES_LABEL]
             need_reindex = True
         else:
             axis = 0
@@ -1332,7 +1335,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             and is_list_like(level)
             and len(level) == self.columns.nlevels
         ):
-            new_columns = ["__reduced__"]
+            new_columns = [MODIN_UNNAMED_SERIES_LABEL]
         else:
             new_columns = None
 
@@ -1731,15 +1734,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
         num_cols = other.shape[1] if len(other.shape) > 1 else 1
         if len(self.columns) == 1:
             new_index = (
-                ["__reduced__"]
+                [MODIN_UNNAMED_SERIES_LABEL]
                 if (len(self.index) == 1 or squeeze_self) and num_cols == 1
                 else None
             )
-            new_columns = ["__reduced__"] if squeeze_self and num_cols == 1 else None
+            new_columns = (
+                [MODIN_UNNAMED_SERIES_LABEL] if squeeze_self and num_cols == 1 else None
+            )
             axis = 0
         else:
             new_index = self.index
-            new_columns = ["__reduced__"] if num_cols == 1 else None
+            new_columns = [MODIN_UNNAMED_SERIES_LABEL] if num_cols == 1 else None
             axis = 1
 
         new_modin_frame = self._modin_frame.apply_full_axis(
@@ -1786,7 +1791,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
 
         if columns is None:
-            new_columns = ["__reduced__"]
+            new_columns = [MODIN_UNNAMED_SERIES_LABEL]
         else:
             new_columns = self.columns
 
@@ -1811,7 +1816,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         if isinstance(empty_eval, pandas.Series):
             new_columns = (
-                [empty_eval.name] if empty_eval.name is not None else ["__reduced__"]
+                [empty_eval.name]
+                if empty_eval.name is not None
+                else [MODIN_UNNAMED_SERIES_LABEL]
             )
         else:
             new_columns = empty_eval.columns
@@ -2597,7 +2604,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             default_to_pandas_func=lambda grp: grp.size(),
         )
         if groupby_kwargs.get("as_index", True):
-            result.columns = ["__reduced__"]
+            result.columns = [MODIN_UNNAMED_SERIES_LABEL]
         elif isinstance(result.columns, pandas.MultiIndex):
             # Dropping one extra-level which was added because of renaming aggregation
             result.columns = (
@@ -2848,7 +2855,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     result = pandas.DataFrame(index=grouped_df.size().index)
                 if isinstance(result, pandas.Series):
                     result = result.to_frame(
-                        result.name if result.name is not None else "__reduced__"
+                        result.name
+                        if result.name is not None
+                        else MODIN_UNNAMED_SERIES_LABEL
                     )
 
                 selection = agg_func.keys() if isinstance(agg_func, dict) else None
@@ -2879,7 +2888,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 else:
                     new_index_names = tuple(
                         None
-                        if isinstance(name, str) and name.startswith("__reduced__")
+                        if isinstance(name, str)
+                        and name.startswith(MODIN_UNNAMED_SERIES_LABEL)
                         else name
                         for name in result.index.names
                     )
