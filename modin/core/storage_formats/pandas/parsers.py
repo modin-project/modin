@@ -701,6 +701,15 @@ class PandasParquetParser(PandasParser):
                     )
                     .to_pandas()
                 )
+                if "row_group_sizes" in kwargs:
+                    import pandas
+
+                    row_group_sizes = kwargs["row_group_sizes"]
+                    start = sum(row_group_sizes[: file_for_parser.row_group_start])
+                    end = sum(row_group_sizes[: file_for_parser.row_group_end])
+                    # for now step=1, hack
+                    step = 1
+                    chunk.index = pandas.RangeIndex(start, end, step)
             chunks.append(chunk)
         df = pandas.concat(chunks)
         return df, df.index, len(df)
