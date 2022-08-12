@@ -664,7 +664,7 @@ class ParquetFileToRead(NamedTuple):
 @doc(_doc_pandas_parser_class, data_type="PARQUET data")
 class PandasParquetParser(PandasParser):
     @staticmethod
-    def read_row_group_chunk(
+    def _read_row_group_chunk(
         f, row_group_start, row_group_end, columns, engine
     ):  # noqa: GL08
         if engine == "pyarrow":
@@ -717,7 +717,7 @@ engine : str
             else:
                 context = fsspec.open(file_for_parser.path, **storage_options)
             with context as f:
-                chunk = PandasParquetParser.read_row_group_chunk(
+                chunk = PandasParquetParser._read_row_group_chunk(
                     f,
                     file_for_parser.row_group_start,
                     file_for_parser.row_group_end,

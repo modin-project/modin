@@ -16,6 +16,7 @@
 from abc import ABC, abstractmethod, abstractproperty
 import os
 
+import json
 import fsspec
 from fsspec.core import split_protocol, url_to_fs
 from fsspec.registry import get_filesystem_class
@@ -66,9 +67,9 @@ class Dataset(ABC):
         pass
 
     @abstractmethod
-    def read_table_as_pandas(self, columns):
+    def to_pandas_dataframe(self, columns):
         """
-        Return a pandas dataframe with the given columns.
+        Read the given columns as a pandas dataframe.
 
         Parameters
         ----------
@@ -80,6 +81,9 @@ class Dataset(ABC):
     def _get_fs_and_fs_path(self):
         """
         Retrieve filesystem interface and filesystem-specific path.
+
+        For example, url_to_fs("s3://example/thing/this") would return
+        an S3FileSystem object and a fs_path of 'example/thing/this'.
 
         Returns
         -------
@@ -180,7 +184,7 @@ class PyArrowDataset(Dataset):
             self._files = self._get_files(self.dataset.files)
         return self._files
 
-    def read_table_as_pandas(
+    def to_pandas_dataframe(
         self,
         columns,
     ):
@@ -209,8 +213,6 @@ class FastParquetDataset(Dataset):
 
     @property
     def pandas_metadata(self):
-        import json
-
         if "pandas" not in self.dataset.key_value_metadata:
             return {}
         return json.loads(self.dataset.key_value_metadata["pandas"])
@@ -241,7 +243,7 @@ class FastParquetDataset(Dataset):
     def files(self):
         return self._files
 
-    def read_table_as_pandas(self, columns):
+    def to_pandas_dataframe(self, columns):
         return self.dataset.to_pandas(columns=columns)
 
     def _get_fastparquet_files(self):  # noqa: GL08
@@ -497,7 +499,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         # For the second check, let us consider the case where we have an empty dataframe,
         # that has a valid index.
         if range_index or (len(partition_ids) == 0 and len(column_names_to_read) != 0):
-            complete_index = dataset.read_table_as_pandas(
+            complete_index = dataset.to_pandas_dataframe(
                 columns=column_names_to_read
             ).index
         # Empty DataFrame case
