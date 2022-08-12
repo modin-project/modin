@@ -33,7 +33,7 @@ class Binary(Operator):
             Binary function to execute. Have to be able to accept at least two arguments.
         join_type : {'left', 'right', 'outer', 'inner', None}, default: 'outer'
             Type of join that will be used if indices of operands are not aligned.
-        labels : {"keep", "replace", "drop"}, default: "keep"
+        labels : {"keep", "replace", "drop"}, default: "replace"
             Whether keep labels from left Modin DataFrame, replace them with labels
             from joined DataFrame or drop altogether to make them be computed lazily later.
 
