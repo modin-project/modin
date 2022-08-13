@@ -195,7 +195,7 @@ class PandasProtocolColumn(ProtocolColumn):
             )
 
         pandas_series = self._col.to_pandas().squeeze(axis=1)
-        cat_frame = self._col.from_pandas(
+        cat_frame = type(self._col).from_pandas(
             pandas.DataFrame({"cat": pandas_series.cat.categories})
         )
         return {
