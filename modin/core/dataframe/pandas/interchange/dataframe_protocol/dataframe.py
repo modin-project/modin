@@ -29,7 +29,7 @@ import collections
 from typing import Any, Dict, Optional, Iterable, Sequence
 import numpy as np
 
-from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe

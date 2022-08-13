@@ -19,7 +19,7 @@ import numpy as np
 from typing import Any, Optional, Tuple, Dict, Iterable, TYPE_CHECKING
 from math import ceil
 
-from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
     DTypeKind,
     ColumnNullType,
     ArrowCTypes,
@@ -27,7 +27,8 @@ from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
     pandas_dtype_to_arrow_c,
     raise_copy_alert,
 )
-from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
+    CategoricalDescription,
     ProtocolColumn,
 )
 from modin.utils import _inherit_docstrings
@@ -65,7 +66,6 @@ class OmnisciProtocolColumn(ProtocolColumn):
     def __init__(self, column: "OmnisciProtocolDataframe") -> None:
         self._col = column
 
-    @property
     def size(self) -> int:
         return self._col.num_rows()
 
@@ -170,11 +170,11 @@ class OmnisciProtocolColumn(ProtocolColumn):
         )
 
     @property
-    def describe_categorical(self) -> Dict[str, Any]:
+    def describe_categorical(self) -> CategoricalDescription:
         dtype = self._pandas_dtype
 
         if dtype != "category":
-            raise RuntimeError(
+            raise TypeError(
                 "`describe_categorical only works on a column with "
                 + "categorical dtype!"
             )
@@ -196,13 +196,22 @@ class OmnisciProtocolColumn(ProtocolColumn):
                 )
             col = col.combine_chunks()
 
+        from .dataframe import OmnisciOnNativeDataframe
+
         col = col.chunks[0]
-        mapping = dict(enumerate(col.dictionary.tolist()))
+        cat_frame = OmnisciOnNativeDataframe.from_arrow(
+            pa.Table.from_pydict({next(iter(self._col.column_names())): col.dictionary})
+        )
+        from .dataframe import OmnisciProtocolDataframe
 
         return {
             "is_ordered": ordered,
             "is_dictionary": True,
-            "mapping": mapping,
+            "categories": OmnisciProtocolColumn(
+                OmnisciProtocolDataframe(
+                    cat_frame, self._col._nan_as_null, self._col._allow_copy
+                )
+            ),
         }
 
     @property
@@ -315,7 +324,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
             Number of bytes to read from the start of the buffer + offset to retrieve the whole chunk.
         """
         # Offset buffer always has ``size + 1`` elements in it as it describes slices bounds
-        elements_in_buffer = self.size + 1 if is_offset_buffer else self.size
+        elements_in_buffer = self.size() + 1 if is_offset_buffer else self.size()
         result = ceil((bit_width * elements_in_buffer) / 8)
         # For a bitmask, if the chunk started in the middle of the byte then we need to
         # read one extra byte from the buffer to retrieve the chunk's tail in the last byte. Example:
@@ -325,7 +334,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
         # Although ``ceil(bit_width * elements_in_buffer / 8)`` gives us '2 bytes',
         # the chunk is located in 3 bytes, that's why we assume the chunk's buffer size
         # to be 'result += 1' in this case:
-        if bit_width == 1 and self.offset % 8 + self.size > result * 8:
+        if bit_width == 1 and self.offset % 8 + self.size() > result * 8:
             result += 1
         return result
 

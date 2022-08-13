@@ -19,13 +19,13 @@ import ctypes
 import re
 from typing import Optional, Tuple, Any, Union
 
-from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
     DTypeKind,
     ColumnNullType,
     ArrowCTypes,
     Endianness,
 )
-from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
     ProtocolColumn,
     ProtocolBuffer,
@@ -99,28 +99,47 @@ def protocol_df_chunk_to_pandas(df):
         if name in columns:
             raise ValueError(f"Column {name} is not unique")
         col = df.get_column_by_name(name)
-        dtype = col.dtype[0]
-        if dtype in (
-            DTypeKind.INT,
-            DTypeKind.UINT,
-            DTypeKind.FLOAT,
-            DTypeKind.BOOL,
-        ):
-            columns[name], buf = primitive_column_to_ndarray(col)
-        elif dtype == DTypeKind.CATEGORICAL:
-            columns[name], buf = categorical_column_to_series(col)
-        elif dtype == DTypeKind.STRING:
-            columns[name], buf = string_column_to_ndarray(col)
-        elif dtype == DTypeKind.DATETIME:
-            columns[name], buf = datetime_column_to_ndarray(col)
-        else:
-            raise NotImplementedError(f"Data type {dtype} not handled yet")
-
+        columns[name], buf = unpack_protocol_column(col)
         buffers.append(buf)
 
     pandas_df = pandas.DataFrame(columns)
     pandas_df._buffers = buffers
     return pandas_df
+
+
+def unpack_protocol_column(
+    col: ProtocolColumn,
+) -> Tuple[Union[np.ndarray, pandas.Series], Any]:
+    """
+    Unpack an interchange protocol column to a pandas-ready column.
+
+    Parameters
+    ----------
+    col : ProtocolColumn
+        Column to unpack.
+
+    Returns
+    -------
+    tuple
+        Tuple of resulting column (either an ndarray or a series) and the object
+        which keeps memory referenced by the column alive.
+    """
+    dtype = col.dtype[0]
+    if dtype in (
+        DTypeKind.INT,
+        DTypeKind.UINT,
+        DTypeKind.FLOAT,
+        DTypeKind.BOOL,
+    ):
+        return primitive_column_to_ndarray(col)
+    elif dtype == DTypeKind.CATEGORICAL:
+        return categorical_column_to_series(col)
+    elif dtype == DTypeKind.STRING:
+        return string_column_to_ndarray(col)
+    elif dtype == DTypeKind.DATETIME:
+        return datetime_column_to_ndarray(col)
+    else:
+        raise NotImplementedError(f"Data type {dtype} not handled yet")
 
 
 def primitive_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
@@ -139,7 +158,7 @@ def primitive_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
     buffers = col.get_buffers()
 
     data_buff, data_dtype = buffers["data"]
-    data = buffer_to_ndarray(data_buff, data_dtype, col.offset, col.size)
+    data = buffer_to_ndarray(data_buff, data_dtype, col.offset, col.size())
 
     data = set_nulls(data, col, buffers["validity"])
     return data, buffers
@@ -158,25 +177,56 @@ def categorical_column_to_series(col: ProtocolColumn) -> Tuple[pandas.Series, An
     tuple
         Tuple of pandas.Series holding the data and the memory owner object that keeps the memory alive.
     """
-    ordered, is_dict, mapping = col.describe_categorical.values()
+    cat_descr = col.describe_categorical
+    ordered, is_dict, categories = (
+        cat_descr["is_ordered"],
+        cat_descr["is_dictionary"],
+        cat_descr["categories"],
+    )
 
-    if not is_dict:
+    if not is_dict or categories is None:
         raise NotImplementedError("Non-dictionary categoricals not supported yet")
 
-    categories = np.array(tuple(mapping.values()))
     buffers = col.get_buffers()
 
     codes_buff, codes_dtype = buffers["data"]
-    codes = buffer_to_ndarray(codes_buff, codes_dtype, col.offset, col.size)
+    codes = buffer_to_ndarray(codes_buff, codes_dtype, col.offset, col.size())
 
     # Doing module in order to not get ``IndexError`` for out-of-bounds sentinel values in `codes`
-    values = categories[codes % len(categories)]
+    cat_values, categories_buf = unpack_protocol_column(categories)
+    values = cat_values[codes % len(cat_values)]
 
-    cat = pandas.Categorical(values, categories=categories, ordered=ordered)
+    cat = pandas.Categorical(values, categories=cat_values, ordered=ordered)
     data = pandas.Series(cat)
 
     data = set_nulls(data, col, buffers["validity"])
-    return data, buffers
+    return data, [buffers, categories_buf]
+
+
+def _inverse_null_buf(buf: np.ndarray, null_kind: ColumnNullType) -> np.ndarray:
+    """
+    Inverse the boolean value of buffer storing either bit- or bytemask.
+
+    Parameters
+    ----------
+    buf : np.ndarray
+        Buffer to inverse the boolean value for.
+    null_kind : {ColumnNullType.USE_BYTEMASK, ColumnNullType.USE_BITMASK}
+        How to treat the buffer.
+
+    Returns
+    -------
+    np.ndarray
+        Logically inversed buffer.
+    """
+    if null_kind == ColumnNullType.USE_BITMASK:
+        return ~buf
+    assert (
+        null_kind == ColumnNullType.USE_BYTEMASK
+    ), f"Unexpected null kind: {null_kind}"
+    # bytemasks use 0 for `False` and anything else for `True`, so convert to bool
+    # by direct comparison instead of bitwise reversal like we do for bitmasks
+    return buf == 0
 
 
 def string_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
@@ -219,27 +269,27 @@ def string_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
         Endianness.NATIVE,
     )
     # Specify zero offset as we don't want to chunk the string data
-    data = buffer_to_ndarray(data_buff, data_dtype, offset=0, length=col.size)
+    data = buffer_to_ndarray(data_buff, data_dtype, offset=0, length=col.size())
 
     # Retrieve the offsets buffer containing the index offsets demarcating the beginning and end of each string
     offset_buff, offset_dtype = buffers["offsets"]
     # Offsets buffer contains start-stop positions of strings in the data buffer,
-    # meaning that it has more elements than in the data buffer, do `col.size + 1` here
+    # meaning that it has more elements than in the data buffer, do `col.size() + 1` here
     # to pass a proper offsets buffer size
     offsets = buffer_to_ndarray(
-        offset_buff, offset_dtype, col.offset, length=col.size + 1
+        offset_buff, offset_dtype, col.offset, length=col.size() + 1
     )
 
     null_pos = None
     if null_kind in (ColumnNullType.USE_BITMASK, ColumnNullType.USE_BYTEMASK):
         valid_buff, valid_dtype = buffers["validity"]
-        null_pos = buffer_to_ndarray(valid_buff, valid_dtype, col.offset, col.size)
+        null_pos = buffer_to_ndarray(valid_buff, valid_dtype, col.offset, col.size())
         if sentinel_val == 0:
-            null_pos = ~null_pos
+            null_pos = _inverse_null_buf(null_pos, null_kind)
 
     # Assemble the strings from the code units
-    str_list = [None] * col.size
-    for i in range(col.size):
+    str_list = [None] * col.size()
+    for i in range(col.size()):
         # Check for missing values
         if null_pos is not None and null_pos[i]:
             str_list[i] = np.nan
@@ -288,7 +338,7 @@ def datetime_column_to_ndarray(col: ProtocolColumn) -> Tuple[np.ndarray, Any]:
             Endianness.NATIVE,
         ),
         col.offset,
-        col.size,
+        col.size(),
     )
 
     def parse_format_str(format_str, data):
@@ -469,9 +519,9 @@ def set_nulls(
         null_pos = data == sentinel_val
     elif null_kind in (ColumnNullType.USE_BITMASK, ColumnNullType.USE_BYTEMASK):
         valid_buff, valid_dtype = validity
-        null_pos = buffer_to_ndarray(valid_buff, valid_dtype, col.offset, col.size)
+        null_pos = buffer_to_ndarray(valid_buff, valid_dtype, col.offset, col.size())
         if sentinel_val == 0:
-            null_pos = ~null_pos
+            null_pos = _inverse_null_buf(null_pos, null_kind)
     elif null_kind in (ColumnNullType.NON_NULLABLE, ColumnNullType.USE_NAN):
         pass
     else:

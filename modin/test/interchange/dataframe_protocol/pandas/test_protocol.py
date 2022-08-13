@@ -50,5 +50,7 @@ def test_simple_import():
 
 
 def test_categorical_from_dataframe():
-    modin_df = pd.DataFrame({"foo": pd.Series([0, 1, 2, 3], dtype="category")})
+    modin_df = pd.DataFrame(
+        {"foo": pd.Series(["0", "1", "2", "3", "0", "3", "2", "3"], dtype="category")}
+    )
     eval_df_protocol(modin_df)

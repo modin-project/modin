@@ -24,7 +24,7 @@ import datetime
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 from pandas._libs.lib import no_default
-from typing import List, Hashable, Optional, Callable, Union, Dict
+from typing import List, Hashable, Optional, Callable, Union, Dict, TYPE_CHECKING
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.error_message import ErrorMessage
@@ -36,9 +36,11 @@ from modin.core.dataframe.base.dataframe.utils import (
     Axis,
     JoinType,
 )
-from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
-    ProtocolDataframe,
-)
+
+if TYPE_CHECKING:
+    from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
+        ProtocolDataframe,
+    )
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
 from modin.logging import ClassLogger
@@ -2975,7 +2977,7 @@ class PandasDataframe(ClassLogger):
         ProtocolDataframe
             A dataframe object following the dataframe protocol specification.
         """
-        from modin.core.dataframe.pandas.exchange.dataframe_protocol.dataframe import (
+        from modin.core.dataframe.pandas.interchange.dataframe_protocol.dataframe import (
             PandasProtocolDataframe,
         )
 
@@ -3008,7 +3010,7 @@ class PandasDataframe(ClassLogger):
                 "`df` does not support DataFrame exchange protocol, i.e. `__dataframe__` method"
             )
 
-        from modin.core.dataframe.pandas.exchange.dataframe_protocol.from_dataframe import (
+        from modin.core.dataframe.pandas.interchange.dataframe_protocol.from_dataframe import (
             from_dataframe_to_pandas,
         )
 
