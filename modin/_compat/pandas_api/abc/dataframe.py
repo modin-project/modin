@@ -42,3 +42,30 @@ class BaseCompatibleDataFrame(BaseCompatibleBasePandasDataset):
 
     def to_parquet(self, *args, **kwargs):  # noqa: GL08
         pass
+
+    def _disambiguate_axes_labels(self, axis, index, columns, labels):
+        """
+        Disambiguate axes labels from `index`, `columns` and `labels`.
+
+        Parameters
+        ----------
+        axis : int, str or pandas._libs.lib.NoDefault
+            Axis along which `labels` are specified if they're not None.
+        index : pandas.Index or array-like or None
+            Optional row labels.
+        columns : pandas.Index or array-like or None
+            Optional column labels.
+        labels : pandas.Index or array-like or None
+            Labels along `axis`.
+
+        Returns
+        -------
+        array-like, array-like
+            Pair of row and column labels.
+        """
+        if labels is not None:
+            if self._get_axis_number(axis) == 0:
+                index = labels
+            else:
+                columns = labels
+        return index, columns

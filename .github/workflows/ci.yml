@@ -665,10 +665,26 @@ jobs:
         run: |
           conda info
           conda list
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_general.py
-      - run: python -m pytest modin/pandas/test/test_io.py --verbose
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
+      - run: pytest -n 2 modin/pandas/test/test_api.py
+      - run: pytest -n 2 modin/pandas/test/test_concat.py
+        if: matrix.engine == 'python'
+      - run: pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+        if: matrix.engine != 'python'
+      - run: pytest -n 2 modin/pandas/test/test_general.py
+      - run: pytest -n 2 modin/pandas/test/test_groupby.py
+      - run: pytest -n 2 modin/pandas/test/test_rolling.py
+      - run: pytest -n 2 modin/pandas/test/test_series.py
+      - run: pytest modin/pandas/test/test_io.py --verbose
       - uses: codecov/codecov-action@v2
 
   test-compat-windows:
@@ -713,10 +729,26 @@ jobs:
         run: |
           conda info
           conda list
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_general.py
-      - run: python -m pytest modin/pandas/test/test_io.py --verbose
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
+      - run: pytest -n 2 modin/pandas/test/test_api.py
+      - run: pytest -n 2 modin/pandas/test/test_concat.py
+        if: matrix.engine == 'python'
+      - run: pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+        if: matrix.engine != 'python'
+      - run: pytest -n 2 modin/pandas/test/test_general.py
+      - run: pytest -n 2 modin/pandas/test/test_groupby.py
+      - run: pytest -n 2 modin/pandas/test/test_rolling.py
+      - run: pytest -n 2 modin/pandas/test/test_series.py
+      - run: pytest modin/pandas/test/test_io.py --verbose
       - uses: codecov/codecov-action@v2
 
   test-cloud:
