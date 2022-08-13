@@ -24,7 +24,7 @@ import datetime
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 from pandas._libs.lib import no_default
-from typing import List, Hashable, Optional, Callable, Union, Dict
+from typing import List, Hashable, Optional, Callable, Union, Dict, TYPE_CHECKING
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.error_message import ErrorMessage
@@ -36,12 +36,15 @@ from modin.core.dataframe.base.dataframe.utils import (
     Axis,
     JoinType,
 )
-from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
-    ProtocolDataframe,
-)
+
+if TYPE_CHECKING:
+    from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
+        ProtocolDataframe,
+    )
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
 from modin.logging import ClassLogger
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 
 def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
@@ -321,7 +324,7 @@ class PandasDataframe(ClassLogger):
             )
         else:
             dtypes = pandas.Series([])
-        # reset name to None because we use "__reduced__" internally
+        # reset name to None because we use MODIN_UNNAMED_SERIES_LABEL internally
         dtypes.name = None
         return dtypes
 
@@ -1417,11 +1420,11 @@ class PandasDataframe(ClassLogger):
                 # line up with the index of the data based on how pandas creates a
                 # DataFrame from a Series.
                 result = pandas.DataFrame(series_result).T
-                result.index = ["__reduced__"]
+                result.index = [MODIN_UNNAMED_SERIES_LABEL]
             else:
                 result = pandas.DataFrame(series_result)
                 if isinstance(series_result, pandas.Series):
-                    result.columns = ["__reduced__"]
+                    result.columns = [MODIN_UNNAMED_SERIES_LABEL]
             return result
 
         return _tree_reduce_func
@@ -1444,7 +1447,7 @@ class PandasDataframe(ClassLogger):
         """
         new_axes, new_axes_lengths = [0, 0], [0, 0]
 
-        new_axes[axis] = ["__reduced__"]
+        new_axes[axis] = [MODIN_UNNAMED_SERIES_LABEL]
         new_axes[axis ^ 1] = self.axes[axis ^ 1]
 
         new_axes_lengths[axis] = [1]
@@ -1753,13 +1756,14 @@ class PandasDataframe(ClassLogger):
             return df.rename(index=new_row_labels, columns=new_col_labels, level=level)
 
         new_parts = self._partition_mgr_cls.map_partitions(self._partitions, map_fn)
+        new_dtypes = None if self._dtypes is None else self._dtypes.set_axis(new_cols)
         return self.__constructor__(
             new_parts,
             new_index,
             new_cols,
             self._row_lengths,
             self._column_widths,
-            self._dtypes,
+            new_dtypes,
         )
 
     def sort_by(
@@ -2973,7 +2977,7 @@ class PandasDataframe(ClassLogger):
         ProtocolDataframe
             A dataframe object following the dataframe protocol specification.
         """
-        from modin.core.dataframe.pandas.exchange.dataframe_protocol.dataframe import (
+        from modin.core.dataframe.pandas.interchange.dataframe_protocol.dataframe import (
             PandasProtocolDataframe,
         )
 
@@ -3006,7 +3010,7 @@ class PandasDataframe(ClassLogger):
                 "`df` does not support DataFrame exchange protocol, i.e. `__dataframe__` method"
             )
 
-        from modin.core.dataframe.pandas.exchange.dataframe_protocol.from_dataframe import (
+        from modin.core.dataframe.pandas.interchange.dataframe_protocol.from_dataframe import (
             from_dataframe_to_pandas,
         )
 

@@ -17,7 +17,7 @@ import pytest
 import pandas
 import numpy as np
 
-from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
     pandas_dtype_to_arrow_c,
 )
 

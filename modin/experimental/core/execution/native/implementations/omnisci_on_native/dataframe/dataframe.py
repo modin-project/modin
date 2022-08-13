@@ -15,7 +15,7 @@
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
-from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
 from modin.experimental.core.storage_formats.omnisci.query_compiler import (
@@ -27,6 +27,7 @@ from pandas.core.indexes.api import ensure_index, Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
 from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 import pandas as pd
 from typing import List, Hashable, Optional, Tuple, Union
 
@@ -2073,7 +2074,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 + "that are unsupported by OmniSci."
             )
 
-        from ..exchange.dataframe_protocol.dataframe import OmnisciProtocolDataframe
+        from ..interchange.dataframe_protocol.dataframe import OmnisciProtocolDataframe
 
         return OmnisciProtocolDataframe(
             self, nan_as_null=nan_as_null, allow_copy=allow_copy
@@ -2104,7 +2105,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 "`df` does not support DataFrame exchange protocol, i.e. `__dataframe__` method"
             )
 
-        from modin.core.dataframe.pandas.exchange.dataframe_protocol.from_dataframe import (
+        from modin.core.dataframe.pandas.interchange.dataframe_protocol.from_dataframe import (
             from_dataframe_to_pandas,
         )
 
@@ -2323,7 +2324,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         match = re.search("__index__\\d+_(.*)", col)
         if match:
             name = match.group(1)
-            if name in ("__None__", "__reduced__"):
+            if name in ("__None__", MODIN_UNNAMED_SERIES_LABEL):
                 return None
             return name
 

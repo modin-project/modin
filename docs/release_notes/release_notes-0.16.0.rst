@@ -21,6 +21,7 @@ Key Features and Updates
   * FIX-#4641: Reindex pandas partitions in `df.describe()` (#4651)
   * FIX-#2064: Fix `iloc`/`loc` assignment when dataframe is empty (#4677)
   * FIX-#4634: Check for FrozenList as `by` in `df.groupby()` (#4667)
+  * FIX-#4680: Fix `read_csv` that started defaulting to pandas again in case of reading from a buffer and when a buffer has a non-zero starting position (#4681)
   * FIX-#4491: Wait for all partitions in parallel in benchmark mode (#4656)
   * FIX-#4358: MultiIndex `loc` shouldn't drop levels for full-key lookups (#4608)
   * FIX-#4658: Expand exception handling for `read_*` functions from s3 storages (#4659)
@@ -29,7 +30,9 @@ Key Features and Updates
   * FIX-#4652: Support categorical data in `from_dataframe` (#4737)
   * FIX-#4756: Correctly propagate `storage_options` in `read_parquet` (#4764)
   * FIX-#4657: Use `fsspec` for handling s3/http-like paths instead of `s3fs` (#4710)
-  * FIX-#4676: drain sub-virtual-partition call queues (#4695)    
+  * FIX-#4676: drain sub-virtual-partition call queues (#4695)
+  * FIX-#4782: Exclude certain non-parquet files in `read_parquet` (#4783)    
+  * FIX-#4808: Set dtypes correctly after column rename (#4809)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
@@ -42,6 +45,7 @@ Key Features and Updates
   * PERF-#4305: Parallelize `read_parquet` over row groups (#4700)
   * PERF-#4773: Compute `lengths` and `widths` in `put` method of Dask partition like Ray do (#4780)
   * PERF-#4732: Avoid overwriting already-evaluated `PandasOnRayDataframePartition._length_cache` and `PandasOnRayDataframePartition._width_cache` (#4754)
+  * PERF-#4713: Stop overriding the ray MacOS object store size limit (#4792)
 * Benchmarking enhancements
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
 * Refactor Codebase
@@ -50,9 +54,11 @@ Key Features and Updates
   * REFACTOR-#4708: Delete combine dtypes (#4709)
   * REFACTOR-#4629: Add type annotations to modin/config (#4685)
   * REFACTOR-#4717: Improve PartitionMgr.get_indices() usage (#4718)
+  * REFACTOR-#4730: make Indexer immutable (#4731)
   * REFACTOR-#4774: remove `_build_treereduce_func` call from `_compute_dtypes` (#4775)
   * REFACTOR-#4750: Delete BaseDataframeAxisPartition.shuffle (#4751)
   * REFACTOR-#4722: Stop suppressing undefined name lint (#4723)
+  * REFACTOR-#4796: Introduce constant for __reduced__ column name (#4799)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements
@@ -86,6 +92,7 @@ Key Features and Updates
   * FEAT-#4569: Add error message when `read_` function defaults to pandas (#4647)
   * FEAT-#4725: Make index and columns lazy in Modin DataFrame (#4726)
   * FEAT-#4664: Finalize compatibility support for Python 3.6 (#4800)
+  * FEAT-#4746: Sync interchange protocol with recent API changes (#4763)
 
 Contributors
 ------------

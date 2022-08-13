@@ -23,7 +23,7 @@ from modin.core.storage_formats.base.query_compiler import (
     _get_axis as default_axis_getter,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
-from modin.utils import _inherit_docstrings
+from modin.utils import _inherit_docstrings, MODIN_UNNAMED_SERIES_LABEL
 from modin.error_message import ErrorMessage
 import pandas
 
@@ -315,7 +315,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
         if as_index:
             shape_hint = "column"
-            new_frame = new_frame._set_columns(["__reduced__"])
+            new_frame = new_frame._set_columns([MODIN_UNNAMED_SERIES_LABEL])
         else:
             shape_hint = None
             new_frame = new_frame._set_columns(["size"]).reset_index(drop=False)
@@ -445,7 +445,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
         new_frame = self._modin_frame.agg(agg)
         new_frame = new_frame._set_index(
-            pandas.Index.__new__(pandas.Index, data=["__reduced__"], dtype="O")
+            pandas.Index.__new__(
+                pandas.Index, data=[MODIN_UNNAMED_SERIES_LABEL], dtype="O"
+            )
         )
         return self.__constructor__(new_frame, shape_hint="row")
 
@@ -718,7 +720,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             return self.transpose()
 
         if len(self.columns) != 1 or (
-            len(self.index) == 1 and self.index[0] == "__reduced__"
+            len(self.index) == 1 and self.index[0] == MODIN_UNNAMED_SERIES_LABEL
         ):
             res = self.transpose()
             res._shape_hint = "column"
