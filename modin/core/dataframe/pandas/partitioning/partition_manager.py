@@ -1376,6 +1376,21 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         [part.drain_call_queue() for row in partitions for part in row]
 
     @classmethod
+    def _need_rebalance(cls, count_row_partitions):
+        # We rebalance when the ratio of the number of existing partitions to
+        # the ideal number of partitions is larger than this threshold. The
+        # threshold is a heuristic that may need to be tuned for performance.
+        max_excess_of_num_partitions = 1.5
+        num_existing_partitions = count_row_partitions
+        ideal_num_new_partitions = NPartitions.get()
+        if (
+            num_existing_partitions
+            <= ideal_num_new_partitions * max_excess_of_num_partitions
+        ):
+            return False
+        return max_excess_of_num_partitions, ideal_num_new_partitions
+
+    @classmethod
     def rebalance_partitions(cls, partitions):
         """
         Rebalance a 2-d array of partitions if we are using ``PandasOnRay`` or ``PandasOnDask`` executions.
@@ -1406,17 +1421,11 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             and StorageFormat.get() == "Pandas"
         ):
             # Rebalancing partitions is currently only implemented for PandasOnRay and PandasOnDask.
-            # We rebalance when the ratio of the number of existing partitions to
-            # the ideal number of partitions is larger than this threshold. The
-            # threshold is a heuristic that may need to be tuned for performance.
-            max_excess_of_num_partitions = 1.5
             num_existing_partitions = partitions.shape[0]
-            ideal_num_new_partitions = NPartitions.get()
-            if (
-                num_existing_partitions
-                <= ideal_num_new_partitions * max_excess_of_num_partitions
-            ):
+            need_rebalance = cls._need_rebalance(num_existing_partitions)
+            if not need_rebalance:
                 return partitions, None
+            max_excess_of_num_partitions, ideal_num_new_partitions = need_rebalance
             # If any partition has an unknown length, give each axis partition
             # roughly the same number of row partitions. We use `_length_cache` here
             # to avoid materializing any unmaterialized lengths.

@@ -2915,6 +2915,7 @@ class PandasDataframe(ClassLogger):
             New Modin DataFrame.
         """
         axis = Axis(axis)
+        new_lengths = None
         new_widths = None
         new_lengths = None
 
@@ -2928,6 +2929,24 @@ class PandasDataframe(ClassLogger):
                 ]
             return widths
 
+        def _compute_new_lengths():
+            lengths = None
+            row_partitions_count = sum(
+                [
+                    part.shape[0]
+                    for part in [self._partitions] + [o._partitions for o in others]
+                ]
+            )
+            if (
+                self._row_lengths_cache is not None
+                and all(o._row_lengths_cache is not None for o in others)
+                and not self._partition_mgr_cls._need_rebalance(row_partitions_count)
+            ):
+                lengths = self._row_lengths_cache + [
+                    length for o in others for length in o._row_lengths_cache
+                ]
+            return lengths
+
         # Fast path for equivalent columns and partitioning
         if (
             axis == Axis.ROW_WISE
@@ -2938,6 +2957,7 @@ class PandasDataframe(ClassLogger):
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
             new_widths = self._column_widths_cache
+            new_lengths = _compute_new_lengths()
         elif (
             axis == Axis.COL_WISE
             and all(o.index.equals(self.index) for o in others)
@@ -2947,7 +2967,6 @@ class PandasDataframe(ClassLogger):
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
             new_lengths = self._row_lengths_cache
-            # we can only do this for COL_WISE because `concat` might rebalance partitions for ROW_WISE
             new_widths = _compute_new_widths()
         else:
             (
@@ -2962,6 +2981,7 @@ class PandasDataframe(ClassLogger):
                 new_lengths = partition_sizes_along_axis
                 new_widths = _compute_new_widths()
             else:
+                new_lengths = _compute_new_lengths()
                 new_widths = partition_sizes_along_axis
         new_partitions, new_lengths2 = self._partition_mgr_cls.concat(
             axis.value, left_parts, right_parts
