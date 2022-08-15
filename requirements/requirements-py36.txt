@@ -25,3 +25,4 @@ scikit-learn
 pickle5
 tqdm
 modin-spreadsheet>=0.1.1
+fastparquet
