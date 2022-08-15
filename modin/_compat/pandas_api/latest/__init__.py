@@ -14,9 +14,15 @@
 from .base import LatestCompatibleBasePandasDataset
 from .dataframe import LatestCompatibleDataFrame
 from .series import LatestCompatibleSeries
+from .groupby import LatestCompatibleDataFrameGroupBy, LatestCompatibleSeriesGroupBy
+from .window import LatestCompatibleWindow, LatestCompatibleRolling
 
 __all__ = [
     "LatestCompatibleBasePandasDataset",
     "LatestCompatibleDataFrame",
     "LatestCompatibleSeries",
+    "LatestCompatibleDataFrameGroupBy",
+    "LatestCompatibleSeriesGroupBy",
+    "LatestCompatibleWindow",
+    "LatestCompatibleRolling",
 ]

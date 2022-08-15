@@ -30,10 +30,11 @@ import numpy as np
 import pandas
 
 from modin.utils import _inherit_docstrings
-from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
+    CategoricalDescription,
     ProtocolColumn,
 )
-from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
     DTypeKind,
     pandas_dtype_to_arrow_c,
     ColumnNullType,
@@ -109,7 +110,6 @@ class PandasProtocolColumn(ProtocolColumn):
         self._col = column
         self._allow_copy = allow_copy
 
-    @property
     def size(self) -> int:
         return len(self._col.index)
 
@@ -187,18 +187,21 @@ class PandasProtocolColumn(ProtocolColumn):
         )
 
     @property
-    def describe_categorical(self) -> Dict[str, Any]:
-        if not self.dtype[0] == DTypeKind.CATEGORICAL:
-            raise RuntimeError(
+    def describe_categorical(self) -> CategoricalDescription:
+        if self.dtype[0] != DTypeKind.CATEGORICAL:
+            raise TypeError(
                 "`describe_categorical only works on a column with "
                 + "categorical dtype!"
             )
 
         pandas_series = self._col.to_pandas().squeeze(axis=1)
+        cat_frame = type(self._col).from_pandas(
+            pandas.DataFrame({"cat": pandas_series.cat.categories})
+        )
         return {
             "is_ordered": pandas_series.cat.ordered,
             "is_dictionary": True,
-            "mapping": dict(zip(pandas_series.cat.codes, pandas_series.cat.categories)),
+            "categories": PandasProtocolColumn(cat_frame, self._allow_copy),
         }
 
     @property
@@ -262,7 +265,7 @@ class PandasProtocolColumn(ProtocolColumn):
         self, n_chunks: Optional[int] = None
     ) -> Iterable["PandasProtocolColumn"]:
         cur_n_chunks = self.num_chunks()
-        n_rows = self.size
+        n_rows = self.size()
         if n_chunks is None or n_chunks == cur_n_chunks:
             cum_row_lengths = np.cumsum([0] + self._col._row_lengths)
             for i in range(len(cum_row_lengths) - 1):
