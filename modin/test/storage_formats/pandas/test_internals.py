@@ -13,11 +13,27 @@
 
 import modin.pandas as pd
 from modin.pandas.test.utils import create_test_dfs, test_data_values, df_equals
-from modin.config import NPartitions
+from modin.config import NPartitions, Engine
 
+import pandas
 import pytest
 
 NPartitions.put(4)
+
+if Engine.get() == "Ray":
+    import ray
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
+        PandasOnRayDataframePartition,
+    )
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.virtual_partition import (
+        PandasOnRayDataframeColumnPartition,
+        PandasOnRayDataframeRowPartition,
+    )
+
+    block_partition_class = PandasOnRayDataframePartition
+    virtual_column_partition_class = PandasOnRayDataframeColumnPartition
+    virtual_row_partition_class = PandasOnRayDataframeRowPartition
+    put = ray.put
 
 
 def test_aligning_blocks():
@@ -110,3 +126,25 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
     md_df._query_compiler._modin_frame = new_modin_frame
 
     df_equals(md_df, pd_df)
+
+
+@pytest.mark.skipif(
+    Engine.get() != "Ray",
+    reason="Only Ray engine has virtual partitions.",
+)
+@pytest.mark.parametrize(
+    "virtual_partition_class",
+    (virtual_column_partition_class, virtual_row_partition_class),
+    ids=["partitions_spanning_all_columns", "partitions_spanning_all_rows"],
+)
+def test_virtual_partition_apply_not_returning_pandas_dataframe(
+    virtual_partition_class,
+):
+    # see https://github.com/modin-project/modin/issues/4811
+
+    partition = virtual_partition_class(
+        block_partition_class(put(pandas.DataFrame())), full_axis=False
+    )
+
+    apply_result = partition.apply(lambda df: 1).get()
+    assert apply_result == 1

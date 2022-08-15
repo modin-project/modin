@@ -74,6 +74,9 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
     list of pandas.DataFrames
         Splitted dataframe represented by list of frames.
     """
+    if num_splits == 1:
+        return [result]
+
     if length_list is not None:
         length_list.insert(0, 0)
         sums = np.cumsum(length_list)
@@ -82,8 +85,6 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
         else:
             return [result.iloc[:, sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
 
-    if num_splits == 1:
-        return [result]
     # We do this to restore block partitioning
     chunksize = compute_chunksize(result.shape[axis], num_splits)
     if axis == 0 or isinstance(result, pandas.Series):
