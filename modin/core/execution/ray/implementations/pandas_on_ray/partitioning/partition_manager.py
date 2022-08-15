@@ -131,6 +131,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         ray.wait(blocks, num_returns=len(blocks))
 
 
+<<<<<<< HEAD
 def _make_wrapped_method(name: str):
     """
     Define new attribute that should work with progress bar.
@@ -164,6 +165,6 @@ for method in (
     "apply_func_to_select_indices",
     "apply_func_to_select_indices_along_full_axis",
     "apply_func_to_indices_both_axis",
-    "binary_operation",
+    "n_ary_operation",
 ):
     _make_wrapped_method(method)

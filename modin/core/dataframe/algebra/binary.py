@@ -95,9 +95,9 @@ class Binary(Operator):
                     )
                 else:
                     return query_compiler.__constructor__(
-                        query_compiler._modin_frame.binary_op(
+                        query_compiler._modin_frame.nary_op(
                             lambda x, y: func(x, y, *args, **kwargs),
-                            other._modin_frame,
+                            [other._modin_frame],
                             join_type=join_type,
                         )
                     )

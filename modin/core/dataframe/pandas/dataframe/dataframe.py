@@ -2523,16 +2523,16 @@ class PandasDataframe(ClassLogger):
         return (reindexed_frames[0], reindexed_frames[1:], joined_index, base_lengths)
 
     @lazy_metadata_decorator(apply_axis="both")
-    def binary_op(self, op, right_frame, join_type="outer"):
+    def nary_op(self, op, right_frames: list, join_type="outer"):
         """
-        Perform an operation that requires joining with another Modin DataFrame.
+        Perform an operation that requires joining with other Modin DataFrame(s).
 
         Parameters
         ----------
         op : callable
             Function to apply after the join.
-        right_frame : PandasDataframe
-            Modin DataFrame to join with.
+        right_frames : list of PandasDataframe
+            Modin DataFrames to join with.
         join_type : str, default: "outer"
             Type of join to apply.
 
@@ -2541,32 +2541,36 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             New Modin DataFrame.
         """
-        left_parts, right_parts, joined_index, row_lengths = self._copartition(
-            0, right_frame, join_type, sort=True
+        left_parts, list_of_right_parts, joined_index, row_lengths = self._copartition(
+            0, right_frames, join_type, sort=True
         )
         new_left_frame = self.__constructor__(
             left_parts, joined_index, self.columns, row_lengths, self._column_widths
         )
-        new_right_frame = self.__constructor__(
-            right_parts[0],
-            joined_index,
-            right_frame.columns,
-            row_lengths,
-            right_frame._column_widths,
-        )
+        new_right_frames = [
+            self.__constructor__(
+                right_parts,
+                joined_index,
+                right_frames[0].columns,
+                row_lengths,
+                right_frames[0]._column_widths,
+            )
+            for right_parts in list_of_right_parts
+        ]
 
         (
             left_parts,
-            right_parts,
+            list_of_right_parts,
             joined_columns,
             column_widths,
-        ) = new_left_frame._copartition(1, new_right_frame, join_type, sort=True)
+        ) = new_left_frame._copartition(1, new_right_frames, join_type, sort=True)
 
         new_frame = (
             np.array([])
-            if len(left_parts) == 0 or len(right_parts[0]) == 0
-            else self._partition_mgr_cls.binary_operation(
-                left_parts, op, right_parts[0]
+            if len(left_parts) == 0
+            or any(len(right_parts) == 0 for right_parts in list_of_right_parts)
+            else self._partition_mgr_cls.nary_operation(
+                left_parts, op, list_of_right_parts
             )
         )
 
