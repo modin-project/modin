@@ -30,10 +30,9 @@ from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispa
 from modin.utils import import_optional_dependency, _inherit_docstrings
 
 
-class ColumnStoreDataset:  # noqa : PR01
+class ColumnStoreDataset:
     """
-    Base class that encapsulates Parquet engine-specific details for
-    a given Parquet dataset.
+    Base class that encapsulates Parquet engine-specific details.
 
     This class exposes a set of functions that are commonly used in the
     `read_parquet` implementation.
@@ -60,7 +59,7 @@ class ColumnStoreDataset:  # noqa : PR01
         List that contains the full paths of the parquet files in the dataset.
     """
 
-    def __init__(self, path, storage_options):
+    def __init__(self, path, storage_options):  # noqa : PR01
         self.path = path
         self.storage_options = storage_options
         self._fs_path = None
