@@ -135,7 +135,11 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         # args into kwargs. This is a bit of a hack, but it works.
         result = func(dataframe, *kwargs.pop("args", ()), **kwargs)
 
-        if manual_partition:
+        if num_splits == 1:
+            # If we're not going to split the result, we don't need to specify
+            # split lengths.
+            lengths = None
+        elif manual_partition:
             # The split function is expecting a list
             lengths = list(lengths)
         # We set lengths to None so we don't use the old lengths for the resulting partition

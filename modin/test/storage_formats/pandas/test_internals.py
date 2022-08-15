@@ -367,3 +367,25 @@ class TestDrainVirtualPartitionCallQueue:
             level_three_virtual.to_pandas(),
             pd.DataFrame([1, 2, 3, 4], index=[0, 0, 0, 0]),
         )
+
+
+@pytest.mark.skipif(
+    Engine.get() not in ("Dask", "Ray"),
+    reason="Only Dask and Ray engines have virtual partitions.",
+)
+@pytest.mark.parametrize(
+    "virtual_partition_class",
+    (virtual_column_partition_class, virtual_row_partition_class),
+    ids=["partitions_spanning_all_columns", "partitions_spanning_all_rows"],
+)
+def test_virtual_partition_apply_not_returning_pandas_dataframe(
+    virtual_partition_class,
+):
+    # see https://github.com/modin-project/modin/issues/4811
+
+    partition = virtual_partition_class(
+        block_partition_class(put(pandas.DataFrame())), full_axis=False
+    )
+
+    apply_result = partition.apply(lambda df: 1).get()
+    assert apply_result == 1
