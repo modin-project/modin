@@ -1830,7 +1830,7 @@ class PandasDataframe(ClassLogger):
             if kwargs.get("ignore_index", False):
                 new_axes[axis.value] = RangeIndex(len(new_axes[axis.value]))
             else:
-                new_axes[axis.value] = self._compute_axis_labels(
+                new_axes[axis.value] = self._compute_axis_labels_and_lengths(
                     axis.value, new_partitions
                 )
             if isinstance(self.axes[axis.value], pandas.MultiIndex):
