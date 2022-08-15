@@ -21,20 +21,24 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
 
     if pandas.__version__ != __pandas_version__:
         warnings.warn(
-            f"The pandas version installed {pandas.__version__} does not match the supported pandas version in"
-            + f" Modin {__pandas_version__} compatibility mode. This may cause undesired side effects!"
+            f"The pandas version installed {pandas.__version__} "
+            "does not match the supported pandas version in "
+            f"Modin {__pandas_version__} compatibility mode. "
+            "This may cause undesired side effects!"
         )
     else:
         warnings.warn(
-            f"Starting Modin in compatibility mode to support legacy pandas version {__pandas_version__}"
+            "Starting Modin in compatibility mode to support "
+            f"legacy pandas version {__pandas_version__}"
         )
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
     __pandas_version__ = "1.4.3"
 
     if pandas.__version__ != __pandas_version__:
         warnings.warn(
-            f"The pandas version installed {pandas.__version__} does not match the supported pandas version in"
-            + f" Modin {__pandas_version__}. This may cause undesired side effects!"
+            f"The pandas version installed {pandas.__version__} does "
+            "not match the supported pandas version in "
+            f"Modin {__pandas_version__}. This may cause undesired side effects!"
         )
 
 with warnings.catch_warnings():
@@ -140,7 +144,8 @@ def _update_engine(publisher: Parameter):
             os.environ["OMP_NUM_THREADS"] = str(CpuCount.get())
         else:
             raise ValueError(
-                f"Storage format should be 'Omnisci' with 'Native' engine, but provided {StorageFormat.get()}."
+                "Storage format should be 'Omnisci' with 'Native' engine, "
+                f"but provided {StorageFormat.get()}."
             )
     elif publisher.get() == "Dask":
         if _is_first_update.get("Dask", True):
@@ -179,9 +184,10 @@ def _update_engine(publisher: Parameter):
     elif publisher.get() == "Cloudnative":
         from modin.experimental.cloud import get_connection
 
-        assert (
-            StorageFormat.get() == "Omnisci"
-        ), f"Storage format should be 'Omnisci' with 'Cloudnative' engine, but provided {StorageFormat.get()}."
+        assert StorageFormat.get() == "Omnisci", (
+            "Storage format should be 'Omnisci' with 'Cloudnative' engine, "
+            f"but provided {StorageFormat.get()}."
+        )
         get_connection().modules["modin"].set_execution("Native", "OmniSci")
 
     elif publisher.get() not in _NOINIT_ENGINES:

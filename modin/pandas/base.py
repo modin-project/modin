@@ -259,14 +259,16 @@ class BasePandasDataset(BasePandasDatasetCompat):
             if axis == 0:
                 if len(other) != len(self._query_compiler.index):
                     raise ValueError(
-                        f"Unable to coerce to Series, length must be {len(self._query_compiler.index)}: "
-                        + f"given {len(other)}"
+                        "Unable to coerce to Series, length must be "
+                        f"{len(self._query_compiler.index)}: "
+                        f"given {len(other)}"
                     )
             else:
                 if len(other) != len(self._query_compiler.columns):
                     raise ValueError(
-                        f"Unable to coerce to Series, length must be {len(self._query_compiler.columns)}: "
-                        + f"given {len(other)}"
+                        "Unable to coerce to Series, length must be "
+                        f"{len(self._query_compiler.columns)}: "
+                        f"given {len(other)}"
                     )
             if hasattr(other, "dtype"):
                 other_dtypes = [other.dtype] * len(other)
@@ -548,7 +550,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Return addition of `BasePandasDataset` and `other`, element-wise (binary operator `add`).
+        Return addition of `BasePandasDataset` and `other`, element-wise
+        (binary operator `add`).
         """
         return self._binary_op(
             "add", other, axis=axis, level=level, fill_value=fill_value
@@ -731,7 +734,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
             else:
                 result = self._reduce_dimension(
                     # FIXME: Judging by pandas docs `**kwargs` serves only compatibility
-                    # purpose and does not affect the result, we shouldn't pass them to the query compiler.
+                    # purpose and does not affect the result, we shouldn't pass them to
+                    # the query compiler.
                     self._query_compiler.all(
                         axis=0,
                         bool_only=bool_only,
@@ -1068,7 +1072,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
             self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
             # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
-            # purpose and does not affect the result, we shouldn't pass them to the query compiler.
+            # purpose and does not affect the result, we shouldn't pass them to
+            # the query compiler.
             query_compiler=self._query_compiler.cummax(
                 fold_axis=axis, axis=axis, skipna=skipna, **kwargs
             )
@@ -1083,7 +1088,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
             self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
             # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
-            # purpose and does not affect the result, we shouldn't pass them to the query compiler.
+            # purpose and does not affect the result, we shouldn't pass them to
+            # the query compiler.
             query_compiler=self._query_compiler.cummin(
                 fold_axis=axis, axis=axis, skipna=skipna, **kwargs
             )
@@ -1099,7 +1105,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
             # FIXME: Judging by pandas docs `**kwargs` serves only compatibility
-            # purpose and does not affect the result, we shouldn't pass them to the query compiler.
+            # purpose and does not affect the result, we shouldn't pass them to
+            # the query compiler.
             query_compiler=self._query_compiler.cumprod(
                 fold_axis=axis, axis=axis, skipna=skipna, **kwargs
             )
@@ -1113,7 +1120,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         self._validate_dtypes(numeric_only=True)
         return self.__constructor__(
             # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
-            # purpose and does not affect the result, we shouldn't pass them to the query compiler.
+            # purpose and does not affect the result, we shouldn't pass them to
+            # the query compiler.
             query_compiler=self._query_compiler.cumsum(
                 fold_axis=axis, axis=axis, skipna=skipna, **kwargs
             )
@@ -1511,7 +1519,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Get integer division of `BasePandasDataset` and `other`, element-wise (binary operator `floordiv`).
+        Get integer division of `BasePandasDataset` and `other`, element-wise
+        (binary operator `floordiv`).
         """
         return self._binary_op(
             "floordiv", other, axis=axis, level=level, fill_value=fill_value
@@ -1519,7 +1528,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     def ge(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
-        Get greater than or equal comparison of `BasePandasDataset` and `other`, element-wise (binary operator `ge`).
+        Get greater than or equal comparison of `BasePandasDataset` and `other`,
+        element-wise (binary operator `ge`).
         """
         return self._binary_op("ge", other, axis=axis, level=level, dtypes=np.bool_)
 
@@ -1534,7 +1544,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     def gt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
-        Get greater than comparison of `BasePandasDataset` and `other`, element-wise (binary operator `gt`).
+        Get greater than comparison of `BasePandasDataset` and `other`, element-wise
+        (binary operator `gt`).
         """
         return self._binary_op("gt", other, axis=axis, level=level, dtypes=np.bool_)
 
@@ -1677,13 +1688,15 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     def le(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
-        Get less than or equal comparison of `BasePandasDataset` and `other`, element-wise (binary operator `le`).
+        Get less than or equal comparison of `BasePandasDataset` and `other`,
+        element-wise (binary operator `le`).
         """
         return self._binary_op("le", other, axis=axis, level=level, dtypes=np.bool_)
 
     def lt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
-        Get less than comparison of `BasePandasDataset` and `other`, element-wise (binary operator `lt`).
+        Get less than comparison of `BasePandasDataset` and `other`, element-wise
+        (binary operator `lt`).
         """
         return self._binary_op("lt", other, axis=axis, level=level, dtypes=np.bool_)
 
@@ -1791,9 +1804,10 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 **kwargs,
             )
         # If `numeric_only` is None, then we can do this precheck to whether or not
-        # frame contains non-numeric columns, if it doesn't, then we can pass to a query compiler
-        # `numeric_only=False` parameter and make its work easier in that case, rather than
-        # performing under complicate `numeric_only=None` parameter
+        # frame contains non-numeric columns, if it doesn't, then we can pass to
+        # a query compiler `numeric_only=False` parameter and make its work
+        # easier in that case, rather than performing under complicate
+        # `numeric_only=None` parameter
         if not numeric_only:
             try:
                 self._validate_dtypes(numeric_only=True)
@@ -1883,7 +1897,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Get multiplication of `BasePandasDataset` and `other`, element-wise (binary operator `mul`).
+        Get multiplication of `BasePandasDataset` and `other`, element-wise
+        (binary operator `mul`).
         """
         return self._binary_op(
             "mul", other, axis=axis, level=level, fill_value=fill_value
@@ -1893,7 +1908,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     def ne(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
-        Get Not equal comparison of `BasePandasDataset` and `other`, element-wise (binary operator `ne`).
+        Get Not equal comparison of `BasePandasDataset` and `other`, element-wise
+        (binary operator `ne`).
         """
         return self._binary_op("ne", other, axis=axis, level=level, dtypes=np.bool_)
 
@@ -1947,7 +1963,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Get exponential power of `BasePandasDataset` and `other`, element-wise (binary operator `pow`).
+        Get exponential power of `BasePandasDataset` and `other`, element-wise
+        (binary operator `pow`).
         """
         return self._binary_op(
             "pow", other, axis=axis, level=level, fill_value=fill_value
@@ -2266,7 +2283,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Get integer division of `BasePandasDataset` and `other`, element-wise (binary operator `rfloordiv`).
+        Get integer division of `BasePandasDataset` and `other`, element-wise
+        (binary operator `rfloordiv`).
         """
         return self._binary_op(
             "rfloordiv", other, axis=axis, level=level, fill_value=fill_value
@@ -2276,7 +2294,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Get modulo of `BasePandasDataset` and `other`, element-wise (binary operator `rmod`).
+        Get modulo of `BasePandasDataset` and `other`, element-wise
+        (binary operator `rmod`).
         """
         return self._binary_op(
             "rmod", other, axis=axis, level=level, fill_value=fill_value
@@ -2328,7 +2347,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Get exponential power of `BasePandasDataset` and `other`, element-wise (binary operator `rpow`).
+        Get exponential power of `BasePandasDataset` and `other`, element-wise
+        (binary operator `rpow`).
         """
         return self._binary_op(
             "rpow", other, axis=axis, level=level, fill_value=fill_value
@@ -2338,7 +2358,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Get subtraction of `BasePandasDataset` and `other`, element-wise (binary operator `rsub`).
+        Get subtraction of `BasePandasDataset` and `other`, element-wise
+        (binary operator `rsub`).
         """
         return self._binary_op(
             "rsub", other, axis=axis, level=level, fill_value=fill_value
@@ -2348,7 +2369,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Get floating division of `BasePandasDataset` and `other`, element-wise (binary operator `rtruediv`).
+        Get floating division of `BasePandasDataset` and `other`, element-wise
+        (binary operator `rtruediv`).
         """
         return self._binary_op(
             "rtruediv", other, axis=axis, level=level, fill_value=fill_value
@@ -2388,8 +2410,10 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 if axis == 0:
                     try:
                         weights = self[weights]
-                    except KeyError:
-                        raise KeyError("String passed to weights not a valid column")
+                    except KeyError as err:
+                        raise KeyError(
+                            "String passed to weights not a valid column"
+                        ) from err
                 else:
                     raise ValueError(
                         "Strings can only be passed to "
@@ -2622,7 +2646,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         # pandas throws this exception. See pandas issie #39434
         if ascending is None:
             raise ValueError(
-                "the `axis` parameter is not supported in the pandas implementation of argsort()"
+                "the `axis` parameter is not supported in the pandas "
+                "implementation of argsort()"
             )
         axis = self._get_axis_number(axis)
         inplace = self._validate_bool_kwarg(inplace, "inplace")
@@ -2696,7 +2721,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Get subtraction of `BasePandasDataset` and `other`, element-wise (binary operator `sub`).
+        Get subtraction of `BasePandasDataset` and `other`, element-wise
+        (binary operator `sub`).
         """
         return self._binary_op(
             "sub", other, axis=axis, level=level, fill_value=fill_value
@@ -2887,7 +2913,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Get floating division of `BasePandasDataset` and `other`, element-wise (binary operator `truediv`).
+        Get floating division of `BasePandasDataset` and `other`, element-wise
+        (binary operator `truediv`).
         """
         return self._binary_op(
             "truediv", other, axis=axis, level=level, fill_value=fill_value
@@ -2933,8 +2960,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
             raise ValueError("Transform function failed") from err
         try:
             assert len(result) == len(self)
-        except Exception:
-            raise ValueError("transforms cannot produce aggregated results")
+        except Exception as err:
+            raise ValueError("transforms cannot produce aggregated results") from err
         return result
 
     def tz_convert(self, tz, axis=0, level=None, copy=True):  # noqa: PR01, RT01, D200
@@ -2976,8 +3003,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
     # @prepend_to_notes(
     #     """
     #     In comparison with pandas, Modin's ``value_counts`` returns Series with ``MultiIndex``
-    #     only if multiple columns were passed via the `subset` parameter, otherwise, the resulted
-    #     Series's index will be a regular single dimensional ``Index``.
+    #     only if multiple columns were passed via the `subset` parameter,
+    #     otherwise, the resulted Series's index will be a regular single
+    #     dimensional ``Index``.
     #     """
     # )
     @_inherit_docstrings(

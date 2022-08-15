@@ -37,7 +37,8 @@ class Plotting(ClassLogger):
 
     def __getattribute__(self, item):
         """
-        Convert any Modin DataFrames in parameters to pandas so that they can be plotted normally.
+        Convert any Modin DataFrames in parameters to pandas so that they can
+        be plotted normally.
 
         Parameters
         ----------
@@ -47,9 +48,9 @@ class Plotting(ClassLogger):
         Returns
         -------
         object
-            If attribute is found in pandas.plotting, and it is a callable, a wrapper function is
-            returned which converts its arguments to pandas and calls a function pandas.plotting.`item`
-            on these arguments.
+            If attribute is found in pandas.plotting, and it is a callable, a
+            wrapper function is returned which converts its arguments to pandas
+            and calls a function pandas.plotting.`item` on these arguments.
             If attribute is found in pandas.plotting but it is not a callable, returns it.
             Otherwise function tries to look for an attribute in `self`.
         """

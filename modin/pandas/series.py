@@ -741,8 +741,8 @@ class Series(SeriesCompat, BasePandasDataset):
             keep_equal=keep_equal,
         )
         if align_axis == "columns" or align_axis == 1:
-            # Pandas.DataFrame.Compare returns a dataframe with a multidimensional index object as the
-            # columns so we have to change column object back.
+            # Pandas.DataFrame.Compare returns a dataframe with a multidimensional
+            # index object as the columns so we have to change column object back.
             result.columns = pandas.Index(["self", "other"])
         else:
             result = result.squeeze().rename(None)
@@ -867,7 +867,8 @@ class Series(SeriesCompat, BasePandasDataset):
         self, other, level=None, fill_value=None, axis=0
     ):  # noqa: PR01, RT01, D200
         """
-        Return Integer division and modulo of series and `other`, element-wise (binary operator `divmod`).
+        Return Integer division and modulo of series and `other`, element-wise
+        (binary operator `divmod`).
         """
         return self._default_to_pandas(
             pandas.Series.divmod, other, level=level, fill_value=fill_value, axis=axis
@@ -995,7 +996,8 @@ class Series(SeriesCompat, BasePandasDataset):
         self, other, level=None, fill_value=None, axis=0
     ):  # noqa: PR01, RT01, D200
         """
-        Get Integer division of dataframe and `other`, element-wise (binary operator `floordiv`).
+        Get Integer division of dataframe and `other`, element-wise
+        (binary operator `floordiv`).
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).floordiv(
@@ -1004,7 +1006,8 @@ class Series(SeriesCompat, BasePandasDataset):
 
     def ge(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
         """
-        Return greater than or equal to of series and `other`, element-wise (binary operator `ge`).
+        Return greater than or equal to of series and `other`, element-wise
+        (binary operator `ge`).
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).ge(new_other, level=level, axis=axis)
@@ -1559,7 +1562,8 @@ class Series(SeriesCompat, BasePandasDataset):
         self, other, level=None, fill_value=None, axis=0
     ):  # noqa: PR01, RT01, D200
         """
-        Return integer division and modulo of series and `other`, element-wise (binary operator `rdivmod`).
+        Return integer division and modulo of series and `other`, element-wise
+        (binary operator `rdivmod`).
         """
         return self._default_to_pandas(
             pandas.Series.rdivmod, other, level=level, fill_value=fill_value, axis=axis
@@ -1569,7 +1573,8 @@ class Series(SeriesCompat, BasePandasDataset):
         self, other, level=None, fill_value=None, axis=0
     ):  # noqa: PR01, RT01, D200
         """
-        Return integer division of series and `other`, element-wise (binary operator `rfloordiv`).
+        Return integer division of series and `other`, element-wise
+        (binary operator `rfloordiv`).
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).rfloordiv(
@@ -1591,7 +1596,8 @@ class Series(SeriesCompat, BasePandasDataset):
         self, other, level=None, fill_value=None, axis=0
     ):  # noqa: PR01, RT01, D200
         """
-        Return exponential power of series and `other`, element-wise (binary operator `rpow`).
+        Return exponential power of series and `other`, element-wise
+        (binary operator `rpow`).
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).rpow(
@@ -1613,7 +1619,8 @@ class Series(SeriesCompat, BasePandasDataset):
         self, other, level=None, fill_value=None, axis=0
     ):  # noqa: PR01, RT01, D200
         """
-        Return floating division of series and `other`, element-wise (binary operator `rtruediv`).
+        Return floating division of series and `other`, element-wise
+        (binary operator `rtruediv`).
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).rtruediv(
@@ -1923,7 +1930,8 @@ class Series(SeriesCompat, BasePandasDataset):
         self, other, level=None, fill_value=None, axis=0
     ):  # noqa: PR01, RT01, D200
         """
-        Return floating division of series and `other`, element-wise (binary operator `truediv`).
+        Return floating division of series and `other`, element-wise
+        (binary operator `truediv`).
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).truediv(

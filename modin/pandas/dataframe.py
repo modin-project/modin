@@ -388,8 +388,9 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             output_type = Series
         elif result_type == "broadcast":
             output_type = DataFrame
-        # the 'else' branch also handles 'result_type == "expand"' since it makes the output type
-        # depend on the `func` result (Series for a scalar, DataFrame for list-like)
+        # the 'else' branch also handles 'result_type == "expand"' since it makes
+        # the output type depend on the `func` result
+        # (Series for a scalar, DataFrame for list-like)
         else:
             reduced_index = pandas.Index([MODIN_UNNAMED_SERIES_LABEL])
             if query_compiler.get_axis(axis).equals(
@@ -816,7 +817,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         expr : str
             The expression string to search variables with "@" prefix.
         kwargs : dict
-            See the documentation for eval() for complete details on the keyword arguments accepted by query().
+            See the documentation for eval() for complete details on the keyword
+            arguments accepted by query().
         """
         if "@" not in expr:
             return
@@ -893,7 +895,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Get integer division of ``DataFrame`` and `other`, element-wise (binary operator `floordiv`).
+        Get integer division of ``DataFrame`` and `other`, element-wise
+        (binary operator `floordiv`).
         """
         return self._binary_op(
             "floordiv",
@@ -945,7 +948,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
     def ge(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
-        Get greater than or equal comparison of ``DataFrame`` and `other`, element-wise (binary operator `ge`).
+        Get greater than or equal comparison of ``DataFrame`` and `other`, element-wise
+        (binary operator `ge`).
         """
         return self._binary_op(
             "ge", other, axis=axis, level=level, broadcast=isinstance(other, Series)
@@ -953,7 +957,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
     def gt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
-        Get greater than comparison of ``DataFrame`` and `other`, element-wise (binary operator `ge`).
+        Get greater than comparison of ``DataFrame`` and `other`, element-wise
+        (binary operator `ge`).
         """
         return self._binary_op(
             "gt", other, axis=axis, level=level, broadcast=isinstance(other, Series)
@@ -1028,7 +1033,10 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         columns = self.columns
         columns_len = len(columns)
         dtypes = self.dtypes
-        dtypes_line = f"dtypes: {', '.join(['{}({})'.format(dtype, count) for dtype, count in dtypes.value_counts().items()])}"
+        dtype_vcs = dtypes.value_counts().items()
+        lines = ["{}({})".format(dtype, count) for dtype, count in dtype_vcs]
+        joined = ", ".join(lines)
+        dtypes_line = f"dtypes: {joined}"
 
         if max_cols is None:
             max_cols = 100
@@ -1155,12 +1163,12 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             if not hasattr(value, "index"):
                 try:
                     value = pandas.Series(value)
-                except (TypeError, ValueError, IndexError):
+                except (TypeError, ValueError, IndexError) as err:
                     raise ValueError(
                         "Cannot insert into a DataFrame with no defined index "
                         + "and a value that cannot be converted to a "
                         + "Series"
-                    )
+                    ) from err
             new_index = value.index.copy()
             new_columns = self.columns.insert(loc, column)
             new_query_compiler = DataFrame(
@@ -1321,7 +1329,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
     def le(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
-        Get less than or equal comparison of ``DataFrame`` and `other`, element-wise (binary operator `le`).
+        Get less than or equal comparison of ``DataFrame`` and `other`, element-wise
+        (binary operator `le`).
         """
         return self._binary_op(
             "le", other, axis=axis, level=level, broadcast=isinstance(other, Series)
@@ -1335,7 +1344,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
     def lt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
-        Get less than comparison of ``DataFrame`` and `other`, element-wise (binary operator `le`).
+        Get less than comparison of ``DataFrame`` and `other`, element-wise
+        (binary operator `le`).
         """
         return self._binary_op(
             "lt", other, axis=axis, level=level, broadcast=isinstance(other, Series)
@@ -1469,7 +1479,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
     def ne(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
-        Get not equal comparison of ``DataFrame`` and `other`, element-wise (binary operator `ne`).
+        Get not equal comparison of ``DataFrame`` and `other`, element-wise
+        (binary operator `ne`).
         """
         return self._binary_op(
             "ne", other, axis=axis, level=level, broadcast=isinstance(other, Series)
@@ -1621,7 +1632,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Get exponential power of ``DataFrame`` and `other`, element-wise (binary operator `pow`).
+        Get exponential power of ``DataFrame`` and `other`, element-wise
+        (binary operator `pow`).
         """
         if isinstance(other, Series):
             return self._default_to_pandas(
@@ -1785,7 +1797,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Get integer division of ``DataFrame`` and `other`, element-wise (binary operator `rfloordiv`).
+        Get integer division of ``DataFrame`` and `other`, element-wise
+        (binary operator `rfloordiv`).
         """
         return self._binary_op(
             "rfloordiv",
@@ -1815,7 +1828,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Get exponential power of ``DataFrame`` and `other`, element-wise (binary operator `rpow`).
+        Get exponential power of ``DataFrame`` and `other`, element-wise
+        (binary operator `rpow`).
         """
         if isinstance(other, Series):
             return self._default_to_pandas(
@@ -1849,7 +1863,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Get floating division of ``DataFrame`` and `other`, element-wise (binary operator `rtruediv`).
+        Get floating division of ``DataFrame`` and `other`, element-wise
+        (binary operator `rtruediv`).
         """
         return self._binary_op(
             "rtruediv",
@@ -2203,7 +2218,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
         """
-        Get floating division of ``DataFrame`` and `other`, element-wise (binary operator `truediv`).
+        Get floating division of ``DataFrame`` and `other`, element-wise
+        (binary operator `truediv`).
         """
         return self._binary_op(
             "truediv",
@@ -2370,8 +2386,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         elif key in self and key not in dir(self):
             self.__setitem__(key, value)
             # Note: return immediately so we don't keep this `key` as dataframe state.
-            # `__getattr__` will return the columns not present in `dir(self)`, so we do not need
-            # to manually track this state in the `dir`.
+            # `__getattr__` will return the columns not present in `dir(self)`,
+            # so we do not need to manually track this state in the `dir`.
             return
         elif is_list_like(value) and key not in ["index", "columns"]:
             warnings.warn(
@@ -2549,7 +2565,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         """
         Get a Modin DataFrame that implements the dataframe exchange protocol.
 
-        See more about the protocol in https://data-apis.org/dataframe-protocol/latest/index.html.
+        See more about the protocol in
+        https://data-apis.org/dataframe-protocol/latest/index.html.
 
         Parameters
         ----------

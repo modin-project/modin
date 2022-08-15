@@ -48,7 +48,8 @@ class BaseSparseAccessor(ClassLogger):
 
     def _validate(self, data):
         """
-        Verify that `data` dtypes are compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.
+        Verify that `data` dtypes are compatible with
+        `pandas.core.arrays.sparse.dtype.SparseDtype`.
 
         Parameters
         ----------
@@ -89,7 +90,8 @@ class BaseSparseAccessor(ClassLogger):
 class SparseFrameAccessor(BaseSparseAccessor):
     def _validate(self, data):
         """
-        Verify that `data` dtypes are compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.
+        Verify that `data` dtypes are compatible with
+        `pandas.core.arrays.sparse.dtype.SparseDtype`.
 
         Parameters
         ----------
@@ -127,7 +129,8 @@ class SparseFrameAccessor(BaseSparseAccessor):
 class SparseAccessor(BaseSparseAccessor):
     def _validate(self, data):
         """
-        Verify that `data` dtype is compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.
+        Verify that `data` dtype is compatible with
+        `pandas.core.arrays.sparse.dtype.SparseDtype`.
 
         Parameters
         ----------
