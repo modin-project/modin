@@ -13,13 +13,11 @@
 
 """Module houses `ParquetDispatcher` class, that is used for reading `.parquet` files."""
 
-from abc import ABC, abstractmethod, abstractproperty
 import os
 
 import json
 import fsspec
-from fsspec.core import split_protocol, url_to_fs
-from fsspec.registry import get_filesystem_class
+from fsspec.core import url_to_fs
 from fsspec.spec import AbstractBufferedFile
 import numpy as np
 from packaging import version
@@ -32,9 +30,9 @@ from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispa
 from modin.utils import import_optional_dependency, _inherit_docstrings
 
 
-class Dataset(ABC):  # noqa : PR01
+class ColumnStoreDataset:  # noqa : PR01
     """
-    Abstract class that encapsulates Parquet engine-specific details for
+    Base class that encapsulates Parquet engine-specific details for
     a given Parquet dataset.
 
     This class exposes a set of functions that are commonly used in the
@@ -71,32 +69,32 @@ class Dataset(ABC):  # noqa : PR01
         self._row_groups_per_file = None
         self._files = None
 
-    @abstractproperty
+    @property
     def pandas_metadata(self):
         """Return the pandas metadata of the dataset."""
-        pass
+        raise NotImplementedError
 
-    @abstractproperty
+    @property
     def columns(self):
         """Return the list of columns in the dataset."""
-        pass
+        raise NotImplementedError
 
-    @abstractproperty
+    @property
     def engine(self):
         """Return string representing what engine is being used."""
-        pass
+        raise NotImplementedError
 
     # TODO: make this cache_readonly after docstring inheritance is fixed.
-    @abstractproperty
+    @property
     def files(self):
         """Return the list of formatted file paths of the dataset."""
-        pass
+        raise NotImplementedError
 
     # TODO: make this cache_readonly after docstring inheritance is fixed.
-    @abstractproperty
+    @property
     def row_groups_per_file(self):
         """Return a list with the number of row groups per file."""
-        pass
+        raise NotImplementedError
 
     @property
     def fs(self):
@@ -112,9 +110,7 @@ class Dataset(ABC):  # noqa : PR01
             if isinstance(self.path, AbstractBufferedFile):
                 self._fs = self.path.fs
             else:
-                self._fs = get_filesystem_class(split_protocol(self.path)[0])(
-                    **self.storage_options
-                )
+                self._fs, self._fs_path = url_to_fs(self.path, **self.storage_options)
         return self._fs
 
     @property
@@ -131,10 +127,9 @@ class Dataset(ABC):  # noqa : PR01
             if isinstance(self.path, AbstractBufferedFile):
                 self._fs_path = self.path
             else:
-                _, self._fs_path = url_to_fs(self.path, **self.storage_options)
+                self._fs, self._fs_path = url_to_fs(self.path, **self.storage_options)
         return self._fs_path
 
-    @abstractmethod
     def to_pandas_dataframe(self, columns):
         """
         Read the given columns as a pandas dataframe.
@@ -144,7 +139,7 @@ class Dataset(ABC):  # noqa : PR01
         columns : list
             List of columns that should be read from file.
         """
-        pass
+        raise NotImplementedError
 
     def _get_files(self, files):
         """
@@ -181,8 +176,8 @@ class Dataset(ABC):  # noqa : PR01
         return fs_files
 
 
-@_inherit_docstrings(Dataset)
-class PyArrowDataset(Dataset):
+@_inherit_docstrings(ColumnStoreDataset)
+class PyArrowDataset(ColumnStoreDataset):
     def _init_dataset(self):  # noqa: GL08
         from pyarrow.parquet import ParquetDataset
 
@@ -232,8 +227,8 @@ class PyArrowDataset(Dataset):
         return read_table(self.path, columns=columns, filesystem=self.fs).to_pandas()
 
 
-@_inherit_docstrings(Dataset)
-class FastParquetDataset(Dataset):
+@_inherit_docstrings(ColumnStoreDataset)
+class FastParquetDataset(ColumnStoreDataset):
     def _init_dataset(self):  # noqa: GL08
         from fastparquet import ParquetFile
 
