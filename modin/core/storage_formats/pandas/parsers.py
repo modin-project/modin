@@ -702,8 +702,6 @@ class PandasParquetParser(PandasParser):
                     .to_pandas()
                 )
                 if "row_group_sizes" in kwargs:
-                    import pandas
-
                     row_group_sizes = kwargs["row_group_sizes"]
                     start = sum(row_group_sizes[: file_for_parser.row_group_start])
                     end = sum(row_group_sizes[: file_for_parser.row_group_end])

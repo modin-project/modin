@@ -353,7 +353,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         storage_options = kwargs.pop("storage_options", {}) or {}
         col_partitions, column_widths = cls.build_columns(columns)
         partition_ids = cls.call_deploy(path, col_partitions, storage_options, **kwargs)
-        if not isinstance(index_columns[0], dict):
+        if "row_group_sizes" not in kwargs:
             # range index case
             index, sync_index = cls.build_index(
                 path, partition_ids, index_columns, storage_options
@@ -369,7 +369,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             sync_index = False
         remote_parts = cls.build_partition(partition_ids, column_widths)
         if len(partition_ids) > 0:
-            if not isinstance(index_columns[0], dict):
+            if "row_group_sizes" not in kwargs:
                 row_lengths = [part.length() for part in remote_parts.T[0]]
             else:
                 row_lengths = kwargs["row_group_sizes"]
@@ -448,7 +448,11 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             if dataset.schema.pandas_metadata
             else []
         )
-        if index_columns is not []:
+        if (
+            index_columns is not []
+            and len(index_columns) == 1
+            and isinstance(index_columns[0], dict)
+        ):
             row_group_sizes = [
                 group.num_rows for group in dataset.fragments[0].row_groups
             ]
