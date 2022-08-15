@@ -29,18 +29,20 @@ from modin.utils import (
     wrap_udf_function,
     hashable,
     wrap_into_list,
+    MODIN_UNNAMED_SERIES_LABEL,
 )
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.config import IsExperimental
-from modin.logging import ClassLogger
 from .series import Series
 from .utils import is_label
+from modin._compat import PandasCompatVersion
 from modin._compat.core.pd_common import reconstruct_func
+from modin._compat.pandas_api.classes import DataFrameGroupByCompat, SeriesGroupByCompat
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
-class DataFrameGroupBy(ClassLogger):
+class DataFrameGroupBy(DataFrameGroupByCompat):
     def __init__(
         self,
         df,
@@ -234,8 +236,12 @@ class DataFrameGroupBy(ClassLogger):
                 and DataFrame(query_compiler=self._by.isna()).any(axis=None)
             ):
                 mask_nan_rows = data[self._by.columns].isna().any(axis=1)
-                # drop NaN groups
-                result = result.loc[~mask_nan_rows]
+                if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+                    # older pandas filled invalid rows with NaN-s
+                    result.loc[mask_nan_rows] = np.nan
+                else:
+                    # drop NaN groups
+                    result = result.loc[~mask_nan_rows]
             return result
 
         if freq is None and axis == 1 and self._axis == 0:
@@ -295,16 +301,9 @@ class DataFrameGroupBy(ClassLogger):
         self._indices_cache = self._compute_index_grouped(numerical=True)
         return self._indices_cache
 
-    def pct_change(self, periods=1, fill_method="ffill", limit=None, freq=None, axis=0):
-        return self._default_to_pandas(
-            lambda df: df.pct_change(
-                periods=periods,
-                fill_method=fill_method,
-                limit=limit,
-                freq=freq,
-                axis=axis,
-            )
-        )
+    @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy.pct_change)
+    def _pct_change(self, *args, **kwargs):
+        return self._default_to_pandas(lambda df: df.pct_change(*args, **kwargs))
 
     def filter(self, func, dropna=True, *args, **kwargs):
         return self._default_to_pandas(
@@ -678,8 +677,8 @@ class DataFrameGroupBy(ClassLogger):
         if not self._kwargs.get("as_index") and not isinstance(result, Series):
             result = result.rename(columns={0: "size"})
             result = (
-                result.rename(columns={"__reduced__": "index"})
-                if "__reduced__" in result.columns
+                result.rename(columns={MODIN_UNNAMED_SERIES_LABEL: "index"})
+                if MODIN_UNNAMED_SERIES_LABEL in result.columns
                 else result
             )
         elif isinstance(self._df, Series):
@@ -1188,7 +1187,7 @@ class DataFrameGroupBy(ClassLogger):
 
 
 @_inherit_docstrings(pandas.core.groupby.SeriesGroupBy)
-class SeriesGroupBy(DataFrameGroupBy):
+class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
     @property
     def ndim(self):
         """

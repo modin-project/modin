@@ -98,32 +98,6 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         args.extend(self.list_of_blocks)
         return self._wrap_partitions(self.deploy_axis_func(*args, **kwargs))
 
-    def shuffle(self, func, lengths, **kwargs):
-        """
-        Shuffle the order of the data in this axis partition based on the `lengths`.
-
-        Parameters
-        ----------
-        func : callable
-            The function to apply before splitting.
-        lengths : list
-            The list of partition lengths to split the result into.
-        **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
-
-        Returns
-        -------
-        list
-            A list of `PandasDataframePartition` objects split by `lengths`.
-        """
-        num_splits = len(lengths)
-        # We add these to kwargs and will pop them off before performing the operation.
-        kwargs["manual_partition"] = True
-        kwargs["_lengths"] = lengths
-        args = [self.axis, func, num_splits, False]
-        args.extend(self.list_of_blocks)
-        return self._wrap_partitions(self.deploy_axis_func(*args, **kwargs))
-
     @classmethod
     def deploy_axis_func(
         cls, axis, func, num_splits, maintain_partitioning, *partitions, **kwargs
@@ -163,7 +137,11 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         result = func(dataframe, *kwargs.pop("args", ()), **kwargs)
         if impure:
             return list(result)
-        if manual_partition:
+        elif num_splits == 1:
+            # If we're not going to split the result, we don't need to specify
+            # split lengths.
+            lengths = None
+        elif manual_partition:
             # The split function is expecting a list
             lengths = list(lengths)
         # We set lengths to None so we don't use the old lengths for the resulting partition

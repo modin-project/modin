@@ -298,7 +298,8 @@ def read_stata(
 @_inherit_docstrings(pandas.read_pickle)
 @enable_logging
 def read_pickle(
-    filepath_or_buffer: "FilePathOrBuffer", compression: Optional[str] = "infer"
+    filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
+    compression: Optional[str] = "infer",
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 

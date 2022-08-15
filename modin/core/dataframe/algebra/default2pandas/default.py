@@ -14,7 +14,7 @@
 """Module houses default functions builder class."""
 
 from modin.core.dataframe.algebra import Operator
-from modin.utils import try_cast_to_pandas
+from modin.utils import try_cast_to_pandas, MODIN_UNNAMED_SERIES_LABEL
 
 from pandas.core.dtypes.common import is_list_like
 import pandas
@@ -102,7 +102,7 @@ class DefaultMethod(Operator):
                 )
             if isinstance(result, pandas.Series):
                 if result.name is None:
-                    result.name = "__reduced__"
+                    result.name = MODIN_UNNAMED_SERIES_LABEL
                 result = result.to_frame()
 
             inplace_method = kwargs.get("inplace", False)

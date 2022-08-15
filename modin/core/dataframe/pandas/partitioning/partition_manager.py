@@ -741,9 +741,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             [
                 update_bar(
                     pbar,
-                    put_func(
-                        df.iloc[i : i + row_chunksize, j : j + col_chunksize].copy()
-                    ),
+                    put_func(df.iloc[i : i + row_chunksize, j : j + col_chunksize]),
                 )
                 for j in range(0, len(df.columns), col_chunksize)
             ]

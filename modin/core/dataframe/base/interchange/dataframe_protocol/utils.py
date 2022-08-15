@@ -28,11 +28,10 @@ from pandas.api.types import is_datetime64_dtype
 class DTypeKind(enum.IntEnum):  # noqa PR01
     """
     Integer enum for data types.
-
     Attributes
     ----------
     INT : int
-        Matches to integer data type.
+        Matches to signed integer data type.
     UINT : int
         Matches to unsigned integer data type.
     FLOAT : int
@@ -40,7 +39,7 @@ class DTypeKind(enum.IntEnum):  # noqa PR01
     BOOL : int
         Matches to boolean data type.
     STRING : int
-        Matches to string data type.
+        Matches to string data type (UTF-8 encoded).
     DATETIME : int
         Matches to datetime data type.
     CATEGORICAL : int
@@ -59,15 +58,14 @@ class DTypeKind(enum.IntEnum):  # noqa PR01
 class ColumnNullType(enum.IntEnum):  # noqa PR01
     """
     Integer enum for null type representation.
-
     Attributes
     ----------
     NON_NULLABLE : int
         Non-nullable column.
     USE_NAN : int
-        NaN/NaT value.
+        Use explicit float NaN value.
     USE_SENTINEL : int
-        Sentinel value besides NaN/NaT.
+        Sentinel value besides NaN.
     USE_BITMASK : int
         The bit is set/unset representing a null on a certain position.
     USE_BYTEMASK : int

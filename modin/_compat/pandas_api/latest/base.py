@@ -15,16 +15,31 @@
 
 import pandas
 from pandas.core.dtypes.common import is_datetime_or_timedelta_dtype
+from pandas.core.window.ewm import ExponentialMovingWindow
 from pandas.util._validators import validate_bool_kwarg, validate_ascending
-from pandas._libs.lib import no_default
-from pandas._typing import StorageOptions, CompressionOptions, IndexLabel
+from pandas._libs.lib import no_default, NoDefault
+from pandas._typing import (
+    StorageOptions,
+    CompressionOptions,
+    IndexLabel,
+    TimedeltaConvertibleTypes,
+    Axis,
+)
 import pickle as pkl
-from numpy import nan
-from typing import Sequence, Hashable, Optional
+import numpy as np
+from typing import Sequence, Hashable, Optional, TYPE_CHECKING
 
 from ..abc import BaseCompatibleBasePandasDataset
 from .utils import create_stat_method
 from modin.utils import _inherit_docstrings
+
+if TYPE_CHECKING:
+    from modin.pandas.base import BasePandasDataset
+
+nan = np.nan
+
+# See https://github.com/pandas-dev/pandas/blob/v1.4.3/pandas/core/generic.py#L195
+bool_t = bool
 
 
 class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):

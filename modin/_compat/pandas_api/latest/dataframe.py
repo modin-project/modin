@@ -13,11 +13,23 @@
 
 """Module for 'latest pandas' compatibility layer for DataFrame."""
 
-from typing import Optional, Union, IO
+from datetime import datetime
+from typing import (
+    Optional,
+    Union,
+    IO,
+    Hashable,
+    Sequence,
+)
 import pandas
 from pandas.util._validators import validate_bool_kwarg
-from pandas._libs.lib import no_default
-from pandas._typing import StorageOptions
+from pandas._libs.lib import no_default, NoDefault
+from pandas._typing import (
+    CompressionOptions,
+    FilePath,
+    StorageOptions,
+    WriteBuffer,
+)
 from numpy import nan
 
 from ..abc import BaseCompatibleDataFrame
@@ -132,11 +144,7 @@ class LatestCompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
         limit=None,
         tolerance=None,
     ):  # noqa: PR01, RT01, D200
-        axis = self._get_axis_number(axis)
-        if axis == 0 and labels is not None:
-            index = labels
-        elif labels is not None:
-            columns = labels
+        index, columns = self._disambiguate_axes_labels(axis, index, columns, labels)
         return super(LatestCompatibleDataFrame, self).reindex(
             index=index,
             columns=columns,

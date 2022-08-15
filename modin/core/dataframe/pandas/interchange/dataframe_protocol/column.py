@@ -30,10 +30,11 @@ import numpy as np
 import pandas
 
 from modin.utils import _inherit_docstrings
-from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
+    CategoricalDescription,
     ProtocolColumn,
 )
-from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
     DTypeKind,
     pandas_dtype_to_arrow_c,
     ColumnNullType,
@@ -41,6 +42,13 @@ from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from .buffer import PandasProtocolBuffer
 from .exception import NoValidityBuffer, NoOffsetsBuffer
+
+
+_NO_VALIDITY_BUFFER = {
+    ColumnNullType.NON_NULLABLE: "This column is non-nullable so does not have a mask",
+    ColumnNullType.USE_NAN: "This column uses NaN as null so does not have a separate mask",
+    ColumnNullType.USE_SENTINEL: "This column uses a sentinel value so does not have a mask",
+}
 
 
 @_inherit_docstrings(ProtocolColumn)
@@ -102,7 +110,6 @@ class PandasProtocolColumn(ProtocolColumn):
         self._col = column
         self._allow_copy = allow_copy
 
-    @property
     def size(self) -> int:
         return len(self._col.index)
 
@@ -180,18 +187,21 @@ class PandasProtocolColumn(ProtocolColumn):
         )
 
     @property
-    def describe_categorical(self) -> Dict[str, Any]:
-        if not self.dtype[0] == DTypeKind.CATEGORICAL:
-            raise RuntimeError(
+    def describe_categorical(self) -> CategoricalDescription:
+        if self.dtype[0] != DTypeKind.CATEGORICAL:
+            raise TypeError(
                 "`describe_categorical only works on a column with "
                 + "categorical dtype!"
             )
 
         pandas_series = self._col.to_pandas().squeeze(axis=1)
+        cat_frame = type(self._col).from_pandas(
+            pandas.DataFrame({"cat": pandas_series.cat.categories})
+        )
         return {
             "is_ordered": pandas_series.cat.ordered,
             "is_dictionary": True,
-            "mapping": dict(zip(pandas_series.cat.codes, pandas_series.cat.categories)),
+            "categories": PandasProtocolColumn(cat_frame, self._allow_copy),
         }
 
     @property
@@ -234,7 +244,7 @@ class PandasProtocolColumn(ProtocolColumn):
 
         intermediate_df = self._col.tree_reduce(0, map_func, reduce_func)
         # Set ``pandas.RangeIndex(1)`` to index and column labels because
-        # 1) We internally use '__reduced__' for labels of a reduced axis
+        # 1) We internally use `MODIN_UNNAMED_SERIES_LABEL` for labels of a reduced axis
         # 2) The return value of `reduce_func` is a pandas DataFrame with
         # index and column labels set to ``pandas.RangeIndex(1)``
         # 3) We further use `to_pandas().squeeze()` to get an integer value of the null count.
@@ -255,7 +265,7 @@ class PandasProtocolColumn(ProtocolColumn):
         self, n_chunks: Optional[int] = None
     ) -> Iterable["PandasProtocolColumn"]:
         cur_n_chunks = self.num_chunks()
-        n_rows = self.size
+        n_rows = self.size()
         if n_chunks is None or n_chunks == cur_n_chunks:
             cum_row_lengths = np.cumsum([0] + self._col._row_lengths)
             for i in range(len(cum_row_lengths) - 1):
@@ -414,11 +424,9 @@ class PandasProtocolColumn(ProtocolColumn):
             self._validity_buffer_cache = (buffer, dtype)
             return self._validity_buffer_cache
 
-        if null == ColumnNullType.NON_NULLABLE:
-            msg = "This column is non-nullable so does not have a mask"
-        elif null == ColumnNullType.USE_NAN:
-            msg = "This column uses NaN as null so does not have a separate mask"
-        else:
+        try:
+            msg = _NO_VALIDITY_BUFFER[null]
+        except KeyError:
             raise NotImplementedError("See self.describe_null")
 
         raise NoValidityBuffer(msg)

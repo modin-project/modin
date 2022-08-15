@@ -23,10 +23,15 @@ from pandas.core.dtypes.common import (
 )
 from pandas._libs.lib import no_default
 from pandas._typing import IndexKeyFunc
-from typing import Union, Optional
+from typing import Union, Optional, Hashable, TYPE_CHECKING
 import warnings
 
-from modin.utils import _inherit_docstrings, to_pandas, Engine
+from modin.utils import (
+    _inherit_docstrings,
+    to_pandas,
+    Engine,
+    MODIN_UNNAMED_SERIES_LABEL,
+)
 from modin.config import IsExperimental, PersistentPickle
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
@@ -34,6 +39,10 @@ from .utils import from_pandas, is_scalar, _doc_binary_op
 from .accessor import CachedAccessor, SparseAccessor
 from . import _update_engine
 from modin._compat.pandas_api.classes import SeriesCompat
+
+
+if TYPE_CHECKING:
+    from .dataframe import DataFrame
 
 
 @_inherit_docstrings(
@@ -70,6 +79,7 @@ class Series(SeriesCompat, BasePandasDataset):
     """
 
     _pandas_class = pandas.Series
+    __array_priority__ = pandas.Series.__array_priority__
 
     def __init__(
         self,
@@ -100,7 +110,7 @@ class Series(SeriesCompat, BasePandasDataset):
                 "Distributing {} object. This may take some time.".format(type(data))
             )
             if name is None:
-                name = "__reduced__"
+                name = MODIN_UNNAMED_SERIES_LABEL
                 if isinstance(data, pandas.Series) and data.name is not None:
                     name = data.name
 
@@ -130,7 +140,7 @@ class Series(SeriesCompat, BasePandasDataset):
         hashable
         """
         name = self._query_compiler.columns[0]
-        if name == "__reduced__":
+        if name == MODIN_UNNAMED_SERIES_LABEL:
             return None
         return name
 
@@ -144,7 +154,7 @@ class Series(SeriesCompat, BasePandasDataset):
             Name value to set.
         """
         if name is None:
-            name = "__reduced__"
+            name = MODIN_UNNAMED_SERIES_LABEL
         self._query_compiler.columns = [name]
 
     name = property(_get_name, _set_name)
@@ -185,34 +195,6 @@ class Series(SeriesCompat, BasePandasDataset):
         Return the values as a NumPy array.
         """
         return super(Series, self).__array__(dtype).flatten()
-
-    @property
-    def __array_priority__(self):  # pragma: no cover
-        """
-        Return pandas `__array_priority__` Series internal parameter.
-
-        Returns
-        -------
-        int
-            Internal pandas parameter ``__array_priority__`` used during interaction with NumPy.
-        """
-        return self._to_pandas().__array_priority__
-
-    # FIXME: __bytes__ was removed in newer pandas versions, so Modin
-    # can remove it too.
-    def __bytes__(self):
-        """
-        Return bytes representation of the Series.
-
-        Returns
-        -------
-        bytes
-
-        Notes
-        -----
-        Method is deprecated.
-        """
-        return self._default_to_pandas(pandas.Series.__bytes__)
 
     def __contains__(self, key):
         """
@@ -969,7 +951,8 @@ class Series(SeriesCompat, BasePandasDataset):
         Transform each element of a list-like to a row.
         """
         return super(Series, self).explode(
-            "__reduced__" if self.name is None else self.name, ignore_index=ignore_index
+            MODIN_UNNAMED_SERIES_LABEL if self.name is None else self.name,
+            ignore_index=ignore_index,
         )
 
     def factorize(self, sort=False, na_sentinel=-1):  # noqa: PR01, RT01, D200
@@ -2186,7 +2169,7 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         df = self._query_compiler.to_pandas()
         series = df[df.columns[0]]
-        if self._query_compiler.columns[0] == "__reduced__":
+        if self._query_compiler.columns[0] == MODIN_UNNAMED_SERIES_LABEL:
             series.name = None
         return series
 
@@ -2399,7 +2382,7 @@ class Series(SeriesCompat, BasePandasDataset):
             if self.name == other.name:
                 new_self.name = new_other.name = self.name
             else:
-                new_self.name = new_other.name = "__reduced__"
+                new_self.name = new_other.name = MODIN_UNNAMED_SERIES_LABEL
         else:
             new_self = self
             new_other = other

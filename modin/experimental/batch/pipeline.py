@@ -228,7 +228,7 @@ class PandasQueryPipeline(object):
                         "Fan out is only supported with DataFrames with 1 partition."
                     )
                 partitions[0] = partitions[0].force_materialization()
-                partition_list = partitions[0].list_of_partitions_to_combine
+                partition_list = partitions[0].list_of_block_partitions
                 partitions[0] = partitions[0].add_to_apply_calls(node.func, 0)
                 partitions[0].drain_call_queue(num_splits=1)
                 new_dfs = []
@@ -267,7 +267,7 @@ class PandasQueryPipeline(object):
                 for i in range(self.num_partitions):
                     new_dfs.append(
                         type(partitions[0])(
-                            partitions[0].list_of_partitions_to_combine,
+                            partitions[0].list_of_block_partitions,
                             full_axis=partitions[0].full_axis,
                         ).add_to_apply_calls(mask_partition, i)
                     )
@@ -366,7 +366,7 @@ class PandasQueryPipeline(object):
         for id, df in id_df_iter:
             partitions = []
             for row_partition in df:
-                partitions.append(row_partition.list_of_partitions_to_combine)
+                partitions.append(row_partition.list_of_block_partitions)
             partitions = np.array(partitions)
             partition_mgr_class = PandasOnRayDataframe._partition_mgr_cls
             index, internal_rows = partition_mgr_class.get_indices(0, partitions)
@@ -375,8 +375,8 @@ class PandasQueryPipeline(object):
                 partitions,
                 index,
                 columns,
-                row_lengths=tuple(map(len, internal_rows)),
-                column_widths=tuple(map(len, internal_cols)),
+                row_lengths=list(map(len, internal_rows)),
+                column_widths=list(map(len, internal_cols)),
             )
             query_compiler = PandasQueryCompiler(result_modin_frame)
             result_df = pd.DataFrame(query_compiler=query_compiler)

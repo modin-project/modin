@@ -24,7 +24,7 @@ import pandas
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 from pandas._libs.lib import no_default
-from typing import List, Hashable, Optional, Callable, Union, Dict
+from typing import List, Hashable, Optional, Callable, Union, Dict, TYPE_CHECKING
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.error_message import ErrorMessage
@@ -36,9 +36,15 @@ from modin.core.dataframe.base.dataframe.utils import (
     Axis,
     JoinType,
 )
+
+if TYPE_CHECKING:
+    from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
+        ProtocolDataframe,
+    )
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
 from modin.logging import ClassLogger
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 
 def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
@@ -143,10 +149,12 @@ class PandasDataframe(ClassLogger):
     ----------
     partitions : np.ndarray
         A 2D NumPy array of partitions.
-    index : sequence
+    index : sequence, optional
         The index for the dataframe. Converted to a ``pandas.Index``.
-    columns : sequence
+        Is computed from partitions on demand if not specified.
+    columns : sequence, optional
         The columns object for the dataframe. Converted to a ``pandas.Index``.
+        Is computed from partitions on demand if not specified.
     row_lengths : list, optional
         The length of each partition in the rows. The "height" of
         each of the block partitions. Is computed if not provided.
@@ -177,49 +185,52 @@ class PandasDataframe(ClassLogger):
     def __init__(
         self,
         partitions,
-        index,
-        columns,
+        index=None,
+        columns=None,
         row_lengths=None,
         column_widths=None,
         dtypes=None,
     ):
         self._partitions = partitions
-        self._index_cache = ensure_index(index)
-        self._columns_cache = ensure_index(columns)
-        if row_lengths is not None and len(self.index) > 0:
+        self._index_cache = ensure_index(index) if index is not None else None
+        self._columns_cache = ensure_index(columns) if columns is not None else None
+        self._row_lengths_cache = row_lengths
+        self._column_widths_cache = column_widths
+        self._dtypes = dtypes
+
+        self._validate_axes_lengths()
+        self._filter_empties(compute_metadata=False)
+
+    def _validate_axes_lengths(self):
+        """Validate that labels are split correctly if split is known."""
+        if self._row_lengths_cache is not None and len(self.index) > 0:
             # An empty frame can have 0 rows but a nonempty index. If the frame
             # does have rows, the number of rows must equal the size of the
             # index.
-            num_rows = sum(row_lengths)
+            num_rows = sum(self._row_lengths_cache)
             if num_rows > 0:
                 ErrorMessage.catch_bugs_and_request_email(
                     num_rows != len(self._index_cache),
-                    "Row lengths: {} != {}".format(num_rows, len(self._index_cache)),
+                    f"Row lengths: {num_rows} != {len(self._index_cache)}",
                 )
             ErrorMessage.catch_bugs_and_request_email(
-                any(val < 0 for val in row_lengths),
-                "Row lengths cannot be negative: {}".format(row_lengths),
+                any(val < 0 for val in self._row_lengths_cache),
+                f"Row lengths cannot be negative: {self._row_lengths_cache}",
             )
-        self._row_lengths_cache = row_lengths
-        if column_widths is not None and len(self.columns) > 0:
+        if self._column_widths_cache is not None and len(self.columns) > 0:
             # An empty frame can have 0 column but a nonempty column index. If
             # the frame does have columns, the number of columns must equal the
             # size of the columns.
-            num_columns = sum(column_widths)
+            num_columns = sum(self._column_widths_cache)
             if num_columns > 0:
                 ErrorMessage.catch_bugs_and_request_email(
                     num_columns != len(self._columns_cache),
-                    "Column widths: {} != {}".format(
-                        num_columns, len(self._columns_cache)
-                    ),
+                    f"Column widths: {num_columns} != {len(self._columns_cache)}",
                 )
             ErrorMessage.catch_bugs_and_request_email(
-                any(val < 0 for val in column_widths),
-                "Column widths cannot be negative: {}".format(column_widths),
+                any(val < 0 for val in self._column_widths_cache),
+                f"Column widths cannot be negative: {self._column_widths_cache}",
             )
-        self._column_widths_cache = column_widths
-        self._dtypes = dtypes
-        self._filter_empties()
 
     @property
     def _row_lengths(self):
@@ -232,10 +243,13 @@ class PandasDataframe(ClassLogger):
             A list of row partitions lengths.
         """
         if self._row_lengths_cache is None:
-            if len(self._partitions.T) > 0:
-                self._row_lengths_cache = [
-                    obj.length() for obj in self._partitions.T[0]
-                ]
+            if len(self._partitions) > 0:
+                (
+                    index,
+                    self._row_lengths_cache,
+                ) = self._compute_axis_labels_and_lengths(0)
+                if self._index_cache is None:
+                    self._index_cache = index
             else:
                 self._row_lengths_cache = []
         return self._row_lengths_cache
@@ -252,7 +266,12 @@ class PandasDataframe(ClassLogger):
         """
         if self._column_widths_cache is None:
             if len(self._partitions) > 0:
-                self._column_widths_cache = [obj.width() for obj in self._partitions[0]]
+                (
+                    columns,
+                    self._column_widths_cache,
+                ) = self._compute_axis_labels_and_lengths(1)
+                if self._columns_cache is None:
+                    self._columns_cache = columns
             else:
                 self._column_widths_cache = []
         return self._column_widths_cache
@@ -296,14 +315,16 @@ class PandasDataframe(ClassLogger):
         def dtype_builder(df):
             return df.apply(lambda col: find_common_type(col.values), axis=0)
 
-        map_func = self._build_treereduce_func(0, lambda df: df.dtypes)
-        reduce_func = self._build_treereduce_func(0, dtype_builder)
         # For now we will use a pandas Series for the dtypes.
         if len(self.columns) > 0:
-            dtypes = self.tree_reduce(0, map_func, reduce_func).to_pandas().iloc[0]
+            dtypes = (
+                self.tree_reduce(0, lambda df: df.dtypes, dtype_builder)
+                .to_pandas()
+                .iloc[0]
+            )
         else:
             dtypes = pandas.Series([])
-        # reset name to None because we use "__reduced__" internally
+        # reset name to None because we use MODIN_UNNAMED_SERIES_LABEL internally
         dtypes.name = None
         return dtypes
 
@@ -345,6 +366,10 @@ class PandasDataframe(ClassLogger):
         pandas.Index
             An index object containing the row labels.
         """
+        if self._index_cache is None:
+            self._index_cache, row_lengths = self._compute_axis_labels_and_lengths(0)
+            if self._row_lengths_cache is None:
+                self._row_lengths_cache = row_lengths
         return self._index_cache
 
     def _get_columns(self):
@@ -356,6 +381,12 @@ class PandasDataframe(ClassLogger):
         pandas.Index
             An index object containing the column labels.
         """
+        if self._columns_cache is None:
+            self._columns_cache, column_widths = self._compute_axis_labels_and_lengths(
+                1
+            )
+            if self._column_widths_cache is None:
+                self._column_widths_cache = column_widths
         return self._columns_cache
 
     def _set_index(self, new_index):
@@ -407,7 +438,7 @@ class PandasDataframe(ClassLogger):
         """
         return [self.index, self.columns]
 
-    def _compute_axis_labels(self, axis: int, partitions=None):
+    def _compute_axis_labels_and_lengths(self, axis: int, partitions=None):
         """
         Compute the labels for specific `axis`.
 
@@ -423,14 +454,32 @@ class PandasDataframe(ClassLogger):
         -------
         pandas.Index
             Labels for the specified `axis`.
+        List of int
+            Size of partitions alongside specified `axis`.
         """
         if partitions is None:
             partitions = self._partitions
-        new_index, _ = self._partition_mgr_cls.get_indices(axis, partitions)
-        return new_index
+        new_index, internal_idx = self._partition_mgr_cls.get_indices(axis, partitions)
+        return new_index, list(map(len, internal_idx))
 
-    def _filter_empties(self):
-        """Remove empty partitions from `self._partitions` to avoid triggering excess computation."""
+    def _filter_empties(self, compute_metadata=True):
+        """
+        Remove empty partitions from `self._partitions` to avoid triggering excess computation.
+
+        Parameters
+        ----------
+        compute_metadata : bool, default: True
+            Trigger the computations for partition sizes and labels if they're not done already.
+        """
+        if not compute_metadata and (
+            self._index_cache is None
+            or self._columns_cache is None
+            or self._row_lengths_cache is None
+            or self._column_widths_cache is None
+        ):
+            # do not trigger the computations
+            return
+
         if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
             # This is the case for an empty frame. We don't want to completely remove
             # all metadata and partitions so for the moment, we won't prune if the frame
@@ -1371,11 +1420,11 @@ class PandasDataframe(ClassLogger):
                 # line up with the index of the data based on how pandas creates a
                 # DataFrame from a Series.
                 result = pandas.DataFrame(series_result).T
-                result.index = ["__reduced__"]
+                result.index = [MODIN_UNNAMED_SERIES_LABEL]
             else:
                 result = pandas.DataFrame(series_result)
                 if isinstance(series_result, pandas.Series):
-                    result.columns = ["__reduced__"]
+                    result.columns = [MODIN_UNNAMED_SERIES_LABEL]
             return result
 
         return _tree_reduce_func
@@ -1398,7 +1447,7 @@ class PandasDataframe(ClassLogger):
         """
         new_axes, new_axes_lengths = [0, 0], [0, 0]
 
-        new_axes[axis] = ["__reduced__"]
+        new_axes[axis] = [MODIN_UNNAMED_SERIES_LABEL]
         new_axes[axis ^ 1] = self.axes[axis ^ 1]
 
         new_axes_lengths[axis] = [1]
@@ -1707,13 +1756,14 @@ class PandasDataframe(ClassLogger):
             return df.rename(index=new_row_labels, columns=new_col_labels, level=level)
 
         new_parts = self._partition_mgr_cls.map_partitions(self._partitions, map_fn)
+        new_dtypes = None if self._dtypes is None else self._dtypes.set_axis(new_cols)
         return self.__constructor__(
             new_parts,
             new_index,
             new_cols,
             self._row_lengths,
             self._column_widths,
-            self._dtypes,
+            new_dtypes,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -1852,17 +1902,15 @@ class PandasDataframe(ClassLogger):
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
             axis.value, self._partitions, condition, keep_partitioning=True
         )
+
         new_axes, new_lengths = [0, 0], [0, 0]
 
         new_axes[axis.value] = self.axes[axis.value]
-        new_axes[axis.value ^ 1] = self._compute_axis_labels(
-            axis.value ^ 1, new_partitions
-        )
-
         new_lengths[axis.value] = self._axes_lengths[axis.value]
-        new_lengths[
-            axis.value ^ 1
-        ] = None  # We do not know what the resulting widths will be
+        (
+            new_axes[axis.value ^ 1],
+            new_lengths[axis.value ^ 1],
+        ) = self._compute_axis_labels_and_lengths(axis.value ^ 1, new_partitions)
 
         return self.__constructor__(
             new_partitions,
@@ -1912,12 +1960,18 @@ class PandasDataframe(ClassLogger):
             axis.value, self._partitions, func, keep_partitioning=True
         )
         if axis == Axis.COL_WISE:
-            new_index = self._compute_axis_labels(0, partitions)
-            new_columns = self.columns
+            new_index, row_lengths = self._compute_axis_labels_and_lengths(
+                0, partitions
+            )
+            new_columns, column_widths = self.columns, self._column_widths_cache
         else:
-            new_index = self.index
-            new_columns = self._compute_axis_labels(1, partitions)
-        return self.__constructor__(partitions, new_index, new_columns)
+            new_index, row_lengths = self.index, self._row_lengths_cache
+            new_columns, column_widths = self._compute_axis_labels_and_lengths(
+                1, partitions
+            )
+        return self.__constructor__(
+            partitions, new_index, new_columns, row_lengths, column_widths
+        )
 
     @lazy_metadata_decorator(apply_axis="both")
     def apply_full_axis(
@@ -2238,6 +2292,20 @@ class PandasDataframe(ClassLogger):
             passed_len += len(internal)
         return result_dict
 
+    def __make_init_labels_args(self, partitions, index, columns) -> dict:
+        kw = {}
+        kw["index"], kw["row_lengths"] = (
+            self._compute_axis_labels_and_lengths(0, partitions)
+            if index is None
+            else (index, None)
+        )
+        kw["columns"], kw["column_widths"] = (
+            self._compute_axis_labels_and_lengths(1, partitions)
+            if columns is None
+            else (columns, None)
+        )
+        return kw
+
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_select_indices(
         self,
@@ -2317,14 +2385,8 @@ class PandasDataframe(ClassLogger):
             keep_remaining,
         )
 
-        new_axes = [
-            self._compute_axis_labels(i, new_partitions)
-            if new_axis is None
-            else new_axis
-            for i, new_axis in enumerate([new_index, new_columns])
-        ]
-
-        return self.__constructor__(new_partitions, *new_axes)
+        kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
+        return self.__constructor__(new_partitions, **kw)
 
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_full_axis(
@@ -2391,25 +2453,14 @@ class PandasDataframe(ClassLogger):
             keep_partitioning=True,
         )
         # Index objects for new object creation. This is shorter than if..else
-        new_axes = [
-            self._compute_axis_labels(i, new_partitions)
-            if new_axis is None
-            else new_axis
-            for i, new_axis in enumerate([new_index, new_columns])
-        ]
+        kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
         if dtypes == "copy":
-            dtypes = self._dtypes
+            kw["dtypes"] = self._dtypes
         elif dtypes is not None:
-            dtypes = pandas.Series(
-                [np.dtype(dtypes)] * len(new_axes[1]), index=new_axes[1]
+            kw["dtypes"] = pandas.Series(
+                [np.dtype(dtypes)] * len(kw["columns"]), index=kw["columns"]
             )
-        result = self.__constructor__(
-            new_partitions,
-            *new_axes,
-            None,
-            None,
-            dtypes,
-        )
+        result = self.__constructor__(new_partitions, **kw)
         if new_index is not None:
             result.synchronize_labels(axis=0)
         if new_columns is not None:
@@ -2623,6 +2674,18 @@ class PandasDataframe(ClassLogger):
             New Modin DataFrame.
         """
         axis = Axis(axis)
+        new_widths = None
+
+        def _compute_new_widths():
+            widths = None
+            if self._column_widths_cache is not None and all(
+                o._column_widths_cache is not None for o in others
+            ):
+                widths = self._column_widths_cache + [
+                    width for o in others for width in o._column_widths_cache
+                ]
+            return widths
+
         # Fast path for equivalent columns and partitioning
         if (
             axis == Axis.ROW_WISE
@@ -2642,6 +2705,8 @@ class PandasDataframe(ClassLogger):
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
             new_lengths = self._row_lengths_cache
+            # we can only do this for COL_WISE because `concat` might rebalance partitions for ROW_WISE
+            new_widths = _compute_new_widths()
         else:
             (
                 left_parts,
@@ -2653,6 +2718,7 @@ class PandasDataframe(ClassLogger):
             )
             if axis == Axis.COL_WISE:
                 new_lengths = partition_sizes_along_axis
+                new_widths = _compute_new_widths()
             else:
                 new_widths = partition_sizes_along_axis
         new_partitions = self._partition_mgr_cls.concat(
@@ -2688,15 +2754,15 @@ class PandasDataframe(ClassLogger):
             # frame. Typically, if we know the width for any partition in a
             # column, we know the width for the first partition in the column.
             # So just check the widths of the first row of partitions.
-            new_widths = []
-            if new_partitions.size > 0:
-                for part in new_partitions[0]:
-                    if part._width_cache is not None:
-                        new_widths.append(part.width())
-                    else:
-                        new_widths = None
-                        break
-
+            if not new_widths:
+                new_widths = []
+                if new_partitions.size > 0:
+                    for part in new_partitions[0]:
+                        if part._width_cache is not None:
+                            new_widths.append(part.width())
+                        else:
+                            new_widths = None
+                            break
         return self.__constructor__(
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
@@ -2794,14 +2860,8 @@ class PandasDataframe(ClassLogger):
         new_partitions = self._partition_mgr_cls.groupby_reduce(
             axis, self._partitions, by_parts, map_func, reduce_func, apply_indices
         )
-        new_axes = [
-            self._compute_axis_labels(i, new_partitions)
-            if new_axis is None
-            else new_axis
-            for i, new_axis in enumerate([new_index, new_columns])
-        ]
-
-        return self.__constructor__(new_partitions, *new_axes)
+        kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
+        return self.__constructor__(new_partitions, **kw)
 
     @classmethod
     def from_pandas(cls, df):
@@ -3001,7 +3061,7 @@ class PandasDataframe(ClassLogger):
         ProtocolDataframe
             A dataframe object following the dataframe protocol specification.
         """
-        from modin.core.dataframe.pandas.exchange.dataframe_protocol.dataframe import (
+        from modin.core.dataframe.pandas.interchange.dataframe_protocol.dataframe import (
             PandasProtocolDataframe,
         )
 
@@ -3034,7 +3094,7 @@ class PandasDataframe(ClassLogger):
                 "`df` does not support DataFrame exchange protocol, i.e. `__dataframe__` method"
             )
 
-        from modin.core.dataframe.pandas.exchange.dataframe_protocol.from_dataframe import (
+        from modin.core.dataframe.pandas.interchange.dataframe_protocol.from_dataframe import (
             from_dataframe_to_pandas,
         )
 

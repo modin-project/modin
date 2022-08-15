@@ -13,6 +13,7 @@
 
 import pytest
 import numpy as np
+from packaging import version
 import pandas
 from pandas.errors import ParserWarning
 import pandas._libs.lib as lib
@@ -45,6 +46,7 @@ import shutil
 import sqlalchemy as sa
 import csv
 import tempfile
+from typing import Dict
 
 from .utils import (
     check_file_leaks,
@@ -198,6 +200,22 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
         assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
     finally:
         teardown_test_files([unique_filename_modin, unique_filename_pandas])
+
+
+@pytest.fixture
+def make_parquet_dir():
+    with tempfile.TemporaryDirectory() as tmp_dir:
+
+        def _make_parquet_dir(
+            dfs_by_filename: Dict[str, pandas.DataFrame], row_group_size: int
+        ):
+            for filename, df in dfs_by_filename.items():
+                df.to_parquet(
+                    os.path.join(tmp_dir, filename), row_group_size=row_group_size
+                )
+            return tmp_dir
+
+        yield _make_parquet_dir
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
@@ -1021,16 +1039,9 @@ class TestCsv:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
-    def test_read_csv_default_to_pandas_url(self):
-        # We haven't implemented read_csv from https, but if it's implemented, then this needs to change
-        if self._has_pandas_fallback_reason():
-            warning_match = "No such file"
-        else:
-            warning_match = ""
+    def test_read_csv_url(self):
         eval_io(
             fn_name="read_csv",
-            modin_warning=UserWarning,
-            modin_warning_str_match=warning_match,
             # read_csv kwargs
             filepath_or_buffer="https://raw.githubusercontent.com/modin-project/modin/master/modin/pandas/test/data/blah.csv",
             # It takes about ~17Gb of RAM for Omnisci to import the whole table from this test
@@ -1205,14 +1216,15 @@ class TestCsv:
             ),
         ],
     )
-    def test_read_csv_file_handle(self, read_mode, make_csv_file):
-
+    @pytest.mark.parametrize("buffer_start_pos", [0, 10])
+    def test_read_csv_file_handle(self, read_mode, make_csv_file, buffer_start_pos):
         unique_filename = get_unique_filename()
         make_csv_file(filename=unique_filename)
 
         with open(unique_filename, mode=read_mode) as buffer:
+            buffer.seek(buffer_start_pos)
             df_pandas = pandas.read_csv(buffer)
-            buffer.seek(0)
+            buffer.seek(buffer_start_pos)
             df_modin = pd.read_csv(buffer)
             df_equals(df_modin, df_pandas)
 
@@ -1333,17 +1345,20 @@ class TestTable:
 
 class TestParquet:
     @pytest.mark.parametrize("columns", [None, ["col1"]])
+    @pytest.mark.parametrize("row_group_size", [None, 100, 1000, 10_000])
+    @pytest.mark.parametrize("engine", ["auto", "pyarrow", "fastparquet"])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet(self, make_parquet_file, columns):
+    def test_read_parquet(self, make_parquet_file, columns, row_group_size, engine):
         unique_filename = get_unique_filename(extension="parquet")
-        make_parquet_file(filename=unique_filename)
+        make_parquet_file(filename=unique_filename, row_group_size=row_group_size)
 
         eval_io(
             fn_name="read_parquet",
             # read_parquet kwargs
+            engine=engine,
             path=unique_filename,
             columns=columns,
         )
@@ -1368,71 +1383,133 @@ class TestParquet:
             parquet_df[col]
 
     @pytest.mark.parametrize("columns", [None, ["col1"]])
+    @pytest.mark.parametrize("row_group_size", [None, 100, 1000, 10_000])
+    @pytest.mark.parametrize(
+        "rows_per_file", [[1000] * 40, [0, 0, 40_000], [10_000, 10_000] + [100] * 200]
+    )
+    @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet_directory(self, make_parquet_file, columns):  #
+    def test_read_parquet_directory(
+        self, make_parquet_dir, columns, row_group_size, rows_per_file, engine
+    ):
+        num_cols = DATASET_SIZE_DICT.get(
+            TestDatasetSize.get(), DATASET_SIZE_DICT["Small"]
+        )
+        dfs_by_filename = {}
+        start_row = 0
+        for i, length in enumerate(rows_per_file):
+            end_row = start_row + length
+            dfs_by_filename[f"{i}.parquet"] = pandas.DataFrame(
+                {f"col{x + 1}": np.arange(start_row, end_row) for x in range(num_cols)}
+            )
+            start_row = end_row
+        path = make_parquet_dir(dfs_by_filename, row_group_size)
 
-        unique_filename = get_unique_filename(extension=None)
-        make_parquet_file(filename=unique_filename, directory=True)
+        # There are specific files that PyArrow will try to ignore by default
+        # in a parquet directory. One example are files that start with '_'. Our
+        # previous implementation tried to read all files in a parquet directory,
+        # but we now make use of PyArrow to ensure the directory is valid.
+        with open(os.path.join(path, "_committed_file"), "w+") as f:
+            f.write("testingtesting")
+
         eval_io(
             fn_name="read_parquet",
             # read_parquet kwargs
-            path=unique_filename,
+            engine=engine,
+            path=path,
             columns=columns,
         )
 
+    @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
     @pytest.mark.parametrize("columns", [None, ["col1"]])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet_partitioned_directory(self, make_parquet_file, columns):
+    def test_read_parquet_partitioned_directory(
+        self, make_parquet_file, columns, engine
+    ):
         unique_filename = get_unique_filename(extension=None)
         make_parquet_file(filename=unique_filename, partitioned_columns=["col1"])
 
         eval_io(
             fn_name="read_parquet",
             # read_parquet kwargs
+            engine=engine,
             path=unique_filename,
             columns=columns,
         )
 
+    @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet_pandas_index(self):
+    def test_read_parquet_pandas_index(self, engine):
         # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
         unique_filename = get_unique_filename(extension="parquet")
         pandas_df = pandas.DataFrame(
             {
                 "idx": np.random.randint(0, 100_000, size=2000),
+                "idx_categorical": pandas.Categorical(["y", "z"] * 1000),
+                # Can't do interval index right now because of this bug fix that is planned
+                # to be apart of the pandas 1.5.0 release: https://github.com/pandas-dev/pandas/pull/46034
+                # "idx_interval": pandas.interval_range(start=0, end=2000),
+                "idx_periodrange": pandas.period_range(
+                    start="2017-01-01", periods=2000
+                ),
                 "A": np.random.randint(0, 100_000, size=2000),
                 "B": ["a", "b"] * 1000,
                 "C": ["c"] * 2000,
             }
         )
-        try:
-            pandas_df.set_index("idx").to_parquet(unique_filename)
-            # read the same parquet using modin.pandas
-            df_equals(
-                pd.read_parquet(unique_filename), pandas.read_parquet(unique_filename)
+        # Older versions of pyarrow do not support Arrow to Parquet
+        # schema conversion for duration[ns]
+        # https://issues.apache.org/jira/browse/ARROW-6780
+        if version.parse(pa.__version__) >= version.parse("8.0.0"):
+            pandas_df["idx_timedelta"] = pandas.timedelta_range(
+                start="1 day", periods=2000
             )
 
+        # There is a non-deterministic bug in the fastparquet engine when we
+        # try to set the index to the datetime column. Please see:
+        # https://github.com/dask/fastparquet/issues/796
+        if engine == "pyarrow":
+            pandas_df["idx_datetime"] = pandas.date_range(
+                start="1/1/2018", periods=2000
+            )
+
+        try:
+            for col in pandas_df.columns:
+                if col.startswith("idx"):
+                    pandas_df.set_index(col).to_parquet(unique_filename)
+                    # read the same parquet using modin.pandas
+                    eval_io(
+                        "read_parquet",
+                        # read_parquet kwargs
+                        path=unique_filename,
+                        engine=engine,
+                    )
+
             pandas_df.set_index(["idx", "A"]).to_parquet(unique_filename)
-            df_equals(
-                pd.read_parquet(unique_filename), pandas.read_parquet(unique_filename)
+            eval_io(
+                "read_parquet",
+                # read_parquet kwargs
+                path=unique_filename,
+                engine=engine,
             )
         finally:
             os.remove(unique_filename)
 
+    @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet_pandas_index_partitioned(self):
+    def test_read_parquet_pandas_index_partitioned(self, engine):
         # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
         unique_filename = get_unique_filename(extension="parquet")
         pandas_df = pandas.DataFrame(
@@ -1446,48 +1523,60 @@ class TestParquet:
         try:
             pandas_df.set_index("idx").to_parquet(unique_filename, partition_cols=["A"])
             # read the same parquet using modin.pandas
-            df_equals(
-                pd.read_parquet(unique_filename), pandas.read_parquet(unique_filename)
+            eval_io(
+                "read_parquet",
+                # read_parquet kwargs
+                path=unique_filename,
+                engine=engine,
             )
         finally:
             shutil.rmtree(unique_filename)
 
+    @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet_hdfs(self):
+    def test_read_parquet_hdfs(self, engine):
         eval_io(
             fn_name="read_parquet",
             # read_parquet kwargs
             path="modin/pandas/test/data/hdfs.parquet",
+            engine=engine,
         )
 
     @pytest.mark.parametrize("path_type", ["url", "object"])
+    @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet_s3(self, path_type):
+    def test_read_parquet_s3(self, path_type, engine):
         dataset_url = "s3://modin-datasets/testing/test_data.parquet"
         if path_type == "object":
             import s3fs
 
             fs = s3fs.S3FileSystem(anon=True)
             with fs.open(dataset_url, "rb") as file_obj:
-                eval_io("read_parquet", path=file_obj)
+                eval_io("read_parquet", path=file_obj, engine=engine)
         else:
             if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
                 pytest.xfail(
                     reason="older pandas.read_parquet does not support storage_options"
                 )
-            eval_io("read_parquet", path=dataset_url, storage_options={"anon": True})
+            eval_io(
+                "read_parquet",
+                path=dataset_url,
+                storage_options={"anon": True},
+                engine=engine,
+            )
 
+    @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet_without_metadata(self):
+    def test_read_parquet_without_metadata(self, engine):
         """Test that Modin can read parquet files not written by pandas."""
         from pyarrow import csv
         from pyarrow import parquet
@@ -1508,19 +1597,23 @@ class TestParquet:
             t = csv.read_csv(csv_fname)
             parquet.write_table(t, parquet_fname)
 
-            df_equals(
-                pd.read_parquet(parquet_fname), pandas.read_parquet(parquet_fname)
+            eval_io(
+                "read_parquet",
+                # read_parquet kwargs
+                path=parquet_fname,
+                engine=engine,
             )
         finally:
             teardown_test_files([parquet_fname, csv_fname])
 
-    def test_read_empty_parquet_file(self):
+    @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
+    def test_read_empty_parquet_file(self, engine):
         test_df = pandas.DataFrame()
         with tempfile.TemporaryDirectory() as directory:
             path = f"{directory}/data"
             os.makedirs(path)
             test_df.to_parquet(path + "/part-00000.parquet")
-            eval_io(fn_name="read_parquet", path=path)
+            eval_io(fn_name="read_parquet", path=path, engine=engine)
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
