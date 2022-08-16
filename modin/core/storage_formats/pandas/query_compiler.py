@@ -29,6 +29,7 @@ from pandas.core.dtypes.common import (
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
     is_datetime64_any_dtype,
+    is_bool_dtype,
 )
 from pandas.core.base import DataError
 from collections.abc import Iterable
@@ -2149,23 +2150,35 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Map across rows/columns
 
     # __getitem__ methods
+    __getitem_bool = Binary.register(
+        lambda df, r: df[r], join_type="left", labels="drop"
+    )
+
+    def __validate_bool_indexer(self, indexer):
+        if len(indexer) != len(self.index):
+            raise ValueError(
+                f"Item wrong length {len(indexer)} instead of {len(self.index)}."
+            )
+        if isinstance(indexer, pandas.Series) and not indexer.equals(self.index):
+            warnings.warn(
+                "Boolean Series key will be reindexed to match DataFrame index.",
+                PendingDeprecationWarning,
+                stacklevel=4,
+            )
+
     def getitem_array(self, key):
-        # TODO: dont convert to pandas for array indexing
         if isinstance(key, type(self)):
+            # here we check for a subset of bool indexers only to simplify the code;
+            # there could (potentially) be more of those, but we assume the most frequent
+            # ones are just of bool dtype
+            if len(key.dtypes) == 1 and is_bool_dtype(key.dtypes[0]):
+                self.__validate_bool_indexer(key.index)
+                return self.__getitem_bool(key, broadcast=True, dtypes="copy")
+
             key = key.to_pandas().squeeze(axis=1)
+
         if is_bool_indexer(key):
-            if isinstance(key, pandas.Series) and not key.index.equals(self.index):
-                warnings.warn(
-                    "Boolean Series key will be reindexed to match DataFrame index.",
-                    PendingDeprecationWarning,
-                    stacklevel=3,
-                )
-            elif len(key) != len(self.index):
-                raise ValueError(
-                    "Item wrong length {} instead of {}.".format(
-                        len(key), len(self.index)
-                    )
-                )
+            self.__validate_bool_indexer(key)
             key = check_bool_indexer(self.index, key)
             # We convert to a RangeIndex because getitem_row_array is expecting a list
             # of indices, and RangeIndex will give us the exact indices of each boolean
