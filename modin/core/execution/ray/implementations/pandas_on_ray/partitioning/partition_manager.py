@@ -107,7 +107,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         list
             The objects wrapped by `partitions`.
         """
-        return ray.get([partition._data for partition in partitions])
+        return ray.get([partition.list_of_blocks[0] for partition in partitions])
 
     @classmethod
     def wait_partitions(cls, partitions):
@@ -122,7 +122,8 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             NumPy array with ``PandasDataframePartition``-s.
         """
         ray.wait(
-            [partition._data for partition in partitions], num_returns=len(partitions)
+            [partition.list_of_blocks[0] for partition in partitions],
+            num_returns=len(partitions),
         )
 
     @classmethod

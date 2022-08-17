@@ -128,7 +128,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         result = [None] * len(self.list_of_block_partitions)
         for idx, partition in enumerate(self.list_of_block_partitions):
             partition.drain_call_queue()
-            result[idx] = partition._data
+            result[idx] = partition.list_of_blocks[0]
         return result
 
     @property

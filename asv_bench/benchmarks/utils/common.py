@@ -504,20 +504,14 @@ def execute(
             return
 
         # compatibility with old Modin versions
-        all(
-            map(
-                lambda partition: partition.drain_call_queue() or True,
-                partitions,
-            )
-        )
         if ASV_USE_ENGINE == "ray":
             from ray import wait
 
-            all(map(lambda partition: wait([partition._data]), partitions))
+            all(map(lambda partition: wait([partition.list_of_blocks[0]]), partitions))
         elif ASV_USE_ENGINE == "dask":
             from dask.distributed import wait
 
-            all(map(lambda partition: wait(partition._data), partitions))
+            all(map(lambda partition: wait(partition.list_of_blocks[0]), partitions))
         elif ASV_USE_ENGINE == "python":
             pass
 

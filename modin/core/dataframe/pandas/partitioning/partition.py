@@ -51,6 +51,11 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
+    @property
+    def list_of_blocks(self):
+        self.drain_call_queue()
+        return [self._data]
+
     def apply(self, func, *args, **kwargs):
         """
         Apply a function to the object wrapped by this partition.

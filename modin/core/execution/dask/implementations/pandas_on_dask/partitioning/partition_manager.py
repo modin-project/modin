@@ -49,7 +49,9 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         list
             The objects wrapped by `partitions`.
         """
-        return DaskWrapper.materialize([partition._data for partition in partitions])
+        return DaskWrapper.materialize(
+            [partition.list_of_blocks[0] for partition in partitions]
+        )
 
     @classmethod
     def wait_partitions(cls, partitions):
@@ -63,4 +65,7 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         partitions : np.ndarray
             NumPy array with ``PandasDataframePartition``-s.
         """
-        wait([partition._data for partition in partitions], return_when="ALL_COMPLETED")
+        wait(
+            [partition.list_of_blocks[0] for partition in partitions],
+            return_when="ALL_COMPLETED",
+        )

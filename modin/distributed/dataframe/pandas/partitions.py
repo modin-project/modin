@@ -58,12 +58,15 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
             [p.drain_call_queue() for p in modin_frame._partitions.flatten()]
             if get_ip:
                 return [
-                    [(partition._ip_cache, partition._data) for partition in row]
+                    [
+                        (partition._ip_cache, partition.list_of_blocks[0])
+                        for partition in row
+                    ]
                     for row in modin_frame._partitions
                 ]
             else:
                 return [
-                    [partition._data for partition in row]
+                    [partition.list_of_blocks[0] for partition in row]
                     for row in modin_frame._partitions
                 ]
 

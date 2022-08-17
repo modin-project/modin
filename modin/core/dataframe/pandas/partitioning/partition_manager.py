@@ -1289,7 +1289,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 [
                     part.apply(
                         func,
-                        right[row_idx][col_idx]._data,
+                        right[row_idx][col_idx].list_of_blocks[0],
                     )
                     for col_idx, part in enumerate(left[row_idx])
                 ]
