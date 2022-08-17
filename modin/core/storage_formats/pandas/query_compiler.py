@@ -417,7 +417,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     cond._modin_frame,
                     other._modin_frame,
                 ],
-                join_type="left",
+                join_type=None,
             )
         # This will be a Series of scalars to be applied based on the condition
         # dataframe.
@@ -429,14 +429,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame.nary_op(
                 where_builder_series, [cond._modin_frame], join_type="left"
             )
-        result = self.__constructor__(new_modin_frame)
-        # The trinary operation may reorder rows or columns, but where requires
-        # that we keep the original index and columns
-        if not result.index.equals(self.index):
-            result = result.reindex(axis=0, labels=self.index)
-        if not result.columns.equals(self.columns):
-            result = result.reindex(axis=1, labels=self.columns)
-        return result
+        return self.__constructor__(new_modin_frame)
 
     def merge(self, right, **kwargs):
         how = kwargs.get("how", "inner")
