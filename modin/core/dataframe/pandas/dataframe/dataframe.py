@@ -2452,9 +2452,9 @@ class PandasDataframe(ClassLogger):
             new_column_widths = self._column_widths_cache
 
             if axis == 0:
-                if sum(new_column_widths) != len(new_axes[1]):
-                    # previous cache isn't valid
-                    new_column_widths = None
+                # if sum(new_column_widths) != len(new_axes[1]):
+                #    # previous cache isn't valid
+                #    new_column_widths = None
                 if sum(new_row_lengths) != len(new_axes[0]):
                     # the case when an axis partition tries to save its partitioning
                     # `maintain_partitioning` arg
@@ -2468,9 +2468,9 @@ class PandasDataframe(ClassLogger):
                             len(new_partitions) - len(new_row_lengths)
                         )
             elif axis == 1:
-                if sum(new_row_lengths) != len(new_axes[0]):
-                    # previous cache isn't valid
-                    new_row_lengths = None
+                # if sum(new_row_lengths) != len(new_axes[0]):
+                #    # previous cache isn't valid
+                #    new_row_lengths = None
                 if sum(new_column_widths) != len(new_axes[1]):
                     # the case when a axis partition tries to save its partitioning
                     # `maintain_partitioning` arg
