@@ -1265,7 +1265,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
     @wait_computations_if_benchmark_mode
     def nary_operation(cls, left, func, right: list):
         r"""
-        Apply a function that requires multiple ``PandasDataframe`` objects.
+        Apply an n-ary operation to multiple ``PandasDataframe`` objects.
 
         This method assumes that all the partitions of the dataframes in left
         and right have the same dimensions. For each position i, j in each

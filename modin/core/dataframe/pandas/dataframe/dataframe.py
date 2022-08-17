@@ -2525,7 +2525,7 @@ class PandasDataframe(ClassLogger):
     @lazy_metadata_decorator(apply_axis="both")
     def nary_op(self, op, right_frames: list, join_type="outer"):
         """
-        Perform an operation that requires joining with other Modin DataFrame(s).
+        Perform an n-opary operation by joining with other Modin DataFrame(s).
 
         Parameters
         ----------
@@ -2551,11 +2551,11 @@ class PandasDataframe(ClassLogger):
             self.__constructor__(
                 right_parts,
                 joined_index,
-                right_frames[0].columns,
+                right_frame.columns,
                 row_lengths,
-                right_frames[0]._column_widths,
+                right_frame._column_widths,
             )
-            for right_parts in list_of_right_parts
+            for right_parts, right_frame in zip(list_of_right_parts, right_frames)
         ]
 
         (

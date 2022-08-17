@@ -430,7 +430,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 where_builder_series, [cond._modin_frame], join_type="left"
             )
         result = self.__constructor__(new_modin_frame)
-        # The binary operation may reorder rows or columns, but where requires
+        # The trinary operation may reorder rows or columns, but where requires
         # that we keep the original index and columns
         if not result.index.equals(self.index):
             result = result.reindex(axis=0, labels=self.index)
