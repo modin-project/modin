@@ -44,6 +44,7 @@ Key Features and Updates
   * FIX-#4907: Implement `radd` for Series and DataFrame (#4908)
   * FIX-#4818, PERF-#4825: Fix where by using the new n-ary operator (#4820)    
   * FIX-#4845: Fix KeyError from `__getitem_bool` for single row dataframes (#4845)
+  * FIX-#4734: Handle Series.apply when return type is a DataFrame (#4830)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
