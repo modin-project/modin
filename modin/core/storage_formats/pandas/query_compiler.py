@@ -2381,13 +2381,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # UDF (apply and agg) methods
     # There is a wide range of behaviors that are supported, so a lot of the
     # logic can get a bit convoluted.
-    def apply(self, func, axis, is_series, *args, **kwargs):
+    def apply(self, func, axis, *args, **kwargs):
         # if any of args contain modin object, we should
         # convert it to pandas
 
         # TODO(vkarthik): currently is_series only works for callable
         # functions that return Series objects. We should handle this
         # for other cases as well.
+        is_series = kwargs.pop("is_series", False)
+
         args = try_cast_to_pandas(args)
         kwargs = try_cast_to_pandas(kwargs)
         if isinstance(func, dict):

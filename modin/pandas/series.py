@@ -680,9 +680,10 @@ class Series(SeriesCompat, BasePandasDataset):
                     result = self._query_compiler.apply(f, axis=1, is_series=True)
                 else:
                     result = self.map(f)._query_compiler
-        from .dataframe import DataFrame
 
         if return_type == "DataFrame":
+            from .dataframe import DataFrame
+
             result = DataFrame(query_compiler=result)
         elif return_type == "Series":
             result = Series(query_compiler=result)
