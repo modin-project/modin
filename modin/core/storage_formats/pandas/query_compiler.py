@@ -3252,7 +3252,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Cat operations
     def cat_codes(self):
-
         def func(df) -> np.ndarray:
             # equiv: df.iloc[:, 0]
             ser = df._ixs(0, axis=1)
