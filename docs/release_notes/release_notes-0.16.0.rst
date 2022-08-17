@@ -61,6 +61,7 @@ Key Features and Updates
   * REFACTOR-#4774: remove `_build_treereduce_func` call from `_compute_dtypes` (#4775)
   * REFACTOR-#4750: Delete BaseDataframeAxisPartition.shuffle (#4751)
   * REFACTOR-#4722: Stop suppressing undefined name lint (#4723)
+  * REFACTOR-#4832: unify `split_result_of_axis_func_pandas` (#4831)
   * REFACTOR-#4796: Introduce constant for __reduced__ column name (#4799)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
