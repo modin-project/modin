@@ -260,6 +260,15 @@ def test_iloc(request, data):
             modin_df.iloc[0, 1]
 
 
+def test_iloc_partitioned_dtypes():
+    # See issue #4675
+    modin_df = pd.concat([pd.DataFrame(['a']), pd.DataFrame([2])])
+    pandas_df = pandas.concat([pandas.DataFrame(['a']), pandas.DataFrame([2])])
+    modin_result = modin_df.iloc[1:].dtypes
+    pandas_result = pandas_df.iloc[1:].dtypes
+    assert modin_result.equals(pandas_result)
+
+
 @pytest.mark.gpu
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_index(data):

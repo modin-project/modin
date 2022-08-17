@@ -571,6 +571,15 @@ def test_astype_category_large():
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
+def test_infer_objects_single_partition():
+    data = {"a": ["s", 2, 3]}
+    modin_df = pd.DataFrame(data).iloc[1:]
+    pandas_df = pandas.DataFrame(data).iloc[1:]
+    modin_result = modin_df.infer_objects()
+    pandas_result = pandas_df.infer_objects()
+    assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+
 @pytest.mark.parametrize(
     "infer_objects", bool_arg_values, ids=arg_keys("infer_objects", bool_arg_keys)
 )
