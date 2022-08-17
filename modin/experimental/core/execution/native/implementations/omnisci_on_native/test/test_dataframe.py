@@ -2156,5 +2156,18 @@ class TestArrowExecution:
         )
 
 
+class TestNonStrCols:
+    data = {0: [1, 2, 3], "1": [3, 4, 5], 2: [6, 7, 8]}
+
+    def test_sum(self):
+        mdf = pd.DataFrame(self.data).sum()
+        pdf = pandas.DataFrame(self.data).sum()
+        df_equals(mdf, pdf)
+
+    def test_set_index(self):
+        df = pd.DataFrame(self.data)
+        df._query_compiler._modin_frame._set_index(pd.Index([1, 2, 3]))
+
+
 if __name__ == "__main__":
     pytest.main(["-v", __file__])

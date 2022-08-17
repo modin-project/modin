@@ -1927,9 +1927,11 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 index_at = index_at.append_column(field, at.column(i))
 
             index_names = self._mangle_index_names(new_index.names)
-            index_at = index_at.rename_columns(index_names + list(self.columns))
+            index_at = index_at.rename_columns(
+                index_names + [f"F_{c}" for c in self.columns]
+            )
 
-            return self.from_arrow(index_at, index_names, new_index)
+            return self.from_arrow(index_at, index_names, new_index, self.columns)
 
     def reset_index(self, drop):
         """
@@ -2441,7 +2443,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         ]
 
     @classmethod
-    def from_arrow(cls, at, index_cols=None, index=None):
+    def from_arrow(cls, at, index_cols=None, index=None, columns=None):
         """
         Build a frame from an Arrow table.
 
@@ -2455,6 +2457,8 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         index : pandas.Index, optional
             An index to be used by the new frame. Should present
             if `index_cols` is not None.
+        columns : Index or array-like, optional
+            Column labels to use for resulting frame.
 
         Returns
         -------
@@ -2468,15 +2472,18 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             unsupported_cols,
         ) = cls._partition_mgr_cls.from_arrow(at, return_dims=True)
 
-        if index_cols:
+        if columns is not None:
+            new_columns = columns
+            new_index = pd.RangeIndex(at.num_rows) if index is None else index
+        elif index_cols:
             data_cols = [col for col in at.column_names if col not in index_cols]
+            new_columns = pd.Index(data=data_cols, dtype="O")
             new_index = index
         else:
-            data_cols = at.column_names
             assert index is None
+            new_columns = pd.Index(data=at.column_names, dtype="O")
             new_index = pd.RangeIndex(at.num_rows)
 
-        new_columns = pd.Index(data=data_cols, dtype="O")
         new_dtypes = pd.Series(
             [cls._arrow_type_to_dtype(col.type) for col in at.columns],
             index=at.column_names,
