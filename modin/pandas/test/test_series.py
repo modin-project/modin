@@ -4711,3 +4711,30 @@ def test_peculiar_callback():
     modin_series = modin_df["col"].apply(func)
 
     df_equals(modin_series, pandas_series)
+
+
+def test_apply_return_df():
+    modin_df = pd.Series(1).apply(lambda x: pandas.Series([x, x]))
+    pandas_df = pandas.Series(1).apply(lambda x: pandas.Series([x, x]))
+
+    df_equals(modin_df, pandas_df)
+
+    modin_df = pd.Series([2, 4, 6, 0, 1]).apply(lambda x: pandas.Series([x, x + 1]))
+    pandas_df = pandas.Series([2, 4, 6, 0, 1]).apply(
+        lambda x: pandas.Series([x, x + 1])
+    )
+
+    df_equals(modin_df, pandas_df)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_apply_return_df_multiple_partitions(data):
+    modin_series, pandas_series = create_test_series(data)
+    modin_df = modin_series.apply(
+        lambda x: pandas.Series([x, x + 1, x + 2], index=["a", "b", "c"])
+    )
+    pandas_df = pandas_series.apply(
+        lambda x: pandas.Series([x, x + 1, x + 2], index=["a", "b", "c"])
+    )
+
+    df_equals(modin_df, pandas_df)

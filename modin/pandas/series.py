@@ -671,19 +671,28 @@ class Series(SeriesCompat, BasePandasDataset):
             with np.errstate(all="ignore"):
                 if isinstance(f, np.ufunc):
                     return f(self)
-                result = self.map(f)._query_compiler
-        if return_type not in ["DataFrame", "Series"]:
-            # sometimes result can be not a query_compiler, but scalar (for example
-            # for sum or count functions)
-            if isinstance(result, type(self._query_compiler)):
-                return result.to_pandas().squeeze()
-            else:
-                return result
-        else:
-            result = globals()[return_type](query_compiler=result)
+
+                # The return_type is only a DataFrame when we have a function
+                # return a Series object. This is a very particular case that
+                # has to be handled by the underlying pandas.Series apply
+                # function and not our default applymap call.
+                if return_type == "DataFrame":
+                    result = self._query_compiler.apply(f, axis=1, is_series=True)
+                else:
+                    result = self.map(f)._query_compiler
+        from .dataframe import DataFrame
+
+        if return_type == "DataFrame":
+            result = DataFrame(query_compiler=result)
+        elif return_type == "Series":
+            result = Series(query_compiler=result)
             if result.name == self.index[0]:
                 result.name = None
-            return result
+        elif isinstance(result, type(self._query_compiler)):
+            # sometimes result can be not a query_compiler, but scalar (for example
+            # for sum or count functions)
+            return result.to_pandas().squeeze()
+        return result
 
     def argmax(self, axis=None, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
         """

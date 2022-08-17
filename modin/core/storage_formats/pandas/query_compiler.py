@@ -2381,9 +2381,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # UDF (apply and agg) methods
     # There is a wide range of behaviors that are supported, so a lot of the
     # logic can get a bit convoluted.
-    def apply(self, func, axis, *args, **kwargs):
+    def apply(self, func, axis, is_series, *args, **kwargs):
         # if any of args contain modin object, we should
         # convert it to pandas
+
+        # TODO(vkarthik): currently is_series only works for callable
+        # functions that return Series objects. We should handle this
+        # for other cases as well.
         args = try_cast_to_pandas(args)
         kwargs = try_cast_to_pandas(kwargs)
         if isinstance(func, dict):
@@ -2391,7 +2395,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         elif is_list_like(func):
             return self._list_like_func(func, axis, *args, **kwargs)
         else:
-            return self._callable_func(func, axis, *args, **kwargs)
+            return self._callable_func(func, axis, is_series, *args, **kwargs)
 
     def _dict_func(self, func, axis, *args, **kwargs):
         """
@@ -2470,7 +2474,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_modin_frame)
 
-    def _callable_func(self, func, axis, *args, **kwargs):
+    def _callable_func(self, func, axis, is_series, *args, **kwargs):
         """
         Apply passed function to each row/column.
 
@@ -2481,6 +2485,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         axis : {0, 1}
             Target axis to apply function along. 0 means apply to columns,
             1 means apply to rows.
+        is_series : bool
+            Flag that specifies whether we are working on a Series.
         *args : args
             Arguments to pass to the specified function.
         **kwargs : kwargs
@@ -2495,9 +2501,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if callable(func):
             func = wrap_udf_function(func)
 
-        new_modin_frame = self._modin_frame.apply_full_axis(
-            axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
-        )
+        # This flag is set when we are applying a function that returns a
+        # Series object on a Modin Series object. By calling df.squeeze, we
+        # are able to get a Series object that we can call apply on.
+        if is_series:
+            new_modin_frame = self._modin_frame.apply_full_axis(
+                1, lambda df: df.squeeze(axis=1).apply(func, *args, **kwargs)
+            )
+        else:
+            new_modin_frame = self._modin_frame.apply_full_axis(
+                axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
+            )
         return self.__constructor__(new_modin_frame)
 
     # END UDF
