@@ -54,12 +54,12 @@ class PandasDataframePartition(ABC):  # pragma: no cover
     @property
     def list_of_blocks(self):
         """
-        Get actual physical data holded by partition.
+        Get the list of physical partition objects that compose this partition.
 
         Returns
         -------
         list
-            List of objects, specific for concrete execution ([ray.ObjectRef] e.g.)
+            A list of physical partition objects (``ray.ObjectRef``, ``distributed.Future`` e.g.).
         """
         self.drain_call_queue()
         return [self._data]
