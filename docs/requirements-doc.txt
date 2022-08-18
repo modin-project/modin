@@ -16,6 +16,8 @@ ray[default]>=1.4.0,<1.13.0
 # because versions >= 4.0.0 are incompatible with ray<1.13.0.
 protobuf<4.0.0
 git+https://github.com/modin-project/modin.git@master#egg=modin[all]
+# Override to latest version of modin-spreadsheet
+git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
 sphinxcontrib_plantuml
 sphinx-issues
 xgboost
