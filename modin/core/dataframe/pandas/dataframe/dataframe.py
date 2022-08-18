@@ -2569,7 +2569,7 @@ class PandasDataframe(ClassLogger):
             np.array([])
             if len(left_parts) == 0
             or any(len(right_parts) == 0 for right_parts in list_of_right_parts)
-            else self._partition_mgr_cls.nary_operation(
+            else self._partition_mgr_cls.n_ary_operation(
                 left_parts, op, list_of_right_parts
             )
         )

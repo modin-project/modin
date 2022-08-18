@@ -426,7 +426,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def where_builder_series(df, cond):
                 return df.where(cond, other, **kwargs)
 
-            new_modin_frame = self._modin_frame.nary_op(
+            new_modin_frame = self._modin_frame.n_ary_op(
                 where_builder_series, [cond._modin_frame], join_type="left"
             )
         return self.__constructor__(new_modin_frame)
@@ -1878,7 +1878,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         # objects (when `limit` parameter is absent) as it works on two `Series`.
                         return series.fillna(value=value_arg, **kwargs)
 
-                    new_modin_frame = self._modin_frame.nary_op(
+                    new_modin_frame = self._modin_frame.n_ary_op(
                         fillna_builder, [value._modin_frame], join_type="left"
                     )
 

@@ -1270,7 +1270,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         This method assumes that all the partitions of the dataframes in left
         and right have the same dimensions. For each position i, j in each
         dataframe's partitions, the result has a partition at (i, j) whose data
-        is func(let_partitions[i,j], \*each_right_partitions[i,j]).
+        is func(left_partitions[i,j], \*each_right_partitions[i,j]).
 
         Parameters
         ----------
