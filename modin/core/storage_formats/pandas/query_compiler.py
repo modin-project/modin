@@ -411,7 +411,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             cond, type(self)
         ), "Must have the same QueryCompiler subclass to perform this operation"
         if isinstance(other, type(self)):
-            new_modin_frame = self._modin_frame.nary_op(
+            new_modin_frame = self._modin_frame.n_ary_op(
                 lambda df, cond, other: df.where(cond, other, **kwargs),
                 [
                     cond._modin_frame,
