@@ -4,3 +4,5 @@ ipywidgets
 tqdm
 modin[ray]
 modin[spreadsheet]
+# Override modin-spreadsheet to latest version
+git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
