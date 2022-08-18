@@ -20,7 +20,6 @@ import fsspec
 from fsspec.core import url_to_fs
 from fsspec.spec import AbstractBufferedFile
 import numpy as np
-from pathlib import Path
 from packaging import version
 
 from modin.core.storage_formats.pandas.utils import compute_chunksize
@@ -61,7 +60,7 @@ class ColumnStoreDataset:
     """
 
     def __init__(self, path, storage_options):  # noqa : PR01
-        self.path = str(path) if isinstance(path, Path) else path
+        self.path = ColumnStoreDataset._get_path_str_or_handle(path)
         self.storage_options = storage_options
         self._fs_path = None
         self._fs = None
@@ -140,6 +139,25 @@ class ColumnStoreDataset:
             List of columns that should be read from file.
         """
         raise NotImplementedError
+
+    @staticmethod
+    def _get_path_str_or_handle(path):
+        """
+        Return string if path is a PathLike object.
+
+        Parameters
+        ----------
+        path : str, path object or file-like object
+            The filepath of the parquet file in local filesystem or hdfs.
+
+        Returns
+        -------
+        fs_path_str : str, bytes, or file-like object
+            String representation of path or file object
+        """
+        if isinstance(path, os.PathLike):
+            return path.__fspath__()
+        return path
 
     def _get_files(self, files):
         """
