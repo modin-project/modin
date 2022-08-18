@@ -2523,7 +2523,7 @@ class PandasDataframe(ClassLogger):
         return (reindexed_frames[0], reindexed_frames[1:], joined_index, base_lengths)
 
     @lazy_metadata_decorator(apply_axis="both")
-    def nary_op(self, op, right_frames: list, join_type="outer"):
+    def n_ary_op(self, op, right_frames: list, join_type="outer"):
         """
         Perform an n-opary operation by joining with other Modin DataFrame(s).
 

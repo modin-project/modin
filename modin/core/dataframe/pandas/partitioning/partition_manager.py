@@ -1263,7 +1263,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def nary_operation(cls, left, func, right: list):
+    def n_ary_operation(cls, left, func, right: list):
         r"""
         Apply an n-ary operation to multiple ``PandasDataframe`` objects.
 
