@@ -1352,7 +1352,7 @@ class TestParquet:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet(self, make_parquet_file, columns, row_group_size, engine):
-        unique_filename = get_unique_filename(extension="parquet")
+        unique_filename = Path(get_unique_filename(extension="parquet"))
         make_parquet_file(filename=unique_filename, row_group_size=row_group_size)
 
         eval_io(
@@ -1642,6 +1642,26 @@ class TestParquet:
             read_df = pd.read_parquet(path)
 
             df_equals(test_df, read_df)
+
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
+    def test_read_parquet_glob_path(self):
+        test_dfs = [
+            pandas.DataFrame(np.arange(1, 16).reshape(3, 5)).add_prefix("col")
+            for _ in range(5)
+        ]
+        pandas_df = pd.concat(test_dfs)
+
+        with tempfile.TemporaryDirectory() as directory:
+            for idx, test_df in enumerate(test_dfs):
+                test_df.to_parquet(f"{directory}/{idx}.parquet")
+
+            path = Path(directory)
+            files = list(path.glob("**/*.parquet"))
+            modin_df = pd.concat([pd.read_parquet(f) for f in files])
+            df_equals(pandas_df, modin_df)
 
 
 class TestJson:

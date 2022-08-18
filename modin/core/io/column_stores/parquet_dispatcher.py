@@ -20,6 +20,7 @@ import fsspec
 from fsspec.core import url_to_fs
 from fsspec.spec import AbstractBufferedFile
 import numpy as np
+from pathlib import Path
 from packaging import version
 
 from modin.core.storage_formats.pandas.utils import compute_chunksize
@@ -60,7 +61,7 @@ class ColumnStoreDataset:
     """
 
     def __init__(self, path, storage_options):  # noqa : PR01
-        self.path = path
+        self.path = str(path) if isinstance(path, Path) else path
         self.storage_options = storage_options
         self._fs_path = None
         self._fs = None
