@@ -61,6 +61,8 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         list
             A list of physical partition objects (``ray.ObjectRef``, ``distributed.Future`` e.g.).
         """
+        # Defer draining call queue until we get the partitions.
+        # TODO Look into draining call queue at the same time as the task
         self.drain_call_queue()
         return [self._data]
 
