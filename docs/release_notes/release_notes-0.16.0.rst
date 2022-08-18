@@ -34,7 +34,8 @@ Key Features and Updates
   * FIX-#4782: Exclude certain non-parquet files in `read_parquet` (#4783)    
   * FIX-#4808: Set dtypes correctly after column rename (#4809)
   * FIX-#4811: Apply dataframe -> not_dataframe functions to virtual partitions (#4812)
-  * FIX-#4099: Use mangled column names but keep the original when building frames from arrow
+  * FIX-#4099: Use mangled column names but keep the original when building frames from arrow (#4767)
+  * FIX-#4838: Bump up modin-spreadsheet to latest master (#4839)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)

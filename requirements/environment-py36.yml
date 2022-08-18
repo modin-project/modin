@@ -40,7 +40,8 @@ dependencies:
   - jupyter>=1.0.0 # modin-spreadsheet needs that, but it won't install on Windows on Py36 via pip
   - fastparquet
   - pip:
-      - modin-spreadsheet>=0.1.1
+      # Fixes breaking ipywidgets changes, but didn't release yet.
+      - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - tqdm
       - ray[default]>=1.4.0
       # TODO: remove when resolving GH#4398
