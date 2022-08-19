@@ -38,7 +38,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         list
             A list of physical partition objects (``ray.ObjectRef``, ``distributed.Future`` e.g.).
         """
-        # Defer draining call queue (which is hided in `partition.list_of_blocks` call) until we get the partitions.
+        # Defer draining call queue (which is hidden in `partition.list_of_blocks` call) until we get the partitions.
         # TODO Look into draining call queue at the same time as the task
         return [
             partition.list_of_blocks[0] for partition in self.list_of_block_partitions
