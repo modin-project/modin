@@ -21,6 +21,7 @@ import modin.pandas as pd
 from modin.utils import to_pandas
 
 from modin.pandas.test.utils import (
+    create_test_dfs,
     random_state,
     df_equals,
     arg_keys,
@@ -532,8 +533,7 @@ def test_where():
     columns = list("abcdefghij")
 
     frame_data = random_state.randn(100, 10)
-    pandas_df = pandas.DataFrame(frame_data, columns=columns)
-    modin_df = pd.DataFrame(frame_data, columns=columns)
+    modin_df, pandas_df = create_test_dfs(frame_data, columns=columns)
     pandas_cond_df = pandas_df % 5 < 2
     modin_cond_df = modin_df % 5 < 2
 
@@ -544,11 +544,10 @@ def test_where():
     # Test that we choose the right values to replace when `other` == `True`
     # everywhere.
     other_data = np.full(shape=pandas_df.shape, fill_value=True)
-    pandas_other = pandas.DataFrame(other_data, columns=columns)
-    modin_other = pd.DataFrame(other_data, columns=columns)
+    modin_other, pandas_other = create_test_dfs(other_data, columns=columns)
     pandas_result = pandas_df.where(pandas_cond_df, pandas_other)
     modin_result = modin_df.where(modin_cond_df, modin_other)
-    assert all((to_pandas(modin_result) == pandas_result).all())
+    df_equals(modin_result, pandas_result)
 
     other = pandas_df.loc[3]
     pandas_result = pandas_df.where(pandas_cond_df, other, axis=1)

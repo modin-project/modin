@@ -411,6 +411,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             cond, type(self)
         ), "Must have the same QueryCompiler subclass to perform this operation"
         if isinstance(other, type(self)):
+            # Make sure to set join_type=None so the `where` result always has
+            # the same row and column labels as `self`.
             new_modin_frame = self._modin_frame.n_ary_op(
                 lambda df, cond, other: df.where(cond, other, **kwargs),
                 [
