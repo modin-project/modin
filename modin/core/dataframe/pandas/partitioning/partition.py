@@ -51,7 +51,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
-    def apply(self, func, *args, **kwargs):
+    def apply(self, func, *args, other_partition=None, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
 
@@ -61,6 +61,9 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             Function to apply.
         *args : iterable
             Additional positional arguments to be passed in `func`.
+        other_partition : PandasDataframePartition, default: None
+            Another ``PandasDataframePartition`` object to be applied
+            to `func`. This is for operations that are between two data sets.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 

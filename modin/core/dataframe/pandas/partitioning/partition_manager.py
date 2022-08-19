@@ -452,7 +452,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         # load-balance the data as well.
         kw = {
             "num_splits": num_splits,
-            "other_axis_partition": right_partitions,
+            "other_partition": right_partitions,
         }
         if lengths:
             kw["_lengths"] = lengths
@@ -1289,7 +1289,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 [
                     part.apply(
                         func,
-                        right[row_idx][col_idx]._data,
+                        other_partition=right[row_idx][col_idx],
                     )
                     for col_idx, part in enumerate(left[row_idx])
                 ]

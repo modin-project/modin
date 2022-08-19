@@ -27,7 +27,7 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         self,
         func,
         num_splits=None,
-        other_axis_partition=None,
+        other_partition=None,
         maintain_partitioning=True,
         **kwargs,
     ):
@@ -41,7 +41,7 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
             the corresponding `BaseDataframePartition` objects.
         num_splits : int, default: None
             The number of times to split the result object.
-        other_axis_partition : BaseDataframeAxisPartition, default: None
+        other_partition : BaseDataframeAxisPartition, default: None
             Another `BaseDataframeAxisPartition` object to be applied
             to func. This is for operations that are between two data sets.
         maintain_partitioning : bool, default: True

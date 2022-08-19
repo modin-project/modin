@@ -286,3 +286,11 @@ def test_empty_df(empty_operand):
         pandas_res = pandas_df_empty + pandas_df_empty
 
     df_equals(modin_res, pandas_res)
+
+
+@pytest.mark.parametrize("size", [1, 25, 50])
+def test_virtual_partitions(size):
+    pd_df = pandas.concat([pandas.DataFrame([i]) for i in range(size)])
+    md_df = pd.concat([pd.DataFrame([i]) for i in range(size)])
+
+    df_equals(pd_df + pd_df, md_df + md_df)

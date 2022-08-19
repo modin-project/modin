@@ -38,7 +38,7 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
         # Unwrap from PandasDataframePartition object for ease of use
         self.list_of_blocks = [obj._data for obj in list_of_blocks]
 
-    def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
+    def apply(self, func, num_splits=None, other_partition=None, **kwargs):
         """
         Apply func to the object in the Plasma store.
 
@@ -48,7 +48,7 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
             The function to apply.
         num_splits : int, optional
             The number of times to split the resulting object.
-        other_axis_partition : PyarrowOnRayDataframeAxisPartition, optional
+        other_partition : PyarrowOnRayDataframeAxisPartition, optional
             Another ``PyarrowOnRayDataframeAxisPartition`` object to apply to
             `func` with this one.
         **kwargs : dict
@@ -66,7 +66,7 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
         if num_splits is None:
             num_splits = len(self.list_of_blocks)
 
-        if other_axis_partition is not None:
+        if other_partition is not None:
             return [
                 PyarrowOnRayDataframePartition(obj)
                 for obj in deploy_ray_func_between_two_axis_partitions.options(
@@ -77,7 +77,7 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
                     num_splits,
                     len(self.list_of_blocks),
                     kwargs,
-                    *(self.list_of_blocks + other_axis_partition.list_of_blocks),
+                    *(self.list_of_blocks + other_partition.list_of_blocks),
                 )
             ]
 

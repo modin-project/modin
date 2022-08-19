@@ -62,7 +62,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         self.drain_call_queue()
         return DaskWrapper.materialize(self._data)
 
-    def apply(self, func, *args, **kwargs):
+    def apply(self, func, *args, other_partition=None, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
 
@@ -72,6 +72,9 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             A function to apply.
         *args : iterable
             Additional positional arguments to be passed in `func`.
+        other_partition : PandasDataframePartition, default: None
+            Another ``PandasDataframePartition`` object to be applied
+            to `func`. This is for operations that are between two data sets.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
@@ -84,6 +87,10 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         -----
         The keyword arguments are sent as a dictionary.
         """
+        if other_partition is not None:
+            other_partition.drain_call_queue()
+            args = (other_partition._data,) + args
+
         call_queue = self.call_queue + [[func, args, kwargs]]
         if len(call_queue) > 1:
             futures = DaskWrapper.deploy(

@@ -267,7 +267,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         func,
         *args,
         num_splits=None,
-        other_axis_partition=None,
+        other_partition=None,
         maintain_partitioning=True,
         **kwargs,
     ):
@@ -282,7 +282,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             Additional positional arguments to be passed in `func`.
         num_splits : int, default: None
             The number of times to split the result object.
-        other_axis_partition : PandasDataframeAxisPartition, default: None
+        other_partition : PandasDataframeAxisPartition, default: None
             Another `PandasDataframeAxisPartition` object to be applied
             to func. This is for operations that are between two data sets.
         maintain_partitioning : bool, default: True
@@ -308,7 +308,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             self.drain_call_queue()
         kwargs["args"] = args
         result = super(PandasOnDaskDataframeVirtualPartition, self).apply(
-            func, num_splits, other_axis_partition, maintain_partitioning, **kwargs
+            func, num_splits, other_partition, maintain_partitioning, **kwargs
         )
         if self.full_axis:
             return result

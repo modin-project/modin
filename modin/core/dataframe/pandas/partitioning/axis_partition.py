@@ -32,7 +32,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         self,
         func,
         num_splits=None,
-        other_axis_partition=None,
+        other_partition=None,
         maintain_partitioning=True,
         **kwargs,
     ):
@@ -45,7 +45,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             The function to apply.
         num_splits : int, default: None
             The number of times to split the result object.
-        other_axis_partition : PandasDataframeAxisPartition, default: None
+        other_partition : PandasDataframeAxisPartition, default: None
             Another `PandasDataframeAxisPartition` object to be applied
             to func. This is for operations that are between two data sets.
         maintain_partitioning : bool, default: True
@@ -66,14 +66,14 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         if num_splits is None:
             num_splits = len(self.list_of_blocks)
 
-        if other_axis_partition is not None:
-            if not isinstance(other_axis_partition, list):
-                other_axis_partition = [other_axis_partition]
+        if other_partition is not None:
+            if not isinstance(other_partition, list):
+                other_partition = [other_partition]
 
             # (other_shape[i-1], other_shape[i]) will indicate slice
             # to restore i-1 axis partition
             other_shape = np.cumsum(
-                [0] + [len(o.list_of_blocks) for o in other_axis_partition]
+                [0] + [len(o.list_of_blocks) for o in other_partition]
             )
 
             return self._wrap_partitions(
@@ -87,7 +87,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                         self.list_of_blocks
                         + [
                             part
-                            for axis_partition in other_axis_partition
+                            for axis_partition in other_partition
                             for part in axis_partition.list_of_blocks
                         ]
                     ),

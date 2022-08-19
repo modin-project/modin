@@ -81,7 +81,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         logger.debug(f"EXIT::Partition.get::{self._identity}")
         return result
 
-    def apply(self, func, *args, **kwargs):
+    def apply(self, func, *args, other_partition=None, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
 
@@ -91,6 +91,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             A function to apply.
         *args : iterable
             Additional positional arguments to be passed in `func`.
+        other_partition : PandasDataframePartition, default: None
+            Another ``PandasDataframePartition`` object to be applied
+            to `func`. This is for operations that are between two data sets.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
@@ -107,6 +110,11 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         logger = get_logger()
         logger.debug(f"ENTER::Partition.apply::{self._identity}")
         data = self._data
+
+        if other_partition is not None:
+            other_partition.drain_call_queue()
+            args = (other_partition._data,) + args
+
         call_queue = self.call_queue + [(func, args, kwargs)]
         if len(call_queue) > 1:
             logger.debug(f"SUBMIT::_apply_list_of_funcs::{self._identity}")
