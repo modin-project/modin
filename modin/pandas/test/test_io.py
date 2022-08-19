@@ -1655,7 +1655,7 @@ class TestParquet:
             pandas.DataFrame(np.arange(1, 16).reshape(3, 5)).add_prefix("col")
             for _ in range(5)
         ]
-        pandas_df = pd.concat(test_dfs)
+        pandas_df = pandas.concat(test_dfs)
 
         with tempfile.TemporaryDirectory() as directory:
             for idx, test_df in enumerate(test_dfs):
