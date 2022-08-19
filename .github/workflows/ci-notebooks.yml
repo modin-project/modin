@@ -44,7 +44,10 @@ jobs:
       - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
         if: matrix.execution != 'omnisci_on_native'
       # install dependencies required for notebooks execution for `pandas_on_ray` and `pandas_on_dask`
-      - run: pip install -r examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
+      # Override modin-spreadsheet install for now
+      - run: |
+          pip install -r examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
+          pip install git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
         if: matrix.execution != 'omnisci_on_native'
       # Build Modin from sources for `omnisci_on_native`
       - run: pip install .
