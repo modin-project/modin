@@ -1002,8 +1002,8 @@ class PandasDataframe(ClassLogger):
         """
         return self.__constructor__(
             self._partitions,
-            self._index_cache,
-            self._columns_cache,
+            self._index_cache.copy() if self._index_cache is not None else None,
+            self._columns_cache.copy() if self._columns_cache is not None else None,
             self._row_lengths_cache,
             self._column_widths_cache,
             self._dtypes,
