@@ -2653,11 +2653,16 @@ class PandasDataframe(ClassLogger):
         if axis == Axis.ROW_WISE:
             new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
-            all_dtypes = [frame._dtypes for frame in [self] + others]
-            if all(dtypes is not None for dtypes in all_dtypes):
-                new_dtypes = pandas.concat(all_dtypes, axis=1).apply(
-                    lambda col: find_common_type(col.values), axis=1
-                )
+            try:
+                all_dtypes = [frame._dtypes for frame in [self] + others]
+                if all(dtypes is not None for dtypes in all_dtypes):
+                    new_dtypes = pandas.concat(all_dtypes, axis=1).apply(
+                        lambda col: find_common_type(col.values), axis=1
+                    )
+            except TypeError:
+                # Cannot interpret 'nan' as a data type;
+                # Case when not all dtypes in a frame are defined
+                pass
             # If we have already cached the length of each row in at least one
             # of the row's partitions, we can build new_lengths for the new
             # frame. Typically, if we know the length for any partition in a
