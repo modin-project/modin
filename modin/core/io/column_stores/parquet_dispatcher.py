@@ -60,7 +60,7 @@ class ColumnStoreDataset:
     """
 
     def __init__(self, path, storage_options):  # noqa : PR01
-        self.path = path
+        self.path = path.__fspath__() if isinstance(path, os.PathLike) else path
         self.storage_options = storage_options
         self._fs_path = None
         self._fs = None

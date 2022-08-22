@@ -1347,12 +1347,15 @@ class TestParquet:
     @pytest.mark.parametrize("columns", [None, ["col1"]])
     @pytest.mark.parametrize("row_group_size", [None, 100, 1000, 10_000])
     @pytest.mark.parametrize("engine", ["auto", "pyarrow", "fastparquet"])
+    @pytest.mark.parametrize("path_type", [Path, str])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet(self, make_parquet_file, columns, row_group_size, engine):
-        unique_filename = get_unique_filename(extension="parquet")
+    def test_read_parquet(
+        self, make_parquet_file, columns, row_group_size, engine, path_type
+    ):
+        unique_filename = path_type(get_unique_filename(extension="parquet"))
         make_parquet_file(filename=unique_filename, row_group_size=row_group_size)
 
         eval_io(
