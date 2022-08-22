@@ -68,7 +68,7 @@ class DefaultMethod(Operator):
         if type(fn) == property:
             fn = cls.build_property_wrapper(fn)
 
-        def applyier(df, *args, **kwargs):
+        def applyier(df, *args, dtypes=None, **kwargs):
             """
             Apply target function to the casted to pandas frame.
 
