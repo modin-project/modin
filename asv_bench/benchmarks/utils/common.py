@@ -504,19 +504,7 @@ def execute(
             return
 
         # compatibility with old Modin versions
-        blocks = [
-            block for partition in partitions for block in partition.list_of_blocks
-        ]
-        if ASV_USE_ENGINE == "ray":
-            from ray import wait
-
-            wait(blocks, num_returns=len(blocks))
-        elif ASV_USE_ENGINE == "dask":
-            from dask.distributed import wait
-
-            wait(blocks, return_when="ALL_COMPLETED")
-        elif ASV_USE_ENGINE == "python":
-            pass
+        df._query_compiler._modin_frame._partition_mgr_cls.wait_partitions(partitions)
 
     elif ASV_USE_IMPL == "pandas":
         pass
