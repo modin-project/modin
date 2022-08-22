@@ -504,7 +504,9 @@ def execute(
             return
 
         # compatibility with old Modin versions
-        blocks = [block for partition in partitions for block in partition.list_of_blocks]
+        blocks = [
+            block for partition in partitions for block in partition.list_of_blocks
+        ]
         if ASV_USE_ENGINE == "ray":
             from ray import wait
 
@@ -512,7 +514,7 @@ def execute(
         elif ASV_USE_ENGINE == "dask":
             from dask.distributed import wait
 
-            wait(blocks, return_when='ALL_COMPLETED')
+            wait(blocks, return_when="ALL_COMPLETED")
         elif ASV_USE_ENGINE == "python":
             pass
 
