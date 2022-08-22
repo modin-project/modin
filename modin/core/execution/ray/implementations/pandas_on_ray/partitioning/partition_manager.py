@@ -97,6 +97,8 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         """
         Get the objects wrapped by `partitions` in parallel.
 
+        This function assumes that each partition in `partitions` contains a single block.
+
         Parameters
         ----------
         partitions : np.ndarray
