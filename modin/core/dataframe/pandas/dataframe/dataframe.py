@@ -2656,8 +2656,8 @@ class PandasDataframe(ClassLogger):
             all_dtypes = [frame._dtypes for frame in [self] + others]
             if all(dtypes is not None for dtypes in all_dtypes):
                 new_dtypes = pandas.concat(all_dtypes, axis=1)
-                # nan value will be placed in a row if column isn't exist in all partitions;
-                # this value is np.float64 type, need an explicit conversion
+                # 'nan' value will be placed in a row if a column doesn't exist in all frames;
+                # this value is np.float64 type so we need an explicit conversion
                 new_dtypes.fillna(np.dtype("float64"), inplace=True)
                 new_dtypes = new_dtypes.apply(
                     lambda row: find_common_type(row.values), axis=1
