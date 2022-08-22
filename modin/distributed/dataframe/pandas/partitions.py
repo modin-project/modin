@@ -56,17 +56,22 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
 
         def _unwrap_partitions():
             [p.drain_call_queue() for p in modin_frame._partitions.flatten()]
+
+            def get_block(partition):
+                blocks = partition.list_of_blocks
+                assert (
+                    len(blocks) == 1
+                ), f"Implementation assumes that partition contains a single block, but {len(blocks)} recieved."
+                return blocks[0]
+
             if get_ip:
                 return [
-                    [
-                        (partition._ip_cache, partition.list_of_blocks[0])
-                        for partition in row
-                    ]
+                    [(partition._ip_cache, get_block(partition)) for partition in row]
                     for row in modin_frame._partitions
                 ]
             else:
                 return [
-                    [partition.list_of_blocks[0] for partition in row]
+                    [get_block(partition) for partition in row]
                     for row in modin_frame._partitions
                 ]
 

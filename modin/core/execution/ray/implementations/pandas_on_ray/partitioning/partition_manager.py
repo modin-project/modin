@@ -107,6 +107,9 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         list
             The objects wrapped by `partitions`.
         """
+        assert all(
+            [len(partition.list_of_blocks) == 1 for partition in partitions]
+        ), "Implementation assumes that each partition contains a signle block."
         return ray.get([partition.list_of_blocks[0] for partition in partitions])
 
     @classmethod
@@ -121,9 +124,12 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         partitions : np.ndarray
             NumPy array with ``PandasDataframePartition``-s.
         """
+        blocks = [
+            block for partition in partitions for block in partition.list_of_blocks
+        ]
         ray.wait(
-            [partition.list_of_blocks[0] for partition in partitions],
-            num_returns=len(partitions),
+            blocks,
+            num_returns=len(blocks),
         )
 
     @classmethod
