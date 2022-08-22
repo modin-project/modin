@@ -2649,11 +2649,15 @@ class PandasDataframe(ClassLogger):
         new_partitions = self._partition_mgr_cls.concat(
             axis.value, left_parts, right_parts
         )
+        new_dtypes = None
         if axis == Axis.ROW_WISE:
             new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
-            # TODO: Can optimize by combining if all dtypes are materialized
-            new_dtypes = None
+            all_dtypes = [frame._dtypes for frame in [self] + others]
+            if all(dtypes is not None for dtypes in all_dtypes):
+                new_dtypes = pandas.concat(all_dtypes, axis=1).apply(
+                    lambda col: find_common_type(col.values), axis=1
+                )
             # If we have already cached the length of each row in at least one
             # of the row's partitions, we can build new_lengths for the new
             # frame. Typically, if we know the length for any partition in a
@@ -2672,8 +2676,6 @@ class PandasDataframe(ClassLogger):
             new_index = joined_index
             if self._dtypes is not None and all(o._dtypes is not None for o in others):
                 new_dtypes = self.dtypes.append([o.dtypes for o in others])
-            else:
-                new_dtypes = None
             # If we have already cached the width of each column in at least one
             # of the column's partitions, we can build new_widths for the new
             # frame. Typically, if we know the width for any partition in a
