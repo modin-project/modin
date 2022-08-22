@@ -52,6 +52,7 @@ Key Features and Updates
   * PERF-#4732: Avoid overwriting already-evaluated `PandasOnRayDataframePartition._length_cache` and `PandasOnRayDataframePartition._width_cache` (#4754)
   * PERF-#4713: Stop overriding the ray MacOS object store size limit (#4792)
   * PERF-#4842: `copy` should not trigger any previous computations (#4843)
+  * PERF-#4849: compute `dtypes` in `concat` also for ROW_WISE case when possible (#4850)
   * PERF-#4268: Implement partition-parallel __getitem__ for bool Series masks (#4753)
 * Benchmarking enhancements
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
