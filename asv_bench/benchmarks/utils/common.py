@@ -29,7 +29,6 @@ from typing import Optional, Union
 from .compatibility import (
     ASV_USE_IMPL,
     ASV_DATASET_SIZE,
-    ASV_USE_ENGINE,
     ASV_USE_STORAGE_FORMAT,
 )
 from .data_shapes import RAND_LOW, RAND_HIGH
