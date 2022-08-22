@@ -129,10 +129,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         blocks = [
             block for partition in partitions for block in partition.list_of_blocks
         ]
-        ray.wait(
-            blocks,
-            num_returns=len(blocks),
-        )
+        ray.wait(blocks, num_returns=len(blocks))
 
     @classmethod
     @progress_bar_wrapper
