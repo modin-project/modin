@@ -1329,7 +1329,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get equality of `BasePandasDataset` and `other`, element-wise (binary operator `eq`).
         """
-        return self._binary_op("eq", other, axis=axis, level=level)
+        return self._binary_op("eq", other, axis=axis, level=level, dtypes=np.bool_)
 
     def explode(self, column, ignore_index: bool = False):  # noqa: PR01, RT01, D200
         """
@@ -1521,7 +1521,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get greater than or equal comparison of `BasePandasDataset` and `other`, element-wise (binary operator `ge`).
         """
-        return self._binary_op("ge", other, axis=axis, level=level)
+        return self._binary_op("ge", other, axis=axis, level=level, dtypes=np.bool_)
 
     def get(self, key, default=None):  # noqa: PR01, RT01, D200
         """
@@ -1536,7 +1536,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get greater than comparison of `BasePandasDataset` and `other`, element-wise (binary operator `gt`).
         """
-        return self._binary_op("gt", other, axis=axis, level=level)
+        return self._binary_op("gt", other, axis=axis, level=level, dtypes=np.bool_)
 
     def head(self, n=5):  # noqa: PR01, RT01, D200
         """
@@ -1679,13 +1679,13 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get less than or equal comparison of `BasePandasDataset` and `other`, element-wise (binary operator `le`).
         """
-        return self._binary_op("le", other, axis=axis, level=level)
+        return self._binary_op("le", other, axis=axis, level=level, dtypes=np.bool_)
 
     def lt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
         Get less than comparison of `BasePandasDataset` and `other`, element-wise (binary operator `lt`).
         """
-        return self._binary_op("lt", other, axis=axis, level=level)
+        return self._binary_op("lt", other, axis=axis, level=level, dtypes=np.bool_)
 
     @property
     def loc(self):  # noqa: RT01, D200
@@ -1895,7 +1895,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get Not equal comparison of `BasePandasDataset` and `other`, element-wise (binary operator `ne`).
         """
-        return self._binary_op("ne", other, axis=axis, level=level)
+        return self._binary_op("ne", other, axis=axis, level=level, dtypes=np.bool_)
 
     def notna(self):  # noqa: RT01, D200
         """
@@ -3031,13 +3031,13 @@ class BasePandasDataset(BasePandasDatasetCompat):
         operation="union", bin_op="and", right="other", **_doc_binary_op_kwargs
     )
     def __and__(self, other):
-        return self._binary_op("__and__", other, axis=0)
+        return self._binary_op("__and__", other, axis=0, dtypes="copy")
 
     @_doc_binary_op(
         operation="union", bin_op="rand", right="other", **_doc_binary_op_kwargs
     )
     def __rand__(self, other):
-        return self._binary_op("__rand__", other, axis=0)
+        return self._binary_op("__rand__", other, axis=0, dtypes="copy")
 
     def __array__(self, dtype=None):
         """
@@ -3330,7 +3330,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         **_doc_binary_op_kwargs,
     )
     def __or__(self, other):
-        return self._binary_op("__or__", other, axis=0)
+        return self._binary_op("__or__", other, axis=0, dtypes="copy")
 
     @_doc_binary_op(
         operation="disjunction",
@@ -3339,7 +3339,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         **_doc_binary_op_kwargs,
     )
     def __ror__(self, other):
-        return self._binary_op("__ror__", other, axis=0)
+        return self._binary_op("__ror__", other, axis=0, dtypes="copy")
 
     def __sizeof__(self):
         """
@@ -3368,7 +3368,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         **_doc_binary_op_kwargs,
     )
     def __xor__(self, other):
-        return self._binary_op("__xor__", other, axis=0)
+        return self._binary_op("__xor__", other, axis=0, dtypes="copy")
 
     @_doc_binary_op(
         operation="exclusive disjunction",
@@ -3377,7 +3377,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         **_doc_binary_op_kwargs,
     )
     def __rxor__(self, other):
-        return self._binary_op("__rxor__", other, axis=0)
+        return self._binary_op("__rxor__", other, axis=0, dtypes="copy")
 
     @property
     def size(self):  # noqa: RT01, D200
