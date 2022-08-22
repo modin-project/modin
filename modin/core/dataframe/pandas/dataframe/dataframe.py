@@ -2657,7 +2657,7 @@ class PandasDataframe(ClassLogger):
                 all_dtypes = [frame._dtypes for frame in [self] + others]
                 if all(dtypes is not None for dtypes in all_dtypes):
                     new_dtypes = pandas.concat(all_dtypes, axis=1).apply(
-                        lambda col: find_common_type(col.values), axis=1
+                        lambda row: find_common_type(row.values), axis=1
                     )
             except TypeError:
                 # Cannot interpret 'nan' as a data type;
