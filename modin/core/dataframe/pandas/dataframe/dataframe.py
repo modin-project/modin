@@ -2566,11 +2566,23 @@ class PandasDataframe(ClassLogger):
                 left_parts, op, right_parts[0]
             )
         )
+        new_dtypes = None
         if dtypes == "copy":
-            dtypes = self._dtypes
+            all_dtypes = [self._dtypes, right_frame._dtypes]
+            if all(dtypes is not None for dtypes in all_dtypes):
+                from time import time
+                start = time()
+                new_dtypes = pandas.concat(all_dtypes, axis=1)
+                # 'nan' value will be placed in a row if a column doesn't exist in all frames;
+                # this value is np.float64 type so we need an explicit conversion
+                new_dtypes.fillna(np.dtype("float64"), inplace=True)
+                new_dtypes = new_dtypes.apply(
+                    lambda row: find_common_type(row.values), axis=1
+                )
+                print(f"compute dtype: {time()-start}")
         elif dtypes is not None:
-            dtypes = pandas.Series(
-                [np.dtype(dtypes)] * len(self.columns), index=self.columns
+            new_dtypes = pandas.Series(
+                [np.dtype(dtypes)] * len(joined_columns), index=joined_columns
             )
         return self.__constructor__(
             new_frame,
@@ -2578,7 +2590,7 @@ class PandasDataframe(ClassLogger):
             joined_columns,
             row_lengths,
             column_widths,
-            dtypes,
+            new_dtypes,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
