@@ -272,7 +272,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             return InputRefExpr(self, col, get_dtype(int))
         return InputRefExpr(self, col, self.get_dtype(col))
 
-    def mask(
+    def take_2d_labels_or_positional(
         self,
         row_labels: Optional[List[Hashable]] = None,
         row_positions: Optional[List[int]] = None,
@@ -441,7 +441,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                     else:
                         raise NotImplementedError("unsupported groupby args")
                 by_cols = Index.__new__(Index, data=by_cols, dtype=self.columns.dtype)
-                by_frame = self.mask(col_labels=by_cols)
+                by_frame = self.take_2d_labels_or_positional(col_labels=by_cols)
                 if by_frames:
                     by_frame = by_frame.concat(
                         axis=1, other_modin_frames=by_frames, ignore_index=True
@@ -566,7 +566,9 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 if not (isinstance(col, str) and re.match(col_to_delete, col))
             ]
             if len(filtered_columns) != len(new_frame.columns):
-                new_frame = new_frame.mask(col_labels=filtered_columns)
+                new_frame = new_frame.take_2d_labels_or_positional(
+                    col_labels=filtered_columns
+                )
         return new_frame
 
     def agg(self, agg):

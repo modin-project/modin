@@ -2202,13 +2202,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def getitem_column_array(self, key, numeric=False):
         # Convert to list for type checking
         if numeric:
-            new_modin_frame = self._modin_frame.mask(col_positions=key)
+            new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
+                col_positions=key
+            )
         else:
-            new_modin_frame = self._modin_frame.mask(col_labels=key)
+            new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
+                col_labels=key
+            )
         return self.__constructor__(new_modin_frame)
 
     def getitem_row_array(self, key):
-        return self.__constructor__(self._modin_frame.mask(row_positions=key))
+        return self.__constructor__(
+            self._modin_frame.take_2d_labels_or_positional(row_positions=key)
+        )
 
     def setitem(self, axis, key, value):
         return self._setitem(axis=axis, key=key, value=value, how=None)
@@ -2316,7 +2322,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             columns = np.sort(
                 self.columns.get_indexer_for(self.columns.difference(columns))
             )
-        new_modin_frame = self._modin_frame.mask(
+        new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
             row_positions=index, col_positions=columns
         )
         return self.__constructor__(new_modin_frame)
@@ -3109,7 +3115,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
             untouched_frame = None
         else:
-            new_modin_frame = self._modin_frame.mask(
+            new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_labels=columns
             ).apply_full_axis(
                 0, lambda df: pandas.get_dummies(df, **kwargs), new_index=self.index
@@ -3127,9 +3133,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Get_dummies
 
     # Indexing
-    def view(self, index=None, columns=None):
+    def take_2d(self, index=None, columns=None):
         return self.__constructor__(
-            self._modin_frame.mask(row_positions=index, col_positions=columns)
+            self._modin_frame.take_2d_labels_or_positional(
+                row_positions=index, col_positions=columns
+            )
         )
 
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):

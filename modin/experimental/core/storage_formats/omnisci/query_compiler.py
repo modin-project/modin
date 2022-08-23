@@ -222,9 +222,13 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def getitem_column_array(self, key, numeric=False):
         shape_hint = "column" if len(key) == 1 else None
         if numeric:
-            new_modin_frame = self._modin_frame.mask(col_positions=key)
+            new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
+                col_positions=key
+            )
         else:
-            new_modin_frame = self._modin_frame.mask(col_labels=key)
+            new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
+                col_labels=key
+            )
         return self.__constructor__(new_modin_frame, shape_hint)
 
     def getitem_array(self, key):
@@ -280,9 +284,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         else:
             return self.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
 
-    def view(self, index=None, columns=None):
+    def take_2d(self, index=None, columns=None):
         return self.__constructor__(
-            self._modin_frame.mask(row_positions=index, col_positions=columns)
+            self._modin_frame.take_2d_labels_or_positional(
+                row_positions=index, col_positions=columns
+            )
         )
 
     def groupby_size(
@@ -547,7 +553,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def drop(self, index=None, columns=None):
         assert index is None, "Only column drop is supported"
         return self.__constructor__(
-            self._modin_frame.mask(
+            self._modin_frame.take_2d_labels_or_positional(
                 row_labels=index, col_labels=self.columns.drop(columns)
             )
         )

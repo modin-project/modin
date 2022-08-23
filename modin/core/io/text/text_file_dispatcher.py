@@ -918,7 +918,7 @@ class TextFileDispatcher(FileDispatcher):
             nrows = kwargs.get("nrows", None)
             index_range = pandas.RangeIndex(len(new_query_compiler.index))
             if is_list_like(skiprows_md):
-                new_query_compiler = new_query_compiler.view(
+                new_query_compiler = new_query_compiler.take_2d(
                     index=index_range.delete(skiprows_md)
                 )
             elif callable(skiprows_md):
@@ -926,7 +926,7 @@ class TextFileDispatcher(FileDispatcher):
                 if not isinstance(skip_mask, np.ndarray):
                     skip_mask = skip_mask.to_numpy("bool")
                 view_idx = index_range[~skip_mask]
-                new_query_compiler = new_query_compiler.view(index=view_idx)
+                new_query_compiler = new_query_compiler.take_2d(index=view_idx)
             else:
                 raise TypeError(
                     f"Not acceptable type of `skiprows` parameter: {type(skiprows_md)}"
@@ -936,7 +936,7 @@ class TextFileDispatcher(FileDispatcher):
                 new_query_compiler = new_query_compiler.reset_index(drop=True)
 
             if nrows:
-                new_query_compiler = new_query_compiler.view(
+                new_query_compiler = new_query_compiler.take_2d(
                     pandas.RangeIndex(len(new_query_compiler.index))[:nrows]
                 )
         if index_col is None:
