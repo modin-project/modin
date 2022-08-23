@@ -3031,13 +3031,13 @@ class BasePandasDataset(BasePandasDatasetCompat):
         operation="union", bin_op="and", right="other", **_doc_binary_op_kwargs
     )
     def __and__(self, other):
-        return self._binary_op("__and__", other, axis=0, dtypes="copy")
+        return self._binary_op("__and__", other, axis=0)
 
     @_doc_binary_op(
         operation="union", bin_op="rand", right="other", **_doc_binary_op_kwargs
     )
     def __rand__(self, other):
-        return self._binary_op("__rand__", other, axis=0, dtypes="copy")
+        return self._binary_op("__rand__", other, axis=0)
 
     def __array__(self, dtype=None):
         """
@@ -3330,7 +3330,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         **_doc_binary_op_kwargs,
     )
     def __or__(self, other):
-        return self._binary_op("__or__", other, axis=0, dtypes="copy")
+        return self._binary_op("__or__", other, axis=0)
 
     @_doc_binary_op(
         operation="disjunction",
@@ -3339,7 +3339,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         **_doc_binary_op_kwargs,
     )
     def __ror__(self, other):
-        return self._binary_op("__ror__", other, axis=0, dtypes="copy")
+        return self._binary_op("__ror__", other, axis=0)
 
     def __sizeof__(self):
         """
@@ -3368,7 +3368,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         **_doc_binary_op_kwargs,
     )
     def __xor__(self, other):
-        return self._binary_op("__xor__", other, axis=0, dtypes="copy")
+        return self._binary_op("__xor__", other, axis=0)
 
     @_doc_binary_op(
         operation="exclusive disjunction",
@@ -3377,7 +3377,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         **_doc_binary_op_kwargs,
     )
     def __rxor__(self, other):
-        return self._binary_op("__rxor__", other, axis=0, dtypes="copy")
+        return self._binary_op("__rxor__", other, axis=0)
 
     @property
     def size(self):  # noqa: RT01, D200
