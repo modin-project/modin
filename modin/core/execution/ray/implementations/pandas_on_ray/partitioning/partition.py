@@ -228,15 +228,23 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         if isinstance(row_labels, slice) and isinstance(
             self._length_cache, ObjectIDType
         ):
-            new_obj._length_cache = compute_sliced_len.remote(
-                row_labels, self._length_cache
-            )
+            if row_labels == slice(None):
+                # more faster way
+                new_obj._length_cache = self._length_cache
+            else:
+                new_obj._length_cache = compute_sliced_len.remote(
+                    row_labels, self._length_cache
+                )
         if isinstance(col_labels, slice) and isinstance(
             self._width_cache, ObjectIDType
         ):
-            new_obj._width_cache = compute_sliced_len.remote(
-                col_labels, self._width_cache
-            )
+            if col_labels == slice(None):
+                # more faster way
+                new_obj._width_cache = self._width_cache
+            else:
+                new_obj._width_cache = compute_sliced_len.remote(
+                    col_labels, self._width_cache
+                )
         logger.debug(f"EXIT::Partition.mask::{self._identity}")
         return new_obj
 
