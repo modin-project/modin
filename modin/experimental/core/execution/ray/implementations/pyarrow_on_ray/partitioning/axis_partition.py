@@ -35,6 +35,9 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
     """
 
     def __init__(self, list_of_blocks):
+        assert all(
+            [len(partition.list_of_blocks) == 1 for partition in list_of_blocks]
+        ), "Implementation assumes that each partition contains a signle block."
         # Unwrap from PandasDataframePartition object for ease of use
         self.list_of_blocks = [obj.list_of_blocks[0] for obj in list_of_blocks]
 
