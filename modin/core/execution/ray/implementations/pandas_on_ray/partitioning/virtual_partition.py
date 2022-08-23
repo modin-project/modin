@@ -185,6 +185,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of ``ray.ObjectRef``-s.
         """
+        global _DEPLOY_AXIS_FUNC
         lengths = kwargs.get("_lengths", None)
         max_retries = kwargs.pop("max_retries", None)
         if _DEPLOY_AXIS_FUNC is None:
