@@ -2516,7 +2516,7 @@ class PandasDataframe(ClassLogger):
         return (reindexed_frames[0], reindexed_frames[1:], joined_index, base_lengths)
 
     @lazy_metadata_decorator(apply_axis="both")
-    def binary_op(self, op, right_frame, join_type="outer"):
+    def binary_op(self, op, right_frame, join_type="outer", dtypes=None):
         """
         Perform an operation that requires joining with another Modin DataFrame.
 
@@ -2528,6 +2528,10 @@ class PandasDataframe(ClassLogger):
             Modin DataFrame to join with.
         join_type : str, default: "outer"
             Type of join to apply.
+        dtypes : dtypes of the result, optional
+            The data types for the result. This is an optimization
+            because there are functions that always result in a particular data
+            type, and this allows us to avoid (re)computing it.
 
         Returns
         -------
@@ -2562,13 +2566,19 @@ class PandasDataframe(ClassLogger):
                 left_parts, op, right_parts[0]
             )
         )
-
+        if dtypes == "copy":
+            dtypes = self._dtypes
+        elif dtypes is not None:
+            dtypes = pandas.Series(
+                [np.dtype(dtypes)] * len(self.columns), index=self.columns
+            )
         return self.__constructor__(
             new_frame,
             joined_index,
             joined_columns,
             row_lengths,
             column_widths,
+            dtypes,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
