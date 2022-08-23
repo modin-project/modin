@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 """Module provides ``HdkOnNativeDataframe`` class implementing lazy frame."""
+import pandas
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
@@ -185,6 +186,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         assert len(dtypes) == len(
             self._table_cols
         ), f"unaligned dtypes ({dtypes}) and table columns ({self._table_cols})"
+
         if isinstance(dtypes, list):
             if self._index_cols is not None:
                 # Table stores both index and data columns but those are accessed
@@ -214,12 +216,17 @@ class HdkOnNativeDataframe(PandasDataframe):
         if self._has_arrow_table() and self._partitions.size > 0:
             assert self._partitions.size == 1
             table = self._partitions[0][0].get()
-            if len(table) > 0 and table.column_names[0] != f"F_{self._table_cols[0]}":
-                new_names = [f"F_{col}" for col in table.column_names]
-                new_table = table.rename_columns(new_names)
+            column_names = table.column_names
+            if len(table) > 0 and column_names[0] != f"F_{self._table_cols[0]}":
+                column_names = [f"F_{col}" for col in column_names]
+                table = table.rename_columns(column_names)
                 self._partitions[0][
                     0
-                ] = self._partition_mgr_cls._partition_class.put_arrow(new_table)
+                ] = self._partition_mgr_cls._partition_class.put_arrow(table)
+
+            for i, t in enumerate(dtypes):
+                if isinstance(t, LazyProxyCategoricalDtype):
+                    dtypes[i] = t._new(table, column_names[i])
 
         self._uses_rowid = uses_rowid
         self._force_execution_mode = force_execution_mode
@@ -2508,10 +2515,13 @@ class HdkOnNativeDataframe(PandasDataframe):
             new_columns = pd.Index(data=at.column_names, dtype="O")
             new_index = pd.RangeIndex(at.num_rows)
 
-        new_dtypes = pd.Series(
-            [cls._arrow_type_to_dtype(col.type) for col in at.columns],
-            index=at.column_names,
-        )
+        new_dtypes = []
+
+        for col in at.columns:
+            if pyarrow.types.is_dictionary(col.type):
+                new_dtypes.append(LazyProxyCategoricalDtype(at, col._name))
+            else:
+                new_dtypes.append(cls._arrow_type_to_dtype(col.type))
 
         if len(unsupported_cols) > 0:
             ErrorMessage.single_warning(
@@ -2525,7 +2535,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             columns=new_columns,
             row_lengths=new_lengths,
             column_widths=new_widths,
-            dtypes=new_dtypes,
+            dtypes=pd.Series(data=new_dtypes, index=at.column_names),
             index_cols=index_cols,
             has_unsupported_data=len(unsupported_cols) > 0,
         )
@@ -2556,3 +2566,58 @@ class HdkOnNativeDataframe(PandasDataframe):
             and index.min() == 0
             and index.max() == len(index) - 1
         )
+
+
+class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
+    """
+    Proxy class for lazily retrieving categorical dtypes from arrow tables.
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        Source table.
+    name : str
+        Column name.
+    """
+
+    def __init__(self, table: pyarrow.Table, name: str):
+        self._table = table
+        self._name = name
+        self._ordered = False
+        self._lazy_categories = None
+
+    def _new(self, table: pyarrow.Table, name: str) -> pandas.CategoricalDtype:
+        """
+        Create a new proxy, if either table or column name are different.
+
+        Parameters
+        ----------
+        table : pyarrow.Table
+            Source table.
+        name : str
+            Column name.
+
+        Returns
+        -------
+        pandas.CategoricalDtype
+        """
+        if self._table is None:
+            # The table has been materialized, we don't need a proxy anymore.
+            return pandas.CategoricalDtype(self.categories)
+        elif table is self._table and name == self._name:
+            return self
+        else:
+            return LazyProxyCategoricalDtype(table, name)
+
+    @property
+    def _categories(self):  # noqa: GL08
+        if self._table is not None:
+            chunks = self._table.column(self._name).chunks
+            cat = pandas.concat([chunk.dictionary.to_pandas() for chunk in chunks])
+            self._lazy_categories = self.validate_categories(cat.unique())
+            self._table = None  # The table is not required any more
+        return self._lazy_categories
+
+    @_categories.setter
+    def _set_categories(self, categories):  # noqa: GL08
+        self._lazy_categories = categories
