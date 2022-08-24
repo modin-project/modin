@@ -557,7 +557,8 @@ def pytest_sessionstart(session):
 
 def pytest_sessionfinish(session, exitstatus):
     # Cleanup io_tests_data
-    shutil.rmtree(IO_OPS_DATA_DIR)
+    if os.path.exists(IO_OPS_DATA_DIR):
+        shutil.rmtree(IO_OPS_DATA_DIR)
 
     if TestRayClient.get():
         import ray
