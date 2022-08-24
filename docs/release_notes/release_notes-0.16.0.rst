@@ -38,6 +38,7 @@ Key Features and Updates
   * FIX-#4838: Bump up modin-spreadsheet to latest master (#4839)
   * FIX-#4840: Change modin-spreadsheet version for notebook requirements (#4841)
   * FIX-#4835: Handle Pathlike paths in `read_parquet` (#4837)
+  * TEST-#4879: Cleanup `io_tests_data` after pytests finish (#4881)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
