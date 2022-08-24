@@ -1281,8 +1281,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         np.ndarray
             A NumPy array with new partitions.
         """
-        [part.drain_call_queue() for part in right.flatten()]
-
         func = cls.preprocess_func(func)
         return np.array(
             [
