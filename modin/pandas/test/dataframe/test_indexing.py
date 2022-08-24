@@ -1673,24 +1673,30 @@ def test___getitem__(data):
     pd_col = pandas_df[key]
     df_equals(pd_col, modin_col)
 
-    slices = [
-        (None, -1),
-        (-1, None),
-        (1, 2),
-        (1, None),
-        (None, 1),
-        (1, -1),
-        (-3, -1),
-        (1, -1, 2),
-        (-1, 1, -1),
-        (None, None, 2),
-    ]
 
-    # slice test
-    for slice_param in slices:
-        s = slice(*slice_param)
-        df_equals(modin_df[s], pandas_df[s])
+@pytest.mark.parametrize("slc", [
+        slice(None, -1),
+        slice(-1, None),
+        slice(1, 2),
+        slice(1, None),
+        slice(None, 1),
+        slice(1, -1),
+        slice(-3, -1),
+        slice(1, -1, 2),
+        slice(-1, 1, -1),
+        slice(None, None, 2),
+    ])
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test__getitem__slice(slc, data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
 
+    result = modin_df[slc]
+    expected = pandas_df[slc]
+    df_equals(result, expected)
+
+
+def test__getitem__empty():
     # Test empty
     df_equals(pd.DataFrame([])[:10], pandas.DataFrame([])[:10])
 

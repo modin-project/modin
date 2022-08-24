@@ -1137,16 +1137,6 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         output.append("")
         buf.write("\n".join(output))
 
-    def iat2(self, x: int, y: int):
-        """
-        Temporary function for profiling against `iat[x, y]`
-
-        DO NOT MERGE until this is deleted.
-        """
-        qc = self._query_compiler
-        mf = qc._modin_frame
-        return mf.getitem_iat(x, y)
-
     def insert(self, loc, column, value, allow_duplicates=False):  # noqa: PR01, D200
         """
         Insert column into ``DataFrame`` at specified location.

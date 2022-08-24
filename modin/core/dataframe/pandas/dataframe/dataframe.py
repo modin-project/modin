@@ -17,6 +17,8 @@ Module contains class PandasDataframe.
 PandasDataframe is a parent abstract class for any dataframe class
 for pandas storage format.
 """
+from __future__ import annotations
+
 from pandas.util._decorators import cache_readonly
 from collections import OrderedDict
 import numpy as np
@@ -670,32 +672,13 @@ class PandasDataframe(ClassLogger):
 
         return self._take_2d_positional(row_positions, col_positions)
 
-    def _get_sorted_positions(self, positions):
-        """
-        Sort positions if necessary.
-
-        Parameters
-        ----------
-        positions : Sequence[int]
-
-        Returns
-        -------
-        Sequence[int]
-        """
-        # Helper for take_2d_positional
-        if is_range_like(positions) and positions.step > 0:
-            sorted_positions = positions
-        else:
-            sorted_positions = np.sort(positions)
-        return sorted_positions
-
-    def _get_new_lengths(self, partitions_dict, *, axis: int) -> List[int]:
+    def _get_new_lengths(self, partitions_list, *, axis: int) -> List[int]:
         """
         Find lengths of new partitions.
 
         Parameters
         ----------
-        partitions_dict : dict
+        partitions_list : dict
         axis : int
 
         Returns
@@ -717,44 +700,9 @@ class PandasDataframe(ClassLogger):
                 if isinstance(part_indexer, slice)
                 else part_indexer
             )
-            for part_idx, part_indexer in partitions_dict.items()
+            for part_idx, part_indexer in partitions_list
         ]
         return new_lengths
-
-    def _get_new_index_obj(
-        self, positions, sorted_positions, axis: int
-    ) -> "tuple[pandas.Index, slice | npt.NDArray[np.intp]]":
-        """
-        Find the new Index object for take_2d_positional result.
-
-        Parameters
-        ----------
-        positions : Sequence[int]
-        sorted_positions : Sequence[int]
-        axis : int
-
-        Returns
-        -------
-        pandas.Index
-        slice or Sequence[int]
-        """
-        # Helper for take_2d_positional
-        # Use the slice to calculate the new columns
-        if axis == 0:
-            idx = self.index
-        else:
-            idx = self.columns
-
-        # TODO: Support fast processing of negative-step ranges
-        if is_range_like(positions) and positions.step > 0:
-            # pandas Index is more likely to preserve its metadata if the indexer
-            #  is slice
-            monotonic_idx = slice(positions.start, positions.stop, positions.step)
-        else:
-            monotonic_idx = np.asarray(sorted_positions, dtype=np.intp)
-
-        new_idx = idx[monotonic_idx]
-        return new_idx, monotonic_idx
 
     def _take_2d_positional(
         self,
@@ -800,48 +748,66 @@ class PandasDataframe(ClassLogger):
         if col_positions is None and row_positions is None:
             return self.copy()
 
-        sorted_row_positions = sorted_col_positions = None
+        import pandas._libs.internals as libinternals
 
         if row_positions is not None:
-            sorted_row_positions = self._get_sorted_positions(row_positions)
-            # Get dict of row_parts as {row_index: row_internal_indices}
-            row_partitions_dict = self._get_dict_of_block_index(
-                0, sorted_row_positions, are_indices_sorted=True
-            )
-            new_row_lengths = self._get_new_lengths(row_partitions_dict, axis=0)
-            new_index, _ = self._get_new_index_obj(
-                row_positions, sorted_row_positions, axis=0
-            )
+            # row_blknos[i] is the index of the row-partition in which
+            #  row_positions[i] is located.
+            row_blknos = np.digitize(row_positions, self._row_bins)
+            # row_blklocs[i] is the index within self._partitions[row_blknos[i]]
+            #  in which to find row_positions[i]
+            row_blklocs = self._get_blklocs(row_positions, row_blknos, axis=0)
+
+            row_partitions_list = []
+            for blkno, mgr_locs in libinternals.get_blkno_placements(
+                row_blknos, group=False
+            ):
+                taker = row_blklocs[mgr_locs.indexer]
+                item = (blkno, taker)
+                row_partitions_list.append(item)
+
+            new_row_lengths = self._get_new_lengths(row_partitions_list, axis=0)
+            new_index = self.index[row_positions]
         else:
             row_partitions_dict = {i: slice(None) for i in range(len(self._partitions))}
+            row_partitions_list = list(row_partitions_dict.items())
             new_row_lengths = self._row_lengths_cache
             new_index = self._index_cache
 
         if col_positions is not None:
-            sorted_col_positions = self._get_sorted_positions(col_positions)
-            # Get dict of col_parts as {col_index: col_internal_indices}
-            col_partitions_dict = self._get_dict_of_block_index(
-                1, sorted_col_positions, are_indices_sorted=True
-            )
-            new_col_widths = self._get_new_lengths(col_partitions_dict, axis=1)
-            new_columns, monotonic_col_idx = self._get_new_index_obj(
-                col_positions, sorted_col_positions, axis=1
-            )
+            # col_blknos[i] is the index of the col-partition in which
+            #  col_positions[i] is located.
+            col_blknos = np.digitize(col_positions, self._col_bins)
+            # col_blklocs[i] is the index within self._partitions[0, col_blknos[i]]
+            #  in which to find col_positions[i]
+            col_blklocs = self._get_blklocs(col_positions, col_blknos, axis=1)
+
+            col_partitions_list = []
+            for blkno, mgr_locs in libinternals.get_blkno_placements(
+                col_blknos, group=False
+            ):
+                taker = col_blklocs[mgr_locs.indexer]
+                item = (blkno, taker)
+                col_partitions_list.append(item)
+
+            new_col_widths = self._get_new_lengths(col_partitions_list, axis=1)
+            new_columns = self.columns[col_positions]
 
             ErrorMessage.catch_bugs_and_request_email(
                 failure_condition=sum(new_col_widths) != len(new_columns),
                 extra_log=f"{sum(new_col_widths)} != {len(new_columns)}.\n"
-                + f"{col_positions}\n{self._column_widths}\n{col_partitions_dict}",
+                + f"{col_positions}\n{self._column_widths}\n{col_partitions_list}",
             )
 
             if self._dtypes is not None:
-                new_dtypes = self.dtypes.iloc[monotonic_col_idx]
+                new_dtypes = self.dtypes.iloc[col_positions]
             else:
                 new_dtypes = None
         else:
             col_partitions_dict = {
                 i: slice(None) for i in range(len(self._partitions.T))
             }
+            col_partitions_list = list(col_partitions_dict.items())
             new_col_widths = self._column_widths_cache
             new_columns = self._columns_cache
             new_dtypes = self._dtypes
@@ -852,11 +818,11 @@ class PandasDataframe(ClassLogger):
                     self._partitions[row_idx][col_idx].mask(
                         row_internal_indices, col_internal_indices
                     )
-                    for col_idx, col_internal_indices in col_partitions_dict.items()
+                    for col_idx, col_internal_indices in col_partitions_list
                     if isinstance(col_internal_indices, slice)
                     or len(col_internal_indices) > 0
                 ]
-                for row_idx, row_internal_indices in row_partitions_dict.items()
+                for row_idx, row_internal_indices in row_partitions_list
                 if isinstance(row_internal_indices, slice)
                 or len(row_internal_indices) > 0
             ]
@@ -869,14 +835,7 @@ class PandasDataframe(ClassLogger):
             new_col_widths,
             new_dtypes,
         )
-
-        return self._maybe_reorder_labels(
-            intermediate,
-            row_positions,
-            sorted_row_positions,
-            col_positions,
-            sorted_col_positions,
-        )
+        return intermediate
 
     def _maybe_reorder_labels(
         self,
@@ -1319,6 +1278,26 @@ class PandasDataframe(ClassLogger):
 
         return part.getitem_iat(row_blkloc, col_blkloc)
 
+    def _get_blklocs(
+        self,
+        positions: "npt.NDArray[np.intp]",
+        blknos: "npt.NDArray[np.intp]",
+        *,
+        axis: int,
+    ) -> "npt.NDArray[np.intp]":
+        # For axis=0, blknos should be given by
+        #  np.digitize(positions, self._row_bins)
+        # For axis=1, blknos should be given by
+        #  np.digitize(positions, self._col_bins)
+
+        if axis == 0:
+            prev = self._row_bins[blknos - 1]
+        else:
+            prev = self._col_bins[blknos - 1]
+
+        prev[blknos == 0] = 0
+        return positions - prev
+
     def _get_dict_of_block_index(self, axis, indices, are_indices_sorted=False):
         """
         Convert indices to an ordered dict mapping partition (or block) index to internal indices in said partition.
@@ -1426,24 +1405,21 @@ class PandasDataframe(ClassLogger):
         # then the original order was broken and so we have to sort anyway:
         if has_negative or not are_indices_sorted:
             indices = np.sort(indices)
+
         if axis == 0:
-            bins = np.array(self._row_lengths)
+            cumulative = self._row_bins
         else:
-            bins = np.array(self._column_widths)
-        # INT_MAX to make sure we don't try to compute on partitions that don't exist.
-        cumulative = np.append(bins[:-1].cumsum(), np.iinfo(bins.dtype).max)
+            cumulative = self._col_bins
 
         def internal(block_idx: int, global_index):
             """Transform global index to internal one for given block (identified by its index)."""
-            return (
-                global_index
-                if not block_idx
-                else np.subtract(
-                    global_index, cumulative[min(block_idx, len(cumulative) - 1) - 1]
-                )
-            )
+            if not block_idx:
+                return global_index
+
+            return global_index - cumulative[min(block_idx, len(cumulative) - 1) - 1]
 
         partition_ids = np.digitize(indices, cumulative)
+
         count_for_each_partition = np.array(
             [(partition_ids == i).sum() for i in range(len(cumulative))]
         ).cumsum()
