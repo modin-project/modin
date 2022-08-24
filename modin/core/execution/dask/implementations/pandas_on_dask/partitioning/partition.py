@@ -188,7 +188,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         new_obj = super().mask(row_labels, col_labels)
         if isinstance(row_labels, slice) and isinstance(self._length_cache, Future):
             if row_labels == slice(None):
-                # more faster way
+                # fast path - full axis take
                 new_obj._length_cache = self._length_cache
             else:
                 new_obj._length_cache = DaskWrapper.deploy(
@@ -196,7 +196,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
                 )
         if isinstance(col_labels, slice) and isinstance(self._width_cache, Future):
             if col_labels == slice(None):
-                # more faster way
+                # fast path - full axis take
                 new_obj._width_cache = self._width_cache
             else:
                 new_obj._width_cache = DaskWrapper.deploy(

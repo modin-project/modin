@@ -229,7 +229,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             self._length_cache, ObjectIDType
         ):
             if row_labels == slice(None):
-                # more faster way
+                # fast path - full axis take
                 new_obj._length_cache = self._length_cache
             else:
                 new_obj._length_cache = compute_sliced_len.remote(
@@ -239,7 +239,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             self._width_cache, ObjectIDType
         ):
             if col_labels == slice(None):
-                # more faster way
+                # fast path - full axis take
                 new_obj._width_cache = self._width_cache
             else:
                 new_obj._width_cache = compute_sliced_len.remote(
