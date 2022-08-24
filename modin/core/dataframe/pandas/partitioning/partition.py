@@ -189,7 +189,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
 
         # FIXME: for a `take` won't is_full_axis_mask be wrong if row_labels
-        #  is non-unique or 
+        #  is non-unique or not monotonic increasing.
 
         def is_full_axis_mask(index, axis_length):
             """Check whether `index` mask grabs `axis_length` amount of elements."""
@@ -207,12 +207,12 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         row_labels = [row_labels] if is_scalar(row_labels) else row_labels
         col_labels = [col_labels] if is_scalar(col_labels) else col_labels
 
-        if False:#is_full_axis_mask(row_labels, self._length_cache) and is_full_axis_mask(
+        # TODO: restore this fastpath once is_full_axis_mask is fixed; see FIXME
+        #  above.
+        # if is_full_axis_mask(row_labels, self._length_cache) and is_full_axis_mask(
         #    col_labels, self._width_cache
-        #):
-            # FIXME: for a `take` won't this just
-            breakpoint()
-            return copy(self)
+        # ):
+        #    return copy(self)
 
         new_obj = self.add_to_apply_calls(self._iloc, row_labels, col_labels)
 
@@ -336,7 +336,3 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             New `PandasDataframePartition` object.
         """
         return cls.put(pandas.DataFrame(), 0, 0)
-
-    def getitem_iat(self, x: int, y: int):
-        df = self.get()
-        return df.iat[x, y]

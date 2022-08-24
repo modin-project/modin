@@ -1266,18 +1266,6 @@ class PandasDataframe(ClassLogger):
             prev = self._col_bins[blkno - 1]
         return x - prev
 
-    def getitem_iat(self, x, y):
-        row_blkno = np.digitize(x, self._row_bins)
-        # TODO: searchsorted is marginally faster than digitize
-        col_blkno = np.digitize(y, self._col_bins)
-
-        part = self._partitions[row_blkno, col_blkno]
-
-        row_blkloc = self._get_row_blklocs(x, row_blkno, 0)
-        col_blkloc = self._get_row_blklocs(y, col_blkno, 1)
-
-        return part.getitem_iat(row_blkloc, col_blkloc)
-
     def _get_blklocs(
         self,
         positions: "npt.NDArray[np.intp]",
@@ -1413,10 +1401,13 @@ class PandasDataframe(ClassLogger):
 
         def internal(block_idx: int, global_index):
             """Transform global index to internal one for given block (identified by its index)."""
-            if not block_idx:
-                return global_index
-
-            return global_index - cumulative[min(block_idx, len(cumulative) - 1) - 1]
+            return (
+                global_index
+                if not block_idx
+                else np.subtract(
+                    global_index, cumulative[min(block_idx, len(cumulative) - 1) - 1]
+                )
+            )
 
         partition_ids = np.digitize(indices, cumulative)
 
