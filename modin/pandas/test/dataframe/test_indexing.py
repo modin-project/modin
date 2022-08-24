@@ -1674,7 +1674,9 @@ def test___getitem__(data):
     df_equals(pd_col, modin_col)
 
 
-@pytest.mark.parametrize("slc", [
+@pytest.mark.parametrize(
+    "slc",
+    [
         slice(None, -1),
         slice(-1, None),
         slice(1, 2),
@@ -1685,7 +1687,8 @@ def test___getitem__(data):
         slice(1, -1, 2),
         slice(-1, 1, -1),
         slice(None, None, 2),
-    ])
+    ],
+)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test__getitem__slice(slc, data):
     modin_df = pd.DataFrame(data)
