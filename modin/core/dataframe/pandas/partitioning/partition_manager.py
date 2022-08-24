@@ -1430,7 +1430,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 # its result along axis 0.
                 new_partitions.append(
                     cls.column_partitions(
-                        (partitions[start : stop + 1]), full_axis=False
+                        partitions[start : stop + 1], full_axis=False
                     )
                 )
                 start = stop + 1
