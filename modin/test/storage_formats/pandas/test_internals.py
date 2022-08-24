@@ -151,6 +151,14 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
     df_equals(md_df, pd_df)
 
 
+@pytest.fixture
+def set_num_partitions(request):
+    old_num_partitions = NPartitions.get()
+    NPartitions.put(request.param)
+    yield
+    NPartitions.put(old_num_partitions)
+
+
 @pytest.mark.skipif(
     Engine.get() not in ("Dask", "Ray"),
     reason="Rebalancing partitions is only supported for Dask and Ray engines",
@@ -163,7 +171,13 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
         "large_df_plus_small_dfs",
     ],
 )
-def test_rebalance_partitions(test_type):
+@pytest.mark.parametrize(
+    "set_num_partitions",
+    [1, 4],
+    indirect=True,
+)
+def test_rebalance_partitions(test_type, set_num_partitions):
+    num_partitions = NPartitions.get()
     if test_type == "many_small_dfs":
         small_dfs = [
             pd.DataFrame(
@@ -204,8 +218,8 @@ def test_rebalance_partitions(test_type):
         col_length = 103
     large_modin_frame = large_df._query_compiler._modin_frame
     assert large_modin_frame._partitions.shape == (
-        NPartitions.get(),
-        NPartitions.get(),
+        num_partitions,
+        num_partitions,
     ), "Partitions were not rebalanced after concat."
     assert all(
         isinstance(ptn, large_modin_frame._partition_mgr_cls._column_partitions_class)
@@ -221,8 +235,8 @@ def test_rebalance_partitions(test_type):
     large_df = large_df.apply(col_apply_func)
     new_large_modin_frame = large_df._query_compiler._modin_frame
     assert new_large_modin_frame._partitions.shape == (
-        NPartitions.get(),
-        NPartitions.get(),
+        num_partitions,
+        num_partitions,
     ), "Partitions list shape is incorrect."
     assert all(
         isinstance(ptn, new_large_modin_frame._partition_mgr_cls._partition_class)
@@ -241,8 +255,8 @@ def test_rebalance_partitions(test_type):
     large_df = large_df.apply(row_apply_func, axis=1)
     new_large_modin_frame = large_df._query_compiler._modin_frame
     assert new_large_modin_frame._partitions.shape == (
-        4,
-        4,
+        num_partitions,
+        num_partitions,
     ), "Partitions list shape is incorrect."
     assert all(
         isinstance(ptn, new_large_modin_frame._partition_mgr_cls._partition_class)

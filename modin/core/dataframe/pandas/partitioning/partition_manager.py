@@ -1424,8 +1424,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                     partition_size = ideal_partition_size
                 new_partitions.append(
                     cls.column_partitions(
-                        (partitions[start : stop + 1]),
-                        full_axis=partition_size == total_rows,
+                        (partitions[start : stop + 1]), full_axis=False
                     )
                 )
                 start = stop + 1
