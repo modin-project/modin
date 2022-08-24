@@ -115,6 +115,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         self.call_queue = []
 
         if other_partition is not None:
+            other_partition.drain_call_queue()
             args = (other_partition._data,) + args
 
         return PandasOnPythonDataframePartition(
