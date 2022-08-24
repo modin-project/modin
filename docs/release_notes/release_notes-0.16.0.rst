@@ -75,6 +75,7 @@ Key Features and Updates
   * REFACTOR-#4832: unify `split_result_of_axis_func_pandas` (#4831)
   * REFACTOR-#4796: Introduce constant for __reduced__ column name (#4799)
   * REFACTOR-#4530: Unify access to physical data for any partition type (#4829)
+  * REFACTOR-#4885: De-duplicated take_2d_labels_or_positional methods (#4883)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements
