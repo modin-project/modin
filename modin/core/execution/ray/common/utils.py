@@ -192,9 +192,17 @@ def _get_object_store_memory() -> Optional[int]:
     if object_store_memory == 0:
         return None
     # Newer versions of ray don't allow us to initialize ray with object store
-    # size larger than that _MAC_OBJECT_STORE_LIMIT_BYTES.
-    # For background see https://github.com/ray-project/ray/issues/20388
-    if sys.platform == "darwin":
+    # size larger than that _MAC_OBJECT_STORE_LIMIT_BYTES. It seems that
+    # object store > the limit is too slow even on ray 1.0.0. However, limiting
+    # the object store to _MAC_OBJECT_STORE_LIMIT_BYTES only seems to start
+    # helping at ray version 1.3.0. So if ray version is at least 1.3.0, cap
+    # the object store at _MAC_OBJECT_STORE_LIMIT_BYTES.
+    # For background on the ray bug see:
+    # - https://github.com/ray-project/ray/issues/20388
+    # - https://github.com/modin-project/modin/issues/4872
+    if sys.platform == "darwin" and version.parse(ray.__version__) >= version.parse(
+        "1.3.0"
+    ):
         object_store_memory = min(object_store_memory, _MAC_OBJECT_STORE_LIMIT_BYTES)
     return object_store_memory
 
