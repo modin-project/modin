@@ -1351,7 +1351,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     abs = Map.register(pandas.DataFrame.abs, dtypes="copy")
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
-    infer_objects = Map.register(pandas.DataFrame.infer_objects)
     convert_dtypes = Map.register(pd_convert_dtypes)
     invert = Map.register(pandas.DataFrame.__invert__)
     isin = Map.register(pandas.DataFrame.isin, dtypes=np.bool_)
@@ -1513,6 +1512,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def astype(self, col_dtypes, **kwargs):
         return self.__constructor__(self._modin_frame.astype(col_dtypes))
+
+    def infer_objects(self):
+        return self.__constructor__(self._modin_frame.infer_objects())
 
     # Column/Row partitions reduce operations
 
