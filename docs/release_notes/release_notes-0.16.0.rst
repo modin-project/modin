@@ -38,7 +38,6 @@ Key Features and Updates
   * FIX-#4838: Bump up modin-spreadsheet to latest master (#4839)
   * FIX-#4840: Change modin-spreadsheet version for notebook requirements (#4841)
   * FIX-#4835: Handle Pathlike paths in `read_parquet` (#4837)
-  * TEST-#4879: Cleanup `io_tests_data` after pytests finish (#4881)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
@@ -86,6 +85,7 @@ Key Features and Updates
   * TEST-#4698: Stop passing invalid storage_options param (#4699)
   * TEST-#4745: Pin flake8 to <5 to workaround installation conflict (#4752)
   * TEST-#4875: XFail tests failing due to file gone missing (#4876)
+  * TEST-#4879: Cleanup `io_tests_data` after pytests finish (#4881)
 * Documentation improvements
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
   * DOCS-#4628: Add to_parquet partial support notes (#4648)
