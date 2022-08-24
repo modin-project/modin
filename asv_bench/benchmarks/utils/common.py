@@ -29,6 +29,7 @@ from typing import Optional, Union
 from .compatibility import (
     ASV_USE_IMPL,
     ASV_DATASET_SIZE,
+    ASV_USE_ENGINE,
     ASV_USE_STORAGE_FORMAT,
 )
 from .data_shapes import RAND_LOW, RAND_HIGH
@@ -503,7 +504,22 @@ def execute(
             return
 
         # compatibility with old Modin versions
-        df._query_compiler._modin_frame._partition_mgr_cls.wait_partitions(partitions)
+        all(
+            map(
+                lambda partition: partition.drain_call_queue() or True,
+                partitions,
+            )
+        )
+        if ASV_USE_ENGINE == "ray":
+            from ray import wait
+
+            all(map(lambda partition: wait([partition._data]), partitions))
+        elif ASV_USE_ENGINE == "dask":
+            from dask.distributed import wait
+
+            all(map(lambda partition: wait(partition._data), partitions))
+        elif ASV_USE_ENGINE == "python":
+            pass
 
     elif ASV_USE_IMPL == "pandas":
         pass
