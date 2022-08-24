@@ -1429,9 +1429,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 # default full_axis=True would cause partition.apply() to split
                 # its result along axis 0.
                 new_partitions.append(
-                    cls.column_partitions(
-                        partitions[start : stop + 1], full_axis=False
-                    )
+                    cls.column_partitions(partitions[start : stop + 1], full_axis=False)
                 )
                 start = stop + 1
             return np.array(new_partitions)
