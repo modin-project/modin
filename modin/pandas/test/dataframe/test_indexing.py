@@ -1895,7 +1895,7 @@ def test___setitem__partitions_aligning():
 
 
 def test___setitem__with_mismatched_partitions():
-    fname = get_unique_filename(extension=".csv")
+    fname = get_unique_filename(extension="csv")
     np.savetxt(fname, np.random.randint(0, 100, size=(200_000, 99)), delimiter=",")
     modin_df = pd.read_csv(fname)
     pandas_df = pandas.read_csv(fname)
