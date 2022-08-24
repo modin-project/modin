@@ -59,6 +59,14 @@ elif Engine.get() == "Dask":
     virtual_row_partition_class = PandasOnDaskDataframeRowPartition
 
 
+@pytest.fixture
+def set_num_partitions(request):
+    old_num_partitions = NPartitions.get()
+    NPartitions.put(request.param)
+    yield
+    NPartitions.put(old_num_partitions)
+
+
 def test_aligning_blocks():
     # Test problem when modin frames have the same number of rows, but different
     # blocks (partition.list_of_blocks). See #2322 for details
@@ -151,14 +159,6 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
     df_equals(md_df, pd_df)
 
 
-@pytest.fixture
-def set_num_partitions(request):
-    old_num_partitions = NPartitions.get()
-    NPartitions.put(request.param)
-    yield
-    NPartitions.put(old_num_partitions)
-
-
 @pytest.mark.skipif(
     Engine.get() not in ("Dask", "Ray"),
     reason="Rebalancing partitions is only supported for Dask and Ray engines",
@@ -232,16 +232,16 @@ def test_rebalance_partitions(test_type, set_num_partitions):
         assert len(col) == col_length, "Partial axis partition detected."
         return col + 1
 
-    large_df = large_df.apply(col_apply_func)
-    new_large_modin_frame = large_df._query_compiler._modin_frame
-    assert new_large_modin_frame._partitions.shape == (
+    large_apply_result = large_df.apply(col_apply_func)
+    large_apply_result_frame = large_apply_result._query_compiler._modin_frame
+    assert large_apply_result_frame._partitions.shape == (
         num_partitions,
         num_partitions,
     ), "Partitions list shape is incorrect."
     assert all(
-        isinstance(ptn, new_large_modin_frame._partition_mgr_cls._partition_class)
-        for ptn in new_large_modin_frame._partitions.flatten()
-    ), "Partitions are not block partitioned after apply."
+        isinstance(ptn, large_apply_result_frame._partition_mgr_cls._partition_class)
+        for ptn in large_apply_result_frame._partitions.flatten()
+    ), "Partitions are not block partitioned after column-wise apply."
     large_df = pd.DataFrame(
         query_compiler=large_df._query_compiler.__constructor__(large_modin_frame)
     )
@@ -252,16 +252,27 @@ def test_rebalance_partitions(test_type, set_num_partitions):
         assert len(row) == 1000, "Partial axis partition detected."
         return row + 1
 
-    large_df = large_df.apply(row_apply_func, axis=1)
-    new_large_modin_frame = large_df._query_compiler._modin_frame
-    assert new_large_modin_frame._partitions.shape == (
+    large_apply_result = large_df.apply(row_apply_func, axis=1)
+    large_apply_result_frame = large_apply_result._query_compiler._modin_frame
+    assert large_apply_result_frame._partitions.shape == (
         num_partitions,
         num_partitions,
     ), "Partitions list shape is incorrect."
     assert all(
-        isinstance(ptn, new_large_modin_frame._partition_mgr_cls._partition_class)
-        for ptn in new_large_modin_frame._partitions.flatten()
-    ), "Partitions are not block partitioned after apply."
+        isinstance(ptn, large_apply_result_frame._partition_mgr_cls._partition_class)
+        for ptn in large_apply_result_frame._partitions.flatten()
+    ), "Partitions are not block partitioned after row-wise apply."
+
+    large_apply_result = large_df.applymap(lambda x: x)
+    large_apply_result_frame = large_apply_result._query_compiler._modin_frame
+    assert large_apply_result_frame._partitions.shape == (
+        num_partitions,
+        num_partitions,
+    ), "Partitions list shape is incorrect."
+    assert all(
+        isinstance(ptn, large_apply_result_frame._partition_mgr_cls._partition_class)
+        for ptn in large_apply_result_frame._partitions.flatten()
+    ), "Partitions are not block partitioned after element-wise apply."
 
 
 @pytest.mark.skipif(
