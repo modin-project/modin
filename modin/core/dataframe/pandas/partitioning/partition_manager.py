@@ -1422,11 +1422,14 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                         for obj in partitions[stop]
                     ]
                     partition_size = ideal_partition_size
+                # The new virtual partitions are not `full_axis`, even if they
+                # happen to span all rows in the dataframe, because they are
+                # meant to be the final partitions of the dataframe. They've
+                # already been split up correctly along axis 0, but using the
+                # default full_axis=True would cause partition.apply() to split
+                # its result along axis 0.
                 new_partitions.append(
-                    cls.column_partitions(
-                        (partitions[start : stop + 1]),
-                        full_axis=partition_size == total_rows,
-                    )
+                    cls.column_partitions(partitions[start : stop + 1], full_axis=False)
                 )
                 start = stop + 1
             return np.array(new_partitions)
