@@ -68,7 +68,7 @@ class DefaultMethod(Operator):
         if type(fn) == property:
             fn = cls.build_property_wrapper(fn)
 
-        def applyier(df, *args, dtypes=None, **kwargs):
+        def applyier(df, *args, **kwargs):
             """
             Apply target function to the casted to pandas frame.
 
@@ -76,6 +76,8 @@ class DefaultMethod(Operator):
             function under it and processes result so it is possible to create a valid
             query compiler from it.
             """
+            # pandas default implementation does not use argument
+            kwargs.pop("dtypes", None)
             df = cls.frame_wrapper(df)
             result = fn(df, *args, **kwargs)
 
