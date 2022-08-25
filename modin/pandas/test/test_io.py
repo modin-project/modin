@@ -18,6 +18,7 @@ import pandas
 from pandas.errors import ParserWarning
 import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
+from pandas._testing import ensure_clean, ensure_clean_dir
 from pathlib import Path
 from collections import OrderedDict
 from modin.config.envvars import MinPartitionSize
@@ -150,22 +151,23 @@ def parquet_eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     extension : str
         Extension of the test file.
     """
-    unique_filename_modin = get_unique_filename(extension=extension)
-    unique_filename_pandas = get_unique_filename(extension=extension)
+    with ensure_clean_dir() as dir:
+        unique_filename_modin = get_unique_filename(extension=extension, data_dir=dir)
+        unique_filename_pandas = get_unique_filename(extension=extension, data_dir=dir)
 
-    try:
-        getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
-        getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
-
-        pandas_df = pandas.read_parquet(unique_filename_pandas)
-        modin_df = pd.read_parquet(unique_filename_modin)
-        df_equals(pandas_df, modin_df)
-    finally:
-        teardown_test_file(unique_filename_pandas)
         try:
-            teardown_test_file(unique_filename_modin)
-        except IsADirectoryError:
-            shutil.rmtree(unique_filename_modin)
+            getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+            getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
+
+            pandas_df = pandas.read_parquet(unique_filename_pandas)
+            modin_df = pd.read_parquet(unique_filename_modin)
+            df_equals(pandas_df, modin_df)
+        finally:
+            teardown_test_file(unique_filename_pandas)
+            try:
+                teardown_test_file(unique_filename_modin)
+            except IsADirectoryError:
+                shutil.rmtree(unique_filename_modin)
 
 
 def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
@@ -177,29 +179,30 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
         fn: name of the method, that should be tested.
         extension: Extension of the test file.
     """
-    unique_filename_modin = get_unique_filename(extension=extension)
-    unique_filename_pandas = get_unique_filename(extension=extension)
+    with ensure_clean_dir() as dir:
+        unique_filename_modin = get_unique_filename(extension=extension, data_dir=dir)
+        unique_filename_pandas = get_unique_filename(extension=extension, data_dir=dir)
 
-    try:
-        # parameter `max_retries=0` is set for `to_csv` function on Ray engine,
-        # in order to increase the stability of tests, we repeat the call of
-        # the entire function manually
-        last_exception = None
-        for _ in range(3):
-            try:
-                getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
-            except EXCEPTIONS as exc:
-                last_exception = exc
-                continue
-            break
-        else:
-            raise last_exception
+        try:
+            # parameter `max_retries=0` is set for `to_csv` function on Ray engine,
+            # in order to increase the stability of tests, we repeat the call of
+            # the entire function manually
+            last_exception = None
+            for _ in range(3):
+                try:
+                    getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+                except EXCEPTIONS as exc:
+                    last_exception = exc
+                    continue
+                break
+            else:
+                raise last_exception
 
-        getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
+            getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
 
-        assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
-    finally:
-        teardown_test_files([unique_filename_modin, unique_filename_pandas])
+            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
+        finally:
+            teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
 
 @pytest.fixture
@@ -232,23 +235,23 @@ class TestCsv:
     def test_read_csv_delimiters(
         self, make_csv_file, sep, delimiter, decimal, thousands
     ):
-        unique_filename = get_unique_filename()
-        make_csv_file(
-            filename=unique_filename,
-            delimiter=delimiter,
-            thousands_separator=thousands,
-            decimal_separator=decimal,
-        )
+        with ensure_clean(".csv") as unique_filename:
+            make_csv_file(
+                filename=unique_filename,
+                delimiter=delimiter,
+                thousands_separator=thousands,
+                decimal_separator=decimal,
+            )
 
-        eval_io(
-            fn_name="read_csv",
-            # read_csv kwargs
-            filepath_or_buffer=unique_filename,
-            delimiter=delimiter,
-            sep=sep,
-            decimal=decimal,
-            thousands=thousands,
-        )
+            eval_io(
+                fn_name="read_csv",
+                # read_csv kwargs
+                filepath_or_buffer=unique_filename,
+                delimiter=delimiter,
+                sep=sep,
+                decimal=decimal,
+                thousands=thousands,
+            )
 
     # Column and Index Locations and Names tests
     @pytest.mark.parametrize("header", ["infer", None, 0])
@@ -388,36 +391,38 @@ class TestCsv:
             pytest.xfail(
                 reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
             )
-        if encoding:
-            unique_filename = get_unique_filename()
-            make_csv_file(
-                filename=unique_filename,
-                encoding=encoding,
-            )
-        kwargs = {
-            "filepath_or_buffer": unique_filename
-            if encoding
-            else pytest.csvs_names["test_read_csv_regular"],
-            "header": header,
-            "skiprows": skiprows,
-            "nrows": nrows,
-            "names": names,
-            "encoding": encoding,
-        }
+        with ensure_clean(".csv") as unique_filename:
+            if encoding:
+                make_csv_file(
+                    filename=unique_filename,
+                    encoding=encoding,
+                )
+            kwargs = {
+                "filepath_or_buffer": unique_filename
+                if encoding
+                else pytest.csvs_names["test_read_csv_regular"],
+                "header": header,
+                "skiprows": skiprows,
+                "nrows": nrows,
+                "names": names,
+                "encoding": encoding,
+            }
 
-        if Engine.get() != "Python":
-            df = pandas.read_csv(**dict(kwargs, nrows=1))
-            # in that case first partition will contain str
-            if df[df.columns[0]][df.index[0]] in ["c1", "col1", "c3", "col3"]:
-                pytest.xfail("read_csv incorrect output with float data - issue #2634")
-        eval_io(
-            fn_name="read_csv",
-            check_exception_type=None,  # issue #2320
-            raising_exceptions=None,
-            check_kwargs_callable=not callable(skiprows),
-            # read_csv kwargs
-            **kwargs,
-        )
+            if Engine.get() != "Python":
+                df = pandas.read_csv(**dict(kwargs, nrows=1))
+                # in that case first partition will contain str
+                if df[df.columns[0]][df.index[0]] in ["c1", "col1", "c3", "col3"]:
+                    pytest.xfail(
+                        "read_csv incorrect output with float data - issue #2634"
+                    )
+            eval_io(
+                fn_name="read_csv",
+                check_exception_type=None,  # issue #2320
+                raising_exceptions=None,
+                check_kwargs_callable=not callable(skiprows),
+                # read_csv kwargs
+                **kwargs,
+            )
 
     @pytest.mark.parametrize("true_values", [["Yes"], ["Yes", "true"], None])
     @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
@@ -451,15 +456,15 @@ class TestCsv:
         )
 
     def test_read_csv_skipinitialspace(self):
-        unique_filename = get_unique_filename()
-        str_initial_spaces = (
-            "col1,col2,col3,col4\n"
-            + "five,  six,  seven,  eight\n"
-            + "    five,    six,    seven,    eight\n"
-            + "five, six,  seven,   eight\n"
-        )
+        with ensure_clean(".csv") as unique_filename:
+            str_initial_spaces = (
+                "col1,col2,col3,col4\n"
+                + "five,  six,  seven,  eight\n"
+                + "    five,    six,    seven,    eight\n"
+                + "five, six,  seven,   eight\n"
+            )
 
-        eval_io_from_str(str_initial_spaces, unique_filename, skipinitialspace=True)
+            eval_io_from_str(str_initial_spaces, unique_filename, skipinitialspace=True)
 
     @pytest.mark.parametrize(
         "test_case",
@@ -470,30 +475,31 @@ class TestCsv:
             pytest.xfail(
                 reason="Error EOFError: stream has been closed in `modin in the cloud` mode - issue #3329"
             )
-        unique_filename = get_unique_filename()
+        with ensure_clean(".csv") as unique_filename:
+            str_single_element = "1"
+            str_single_col = "1\n2\n3\n"
+            str_four_cols = "1, 2, 3, 4\n5, 6, 7, 8\n9, 10, 11, 12\n"
+            case_to_data = {
+                "single_element": str_single_element,
+                "single_column": str_single_col,
+                "multiple_columns": str_four_cols,
+            }
 
-        str_single_element = "1"
-        str_single_col = "1\n2\n3\n"
-        str_four_cols = "1, 2, 3, 4\n5, 6, 7, 8\n9, 10, 11, 12\n"
-        case_to_data = {
-            "single_element": str_single_element,
-            "single_column": str_single_col,
-            "multiple_columns": str_four_cols,
-        }
-
-        eval_io_from_str(case_to_data[test_case], unique_filename, squeeze=True)
-        eval_io_from_str(
-            case_to_data[test_case], unique_filename, header=None, squeeze=True
-        )
+            eval_io_from_str(case_to_data[test_case], unique_filename, squeeze=True)
+            eval_io_from_str(
+                case_to_data[test_case], unique_filename, header=None, squeeze=True
+            )
 
     def test_read_csv_mangle_dupe_cols(self):
         if StorageFormat.get() == "Omnisci":
             pytest.xfail(
                 "processing of duplicated columns in OmniSci storage format is not supported yet - issue #3080"
             )
-        unique_filename = get_unique_filename()
-        str_non_unique_cols = "col,col,col,col\n5, 6, 7, 8\n9, 10, 11, 12\n"
-        eval_io_from_str(str_non_unique_cols, unique_filename, mangle_dupe_cols=True)
+        with ensure_clean() as unique_filename:
+            str_non_unique_cols = "col,col,col,col\n5, 6, 7, 8\n9, 10, 11, 12\n"
+            eval_io_from_str(
+                str_non_unique_cols, unique_filename, mangle_dupe_cols=True
+            )
 
     # NA and Missing Data Handling tests
     @pytest.mark.parametrize("na_values", ["custom_nan", "73"])
@@ -630,24 +636,24 @@ class TestCsv:
             pytest.xfail(
                 "Parallel read_csv does not support compression with older pandas"
             )
-        unique_filename = get_unique_filename()
-        make_csv_file(
-            filename=unique_filename, encoding=encoding, compression=compression
-        )
-        compressed_file_path = (
-            f"{unique_filename}.{COMP_TO_EXT[compression]}"
-            if compression != "infer"
-            else unique_filename
-        )
+        with ensure_clean(".csv") as unique_filename:
+            make_csv_file(
+                filename=unique_filename, encoding=encoding, compression=compression
+            )
+            compressed_file_path = (
+                f"{unique_filename}.{COMP_TO_EXT[compression]}"
+                if compression != "infer"
+                else unique_filename
+            )
 
-        eval_io(
-            fn_name="read_csv",
-            # read_csv kwargs
-            filepath_or_buffer=compressed_file_path,
-            compression=compression,
-            encoding=encoding,
-            engine=engine,
-        )
+            eval_io(
+                fn_name="read_csv",
+                # read_csv kwargs
+                filepath_or_buffer=compressed_file_path,
+                compression=compression,
+                encoding=encoding,
+                engine=engine,
+            )
 
     @pytest.mark.parametrize(
         "encoding",
@@ -675,15 +681,15 @@ class TestCsv:
         ],
     )
     def test_read_csv_encoding(self, make_csv_file, encoding):
-        unique_filename = get_unique_filename()
-        make_csv_file(filename=unique_filename, encoding=encoding)
+        with ensure_clean(".csv") as unique_filename:
+            make_csv_file(filename=unique_filename, encoding=encoding)
 
-        eval_io(
-            fn_name="read_csv",
-            # read_csv kwargs
-            filepath_or_buffer=unique_filename,
-            encoding=encoding,
-        )
+            eval_io(
+                fn_name="read_csv",
+                # read_csv kwargs
+                filepath_or_buffer=unique_filename,
+                encoding=encoding,
+            )
 
     @pytest.mark.parametrize("thousands", [None, ",", "_", " "])
     @pytest.mark.parametrize("decimal", [".", "_"])
@@ -710,39 +716,39 @@ class TestCsv:
                 "read_csv with Ray engine fails with `dialect` parameter - issue #2508"
             )
 
-        unique_filename = get_unique_filename()
-        if dialect:
-            test_csv_dialect_params = {
-                "delimiter": "_",
-                "doublequote": False,
-                "escapechar": "\\",
-                "quotechar": "d",
-                "quoting": csv.QUOTE_ALL,
-            }
-            csv.register_dialect(dialect, **test_csv_dialect_params)
-            dialect = csv.get_dialect(dialect)
-            make_csv_file(filename=unique_filename, **test_csv_dialect_params)
-        else:
-            make_csv_file(
-                filename=unique_filename,
-                thousands_separator=thousands,
-                decimal_separator=decimal,
-                escapechar=escapechar,
-                line_terminator=lineterminator,
-            )
+        with ensure_clean(".csv") as unique_filename:
+            if dialect:
+                test_csv_dialect_params = {
+                    "delimiter": "_",
+                    "doublequote": False,
+                    "escapechar": "\\",
+                    "quotechar": "d",
+                    "quoting": csv.QUOTE_ALL,
+                }
+                csv.register_dialect(dialect, **test_csv_dialect_params)
+                dialect = csv.get_dialect(dialect)
+                make_csv_file(filename=unique_filename, **test_csv_dialect_params)
+            else:
+                make_csv_file(
+                    filename=unique_filename,
+                    thousands_separator=thousands,
+                    decimal_separator=decimal,
+                    escapechar=escapechar,
+                    line_terminator=lineterminator,
+                )
 
-        eval_io(
-            check_exception_type=None,  # issue #2320
-            raising_exceptions=None,
-            fn_name="read_csv",
-            # read_csv kwargs
-            filepath_or_buffer=unique_filename,
-            thousands=thousands,
-            decimal=decimal,
-            lineterminator=lineterminator,
-            escapechar=escapechar,
-            dialect=dialect,
-        )
+            eval_io(
+                check_exception_type=None,  # issue #2320
+                raising_exceptions=None,
+                fn_name="read_csv",
+                # read_csv kwargs
+                filepath_or_buffer=unique_filename,
+                thousands=thousands,
+                decimal=decimal,
+                lineterminator=lineterminator,
+                escapechar=escapechar,
+                dialect=dialect,
+            )
 
     @pytest.mark.parametrize(
         "quoting",
@@ -765,27 +771,26 @@ class TestCsv:
             not doublequote and quotechar != '"' and quoting != csv.QUOTE_NONE
         )
         escapechar = "\\" if use_escapechar else None
-        unique_filename = get_unique_filename()
+        with ensure_clean(".csv") as unique_filename:
+            make_csv_file(
+                filename=unique_filename,
+                quoting=quoting,
+                quotechar=quotechar,
+                doublequote=doublequote,
+                escapechar=escapechar,
+                comment_col_char=comment,
+            )
 
-        make_csv_file(
-            filename=unique_filename,
-            quoting=quoting,
-            quotechar=quotechar,
-            doublequote=doublequote,
-            escapechar=escapechar,
-            comment_col_char=comment,
-        )
-
-        eval_io(
-            fn_name="read_csv",
-            # read_csv kwargs
-            filepath_or_buffer=unique_filename,
-            quoting=quoting,
-            quotechar=quotechar,
-            doublequote=doublequote,
-            escapechar=escapechar,
-            comment=comment,
-        )
+            eval_io(
+                fn_name="read_csv",
+                # read_csv kwargs
+                filepath_or_buffer=unique_filename,
+                quoting=quoting,
+                quotechar=quotechar,
+                doublequote=doublequote,
+                escapechar=escapechar,
+                comment=comment,
+            )
 
     # Error Handling parameters tests
     @pytest.mark.parametrize("warn_bad_lines", [True, False, None])
@@ -870,30 +875,29 @@ class TestCsv:
             "float_precision": float_precision,
         }
 
-        unique_filename = get_unique_filename()
+        with ensure_clean(".csv") as unique_filename:
+            if use_str_data:
+                str_delim_whitespaces = (
+                    "col1 col2  col3   col4\n5 6   7  8\n9  10    11 12\n"
+                )
+                eval_io_from_str(
+                    str_delim_whitespaces,
+                    unique_filename,
+                    raising_exceptions=raising_exceptions,
+                    **kwargs,
+                )
+            else:
+                make_csv_file(
+                    filename=unique_filename,
+                    delimiter=delimiter,
+                )
 
-        if use_str_data:
-            str_delim_whitespaces = (
-                "col1 col2  col3   col4\n5 6   7  8\n9  10    11 12\n"
-            )
-            eval_io_from_str(
-                str_delim_whitespaces,
-                unique_filename,
-                raising_exceptions=raising_exceptions,
-                **kwargs,
-            )
-        else:
-            make_csv_file(
-                filename=unique_filename,
-                delimiter=delimiter,
-            )
-
-            eval_io(
-                filepath_or_buffer=unique_filename,
-                fn_name="read_csv",
-                raising_exceptions=raising_exceptions,
-                **kwargs,
-            )
+                eval_io(
+                    filepath_or_buffer=unique_filename,
+                    fn_name="read_csv",
+                    raising_exceptions=raising_exceptions,
+                    **kwargs,
+                )
 
     # Issue related, specific or corner cases
     @pytest.mark.parametrize("nrows", [2, None])
@@ -902,9 +906,8 @@ class TestCsv:
             '1, 2, 3, 4\none, two, three, four\nfive, "six", seven, "eight\n'
         )
 
-        unique_filename = get_unique_filename()
-
-        eval_io_from_str(csv_bad_quotes, unique_filename, nrows=nrows)
+        with ensure_clean(".csv") as unique_filename:
+            eval_io_from_str(csv_bad_quotes, unique_filename, nrows=nrows)
 
     def test_read_csv_categories(self):
         eval_io(
@@ -1221,15 +1224,15 @@ class TestCsv:
     )
     @pytest.mark.parametrize("buffer_start_pos", [0, 10])
     def test_read_csv_file_handle(self, read_mode, make_csv_file, buffer_start_pos):
-        unique_filename = get_unique_filename()
-        make_csv_file(filename=unique_filename)
+        with ensure_clean() as unique_filename:
+            make_csv_file(filename=unique_filename)
 
-        with open(unique_filename, mode=read_mode) as buffer:
-            buffer.seek(buffer_start_pos)
-            df_pandas = pandas.read_csv(buffer)
-            buffer.seek(buffer_start_pos)
-            df_modin = pd.read_csv(buffer)
-            df_equals(df_modin, df_pandas)
+            with open(unique_filename, mode=read_mode) as buffer:
+                buffer.seek(buffer_start_pos)
+                df_pandas = pandas.read_csv(buffer)
+                buffer.seek(buffer_start_pos)
+                df_modin = pd.read_csv(buffer)
+                df_equals(df_modin, df_pandas)
 
     def test_unnamed_index(self):
         def get_internal_df(df):
@@ -1308,18 +1311,15 @@ class TestCsv:
 
 class TestTable:
     def test_read_table(self, make_csv_file):
-        unique_filename = get_unique_filename()
-        make_csv_file(filename=unique_filename, delimiter="\t")
-        eval_io(
-            fn_name="read_table",
-            # read_table kwargs
-            filepath_or_buffer=unique_filename,
-        )
+        with ensure_clean() as unique_filename:
+            make_csv_file(filename=unique_filename, delimiter="\t")
+            eval_io(
+                fn_name="read_table",
+                # read_table kwargs
+                filepath_or_buffer=unique_filename,
+            )
 
     def test_read_table_within_decorator(self, make_csv_file):
-        unique_filename = get_unique_filename()
-        make_csv_file(filename=unique_filename, delimiter="\t")
-
         @dummy_decorator()
         def wrapped_read_table(file, method):
             if method == "pandas":
@@ -1328,22 +1328,25 @@ class TestTable:
             if method == "modin":
                 return pd.read_table(file)
 
-        pandas_df = wrapped_read_table(unique_filename, method="pandas")
-        modin_df = wrapped_read_table(unique_filename, method="modin")
+        with ensure_clean() as unique_filename:
+            make_csv_file(filename=unique_filename, delimiter="\t")
 
-        df_equals(modin_df, pandas_df)
+            pandas_df = wrapped_read_table(unique_filename, method="pandas")
+            modin_df = wrapped_read_table(unique_filename, method="modin")
+
+            df_equals(modin_df, pandas_df)
 
     def test_read_table_empty_frame(self, make_csv_file):
-        unique_filename = get_unique_filename()
-        make_csv_file(filename=unique_filename, delimiter="\t")
+        with ensure_clean() as unique_filename:
+            make_csv_file(filename=unique_filename, delimiter="\t")
 
-        eval_io(
-            fn_name="read_table",
-            # read_table kwargs
-            filepath_or_buffer=unique_filename,
-            usecols=["col1"],
-            index_col="col1",
-        )
+            eval_io(
+                fn_name="read_table",
+                # read_table kwargs
+                filepath_or_buffer=unique_filename,
+                usecols=["col1"],
+                index_col="col1",
+            )
 
 
 class TestParquet:
@@ -1358,16 +1361,17 @@ class TestParquet:
     def test_read_parquet(
         self, make_parquet_file, columns, row_group_size, engine, path_type
     ):
-        unique_filename = path_type(get_unique_filename(extension="parquet"))
-        make_parquet_file(filename=unique_filename, row_group_size=row_group_size)
+        with ensure_clean(".parquet") as unique_filename:
+            unique_filename = path_type(unique_filename)
+            make_parquet_file(filename=unique_filename, row_group_size=row_group_size)
 
-        eval_io(
-            fn_name="read_parquet",
-            # read_parquet kwargs
-            engine=engine,
-            path=unique_filename,
-            columns=columns,
-        )
+            eval_io(
+                fn_name="read_parquet",
+                # read_parquet kwargs
+                engine=engine,
+                path=unique_filename,
+                columns=columns,
+            )
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1381,12 +1385,13 @@ class TestParquet:
         nrows = (
             MinPartitionSize.get() + 1
         )  # Use the minimal guaranteed failing value for nrows.
-        unique_filename = get_unique_filename(extension="parquet")
-        make_parquet_file(filename=unique_filename, nrows=nrows)
+        with ensure_clean_dir() as dir:
+            unique_filename = get_unique_filename(extension="parquet", data_dir=dir)
+            make_parquet_file(filename=unique_filename, nrows=nrows)
 
-        parquet_df = pd.read_parquet(unique_filename)
-        for col in parquet_df.columns:
-            parquet_df[col]
+            parquet_df = pd.read_parquet(unique_filename)
+            for col in parquet_df.columns:
+                parquet_df[col]
 
     @pytest.mark.parametrize("columns", [None, ["col1"]])
     @pytest.mark.parametrize("row_group_size", [None, 100, 1000, 10_000])
@@ -1438,16 +1443,17 @@ class TestParquet:
     def test_read_parquet_partitioned_directory(
         self, make_parquet_file, columns, engine
     ):
-        unique_filename = get_unique_filename(extension=None)
-        make_parquet_file(filename=unique_filename, partitioned_columns=["col1"])
+        with ensure_clean_dir() as dir:
+            unique_filename = get_unique_filename(extension=None, data_dir=dir)
+            make_parquet_file(filename=unique_filename, partitioned_columns=["col1"])
 
-        eval_io(
-            fn_name="read_parquet",
-            # read_parquet kwargs
-            engine=engine,
-            path=unique_filename,
-            columns=columns,
-        )
+            eval_io(
+                fn_name="read_parquet",
+                # read_parquet kwargs
+                engine=engine,
+                path=unique_filename,
+                columns=columns,
+            )
 
     @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
     @pytest.mark.xfail(
@@ -1456,7 +1462,6 @@ class TestParquet:
     )
     def test_read_parquet_pandas_index(self, engine):
         # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
-        unique_filename = get_unique_filename(extension="parquet")
         pandas_df = pandas.DataFrame(
             {
                 "idx": np.random.randint(0, 100_000, size=2000),
@@ -1488,7 +1493,7 @@ class TestParquet:
                 start="1/1/2018", periods=2000
             )
 
-        try:
+        with ensure_clean(".parquet") as unique_filename:
             for col in pandas_df.columns:
                 if col.startswith("idx"):
                     pandas_df.set_index(col).to_parquet(unique_filename)
@@ -1507,8 +1512,6 @@ class TestParquet:
                 path=unique_filename,
                 engine=engine,
             )
-        finally:
-            os.remove(unique_filename)
 
     @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
     @pytest.mark.xfail(
@@ -1517,7 +1520,6 @@ class TestParquet:
     )
     def test_read_parquet_pandas_index_partitioned(self, engine):
         # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
-        unique_filename = get_unique_filename(extension="parquet")
         pandas_df = pandas.DataFrame(
             {
                 "idx": np.random.randint(0, 100_000, size=2000),
@@ -1526,7 +1528,8 @@ class TestParquet:
                 "C": ["c"] * 2000,
             }
         )
-        try:
+        with ensure_clean_dir() as dir:
+            unique_filename = get_unique_filename(extension="parquet", data_dir=dir)
             pandas_df.set_index("idx").to_parquet(unique_filename, partition_cols=["A"])
             # read the same parquet using modin.pandas
             eval_io(
@@ -1535,8 +1538,6 @@ class TestParquet:
                 path=unique_filename,
                 engine=engine,
             )
-        finally:
-            shutil.rmtree(unique_filename)
 
     @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
     @pytest.mark.xfail(
@@ -1587,30 +1588,31 @@ class TestParquet:
         from pyarrow import csv
         from pyarrow import parquet
 
-        parquet_fname = get_unique_filename(extension="parquet")
-        csv_fname = get_unique_filename(extension="parquet")
-        pandas_df = pandas.DataFrame(
-            {
-                "idx": np.random.randint(0, 100_000, size=2000),
-                "A": np.random.randint(0, 10, size=2000),
-                "B": ["a", "b"] * 1000,
-                "C": ["c"] * 2000,
-            }
-        )
-        try:
-            pandas_df.to_csv(csv_fname, index=False)
-            # read into pyarrow table and write it to a parquet file
-            t = csv.read_csv(csv_fname)
-            parquet.write_table(t, parquet_fname)
-
-            eval_io(
-                "read_parquet",
-                # read_parquet kwargs
-                path=parquet_fname,
-                engine=engine,
+        with ensure_clean_dir() as dir:
+            parquet_fname = get_unique_filename(extension="parquet", data_dir=dir)
+            csv_fname = get_unique_filename(extension="parquet", data_dir=dir)
+            pandas_df = pandas.DataFrame(
+                {
+                    "idx": np.random.randint(0, 100_000, size=2000),
+                    "A": np.random.randint(0, 10, size=2000),
+                    "B": ["a", "b"] * 1000,
+                    "C": ["c"] * 2000,
+                }
             )
-        finally:
-            teardown_test_files([parquet_fname, csv_fname])
+            try:
+                pandas_df.to_csv(csv_fname, index=False)
+                # read into pyarrow table and write it to a parquet file
+                t = csv.read_csv(csv_fname)
+                parquet.write_table(t, parquet_fname)
+
+                eval_io(
+                    "read_parquet",
+                    # read_parquet kwargs
+                    path=parquet_fname,
+                    engine=engine,
+                )
+            finally:
+                teardown_test_files([parquet_fname, csv_fname])
 
     @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
     def test_read_empty_parquet_file(self, engine):
@@ -1904,21 +1906,22 @@ class TestExcel:
     def test_to_excel(self):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
 
-        unique_filename_modin = get_unique_filename(extension="xlsx")
-        unique_filename_pandas = get_unique_filename(extension="xlsx")
+        with ensure_clean_dir() as dir:
+            unique_filename_modin = get_unique_filename(extension="xlsx", data_dir=dir)
+            unique_filename_pandas = get_unique_filename(extension="xlsx", data_dir=dir)
 
-        modin_writer = pandas.ExcelWriter(unique_filename_modin)
-        pandas_writer = pandas.ExcelWriter(unique_filename_pandas)
-        try:
-            modin_df.to_excel(modin_writer)
-            pandas_df.to_excel(pandas_writer)
+            modin_writer = pandas.ExcelWriter(unique_filename_modin)
+            pandas_writer = pandas.ExcelWriter(unique_filename_pandas)
+            try:
+                modin_df.to_excel(modin_writer)
+                pandas_df.to_excel(pandas_writer)
 
-            modin_writer.save()
-            pandas_writer.save()
+                modin_writer.save()
+                pandas_writer.save()
 
-            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
-        finally:
-            teardown_test_files([unique_filename_modin, unique_filename_pandas])
+                assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
+            finally:
+                teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
     @pytest.mark.xfail(
         Engine.get() != "Python"
@@ -1961,41 +1964,42 @@ class TestHdf:
     )
     def test_HDFStore(self):
         hdf_file = None
-        unique_filename_modin = get_unique_filename(extension="hdf")
-        unique_filename_pandas = get_unique_filename(extension="hdf")
-        try:
-            modin_store = pd.HDFStore(unique_filename_modin)
-            pandas_store = pandas.HDFStore(unique_filename_pandas)
+        with ensure_clean_dir() as dir:
+            unique_filename_modin = get_unique_filename(extension="hdf", data_dir=dir)
+            unique_filename_pandas = get_unique_filename(extension="hdf", data_dir=dir)
+            try:
+                modin_store = pd.HDFStore(unique_filename_modin)
+                pandas_store = pandas.HDFStore(unique_filename_pandas)
 
-            modin_df, pandas_df = create_test_dfs(TEST_DATA)
+                modin_df, pandas_df = create_test_dfs(TEST_DATA)
 
-            modin_store["foo"] = modin_df
-            pandas_store["foo"] = pandas_df
+                modin_store["foo"] = modin_df
+                pandas_store["foo"] = pandas_df
 
-            modin_df = modin_store.get("foo")
-            pandas_df = pandas_store.get("foo")
-            df_equals(modin_df, pandas_df)
+                modin_df = modin_store.get("foo")
+                pandas_df = pandas_store.get("foo")
+                df_equals(modin_df, pandas_df)
 
-            modin_store.close()
-            pandas_store.close()
-            modin_df = pandas.read_hdf(unique_filename_modin, key="foo", mode="r")
-            pandas_df = pandas.read_hdf(unique_filename_pandas, key="foo", mode="r")
-            df_equals(modin_df, pandas_df)
-            assert isinstance(modin_store, pd.HDFStore)
+                modin_store.close()
+                pandas_store.close()
+                modin_df = pandas.read_hdf(unique_filename_modin, key="foo", mode="r")
+                pandas_df = pandas.read_hdf(unique_filename_pandas, key="foo", mode="r")
+                df_equals(modin_df, pandas_df)
+                assert isinstance(modin_store, pd.HDFStore)
 
-            handle, hdf_file = tempfile.mkstemp(suffix=".hdf5", prefix="test_read")
-            os.close(handle)
-            with pd.HDFStore(hdf_file, mode="w") as store:
-                store.append("data/df1", pd.DataFrame(np.random.randn(5, 5)))
-                store.append("data/df2", pd.DataFrame(np.random.randn(4, 4)))
+                handle, hdf_file = tempfile.mkstemp(suffix=".hdf5", prefix="test_read")
+                os.close(handle)
+                with pd.HDFStore(hdf_file, mode="w") as store:
+                    store.append("data/df1", pd.DataFrame(np.random.randn(5, 5)))
+                    store.append("data/df2", pd.DataFrame(np.random.randn(4, 4)))
 
-            modin_df = pd.read_hdf(hdf_file, key="data/df1", mode="r")
-            pandas_df = pandas.read_hdf(hdf_file, key="data/df1", mode="r")
-            df_equals(modin_df, pandas_df)
-        finally:
-            if hdf_file:
-                os.unlink(hdf_file)
-            teardown_test_files([unique_filename_modin, unique_filename_pandas])
+                modin_df = pd.read_hdf(hdf_file, key="data/df1", mode="r")
+                pandas_df = pandas.read_hdf(hdf_file, key="data/df1", mode="r")
+                df_equals(modin_df, pandas_df)
+            finally:
+                if hdf_file:
+                    os.unlink(hdf_file)
+                teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -2023,59 +2027,59 @@ class TestSql:
     )
     @pytest.mark.parametrize("read_sql_engine", ["Pandas", "Connectorx"])
     def test_read_sql(self, make_sql_connection, read_sql_engine):
-        filename = get_unique_filename(extension="db")
-        table = "test_read_sql"
-        conn = make_sql_connection(filename, table)
-        query = f"select * from {table}"
+        with ensure_clean(".db") as filename:
+            table = "test_read_sql"
+            conn = make_sql_connection(filename, table)
+            query = f"select * from {table}"
 
-        eval_io(
-            fn_name="read_sql",
-            # read_sql kwargs
-            sql=query,
-            con=conn,
-        )
-
-        eval_io(
-            fn_name="read_sql",
-            # read_sql kwargs
-            sql=query,
-            con=conn,
-            index_col="index",
-        )
-
-        with warns_that_defaulting_to_pandas():
-            pd.read_sql_query(query, conn)
-
-        with warns_that_defaulting_to_pandas():
-            pd.read_sql_table(table, conn)
-
-        # Test SQLAlchemy engine
-        sqlalchemy_engine = sa.create_engine(conn)
-        eval_io(
-            fn_name="read_sql",
-            # read_sql kwargs
-            sql=query,
-            con=sqlalchemy_engine,
-        )
-
-        # Test SQLAlchemy Connection
-        sqlalchemy_connection = sqlalchemy_engine.connect()
-        eval_io(
-            fn_name="read_sql",
-            # read_sql kwargs
-            sql=query,
-            con=sqlalchemy_connection,
-        )
-
-        ReadSqlEngine.put(read_sql_engine)
-        if ReadSqlEngine.get() == "Connectorx":
-            modin_df = pd.read_sql(sql=query, con=conn)
-        else:
-            modin_df = pd.read_sql(
-                sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
+            eval_io(
+                fn_name="read_sql",
+                # read_sql kwargs
+                sql=query,
+                con=conn,
             )
-        pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
-        df_equals(modin_df, pandas_df)
+
+            eval_io(
+                fn_name="read_sql",
+                # read_sql kwargs
+                sql=query,
+                con=conn,
+                index_col="index",
+            )
+
+            with warns_that_defaulting_to_pandas():
+                pd.read_sql_query(query, conn)
+
+            with warns_that_defaulting_to_pandas():
+                pd.read_sql_table(table, conn)
+
+            # Test SQLAlchemy engine
+            sqlalchemy_engine = sa.create_engine(conn)
+            eval_io(
+                fn_name="read_sql",
+                # read_sql kwargs
+                sql=query,
+                con=sqlalchemy_engine,
+            )
+
+            # Test SQLAlchemy Connection
+            sqlalchemy_connection = sqlalchemy_engine.connect()
+            eval_io(
+                fn_name="read_sql",
+                # read_sql kwargs
+                sql=query,
+                con=sqlalchemy_connection,
+            )
+
+            ReadSqlEngine.put(read_sql_engine)
+            if ReadSqlEngine.get() == "Connectorx":
+                modin_df = pd.read_sql(sql=query, con=conn)
+            else:
+                modin_df = pd.read_sql(
+                    sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
+                )
+            pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
+            df_equals(modin_df, pandas_df)
 
     @pytest.mark.skipif(
         not TestReadFromSqlServer.get(),
@@ -2132,15 +2136,15 @@ class TestSql:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_sql_with_chunksize(self, make_sql_connection):
-        filename = get_unique_filename(extension="db")
-        table = "test_read_sql_with_chunksize"
-        conn = make_sql_connection(filename, table)
-        query = f"select * from {table}"
+        with ensure_clean(".db") as filename:
+            table = "test_read_sql_with_chunksize"
+            conn = make_sql_connection(filename, table)
+            query = f"select * from {table}"
 
-        pandas_gen = pandas.read_sql(query, conn, chunksize=10)
-        modin_gen = pd.read_sql(query, conn, chunksize=10)
-        for modin_df, pandas_df in zip(modin_gen, pandas_gen):
-            df_equals(modin_df, pandas_df)
+            pandas_gen = pandas.read_sql(query, conn, chunksize=10)
+            modin_gen = pd.read_sql(query, conn, chunksize=10)
+            for modin_df, pandas_df in zip(modin_gen, pandas_gen):
+                df_equals(modin_df, pandas_df)
 
     @pytest.mark.parametrize("index", [False, True])
     def test_to_sql(self, make_sql_connection, index):
@@ -2520,16 +2524,16 @@ class TestPickle:
         eval_to_file(
             modin_obj=modin_df, pandas_obj=pandas_df, fn="to_pickle", extension="pkl"
         )
+        with ensure_clean_dir() as dir:
+            unique_filename_modin = get_unique_filename(extension="pkl", data_dir=dir)
+            unique_filename_pandas = get_unique_filename(extension="pkl", data_dir=dir)
+            try:
+                pd.to_pickle(modin_df, unique_filename_modin)
+                pandas.to_pickle(pandas_df, unique_filename_pandas)
 
-        unique_filename_modin = get_unique_filename(extension="pkl")
-        unique_filename_pandas = get_unique_filename(extension="pkl")
-        try:
-            pd.to_pickle(modin_df, unique_filename_modin)
-            pandas.to_pickle(pandas_df, unique_filename_pandas)
-
-            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
-        finally:
-            teardown_test_files([unique_filename_modin, unique_filename_pandas])
+                assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
+            finally:
+                teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
 
 @pytest.mark.xfail(

@@ -16,13 +16,13 @@ import glob
 import json
 import numpy as np
 import pandas
+from pandas._testing import ensure_clean
 import pytest
 import modin.experimental.pandas as pd
 from modin.config import Engine
 from modin.utils import get_current_execution
 from modin.pandas.test.utils import (
     df_equals,
-    get_unique_filename,
     teardown_test_files,
     test_data,
     eval_general,
@@ -259,38 +259,38 @@ def test_distributed_pickling(filename, compression):
     reason=f"{Engine.get()} does not have experimental read_custom_text API",
 )
 def test_read_custom_json_text():
-    filename = get_unique_filename(extension="json")
+    with ensure_clean() as filename:
 
-    def _generate_json(file_name, nrows, ncols):
-        data = np.random.rand(nrows, ncols)
-        df = pandas.DataFrame(data, columns=[f"col{x}" for x in range(ncols)])
-        df.to_json(file_name, lines=True, orient="records")
+        def _generate_json(file_name, nrows, ncols):
+            data = np.random.rand(nrows, ncols)
+            df = pandas.DataFrame(data, columns=[f"col{x}" for x in range(ncols)])
+            df.to_json(file_name, lines=True, orient="records")
 
-    _generate_json(filename, 64, 8)
+        _generate_json(filename, 64, 8)
 
-    # Custom parser allows us to add some specifics to reading files,
-    # which is not available through the ready-made API.
-    # For example, the parser allows us to reduce the amount of RAM
-    # required for reading by selecting a subset of columns.
-    def _custom_parser(io_input, **kwargs):
-        result = {"col0": [], "col1": [], "col3": []}
-        for line in io_input:
-            # for example, simjson can be used here
-            obj = json.loads(line)
-            for key in result:
-                result[key].append(obj[key])
-        return pandas.DataFrame(result).rename(columns={"col0": "testID"})
+        # Custom parser allows us to add some specifics to reading files,
+        # which is not available through the ready-made API.
+        # For example, the parser allows us to reduce the amount of RAM
+        # required for reading by selecting a subset of columns.
+        def _custom_parser(io_input, **kwargs):
+            result = {"col0": [], "col1": [], "col3": []}
+            for line in io_input:
+                # for example, simjson can be used here
+                obj = json.loads(line)
+                for key in result:
+                    result[key].append(obj[key])
+            return pandas.DataFrame(result).rename(columns={"col0": "testID"})
 
-    df1 = pd.read_custom_text(
-        filename,
-        columns=["testID", "col1", "col3"],
-        custom_parser=_custom_parser,
-        is_quoting=False,
-    )
-    df2 = pd.read_json(filename, lines=True)[["col0", "col1", "col3"]].rename(
-        columns={"col0": "testID"}
-    )
-    df_equals(df1, df2)
+        df1 = pd.read_custom_text(
+            filename,
+            columns=["testID", "col1", "col3"],
+            custom_parser=_custom_parser,
+            is_quoting=False,
+        )
+        df2 = pd.read_json(filename, lines=True)[["col0", "col1", "col3"]].rename(
+            columns={"col0": "testID"}
+        )
+        df_equals(df1, df2)
 
 
 @pytest.mark.skipif(
@@ -298,8 +298,6 @@ def test_read_custom_json_text():
     reason=f"{Engine.get()} does not have experimental API",
 )
 def test_read_evaluated_dict():
-    filename = get_unique_filename(extension="json")
-
     def _generate_evaluated_dict(file_name, nrows, ncols):
         result = {}
         keys = [f"col{x}" for x in range(ncols)]
@@ -312,8 +310,6 @@ def test_read_evaluated_dict():
                 _file.write(str(result))
                 _file.write("\n")
 
-    _generate_evaluated_dict(filename, 64, 8)
-
     # This parser allows us to read a format not supported by other reading functions
     def _custom_parser(io_input, **kwargs):
         cat_list = []
@@ -324,13 +320,6 @@ def test_read_evaluated_dict():
             asin_list.append(obj["col2"])
         return pandas.DataFrame({"col1": asin_list, "col2": cat_list})
 
-    df1 = pd.read_custom_text(
-        filename,
-        columns=["col1", "col2"],
-        custom_parser=_custom_parser,
-    )
-    assert df1.shape == (64, 2)
-
     def columns_callback(io_input, **kwargs):
         columns = None
         for line in io_input:
@@ -338,7 +327,17 @@ def test_read_evaluated_dict():
             break
         return columns
 
-    df2 = pd.read_custom_text(
-        filename, columns=columns_callback, custom_parser=_custom_parser
-    )
-    df_equals(df1, df2)
+    with ensure_clean() as filename:
+        _generate_evaluated_dict(filename, 64, 8)
+
+        df1 = pd.read_custom_text(
+            filename,
+            columns=["col1", "col2"],
+            custom_parser=_custom_parser,
+        )
+        assert df1.shape == (64, 2)
+
+        df2 = pd.read_custom_text(
+            filename, columns=columns_callback, custom_parser=_custom_parser
+        )
+        df_equals(df1, df2)

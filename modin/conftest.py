@@ -60,7 +60,6 @@ from modin.pandas.test.utils import (  # noqa: E402
     make_default_file,
     teardown_test_files,
     NROWS,
-    IO_OPS_DATA_DIR,
 )
 
 
@@ -541,10 +540,6 @@ ray_client_server = None
 
 
 def pytest_sessionstart(session):
-    # create test data dir if it is not exists yet
-    if not os.path.exists(IO_OPS_DATA_DIR):
-        os.mkdir(IO_OPS_DATA_DIR)
-
     if TestRayClient.get():
         import ray
         import ray.util.client.server.server as ray_server
@@ -556,10 +551,6 @@ def pytest_sessionstart(session):
 
 
 def pytest_sessionfinish(session, exitstatus):
-    # Cleanup io_tests_data
-    if os.path.exists(IO_OPS_DATA_DIR):
-        shutil.rmtree(IO_OPS_DATA_DIR)
-
     if TestRayClient.get():
         import ray
 

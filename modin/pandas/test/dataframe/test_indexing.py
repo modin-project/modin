@@ -15,6 +15,7 @@ import pytest
 import numpy as np
 import pandas
 from pandas.testing import assert_index_equal
+from pandas._testing import ensure_clean
 import matplotlib
 import modin.pandas as pd
 import sys
@@ -26,7 +27,6 @@ from modin.pandas.test.utils import (
     df_equals,
     arg_keys,
     name_contains,
-    get_unique_filename,
     test_data,
     test_data_values,
     test_data_keys,
@@ -1895,13 +1895,13 @@ def test___setitem__partitions_aligning():
 
 
 def test___setitem__with_mismatched_partitions():
-    fname = get_unique_filename(extension="csv")
-    np.savetxt(fname, np.random.randint(0, 100, size=(200_000, 99)), delimiter=",")
-    modin_df = pd.read_csv(fname)
-    pandas_df = pandas.read_csv(fname)
-    modin_df["new"] = pd.Series(list(range(len(modin_df))))
-    pandas_df["new"] = pandas.Series(list(range(len(pandas_df))))
-    df_equals(modin_df, pandas_df)
+    with ensure_clean(".csv") as fname:
+        np.savetxt(fname, np.random.randint(0, 100, size=(200_000, 99)), delimiter=",")
+        modin_df = pd.read_csv(fname)
+        pandas_df = pandas.read_csv(fname)
+        modin_df["new"] = pd.Series(list(range(len(modin_df))))
+        pandas_df["new"] = pandas.Series(list(range(len(pandas_df))))
+        df_equals(modin_df, pandas_df)
 
 
 def test___setitem__mask():
