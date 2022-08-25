@@ -24,7 +24,7 @@ from modin.core.execution.ray.common.utils import deserialize
 from .partition import PandasOnRayDataframePartition
 
 
-_DEPLOY_AXIS_FUNC = None
+_DEPLOY_AXIS_FUNC = ray.put(PandasDataframeAxisPartition.deploy_axis_func)
 
 
 class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
@@ -185,11 +185,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of ``ray.ObjectRef``-s.
         """
-        global _DEPLOY_AXIS_FUNC
         lengths = kwargs.get("_lengths", None)
         max_retries = kwargs.pop("max_retries", None)
-        if _DEPLOY_AXIS_FUNC is None:
-            _DEPLOY_AXIS_FUNC = ray.put(PandasDataframeAxisPartition.deploy_axis_func)
         return deploy_ray_func.options(
             num_returns=(num_splits if lengths is None else len(lengths)) * 4,
             **({"max_retries": max_retries} if max_retries is not None else {}),
