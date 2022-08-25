@@ -51,7 +51,7 @@ Key Features and Updates
   * PERF-#4773: Compute `lengths` and `widths` in `put` method of Dask partition like Ray do (#4780)
   * PERF-#4732: Avoid overwriting already-evaluated `PandasOnRayDataframePartition._length_cache` and `PandasOnRayDataframePartition._width_cache` (#4754)
   * PERF-#4713: Stop overriding the ray MacOS object store size limit (#4792)
-  * PERF-#4851: Compute `dtypes` for binary operations that can only return bool type (#4852)
+  * PERF-#4851: Compute `dtypes` for binary operations that can only return bool type and the right operand is not a Modin object (#4852)
   * PERF-#4842: `copy` should not trigger any previous computations (#4843)
   * PERF-#4268: Implement partition-parallel __getitem__ for bool Series masks (#4753)
 * Benchmarking enhancements
