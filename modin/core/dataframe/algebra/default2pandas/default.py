@@ -76,6 +76,8 @@ class DefaultMethod(Operator):
             function under it and processes result so it is possible to create a valid
             query compiler from it.
             """
+            # pandas default implementation doesn't know how to handle `dtypes` keyword argument
+            kwargs.pop("dtypes", None)
             df = cls.frame_wrapper(df)
             result = fn(df, *args, **kwargs)
 

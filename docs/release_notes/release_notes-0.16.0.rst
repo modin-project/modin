@@ -39,6 +39,7 @@ Key Features and Updates
   * FIX-#4840: Change modin-spreadsheet version for notebook requirements (#4841)
   * FIX-#4835: Handle Pathlike paths in `read_parquet` (#4837)
   * FIX-#4872: Stop checking the private ray mac memory limit (#4873)
+  * FIX-#4848: Fix rebalancing partitions when NPartitions == 1 (#4874)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
@@ -51,9 +52,12 @@ Key Features and Updates
   * PERF-#4305: Parallelize `read_parquet` over row groups (#4700)
   * PERF-#4773: Compute `lengths` and `widths` in `put` method of Dask partition like Ray do (#4780)
   * PERF-#4732: Avoid overwriting already-evaluated `PandasOnRayDataframePartition._length_cache` and `PandasOnRayDataframePartition._width_cache` (#4754)
+  * PERF-#4862: Don't call `compute_sliced_len.remote` when `row_labels/col_labels == slice(None)` (#4863)
   * PERF-#4713: Stop overriding the ray MacOS object store size limit (#4792)
+  * PERF-#4851: Compute `dtypes` for binary operations that can only return bool type and the right operand is not a Modin object (#4852)
   * PERF-#4842: `copy` should not trigger any previous computations (#4843)
   * PERF-#4849: compute `dtypes` in `concat` also for ROW_WISE case when possible (#4850)
+  * PERF-#4860: `PandasDataframeAxisPartition.deploy_axis_func` should be serialized only once (#4861)
   * PERF-#4268: Implement partition-parallel __getitem__ for bool Series masks (#4753)
 * Benchmarking enhancements
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
