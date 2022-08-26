@@ -42,6 +42,10 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         Whether or not the virtual partition encompasses the whole axis.
     call_queue : list, optional
         A list of tuples (callable, args, kwargs) that contains deferred calls.
+    length : int, optional
+        Length or reference to it of wrapped ``pandas.DataFrame``.
+    width : ray.ObjectRef or int, optional
+        Width or reference to it of wrapped ``pandas.DataFrame``.
     """
 
     axis = None
@@ -49,12 +53,20 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
     instance_type = Future
 
     def __init__(
-        self, list_of_partitions, get_ip=False, full_axis=True, call_queue=None
+        self,
+        list_of_partitions,
+        get_ip=False,
+        full_axis=True,
+        call_queue=None,
+        length=None,
+        width=None,
     ):
         if isinstance(list_of_partitions, PandasOnDaskDataframePartition):
             list_of_partitions = [list_of_partitions]
         self.call_queue = call_queue or []
         self.full_axis = full_axis
+        self._length_cache = length
+        self._width_cache = width
         # Check that all virtual partition axes are the same in `list_of_partitions`
         # We should never have mismatching axis in the current implementation. We add this
         # defensive assertion to ensure that undefined behavior does not happen.
@@ -489,6 +501,10 @@ class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeVirtualPartition
         Whether this partition spans an entire axis of the dataframe.
     call_queue : list, optional
         A list of tuples (callable, args, kwargs) that contains deferred calls.
+    length : int, optional
+        Length or reference to it of wrapped ``pandas.DataFrame``.
+    width : ray.ObjectRef or int, optional
+        Width or reference to it of wrapped ``pandas.DataFrame``.
     """
 
     axis = 0
@@ -513,6 +529,10 @@ class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeVirtualPartition):
         Whether this partition spans an entire axis of the dataframe.
     call_queue : list, optional
         A list of tuples (callable, args, kwargs) that contains deferred calls.
+    length : int, optional
+        Length or reference to it of wrapped ``pandas.DataFrame``.
+    width : ray.ObjectRef or int, optional
+        Width or reference to it of wrapped ``pandas.DataFrame``.
     """
 
     axis = 1
