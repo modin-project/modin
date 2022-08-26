@@ -435,7 +435,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         self.drain_call_queue()
         wait(self.list_of_blocks)
 
-    def add_to_apply_calls(self, func, *args, **kwargs):
+    def add_to_apply_calls(self, func, *args, length=None, width=None, **kwargs):
         """
         Add a function to the call queue.
 
@@ -445,6 +445,10 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             Function to be added to the call queue.
         *args : iterable
             Additional positional arguments to be passed in `func`.
+        length : int, optional
+            Length of wrapped pandas DataFrame.
+        width : int, optional
+            Width of wrapped pandas DataFrame.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
@@ -461,6 +465,8 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             self.list_of_block_partitions,
             full_axis=self.full_axis,
             call_queue=self.call_queue + [(func, args, kwargs)],
+            length=length,
+            width=width,
         )
 
 
