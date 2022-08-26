@@ -56,6 +56,7 @@ Key Features and Updates
   * PERF-#4851: Compute `dtypes` for binary operations that can only return bool type and the right operand is not a Modin object (#4852)
   * PERF-#4842: `copy` should not trigger any previous computations (#4843)
   * PERF-#4849: compute `dtypes` in `concat` also for ROW_WISE case when possible (#4850)
+  * PERF-#4860: `PandasDataframeAxisPartition.deploy_axis_func` should be serialized only once (#4861)
   * PERF-#4268: Implement partition-parallel __getitem__ for bool Series masks (#4753)
 * Benchmarking enhancements
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
