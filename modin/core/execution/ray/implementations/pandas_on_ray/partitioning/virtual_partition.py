@@ -43,6 +43,10 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         Whether or not the virtual partition encompasses the whole axis.
     call_queue : list, optional
         A list of tuples (callable, args, kwargs) that contains deferred calls.
+    length : int, optional
+        Length or reference to it of wrapped ``pandas.DataFrame``.
+    width : ray.ObjectRef or int, optional
+        Width or reference to it of wrapped ``pandas.DataFrame``.
     """
 
     partition_type = PandasOnRayDataframePartition
@@ -508,6 +512,10 @@ class PandasOnRayDataframeColumnPartition(PandasOnRayDataframeVirtualPartition):
         Whether this partition spans an entire axis of the dataframe.
     call_queue : list, default: None
         Call queue that needs to be executed on the partition.
+    length : int, optional
+        Length or reference to it of wrapped ``pandas.DataFrame``.
+    width : ray.ObjectRef or int, optional
+        Width or reference to it of wrapped ``pandas.DataFrame``.
     """
 
     axis = 0
@@ -532,6 +540,10 @@ class PandasOnRayDataframeRowPartition(PandasOnRayDataframeVirtualPartition):
         Whether this partition spans an entire axis of the dataframe.
     call_queue : list, default: None
         Call queue that needs to be executed on the partition.
+    length : int, optional
+        Length or reference to it of wrapped ``pandas.DataFrame``.
+    width : ray.ObjectRef or int, optional
+        Width or reference to it of wrapped ``pandas.DataFrame``.
     """
 
     axis = 1

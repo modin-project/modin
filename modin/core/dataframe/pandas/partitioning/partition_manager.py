@@ -1408,7 +1408,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                     new_last_partition_size = ideal_partition_size - sum(
                         row[0].length() for row in partitions[start:stop]
                     )
-                    _length = partitions[stop][0].length()
                     partitions = np.insert(
                         partitions,
                         stop + 1,
@@ -1418,15 +1417,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                         ],
                         0,
                     )
-                    for obj in partitions[stop]:
-                        obj._length_cache = _length - new_last_partition_size
                     partitions[stop, :] = [
                         obj.mask(slice(None, new_last_partition_size), slice(None))
                         for obj in partitions[stop]
                     ]
-                    for obj in partitions[stop]:
-                        obj._length_cache = new_last_partition_size
-
                     partition_size = ideal_partition_size
                 # The new virtual partitions are not `full_axis`, even if they
                 # happen to span all rows in the dataframe, because they are
