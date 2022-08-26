@@ -1253,26 +1253,6 @@ class PandasDataframe(ClassLogger):
         bins = np.append(lengths[:-1].cumsum(), np.iinfo(lengths.dtype).max)
         return bins
 
-    def _get_row_blklocs(self, x: int, blkno: int, axis: int):
-        """
-        For a row position x, we use _row_blknos to find the partition N
-        containing row x. We now want to find what row position _within_
-        partition N corresponds to row x.
-
-        See also
-        --------
-        pandas.core.internals.BlockManager.blklocs
-        """
-        # TODO: vectorize this function
-        if blkno == 0:
-            return x
-
-        if axis == 0:
-            prev = self._row_bins[blkno - 1]
-        else:
-            prev = self._col_bins[blkno - 1]
-        return x - prev
-
     def _get_blklocs(
         self,
         positions: "npt.NDArray[np.intp]",
