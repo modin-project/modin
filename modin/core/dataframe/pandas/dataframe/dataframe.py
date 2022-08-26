@@ -1224,7 +1224,7 @@ class PandasDataframe(ClassLogger):
 
         To find which partition column j is in, we use `np.digitize(j, self._col_bins)`.
 
-        See also
+        See Also
         --------
         pandas.core.internals.BlockManager.blknos
             Analogous to np.digitize(np.arange(ncols), self._col_bins)
@@ -1242,7 +1242,7 @@ class PandasDataframe(ClassLogger):
 
         To find which partition row i is in, we use `np.digitize(i, self._row_bins)`.
 
-        See also
+        See Also
         --------
         pandas.core.internals.BlockManager.blknos
             Analogous to np.digitize(np.arange(nrows), self._row_bins)
