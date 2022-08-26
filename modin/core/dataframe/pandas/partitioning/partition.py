@@ -14,7 +14,6 @@
 """The module defines base interface for a partition of a Modin DataFrame."""
 
 from abc import ABC
-from copy import copy
 
 import pandas
 from pandas.api.types import is_scalar
@@ -191,18 +190,18 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         # FIXME: for a `take` won't is_full_axis_mask be wrong if row_labels
         #  is non-unique or not monotonic increasing.
 
-        def is_full_axis_mask(index, axis_length):
-            """Check whether `index` mask grabs `axis_length` amount of elements."""
-            if isinstance(index, slice):
-                return index == slice(None) or (
-                    isinstance(axis_length, int)
-                    and compute_sliced_len(index, axis_length) == axis_length
-                )
-            return (
-                hasattr(index, "__len__")
-                and isinstance(axis_length, int)
-                and len(index) == axis_length
-            )
+        # def is_full_axis_mask(index, axis_length):
+        #    """Check whether `index` mask grabs `axis_length` amount of elements."""
+        #    if isinstance(index, slice):
+        #        return index == slice(None) or (
+        #            isinstance(axis_length, int)
+        #            and compute_sliced_len(index, axis_length) == axis_length
+        #        )
+        #    return (
+        #        hasattr(index, "__len__")
+        #        and isinstance(axis_length, int)
+        #        and len(index) == axis_length
+        #    )
 
         row_labels = [row_labels] if is_scalar(row_labels) else row_labels
         col_labels = [col_labels] if is_scalar(col_labels) else col_labels
