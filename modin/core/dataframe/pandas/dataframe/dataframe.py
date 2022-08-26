@@ -1827,10 +1827,7 @@ class PandasDataframe(ClassLogger):
 
         new_axes[axis.value] = self.axes[axis.value]
         new_lengths[axis.value] = self._axes_lengths[axis.value]
-        (
-            new_axes[axis.value ^ 1],
-            new_lengths[axis.value ^ 1],
-        ) = self._compute_axis_labels_and_lengths(axis.value ^ 1, new_partitions)
+        new_axes[axis.value ^ 1], new_lengths[axis.value ^ 1] = None, None
 
         return self.__constructor__(
             new_partitions,
