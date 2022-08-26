@@ -751,6 +751,8 @@ class PandasDataframe(ClassLogger):
         import pandas._libs.internals as libinternals
 
         if row_positions is not None:
+            row_positions = np.asarray(row_positions, dtype=np.intp)
+
             # row_blknos[i] is the index of the row-partition in which
             #  row_positions[i] is located.
             row_blknos = np.digitize(row_positions, self._row_bins)
@@ -775,6 +777,8 @@ class PandasDataframe(ClassLogger):
             new_index = self._index_cache
 
         if col_positions is not None:
+            col_positions = np.asarray(col_positions, dtype=np.intp)
+
             # col_blknos[i] is the index of the col-partition in which
             #  col_positions[i] is located.
             col_blknos = np.digitize(col_positions, self._col_bins)
