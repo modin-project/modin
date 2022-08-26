@@ -38,6 +38,7 @@ Key Features and Updates
   * FIX-#4838: Bump up modin-spreadsheet to latest master (#4839)
   * FIX-#4840: Change modin-spreadsheet version for notebook requirements (#4841)
   * FIX-#4835: Handle Pathlike paths in `read_parquet` (#4837)
+  * FIX-#4872: Stop checking the private ray mac memory limit (#4873)
   * FIX-#4848: Fix rebalancing partitions when NPartitions == 1 (#4874)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
