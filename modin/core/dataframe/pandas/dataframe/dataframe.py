@@ -2471,6 +2471,9 @@ class PandasDataframe(ClassLogger):
                 base_frame._partitions,
                 make_reindexer(do_reindex_base, base_frame_idx),
             )
+            base_frame._partition_mgr_cls._update_partition_dimension_caches(
+                reindexed_base[0] if axis else reindexed_base.T[0]
+            )
             if axis:
                 base_lengths = [obj.width() for obj in reindexed_base[0]]
             else:

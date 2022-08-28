@@ -56,35 +56,30 @@ class PandasOnDaskDataframe(PandasDataframe):
         Returns
         -------
         list
-            A list of lengths along the specified axis that sum to the overall length of the partition
-            along the specified axis.
+            A list of Dask futures representing lengths along the specified axis that sum to
+            the overall length of the partition along the specified axis.
 
         Notes
         -----
         This utility function is used to ensure that computation occurs asynchronously across all partitions
         whether the partitions are virtual or physical partitions.
         """
+
+        def len_fn(df):
+            return len(df) if not axis else len(df.columns)
+
         if isinstance(partition, self._partition_mgr_cls._partition_class):
-            return [
-                partition.apply(
-                    lambda df: len(df) if not axis else len(df.columns)
-                )._data
-            ]
+            return [partition.apply(len_fn)._data]
         elif partition.axis == axis:
             return [
-                ptn.apply(lambda df: len(df) if not axis else len(df.columns))._data
-                for ptn in partition.list_of_block_partitions
+                ptn.apply(len_fn)._data for ptn in partition.list_of_block_partitions
             ]
-        return [
-            partition.list_of_block_partitions[0]
-            .apply(lambda df: len(df) if not axis else (len(df.columns)))
-            ._data
-        ]
+        return [partition.list_of_block_partitions[0].apply(len_fn)._data]
 
     @property
     def _row_lengths(self):
         """
-        Compute ther row partitions lengths if they are not cached.
+        Compute the row partitions lengths if they are not cached.
 
         Returns
         -------

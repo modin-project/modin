@@ -13,6 +13,8 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
+from typing import Union
+
 from distributed import Future
 from distributed.utils import get_ip
 from dask.distributed import wait
@@ -264,10 +266,23 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         int
             The length of the object.
         """
-        if self._length_cache is None:
-            self._length_cache = self.apply(lambda df: len(df))._data
+        self.build_length_cache()
         if isinstance(self._length_cache, Future):
             self._length_cache = DaskWrapper.materialize(self._length_cache)
+        return self._length_cache
+
+    def build_length_cache(self) -> Union[Future, int]:
+        """
+        Attempt to set this partition's length cache, and return it.
+
+        Returns
+        -------
+        distributed.Future | int
+            Either a Dask future representing the length of the object wrapped by this partition,
+            or the concrete value of the length if it was already cached.
+        """
+        if self._length_cache is None:
+            self._length_cache = self.apply(lambda df: len(df))._data
         return self._length_cache
 
     def width(self):
@@ -279,10 +294,23 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         int
             The width of the object.
         """
-        if self._width_cache is None:
-            self._width_cache = self.apply(lambda df: len(df.columns))._data
+        self.build_width_cache()
         if isinstance(self._width_cache, Future):
             self._width_cache = DaskWrapper.materialize(self._width_cache)
+        return self._width_cache
+
+    def build_width_cache(self) -> Union[Future, int]:
+        """
+        Attempt to set this partition's width cache, and return it.
+
+        Returns
+        -------
+        distributed.Future | int
+            Either a Dask future representing the length of the object wrapped by this partition,
+            or the concrete value of the length if it was already cached.
+        """
+        if self._width_cache is None:
+            self._width_cache = self.apply(lambda df: len(df.columns))._data
         return self._width_cache
 
     def ip(self):
