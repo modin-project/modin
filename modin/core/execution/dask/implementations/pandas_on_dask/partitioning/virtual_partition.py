@@ -26,6 +26,9 @@ from .partition import PandasOnDaskDataframePartition
 from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
 
 
+_DRAIN = DaskWrapper.put(PandasDataframeAxisPartition.drain)
+
+
 class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
     """
     The class implements the interface in ``PandasDataframeAxisPartition``.
@@ -418,14 +421,8 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         num_splits : int, default: None
             The number of times to split the result object.
         """
-
-        def drain(df):
-            for func, args, kwargs in self.call_queue:
-                df = func(df, *args, **kwargs)
-            return df
-
         drained = super(PandasOnDaskDataframeVirtualPartition, self).apply(
-            drain, num_splits=num_splits
+            _DRAIN, num_splits=num_splits, call_queue=self.call_queue
         )
         self._list_of_block_partitions = drained
         self.call_queue = []
