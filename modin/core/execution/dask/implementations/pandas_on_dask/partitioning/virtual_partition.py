@@ -116,24 +116,6 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         return self._list_of_block_partitions
 
     @property
-    def list_of_blocks(self):
-        """
-        Get the list of physical partition objects that compose this partition.
-
-        Returns
-        -------
-        List
-            A list of ``distributed.Future``.
-        """
-        # Defer draining call queue until we get the partitions
-        # TODO Look into draining call queue at the same time as the task
-        result = [None] * len(self.list_of_block_partitions)
-        for idx, partition in enumerate(self.list_of_block_partitions):
-            partition.drain_call_queue()
-            result[idx] = partition._data
-        return result
-
-    @property
     def list_of_ips(self):
         """
         Get the IPs holding the physical objects composing this partition.

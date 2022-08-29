@@ -1281,15 +1281,23 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         np.ndarray
             A NumPy array with new partitions.
         """
-        [part.drain_call_queue() for part in right.flatten()]
-
         func = cls.preprocess_func(func)
+
+        def get_right_block(row_idx, col_idx):
+            blocks = right[row_idx][col_idx].list_of_blocks
+            # TODO Resolve this assertion as a part of #4691, because the current implementation assumes
+            # that partition contains only 1 block.
+            assert (
+                len(blocks) == 1
+            ), f"Implementation assumes that partition contains only 1 block, but {len(blocks)} recieved."
+            return blocks[0]
+
         return np.array(
             [
                 [
                     part.apply(
                         func,
-                        right[row_idx][col_idx]._data,
+                        get_right_block(row_idx, col_idx),
                     )
                     for col_idx, part in enumerate(left[row_idx])
                 ]

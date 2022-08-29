@@ -28,6 +28,22 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
     Because much of the code is similar, this allows us to reuse this code.
     """
 
+    @property
+    def list_of_blocks(self):
+        """
+        Get the list of physical partition objects that compose this partition.
+
+        Returns
+        -------
+        list
+            A list of physical partition objects (``ray.ObjectRef``, ``distributed.Future`` e.g.).
+        """
+        # Defer draining call queue (which is hidden in `partition.list_of_blocks` call) until we get the partitions.
+        # TODO Look into draining call queue at the same time as the task
+        return [
+            partition.list_of_blocks[0] for partition in self.list_of_block_partitions
+        ]
+
     def apply(
         self,
         func,

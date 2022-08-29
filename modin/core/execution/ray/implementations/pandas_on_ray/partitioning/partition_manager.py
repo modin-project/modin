@@ -97,6 +97,8 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         """
         Get the objects wrapped by `partitions` in parallel.
 
+        This function assumes that each partition in `partitions` contains a single block.
+
         Parameters
         ----------
         partitions : np.ndarray
@@ -107,7 +109,10 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         list
             The objects wrapped by `partitions`.
         """
-        return ray.get([partition._data for partition in partitions])
+        assert all(
+            [len(partition.list_of_blocks) == 1 for partition in partitions]
+        ), "Implementation assumes that each partition contains a signle block."
+        return ray.get([partition.list_of_blocks[0] for partition in partitions])
 
     @classmethod
     def wait_partitions(cls, partitions):
@@ -121,9 +126,10 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         partitions : np.ndarray
             NumPy array with ``PandasDataframePartition``-s.
         """
-        ray.wait(
-            [partition._data for partition in partitions], num_returns=len(partitions)
-        )
+        blocks = [
+            block for partition in partitions for block in partition.list_of_blocks
+        ]
+        ray.wait(blocks, num_returns=len(blocks))
 
     @classmethod
     @progress_bar_wrapper
