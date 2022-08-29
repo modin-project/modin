@@ -130,10 +130,10 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             Function to be added to the call queue.
         *args : iterable
             Additional positional arguments to be passed in `func`.
-        length : int, optional
-            Length of wrapped pandas DataFrame.
-        width : int, optional
-            Width of wrapped pandas DataFrame.
+        length : ray.ObjectRef or int, optional
+            Length or reference to it of wrapped ``pandas.DataFrame``.
+        width : ray.ObjectRef or int, optional
+            Width or reference to it of wrapped ``pandas.DataFrame``.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 

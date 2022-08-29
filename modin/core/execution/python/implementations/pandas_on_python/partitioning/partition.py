@@ -125,9 +125,9 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         *args : iterable
             Additional positional arguments to be passed in `func`.
         length : int, optional
-            Length of wrapped pandas DataFrame.
+            Length of wrapped ``pandas.DataFrame``.
         width : int, optional
-            Width of wrapped pandas DataFrame.
+            Width of wrapped ``pandas.DataFrame``.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
