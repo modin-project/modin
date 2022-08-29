@@ -510,7 +510,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         if self._modin_frame._has_unsupported_data:
             default_axis_setter(1)(self, columns)
         else:
-            self._modin_frame = self._modin_frame._set_columns(columns)
+            try:
+                self._modin_frame = self._modin_frame._set_columns(columns)
+            except NotImplementedError:
+                default_axis_setter(1)(self, columns)
+                self._modin_frame._has_unsupported_data = True
 
     def fillna(
         self,
