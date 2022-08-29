@@ -2601,6 +2601,7 @@ class PandasDataframe(ClassLogger):
         """
         axis = Axis(axis)
         new_widths = None
+        new_lengths = None
 
         def _compute_new_widths():
             widths = None
@@ -2647,11 +2648,11 @@ class PandasDataframe(ClassLogger):
                 new_widths = _compute_new_widths()
             else:
                 new_widths = partition_sizes_along_axis
-        new_partitions, new_length2 = self._partition_mgr_cls.concat(
+        new_partitions, new_lengths2 = self._partition_mgr_cls.concat(
             axis.value, left_parts, right_parts
         )
         if new_lengths is None:
-            new_lengths = new_length2
+            new_lengths = new_lengths2
         new_dtypes = None
         if axis == Axis.ROW_WISE:
             new_index = self.index.append([other.index for other in others])

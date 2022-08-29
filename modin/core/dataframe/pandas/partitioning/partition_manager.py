@@ -601,6 +601,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         -------
         np.ndarray
             A new NumPy array with concatenated partitions.
+        list[int] or None
+            Row lengths if possible to compute it.
 
         Notes
         -----
@@ -625,7 +627,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         if axis == 0:
             return cls.rebalance_partitions(result)
         else:
-            return result
+            return result, None
 
     @classmethod
     def to_pandas(cls, partitions):
