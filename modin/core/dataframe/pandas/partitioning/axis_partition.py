@@ -215,7 +215,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         return split_result_of_axis_func_pandas(axis, num_splits, result)
 
     @classmethod
-    def drain(cls, df, call_queue):
+    def drain(cls, df: pandas.DataFrame, call_queue: list):
         """
         Execute all operations stored in the call queue on the pandas object (helper function).
 
