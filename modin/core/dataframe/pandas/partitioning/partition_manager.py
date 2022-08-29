@@ -1412,9 +1412,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 # new partition have length `ideal_partition_size`, and the second
                 # partition has the remainder.
                 if partition_size > ideal_partition_size * max_excess_of_num_partitions:
-                    new_last_partition_size = ideal_partition_size - sum(
+                    prev_length = sum(
                         row[0].length() for row in partitions[start:stop]
                     )
+                    new_last_partition_size = ideal_partition_size - prev_length
                     partitions = np.insert(
                         partitions,
                         stop + 1,
@@ -1425,7 +1426,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                         0,
                     )
                     for obj in partitions[stop + 1]:
-                        obj._length_cache = partition_size - new_last_partition_size
+                        obj._length_cache = partition_size - (prev_length + new_last_partition_size)
 
                     partitions[stop, :] = [
                         obj.mask(slice(None, new_last_partition_size), slice(None))
