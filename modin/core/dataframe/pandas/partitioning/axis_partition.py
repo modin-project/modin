@@ -217,7 +217,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
     @classmethod
     def drain(cls, df, call_queue):
         """
-        Helper function for drain operation.
+        Execute all operations stored in the call queue on the pandas object (helper function).
 
         Parameters
         ----------
