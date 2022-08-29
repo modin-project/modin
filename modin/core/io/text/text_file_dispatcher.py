@@ -28,6 +28,7 @@ import numpy as np
 import pandas
 import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
+from pandas.io.common import stringify_path
 
 from modin.core.io.file_dispatcher import FileDispatcher, OpenFile
 from modin.core.storage_formats.pandas.utils import compute_chunksize
@@ -963,6 +964,7 @@ class TextFileDispatcher(FileDispatcher):
         new_query_compiler : BaseQueryCompiler
             Query compiler with imported data for further processing.
         """
+        filepath_or_buffer = stringify_path(filepath_or_buffer)
         filepath_or_buffer_md = (
             cls.get_path(filepath_or_buffer)
             if isinstance(filepath_or_buffer, str)

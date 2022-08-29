@@ -915,6 +915,13 @@ class TestCsv:
             dtype={"one": "int64", "two": "category"},
         )
 
+    def test_read_csv_gs(self):
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer="gs://modin-testing/testing/multiple_csv/test_data0.csv",
+        )
+
     @pytest.mark.parametrize("encoding", [None, "utf-8"])
     @pytest.mark.parametrize("encoding_errors", ["strict", "ignore"])
     @pytest.mark.parametrize(

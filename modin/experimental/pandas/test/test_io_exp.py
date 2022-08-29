@@ -168,7 +168,7 @@ class TestCsvGlob:
     Engine.get() != "Ray", reason="Currently only support Ray engine for glob paths."
 )
 def test_read_multiple_csv_s3():
-    path = "S3://modin-datasets/testing/multiple_csv/test_data*.csv"
+    path = "s3://modin-datasets/testing/multiple_csv/test_data*.csv"
 
     def _pandas_read_csv_glob(path, storage_options):
         pandas_dfs = [
