@@ -1333,6 +1333,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         np.ndarray
             A NumPy array with the same; or new, rebalanced, partitions, depending on the execution
             engine and storage format.
+        list[int] or None
+            Row lengths if possible to compute it.
         """
         if Engine.get() in ["Ray", "Dask"] and StorageFormat.get() == "Pandas":
             # Rebalancing partitions is currently only implemented for PandasOnRay and PandasOnDask.
@@ -1346,7 +1348,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 num_existing_partitions
                 <= ideal_num_new_partitions * max_excess_of_num_partitions
             ):
-                return partitions
+                return partitions, None
             # If any partition has an unknown length, give each axis partition
             # roughly the same number of row partitions. We use `_length_cache` here
             # to avoid materializing any unmaterialized lengths.
@@ -1361,18 +1363,21 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 chunk_size = compute_chunksize(
                     num_existing_partitions, ideal_num_new_partitions, min_block_size=1
                 )
-                return np.array(
-                    [
-                        cls.column_partitions(
-                            partitions[i : i + chunk_size],
-                            full_axis=False,
-                        )
-                        for i in range(
-                            0,
-                            num_existing_partitions,
-                            chunk_size,
-                        )
-                    ]
+                return (
+                    np.array(
+                        [
+                            cls.column_partitions(
+                                partitions[i : i + chunk_size],
+                                full_axis=False,
+                            )
+                            for i in range(
+                                0,
+                                num_existing_partitions,
+                                chunk_size,
+                            )
+                        ]
+                    ),
+                    None,
                 )
 
             # If we know the number of rows in every partition, then we should try
@@ -1417,10 +1422,16 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                         ],
                         0,
                     )
+                    for obj in partitions[stop + 1]:
+                        obj._length_cache = partition_size - new_last_partition_size
+
                     partitions[stop, :] = [
                         obj.mask(slice(None, new_last_partition_size), slice(None))
                         for obj in partitions[stop]
                     ]
+                    for obj in partitions[stop]:
+                        obj._length_cache = new_last_partition_size
+
                     partition_size = ideal_partition_size
                 # The new virtual partitions are not `full_axis`, even if they
                 # happen to span all rows in the dataframe, because they are
@@ -1431,6 +1442,11 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 new_partitions.append(
                     cls.column_partitions(partitions[start : stop + 1], full_axis=False)
                 )
+                length = sum(part.length() for part in partitions[start : stop + 1, 0])
+                for col in new_partitions[-1]:
+                    col._length_cache = length
                 start = stop + 1
-            return np.array(new_partitions)
-        return partitions
+            new_partitions = np.array(new_partitions)
+            lengths = [part.length() for part in new_partitions[:, 0]]
+            return new_partitions, lengths
+        return partitions, None
