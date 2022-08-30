@@ -915,7 +915,7 @@ class TestCsv:
             dtype={"one": "int64", "two": "category"},
         )
 
-    def test_read_csv_gs(self):
+    def test_read_csv_google_cloud_storage(self):
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
