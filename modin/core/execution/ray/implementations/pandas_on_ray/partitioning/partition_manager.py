@@ -131,7 +131,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         ray.wait(blocks, num_returns=len(blocks))
 
 
-def _make_wrapped_method(name):
+def _make_wrapped_method(name: str):  # noqa: GL08
     setattr(
         PandasOnRayDataframePartitionManager,
         name,
