@@ -1970,53 +1970,49 @@ class TestHdf:
             unique_filename_pandas = get_unique_filename(
                 extension="hdf", data_dir=dirname
             )
-            try:
-                modin_store = pd.HDFStore(unique_filename_modin)
-                pandas_store = pandas.HDFStore(unique_filename_pandas)
 
-                modin_df, pandas_df = create_test_dfs(TEST_DATA)
+            modin_store = pd.HDFStore(unique_filename_modin)
+            pandas_store = pandas.HDFStore(unique_filename_pandas)
 
-                modin_store["foo"] = modin_df
-                pandas_store["foo"] = pandas_df
+            modin_df, pandas_df = create_test_dfs(TEST_DATA)
 
-                modin_df = modin_store.get("foo")
-                pandas_df = pandas_store.get("foo")
-                df_equals(modin_df, pandas_df)
+            modin_store["foo"] = modin_df
+            pandas_store["foo"] = pandas_df
 
-                modin_store.close()
-                pandas_store.close()
-                modin_df = pandas.read_hdf(unique_filename_modin, key="foo", mode="r")
-                pandas_df = pandas.read_hdf(unique_filename_pandas, key="foo", mode="r")
-                df_equals(modin_df, pandas_df)
-                assert isinstance(modin_store, pd.HDFStore)
+            modin_df = modin_store.get("foo")
+            pandas_df = pandas_store.get("foo")
+            df_equals(modin_df, pandas_df)
 
-                handle, hdf_file = tempfile.mkstemp(suffix=".hdf5", prefix="test_read")
-                os.close(handle)
-                with pd.HDFStore(hdf_file, mode="w") as store:
-                    store.append("data/df1", pd.DataFrame(np.random.randn(5, 5)))
-                    store.append("data/df2", pd.DataFrame(np.random.randn(4, 4)))
+            modin_store.close()
+            pandas_store.close()
+            modin_df = pandas.read_hdf(unique_filename_modin, key="foo", mode="r")
+            pandas_df = pandas.read_hdf(unique_filename_pandas, key="foo", mode="r")
+            df_equals(modin_df, pandas_df)
+            assert isinstance(modin_store, pd.HDFStore)
 
-                modin_df = pd.read_hdf(hdf_file, key="data/df1", mode="r")
-                pandas_df = pandas.read_hdf(hdf_file, key="data/df1", mode="r")
-                df_equals(modin_df, pandas_df)
-            finally:
-                if hdf_file:
-                    os.unlink(hdf_file)
+        with ensure_clean(".hdf5") as hdf_file:
+            with pd.HDFStore(hdf_file, mode="w") as store:
+                store.append("data/df1", pd.DataFrame(np.random.randn(5, 5)))
+                store.append("data/df2", pd.DataFrame(np.random.randn(4, 4)))
+
+            modin_df = pd.read_hdf(hdf_file, key="data/df1", mode="r")
+            pandas_df = pandas.read_hdf(hdf_file, key="data/df1", mode="r")
+            df_equals(modin_df, pandas_df)
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_HDFStore_in_read_hdf(self):
-        filename = get_unique_filename(extension="hdf")
-        dfin = pd.DataFrame(np.random.rand(8, 8))
-        dfin.to_hdf(filename, "/key")
+        with ensure_clean(".hdf") as filename:
+            dfin = pd.DataFrame(np.random.rand(8, 8))
+            dfin.to_hdf(filename, "/key")
 
-        with pd.HDFStore(filename) as h:
-            modin_df = pd.read_hdf(h, "/key")
-        with pandas.HDFStore(filename) as h:
-            pandas_df = pandas.read_hdf(h, "/key")
-        df_equals(modin_df, pandas_df)
+            with pd.HDFStore(filename) as h:
+                modin_df = pd.read_hdf(h, "/key")
+            with pandas.HDFStore(filename) as h:
+                pandas_df = pandas.read_hdf(h, "/key")
+            df_equals(modin_df, pandas_df)
 
 
 class TestSql:
@@ -2026,9 +2022,10 @@ class TestSql:
     )
     @pytest.mark.parametrize("read_sql_engine", ["Pandas", "Connectorx"])
     def test_read_sql(self, make_sql_connection, read_sql_engine):
-        with ensure_clean(".db") as filename:
+        with ensure_clean_dir() as dirname:
+            filename = get_unique_filename(".db")
             table = "test_read_sql"
-            conn = make_sql_connection(filename, table)
+            conn = make_sql_connection(os.path.join(dirname, filename), table)
             query = f"select * from {table}"
 
             eval_io(
