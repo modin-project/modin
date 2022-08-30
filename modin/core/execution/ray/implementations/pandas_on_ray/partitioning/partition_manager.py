@@ -131,7 +131,20 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         ray.wait(blocks, num_returns=len(blocks))
 
 
-def _make_wrapped_method(name: str):  # noqa: GL08
+def _make_wrapped_method(name: str):
+    """
+    Define new attribute that should work with progress bar.
+
+    Parameters
+    ----------
+    name : str
+        Name of `GenericRayDataframePartitionManager` attribute that should be reused.
+
+    Notes
+    -----
+    - `classmethod` decorator shouldn't be applied twice, so we refer to `__func__` attribute.
+    - New attribute is defined for `PandasOnRayDataframePartitionManager`.
+    """
     setattr(
         PandasOnRayDataframePartitionManager,
         name,
