@@ -162,6 +162,12 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
 
+    _iloc = (
+        lambda df, row_labels, col_labels: df.iloc[  # noqa: E731 (lambda assignment)
+            row_labels, col_labels
+        ]
+    )
+
     def mask(self, row_labels, col_labels):
         """
         Lazily create a mask that extracts the indices provided.
@@ -200,7 +206,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         ):
             return copy(self)
 
-        new_obj = self.add_to_apply_calls(lambda df: df.iloc[row_labels, col_labels])
+        new_obj = self.add_to_apply_calls(self._iloc, row_labels, col_labels)
 
         def try_recompute_cache(indices, previous_cache):
             """Compute new axis-length cache for the masked frame based on its previous cache."""
