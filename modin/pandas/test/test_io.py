@@ -43,7 +43,6 @@ import pyarrow as pa
 import os
 from scipy import sparse
 import sys
-import shutil
 import sqlalchemy as sa
 import csv
 import tempfile
@@ -62,7 +61,6 @@ from .utils import (
     dummy_decorator,
     create_test_dfs,
     COMP_TO_EXT,
-    teardown_test_file,
     generate_dataframe,
     default_to_pandas_ignore_string,
     parse_dates_values_by_id,
@@ -158,19 +156,12 @@ def parquet_eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
             extension=extension, data_dir=dirname
         )
 
-        try:
-            getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
-            getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
+        getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+        getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
 
-            pandas_df = pandas.read_parquet(unique_filename_pandas)
-            modin_df = pd.read_parquet(unique_filename_modin)
-            df_equals(pandas_df, modin_df)
-        finally:
-            teardown_test_file(unique_filename_pandas)
-            try:
-                teardown_test_file(unique_filename_modin)
-            except IsADirectoryError:
-                shutil.rmtree(unique_filename_modin)
+        pandas_df = pandas.read_parquet(unique_filename_pandas)
+        modin_df = pd.read_parquet(unique_filename_modin)
+    df_equals(pandas_df, modin_df)
 
 
 def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
@@ -1236,7 +1227,7 @@ class TestCsv:
                 df_pandas = pandas.read_csv(buffer)
                 buffer.seek(buffer_start_pos)
                 df_modin = pd.read_csv(buffer)
-                df_equals(df_modin, df_pandas)
+        df_equals(df_modin, df_pandas)
 
     def test_unnamed_index(self):
         def get_internal_df(df):
@@ -1338,7 +1329,7 @@ class TestTable:
             pandas_df = wrapped_read_table(unique_filename, method="pandas")
             modin_df = wrapped_read_table(unique_filename, method="modin")
 
-            df_equals(modin_df, pandas_df)
+        df_equals(modin_df, pandas_df)
 
     def test_read_table_empty_frame(self, make_csv_file):
         with ensure_clean() as unique_filename:
@@ -1997,7 +1988,7 @@ class TestHdf:
 
             modin_df = pd.read_hdf(hdf_file, key="data/df1", mode="r")
             pandas_df = pandas.read_hdf(hdf_file, key="data/df1", mode="r")
-            df_equals(modin_df, pandas_df)
+        df_equals(modin_df, pandas_df)
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -2012,7 +2003,7 @@ class TestHdf:
                 modin_df = pd.read_hdf(h, "/key")
             with pandas.HDFStore(filename) as h:
                 pandas_df = pandas.read_hdf(h, "/key")
-            df_equals(modin_df, pandas_df)
+        df_equals(modin_df, pandas_df)
 
 
 class TestSql:
@@ -2075,7 +2066,7 @@ class TestSql:
                     sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
                 )
             pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
-            df_equals(modin_df, pandas_df)
+        df_equals(modin_df, pandas_df)
 
     @pytest.mark.skipif(
         not TestReadFromSqlServer.get(),

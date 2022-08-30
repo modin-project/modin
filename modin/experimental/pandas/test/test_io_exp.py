@@ -62,8 +62,8 @@ def test_from_sql_distributed(make_sql_connection):  # noqa: F811
                 max_sessions=2,
             )
 
-            df_equals(modin_df_from_query, pandas_df)
-            df_equals(modin_df_from_table, pandas_df)
+        df_equals(modin_df_from_query, pandas_df)
+        df_equals(modin_df_from_table, pandas_df)
 
 
 @pytest.mark.skipif(
@@ -83,8 +83,8 @@ def test_from_sql_defaults(make_sql_connection):  # noqa: F811
         with pytest.warns(UserWarning):
             modin_df_from_table = pd.read_sql(table, conn)
 
-        df_equals(modin_df_from_query, pandas_df)
-        df_equals(modin_df_from_table, pandas_df)
+    df_equals(modin_df_from_query, pandas_df)
+    df_equals(modin_df_from_table, pandas_df)
 
 
 @pytest.mark.usefixtures("TestReadGlobCSVFixture")
@@ -292,7 +292,7 @@ def test_read_custom_json_text():
         df2 = pd.read_json(filename, lines=True)[["col0", "col1", "col3"]].rename(
             columns={"col0": "testID"}
         )
-        df_equals(df1, df2)
+    df_equals(df1, df2)
 
 
 @pytest.mark.skipif(
@@ -342,4 +342,4 @@ def test_read_evaluated_dict():
         df2 = pd.read_custom_text(
             filename, columns=columns_callback, custom_parser=_custom_parser
         )
-        df_equals(df1, df2)
+    df_equals(df1, df2)
