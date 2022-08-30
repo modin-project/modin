@@ -63,7 +63,6 @@ from .utils import (
     create_test_dfs,
     COMP_TO_EXT,
     teardown_test_file,
-    teardown_test_files,
     generate_dataframe,
     default_to_pandas_ignore_string,
     parse_dates_values_by_id,
@@ -151,9 +150,13 @@ def parquet_eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     extension : str
         Extension of the test file.
     """
-    with ensure_clean_dir() as dir:
-        unique_filename_modin = get_unique_filename(extension=extension, data_dir=dir)
-        unique_filename_pandas = get_unique_filename(extension=extension, data_dir=dir)
+    with ensure_clean_dir() as dirname:
+        unique_filename_modin = get_unique_filename(
+            extension=extension, data_dir=dirname
+        )
+        unique_filename_pandas = get_unique_filename(
+            extension=extension, data_dir=dirname
+        )
 
         try:
             getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
@@ -179,30 +182,31 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
         fn: name of the method, that should be tested.
         extension: Extension of the test file.
     """
-    with ensure_clean_dir() as dir:
-        unique_filename_modin = get_unique_filename(extension=extension, data_dir=dir)
-        unique_filename_pandas = get_unique_filename(extension=extension, data_dir=dir)
+    with ensure_clean_dir() as dirname:
+        unique_filename_modin = get_unique_filename(
+            extension=extension, data_dir=dirname
+        )
+        unique_filename_pandas = get_unique_filename(
+            extension=extension, data_dir=dirname
+        )
 
-        try:
-            # parameter `max_retries=0` is set for `to_csv` function on Ray engine,
-            # in order to increase the stability of tests, we repeat the call of
-            # the entire function manually
-            last_exception = None
-            for _ in range(3):
-                try:
-                    getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
-                except EXCEPTIONS as exc:
-                    last_exception = exc
-                    continue
-                break
-            else:
-                raise last_exception
+        # parameter `max_retries=0` is set for `to_csv` function on Ray engine,
+        # in order to increase the stability of tests, we repeat the call of
+        # the entire function manually
+        last_exception = None
+        for _ in range(3):
+            try:
+                getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+            except EXCEPTIONS as exc:
+                last_exception = exc
+                continue
+            break
+        else:
+            raise last_exception
 
-            getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
+        getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
 
-            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
-        finally:
-            teardown_test_files([unique_filename_modin, unique_filename_pandas])
+        assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
 
 
 @pytest.fixture
@@ -1385,8 +1389,8 @@ class TestParquet:
         nrows = (
             MinPartitionSize.get() + 1
         )  # Use the minimal guaranteed failing value for nrows.
-        with ensure_clean_dir() as dir:
-            unique_filename = get_unique_filename(extension="parquet", data_dir=dir)
+        with ensure_clean_dir() as dirname:
+            unique_filename = get_unique_filename(extension="parquet", data_dir=dirname)
             make_parquet_file(filename=unique_filename, nrows=nrows)
 
             parquet_df = pd.read_parquet(unique_filename)
@@ -1443,8 +1447,8 @@ class TestParquet:
     def test_read_parquet_partitioned_directory(
         self, make_parquet_file, columns, engine
     ):
-        with ensure_clean_dir() as dir:
-            unique_filename = get_unique_filename(extension=None, data_dir=dir)
+        with ensure_clean_dir() as dirname:
+            unique_filename = get_unique_filename(extension=None, data_dir=dirname)
             make_parquet_file(filename=unique_filename, partitioned_columns=["col1"])
 
             eval_io(
@@ -1528,8 +1532,8 @@ class TestParquet:
                 "C": ["c"] * 2000,
             }
         )
-        with ensure_clean_dir() as dir:
-            unique_filename = get_unique_filename(extension="parquet", data_dir=dir)
+        with ensure_clean_dir() as dirname:
+            unique_filename = get_unique_filename(extension="parquet", data_dir=dirname)
             pandas_df.set_index("idx").to_parquet(unique_filename, partition_cols=["A"])
             # read the same parquet using modin.pandas
             eval_io(
@@ -1588,9 +1592,9 @@ class TestParquet:
         from pyarrow import csv
         from pyarrow import parquet
 
-        with ensure_clean_dir() as dir:
-            parquet_fname = get_unique_filename(extension="parquet", data_dir=dir)
-            csv_fname = get_unique_filename(extension="parquet", data_dir=dir)
+        with ensure_clean_dir() as dirname:
+            parquet_fname = get_unique_filename(extension="parquet", data_dir=dirname)
+            csv_fname = get_unique_filename(extension="parquet", data_dir=dirname)
             pandas_df = pandas.DataFrame(
                 {
                     "idx": np.random.randint(0, 100_000, size=2000),
@@ -1599,20 +1603,17 @@ class TestParquet:
                     "C": ["c"] * 2000,
                 }
             )
-            try:
-                pandas_df.to_csv(csv_fname, index=False)
-                # read into pyarrow table and write it to a parquet file
-                t = csv.read_csv(csv_fname)
-                parquet.write_table(t, parquet_fname)
+            pandas_df.to_csv(csv_fname, index=False)
+            # read into pyarrow table and write it to a parquet file
+            t = csv.read_csv(csv_fname)
+            parquet.write_table(t, parquet_fname)
 
-                eval_io(
-                    "read_parquet",
-                    # read_parquet kwargs
-                    path=parquet_fname,
-                    engine=engine,
-                )
-            finally:
-                teardown_test_files([parquet_fname, csv_fname])
+            eval_io(
+                "read_parquet",
+                # read_parquet kwargs
+                path=parquet_fname,
+                engine=engine,
+            )
 
     @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
     def test_read_empty_parquet_file(self, engine):
@@ -1912,16 +1913,14 @@ class TestExcel:
 
             modin_writer = pandas.ExcelWriter(unique_filename_modin)
             pandas_writer = pandas.ExcelWriter(unique_filename_pandas)
-            try:
-                modin_df.to_excel(modin_writer)
-                pandas_df.to_excel(pandas_writer)
 
-                modin_writer.save()
-                pandas_writer.save()
+            modin_df.to_excel(modin_writer)
+            pandas_df.to_excel(pandas_writer)
 
-                assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
-            finally:
-                teardown_test_files([unique_filename_modin, unique_filename_pandas])
+            modin_writer.save()
+            pandas_writer.save()
+
+            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
 
     @pytest.mark.xfail(
         Engine.get() != "Python"
@@ -1964,9 +1963,13 @@ class TestHdf:
     )
     def test_HDFStore(self):
         hdf_file = None
-        with ensure_clean_dir() as dir:
-            unique_filename_modin = get_unique_filename(extension="hdf", data_dir=dir)
-            unique_filename_pandas = get_unique_filename(extension="hdf", data_dir=dir)
+        with ensure_clean_dir() as dirname:
+            unique_filename_modin = get_unique_filename(
+                extension="hdf", data_dir=dirname
+            )
+            unique_filename_pandas = get_unique_filename(
+                extension="hdf", data_dir=dirname
+            )
             try:
                 modin_store = pd.HDFStore(unique_filename_modin)
                 pandas_store = pandas.HDFStore(unique_filename_pandas)
@@ -1999,7 +2002,6 @@ class TestHdf:
             finally:
                 if hdf_file:
                     os.unlink(hdf_file)
-                teardown_test_files([unique_filename_modin, unique_filename_pandas])
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -2008,16 +2010,13 @@ class TestHdf:
     def test_HDFStore_in_read_hdf(self):
         filename = get_unique_filename(extension="hdf")
         dfin = pd.DataFrame(np.random.rand(8, 8))
-        try:
-            dfin.to_hdf(filename, "/key")
+        dfin.to_hdf(filename, "/key")
 
-            with pd.HDFStore(filename) as h:
-                modin_df = pd.read_hdf(h, "/key")
-            with pandas.HDFStore(filename) as h:
-                pandas_df = pandas.read_hdf(h, "/key")
-            df_equals(modin_df, pandas_df)
-        finally:
-            teardown_test_files([filename])
+        with pd.HDFStore(filename) as h:
+            modin_df = pd.read_hdf(h, "/key")
+        with pandas.HDFStore(filename) as h:
+            pandas_df = pandas.read_hdf(h, "/key")
+        df_equals(modin_df, pandas_df)
 
 
 class TestSql:
@@ -2136,36 +2135,37 @@ class TestSql:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_sql_with_chunksize(self, make_sql_connection):
-        with ensure_clean(".db") as filename:
-            table = "test_read_sql_with_chunksize"
-            conn = make_sql_connection(filename, table)
-            query = f"select * from {table}"
+        filename = get_unique_filename(extension="db")
+        table = "test_read_sql_with_chunksize"
+        conn = make_sql_connection(filename, table)
+        query = f"select * from {table}"
 
-            pandas_gen = pandas.read_sql(query, conn, chunksize=10)
-            modin_gen = pd.read_sql(query, conn, chunksize=10)
-            for modin_df, pandas_df in zip(modin_gen, pandas_gen):
-                df_equals(modin_df, pandas_df)
+        pandas_gen = pandas.read_sql(query, conn, chunksize=10)
+        modin_gen = pd.read_sql(query, conn, chunksize=10)
+        for modin_df, pandas_df in zip(modin_gen, pandas_gen):
+            df_equals(modin_df, pandas_df)
 
     @pytest.mark.parametrize("index", [False, True])
     def test_to_sql(self, make_sql_connection, index):
         table_name = f"test_to_sql_{str(index)}"
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
 
-        # We do not pass the table name so the fixture won't generate a table
-        conn = make_sql_connection(f"{table_name}_modin.db")
-        modin_df.to_sql(table_name, conn, index=index)
-        df_modin_sql = pandas.read_sql(
-            table_name, con=conn, index_col="index" if index else None
-        )
+        with ensure_clean_dir() as dirname:
+            # We do not pass the table name so the fixture won't generate a table
+            conn = make_sql_connection(os.path.join(dirname, f"{table_name}_modin.db"))
+            modin_df.to_sql(table_name, conn, index=index)
+            df_modin_sql = pandas.read_sql(
+                table_name, con=conn, index_col="index" if index else None
+            )
 
-        # We do not pass the table name so the fixture won't generate a table
-        conn = make_sql_connection(f"{table_name}_pandas.db")
-        pandas_df.to_sql(table_name, conn, index=index)
-        df_pandas_sql = pandas.read_sql(
-            table_name, con=conn, index_col="index" if index else None
-        )
+            # We do not pass the table name so the fixture won't generate a table
+            conn = make_sql_connection(os.path.join(dirname, f"{table_name}_pandas.db"))
+            pandas_df.to_sql(table_name, conn, index=index)
+            df_pandas_sql = pandas.read_sql(
+                table_name, con=conn, index_col="index" if index else None
+            )
 
-        assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
+            assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
 
 
 class TestHtml:
@@ -2524,16 +2524,17 @@ class TestPickle:
         eval_to_file(
             modin_obj=modin_df, pandas_obj=pandas_df, fn="to_pickle", extension="pkl"
         )
-        with ensure_clean_dir() as dir:
-            unique_filename_modin = get_unique_filename(extension="pkl", data_dir=dir)
-            unique_filename_pandas = get_unique_filename(extension="pkl", data_dir=dir)
-            try:
-                pd.to_pickle(modin_df, unique_filename_modin)
-                pandas.to_pickle(pandas_df, unique_filename_pandas)
+        with ensure_clean_dir() as dirname:
+            unique_filename_modin = get_unique_filename(
+                extension="pkl", data_dir=dirname
+            )
+            unique_filename_pandas = get_unique_filename(
+                extension="pkl", data_dir=dirname
+            )
+            pd.to_pickle(modin_df, unique_filename_modin)
+            pandas.to_pickle(pandas_df, unique_filename_pandas)
 
-                assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
-            finally:
-                teardown_test_files([unique_filename_modin, unique_filename_pandas])
+            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
 
 
 @pytest.mark.xfail(

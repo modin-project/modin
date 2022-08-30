@@ -15,8 +15,9 @@ from contextlib import nullcontext
 import glob
 import json
 import numpy as np
+import os
 import pandas
-from pandas._testing import ensure_clean
+from pandas._testing import ensure_clean, ensure_clean_dir
 import pytest
 import modin.experimental.pandas as pd
 from modin.config import Engine
@@ -37,31 +38,32 @@ from modin.pandas.test.utils import parse_dates_values_by_id, time_parsing_csv_p
 )
 def test_from_sql_distributed(make_sql_connection):  # noqa: F811
     if Engine.get() == "Ray":
-        filename = "test_from_sql_distributed.db"
-        table = "test_from_sql_distributed"
-        conn = make_sql_connection(filename, table)
-        query = "select * from {0}".format(table)
+        with ensure_clean_dir() as dirname:
+            filename = "test_from_sql_distributed.db"
+            table = "test_from_sql_distributed"
+            conn = make_sql_connection(os.path.join(dirname, filename), table)
+            query = "select * from {0}".format(table)
 
-        pandas_df = pandas.read_sql(query, conn)
-        modin_df_from_query = pd.read_sql(
-            query,
-            conn,
-            partition_column="col1",
-            lower_bound=0,
-            upper_bound=6,
-            max_sessions=2,
-        )
-        modin_df_from_table = pd.read_sql(
-            table,
-            conn,
-            partition_column="col1",
-            lower_bound=0,
-            upper_bound=6,
-            max_sessions=2,
-        )
+            pandas_df = pandas.read_sql(query, conn)
+            modin_df_from_query = pd.read_sql(
+                query,
+                conn,
+                partition_column="col1",
+                lower_bound=0,
+                upper_bound=6,
+                max_sessions=2,
+            )
+            modin_df_from_table = pd.read_sql(
+                table,
+                conn,
+                partition_column="col1",
+                lower_bound=0,
+                upper_bound=6,
+                max_sessions=2,
+            )
 
-        df_equals(modin_df_from_query, pandas_df)
-        df_equals(modin_df_from_table, pandas_df)
+            df_equals(modin_df_from_query, pandas_df)
+            df_equals(modin_df_from_table, pandas_df)
 
 
 @pytest.mark.skipif(
@@ -69,19 +71,20 @@ def test_from_sql_distributed(make_sql_connection):  # noqa: F811
     reason="Dask does not have experimental API",
 )
 def test_from_sql_defaults(make_sql_connection):  # noqa: F811
-    filename = "test_from_sql_distributed.db"
-    table = "test_from_sql_distributed"
-    conn = make_sql_connection(filename, table)
-    query = "select * from {0}".format(table)
+    with ensure_clean_dir() as dirname:
+        filename = "test_from_sql_distributed.db"
+        table = "test_from_sql_distributed"
+        conn = make_sql_connection(os.path.join(dirname, filename), table)
+        query = "select * from {0}".format(table)
 
-    pandas_df = pandas.read_sql(query, conn)
-    with pytest.warns(UserWarning):
-        modin_df_from_query = pd.read_sql(query, conn)
-    with pytest.warns(UserWarning):
-        modin_df_from_table = pd.read_sql(table, conn)
+        pandas_df = pandas.read_sql(query, conn)
+        with pytest.warns(UserWarning):
+            modin_df_from_query = pd.read_sql(query, conn)
+        with pytest.warns(UserWarning):
+            modin_df_from_table = pd.read_sql(table, conn)
 
-    df_equals(modin_df_from_query, pandas_df)
-    df_equals(modin_df_from_table, pandas_df)
+        df_equals(modin_df_from_query, pandas_df)
+        df_equals(modin_df_from_table, pandas_df)
 
 
 @pytest.mark.usefixtures("TestReadGlobCSVFixture")
@@ -259,27 +262,26 @@ def test_distributed_pickling(filename, compression):
     reason=f"{Engine.get()} does not have experimental read_custom_text API",
 )
 def test_read_custom_json_text():
+    def _generate_json(file_name, nrows, ncols):
+        data = np.random.rand(nrows, ncols)
+        df = pandas.DataFrame(data, columns=[f"col{x}" for x in range(ncols)])
+        df.to_json(file_name, lines=True, orient="records")
+
+    # Custom parser allows us to add some specifics to reading files,
+    # which is not available through the ready-made API.
+    # For example, the parser allows us to reduce the amount of RAM
+    # required for reading by selecting a subset of columns.
+    def _custom_parser(io_input, **kwargs):
+        result = {"col0": [], "col1": [], "col3": []}
+        for line in io_input:
+            # for example, simjson can be used here
+            obj = json.loads(line)
+            for key in result:
+                result[key].append(obj[key])
+        return pandas.DataFrame(result).rename(columns={"col0": "testID"})
+
     with ensure_clean() as filename:
-
-        def _generate_json(file_name, nrows, ncols):
-            data = np.random.rand(nrows, ncols)
-            df = pandas.DataFrame(data, columns=[f"col{x}" for x in range(ncols)])
-            df.to_json(file_name, lines=True, orient="records")
-
         _generate_json(filename, 64, 8)
-
-        # Custom parser allows us to add some specifics to reading files,
-        # which is not available through the ready-made API.
-        # For example, the parser allows us to reduce the amount of RAM
-        # required for reading by selecting a subset of columns.
-        def _custom_parser(io_input, **kwargs):
-            result = {"col0": [], "col1": [], "col3": []}
-            for line in io_input:
-                # for example, simjson can be used here
-                obj = json.loads(line)
-                for key in result:
-                    result[key].append(obj[key])
-            return pandas.DataFrame(result).rename(columns={"col0": "testID"})
 
         df1 = pd.read_custom_text(
             filename,

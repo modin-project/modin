@@ -511,9 +511,6 @@ def make_sql_connection():
 
     yield _sql_connection
 
-    # Teardown the fixture
-    teardown_test_files(filenames)
-
 
 @pytest.fixture(scope="class")
 def TestReadGlobCSVFixture():
