@@ -162,7 +162,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
 
-    _iloc = (
+    _iloc = staticmethod(
         lambda df, row_labels, col_labels: df.iloc[  # noqa: E731 (lambda assignment)
             row_labels, col_labels
         ]
