@@ -569,7 +569,7 @@ class DatetimeProperties(ClassLogger):
         return Series(query_compiler=self._query_compiler.dt_days_in_month())
 
     @property
-    def tz(self) -> "tzinfo" | None:
+    def tz(self) -> "tzinfo | None":
         dtype = self._series.dtype
         if isinstance(dtype, np.dtype):
             return None
