@@ -74,6 +74,7 @@ Key Features and Updates
   * REFACTOR-#4722: Stop suppressing undefined name lint (#4723)
   * REFACTOR-#4832: unify `split_result_of_axis_func_pandas` (#4831)
   * REFACTOR-#4796: Introduce constant for __reduced__ column name (#4799)
+  * REFACTOR-#4000: Remove code duplication for `PandasOnRayDataframePartitionManager` (#4895)
   * REFACTOR-#4530: Unify access to physical data for any partition type (#4829)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
