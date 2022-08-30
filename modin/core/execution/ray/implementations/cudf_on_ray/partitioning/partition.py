@@ -142,9 +142,9 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         func : callable
             A function to apply.
         length : ray.ObjectRef or int, optional
-            Length or reference to it of wrapped ``pandas.DataFrame``.
+            Length, or reference to length, of wrapped ``pandas.DataFrame``.
         width : ray.ObjectRef or int, optional
-            Width or reference to it of wrapped ``pandas.DataFrame``.
+            Width, or reference to width, of wrapped ``pandas.DataFrame``.
         **kwargs : dict
             Additional keywords arguments to be passed in `func`.
 

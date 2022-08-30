@@ -43,9 +43,9 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
     call_queue : list, optional
         A list of tuples (callable, args, kwargs) that contains deferred calls.
     length : distributed.Future or int, optional
-        Length or reference to it of wrapped ``pandas.DataFrame``.
+        Length, or reference to length, of wrapped ``pandas.DataFrame``
     width : distributed.Future or int, optional
-        Width or reference to it of wrapped ``pandas.DataFrame``.
+        Width, or reference to width, of wrapped ``pandas.DataFrame``
     """
 
     axis = None
@@ -458,9 +458,9 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         *args : iterable
             Additional positional arguments to be passed in `func`.
         length : distributed.Future or int, optional
-            Length or reference to it of wrapped ``pandas.DataFrame``.
+            Length, or reference to length, of wrapped ``pandas.DataFrame``.
         width : distributed.Future or int, optional
-            Width or reference to it of wrapped ``pandas.DataFrame``.
+            Width, or reference to width, of wrapped ``pandas.DataFrame``.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
