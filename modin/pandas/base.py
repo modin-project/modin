@@ -260,15 +260,15 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 if len(other) != len(self._query_compiler.index):
                     raise ValueError(
                         "Unable to coerce to Series, length must be "
-                        f"{len(self._query_compiler.index)}: "
-                        f"given {len(other)}"
+                        + f"{len(self._query_compiler.index)}: "
+                        + f"given {len(other)}"
                     )
             else:
                 if len(other) != len(self._query_compiler.columns):
                     raise ValueError(
                         "Unable to coerce to Series, length must be "
-                        f"{len(self._query_compiler.columns)}: "
-                        f"given {len(other)}"
+                        + f"{len(self._query_compiler.columns)}: "
+                        + f"given {len(other)}"
                     )
             if hasattr(other, "dtype"):
                 other_dtypes = [other.dtype] * len(other)
@@ -2647,7 +2647,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         if ascending is None:
             raise ValueError(
                 "the `axis` parameter is not supported in the pandas "
-                "implementation of argsort()"
+                + "implementation of argsort()"
             )
         axis = self._get_axis_number(axis)
         inplace = self._validate_bool_kwarg(inplace, "inplace")
