@@ -22,6 +22,7 @@ from modin.core.dataframe.pandas.partitioning.axis_partition import (
 )
 from modin.core.execution.ray.common.utils import deserialize
 from .partition import PandasOnRayDataframePartition
+from modin.utils import _inherit_docstrings
 
 
 _DEPLOY_AXIS_FUNC = ray.put(PandasDataframeAxisPartition.deploy_axis_func)
@@ -493,59 +494,13 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         )
 
 
+@_inherit_docstrings(PandasOnRayDataframeVirtualPartition.__init__)
 class PandasOnRayDataframeColumnPartition(PandasOnRayDataframeVirtualPartition):
-    """
-    The column partition implementation.
-
-    All of the implementation for this class is in the parent class,
-    and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_partitions : Union[list, PandasOnRayDataframePartition]
-        List of ``PandasOnRayDataframePartition`` and
-        ``PandasOnRayDataframeColumnPartition`` objects, or a single
-        ``PandasOnRayDataframePartition``.
-    get_ip : bool, default: False
-        Whether to get node IP addresses to conforming partitions or not.
-    full_axis : bool, default: True
-        Whether this partition spans an entire axis of the dataframe.
-    call_queue : list, default: None
-        Call queue that needs to be executed on the partition.
-    length : ray.ObjectRef or int, optional
-        Length or reference to it of wrapped ``pandas.DataFrame``.
-    width : ray.ObjectRef or int, optional
-        Width or reference to it of wrapped ``pandas.DataFrame``.
-    """
-
     axis = 0
 
 
+@_inherit_docstrings(PandasOnRayDataframeVirtualPartition.__init__)
 class PandasOnRayDataframeRowPartition(PandasOnRayDataframeVirtualPartition):
-    """
-    The row partition implementation.
-
-    All of the implementation for this class is in the parent class,
-    and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_partitions : Union[list, PandasOnRayDataframePartition]
-        List of ``PandasOnRayDataframePartition`` and
-        ``PandasOnRayDataframeRowPartition`` objects, or a single
-        ``PandasOnRayDataframePartition``.
-    get_ip : bool, default: False
-        Whether to get node IP addresses to conforming partitions or not.
-    full_axis : bool, default: True
-        Whether this partition spans an entire axis of the dataframe.
-    call_queue : list, default: None
-        Call queue that needs to be executed on the partition.
-    length : ray.ObjectRef or int, optional
-        Length or reference to it of wrapped ``pandas.DataFrame``.
-    width : ray.ObjectRef or int, optional
-        Width or reference to it of wrapped ``pandas.DataFrame``.
-    """
-
     axis = 1
 
 

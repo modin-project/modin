@@ -24,6 +24,7 @@ from modin.core.dataframe.pandas.partitioning.axis_partition import (
 )
 from .partition import PandasOnDaskDataframePartition
 from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
+from modin.utils import _inherit_docstrings
 
 
 class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
@@ -43,9 +44,9 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
     call_queue : list, optional
         A list of tuples (callable, args, kwargs) that contains deferred calls.
     length : distributed.Future or int, optional
-        Length, or reference to length, of wrapped ``pandas.DataFrame``
+        Length, or reference to length, of wrapped ``pandas.DataFrame``.
     width : distributed.Future or int, optional
-        Width, or reference to width, of wrapped ``pandas.DataFrame``
+        Width, or reference to width, of wrapped ``pandas.DataFrame``.
     """
 
     axis = None
@@ -482,59 +483,13 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         )
 
 
+@_inherit_docstrings(PandasOnDaskDataframeVirtualPartition.__init__)
 class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeVirtualPartition):
-    """
-    The column partition implementation.
-
-    All of the implementation for this class is in the parent class,
-    and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_partitions : Union[list, PandasOnDaskDataframePartition]
-        List of ``PandasOnDaskDataframePartition`` and
-        ``PandasOnDaskDataframeColumnPartition`` objects, or a single
-        ``PandasOnDaskDataframePartition``.
-    get_ip : bool, default: False
-        Whether to get node IP addresses to conforming partitions or not.
-    full_axis : bool, default: True
-        Whether this partition spans an entire axis of the dataframe.
-    call_queue : list, optional
-        A list of tuples (callable, args, kwargs) that contains deferred calls.
-    length : distributed.Future or int, optional
-        Length or reference to it of wrapped ``pandas.DataFrame``.
-    width : distributed.Future or int, optional
-        Width or reference to it of wrapped ``pandas.DataFrame``.
-    """
-
     axis = 0
 
 
+@_inherit_docstrings(PandasOnDaskDataframeVirtualPartition.__init__)
 class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeVirtualPartition):
-    """
-    The row partition implementation.
-
-    All of the implementation for this class is in the parent class,
-    and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_partitions : Union[list, PandasOnDaskDataframePartition]
-        List of ``PandasOnDaskDataframePartition`` and
-        ``PandasOnDaskDataframeRowPartition`` objects, or a single
-        ``PandasOnDaskDataframePartition``.
-    get_ip : bool, default: False
-        Whether to get node IP addresses to conforming partitions or not.
-    full_axis : bool, default: True
-        Whether this partition spans an entire axis of the dataframe.
-    call_queue : list, optional
-        A list of tuples (callable, args, kwargs) that contains deferred calls.
-    length : distributed.Future or int, optional
-        Length or reference to it of wrapped ``pandas.DataFrame``.
-    width : distributed.Future or int, optional
-        Width or reference to it of wrapped ``pandas.DataFrame``.
-    """
-
     axis = 1
 
 

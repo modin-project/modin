@@ -88,9 +88,9 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         *args : iterable
             Additional positional arguments to be passed in `func`.
         length : reference or int, optional
-            Length, or reference to length, of wrapped ``pandas.DataFrame``
+            Length, or reference to length, of wrapped ``pandas.DataFrame``.
         width : reference or int, optional
-            Width, or reference to width, of wrapped ``pandas.DataFrame``
+            Width, or reference to width, of wrapped ``pandas.DataFrame``.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
