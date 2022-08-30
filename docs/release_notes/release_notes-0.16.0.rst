@@ -90,6 +90,7 @@ Key Features and Updates
   * REFACTOR-#4530: Unify access to physical data for any partition type (#4829)
   * REFACTOR-#4885: De-duplicated take_2d_labels_or_positional methods (#4883)
   * REFACTOR-#4922: Helpers for take_2d_labels_or_positional (#4865)
+  * REFACTOR-#0000: Avoid default_to_pandas (#4833)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements

@@ -16,8 +16,6 @@ Implement Series's accessors public API as pandas does.
 
 Accessors: `Series.cat`, `Series.str`, `Series.dt`
 """
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 import sys
 import numpy as np
@@ -625,7 +623,7 @@ class DatetimeProperties(ClassLogger):
             query_compiler=self._query_compiler.dt_total_seconds(*args, **kwargs)
         )
 
-    def to_pytimedelta(self) -> npt.NDArray[np.object_]:
+    def to_pytimedelta(self) -> "npt.NDArray[np.object_]":
         res = self._query_compiler.dt_to_pytimedelta()
         return res.to_numpy()[:, 0]
 
