@@ -130,35 +130,27 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         ]
         ray.wait(blocks, num_returns=len(blocks))
 
-    map_partitions = classmethod(
-        progress_bar_wrapper(GenericRayDataframePartitionManager.map_partitions)
+
+def _make_wrapped_method(name):
+    setattr(
+        PandasOnRayDataframePartitionManager,
+        name,
+        classmethod(
+            progress_bar_wrapper(
+                getattr(GenericRayDataframePartitionManager, name).__func__
+            )
+        ),
     )
-    lazy_map_partitions = classmethod(
-        progress_bar_wrapper(GenericRayDataframePartitionManager.lazy_map_partitions)
-    )
-    map_axis_partitions = classmethod(
-        progress_bar_wrapper(GenericRayDataframePartitionManager.map_axis_partitions)
-    )
-    _apply_func_to_list_of_partitions = classmethod(
-        progress_bar_wrapper(
-            GenericRayDataframePartitionManager._apply_func_to_list_of_partitions
-        )
-    )
-    apply_func_to_select_indices = classmethod(
-        progress_bar_wrapper(
-            GenericRayDataframePartitionManager.apply_func_to_select_indices
-        )
-    )
-    apply_func_to_select_indices_along_full_axis = classmethod(
-        progress_bar_wrapper(
-            GenericRayDataframePartitionManager.apply_func_to_select_indices_along_full_axis
-        )
-    )
-    apply_func_to_indices_both_axis = classmethod(
-        progress_bar_wrapper(
-            GenericRayDataframePartitionManager.apply_func_to_indices_both_axis
-        )
-    )
-    binary_operation = classmethod(
-        progress_bar_wrapper(GenericRayDataframePartitionManager.binary_operation)
-    )
+
+
+for method in (
+    "map_partitions",
+    "lazy_map_partitions",
+    "map_axis_partitions",
+    "_apply_func_to_list_of_partitions",
+    "apply_func_to_select_indices",
+    "apply_func_to_select_indices_along_full_axis",
+    "apply_func_to_indices_both_axis",
+    "binary_operation",
+):
+    _make_wrapped_method(method)
