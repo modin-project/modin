@@ -329,7 +329,10 @@ class CSVGlobDispatcher(CSVDispatcher):
         bool
             True if the path is valid.
         """
-        if not is_fsspec_url(file_path) and not is_url(file_path):
+        if is_url(file_path):
+            raise NotImplementedError("`read_csv_glob` does not support urllib paths.")
+
+        if not is_fsspec_url(file_path):
             return len(glob.glob(file_path)) > 0
 
         from botocore.exceptions import (
