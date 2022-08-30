@@ -1289,7 +1289,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         func = cls.preprocess_func(func)
 
         def get_right_block(right_partitions, row_idx, col_idx):
-            blocks = right[row_idx][col_idx].list_of_blocks
+            blocks = right_partitions[row_idx][col_idx].list_of_blocks
             # TODO Resolve this assertion as a part of #4691, because the current implementation assumes
             # that partition contains only 1 block.
             assert (
