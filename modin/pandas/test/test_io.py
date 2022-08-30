@@ -1385,8 +1385,8 @@ class TestParquet:
             make_parquet_file(filename=unique_filename, nrows=nrows)
 
             parquet_df = pd.read_parquet(unique_filename)
-            for col in parquet_df.columns:
-                parquet_df[col]
+        for col in parquet_df.columns:
+            parquet_df[col]
 
     @pytest.mark.parametrize("columns", [None, ["col1"]])
     @pytest.mark.parametrize("row_group_size", [None, 100, 1000, 10_000])
