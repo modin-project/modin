@@ -236,7 +236,7 @@ class PandasOnRayIO(RayIO):
             max_retries=0,
         )
         # pending completion
-        ray.get([partition._data for partition in result.flatten()])
+        ray.get([partition.list_of_blocks[0] for partition in result.flatten()])
 
     @staticmethod
     def _to_parquet_check_support(kwargs):
@@ -309,4 +309,4 @@ class PandasOnRayIO(RayIO):
             lengths=None,
             enumerate_partitions=True,
         )
-        ray.get([part._data for row in result for part in row])
+        ray.get([part.list_of_blocks[0] for row in result for part in row])

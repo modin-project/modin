@@ -555,6 +555,8 @@ class PandasDataframe(ClassLogger):
                             cols=self.columns[
                                 slice(cum_col_widths[j], cum_col_widths[j + 1])
                             ],
+                            length=self._row_lengths[i],
+                            width=self._column_widths[j],
                         )
                         for j in range(len(self._partitions[i]))
                     ]
@@ -576,6 +578,8 @@ class PandasDataframe(ClassLogger):
                             idx=self.index[
                                 slice(cum_row_lengths[i], cum_row_lengths[i + 1])
                             ],
+                            length=self._row_lengths[i],
+                            width=self._column_widths[j],
                         )
                         for j in range(len(self._partitions[i]))
                     ]
@@ -596,6 +600,8 @@ class PandasDataframe(ClassLogger):
                             cols=self.columns[
                                 slice(cum_col_widths[j], cum_col_widths[j + 1])
                             ],
+                            length=self._row_lengths[i],
+                            width=self._column_widths[j],
                         )
                         for j in range(len(self._partitions[i]))
                     ]
@@ -1858,10 +1864,7 @@ class PandasDataframe(ClassLogger):
 
         new_axes[axis.value] = self.axes[axis.value]
         new_lengths[axis.value] = self._axes_lengths[axis.value]
-        (
-            new_axes[axis.value ^ 1],
-            new_lengths[axis.value ^ 1],
-        ) = self._compute_axis_labels_and_lengths(axis.value ^ 1, new_partitions)
+        new_axes[axis.value ^ 1], new_lengths[axis.value ^ 1] = None, None
 
         return self.__constructor__(
             new_partitions,
@@ -2635,6 +2638,7 @@ class PandasDataframe(ClassLogger):
         """
         axis = Axis(axis)
         new_widths = None
+        new_lengths = None
 
         def _compute_new_widths():
             widths = None
@@ -2681,9 +2685,11 @@ class PandasDataframe(ClassLogger):
                 new_widths = _compute_new_widths()
             else:
                 new_widths = partition_sizes_along_axis
-        new_partitions = self._partition_mgr_cls.concat(
+        new_partitions, new_lengths2 = self._partition_mgr_cls.concat(
             axis.value, left_parts, right_parts
         )
+        if new_lengths is None:
+            new_lengths = new_lengths2
         new_dtypes = None
         if axis == Axis.ROW_WISE:
             new_index = self.index.append([other.index for other in others])
@@ -2702,14 +2708,15 @@ class PandasDataframe(ClassLogger):
             # frame. Typically, if we know the length for any partition in a
             # row, we know the length for the first partition in the row. So
             # just check the lengths of the first column of partitions.
-            new_lengths = []
-            if new_partitions.size > 0:
-                for part in new_partitions.T[0]:
-                    if part._length_cache is not None:
-                        new_lengths.append(part.length())
-                    else:
-                        new_lengths = None
-                        break
+            if not new_lengths:
+                new_lengths = []
+                if new_partitions.size > 0:
+                    for part in new_partitions.T[0]:
+                        if part._length_cache is not None:
+                            new_lengths.append(part.length())
+                        else:
+                            new_lengths = None
+                            break
         else:
             new_columns = self.columns.append([other.columns for other in others])
             new_index = joined_index

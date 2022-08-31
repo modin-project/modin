@@ -36,6 +36,10 @@ from modin.config import (
 from modin.error_message import ErrorMessage
 
 _OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO = 0.6
+# This constant should be in sync with the limit in ray, which is private,
+# not exposed to users, and not documented:
+# https://github.com/ray-project/ray/blob/4692e8d8023e789120d3f22b41ffb136b50f70ea/python/ray/_private/ray_constants.py#L57-L62
+_MAC_OBJECT_STORE_LIMIT_BYTES = 2 * 2**30
 
 ObjectIDType = ray.ObjectRef
 if version.parse(ray.__version__) >= version.parse("1.2.0"):
@@ -187,18 +191,19 @@ def _get_object_store_memory() -> Optional[int]:
     )
     if object_store_memory == 0:
         return None
-    # Versions of ray with MAC_DEGRADED_PERF_MMAP_SIZE_LIMIT don't allow us
-    # to initialize ray with object store size larger than that constant.
-    # For background see https://github.com/ray-project/ray/issues/20388
-    mac_size_limit = getattr(
-        ray.ray_constants, "MAC_DEGRADED_PERF_MMAP_SIZE_LIMIT", None
-    )
-    if (
-        sys.platform == "darwin"
-        and mac_size_limit is not None
-        and object_store_memory > mac_size_limit
+    # Newer versions of ray don't allow us to initialize ray with object store
+    # size larger than that _MAC_OBJECT_STORE_LIMIT_BYTES. It seems that
+    # object store > the limit is too slow even on ray 1.0.0. However, limiting
+    # the object store to _MAC_OBJECT_STORE_LIMIT_BYTES only seems to start
+    # helping at ray version 1.3.0. So if ray version is at least 1.3.0, cap
+    # the object store at _MAC_OBJECT_STORE_LIMIT_BYTES.
+    # For background on the ray bug see:
+    # - https://github.com/ray-project/ray/issues/20388
+    # - https://github.com/modin-project/modin/issues/4872
+    if sys.platform == "darwin" and version.parse(ray.__version__) >= version.parse(
+        "1.3.0"
     ):
-        object_store_memory = mac_size_limit
+        object_store_memory = min(object_store_memory, _MAC_OBJECT_STORE_LIMIT_BYTES)
     return object_store_memory
 
 

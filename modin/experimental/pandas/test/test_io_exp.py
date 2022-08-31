@@ -164,12 +164,17 @@ class TestCsvGlob:
             df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.parametrize(
+    "path",
+    [
+        "s3://modin-datasets/testing/multiple_csv/test_data*.csv",
+        "gs://modin-testing/testing/multiple_csv/test_data*.csv",
+    ],
+)
 @pytest.mark.skipif(
     Engine.get() != "Ray", reason="Currently only support Ray engine for glob paths."
 )
-def test_read_multiple_csv_s3():
-    path = "S3://modin-datasets/testing/multiple_csv/test_data*.csv"
-
+def test_read_multiple_csv_cloud_store(path):
     def _pandas_read_csv_glob(path, storage_options):
         pandas_dfs = [
             pandas.read_csv(

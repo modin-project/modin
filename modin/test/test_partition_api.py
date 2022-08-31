@@ -80,7 +80,7 @@ def test_unwrap_partitions(axis, reverse_index, reverse_columns):
         for row_idx in range(expected_partitions.shape[0]):
             for col_idx in range(expected_partitions.shape[1]):
                 df_equals(
-                    get_func(expected_partitions[row_idx][col_idx]._data),
+                    get_func(expected_partitions[row_idx][col_idx].list_of_blocks[0]),
                     get_func(actual_partitions[row_idx][col_idx]),
                 )
     else:

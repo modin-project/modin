@@ -1329,7 +1329,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get equality of `BasePandasDataset` and `other`, element-wise (binary operator `eq`).
         """
-        return self._binary_op("eq", other, axis=axis, level=level)
+        return self._binary_op("eq", other, axis=axis, level=level, dtypes=np.bool_)
 
     def explode(self, column, ignore_index: bool = False):  # noqa: PR01, RT01, D200
         """
@@ -1521,7 +1521,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get greater than or equal comparison of `BasePandasDataset` and `other`, element-wise (binary operator `ge`).
         """
-        return self._binary_op("ge", other, axis=axis, level=level)
+        return self._binary_op("ge", other, axis=axis, level=level, dtypes=np.bool_)
 
     def get(self, key, default=None):  # noqa: PR01, RT01, D200
         """
@@ -1536,7 +1536,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get greater than comparison of `BasePandasDataset` and `other`, element-wise (binary operator `gt`).
         """
-        return self._binary_op("gt", other, axis=axis, level=level)
+        return self._binary_op("gt", other, axis=axis, level=level, dtypes=np.bool_)
 
     def head(self, n=5):  # noqa: PR01, RT01, D200
         """
@@ -1679,13 +1679,13 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get less than or equal comparison of `BasePandasDataset` and `other`, element-wise (binary operator `le`).
         """
-        return self._binary_op("le", other, axis=axis, level=level)
+        return self._binary_op("le", other, axis=axis, level=level, dtypes=np.bool_)
 
     def lt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
         Get less than comparison of `BasePandasDataset` and `other`, element-wise (binary operator `lt`).
         """
-        return self._binary_op("lt", other, axis=axis, level=level)
+        return self._binary_op("lt", other, axis=axis, level=level, dtypes=np.bool_)
 
     @property
     def loc(self):  # noqa: RT01, D200
@@ -1895,7 +1895,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get Not equal comparison of `BasePandasDataset` and `other`, element-wise (binary operator `ne`).
         """
-        return self._binary_op("ne", other, axis=axis, level=level)
+        return self._binary_op("ne", other, axis=axis, level=level, dtypes=np.bool_)
 
     def notna(self):  # noqa: RT01, D200
         """
