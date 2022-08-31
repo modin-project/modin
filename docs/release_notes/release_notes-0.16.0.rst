@@ -52,6 +52,7 @@ Key Features and Updates
   * FIX-#4993: Return `_default_to_pandas` in `df.attrs` (#4995)
   * FIX-#4597: Refactor Partition handling of func, args, kwargs (#4715)
   * FIX-#4996: Evaluate BenchmarkMode at each function call (#4997)
+  * FIX-#4022: Fixed empty data frame with index (#4910)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)

@@ -2214,6 +2214,17 @@ class TestStr:
         pds = pandas.Series(data[next(iter(data.keys()))])
         assert str(mds) == str(pds)
 
+    def test_no_cols(self):
+        def run_cols(df, **kwargs):
+            return df.loc[1]
+
+        run_and_compare(
+            fn=run_cols,
+            data=None,
+            constructor_kwargs={"index": range(5)},
+            force_lazy=False,
+        )
+
 
 if __name__ == "__main__":
     pytest.main(["-v", __file__])
