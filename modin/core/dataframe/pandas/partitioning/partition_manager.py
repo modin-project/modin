@@ -1373,22 +1373,20 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 chunk_size = compute_chunksize(
                     num_existing_partitions, ideal_num_new_partitions, min_block_size=1
                 )
-                return (
-                    np.array(
-                        [
-                            cls.column_partitions(
-                                partitions[i : i + chunk_size],
-                                full_axis=False,
-                            )
-                            for i in range(
-                                0,
-                                num_existing_partitions,
-                                chunk_size,
-                            )
-                        ]
-                    ),
-                    None,
+                new_partitions = np.array(
+                    [
+                        cls.column_partitions(
+                            partitions[i : i + chunk_size],
+                            full_axis=False,
+                        )
+                        for i in range(
+                            0,
+                            num_existing_partitions,
+                            chunk_size,
+                        )
+                    ]
                 )
+                return new_partitions, None
 
             # If we know the number of rows in every partition, then we should try
             # instead to give each new partition roughly the same number of rows.
