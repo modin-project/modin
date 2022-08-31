@@ -17,8 +17,6 @@ Module contains class PandasDataframe.
 PandasDataframe is a parent abstract class for any dataframe class
 for pandas storage format.
 """
-from __future__ import annotations
-
 from pandas.util._decorators import cache_readonly
 from collections import OrderedDict
 import numpy as np
