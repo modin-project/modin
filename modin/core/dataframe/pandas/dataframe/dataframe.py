@@ -554,6 +554,8 @@ class PandasDataframe(ClassLogger):
                             cols=self.columns[
                                 slice(cum_col_widths[j], cum_col_widths[j + 1])
                             ],
+                            length=self._row_lengths[i],
+                            width=self._column_widths[j],
                         )
                         for j in range(len(self._partitions[i]))
                     ]
@@ -575,6 +577,8 @@ class PandasDataframe(ClassLogger):
                             idx=self.index[
                                 slice(cum_row_lengths[i], cum_row_lengths[i + 1])
                             ],
+                            length=self._row_lengths[i],
+                            width=self._column_widths[j],
                         )
                         for j in range(len(self._partitions[i]))
                     ]
@@ -595,6 +599,8 @@ class PandasDataframe(ClassLogger):
                             cols=self.columns[
                                 slice(cum_col_widths[j], cum_col_widths[j + 1])
                             ],
+                            length=self._row_lengths[i],
+                            width=self._column_widths[j],
                         )
                         for j in range(len(self._partitions[i]))
                     ]
