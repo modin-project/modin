@@ -12,6 +12,9 @@
 # governing permissions and limitations under the License.
 
 import inspect
+import pandas
+import ray
+from typing import Callable
 
 from . import DataFrame
 from modin.data_management.factories.dispatcher import EngineDispatcher
@@ -66,3 +69,46 @@ def read_sql(
     assert IsExperimental.get(), "This only works in experimental mode"
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return DataFrame(query_compiler=EngineDispatcher.read_sql(**kwargs))
+
+
+@ray.remote
+def _get_dataframes(json_string, json_to_dataframes):
+    return json_to_dataframes(json_string)
+
+
+def read_json_row_partitions(
+    path: str, split_json_string: Callable, json_to_dataframes: Callable
+) -> list:
+    """
+    Read a JSON file to pandas dataframes by splitting it into json chunks.
+
+    Parameters
+    ----------
+    path : str
+        Path to JSON file.
+
+    split_json_string : Callable
+        Function that takes a json string and returns a list of strings.
+
+    json_to_dataframes : Callable
+        Function that maps a json string to a list of dataframes. This function
+        must return the same number of dataframes for each string produced by
+        ``split_json_strings``.
+
+    Notes
+    -----
+    This function ignores indexes of the constituent dataframes. The resulting
+    dataframes will always have the default RangeIndex.
+    """
+    with open(path, "r") as open_file:
+        data = open_file.read()
+    futures_per_split = [
+        _get_dataframes.remote(json_string, json_to_dataframes)
+        for json_string in split_json_string(data)
+    ]
+    row_partitions_per_split = ray.get(futures_per_split)
+    row_partitions_per_dataframe = zip(*row_partitions_per_split)
+    return [
+        pandas.concat(partitions, copy=False, ignore_index=True)
+        for partitions in row_partitions_per_dataframe
+    ]

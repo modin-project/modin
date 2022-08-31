@@ -11,14 +11,19 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from platform import java_ver
 import pandas
 import pytest
+from typing import Callable
+
 import modin.experimental.pandas as pd
 from modin.config import Engine
 from modin.pandas.test.test_io import (  # noqa: F401
     df_equals,
     make_sql_connection,
+    teardown_test_files,
 )
+from modin.pandas.test.utils import get_unique_filename
 
 
 @pytest.mark.skipif(
@@ -63,3 +68,30 @@ def test_from_sql_defaults(make_sql_connection):  # noqa: F811
 
     df_equals(modin_df_from_query, pandas_df)
     df_equals(modin_df_from_table, pandas_df)
+
+
+def test_read_json_row_partitions():
+    json = "fake_json"
+
+    def split_json_string(json_string):
+        assert json_string == "fake_json", "can only split fake json"
+        return ["fake_json_part1", "fake_json_part2"]
+
+    def json_to_dataframes(json_string):
+        return [
+            pandas.DataFrame({0: [json_string]}),
+            pandas.DataFrame({1: [json_string]}),
+        ]
+
+    unique_filename = get_unique_filename(extension="json")
+    try:
+        with open(unique_filename, "w") as out:
+            out.write(json)
+        actual_df1, actual_df2 = pd.read_json_row_partitions(
+            unique_filename, split_json_string, json_to_dataframes
+        )
+    finally:
+        teardown_test_files([unique_filename])
+
+    df_equals(actual_df1, pandas.DataFrame({0: ["fake_json_part1", "fake_json_part2"]}))
+    df_equals(actual_df2, pandas.DataFrame({1: ["fake_json_part1", "fake_json_part2"]}))
