@@ -1447,7 +1447,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 new_partitions.append(
                     cls.column_partitions(partitions[start : stop + 1], full_axis=False)
                 )
-                length = sum(part.length() for part in partitions[start : stop + 1, 0])
                 start = stop + 1
             new_partitions = np.array(new_partitions)
             lengths = [part.length() for part in new_partitions[:, 0]]
