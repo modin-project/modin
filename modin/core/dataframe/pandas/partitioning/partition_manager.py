@@ -1423,6 +1423,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                         ],
                         0,
                     )
+                    # TODO: explicit `_length_cache` computing may be avoided after #4903 is merged
                     for obj in partitions[stop + 1]:
                         obj._length_cache = partition_size - (
                             prev_length + new_last_partition_size
@@ -1432,6 +1433,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                         obj.mask(slice(None, new_last_partition_size), slice(None))
                         for obj in partitions[stop]
                     ]
+                    # TODO: explicit `_length_cache` computing may be avoided after #4903 is merged
                     for obj in partitions[stop]:
                         obj._length_cache = new_last_partition_size
 
@@ -1446,8 +1448,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                     cls.column_partitions(partitions[start : stop + 1], full_axis=False)
                 )
                 length = sum(part.length() for part in partitions[start : stop + 1, 0])
-                for col in new_partitions[-1]:
-                    col._length_cache = length
                 start = stop + 1
             new_partitions = np.array(new_partitions)
             lengths = [part.length() for part in new_partitions[:, 0]]
