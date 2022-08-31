@@ -61,6 +61,7 @@ Key Features and Updates
   * PERF-#4860: `PandasDataframeAxisPartition.deploy_axis_func` should be serialized only once (#4861)
   * PERF-#4890: `PandasDataframeAxisPartition.drain` should be serialized only once (#4891)
   * PERF-#4886: Use lazy index and columns evaluation in `query` method (#4887)
+  * PERF-#4866: `iloc` function that used in `partition.mask` should be serialized only once (#4901)
   * PERF-#4268: Implement partition-parallel __getitem__ for bool Series masks (#4753)
 * Benchmarking enhancements
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
