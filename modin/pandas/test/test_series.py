@@ -4541,13 +4541,9 @@ def test_encode(data, encoding_type):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-def test_concat_string_to_series(data):
-    modin_series, pandas_series = create_test_series(data)
-
-    modin_series = "random_string" + modin_series
-    pandas_series = "random_string" + pandas_series
-
-    df_equals(modin_series, pandas_series)
+def test_add_string_to_series(data):
+    eval_general(*create_test_series(data), lambda s: "string" + s)
+    eval_general(*create_test_series(data), lambda s: s + "string")
 
 
 @pytest.mark.parametrize(
