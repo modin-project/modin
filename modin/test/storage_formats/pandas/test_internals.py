@@ -183,7 +183,7 @@ def test_take_2d_labels_or_positional(row_labels, col_labels):
 @pytest.mark.parametrize("has_frame_shape_cache", [True, False])
 def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cache):
     """
-    Test ``modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe.apply_select_indices`` functionality of broadcasting non-distributed items.
+    Test ``modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe.map_select_indices_both_axes`` functionality of broadcasting non-distributed items.
     """
     data = test_data_values[0]
 
@@ -218,13 +218,11 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
         partition.iloc[row_internal_indices, col_internal_indices] = item
         return partition
 
-    new_modin_frame = modin_frame.apply_select_indices(
-        axis=None,
+    new_modin_frame = modin_frame.map_select_indices_both_axes(
         func=func_to_apply,
         # Passing none-slices does not trigger shapes recomputation and so the cache is untouched.
         row_labels=slice(None),
         col_labels=slice(None),
-        keep_remaining=True,
         new_index=pd_df.index,
         new_columns=pd_df.columns,
         item_to_distribute=values,
