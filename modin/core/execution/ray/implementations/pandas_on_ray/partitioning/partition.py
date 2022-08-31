@@ -120,7 +120,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         logger.debug(f"EXIT::Partition.apply::{self._identity}")
         return PandasOnRayDataframePartition(result, length, width, ip)
 
-    def add_to_apply_calls(self, func, *args, **kwargs):
+    def add_to_apply_calls(self, func, *args, length=None, width=None, **kwargs):
         """
         Add a function to the call queue.
 
@@ -130,6 +130,10 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             Function to be added to the call queue.
         *args : iterable
             Additional positional arguments to be passed in `func`.
+        length : ray.ObjectRef or int, optional
+            Length, or reference to length, of wrapped ``pandas.DataFrame``.
+        width : ray.ObjectRef or int, optional
+            Width, or reference to width, of wrapped ``pandas.DataFrame``.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
@@ -144,7 +148,10 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         return PandasOnRayDataframePartition(
-            self._data, call_queue=self.call_queue + [(func, args, kwargs)]
+            self._data,
+            call_queue=self.call_queue + [(func, args, kwargs)],
+            length=length,
+            width=width,
         )
 
     def drain_call_queue(self):

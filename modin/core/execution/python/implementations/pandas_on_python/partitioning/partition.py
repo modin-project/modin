@@ -114,7 +114,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
             func(self._data.copy(), *args, **kwargs)
         )
 
-    def add_to_apply_calls(self, func, *args, **kwargs):
+    def add_to_apply_calls(self, func, *args, length=None, width=None, **kwargs):
         """
         Add a function to the call queue.
 
@@ -124,6 +124,10 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
             Function to be added to the call queue.
         *args : iterable
             Additional positional arguments to be passed in `func`.
+        length : int, optional
+            Length of wrapped ``pandas.DataFrame``.
+        width : int, optional
+            Width of wrapped ``pandas.DataFrame``.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
@@ -135,6 +139,8 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         return PandasOnPythonDataframePartition(
             self._data.copy(),
             call_queue=self.call_queue + [(func, args, kwargs)],
+            length=length,
+            width=width,
         )
 
     def drain_call_queue(self):

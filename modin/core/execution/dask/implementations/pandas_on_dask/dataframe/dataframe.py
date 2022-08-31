@@ -68,17 +68,19 @@ class PandasOnDaskDataframe(PandasDataframe):
             return [
                 partition.apply(
                     lambda df: len(df) if not axis else len(df.columns)
-                )._data
+                ).list_of_blocks[0]
             ]
         elif partition.axis == axis:
             return [
-                ptn.apply(lambda df: len(df) if not axis else len(df.columns))._data
+                ptn.apply(
+                    lambda df: len(df) if not axis else len(df.columns)
+                ).list_of_blocks[0]
                 for ptn in partition.list_of_block_partitions
             ]
         return [
             partition.list_of_block_partitions[0]
             .apply(lambda df: len(df) if not axis else (len(df.columns)))
-            ._data
+            .list_of_blocks[0]
         ]
 
     @property

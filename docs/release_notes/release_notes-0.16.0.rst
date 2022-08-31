@@ -31,7 +31,7 @@ Key Features and Updates
   * FIX-#4756: Correctly propagate `storage_options` in `read_parquet` (#4764)
   * FIX-#4657: Use `fsspec` for handling s3/http-like paths instead of `s3fs` (#4710)
   * FIX-#4676: drain sub-virtual-partition call queues (#4695)
-  * FIX-#4782: Exclude certain non-parquet files in `read_parquet` (#4783)    
+  * FIX-#4782: Exclude certain non-parquet files in `read_parquet` (#4783)
   * FIX-#4808: Set dtypes correctly after column rename (#4809)
   * FIX-#4811: Apply dataframe -> not_dataframe functions to virtual partitions (#4812)
   * FIX-#4099: Use mangled column names but keep the original when building frames from arrow (#4767)
@@ -58,7 +58,9 @@ Key Features and Updates
   * PERF-#4842: `copy` should not trigger any previous computations (#4843)
   * PERF-#4849: Compute `dtypes` in `concat` also for ROW_WISE case when possible (#4850)
   * PERF-#4892: Compute `lengths` in `rebalance_partitions` when possible (#4893)
+  * PERF-#4794: Compute caches in `_propagate_index_objs` (#4888)
   * PERF-#4860: `PandasDataframeAxisPartition.deploy_axis_func` should be serialized only once (#4861)
+  * PERF-#4890: `PandasDataframeAxisPartition.drain` should be serialized only once (#4891)
   * PERF-#4886: Use lazy index and columns evaluation in `query` method (#4887)
   * PERF-#4268: Implement partition-parallel __getitem__ for bool Series masks (#4753)
 * Benchmarking enhancements
@@ -75,6 +77,7 @@ Key Features and Updates
   * REFACTOR-#4722: Stop suppressing undefined name lint (#4723)
   * REFACTOR-#4832: unify `split_result_of_axis_func_pandas` (#4831)
   * REFACTOR-#4796: Introduce constant for __reduced__ column name (#4799)
+  * REFACTOR-#4530: Unify access to physical data for any partition type (#4829)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements
@@ -88,7 +91,7 @@ Key Features and Updates
   * TEST-#4550: Use much less data in test_partition_api (#4554)
   * TEST-#4610: Remove explicit installation of `black`/`flake8` for omnisci ci-notebooks (#4609)
   * TEST-#2564: Add caching and use mamba for conda setups in GH (#4607)
-  * TEST-#4557: Delete multiindex sorts instead of xfailing (#4559)  
+  * TEST-#4557: Delete multiindex sorts instead of xfailing (#4559)
   * TEST-#4698: Stop passing invalid storage_options param (#4699)
   * TEST-#4745: Pin flake8 to <5 to workaround installation conflict (#4752)
   * TEST-#4875: XFail tests failing due to file gone missing (#4876)
