@@ -832,7 +832,9 @@ class PandasDataframe(ClassLogger):
             ]
         )
 
-        new_partitions = self._partition_mgr_cls.rebalance_partitions(new_partitions)
+        new_partitions, new_row_lengths = self._partition_mgr_cls.rebalance_partitions(
+            new_partitions
+        )
 
         intermediate = self.__constructor__(
             new_partitions,
