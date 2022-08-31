@@ -162,12 +162,9 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
 
-    _iloc = staticmethod(
-        lambda df, row_labels, col_labels: df.iloc[  # noqa: E731 (lambda assignment)
-            row_labels, col_labels
-        ]
-    )
-
+    @staticmethod
+    def _iloc(df, row_labels, col_labels):
+        return df.iloc[row_labels, col_labels]
     def mask(self, row_labels, col_labels):
         """
         Lazily create a mask that extracts the indices provided.

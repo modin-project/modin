@@ -206,7 +206,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             call_queue=self.call_queue,
         )
 
-    _iloc = ray.put(lambda df, row_labels, col_labels: df.iloc[row_labels, col_labels])
+    _iloc = ray.put(PandasDataframePartition._iloc)
 
     def mask(self, row_labels, col_labels):
         """
