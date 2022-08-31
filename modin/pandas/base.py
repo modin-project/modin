@@ -3171,7 +3171,11 @@ class BasePandasDataset(BasePandasDatasetCompat):
         BasePandasDataset
             Located dataset.
         """
-        if not self._query_compiler.lazy_execution and len(self) == 0:
+        if (
+            not self._query_compiler.lazy_execution
+            and self._query_compiler._modin_frame._index_cache is not None
+            and len(self) == 0
+        ):
             return self._default_to_pandas("__getitem__", key)
         # see if we can slice the rows
         # This lets us reuse code in pandas to error check
@@ -3420,7 +3424,14 @@ class BasePandasDataset(BasePandasDatasetCompat):
             # We default to pandas on empty DataFrames. This avoids a large amount of
             # pain in underlying implementation and returns a result immediately rather
             # than dealing with the edge cases that empty DataFrames have.
-            if callable(attr) and self.empty and hasattr(self._pandas_class, item):
+            frame = self._query_compiler._modin_frame
+            if (
+                callable(attr)
+                and frame._index_cache is not None
+                and frame._columns_cache is not None
+                and self.empty
+                and hasattr(self._pandas_class, item)
+            ):
 
                 def default_handler(*args, **kwargs):
                     return self._default_to_pandas(item, *args, **kwargs)
