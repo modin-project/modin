@@ -286,3 +286,12 @@ def test_empty_df(empty_operand):
         pandas_res = pandas_df_empty + pandas_df_empty
 
     df_equals(modin_res, pandas_res)
+
+
+def test_concat_string_to_df():
+    modin_df, pandas_df = create_test_dfs({"a": ["a", "b", "c", "d"]})
+
+    modin_df = "random_string" + modin_df
+    pandas_df = "random_string" + pandas_df
+
+    df_equals(modin_df, pandas_df)

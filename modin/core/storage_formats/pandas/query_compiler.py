@@ -381,6 +381,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     mul = Binary.register(pandas.DataFrame.mul)
     ne = Binary.register(pandas.DataFrame.ne)
     pow = Binary.register(pandas.DataFrame.pow)
+    radd = Binary.register(pandas.DataFrame.radd)
     rfloordiv = Binary.register(pandas.DataFrame.rfloordiv)
     rmod = Binary.register(pandas.DataFrame.rmod)
     rpow = Binary.register(pandas.DataFrame.rpow)

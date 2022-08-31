@@ -1697,7 +1697,6 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         )
 
     product = DataFrameCompat.prod
-    radd = add
 
     def query(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
         """
@@ -1789,6 +1788,21 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         """
         return self._binary_op(
             "rfloordiv",
+            other,
+            axis=axis,
+            level=level,
+            fill_value=fill_value,
+            broadcast=isinstance(other, Series),
+        )
+
+    def radd(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get addition of ``DataFrame`` and `other`, element-wise (binary operator `radd`).
+        """
+        return self._binary_op(
+            "radd",
             other,
             axis=axis,
             level=level,

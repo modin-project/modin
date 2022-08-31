@@ -170,9 +170,9 @@ class Series(SeriesCompat, BasePandasDataset):
     def __add__(self, right):
         return self.add(right)
 
-    @_doc_binary_op(operation="addition", bin_op="add", right="left")
+    @_doc_binary_op(operation="addition", bin_op="radd", right="left")
     def __radd__(self, left):
-        return self.add(left)
+        return self.radd(left)
 
     @_doc_binary_op(operation="union", bin_op="and", right="other")
     def __and__(self, other):
@@ -492,6 +492,17 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).add(
+            new_other, level=level, fill_value=fill_value, axis=axis
+        )
+
+    def radd(
+        self, other, level=None, fill_value=None, axis=0
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return Addition of series and other, element-wise (binary operator radd).
+        """
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).radd(
             new_other, level=level, fill_value=fill_value, axis=axis
         )
 
@@ -1441,7 +1452,6 @@ class Series(SeriesCompat, BasePandasDataset):
         )
 
     product = SeriesCompat.prod
-    radd = add
 
     def ravel(self, order="C"):  # noqa: PR01, RT01, D200
         """
