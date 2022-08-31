@@ -95,6 +95,13 @@ def read_json_row_partitions(
         must return the same number of dataframes for each string produced by
         ``split_json_strings``.
 
+    Returns
+    -------
+    List of DataFrame
+        List of dataframes where the dataframe at position i comes from
+        concatenating json_to_dataframes(chunk)[i] for each ``chunk`` in
+        split_json_string.
+
     Notes
     -----
     This function ignores indexes of the constituent dataframes. The resulting
