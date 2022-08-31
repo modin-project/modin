@@ -59,6 +59,7 @@ Key Features and Updates
   * PERF-#4849: compute `dtypes` in `concat` also for ROW_WISE case when possible (#4850)
   * PERF-#4794: Compute caches in `_propagate_index_objs` (#4888)
   * PERF-#4860: `PandasDataframeAxisPartition.deploy_axis_func` should be serialized only once (#4861)
+  * PERF-#4890: `PandasDataframeAxisPartition.drain` should be serialized only once (#4891)
   * PERF-#4886: Use lazy index and columns evaluation in `query` method (#4887)
   * PERF-#4268: Implement partition-parallel __getitem__ for bool Series masks (#4753)
 * Benchmarking enhancements

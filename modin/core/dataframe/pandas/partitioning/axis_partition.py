@@ -229,3 +229,22 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         # for func, we fold args into kwargs. This is a bit of a hack, but it works.
         result = func(lt_frame, rt_frame, *kwargs.pop("args", ()), **kwargs)
         return split_result_of_axis_func_pandas(axis, num_splits, result)
+
+    @classmethod
+    def drain(cls, df: pandas.DataFrame, call_queue: list):
+        """
+        Execute all operations stored in the call queue on the pandas object (helper function).
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+        call_queue : list
+            Call queue that needs to be executed on pandas DataFrame.
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+        for func, args, kwargs in call_queue:
+            df = func(df, *args, **kwargs)
+        return df

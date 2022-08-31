@@ -26,6 +26,7 @@ from modin.utils import _inherit_docstrings
 
 
 _DEPLOY_AXIS_FUNC = ray.put(PandasDataframeAxisPartition.deploy_axis_func)
+_DRAIN = ray.put(PandasDataframeAxisPartition.drain)
 
 
 class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
@@ -422,14 +423,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         num_splits : int, default: None
             The number of times to split the result object.
         """
-
-        def drain(df):
-            for func, args, kwargs in self.call_queue:
-                df = func(df, *args, **kwargs)
-            return df
-
         drained = super(PandasOnRayDataframeVirtualPartition, self).apply(
-            drain, num_splits=num_splits
+            _DRAIN, num_splits=num_splits, call_queue=self.call_queue
         )
         self._list_of_block_partitions = drained
         self.call_queue = []

@@ -413,14 +413,12 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         num_splits : int, default: None
             The number of times to split the result object.
         """
-
-        def drain(df):
-            for func, args, kwargs in self.call_queue:
-                df = func(df, *args, **kwargs)
-            return df
-
+        # TODO: Need to check if `drain_call_queue` speeds up if helper
+        # `drain` function is serialized only once.
         drained = super(PandasOnDaskDataframeVirtualPartition, self).apply(
-            drain, num_splits=num_splits
+            PandasDataframeAxisPartition.drain,
+            num_splits=num_splits,
+            call_queue=self.call_queue,
         )
         self._list_of_block_partitions = drained
         self.call_queue = []
