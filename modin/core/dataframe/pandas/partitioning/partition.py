@@ -163,8 +163,10 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
 
     @staticmethod
-    def _iloc(df, row_labels, col_labels):
+    def _iloc(df, row_labels, col_labels):  # noqa: RT01, PR01
+        """Perform `iloc` on dataframes wrapped in partitions (helper function)."""
         return df.iloc[row_labels, col_labels]
+
     def mask(self, row_labels, col_labels):
         """
         Lazily create a mask that extracts the indices provided.
