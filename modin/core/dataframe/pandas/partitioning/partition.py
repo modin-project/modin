@@ -186,7 +186,6 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         PandasDataframePartition
             New `PandasDataframePartition` object.
         """
-
         # FIXME: for a `take` won't is_full_axis_mask be wrong if row_labels
         #  is non-unique or not monotonic increasing.
 

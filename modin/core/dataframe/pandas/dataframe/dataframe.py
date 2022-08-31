@@ -1228,7 +1228,7 @@ class PandasDataframe(ClassLogger):
         --------
         pandas.core.internals.BlockManager.blknos
             Analogous to np.digitize(np.arange(ncols), self._col_bins)
-        """
+        """  # noqa:D401
         widths = np.asarray(self._column_widths)
 
         # INT_MAX to make sure we don't try to compute on partitions that don't exist.
@@ -1246,7 +1246,7 @@ class PandasDataframe(ClassLogger):
         --------
         pandas.core.internals.BlockManager.blknos
             Analogous to np.digitize(np.arange(nrows), self._row_bins)
-        """
+        """  # noqa:D401
         lengths = np.asarray(self._row_lengths)
 
         # INT_MAX to make sure we don't try to compute on partitions that don't exist.
