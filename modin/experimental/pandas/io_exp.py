@@ -116,6 +116,6 @@ def read_json_row_partitions(
     row_partitions_per_split = ray.get(futures_per_split)
     row_partitions_per_dataframe = zip(*row_partitions_per_split)
     return [
-        pandas.concat(partitions, copy=False, ignore_index=True)
+        pandas.concat(partitions, ignore_index=True)
         for partitions in row_partitions_per_dataframe
     ]
