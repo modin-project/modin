@@ -244,7 +244,7 @@ by ``DFAlgNode`` based trees. Scalar computations are described by ``BaseExpr`` 
 * :doc:`Frame nodes <df_algebra>`
 * :doc:`Expression nodes <expr>`
 
-Interactions with OmniSci engine are done using ``OmnisciServer`` class. Queries use serialized
+Interactions with OmniSci engine are done using ``OmnisciWorker`` class. Queries use serialized
 Calcite relational algebra format. Calcite algebra nodes are based on ``CalciteBaseNode`` class.
 Translation is done by ``CalciteBuilder`` class. Serialization is performed by ``CalciteSerializer``
 class.
@@ -252,7 +252,7 @@ class.
 * :doc:`CalciteBaseNode <calcite_algebra>`
 * :doc:`CalciteBuilder <calcite_builder>`
 * :doc:`CalciteSerializer <calcite_serializer>`
-* :doc:`OmnisciServer <omnisci_worker>`
+* :doc:`OmnisciWorker <omnisci_worker>`
 
 Column name mangling
 """"""""""""""""""""

@@ -14,7 +14,9 @@
 import sys
 import time
 import modin.pandas as pd
-from modin.experimental.core.execution.native.implementations.omnisci_on_native.omnisci_worker import OmnisciServer
+from modin.experimental.core.execution.native.implementations.omnisci_on_native.omnisci_worker import (
+    DbWorker,
+)
 
 from sklearn import config_context
 import sklearnex
@@ -132,7 +134,7 @@ def read(filename):
     df.shape  # to trigger real execution
     df._query_compiler._modin_frame._partitions[0][
         0
-    ].frame_id = OmnisciServer().put_arrow_to_omnisci(
+    ].frame_id = DbWorker().import_arrow_table(
         df._query_compiler._modin_frame._partitions[0][0].get()
     )  # to trigger real execution
     return df

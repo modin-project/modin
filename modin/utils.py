@@ -616,10 +616,10 @@ def _get_modin_deps_info() -> "dict[str, JSONSerializable]":
             )
 
     try:
-        # We import ``PyDbEngine`` from this module since correct import of ``PyDbEngine`` itself
+        # We import ``DbWorker`` from this module since correct import of ``DbWorker`` itself
         # from Omnisci is located in it with all the necessary options for dlopen.
-        from modin.experimental.core.execution.native.implementations.omnisci_on_native.utils import (  # noqa
-            PyDbEngine,
+        from modin.experimental.core.execution.native.implementations.omnisci_on_native.db_worker import (  # noqa
+            DbWorker,
         )
 
         result["omniscidbe"] = "present"

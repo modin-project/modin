@@ -16,7 +16,7 @@
 import pandas
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
-from ..omnisci_worker import OmnisciServer
+from ..db_worker import DbWorker
 import pyarrow
 
 
@@ -63,12 +63,12 @@ class OmnisciOnNativeDataframePartition(PandasDataframePartition):
         self.arrow_table = arrow_table
         self._length_cache = length
         self._width_cache = width
-        self._server = OmnisciServer
+        self._server = DbWorker
 
     def __del__(self):
         """Deallocate OmniSci resources related to the partition."""
         if self.frame_id is not None:
-            self._server.executeDDL(f"DROP TABLE {self.frame_id};")
+            self._server.dropTable(self.frame_id)
 
     def to_pandas(self):
         """

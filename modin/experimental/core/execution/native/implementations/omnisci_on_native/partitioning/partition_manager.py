@@ -20,7 +20,7 @@ from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
 from ..partitioning.partition import OmnisciOnNativeDataframePartition
-from ..omnisci_worker import OmnisciServer
+from ..db_worker import DbWorker
 from ..calcite_builder import CalciteBuilder
 from ..calcite_serializer import CalciteSerializer
 from modin.config import DoUseCalcite
@@ -231,7 +231,7 @@ class OmnisciOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         np.array
             Created frame's partitions.
         """
-        omniSession = OmnisciServer()
+        omniSession = DbWorker()
 
         # First step is to make sure all partitions are in OmniSci.
         frames = plan.collect_frames()
@@ -244,10 +244,10 @@ class OmnisciOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                 if p.frame_id is None:
                     obj = p.get()
                     if isinstance(obj, (pandas.DataFrame, pandas.Series)):
-                        p.frame_id = omniSession.put_pandas_to_omnisci(obj)
+                        p.frame_id = omniSession.import_pandas_dataframe(obj)
                     else:
                         assert isinstance(obj, pyarrow.Table)
-                        p.frame_id = omniSession.put_arrow_to_omnisci(obj)
+                        p.frame_id = omniSession.import_arrow_table(obj)
 
         calcite_plan = CalciteBuilder().build(plan)
         calcite_json = CalciteSerializer().serialize(calcite_plan)
@@ -257,15 +257,7 @@ class OmnisciOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         if DoUseCalcite.get():
             cmd_prefix = "execute calcite "
 
-        curs = omniSession.executeRA(cmd_prefix + calcite_json)
-        assert curs
-        if hasattr(curs, "getArrowTable"):
-            at = curs.getArrowTable()
-        else:
-            rb = curs.getArrowRecordBatch()
-            assert rb is not None
-            at = pyarrow.Table.from_batches([rb])
-        assert at is not None
+        at = omniSession.executeRA(cmd_prefix + calcite_json)
 
         res = np.empty((1, 1), dtype=np.dtype(object))
         # workaround for https://github.com/modin-project/modin/issues/1851

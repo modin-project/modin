@@ -27,8 +27,8 @@ from modin.pandas.test.utils import (
 )
 from ..df_algebra import FrameNode
 
-from modin.experimental.core.execution.native.implementations.omnisci_on_native.omnisci_worker import (
-    OmnisciServer,
+from modin.experimental.core.execution.native.implementations.omnisci_on_native.db_worker import (
+    DbWorker,
 )
 
 
@@ -166,9 +166,9 @@ class ForceOmnisciImport:
                 continue
             frame = partition.get()
             if isinstance(frame, (pandas.DataFrame, pandas.Series)):
-                frame_id = OmnisciServer().put_pandas_to_omnisci(frame)
+                frame_id = DbWorker().import_pandas_dataframe(frame)
             elif isinstance(frame, pa.Table):
-                frame_id = OmnisciServer().put_arrow_to_omnisci(frame)
+                frame_id = DbWorker().import_arrow_table(frame)
             else:
                 raise TypeError(
                     f"Unexpected storage format, expected pandas.DataFrame or pyarrow.Table, got: {type(frame)}."
@@ -210,7 +210,7 @@ class ForceOmnisciImport:
     def __exit__(self, exc_type, exc_val, exc_tb):
         for df, frame_id in self._imported_frames:
             actual_frame_id = df._query_compiler._modin_frame._partitions[0][0].frame_id
-            OmnisciServer().executeDDL(f"DROP TABLE IF EXISTS {frame_id}")
+            DbWorker().dropTable(frame_id)
             if actual_frame_id == frame_id:
                 df._query_compiler._modin_frame._partitions[0][0].frame_id = None
         self._imported_frames = []

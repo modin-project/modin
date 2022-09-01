@@ -86,7 +86,7 @@ Key Features and Updates
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements
-  *
+  * FEAT-#4913: Enabling pyhdk
 * XGBoost enhancements
   *
 * Developer API enhancements
@@ -139,3 +139,5 @@ Contributors
 @YarShev
 @naren-ponder
 @jbrockmendel
+@ienkovich
+@Garra1980

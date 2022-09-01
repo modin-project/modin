@@ -46,7 +46,7 @@ def test_omnisci_import(import_strategy, has_other_engines):
     """
     Test import of OmniSci engine.
 
-    The import of PyDBEngine requires to set special dlopen flags which make it then
+    The import of DbWorker requires to set special dlopen flags which make it then
     incompatible to import some other libraries further (like ``pyarrow.gandiva``).
     This test verifies that it's not the case when a user naturally imports Modin
     with OmniSci engine.
@@ -93,7 +93,7 @@ sys.modules['dask'] = None
     [
         pytest.param(
             """
-from modin.experimental.core.execution.native.implementations.omnisci_on_native.utils import PyDbEngine
+from modin.experimental.core.execution.native.implementations.omnisci_on_native.db_worker import DbWorker
 import pyarrow.gandiva
 """,
             True,
@@ -102,7 +102,7 @@ import pyarrow.gandiva
         pytest.param(
             """
 import pyarrow.gandiva
-from modin.experimental.core.execution.native.implementations.omnisci_on_native.utils import PyDbEngine
+from modin.experimental.core.execution.native.implementations.omnisci_on_native.db_worker import DbWorker
 """,
             False,
             id="import_pyarrow_gandiva_first-pydbe_second",
@@ -111,7 +111,7 @@ from modin.experimental.core.execution.native.implementations.omnisci_on_native.
 )
 def test_omnisci_compatibility_with_pyarrow_gandiva(import_strategy, expected_to_fail):
     """
-    Test the current status of compatibility of PyDbEngine and pyarrow.gandiva packages.
+    Test the current status of compatibility of DbWorker and pyarrow.gandiva packages.
 
     If this test appears to fail, it means that these packages are now compatible/incopmatible,
     if it's so, please post the actual compatibility status to the issue:
@@ -121,7 +121,7 @@ def test_omnisci_compatibility_with_pyarrow_gandiva(import_strategy, expected_to
     Parameters
     ----------
     import_strategy : str
-        There are several scenarios of how a user can import PyDbEngine and pyarrow.gandiva.
+        There are several scenarios of how a user can import DbWorker and pyarrow.gandiva.
         This parameters holds a python code, implementing one of the scenarios.
     expected_to_fail : bool
         Indicates the estimated compatibility status for the specified `import_strategy`.
@@ -138,11 +138,11 @@ def test_omnisci_compatibility_with_pyarrow_gandiva(import_strategy, expected_to
     if expected_to_fail:
         assert (
             res.returncode != 0
-        ), "PyDbEngine and pyarrow.gandiva are now compatible! Please check the test's doc-string for further instructions."
+        ), "DbWorker and pyarrow.gandiva are now compatible! Please check the test's doc-string for further instructions."
     else:
         assert (
             res.returncode == 0
-        ), "PyDbEngine and pyarrow.gandiva are now incompatible! Please check the test's doc-string for further instructions."
+        ), "DbWorker and pyarrow.gandiva are now incompatible! Please check the test's doc-string for further instructions."
 
     if res.returncode != 0:
         error_msg = res.stderr.decode("utf-8")
