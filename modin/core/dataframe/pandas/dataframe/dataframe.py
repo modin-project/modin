@@ -680,6 +680,9 @@ class PandasDataframe(ClassLogger):
             and row_positions is None
         ):
             return self.copy()
+
+        sorted_row_positions = sorted_col_positions = None
+
         # Get numpy array of positions of values from `row_labels`
         if row_labels is not None:
             row_positions = self.index.get_indexer_for(row_labels)
@@ -804,6 +807,42 @@ class PandasDataframe(ClassLogger):
             new_col_widths,
             new_dtypes,
         )
+
+        return self._maybe_reorder_labels(
+            intermediate,
+            row_positions,
+            sorted_row_positions,
+            col_positions,
+            sorted_col_positions,
+        )
+
+    def _maybe_reorder_labels(
+        self,
+        intermediate: "PandasDataframe",
+        row_positions,
+        sorted_row_positions,
+        col_positions,
+        sorted_col_positions,
+    ) -> "PandasDataframe":
+        """
+        Call re-order labels on take_2d_labels_or_positional result if necessary.
+
+        Parameters
+        ----------
+        intermediate : PandasDataFrame
+        row_positions : list-like of ints, optional
+            The row positions to extract.
+        sorted_row_positions : list-like of ints, optional
+            Sorted version of row_positions.
+        col_positions : list-like of ints, optional
+            The column positions to extract.
+        sorted_col_positions : list-like of ints, optional
+            Sorted version of col_positions.
+
+        Returns
+        -------
+        PandasDataframe
+        """
         # Check if monotonically increasing, return if it is. Fast track code path for
         # common case to keep it fast.
         if (
@@ -820,6 +859,7 @@ class PandasDataframe(ClassLogger):
             or np.all(col_positions[1:] >= col_positions[:-1])
         ):
             return intermediate
+
         # The new labels are often smaller than the old labels, so we can't reuse the
         # original order values because those were mapped to the original data. We have
         # to reorder here based on the expected order from within the data.

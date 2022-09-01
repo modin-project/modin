@@ -82,6 +82,7 @@ Key Features and Updates
   * REFACTOR-#4000: Remove code duplication for `PandasOnRayDataframePartitionManager` (#4895)
   * REFACTOR-#3780: Remove code duplication for `PandasOnDaskDataframe` (#3781)
   * REFACTOR-#4530: Unify access to physical data for any partition type (#4829)
+  * REFACTOR-#4885: De-duplicated take_2d_labels_or_positional methods (#4883)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements
