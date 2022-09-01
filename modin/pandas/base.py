@@ -1953,8 +1953,6 @@ class BasePandasDataset(BasePandasDatasetCompat):
             "pow", other, axis=axis, level=level, fill_value=fill_value
         )
 
-    radd = add
-
     def quantile(
         self, q=0.5, axis=0, numeric_only=True, interpolation="linear"
     ):  # noqa: PR01, RT01, D200
@@ -2261,6 +2259,16 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 col_fill=col_fill,
             )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
+
+    def radd(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return addition of `BasePandasDataset` and `other`, element-wise (binary operator `radd`).
+        """
+        return self._binary_op(
+            "radd", other, axis=axis, level=level, fill_value=fill_value
+        )
 
     def rfloordiv(
         self, other, axis="columns", level=None, fill_value=None

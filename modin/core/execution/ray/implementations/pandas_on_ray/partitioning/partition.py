@@ -213,6 +213,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             call_queue=self.call_queue,
         )
 
+    _iloc = ray.put(PandasDataframePartition._iloc)
+
     def mask(self, row_labels, col_labels):
         """
         Lazily create a mask that extracts the indices provided.

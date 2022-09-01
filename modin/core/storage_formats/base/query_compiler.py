@@ -600,6 +600,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def pow(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.pow)(self, other=other, **kwargs)
 
+    @doc_utils.doc_binary_method(operation="addition", sign="+", self_on_right=True)
+    def radd(self, other, **kwargs):  # noqa: PR02
+        return BinaryDefault.register(pandas.DataFrame.radd)(
+            self, other=other, **kwargs
+        )
+
     @doc_utils.doc_binary_method(
         operation="integer division", sign="//", self_on_right=True
     )
