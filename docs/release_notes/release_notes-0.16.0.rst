@@ -98,6 +98,7 @@ Key Features and Updates
   * TEST-#4698: Stop passing invalid storage_options param (#4699)
   * TEST-#4745: Pin flake8 to <5 to workaround installation conflict (#4752)
   * TEST-#4875: XFail tests failing due to file gone missing (#4876)
+  * TEST-#4879: Use pandas `ensure_clean()` in place of `io_tests_data` (#4881)
 * Documentation improvements
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
   * DOCS-#4628: Add to_parquet partial support notes (#4648)

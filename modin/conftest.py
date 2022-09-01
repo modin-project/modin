@@ -60,12 +60,7 @@ from modin.pandas.test.utils import (  # noqa: E402
     make_default_file,
     teardown_test_files,
     NROWS,
-    IO_OPS_DATA_DIR,
 )
-
-# create test data dir if it is not exists yet
-if not os.path.exists(IO_OPS_DATA_DIR):
-    os.mkdir(IO_OPS_DATA_DIR)
 
 
 def pytest_addoption(parser):
@@ -515,9 +510,6 @@ def make_sql_connection():
         return conn
 
     yield _sql_connection
-
-    # Teardown the fixture
-    teardown_test_files(filenames)
 
 
 @pytest.fixture(scope="class")

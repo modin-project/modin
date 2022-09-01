@@ -55,9 +55,6 @@ NGROUPS = 10
 RAND_LOW = 0
 RAND_HIGH = 100
 
-# Directory for storing I/O operations test data
-IO_OPS_DATA_DIR = os.path.join(os.path.dirname(__file__), "io_tests_data")
-
 # Input data and functions for the tests
 # The test data that we will test our code against
 test_data = {
@@ -978,7 +975,7 @@ def get_unique_filename(
     test_name: str = "test",
     kwargs: dict = {},
     extension: str = "csv",
-    data_dir: str = IO_OPS_DATA_DIR,
+    data_dir: str = "",
     suffix: str = "",
     debug_mode=False,
 ):
