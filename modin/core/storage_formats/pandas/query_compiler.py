@@ -2144,7 +2144,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # __getitem__ methods
     __getitem_bool = Binary.register(
-        lambda df, r: df[r], join_type="left", labels="drop"
+        # r is usually a list, but when r.size == 1, the array is squeezed to a scalar
+        lambda df, r: df[r] if r.size > 1 else df[[r]],
+        join_type="left",
+        labels="drop",
     )
 
     def __validate_bool_indexer(self, indexer):

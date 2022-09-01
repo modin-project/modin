@@ -43,6 +43,7 @@ Key Features and Updates
   * FIX-#4848: Fix rebalancing partitions when NPartitions == 1 (#4874)
   * FIX-#4907: Implement `radd` for Series and DataFrame (#4908)
   * FIX-#4818, PERF-#4825: Fix where by using the new n-ary operator (#4820)    
+  * FIX-#4845: Fix KeyError from `__getitem_bool` for single row dataframes (#4845)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
@@ -143,3 +144,4 @@ Contributors
 @jbrockmendel
 @ienkovich
 @Garra1980
+@Billy2551
