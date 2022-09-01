@@ -13,11 +13,12 @@
 
 """Module houses builder class for GroupByReduce operator."""
 
+from collections.abc import Container
 import pandas
 
 from .tree_reduce import TreeReduce
 from .default2pandas.groupby import GroupBy
-from modin.utils import try_cast_to_pandas, hashable
+from modin.utils import try_cast_to_pandas, hashable, MODIN_UNNAMED_SERIES_LABEL
 from modin.error_message import ErrorMessage
 
 
@@ -214,13 +215,14 @@ class GroupByReduce(TreeReduce):
         )
 
         if not as_index:
+            idx = df.index
             GroupBy.handle_as_index_for_dataframe(
                 result,
                 by_part,
                 by_cols_dtypes=(
-                    df.index.dtypes.values
-                    if isinstance(df.index, pandas.MultiIndex)
-                    else (df.index.dtype,)
+                    idx.dtypes.values
+                    if isinstance(idx, pandas.MultiIndex) and hasattr(idx, "dtypes")
+                    else (idx.dtype,)
                 ),
                 by_length=len(by_part),
                 selection=reduce_func.keys() if isinstance(reduce_func, dict) else None,
@@ -319,8 +321,8 @@ class GroupByReduce(TreeReduce):
                 operation="df.groupby(categorical_by, sort=False)",
                 message=(
                     "the groupby keys will be sorted anyway, although the 'sort=False' was passed. "
-                    "See the following issue for more details: "
-                    "https://github.com/modin-project/modin/issues/3571"
+                    + "See the following issue for more details: "
+                    + "https://github.com/modin-project/modin/issues/3571"
                 ),
             )
             groupby_kwargs = groupby_kwargs.copy()
@@ -348,7 +350,7 @@ class GroupByReduce(TreeReduce):
         )
 
         result = query_compiler.__constructor__(new_modin_frame)
-        if result.index.name == "__reduced__":
+        if result.index.name == MODIN_UNNAMED_SERIES_LABEL:
             result.index.name = None
         return result
 
@@ -484,3 +486,60 @@ groupby_reduce_functions = {
     "size": ("size", "sum"),
     "sum": ("sum", "sum"),
 }
+
+
+def _is_reduce_function_with_depth(fn, depth: int = 0):
+    """
+    Check whether all functions defined by `fn` are groupby reductions.
+
+    If true, all functions defined by `fn` can be implemented with TreeReduce.
+    This is a recursive helper function for is_reduce_function.
+
+    Parameters
+    ----------
+    fn : Any
+        Function to test.
+    depth : int, default: 0
+        How many nested containers we are within for this check.
+            - if it's 0, then we're outside of any container, and `fn` could be
+              either function name or container of function names/renamers.
+            - if it's 1, then we're inside container of function
+              names/renamers.`fn` must be either function name or renamer.
+              renamer is some container which length == 2, where the first
+              element is the new column name and the second is the function
+              name.
+
+    Returns
+    -------
+    bool
+        Whether all functions defined by `fn` are reductions.
+    """
+    if not isinstance(fn, str) and isinstance(fn, Container):
+        assert depth == 0 or (
+            depth > 0 and len(fn) == 2
+        ), f"Got the renamer with incorrect length, expected 2 got {len(fn)}."
+        return (
+            all(_is_reduce_function_with_depth(f, depth + 1) for f in fn)
+            if depth == 0
+            else _is_reduce_function_with_depth(fn[1], depth + 1)
+        )
+    return isinstance(fn, str) and fn in groupby_reduce_functions
+
+
+def is_reduce_function(fn):
+    """
+    Check whether all functions defined by `fn` are groupby reductions.
+
+    If true, all functions defined by `fn` can be implemented with TreeReduce.
+
+    Parameters
+    ----------
+    fn : Any
+        Function to test.
+
+    Returns
+    -------
+    bool
+        Whether all functions defined by `fn` are reductions.
+    """
+    return _is_reduce_function_with_depth(fn, depth=0)

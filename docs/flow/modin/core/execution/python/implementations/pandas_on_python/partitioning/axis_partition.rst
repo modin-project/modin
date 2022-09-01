@@ -9,7 +9,7 @@ partitions that are stored in this class.
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.python.implementations.pandas_on_python.partitioning.axis_partition.PandasOnPythonDataframeAxisPartition
+.. autoclass:: modin.core.execution.python.implementations.pandas_on_python.partitioning.virtual_partition.PandasOnPythonDataframeAxisPartition
 
 PandasOnPythonFrameColumnPartition
 """"""""""""""""""""""""""""""""""
@@ -17,7 +17,7 @@ PandasOnPythonFrameColumnPartition
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.python.implementations.pandas_on_python.partitioning.axis_partition.PandasOnPythonDataframeColumnPartition
+.. autoclass:: modin.core.execution.python.implementations.pandas_on_python.partitioning.virtual_partition.PandasOnPythonDataframeColumnPartition
   :members:
 
 PandasOnPythonFrameRowPartition
@@ -26,5 +26,5 @@ PandasOnPythonFrameRowPartition
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.python.implementations.pandas_on_python.partitioning.axis_partition.PandasOnPythonDataframeRowPartition
+.. autoclass:: modin.core.execution.python.implementations.pandas_on_python.partitioning.virtual_partition.PandasOnPythonDataframeRowPartition
   :members:

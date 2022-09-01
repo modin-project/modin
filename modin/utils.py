@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 """Collection of general utility functions, mostly for internal use."""
-from __future__ import annotations
 
 import importlib
 import types
@@ -39,6 +38,13 @@ MIN_RAY_VERSION = version.parse("1.4.0")
 MIN_DASK_VERSION = version.parse("2.22.0")
 
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
+
+MODIN_UNNAMED_SERIES_LABEL = "__reduced__"
+"""
+The '__reduced__' name is used internally by the query compiler as a column name to
+represent pandas Series objects that are not explicitly assigned a name, so as to
+distinguish between an N-element series and 1xN dataframe.
+"""
 
 
 def _make_api_url(token):
@@ -209,7 +215,7 @@ def append_to_docstring(message: str):
     """
 
     def decorator(func):
-        to_append = align_indents(func.__doc__, message)
+        to_append = align_indents(func.__doc__ or "", message)
         return Appender(to_append)(func)
 
     return decorator
@@ -252,6 +258,7 @@ def _replace_doc(
     target_doc = target_obj.__doc__ or ""
     overwrite = overwrite or not target_doc
     doc = source_doc if overwrite else target_doc
+    apilink = [apilink] if not isinstance(apilink, list) and apilink else apilink
 
     if parent_cls and not attr_name:
         if isinstance(target_obj, property):
@@ -264,18 +271,22 @@ def _replace_doc(
     if (
         source_doc.strip()
         and apilink
-        and "`pandas API documentation for " not in target_doc
+        and "pandas API documentation for " not in target_doc
         and (not (attr_name or "").startswith("_"))
     ):
-        if attr_name:
-            token = f"{apilink}.{attr_name}"
-        else:
-            token = apilink
-        url = _make_api_url(token)
+        links = [None] * len(apilink)
+        for i, link in enumerate(apilink):
+            if attr_name:
+                token = f"{link}.{attr_name}"
+            else:
+                token = link
+            url = _make_api_url(token)
+            links[i] = f"`{token} <{url}>`_"
 
         indent_line = " " * _get_indent(doc)
         notes_section = f"\n{indent_line}Notes\n{indent_line}-----\n"
-        url_line = f"{indent_line}See `pandas API documentation for {token} <{url}>`_ for more.\n"
+
+        url_line = f"{indent_line}See pandas API documentation for {', '.join(links)} for more.\n"
         notes_section_with_url = notes_section + url_line
 
         if notes_section in doc:
@@ -441,7 +452,7 @@ def try_cast_to_pandas(obj, squeeze=False):
         # Query compiler case, it doesn't have logic about convertion to Series
         if (
             isinstance(getattr(result, "name", None), str)
-            and result.name == "__reduced__"
+            and result.name == MODIN_UNNAMED_SERIES_LABEL
         ):
             result.name = None
         return result
@@ -571,11 +582,11 @@ def import_optional_dependency(name, message):
     except ImportError:
         raise ImportError(
             f"Missing optional dependency '{name}'. {message} "
-            f"Use pip or conda to install {name}."
+            + f"Use pip or conda to install {name}."
         ) from None
 
 
-def _get_modin_deps_info() -> dict[str, JSONSerializable]:
+def _get_modin_deps_info() -> "dict[str, JSONSerializable]":
     """
     Return Modin-specific dependencies information as a JSON serializable dictionary.
 
@@ -620,7 +631,7 @@ def _get_modin_deps_info() -> dict[str, JSONSerializable]:
 
 # Disable flake8 checks for print() in this file
 # flake8: noqa: T001
-def show_versions(as_json: str | bool = False) -> None:
+def show_versions(as_json: Union[str, bool] = False) -> None:
     """
     Provide useful information, important for bug reports.
 

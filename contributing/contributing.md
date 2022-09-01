@@ -89,3 +89,4 @@ you should reopen your terminal to find "(base)" next to your prompt: ![](conda_
         1. In your modin repository, copy [this pre-commit file](pre-commit) to `.git/hooks/pre-commit`
         1. Every time you try to commit, git will run flake8 and abort the commit if it fails. This lets you make sure your commits passes flake8 before you push to GitHub.
         1. To bypass the pre-commit hook (e.g. if you don't want to create a pull request, or you already know your code will pass the tests), commit with the flag `--no-verify`.
+        1. We also recommend installing [flake8-no-implicit-concat](https://pypi.org/project/flake8-no-implicit-concat/) via `pip install flake8-no-implicit-concat` to avoid Python implicit string concatenation errors.

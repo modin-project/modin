@@ -9,7 +9,7 @@ To view the docs for the most recent release, check that you're viewing the
 `stable version`_ of the docs.
 
 In order to install the latest version of Modin, follow the directions found on the
-:doc:`installation page </getting_started/index>`.
+:doc:`installation page </getting_started/installation>`.
 
 Questions on implementation details
 -----------------------------------
@@ -26,6 +26,7 @@ about an API or method in Modin, please contact the Modin `developer mailing lis
    series_supported
    utilities_supported
    io_supported
+   older_pandas_compat
 
 .. meta::
     :description lang=en:

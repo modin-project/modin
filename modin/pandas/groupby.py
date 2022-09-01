@@ -17,7 +17,6 @@ import numpy as np
 import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
-from pandas.core.apply import reconstruct_func
 from pandas._libs.lib import no_default
 import pandas.core.common as com
 from types import BuiltinFunctionType
@@ -30,16 +29,20 @@ from modin.utils import (
     wrap_udf_function,
     hashable,
     wrap_into_list,
+    MODIN_UNNAMED_SERIES_LABEL,
 )
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.config import IsExperimental
 from .series import Series
 from .utils import is_label
+from modin._compat import PandasCompatVersion
+from modin._compat.core.pd_common import reconstruct_func
+from modin._compat.pandas_api.classes import DataFrameGroupByCompat, SeriesGroupByCompat
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
-class DataFrameGroupBy(object):
+class DataFrameGroupBy(DataFrameGroupByCompat):
     def __init__(
         self,
         df,
@@ -135,6 +138,7 @@ class DataFrameGroupBy(object):
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_mean,
                 numeric_only=numeric_only,
+                agg_kwargs=dict(numeric_only=numeric_only),
             )
         )
 
@@ -232,8 +236,12 @@ class DataFrameGroupBy(object):
                 and DataFrame(query_compiler=self._by.isna()).any(axis=None)
             ):
                 mask_nan_rows = data[self._by.columns].isna().any(axis=1)
-                # drop NaN groups
-                result = result.loc[~mask_nan_rows]
+                if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+                    # older pandas filled invalid rows with NaN-s
+                    result.loc[mask_nan_rows] = np.nan
+                else:
+                    # drop NaN groups
+                    result = result.loc[~mask_nan_rows]
             return result
 
         if freq is None and axis == 1 and self._axis == 0:
@@ -293,8 +301,9 @@ class DataFrameGroupBy(object):
         self._indices_cache = self._compute_index_grouped(numerical=True)
         return self._indices_cache
 
-    def pct_change(self):
-        return self._default_to_pandas(lambda df: df.pct_change())
+    @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy.pct_change)
+    def _pct_change(self, *args, **kwargs):
+        return self._default_to_pandas(lambda df: df.pct_change(*args, **kwargs))
 
     def filter(self, func, dropna=True, *args, **kwargs):
         return self._default_to_pandas(
@@ -422,10 +431,10 @@ class DataFrameGroupBy(object):
                     operation="GroupBy.__getitem__",
                     message=(
                         "intersection of the selection and 'by' columns is not yet supported, "
-                        "to achieve the desired result rewrite the original code from:\n"
-                        "df.groupby('by_column')['by_column']\n"
-                        "to the:\n"
-                        "df.groupby(df['by_column'].copy())['by_column']"
+                        + "to achieve the desired result rewrite the original code from:\n"
+                        + "df.groupby('by_column')['by_column']\n"
+                        + "to the:\n"
+                        + "df.groupby(df['by_column'].copy())['by_column']"
                     ),
                 )
             cols_to_grab = internal_by.union(key)
@@ -442,7 +451,7 @@ class DataFrameGroupBy(object):
         ):
             raise NotImplementedError(
                 "Column lookups on GroupBy with arbitrary Series in by"
-                " is not yet supported."
+                + " is not yet supported."
             )
         return SeriesGroupBy(
             self._df[key],
@@ -504,6 +513,13 @@ class DataFrameGroupBy(object):
                 func, **kwargs
             )
             func_dict = {col: try_get_str_func(fn) for col, fn in func_dict.items()}
+            if any(isinstance(fn, list) for fn in func_dict.values()):
+                # multicolumn case
+                # putting functions in a `list` allows to achieve multicolumn in each partition
+                func_dict = {
+                    col: fn if isinstance(fn, list) else [fn]
+                    for col, fn in func_dict.items()
+                }
             if (
                 relabeling_required
                 and not self._as_index
@@ -513,11 +529,11 @@ class DataFrameGroupBy(object):
                     operation="GroupBy.aggregate(**dictionary_renaming_aggregation)",
                     message=(
                         "intersection of the columns to aggregate and 'by' is not yet supported when 'as_index=False', "
-                        "columns with group names of the intersection will not be presented in the result. "
-                        "To achieve the desired result rewrite the original code from:\n"
-                        "df.groupby('by_column', as_index=False).agg(agg_func=('by_column', agg_func))\n"
-                        "to the:\n"
-                        "df.groupby('by_column').agg(agg_func=('by_column', agg_func)).reset_index()"
+                        + "columns with group names of the intersection will not be presented in the result. "
+                        + "To achieve the desired result rewrite the original code from:\n"
+                        + "df.groupby('by_column', as_index=False).agg(agg_func=('by_column', agg_func))\n"
+                        + "to the:\n"
+                        + "df.groupby('by_column').agg(agg_func=('by_column', agg_func)).reset_index()"
                     ),
                 )
 
@@ -661,8 +677,8 @@ class DataFrameGroupBy(object):
         if not self._kwargs.get("as_index") and not isinstance(result, Series):
             result = result.rename(columns={0: "size"})
             result = (
-                result.rename(columns={"__reduced__": "index"})
-                if "__reduced__" in result.columns
+                result.rename(columns={MODIN_UNNAMED_SERIES_LABEL: "index"})
+                if MODIN_UNNAMED_SERIES_LABEL in result.columns
                 else result
             )
         elif isinstance(self._df, Series):
@@ -1044,7 +1060,7 @@ class DataFrameGroupBy(object):
         agg_kwargs = dict() if agg_kwargs is None else agg_kwargs
 
         if numeric_only is None:
-            # pandas behaviour: if `numeric_only` wasn't explicitly specified then
+            # pandas behavior: if `numeric_only` wasn't explicitly specified then
             # the parameter is considered to be `False` if there are no numeric types
             # in the frame and `True` otherwise.
             numeric_only = any(
@@ -1171,7 +1187,7 @@ class DataFrameGroupBy(object):
 
 
 @_inherit_docstrings(pandas.core.groupby.SeriesGroupBy)
-class SeriesGroupBy(DataFrameGroupBy):
+class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
     @property
     def ndim(self):
         """

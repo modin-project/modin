@@ -12,74 +12,98 @@
 # governing permissions and limitations under the License.
 
 import warnings
+from modin.logging import get_logger
+from modin.utils import get_current_execution
 
 
 class ErrorMessage(object):
-    # Only print the request implementation one time. This only applies to Warnings.
-    printed_request_implementation = False
+    # Only print full ``default to pandas`` warning one time.
+    printed_default_to_pandas = False
     printed_warnings = set()
 
     @classmethod
     def not_implemented(cls, message=""):
         if message == "":
             message = "This functionality is not yet available in Modin."
+        get_logger().info(f"Modin Error: NotImplementedError: {message}")
         raise NotImplementedError(
-            "{}\n"
-            "To request implementation, send an email to "
-            "feature_requests@modin.org".format(message)
+            f"{message}\n"
+            + "To request implementation, file an issue at "
+            + "https://github.com/modin-project/modin/issues or, if that's "
+            + "not possible, send an email to feature_requests@modin.org."
         )
 
     @classmethod
     def single_warning(cls, message):
         message_hash = hash(message)
+        logger = get_logger()
         if message_hash in cls.printed_warnings:
+            logger.debug(
+                f"Modin Warning: Single Warning: {message} was raised and suppressed."
+            )
             return
 
+        logger.debug(f"Modin Warning: Single Warning: {message} was raised.")
         warnings.warn(message)
         cls.printed_warnings.add(message_hash)
 
     @classmethod
-    def default_to_pandas(cls, message=""):
+    def default_to_pandas(cls, message="", reason=""):
         if message != "":
-            message = "{} defaulting to pandas implementation.".format(message)
+            execution_str = get_current_execution()
+            message = (
+                f"{message} is not currently supported by {execution_str}, "
+                + "defaulting to pandas implementation."
+            )
         else:
             message = "Defaulting to pandas implementation."
 
-        if not cls.printed_request_implementation:
+        if not cls.printed_default_to_pandas:
             message = (
-                "{}\n".format(message)
-                + "To request implementation, send an email to "
-                + "feature_requests@modin.org."
+                f"{message}\n"
+                + "Please refer to "
+                + "https://modin.readthedocs.io/en/stable/supported_apis/defaulting_to_pandas.html for explanation."
             )
-            cls.printed_request_implementation = True
+            cls.printed_default_to_pandas = True
+        if reason:
+            message += f"\nReason: {reason}"
+        get_logger().debug(f"Modin Warning: Default to pandas: {message}")
         warnings.warn(message)
 
     @classmethod
     def catch_bugs_and_request_email(cls, failure_condition, extra_log=""):
         if failure_condition:
+            get_logger().info(f"Modin Error: Internal Error: {extra_log}")
             raise Exception(
                 "Internal Error. "
-                "Please email bug_reports@modin.org with the traceback and command that"
-                " caused this error.\n{}".format(extra_log)
+                + "Please visit https://github.com/modin-project/modin/issues "
+                + "to file an issue with the traceback and the command that "
+                + "caused this error. If you can't file a GitHub issue, "
+                + f"please email bug_reports@modin.org.\n{extra_log}"
             )
 
     @classmethod
     def non_verified_udf(cls):
+        get_logger().debug("Modin Warning: Non Verified UDF")
         warnings.warn(
             "User-defined function verification is still under development in Modin. "
-            "The function provided is not verified."
+            + "The function provided is not verified."
         )
 
     @classmethod
     def missmatch_with_pandas(cls, operation, message):
+        get_logger().debug(
+            f"Modin Warning: {operation} mismatch with pandas: {message}"
+        )
         cls.single_warning(
             f"`{operation}` implementation has mismatches with pandas:\n{message}."
         )
 
     @classmethod
     def not_initialized(cls, engine, code):
+        get_logger().debug(f"Modin Warning: Not Initialized: {engine}")
         warnings.warn(
-            "{} execution environment not yet initialized. Initializing...\n"
-            "To remove this warning, run the following python code before doing dataframe operations:\n"
-            "{}".format(engine, code)
+            f"{engine} execution environment not yet initialized. Initializing...\n"
+            + "To remove this warning, run the following python code before doing dataframe operations:\n"
+            + f"{code}"
         )

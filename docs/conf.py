@@ -33,6 +33,8 @@ for mod_name in ("cudf", "cupy", "pyarrow.gandiva", "omniscidbe"):
         )
 if not hasattr(sys.modules["cudf"], "DataFrame"):
     sys.modules["cudf"].DataFrame = type("DataFrame", (object,), {})
+if not hasattr(sys.modules["cupy"], "ndarray"):
+    sys.modules["cupy"].ndarray = type("ndarray", (object,), {})
 if not hasattr(sys.modules["omniscidbe"], "PyDbEngine"):
     sys.modules["omniscidbe"].PyDbEngine = type("PyDbEngine", (object,), {})
 
@@ -96,7 +98,7 @@ master_doc = "index"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -122,11 +124,14 @@ html_favicon = "img/MODIN_ver2.ico"
 
 html_logo = "img/MODIN_ver2.png"
 
+html_context = {"default_mode": "light"}
+
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
 html_theme_options = {
+    "navbar_end": ["navbar-icon-links"],
     "sidebarwidth": 270,
     "collapse_navigation": False,
     "navigation_depth": 4,

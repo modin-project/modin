@@ -15,6 +15,8 @@ import pytest
 import numpy as np
 import pandas
 import matplotlib
+
+from modin._compat import PandasCompatVersion
 import modin.pandas as pd
 from modin.utils import to_pandas
 
@@ -333,6 +335,9 @@ def test_merge(test_data, test_data2):
 )
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 def test_sort_index(axis, ascending, na_position):
+    if ascending is None and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+        pytest.skip("pandas 1.1 did not raise on ascending=None but Modin does")
+
     data = test_data["float_nan_data"]
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
@@ -403,27 +408,6 @@ def test_sort_multiindex(sort_remaining):
             marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
         ),
         "first,last,middle",
-        pytest.param(
-            "multiindex_level0",
-            marks=pytest.mark.xfail_executions(
-                ["PandasOnPython", "PandasOnRay", "PandasOnDask"],
-                reason="multiindex levels do not work",
-            ),
-        ),
-        pytest.param(
-            "multiindex_level1,multiindex_level0",
-            marks=pytest.mark.xfail_executions(
-                ["PandasOnPython", "PandasOnRay", "PandasOnDask"],
-                reason="multiindex levels do not work",
-            ),
-        ),
-        pytest.param(
-            "multiindex_level0,last,first,multiindex_level1",
-            marks=pytest.mark.xfail_executions(
-                ["PandasOnPython", "PandasOnRay", "PandasOnDask"],
-                reason="multiindex levels do not work",
-            ),
-        ),
     ],
 )
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)

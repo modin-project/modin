@@ -9,7 +9,7 @@ from raw futures objects.
 Partition IPs
 -------------
 For finer grained placement control, Modin also provides an API to get the IP addresses of the nodes that hold each partition.
-You can pass the partitions having needed IPs to your function. It can help with minimazing of data movement between nodes.
+You can pass the partitions having needed IPs to your function. It can help with minimizing of data movement between nodes.
 
 Partition API implementations
 -----------------------------

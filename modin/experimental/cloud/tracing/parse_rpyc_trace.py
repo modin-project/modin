@@ -54,12 +54,12 @@ def get_syncs(items):
 items = read_log((sys.argv[1:] or ["rpyc-trace.log"])[0])
 syncs = get_syncs(items)
 
-print(  # noqa: T001
+print(  # noqa: T201
     f"total time={sum(i['timing'] for i in syncs if i['kind'] == 'recv' and i['msg'] == 'MSG_REPLY')}"
 )
 
 longs = [i for i in syncs if i["timing"] > 0.5]
-print(f'longs ({len(longs)}) time={sum(i["timing"] for i in longs)}')  # noqa: T001
+print(f'longs ({len(longs)}) time={sum(i["timing"] for i in longs)}')  # noqa: T201
 
 s_sends = [i for i in syncs if i["kind"] == "send"]
 
@@ -68,10 +68,10 @@ buckets = collections.defaultdict(list)
 for i in s_sends:
     buckets[i.get("req", "<REVERSE>")].append(i["args"])
 
-print("-------------------")  # noqa: T001
+print("-------------------")  # noqa: T201
 for k, v in buckets.items():
-    print(f"{k}={len(v)}")  # noqa: T001
-print("-------------------")  # noqa: T001
+    print(f"{k}={len(v)}")  # noqa: T201
+print("-------------------")  # noqa: T201
 
 sends = {
     i["seq"]: i for i in items if i["kind"] == "send" and i["msg"] == "MSG_REQUEST"
@@ -187,42 +187,42 @@ for gsend, grecv in pairs:
         remote[got] = sent
     # remote[from_getattr_recv(grecv, False)] = from_getattr_send(gsend, False)
 
-print(f"total time getattrs={sum(x[1]['timing'] for x in getattrs)}")  # noqa: T001
+print(f"total time getattrs={sum(x[1]['timing'] for x in getattrs)}")  # noqa: T201
 
 # import pdb; pdb.set_trace()
 
-print("\n\n----[ getattr ]----")  # noqa: T001
+print("\n\n----[ getattr ]----")  # noqa: T201
 for gsend, grecv in getattrs:
-    print(f"{from_getattr_send(gsend)} --> {from_getattr_recv(grecv)}")  # noqa: T001
+    print(f"{from_getattr_send(gsend)} --> {from_getattr_recv(grecv)}")  # noqa: T201
 
 
-print("\n\n----[ hash ]----")  # noqa: T001
+print("\n\n----[ hash ]----")  # noqa: T201
 for i in syncs:
     if i.get("req", "") == "HANDLE_HASH" and i["kind"] == "send":
-        print(  # noqa: T001
+        print(  # noqa: T201
             from_hash_send(i), "-->", from_getattr_recv(responses.get(i["seq"]))
         )
 
-print("\n\n----[ str ]----")  # noqa: T001
+print("\n\n----[ str ]----")  # noqa: T201
 for i in syncs:
     if i.get("req", "") == "HANDLE_STR" and i["kind"] == "send":
-        print(  # noqa: T001
+        print(  # noqa: T201
             from_hash_send(i), "-->", from_getattr_recv(responses.get(i["seq"]))
         )
 
-print("\n\n----[ callattr ]----")  # noqa: T001
+print("\n\n----[ callattr ]----")  # noqa: T201
 for i in syncs:
     if i.get("req", "") == "HANDLE_CALLATTR" and i["kind"] == "send":
-        print(  # noqa: T001
+        print(  # noqa: T201
             from_callattr_send(i, remote=remote),
             "-->",
             from_getattr_recv(responses.get(i["seq"])),
         )
 
-print("\n\n----[ call ]----")  # noqa: T001
+print("\n\n----[ call ]----")  # noqa: T201
 for i in syncs:
     if i.get("req", "") == "HANDLE_CALL" and i["kind"] == "send":
-        print(  # noqa: T001
+        print(  # noqa: T201
             from_call_send(i, remote=remote),
             "-->",
             from_getattr_recv(responses.get(i["seq"])),

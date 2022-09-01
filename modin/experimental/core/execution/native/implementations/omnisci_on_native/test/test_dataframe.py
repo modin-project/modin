@@ -35,8 +35,10 @@ from modin.pandas.test.utils import (
     generate_multiindex,
     eval_general,
     df_equals_with_non_stable_indices,
+    time_parsing_csv_path,
 )
 from modin.utils import try_cast_to_pandas
+from modin.pandas.utils import from_arrow
 
 from modin.experimental.core.execution.native.implementations.omnisci_on_native.partitioning.partition_manager import (
     OmnisciOnNativeDataframePartitionManager,
@@ -134,14 +136,15 @@ class TestCSV:
             )
 
     def test_time_parsing(self):
-        csv_file = os.path.join(
-            self.root, "modin/pandas/test/data", "test_time_parsing.csv"
-        )
+        csv_file = os.path.join(self.root, time_parsing_csv_path)
         for kwargs in (
             {
                 "skiprows": 1,
                 "names": [
                     "timestamp",
+                    "year",
+                    "month",
+                    "date",
                     "symbol",
                     "high",
                     "low",
@@ -273,6 +276,7 @@ class TestCSV:
             ["c2"],
             [["col2", "col3"]],
             {"col23": ["col2", "col3"]},
+            [],
         ],
     )
     @pytest.mark.parametrize("names", [None, [f"c{x}" for x in range(1, 7)]])
@@ -284,12 +288,13 @@ class TestCSV:
     ):
 
         parse_dates_unsupported = isinstance(parse_dates, dict) or (
-            isinstance(parse_dates, list) and isinstance(parse_dates[0], list)
+            isinstance(parse_dates, list)
+            and any(not isinstance(date, str) for date in parse_dates)
         )
         if parse_dates_unsupported and engine == "arrow" and not names:
             pytest.skip(
                 "In these cases Modin raises `ArrowEngineException` while pandas "
-                "doesn't raise any exceptions that causes tests fails"
+                + "doesn't raise any exceptions that causes tests fails"
             )
         # In these cases Modin raises `ArrowEngineException` while pandas
         # raises `ValueError`, so skipping exception type checking
@@ -1162,12 +1167,12 @@ class TestAgg:
         ).isna().any(axis=None):
             pytest.xfail(
                 reason="'dropna' parameter is forcibly disabled in OmniSci's GroupBy"
-                "due to performance issues, you can track this problem at:"
-                "https://github.com/modin-project/modin/issues/2896"
+                + "due to performance issues, you can track this problem at:"
+                + "https://github.com/modin-project/modin/issues/2896"
             )
 
         # Custom comparator is required because pandas is inconsistent about
-        # the order of equal values, we can't match this behaviour. For more details:
+        # the order of equal values, we can't match this behavior. For more details:
         # https://github.com/modin-project/modin/issues/1650
         run_and_compare(
             value_counts,
@@ -1932,6 +1937,80 @@ class TestBadData:
 
         run_and_compare(fillna, data=self.ok_data, force_lazy=False)
 
+    @pytest.mark.parametrize(
+        "md_df_constructor",
+        [
+            pytest.param(pd.DataFrame, id="from_pandas_dataframe"),
+            pytest.param(
+                lambda pd_df: from_arrow(pyarrow.Table.from_pandas(pd_df)),
+                id="from_pyarrow_table",
+            ),
+        ],
+    )
+    def test_uint(self, md_df_constructor):
+        """
+        Verify that unsigned integer data could be imported-exported via OmniSci with no errors.
+
+        Originally, OmniSci does not support unsigned integers, there's a logic in Modin that
+        upcasts unsigned types to the compatible ones prior importing to OmniSci.
+        """
+        pd_df = pandas.DataFrame(
+            {
+                "uint8_in_int_bounds": np.array([1, 2, 3], dtype="uint8"),
+                "uint8_out-of_int_bounds": np.array(
+                    [(2**8) - 1, (2**8) - 2, (2**8) - 3], dtype="uint8"
+                ),
+                "uint16_in_int_bounds": np.array([1, 2, 3], dtype="uint16"),
+                "uint16_out-of_int_bounds": np.array(
+                    [(2**16) - 1, (2**16) - 2, (2**16) - 3], dtype="uint16"
+                ),
+                "uint32_in_int_bounds": np.array([1, 2, 3], dtype="uint32"),
+                "uint32_out-of_int_bounds": np.array(
+                    [(2**32) - 1, (2**32) - 2, (2**32) - 3], dtype="uint32"
+                ),
+                "uint64_in_int_bounds": np.array([1, 2, 3], dtype="uint64"),
+            }
+        )
+        md_df = md_df_constructor(pd_df)
+
+        with ForceOmnisciImport(md_df) as instance:
+            md_df_exported = instance.export_frames()[0]
+            result = md_df_exported.values
+            reference = pd_df.values
+            np.testing.assert_array_equal(result, reference)
+
+    @pytest.mark.parametrize(
+        "md_df_constructor",
+        [
+            pytest.param(pd.DataFrame, id="from_pandas_dataframe"),
+            pytest.param(
+                lambda pd_df: from_arrow(pyarrow.Table.from_pandas(pd_df)),
+                id="from_pyarrow_table",
+            ),
+        ],
+    )
+    def test_uint_overflow(self, md_df_constructor):
+        """
+        Verify that the exception is arisen when overflow occurs due to 'uint -> int' compatibility conversion.
+
+        Originally, OmniSci does not support unsigned integers, there's a logic in Modin that upcasts
+        unsigned types to the compatible ones prior importing to OmniSci. This test ensures that the
+        error is arisen when such conversion causes a data loss.
+        """
+        md_df = md_df_constructor(
+            pandas.DataFrame(
+                {
+                    "col": np.array(
+                        [(2**64) - 1, (2**64) - 2, (2**64) - 3], dtype="uint64"
+                    )
+                }
+            )
+        )
+
+        with pytest.raises(OverflowError):
+            with ForceOmnisciImport(md_df):
+                pass
+
 
 class TestDropna:
     data = {
@@ -2075,6 +2154,19 @@ class TestArrowExecution:
         run_and_compare(
             apply, data=self.data1, data2=self.data3, force_arrow_execute=True
         )
+
+
+class TestNonStrCols:
+    data = {0: [1, 2, 3], "1": [3, 4, 5], 2: [6, 7, 8]}
+
+    def test_sum(self):
+        mdf = pd.DataFrame(self.data).sum()
+        pdf = pandas.DataFrame(self.data).sum()
+        df_equals(mdf, pdf)
+
+    def test_set_index(self):
+        df = pd.DataFrame(self.data)
+        df._query_compiler._modin_frame._set_index(pd.Index([1, 2, 3]))
 
 
 if __name__ == "__main__":

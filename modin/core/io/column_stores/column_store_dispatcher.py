@@ -58,13 +58,11 @@ class ColumnStoreDispatcher(FileDispatcher):
             [
                 cls.deploy(
                     cls.parse,
-                    NPartitions.get() + 2,
-                    dict(
-                        fname=fname,
-                        columns=cols,
-                        num_splits=NPartitions.get(),
-                        **kwargs,
-                    ),
+                    num_returns=NPartitions.get() + 2,
+                    fname=fname,
+                    columns=cols,
+                    num_splits=NPartitions.get(),
+                    **kwargs,
                 )
                 for cols in col_partitions
             ]
@@ -122,7 +120,9 @@ class ColumnStoreDispatcher(FileDispatcher):
             List with lengths of index chunks.
         """
         num_partitions = NPartitions.get()
-        index_len = cls.materialize(partition_ids[-2][0])
+        index_len = (
+            0 if len(partition_ids) == 0 else cls.materialize(partition_ids[-2][0])
+        )
         if isinstance(index_len, int):
             index = pandas.RangeIndex(index_len)
         else:
@@ -134,8 +134,8 @@ class ColumnStoreDispatcher(FileDispatcher):
         else:
             row_lengths = [
                 index_chunksize
-                if i != num_partitions - 1
-                else index_len - (index_chunksize * (num_partitions - 1))
+                if (i + 1) * index_chunksize < index_len
+                else max(0, index_len - (index_chunksize * i))
                 for i in range(num_partitions)
             ]
         return index, row_lengths
@@ -143,7 +143,7 @@ class ColumnStoreDispatcher(FileDispatcher):
     @classmethod
     def build_columns(cls, columns):
         """
-        Split columns into chunks, that should be read be workers.
+        Split columns into chunks that should be read by workers.
 
         Parameters
         ----------
@@ -158,15 +158,18 @@ class ColumnStoreDispatcher(FileDispatcher):
             List with lengths of `col_partitions` subarrays
             (number of columns that should be read by workers).
         """
+        columns_length = len(columns)
+        if columns_length == 0:
+            return [], []
         num_partitions = NPartitions.get()
         column_splits = (
-            len(columns) // num_partitions
-            if len(columns) % num_partitions == 0
-            else len(columns) // num_partitions + 1
+            columns_length // num_partitions
+            if columns_length % num_partitions == 0
+            else columns_length // num_partitions + 1
         )
         col_partitions = [
             columns[i : i + column_splits]
-            for i in range(0, len(columns), column_splits)
+            for i in range(0, columns_length, column_splits)
         ]
         column_widths = [len(c) for c in col_partitions]
         return col_partitions, column_widths
@@ -215,7 +218,11 @@ class ColumnStoreDispatcher(FileDispatcher):
         partition_ids = cls.call_deploy(path, col_partitions, **kwargs)
         index, row_lens = cls.build_index(partition_ids)
         remote_parts = cls.build_partition(partition_ids[:-2], row_lens, column_widths)
-        dtypes = cls.build_dtypes(partition_ids[-1], columns)
+        dtypes = (
+            cls.build_dtypes(partition_ids[-1], columns)
+            if len(partition_ids) > 0
+            else None
+        )
         new_query_compiler = cls.query_compiler_cls(
             cls.frame_cls(
                 remote_parts,

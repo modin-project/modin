@@ -20,6 +20,7 @@ Accessors: `Series.cat`, `Series.str`, `Series.dt`
 import sys
 import numpy as np
 import pandas
+from modin.logging import ClassLogger
 from modin.utils import _inherit_docstrings
 from .series import Series
 
@@ -32,14 +33,14 @@ else:
 
 
 @_inherit_docstrings(pandas.core.arrays.categorical.CategoricalAccessor)
-class CategoryMethods(object):
+class CategoryMethods(ClassLogger):
     def __init__(self, series):
         self._series = series
         self._query_compiler = series._query_compiler
 
     @property
     def categories(self):
-        return self._series._default_to_pandas(pandas.Series.cat).categories
+        return self._series.dtype.categories
 
     @categories.setter
     def categories(self, categories):
@@ -50,7 +51,7 @@ class CategoryMethods(object):
 
     @property
     def ordered(self):
-        return self._series._default_to_pandas(pandas.Series.cat).ordered
+        return self._series.dtype.ordered
 
     @property
     def codes(self):
@@ -123,7 +124,7 @@ class CategoryMethods(object):
 
 
 @_inherit_docstrings(pandas.core.strings.StringMethods)
-class StringMethods(object):
+class StringMethods(ClassLogger):
     def __init__(self, series):
         # Check if dtypes is objects
 
@@ -454,7 +455,7 @@ class StringMethods(object):
 
 
 @_inherit_docstrings(pandas.core.indexes.accessors.CombinedDatetimelikeProperties)
-class DatetimeProperties(object):
+class DatetimeProperties(ClassLogger):
     def __init__(self, series):
         self._series = series
         self._query_compiler = series._query_compiler

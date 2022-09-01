@@ -43,7 +43,7 @@ class GenericRayDataframePartitionManager(PandasDataframePartitionManager):
         """
         parts = ray.get(
             [
-                obj.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).oid
+                obj.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).list_of_blocks[0]
                 for row in partitions
                 for obj in row
             ]

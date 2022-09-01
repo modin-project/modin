@@ -17,9 +17,8 @@ import pytest
 import pandas
 from pandas.util._decorators import doc
 import numpy as np
-import pyarrow as pa
-import pyarrow.parquet as pq
 import shutil
+from typing import Optional
 
 assert (
     "modin.utils" not in sys.modules
@@ -44,6 +43,7 @@ modin.utils._make_api_url = _saving_make_api_url
 import modin  # noqa: E402
 import modin.config  # noqa: E402
 from modin.config import IsExperimental, TestRayClient  # noqa: E402
+import uuid  # noqa: E402
 
 from modin.core.storage_formats import (  # noqa: E402
     PandasQueryCompiler,
@@ -128,6 +128,18 @@ def simulate_cloud(request):
     if mode == "off":
         yield
         return
+    if (
+        request.config.getoption("usepdb")
+        and request.config.getoption("capture") != "no"
+    ):
+        with request.config.pluginmanager.getplugin(
+            "capturemanager"
+        ).global_and_fixture_disabled():
+            sys.stderr.write(
+                "WARNING! You're running tests in simulate-cloud mode. "
+                + "To enable pdb in remote side please disable output capturing "
+                + "by passing '-s' or '--capture=no' to pytest command line\n"
+            )
 
     if mode not in ("normal", "experimental"):
         raise ValueError(f"Unsupported --simulate-cloud mode: {mode}")
@@ -233,6 +245,17 @@ class TestQC(BaseQueryCompiler):
     def free(self):
         pass
 
+    def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True):
+        raise NotImplementedError(
+            "The selected execution does not implement the DataFrame exchange protocol."
+        )
+
+    @classmethod
+    def from_dataframe(cls, df, data_cls):
+        raise NotImplementedError(
+            "The selected execution does not implement the DataFrame exchange protocol."
+        )
+
     to_pandas = PandasQueryCompiler.to_pandas
     default_to_pandas = PandasQueryCompiler.default_to_pandas
 
@@ -250,6 +273,41 @@ class BaseOnPythonFactory(factories.BaseFactory):
 def set_base_execution(name=BASE_EXECUTION_NAME):
     setattr(factories, f"{name}Factory", BaseOnPythonFactory)
     modin.set_execution(engine="python", storage_format=name.split("On")[0])
+
+
+@pytest.fixture(scope="function")
+def get_unique_base_execution():
+    """Setup unique execution for a single function and yield its QueryCompiler that's suitable for inplace modifications."""
+    # It's better to use decimal IDs rather than hex ones due to factory names formatting
+    execution_id = int(uuid.uuid4().hex, 16)
+    format_name = f"Base{execution_id}"
+    engine_name = "Python"
+    execution_name = f"{format_name}On{engine_name}"
+
+    # Dynamically building all the required classes to form a new execution
+    base_qc = type(format_name, (TestQC,), {})
+    base_io = type(
+        f"{execution_name}IO", (BaseOnPythonIO,), {"query_compiler_cls": base_qc}
+    )
+    base_factory = type(
+        f"{execution_name}Factory",
+        (BaseOnPythonFactory,),
+        {"prepare": classmethod(lambda cls: setattr(cls, "io_cls", base_io))},
+    )
+
+    # Setting up the new execution
+    setattr(factories, f"{execution_name}Factory", base_factory)
+    old_engine, old_format = modin.set_execution(
+        engine=engine_name, storage_format=format_name
+    )
+    yield base_qc
+
+    # Teardown the new execution
+    modin.set_execution(engine=old_engine, storage_format=old_format)
+    try:
+        delattr(factories, f"{execution_name}Factory")
+    except AttributeError:
+        pass
 
 
 def pytest_configure(config):
@@ -388,8 +446,8 @@ def make_parquet_file():
         nrows=NROWS,
         ncols=2,
         force=True,
-        directory=False,
         partitioned_columns=[],
+        row_group_size: Optional[int] = None,
     ):
         """Helper function to generate parquet files/directories.
 
@@ -398,25 +456,21 @@ def make_parquet_file():
             nrows: Number of rows for the dataframe.
             ncols: Number of cols for the dataframe.
             force: Create a new file/directory even if one already exists.
-            directory: Create a partitioned directory using pyarrow.
             partitioned_columns: Create a partitioned directory using pandas.
-            Will be ignored if directory=True.
+            row_group_size: Maximum size of each row group.
         """
         if force or not os.path.exists(filename):
             df = pandas.DataFrame(
                 {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
             )
-            if directory:
-                if os.path.exists(filename):
-                    shutil.rmtree(filename)
-                else:
-                    os.makedirs(filename)
-                table = pa.Table.from_pandas(df)
-                pq.write_to_dataset(table, root_path=filename)
-            elif len(partitioned_columns) > 0:
-                df.to_parquet(filename, partition_cols=partitioned_columns)
+            if len(partitioned_columns) > 0:
+                df.to_parquet(
+                    filename,
+                    partition_cols=partitioned_columns,
+                    row_group_size=row_group_size,
+                )
             else:
-                df.to_parquet(filename)
+                df.to_parquet(filename, row_group_size=row_group_size)
             filenames.append(filename)
 
     # Return function that generates parquet files

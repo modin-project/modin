@@ -26,17 +26,22 @@ from modin.core.storage_formats.pandas.parsers import (
     _split_result_for_readers,
     PandasCSVGlobParser,
     PandasPickleExperimentalParser,
+    CustomTextExperimentalParser,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.ray.implementations.pandas_on_ray.io import PandasOnRayIO
-from modin.core.io import CSVGlobDispatcher, PickleExperimentalDispatcher
-from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
+from modin.core.io import (
+    CSVGlobDispatcher,
+    PickleExperimentalDispatcher,
+    CustomTextExperimentalDispatcher,
+)
+from modin.core.execution.ray.implementations.pandas_on_ray.dataframe import (
     PandasOnRayDataframe,
 )
-from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
+from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
     PandasOnRayDataframePartition,
 )
-from modin.core.execution.ray.common.task_wrapper import RayTask
+from modin.core.execution.ray.common import RayTask
 from modin.config import NPartitions
 
 import ray
@@ -61,6 +66,12 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
     read_pickle_distributed = type(
         "",
         (RayTask, PandasPickleExperimentalParser, PickleExperimentalDispatcher),
+        build_args,
+    )._read
+
+    read_custom_text = type(
+        "",
+        (RayTask, CustomTextExperimentalParser, CustomTextExperimentalDispatcher),
         build_args,
     )._read
 
@@ -297,7 +308,7 @@ def _read_sql_with_offset_pandas_on_ray(
     Returns
     -------
     list
-        List with splitted read results and it's metadata (index, dtypes, etc.).
+        List with split read results and it's metadata (index, dtypes, etc.).
     """
     from .sql import query_put_bounders
 

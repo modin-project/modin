@@ -19,6 +19,7 @@ import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
 from pandas.core.base import SpecificationError
+from modin._compat import PandasCompatVersion
 from modin.utils import get_current_execution
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 import sys
@@ -633,6 +634,13 @@ def test_add_suffix(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_agg(data, func):
+    if (
+        isinstance(func, int)
+        and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36
+    ):
+        pytest.xfail(
+            "Older pandas raises TypeError but Modin conforms to AssertionError"
+        )
     eval_general(
         *create_test_series(data),
         lambda df: df.agg(func),
@@ -683,6 +691,13 @@ def test_agg_numeric_except(request, data, func):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_aggregate(data, func):
+    if (
+        isinstance(func, int)
+        and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36
+    ):
+        pytest.xfail(
+            "Older pandas raises TypeError but Modin conforms to AssertionError"
+        )
     axis = 0
     eval_general(
         *create_test_series(data),
@@ -1016,6 +1031,8 @@ def test_asof_large(where):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_astype(data):
     modin_series, pandas_series = create_test_series(data)
+    series_name = "test_series"
+    modin_series.name = pandas_series.name = series_name
     try:
         pandas_result = pandas_series.astype(str)
     except Exception as e:
@@ -1039,6 +1056,16 @@ def test_astype(data):
             repr(modin_series.astype(np.float64))  # repr to force materialization
     else:
         df_equals(modin_series.astype(np.float64), pandas_result)
+
+    df_equals(
+        modin_series.astype({series_name: str}),
+        pandas_series.astype({series_name: str}),
+    )
+
+    eval_general(modin_series, pandas_series, lambda df: df.astype({"wrong_name": str}))
+
+    # TODO(https://github.com/modin-project/modin/issues/4317): Test passing a
+    # dict to astype() for a series with no name.
 
 
 def test_astype_categorical():
@@ -1129,6 +1156,14 @@ def test_between_time():
     )
 
 
+def test_add_series_to_timedeltaindex():
+    # Make a pandas.core.indexes.timedeltas.TimedeltaIndex
+    deltas = pd.to_timedelta([1], unit="h")
+    test_series = create_test_series(np.datetime64("2000-12-12"))
+    eval_general(*test_series, lambda s: s + deltas)
+    eval_general(*test_series, lambda s: s - deltas)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_bfill(data):
     modin_series, pandas_series = create_test_series(data)
@@ -1152,8 +1187,11 @@ def test_bool(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_clip(request, data):
-    modin_series, pandas_series = create_test_series(data)
+@pytest.mark.parametrize("bound_type", ["list", "series"], ids=["list", "series"])
+def test_clip_scalar(request, data, bound_type):
+    modin_series, pandas_series = create_test_series(
+        data,
+    )
 
     if name_contains(request.node.name, numeric_dfs):
         # set bounds
@@ -1167,6 +1205,37 @@ def test_clip(request, data):
         # test lower and upper scalar bound
         modin_result = modin_series.clip(lower, upper)
         pandas_result = pandas_series.clip(lower, upper)
+        df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("bound_type", ["list", "series"], ids=["list", "series"])
+def test_clip_sequence(request, data, bound_type):
+    modin_series, pandas_series = create_test_series(
+        data,
+    )
+
+    if name_contains(request.node.name, numeric_dfs):
+        lower = random_state.random_integers(RAND_LOW, RAND_HIGH, len(pandas_series))
+        upper = random_state.random_integers(RAND_LOW, RAND_HIGH, len(pandas_series))
+
+        if bound_type == "series":
+            modin_lower = pd.Series(lower)
+            pandas_lower = pandas.Series(lower)
+            modin_upper = pd.Series(upper)
+            pandas_upper = pandas.Series(upper)
+        else:
+            modin_lower = pandas_lower = lower
+            modin_upper = pandas_upper = upper
+
+        # test lower and upper list bound
+        modin_result = modin_series.clip(modin_lower, modin_upper, axis=0)
+        pandas_result = pandas_series.clip(pandas_lower, pandas_upper)
+        df_equals(modin_result, pandas_result)
+
+        # test only upper list bound
+        modin_result = modin_series.clip(np.nan, modin_upper, axis=0)
+        pandas_result = pandas_series.clip(np.nan, pandas_upper)
         df_equals(modin_result, pandas_result)
 
 
@@ -1347,16 +1416,16 @@ def test_describe(data):
 
     try:
         pandas_result = pandas_series.describe(
-            include=[np.timedelta64, np.datetime64, np.object, np.bool]
+            include=[np.timedelta64, np.datetime64, np.object, np.bool_]
         )
     except Exception as e:
         with pytest.raises(type(e)):
             modin_series.describe(
-                include=[np.timedelta64, np.datetime64, np.object, np.bool]
+                include=[np.timedelta64, np.datetime64, np.object, np.bool_]
             )
     else:
         modin_result = modin_series.describe(
-            include=[np.timedelta64, np.datetime64, np.object, np.bool]
+            include=[np.timedelta64, np.datetime64, np.object, np.bool_]
         )
         df_equals(modin_result, pandas_result)
 
@@ -1574,8 +1643,14 @@ def test_dtype(data):
     df_equals(modin_series.dtype, pandas_series.dtypes)
 
 
-def test_dt():
-    data = pd.date_range("2016-12-31", periods=128, freq="D", tz="Europe/Berlin")
+# Bug https://github.com/modin-project/modin/issues/4436 in
+# Series.dt.to_pydatetime is only reproducible when the date range out of which
+# the frame is created has timezone None, so that its dtype is datetime64[ns]
+# as opposed to, e.g. datetime64[ns, Europe/Berlin]. To reproduce that bug, we
+# use timezones None and Europe/Berlin.
+@pytest.mark.parametrize("timezone", [None, "Europe/Berlin"])
+def test_dt(timezone):
+    data = pd.date_range("2016-12-31", periods=128, freq="D", tz=timezone)
     modin_series = pd.Series(data)
     pandas_series = pandas.Series(data)
 
@@ -1615,10 +1690,11 @@ def test_dt():
         modin_series.dt.tz_localize(None),
         pandas_series.dt.tz_localize(None),
     )
-    df_equals(
-        modin_series.dt.tz_convert(tz="Europe/Berlin"),
-        pandas_series.dt.tz_convert(tz="Europe/Berlin"),
-    )
+    if timezone:
+        df_equals(
+            modin_series.dt.tz_convert(tz="Europe/Berlin"),
+            pandas_series.dt.tz_convert(tz="Europe/Berlin"),
+        )
 
     df_equals(modin_series.dt.normalize(), pandas_series.dt.normalize())
     df_equals(
@@ -2120,6 +2196,28 @@ def test_loc_setting_categorical_series():
     modin_series.loc[1:3] = "a"
     pandas_series.loc[1:3] = "a"
     df_equals(modin_series, pandas_series)
+
+
+# This tests the bug from https://github.com/modin-project/modin/issues/3736
+def test_iloc_assigning_scalar_none_to_string_series():
+    data = ["A"]
+    modin_series, pandas_series = create_test_series(data, dtype="string")
+    modin_series.iloc[0] = None
+    pandas_series.iloc[0] = None
+    df_equals(modin_series, pandas_series)
+
+
+def test_set_ordered_categorical_column():
+    data = {"a": [1, 2, 3], "b": [4, 5, 6]}
+    mdf = pd.DataFrame(data)
+    pdf = pandas.DataFrame(data)
+    mdf["a"] = pd.Categorical(mdf["a"], ordered=True)
+    pdf["a"] = pandas.Categorical(pdf["a"], ordered=True)
+    df_equals(mdf, pdf)
+
+    modin_categories = mdf["a"].dtype
+    pandas_categories = pdf["a"].dtype
+    assert modin_categories == pandas_categories
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2744,6 +2842,10 @@ def test_resample(closed, label, level):
 @pytest.mark.parametrize("name", [None, "Custom name"])
 @pytest.mark.parametrize("inplace", [True, False])
 def test_reset_index(data, drop, name, inplace):
+    if name is not None and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+        pytest.xfail(
+            "pandas.Series.reset_index() should ignore `name` when `drop=True` but it does not"
+        )
     eval_general(
         *create_test_series(data),
         lambda df, *args, **kwargs: df.reset_index(*args, **kwargs),
@@ -2983,6 +3085,10 @@ def test_shift_slice_shift(data, index, periods):
 )
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 def test_sort_index(data, ascending, sort_remaining, na_position):
+    if ascending is None and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+        pytest.xfail(
+            "Modin expects pandas to raise ValueError on ascending=None which older pandas does not"
+        )
     modin_series, pandas_series = create_test_series(data)
     eval_general(
         modin_series,

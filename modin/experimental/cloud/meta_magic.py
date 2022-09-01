@@ -108,7 +108,7 @@ def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
     This new class is instantiated differently depending on
     whether this is done in remote or local context.
 
-    In local context we effectively get the same behaviour, but in remote
+    In local context we effectively get the same behavior, but in remote
     context the created class is actually of separate type which
     proxies most requests to a remote end.
 
@@ -142,6 +142,8 @@ def make_wrapped_class(local_cls: type, rpyc_wrapper_name: str):
         Define a __new__() with a __class__ that is closure-bound, needed for super() to work
         """
         # update '__class__' magic closure value - used by super()
+        # FIXME: make __closure__ replacement recursive, as it breaks for decorated functions:
+        # https://github.com/modin-project/modin/issues/4663
         for attr in __class__.__dict__.values():
             if not callable(attr):
                 continue

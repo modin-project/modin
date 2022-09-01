@@ -2,7 +2,7 @@ name: modin_on_omnisci
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.4.1
+  - pandas==1.4.3
   - pyarrow=6
   - numpy>=1.18.5
   - fsspec
@@ -19,3 +19,9 @@ dependencies:
   - xlrd
   - sqlalchemy
   - scipy
+  - pip:
+      - black
+      # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
+      - flake8<5
+      # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
+      - numpydoc==1.1.0

@@ -11,10 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import modin.pandas as pd
 import pandas
 import inspect
 import numpy as np
+
+from modin._compat import PandasCompatVersion
+import modin.pandas as pd
 
 
 def test_top_level_api_equality():
@@ -42,6 +44,9 @@ def test_top_level_api_equality():
         "option_context",
         "reset_option",
         "Panel",  # This is deprecated and throws a warning every time.
+        "SparseSeries",  # depreceted since pandas 1.0, not present in 1.4+
+        "SparseDataFrame",  # depreceted since pandas 1.0, not present in 1.4+
+        "SparseArray",  # usually not available in top-level namespace
     ]
 
     ignore_modin = [
@@ -53,22 +58,14 @@ def test_top_level_api_equality():
         "utils",
         "dataframe",
         "groupby",
-        "threading",
         "general",
-        "datetimes",
-        "reshape",
-        "types",
-        "sys",
-        "initialize_ray",
         "datetime",
-        "ray",
-        "num_cpus",
         "warnings",
         "os",
-        "multiprocessing",
-        "Client",
-        "get_client",
     ]
+    if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+        # pandas 1.1 does not have read_xml but we define a stub
+        ignore_modin += ["read_xml"]
 
     assert not len(
         missing_from_modin - set(ignore_pandas)

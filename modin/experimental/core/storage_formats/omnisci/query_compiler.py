@@ -23,7 +23,7 @@ from modin.core.storage_formats.base.query_compiler import (
     _get_axis as default_axis_getter,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
-from modin.utils import _inherit_docstrings
+from modin.utils import _inherit_docstrings, MODIN_UNNAMED_SERIES_LABEL
 from modin.error_message import ErrorMessage
 import pandas
 
@@ -201,6 +201,19 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             shape_hint = None
         return cls(data_cls.from_arrow(at), shape_hint=shape_hint)
 
+    # Dataframe exchange protocol
+
+    def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True):
+        return self._modin_frame.__dataframe__(
+            nan_as_null=nan_as_null, allow_copy=allow_copy
+        )
+
+    @classmethod
+    def from_dataframe(cls, df, data_cls):
+        return cls(data_cls.from_dataframe(df))
+
+    # END Dataframe exchange protocol
+
     default_to_pandas = PandasQueryCompiler.default_to_pandas
 
     def copy(self):
@@ -209,9 +222,13 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def getitem_column_array(self, key, numeric=False):
         shape_hint = "column" if len(key) == 1 else None
         if numeric:
-            new_modin_frame = self._modin_frame.mask(col_positions=key)
+            new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
+                col_positions=key
+            )
         else:
-            new_modin_frame = self._modin_frame.mask(col_labels=key)
+            new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
+                col_labels=key
+            )
         return self.__constructor__(new_modin_frame, shape_hint)
 
     def getitem_array(self, key):
@@ -267,9 +284,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         else:
             return self.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
 
-    def view(self, index=None, columns=None):
+    def take_2d(self, index=None, columns=None):
         return self.__constructor__(
-            self._modin_frame.mask(row_positions=index, col_positions=columns)
+            self._modin_frame.take_2d_labels_or_positional(
+                row_positions=index, col_positions=columns
+            )
         )
 
     def groupby_size(
@@ -302,7 +321,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
         if as_index:
             shape_hint = "column"
-            new_frame = new_frame._set_columns(["__reduced__"])
+            new_frame = new_frame._set_columns([MODIN_UNNAMED_SERIES_LABEL])
         else:
             shape_hint = None
             new_frame = new_frame._set_columns(["size"]).reset_index(drop=False)
@@ -432,7 +451,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
         new_frame = self._modin_frame.agg(agg)
         new_frame = new_frame._set_index(
-            pandas.Index.__new__(pandas.Index, data=["__reduced__"], dtype="O")
+            pandas.Index.__new__(
+                pandas.Index, data=[MODIN_UNNAMED_SERIES_LABEL], dtype="O"
+            )
         )
         return self.__constructor__(new_frame, shape_hint="row")
 
@@ -532,7 +553,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def drop(self, index=None, columns=None):
         assert index is None, "Only column drop is supported"
         return self.__constructor__(
-            self._modin_frame.mask(
+            self._modin_frame.take_2d_labels_or_positional(
                 row_labels=index, col_labels=self.columns.drop(columns)
             )
         )
@@ -705,7 +726,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             return self.transpose()
 
         if len(self.columns) != 1 or (
-            len(self.index) == 1 and self.index[0] == "__reduced__"
+            len(self.index) == 1 and self.index[0] == MODIN_UNNAMED_SERIES_LABEL
         ):
             res = self.transpose()
             res._shape_hint = "column"

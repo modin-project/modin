@@ -18,7 +18,7 @@ import pytest
 import modin.pandas as pd
 from modin.distributed.dataframe.pandas import unwrap_partitions, from_partitions
 from modin.config import Engine, NPartitions
-from modin.pandas.test.utils import df_equals
+from modin.pandas.test.utils import df_equals, test_data
 from modin.pandas.indexing import compute_sliced_len
 from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
@@ -33,11 +33,11 @@ if Engine.get() == "Ray":
     get_func = ray.get
     FutureType = ray.ObjectRef
 elif Engine.get() == "Dask":
-    from distributed.client import default_client
+    from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
     from distributed import Future
 
-    put_func = lambda x: default_client().scatter(x)  # noqa: E731
-    get_func = lambda x: x.result()  # noqa: E731
+    put_func = lambda x: DaskWrapper.put(x)  # noqa: E731
+    get_func = lambda x: DaskWrapper.materialize(x)  # noqa: E731
     FutureType = Future
 elif Engine.get() == "Python":
     put_func = lambda x: x  # noqa: E731
@@ -54,33 +54,39 @@ pd.DataFrame([])
 
 
 @pytest.mark.parametrize("axis", [None, 0, 1])
-def test_unwrap_partitions(axis):
-    data = np.random.randint(0, 100, size=(2**16, 2**8))
-    df = pd.DataFrame(data)
+@pytest.mark.parametrize("reverse_index", [True, False])
+@pytest.mark.parametrize("reverse_columns", [True, False])
+def test_unwrap_partitions(axis, reverse_index, reverse_columns):
+    data = test_data["int_data"]
 
+    def get_df(lib, data):
+        df = lib.DataFrame(data)
+        if reverse_index:
+            df.index = df.index[::-1]
+        if reverse_columns:
+            df.columns = df.columns[::-1]
+        return df
+
+    df = get_df(pd, data)
+    # `df` should not have propagated the index and column updates to its
+    # partitions yet. The partitions of `expected_df` should have the updated
+    # metadata because we construct `expected_df` directly from the updated
+    # pandas dataframe.
+    expected_df = pd.DataFrame(get_df(pandas, data))
+    expected_partitions = expected_df._query_compiler._modin_frame._partitions
     if axis is None:
-        expected_partitions = df._query_compiler._modin_frame._partitions
         actual_partitions = np.array(unwrap_partitions(df, axis=axis))
-        assert (
-            expected_partitions.shape[0] == actual_partitions.shape[0]
-            and expected_partitions.shape[1] == expected_partitions.shape[1]
-        )
+        assert expected_partitions.shape == actual_partitions.shape
         for row_idx in range(expected_partitions.shape[0]):
             for col_idx in range(expected_partitions.shape[1]):
-                if Engine.get() == "Ray":
-                    assert (
-                        expected_partitions[row_idx][col_idx].oid
-                        == actual_partitions[row_idx][col_idx]
-                    )
-                if Engine.get() == "Dask":
-                    assert (
-                        expected_partitions[row_idx][col_idx].future
-                        == actual_partitions[row_idx][col_idx]
-                    )
+                df_equals(
+                    get_func(expected_partitions[row_idx][col_idx].list_of_blocks[0]),
+                    get_func(actual_partitions[row_idx][col_idx]),
+                )
     else:
         expected_axis_partitions = (
-            df._query_compiler._modin_frame._partition_mgr_cls.axis_partition(
-                df._query_compiler._modin_frame._partitions, axis ^ 1
+            expected_df._query_compiler._modin_frame._partition_mgr_cls.axis_partition(
+                expected_partitions, axis ^ 1
             )
         )
         expected_axis_partitions = [
@@ -90,15 +96,10 @@ def test_unwrap_partitions(axis):
         actual_axis_partitions = unwrap_partitions(df, axis=axis)
         assert len(expected_axis_partitions) == len(actual_axis_partitions)
         for item_idx in range(len(expected_axis_partitions)):
-            if Engine.get() == "Ray":
+            if Engine.get() in ["Ray", "Dask"]:
                 df_equals(
-                    ray.get(expected_axis_partitions[item_idx]),
-                    ray.get(actual_axis_partitions[item_idx]),
-                )
-            if Engine.get() == "Dask":
-                df_equals(
-                    expected_axis_partitions[item_idx].result(),
-                    actual_axis_partitions[item_idx].result(),
+                    get_func(expected_axis_partitions[item_idx]),
+                    get_func(actual_axis_partitions[item_idx]),
                 )
 
 
@@ -108,10 +109,9 @@ def test_unwrap_partitions(axis):
 @pytest.mark.parametrize("index", [None, "index"])
 @pytest.mark.parametrize("axis", [None, 0, 1])
 def test_from_partitions(axis, index, columns, row_lengths, column_widths):
-    num_rows = 2**16
-    num_cols = 2**8
-    data = np.random.randint(0, 100, size=(num_rows, num_cols))
+    data = test_data["int_data"]
     df1, df2 = pandas.DataFrame(data), pandas.DataFrame(data)
+    num_rows, num_cols = df1.shape
     expected_df = pandas.concat([df1, df2], axis=1 if axis is None else axis)
 
     index = expected_df.index if index == "index" else None
@@ -133,15 +133,14 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
 
     if Engine.get() == "Ray":
         if axis is None:
-            futures = [[ray.put(df1), ray.put(df2)]]
+            futures = [[put_func(df1), put_func(df2)]]
         else:
-            futures = [ray.put(df1), ray.put(df2)]
+            futures = [put_func(df1), put_func(df2)]
     if Engine.get() == "Dask":
-        client = default_client()
         if axis is None:
-            futures = [client.scatter([df1, df2], hash=False)]
+            futures = [put_func([df1, df2], hash=False)]
         else:
-            futures = client.scatter([df1, df2], hash=False)
+            futures = put_func([df1, df2], hash=False)
     actual_df = from_partitions(
         futures,
         axis,
@@ -157,9 +156,7 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
 @pytest.mark.parametrize("index", ["original_idx", "new_idx"])
 @pytest.mark.parametrize("axis", [None, 0, 1])
 def test_from_partitions_mismatched_labels(axis, index, columns):
-    num_rows = 2**16
-    num_cols = 2**8
-    expected_df = pd.DataFrame(np.random.randint(0, 100, size=(num_rows, num_cols)))
+    expected_df = pd.DataFrame(test_data["int_data"])
     partitions = unwrap_partitions(expected_df, axis=axis)
 
     index = (

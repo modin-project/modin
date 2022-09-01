@@ -189,6 +189,16 @@ class BaseFactory(object):
     @classmethod
     @doc(
         _doc_io_method_template,
+        source="a DataFrame object supporting exchange protocol `__dataframe__()`",
+        params=_doc_io_method_all_params,
+        method="utils.from_dataframe",
+    )
+    def _from_dataframe(cls, *args, **kwargs):
+        return cls.io_cls.from_dataframe(*args, **kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_template,
         source="a Parquet file",
         params=_doc_io_method_kwargs_params,
         method="read_parquet",
@@ -520,6 +530,15 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
     )
     def _read_pickle_distributed(cls, **kwargs):
         return cls.io_cls.read_pickle_distributed(**kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="Custom text files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_custom_text(cls, **kwargs):
+        return cls.io_cls.read_custom_text(**kwargs)
 
     @classmethod
     def _to_pickle_distributed(cls, *args, **kwargs):

@@ -282,11 +282,11 @@ def doc_reduce_agg(method, refer_to, params=None, extra_params=None):
 doc_cum_agg = partial(
     doc_qc_method,
     template="""
-    Get cummulative {method} for every row or column.
+    Get cumulative {method} for every row or column.
 
     Parameters
     ----------
-    axis : {{0, 1}}
+    fold_axis : {{0, 1}}
     skipna : bool
     **kwargs : dict
         Serves the compatibility purpose. Does not affect the result.
@@ -321,7 +321,7 @@ doc_resample = partial(
 
         {build_rules}
     """,
-    refer_to_module_name="DataFrame.Resampler",
+    refer_to_module_name="resample.Resampler",
 )
 
 
@@ -334,7 +334,7 @@ def doc_resample_reduce(result, refer_to, params=None, compatibility_params=True
     result : str
         The result of the method.
     refer_to : str
-        Method name in ``modin.pandas.base.Resampler`` module to refer to for
+        Method name in ``modin.pandas.resample.Resampler`` module to refer to for
         more information about parameters and output format.
     params : str, optional
         Method parameters in the NumPy docstyle format to substitute
@@ -371,7 +371,7 @@ def doc_resample_reduce(result, refer_to, params=None, compatibility_params=True
 
     build_rules = f"""
             - Labels on the specified axis are the group names (time-stamps)
-            - Labels on the opposit of specified axis are preserved.
+            - Labels on the opposite of specified axis are preserved.
             - Each element of QueryCompiler is the {result} for the
               corresponding group and column/row."""
     return doc_resample(
@@ -393,7 +393,7 @@ def doc_resample_agg(action, output, refer_to, params=None):
     output : str
         What is the content of column names in the result.
     refer_to : str
-        Method name in ``modin.pandas.base.Resampler`` module to refer to for
+        Method name in ``modin.pandas.resample.Resampler`` module to refer to for
         more information about parameters and output format.
     params : str, optional
         Method parameters in the NumPy docstyle format to substitute
@@ -421,7 +421,7 @@ def doc_resample_agg(action, output, refer_to, params=None):
 
     build_rules = f"""
             - Labels on the specified axis are the group names (time-stamps)
-            - Labels on the opposit of specified axis are a MultiIndex, where first level
+            - Labels on the opposite of specified axis are a MultiIndex, where first level
               contains preserved labels of this axis and the second level is the {output}.
             - Each element of QueryCompiler is the result of corresponding function for the
               corresponding group and column/row."""
@@ -442,7 +442,7 @@ def doc_resample_fillna(method, refer_to, params=None, overwrite_template_params
     method : str
         Fillna method name.
     refer_to : str
-        Method name in ``modin.pandas.base.Resampler`` module to refer to for
+        Method name in ``modin.pandas.resample.Resampler`` module to refer to for
         more information about parameters and output format.
     params : str, optional
         Method parameters in the NumPy docstyle format to substitute
@@ -550,7 +550,7 @@ def doc_window_method(
     result : str
         The result of the method.
     refer_to : str
-        Method name in ``modin.pandas.base.Window`` module to refer to
+        Method name in ``modin.pandas.window.Window`` module to refer to
         for more information about parameters and output format.
     action : str, optional
         What method does with the created window.
@@ -567,10 +567,11 @@ def doc_window_method(
     callable
     """
     template = """
-        Create {win_type} and {action} for each window.
+        Create {win_type} and {action} for each window over the given axis.
 
         Parameters
         ----------
+        fold_axis : {{0, 1}}
         {window_args_name} : list
             Rolling windows arguments with the same signature as ``modin.pandas.DataFrame.rolling``.
         {extra_params}
@@ -578,7 +579,7 @@ def doc_window_method(
         -------
         BaseQueryCompiler
             New QueryCompiler containing {result} for each window, built by the following
-            rulles:
+            rules:
 
             {build_rules}
         """
@@ -588,7 +589,7 @@ def doc_window_method(
             - Each element is the {result} for the corresponding window.""",
         "udf_aggregation": """
             - Labels on the specified axis are preserved.
-            - Labels on the opposit of specified axis are MultiIndex, where first level
+            - Labels on the opposite of specified axis are MultiIndex, where first level
               contains preserved labels of this axis and the second level has the function names.
             - Each element of QueryCompiler is the result of corresponding function for the
               corresponding window and column/row.""",
@@ -661,7 +662,7 @@ def doc_groupby_method(result, refer_to, action=None):
         QueryCompiler containing the result of groupby reduce built by the
         following rules:
 
-        - Labels on the opposit of specified axis are preserved.
+        - Labels on the opposite of specified axis are preserved.
         - If groupby_args["as_index"] is True then labels on the specified axis
           are the group names, otherwise labels would be default: 0, 1 ... n.
         - If groupby_args["as_index"] is False, then first N columns/rows of the frame

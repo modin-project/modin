@@ -35,8 +35,11 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
     """
 
     def __init__(self, list_of_blocks):
+        assert all(
+            [len(partition.list_of_blocks) == 1 for partition in list_of_blocks]
+        ), "Implementation assumes that each partition contains a signle block."
         # Unwrap from PandasDataframePartition object for ease of use
-        self.list_of_blocks = [obj.oid for obj in list_of_blocks]
+        self.list_of_blocks = [obj.list_of_blocks[0] for obj in list_of_blocks]
 
     def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
         """
@@ -80,40 +83,6 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
                     *(self.list_of_blocks + other_axis_partition.list_of_blocks),
                 )
             ]
-
-        args = [self.axis, func, num_splits, kwargs]
-        args.extend(self.list_of_blocks)
-        return [
-            PyarrowOnRayDataframePartition(obj)
-            for obj in deploy_ray_axis_func.options(num_returns=num_splits).remote(
-                *args
-            )
-        ]
-
-    def shuffle(self, func, num_splits=None, **kwargs):
-        """
-        Shuffle the order of the data in this axis based on the `func`.
-
-        Parameters
-        ----------
-        func : callable
-            The function to apply before splitting.
-        num_splits : int, optional
-            The number of times to split the resulting object.
-        **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
-
-        Returns
-        -------
-        list
-            List with ``PyarrowOnRayDataframePartition`` objects.
-
-        Notes
-        -----
-        Method extends ``BaseDataframeAxisPartition.shuffle``.
-        """
-        if num_splits is None:
-            num_splits = len(self.list_of_blocks)
 
         args = [self.axis, func, num_splits, kwargs]
         args.extend(self.list_of_blocks)
@@ -315,27 +284,3 @@ def deploy_ray_func_between_two_axis_partitions(
     return split_arrow_table_result(
         axis, result, len(result.num_rows), num_splits, result.schema.metadata
     )
-
-
-@ray.remote
-def deploy_ray_shuffle_func(axis, func, num_splits, kwargs, *partitions):
-    """
-    Deploy shuffle function that defines the order of the data in this axis partition.
-
-    Parameters
-    ----------
-    axis : {0, 1}
-        The axis to perform the function along.
-    func : callable
-        The function to deploy.
-    num_splits : int
-        The number of splits to return.
-    kwargs : dict
-        A dictionary of keyword arguments.
-    *partitions : array-like
-        All partitions that make up the full axis (row or column).
-
-    Notes
-    -----
-    Function is deprecated.
-    """

@@ -21,10 +21,10 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
 )
+from pandas.core.indexes.frozen import FrozenList
 from pandas.util._validators import validate_bool_kwarg
 from pandas.io.formats.printing import pprint_thing
 from pandas._libs.lib import no_default
-from pandas._typing import StorageOptions
 
 import re
 import itertools
@@ -36,11 +36,18 @@ import warnings
 
 from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
-from modin.utils import _inherit_docstrings, to_pandas, hashable
+from modin.utils import (
+    _inherit_docstrings,
+    to_pandas,
+    hashable,
+    append_to_docstring,
+    MODIN_UNNAMED_SERIES_LABEL,
+)
 from modin.config import Engine, IsExperimental, PersistentPickle
 from .utils import (
     from_pandas,
     from_non_pandas,
+    broadcast_item,
 )
 from . import _update_engine
 from .iterator import PartitionIterator
@@ -48,12 +55,13 @@ from .series import Series
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .groupby import DataFrameGroupBy
 from .accessor import CachedAccessor, SparseFrameAccessor
+from modin._compat.pandas_api.classes import DataFrameCompat
 
 
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame.__init__], apilink="pandas.DataFrame"
 )
-class DataFrame(BasePandasDataset):
+class DataFrame(DataFrameCompat, BasePandasDataset):
     """
     Modin distributed representation of ``pandas.DataFrame``.
 
@@ -98,22 +106,26 @@ class DataFrame(BasePandasDataset):
 
     _pandas_class = pandas.DataFrame
 
-    def __init__(
+    @append_to_docstring(__doc__)
+    def _init(
         self,
-        data=None,
-        index=None,
-        columns=None,
-        dtype=None,
-        copy=None,
-        query_compiler=None,
+        data,
+        index,
+        columns,
+        dtype,
+        copy,
+        query_compiler,
     ):
+        # Siblings are other dataframes that share the same query compiler. We
+        # use this list to update inplace when there is a shallow copy.
+        self._siblings = []
         Engine.subscribe(_update_engine)
         if isinstance(data, (DataFrame, Series)):
             self._query_compiler = data._query_compiler.copy()
             if index is not None and any(i not in data.index for i in index):
                 raise NotImplementedError(
                     "Passing non-existant columns or index values to constructor not"
-                    " yet implemented."
+                    + " yet implemented."
                 )
             if isinstance(data, Series):
                 # We set the column name if it is not in the provided Series
@@ -133,7 +145,7 @@ class DataFrame(BasePandasDataset):
                 if columns is not None and any(i not in data.columns for i in columns):
                     raise NotImplementedError(
                         "Passing non-existant columns or index values to constructor not"
-                        " yet implemented."
+                        + " yet implemented."
                     )
                 if index is None:
                     index = slice(None)
@@ -279,7 +291,7 @@ class DataFrame(BasePandasDataset):
         Return ``DataFrame`` with duplicate rows removed.
         """
         return super(DataFrame, self).drop_duplicates(
-            subset=subset, keep=keep, inplace=inplace
+            subset=subset, keep=keep, inplace=inplace, ignore_index=ignore_index
         )
 
     @property
@@ -342,26 +354,31 @@ class DataFrame(BasePandasDataset):
         """
         return DataFrame(query_compiler=self._query_compiler.add_suffix(suffix))
 
-    def applymap(
-        self, func, na_action: Optional[str] = None, **kwargs
-    ):  # noqa: PR01, RT01, D200
+    def _applymap(self, func, **kwargs):  # noqa: PR01, RT01, D200
         """
         Apply a function to a ``DataFrame`` elementwise.
         """
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
-        ErrorMessage.non_verified_udf()
-        return DataFrame(query_compiler=self._query_compiler.applymap(func))
+        return DataFrame(query_compiler=self._query_compiler.applymap(func, **kwargs))
 
-    def apply(
-        self, func, axis=0, raw=False, result_type=None, args=(), **kwargs
+    def _apply(
+        self, func, axis, raw, result_type, args, **kwargs
     ):  # noqa: PR01, RT01, D200
         """
         Apply a function along an axis of the ``DataFrame``.
         """
         axis = self._get_axis_number(axis)
-        query_compiler = super(DataFrame, self).apply(
-            func, axis=axis, raw=raw, result_type=result_type, args=args, **kwargs
+        query_compiler = super(DataFrame, self)._apply(
+            func,
+            axis=axis,
+            broadcast=None,
+            raw=raw,
+            reduce=None,
+            result_type=result_type,
+            convert_dtype=None,
+            args=args,
+            **kwargs,
         )
         if not isinstance(query_compiler, type(self._query_compiler)):
             # A scalar was returned
@@ -374,7 +391,7 @@ class DataFrame(BasePandasDataset):
         # the 'else' branch also handles 'result_type == "expand"' since it makes the output type
         # depend on the `func` result (Series for a scalar, DataFrame for list-like)
         else:
-            reduced_index = pandas.Index(["__reduced__"])
+            reduced_index = pandas.Index([MODIN_UNNAMED_SERIES_LABEL])
             if query_compiler.get_axis(axis).equals(
                 reduced_index
             ) or query_compiler.get_axis(axis ^ 1).equals(reduced_index):
@@ -403,7 +420,7 @@ class DataFrame(BasePandasDataset):
             warnings.warn(
                 (
                     "The `squeeze` parameter is deprecated and "
-                    "will be removed in a future version."
+                    + "will be removed in a future version."
                 ),
                 FutureWarning,
                 stacklevel=2,
@@ -429,7 +446,7 @@ class DataFrame(BasePandasDataset):
 
         if callable(by):
             by = self.index.map(by)
-        elif hashable(by) and not isinstance(by, pandas.Grouper):
+        elif hashable(by) and not isinstance(by, (pandas.Grouper, FrozenList)):
             drop = by in self.columns
             idx_name = by
             if by is not None and by in self._query_compiler.get_index_names(axis):
@@ -545,7 +562,7 @@ class DataFrame(BasePandasDataset):
         if sort is False:
             warnings.warn(
                 "Due to https://github.com/pandas-dev/pandas/issues/35092, "
-                "Pandas ignores sort=False; Modin correctly does not sort."
+                + "Pandas ignores sort=False; Modin correctly does not sort."
             )
         if isinstance(other, (Series, dict)):
             if isinstance(other, dict):
@@ -553,7 +570,7 @@ class DataFrame(BasePandasDataset):
             if other.name is None and not ignore_index:
                 raise TypeError(
                     "Can only append a Series if ignore_index=True"
-                    " or if the Series has a name"
+                    + " or if the Series has a name"
                 )
             if other.name is not None:
                 # other must have the same index name as self, otherwise
@@ -805,8 +822,8 @@ class DataFrame(BasePandasDataset):
             return
         frame = sys._getframe()
         try:
-            f_locals = frame.f_back.f_back.f_locals
-            f_globals = frame.f_back.f_back.f_globals
+            f_locals = frame.f_back.f_back.f_back.f_back.f_locals
+            f_globals = frame.f_back.f_back.f_back.f_back.f_globals
         finally:
             del frame
         local_names = set(re.findall(r"@([\w]+)", expr))
@@ -857,7 +874,10 @@ class DataFrame(BasePandasDataset):
         inplace=False,
         limit=None,
         downcast=None,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Fill NA/NaN values using the specified method.
+        """
         return super(DataFrame, self)._fillna(
             squeeze_self=False,
             squeeze_value=isinstance(value, Series),
@@ -977,14 +997,14 @@ class DataFrame(BasePandasDataset):
             **kwds,
         )
 
-    def info(
+    def _info(
         self,
-        verbose: Optional[bool] = None,
-        buf: Optional[IO[str]] = None,
-        max_cols: Optional[int] = None,
-        memory_usage: Optional[Union[bool, str]] = None,
-        show_counts: Optional[bool] = None,
-        null_counts: Optional[bool] = None,
+        verbose: bool,
+        buf: IO[str],
+        max_cols: int,
+        memory_usage: Union[bool, str],
+        show_counts: bool,
+        null_counts: bool,
     ):  # noqa: PR01, D200
         """
         Print a concise summary of the ``DataFrame``.
@@ -1121,13 +1141,16 @@ class DataFrame(BasePandasDataset):
         """
         Insert column into ``DataFrame`` at specified location.
         """
-        if isinstance(value, (DataFrame, pandas.DataFrame)):
-            if len(value.columns) != 1:
+        if (
+            isinstance(value, (DataFrame, pandas.DataFrame))
+            or isinstance(value, np.ndarray)
+            and len(value.shape) > 1
+        ):
+            if value.shape[1] != 1:
                 raise ValueError(
-                    f"Wrong number of items passed {len(value.columns)}, placement implies 1"
+                    f"Expected a 1D array, got an array with shape {value.shape}"
                 )
             value = value.squeeze(axis=1)
-
         if not self._query_compiler.lazy_execution and len(self.index) == 0:
             if not hasattr(value, "index"):
                 try:
@@ -1135,8 +1158,8 @@ class DataFrame(BasePandasDataset):
                 except (TypeError, ValueError, IndexError):
                     raise ValueError(
                         "Cannot insert into a DataFrame with no defined index "
-                        "and a value that cannot be converted to a "
-                        "Series"
+                        + "and a value that cannot be converted to a "
+                        + "Series"
                     )
             new_index = value.index.copy()
             new_columns = self.columns.insert(loc, column)
@@ -1153,18 +1176,18 @@ class DataFrame(BasePandasDataset):
                 and not isinstance(value, (pandas.Series, Series))
                 and len(value) != len(self.index)
             ):
-                raise ValueError("Length of values does not match length of index")
+                raise ValueError(
+                    "Length of values ({}) does not match length of index ({})".format(
+                        len(value), len(self.index)
+                    )
+                )
             if not allow_duplicates and column in self.columns:
                 raise ValueError(f"cannot insert {column}, already exists")
-            if loc > len(self.columns):
+            if not -len(self.columns) <= loc <= len(self.columns):
                 raise IndexError(
                     f"index {loc} is out of bounds for axis 0 with size {len(self.columns)}"
                 )
-            if loc < 0:
-                if loc < -len(self.columns):
-                    raise IndexError(
-                        f"index {loc} is out of bounds for axis 0 with size {len(self.columns)}"
-                    )
+            elif loc < 0:
                 raise ValueError("unbounded slice")
             if isinstance(value, Series):
                 value = value._query_compiler
@@ -1523,18 +1546,18 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-    def pivot_table(
+    def _pivot_table(
         self,
-        values=None,
-        index=None,
-        columns=None,
-        aggfunc="mean",
-        fill_value=None,
-        margins=False,
-        dropna=True,
-        margins_name="All",
-        observed=False,
-        sort=True,
+        values,
+        index,
+        columns,
+        aggfunc,
+        fill_value,
+        margins,
+        dropna,
+        margins_name,
+        observed,
+        **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Create a spreadsheet-style pivot table as a ``DataFrame``.
@@ -1550,10 +1573,9 @@ class DataFrame(BasePandasDataset):
                 dropna=dropna,
                 margins_name=margins_name,
                 observed=observed,
-                sort=sort,
+                **kwargs,
             )
         )
-
         return result
 
     @property
@@ -1614,20 +1636,20 @@ class DataFrame(BasePandasDataset):
             broadcast=isinstance(other, Series),
         )
 
-    def prod(
+    def _prod(
         self,
-        axis=None,
-        skipna=True,
-        level=None,
-        numeric_only=None,
-        min_count=0,
+        axis,
+        skipna,
+        level,
+        numeric_only,
+        min_count,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return the product of the values over the requested axis.
         """
+        self._validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis = self._get_axis_number(axis)
-        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)
@@ -1674,51 +1696,18 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-    product = prod
+    product = DataFrameCompat.prod
     radd = add
 
     def query(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
         """
         Query the columns of a ``DataFrame`` with a boolean expression.
         """
-        ErrorMessage.non_verified_udf()
         self._update_var_dicts_in_kwargs(expr, kwargs)
         self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
         new_query_compiler = self._query_compiler.query(expr, **kwargs)
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
-
-    def reindex(
-        self,
-        labels=None,
-        index=None,
-        columns=None,
-        axis=None,
-        method=None,
-        copy=True,
-        level=None,
-        fill_value=np.nan,
-        limit=None,
-        tolerance=None,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Conform ``DataFrame`` to new index with optional filling logic.
-        """
-        axis = self._get_axis_number(axis)
-        if axis == 0 and labels is not None:
-            index = labels
-        elif labels is not None:
-            columns = labels
-        return super(DataFrame, self).reindex(
-            index=index,
-            columns=columns,
-            method=method,
-            copy=copy,
-            level=level,
-            fill_value=fill_value,
-            limit=limit,
-            tolerance=tolerance,
-        )
 
     def rename(
         self,
@@ -1769,14 +1758,14 @@ class DataFrame(BasePandasDataset):
         if not inplace:
             return obj
 
-    def replace(
+    def _replace(
         self,
-        to_replace=None,
-        value=no_default,
-        inplace: "bool" = False,
-        limit=None,
-        regex: "bool" = False,
-        method: "str | NoDefault" = no_default,
+        to_replace,
+        value,
+        inplace,
+        limit,
+        regex,
+        method,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -1948,6 +1937,25 @@ class DataFrame(BasePandasDataset):
                 return frame
             else:
                 return
+
+        missing = []
+        for col in keys:
+            # everything else gets tried as a key;
+            # see https://github.com/pandas-dev/pandas/issues/24969
+            try:
+                found = col in self.columns
+            except TypeError as err:
+                raise TypeError(
+                    'The parameter "keys" may be a column key, one-dimensional '
+                    + "array, or a list containing only valid column keys and "
+                    + f"one-dimensional arrays. Received column of type {type(col)}"
+                ) from err
+            else:
+                if not found:
+                    missing.append(col)
+        if missing:
+            raise KeyError(f"None of {missing} are in the columns")
+
         new_query_compiler = self._query_compiler.set_index_from_columns(
             keys, drop=drop, append=append
         )
@@ -2008,20 +2016,19 @@ class DataFrame(BasePandasDataset):
 
     subtract = sub
 
-    def sum(
+    def _sum(
         self,
-        axis=None,
-        skipna=True,
-        level=None,
-        numeric_only=None,
-        min_count=0,
+        axis,
+        skipna,
+        level,
+        numeric_only,
+        min_count,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return the sum of the values over the requested axis.
         """
         axis = self._get_axis_number(axis)
-        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis_to_apply = self.columns if axis else self.index
         if (
             skipna is not False
@@ -2161,33 +2168,6 @@ class DataFrame(BasePandasDataset):
             encoding=None,
         )
 
-    def to_parquet(
-        self,
-        path=None,
-        engine="auto",
-        compression="snappy",
-        index=None,
-        partition_cols=None,
-        storage_options: StorageOptions = None,
-        **kwargs,
-    ):
-
-        config = {
-            "path": path,
-            "engine": engine,
-            "compression": compression,
-            "index": index,
-            "partition_cols": partition_cols,
-            "storage_options": storage_options,
-        }
-        new_query_compiler = self._query_compiler
-
-        from modin.core.execution.dispatching.factories.dispatcher import (
-            FactoryDispatcher,
-        )
-
-        return FactoryDispatcher.to_parquet(new_query_compiler, **config, **kwargs)
-
     def to_period(
         self, freq=None, axis=0, copy=True
     ):  # pragma: no cover # noqa: PR01, RT01, D200
@@ -2209,41 +2189,6 @@ class DataFrame(BasePandasDataset):
             index_dtypes=index_dtypes,
         )
 
-    def to_stata(
-        self,
-        path: "FilePath | WriteBuffer[bytes]",
-        convert_dates: "dict[Hashable, str] | None" = None,
-        write_index: "bool" = True,
-        byteorder: "str | None" = None,
-        time_stamp: "datetime.datetime | None" = None,
-        data_label: "str | None" = None,
-        variable_labels: "dict[Hashable, str] | None" = None,
-        version: "int | None" = 114,
-        convert_strl: "Sequence[Hashable] | None" = None,
-        compression: "CompressionOptions" = "infer",
-        storage_options: "StorageOptions" = None,
-        *,
-        value_labels: "dict[Hashable, dict[float | int, str]] | None" = None,
-    ):  # pragma: no cover # noqa: PR01, RT01, D200
-        """
-        Export ``DataFrame`` object to Stata data format.
-        """
-        return self._default_to_pandas(
-            pandas.DataFrame.to_stata,
-            path,
-            convert_dates=convert_dates,
-            write_index=write_index,
-            byteorder=byteorder,
-            time_stamp=time_stamp,
-            data_label=data_label,
-            variable_labels=variable_labels,
-            version=version,
-            convert_strl=convert_strl,
-            compression=compression,
-            storage_options=storage_options,
-            value_labels=value_labels,
-        )
-
     def to_timestamp(
         self, freq=None, how="start", axis=0, copy=True
     ):  # noqa: PR01, RT01, D200
@@ -2252,47 +2197,6 @@ class DataFrame(BasePandasDataset):
         """
         return super(DataFrame, self).to_timestamp(
             freq=freq, how=how, axis=axis, copy=copy
-        )
-
-    def to_xml(
-        self,
-        path_or_buffer=None,
-        index=True,
-        root_name="data",
-        row_name="row",
-        na_rep=None,
-        attr_cols=None,
-        elem_cols=None,
-        namespaces=None,
-        prefix=None,
-        encoding="utf-8",
-        xml_declaration=True,
-        pretty_print=True,
-        parser="lxml",
-        stylesheet=None,
-        compression="infer",
-        storage_options=None,
-    ):
-        return self.__constructor__(
-            query_compiler=self._query_compiler.default_to_pandas(
-                pandas.DataFrame.to_xml,
-                path_or_buffer=path_or_buffer,
-                index=index,
-                root_name=root_name,
-                row_name=row_name,
-                na_rep=na_rep,
-                attr_cols=attr_cols,
-                elem_cols=elem_cols,
-                namespaces=namespaces,
-                prefix=prefix,
-                encoding=encoding,
-                xml_declaration=xml_declaration,
-                pretty_print=pretty_print,
-                parser=parser,
-                stylesheet=stylesheet,
-                compression=compression,
-                storage_options=storage_options,
-            )
         )
 
     def truediv(
@@ -2329,7 +2233,7 @@ class DataFrame(BasePandasDataset):
         )
         self._update_inplace(new_query_compiler=query_compiler)
 
-    def where(
+    def _where(
         self,
         cond,
         other=no_default,
@@ -2450,16 +2354,29 @@ class DataFrame(BasePandasDataset):
         value : Any
             Value to set.
         """
-        # We have to check for this first because we have to be able to set
-        # _query_compiler before we check if the key is in self
-        if key in ["_query_compiler"] or key in self.__dict__:
+        # While we let users assign to a column labeled "x" with "df.x" , there
+        # are some attributes that we should assume are NOT column names and
+        # therefore should follow the default Python object assignment
+        # behavior. These are:
+        # - anything in self.__dict__. This includes any attributes that the
+        #   user has added to the dataframe with,  e.g., `df.c = 3`, and
+        #   any attribute that Modin has added to the frame, e.g.
+        #   `_query_compiler` and `_siblings`
+        # - `_query_compiler`, which Modin initializes before it appears in
+        #   __dict__
+        # - `_siblings`, which Modin initializes before it appears in __dict__
+        if key in ["_query_compiler", "_siblings"] or key in self.__dict__:
             pass
         elif key in self and key not in dir(self):
             self.__setitem__(key, value)
-        elif isinstance(value, pandas.Series):
+            # Note: return immediately so we don't keep this `key` as dataframe state.
+            # `__getattr__` will return the columns not present in `dir(self)`, so we do not need
+            # to manually track this state in the `dir`.
+            return
+        elif is_list_like(value) and key not in ["index", "columns"]:
             warnings.warn(
                 "Modin doesn't allow columns to be created via a new attribute name - see "
-                "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
+                + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
                 UserWarning,
             )
         object.__setattr__(self, key, value)
@@ -2484,30 +2401,13 @@ class DataFrame(BasePandasDataset):
 
         if hashable(key) and key not in self.columns:
             if isinstance(value, Series) and len(self.columns) == 0:
+                # Note: column information is lost when assigning a query compiler
+                prev_index = self.columns
                 self._query_compiler = value._query_compiler.copy()
                 # Now that the data is appended, we need to update the column name for
-                # that column to `key`, otherwise the name could be incorrect. Drop the
-                # last column name from the list (the appended value's name and append
-                # the new name.
-                self.columns = self.columns[:-1].append(pandas.Index([key]))
+                # that column to `key`, otherwise the name could be incorrect.
+                self.columns = prev_index.insert(0, key)
                 return
-            elif (
-                isinstance(value, (pandas.DataFrame, DataFrame)) and value.shape[1] != 1
-            ):
-                raise ValueError(
-                    "Wrong number of items passed %i, placement implies 1"
-                    % value.shape[1]
-                )
-            elif isinstance(value, np.ndarray) and len(value.shape) > 1:
-                if value.shape[1] == 1:
-                    # Transform into columnar table and take first column
-                    value = value.copy().T[0]
-                else:
-                    raise ValueError(
-                        "Wrong number of items passed %i, placement implies 1"
-                        % value.shape[1]
-                    )
-
             # Do new column assignment after error checks and possible value modifications
             self.insert(loc=len(self.columns), column=key, value=value)
             return
@@ -2519,6 +2419,26 @@ class DataFrame(BasePandasDataset):
                         raise ValueError("Array must be same shape as DataFrame")
                     key = DataFrame(key, columns=self.columns)
                 return self.mask(key, value, inplace=True)
+
+            if isinstance(key, list) and all((x in self.columns for x in key)):
+                if is_list_like(value):
+                    if not (hasattr(value, "shape") and hasattr(value, "ndim")):
+                        value = np.array(value)
+                    if len(key) != value.shape[-1]:
+                        raise ValueError("Columns must be same length as key")
+                item = broadcast_item(
+                    self,
+                    slice(None),
+                    key,
+                    value,
+                    need_columns_reindex=False,
+                )
+                new_qc = self._query_compiler.write_items(
+                    slice(None), self.columns.get_indexer_for(key), item
+                )
+                self._update_inplace(new_qc)
+                # self.loc[:, key] = value
+                return
 
             def setitem_unhashable_key(df, value):
                 df[key] = value
@@ -2624,6 +2544,35 @@ class DataFrame(BasePandasDataset):
     __imod__ = mod  # pragma: no cover
     __rmod__ = rmod
     __rdiv__ = rdiv
+
+    def __dataframe__(self, nan_as_null: bool = False, allow_copy: bool = True):
+        """
+        Get a Modin DataFrame that implements the dataframe exchange protocol.
+
+        See more about the protocol in https://data-apis.org/dataframe-protocol/latest/index.html.
+
+        Parameters
+        ----------
+        nan_as_null : bool, default: False
+            A keyword intended for the consumer to tell the producer
+            to overwrite null values in the data with ``NaN`` (or ``NaT``).
+            This currently has no effect; once support for nullable extension
+            dtypes is added, this value should be propagated to columns.
+        allow_copy : bool, default: True
+            A keyword that defines whether or not the library is allowed
+            to make a copy of the data. For example, copying data would be necessary
+            if a library supports strided buffers, given that this protocol
+            specifies contiguous buffers. Currently, if the flag is set to ``False``
+            and a copy is needed, a ``RuntimeError`` will be raised.
+
+        Returns
+        -------
+        ProtocolDataframe
+            A dataframe object following the dataframe protocol specification.
+        """
+        return self._query_compiler.to_dataframe(
+            nan_as_null=nan_as_null, allow_copy=allow_copy
+        )
 
     @property
     def attrs(self):  # noqa: D200

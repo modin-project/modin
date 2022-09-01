@@ -14,7 +14,7 @@
 """Module houses `FWFDispatcher` class, that is used for reading of tables with fixed-width formatted lines."""
 
 import pandas
-from typing import Union, Sequence
+from typing import Optional, Union, Sequence, Tuple
 
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 
@@ -22,7 +22,23 @@ from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 class FWFDispatcher(TextFileDispatcher):
     """Class handles utils for reading of tables with fixed-width formatted lines."""
 
-    read_callback = pandas.read_fwf
+    def read_callback(*args, **kwargs):
+        """
+        Parse data on each partition.
+
+        Parameters
+        ----------
+        *args : list
+            Positional arguments to be passed to the callback function.
+        **kwargs : dict
+            Keyword arguments to be passed to the callback function.
+
+        Returns
+        -------
+        pandas.DataFrame or pandas.io.parsers.TextFileReader
+            Function call result.
+        """
+        return pandas.read_fwf(*args, **kwargs)
 
     @classmethod
     def check_parameters_support(
@@ -31,7 +47,7 @@ class FWFDispatcher(TextFileDispatcher):
         read_kwargs: dict,
         skiprows_md: Union[Sequence, callable, int],
         header_size: int,
-    ):
+    ) -> Tuple[bool, Optional[str]]:
         """
         Check support of parameters of `read_fwf` function.
 
@@ -50,11 +66,15 @@ class FWFDispatcher(TextFileDispatcher):
         -------
         bool
             Whether passed parameters are supported or not.
+        Optional[str]
+            `None` if parameters are supported, otherwise an error
+            message describing why parameters are not supported.
         """
         if read_kwargs["infer_nrows"] > 100:
-            # If infer_nrows is a significant portion of the number of rows, pandas may be
-            # faster.
-            return False
+            return (
+                False,
+                "`infer_nrows` is a significant portion of the number of rows, so Pandas may be faster",
+            )
         return super().check_parameters_support(
             filepath_or_buffer, read_kwargs, skiprows_md, header_size
         )

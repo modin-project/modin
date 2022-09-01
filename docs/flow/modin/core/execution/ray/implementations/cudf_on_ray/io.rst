@@ -14,7 +14,7 @@ entities (``cuDFOnRayDataframe``, ``cuDFOnRayDataframePartition`` etc.).
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.io.io.cuDFOnRayIO
+.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.io.cuDFOnRayIO
   :noindex:
   :members:
 
@@ -24,6 +24,6 @@ cuDFCSVDispatcher
 
 The ``cuDFCSVDispatcher`` class implements ``CSVDispatcher`` using cuDFOnRay execution.
 
-.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.io.text.csv_dispatcher.cuDFCSVDispatcher
+.. autoclass:: modin.core.execution.ray.implementations.cudf_on_ray.io.text.cuDFCSVDispatcher
   :noindex:
   :members:

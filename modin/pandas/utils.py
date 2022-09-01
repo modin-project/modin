@@ -13,8 +13,24 @@
 
 """Implement utils for pandas component."""
 
-from pandas import MultiIndex
+from pandas.util._decorators import doc
+import pandas
+import numpy as np
+
 from modin.utils import hashable
+
+_doc_binary_operation = """
+Return {operation} of {left} and `{right}` (binary operator `{bin_op}`).
+
+Parameters
+----------
+{right} : {right_type}
+    The second operand to perform computation.
+
+Returns
+-------
+{returns}
+"""
 
 
 def from_non_pandas(df, index, columns, dtype):
@@ -85,6 +101,28 @@ def from_arrow(at):
     from .dataframe import DataFrame
 
     return DataFrame(query_compiler=FactoryDispatcher.from_arrow(at))
+
+
+def from_dataframe(df):
+    """
+    Convert a DataFrame implementing the dataframe exchange protocol to a Modin DataFrame.
+
+    See more about the protocol in https://data-apis.org/dataframe-protocol/latest/index.html.
+
+    Parameters
+    ----------
+    df : DataFrame
+        The DataFrame object supporting the dataframe exchange protocol.
+
+    Returns
+    -------
+    DataFrame
+        A new Modin DataFrame object.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+    from .dataframe import DataFrame
+
+    return DataFrame(query_compiler=FactoryDispatcher.from_dataframe(df))
 
 
 def is_scalar(obj):
@@ -216,5 +254,131 @@ def check_both_not_none(option1, option2):
     return not (option1 is None or option2 is None)
 
 
-_original_pandas_MultiIndex_from_frame = MultiIndex.from_frame
-MultiIndex.from_frame = from_modin_frame_to_mi
+def broadcast_item(
+    obj,
+    row_lookup,
+    col_lookup,
+    item,
+    need_columns_reindex=True,
+):
+    """
+    Use NumPy to broadcast or reshape item with reindexing.
+
+    Parameters
+    ----------
+    obj : DataFrame or Series
+        The object containing the necessary information about the axes.
+    row_lookup : slice or scalar
+        The global row index to locate inside of `item`.
+    col_lookup : range, array, list, slice or scalar
+        The global col index to locate inside of `item`.
+    item : DataFrame, Series, or query_compiler
+        Value that should be broadcast to a new shape of `to_shape`.
+    need_columns_reindex : bool, default: True
+        In the case of assigning columns to a dataframe (broadcasting is
+        part of the flow), reindexing is not needed.
+
+    Returns
+    -------
+    np.ndarray
+        `item` after it was broadcasted to `to_shape`.
+
+    Raises
+    ------
+    ValueError
+        1) If `row_lookup` or `col_lookup` contains values missing in
+        DataFrame/Series index or columns correspondingly.
+        2) If `item` cannot be broadcast from its own shape to `to_shape`.
+
+    Notes
+    -----
+    NumPy is memory efficient, there shouldn't be performance issue.
+    """
+    # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
+    # the target the user is trying to overwrite.
+    from .dataframe import DataFrame
+    from .series import Series
+
+    new_row_len = (
+        len(obj.index[row_lookup]) if isinstance(row_lookup, slice) else len(row_lookup)
+    )
+    new_col_len = (
+        len(obj.columns[col_lookup])
+        if isinstance(col_lookup, slice)
+        else len(col_lookup)
+    )
+    to_shape = new_row_len, new_col_len
+
+    if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
+        # convert indices in lookups to names, as pandas reindex expects them to be so
+        axes_to_reindex = {}
+        index_values = obj.index[row_lookup]
+        if not index_values.equals(item.index):
+            axes_to_reindex["index"] = index_values
+        if need_columns_reindex and hasattr(item, "columns"):
+            column_values = obj.columns[col_lookup]
+            if not column_values.equals(item.columns):
+                axes_to_reindex["columns"] = column_values
+        # New value for columns/index make that reindex add NaN values
+        if axes_to_reindex:
+            item = item.reindex(**axes_to_reindex)
+    try:
+        item = np.array(item)
+        if np.prod(to_shape) == np.prod(item.shape):
+            return item.reshape(to_shape)
+        else:
+            return np.broadcast_to(item, to_shape)
+    except ValueError:
+        from_shape = np.array(item).shape
+        raise ValueError(
+            f"could not broadcast input array from shape {from_shape} into shape "
+            + f"{to_shape}"
+        )
+
+
+def _doc_binary_op(operation, bin_op, left="Series", right="right", returns="Series"):
+    """
+    Return callable documenting `Series` or `DataFrame` binary operator.
+
+    Parameters
+    ----------
+    operation : str
+        Operation name.
+    bin_op : str
+        Binary operation name.
+    left : str, default: 'Series'
+        The left object to document.
+    right : str, default: 'right'
+        The right operand name.
+    returns : str, default: 'Series'
+        Type of returns.
+
+    Returns
+    -------
+    callable
+    """
+    if left == "Series":
+        right_type = "Series or scalar value"
+    elif left == "DataFrame":
+        right_type = "DataFrame, Series or scalar value"
+    elif left == "BasePandasDataset":
+        right_type = "BasePandasDataset or scalar value"
+    else:
+        raise NotImplementedError(
+            f"Only 'BasePandasDataset', `DataFrame` and 'Series' `left` are allowed, actually passed: {left}"
+        )
+    doc_op = doc(
+        _doc_binary_operation,
+        operation=operation,
+        right=right,
+        right_type=right_type,
+        bin_op=bin_op,
+        returns=returns,
+        left=left,
+    )
+
+    return doc_op
+
+
+_original_pandas_MultiIndex_from_frame = pandas.MultiIndex.from_frame
+pandas.MultiIndex.from_frame = from_modin_frame_to_mi

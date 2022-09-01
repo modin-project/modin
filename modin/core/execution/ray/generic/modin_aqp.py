@@ -51,7 +51,12 @@ def call_progress_bar(result_parts, line_no):
     except AttributeError:
         return
     pbar_id = str(cell_no) + "-" + str(line_no)
-    futures = [x.oid for row in result_parts for x in row]
+    futures = [
+        block
+        for row in result_parts
+        for partition in row
+        for block in partition.list_of_blocks
+    ]
     bar_format = (
         "{l_bar}{bar}{r_bar}"
         if "DEBUG_PROGRESS_BAR" in os.environ
@@ -78,7 +83,7 @@ def call_progress_bar(result_parts, line_no):
         )
     bar_lock.release()
 
-    threading.Thread(target=show_time_updates, args=(progress_bars[pbar_id],)).start()
+    threading.Thread(target=_show_time_updates, args=(progress_bars[pbar_id],)).start()
     for i in range(1, len(futures) + 1):
         ray.wait(futures, num_returns=i)
         progress_bars[pbar_id].update(1)
@@ -96,10 +101,10 @@ def display_time_updates(bar):
     bar : tqdm.tqdm
         The progress bar wrapper to display in a notebook cell.
     """
-    threading.Thread(target=show_time_updates, args=(bar,)).start()
+    threading.Thread(target=_show_time_updates, args=(bar,)).start()
 
 
-def show_time_updates(p_bar):
+def _show_time_updates(p_bar):
     """
     Refresh displayed progress bar `p_bar` periodically until it is complete.
 

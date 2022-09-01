@@ -28,7 +28,7 @@ warnings.filterwarnings("ignore", message="Large object of size")
 warnings.filterwarnings(
     "ignore",
     message="The pandas.datetime class is deprecated and will be removed from pandas in a future version. "
-    "Import from datetime module instead.",
+    + "Import from datetime module instead.",
 )
 
 

@@ -14,7 +14,7 @@
 """Module houses default functions builder class."""
 
 from modin.core.dataframe.algebra import Operator
-from modin.utils import try_cast_to_pandas
+from modin.utils import try_cast_to_pandas, MODIN_UNNAMED_SERIES_LABEL
 
 from pandas.core.dtypes.common import is_list_like
 import pandas
@@ -76,6 +76,8 @@ class DefaultMethod(Operator):
             function under it and processes result so it is possible to create a valid
             query compiler from it.
             """
+            # pandas default implementation doesn't know how to handle `dtypes` keyword argument
+            kwargs.pop("dtypes", None)
             df = cls.frame_wrapper(df)
             result = fn(df, *args, **kwargs)
 
@@ -85,14 +87,24 @@ class DefaultMethod(Operator):
                 and func != "to_numpy"
                 and func != pandas.DataFrame.to_numpy
             ):
+                # When applying a DatetimeProperties function, if we don't
+                # specify the dtype for the DataFrame, the frame might get the
+                # wrong dtype, e.g. for to_pydatetime in
+                # https://github.com/modin-project/modin/issues/4436
+                astype_kwargs = {}
+                dtype = getattr(result, "dtype", None)
+                if dtype and isinstance(
+                    df, pandas.core.indexes.accessors.DatetimeProperties
+                ):
+                    astype_kwargs["dtype"] = dtype
                 result = (
-                    pandas.DataFrame(result)
+                    pandas.DataFrame(result, **astype_kwargs)
                     if is_list_like(result)
-                    else pandas.DataFrame([result])
+                    else pandas.DataFrame([result], **astype_kwargs)
                 )
             if isinstance(result, pandas.Series):
                 if result.name is None:
-                    result.name = "__reduced__"
+                    result.name = MODIN_UNNAMED_SERIES_LABEL
                 result = result.to_frame()
 
             inplace_method = kwargs.get("inplace", False)

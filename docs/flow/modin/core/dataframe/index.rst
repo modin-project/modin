@@ -3,7 +3,7 @@
 Core Modin Dataframe Objects
 ============================
 
-Modin paritions data to scale efficiently.
+Modin partitions data to scale efficiently.
 To keep track of everything a few key classes are introduced: ``Dataframe``, ``Partition``, ``AxisPartiton`` and ``PartitionManager``.
 
 * ``Dataframe`` is the class conforming to Dataframe Algebra.

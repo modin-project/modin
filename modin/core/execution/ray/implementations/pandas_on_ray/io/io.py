@@ -30,6 +30,7 @@ from modin.core.io import (
     SQLDispatcher,
     ExcelDispatcher,
 )
+from modin._compat.core.pd_common import get_handle as pd_get_handle
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVParser,
     PandasFWFParser,
@@ -39,13 +40,9 @@ from modin.core.storage_formats.pandas.parsers import (
     PandasSQLParser,
     PandasExcelParser,
 )
-from modin.core.execution.ray.common.task_wrapper import RayTask, SignalActor
-from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
-    PandasOnRayDataframePartition,
-)
-from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
-    PandasOnRayDataframe,
-)
+from modin.core.execution.ray.common import RayTask, SignalActor
+from ..dataframe import PandasOnRayDataframe
+from ..partitioning import PandasOnRayDataframePartition
 
 
 class PandasOnRayIO(RayIO):
@@ -207,7 +204,7 @@ class PandasOnRayIO(RayIO):
             ray.get(signals.wait.remote(partition_idx))
 
             # preparing to write data from the buffer to a file
-            with pandas.io.common.get_handle(
+            with pd_get_handle(
                 path_or_buf,
                 # in case when using URL in implicit text mode
                 # pandas try to open `path_or_buf` in binary mode
@@ -215,8 +212,8 @@ class PandasOnRayIO(RayIO):
                 encoding=kwargs["encoding"],
                 errors=kwargs["errors"],
                 compression=kwargs["compression"],
-                storage_options=kwargs["storage_options"],
-                is_text=False,
+                storage_options=kwargs.get("storage_options", None),
+                is_text=not is_binary,
             ) as handles:
                 handles.handle.write(content)
 
@@ -239,7 +236,7 @@ class PandasOnRayIO(RayIO):
             max_retries=0,
         )
         # pending completion
-        ray.get([partition.oid for partition in result.flatten()])
+        ray.get([partition.list_of_blocks[0] for partition in result.flatten()])
 
     @staticmethod
     def _to_parquet_check_support(kwargs):
@@ -281,6 +278,9 @@ class PandasOnRayIO(RayIO):
         if not cls._to_parquet_check_support(kwargs):
             return RayIO.to_parquet(qc, **kwargs)
 
+        output_path = kwargs["path"]
+        os.makedirs(output_path, exist_ok=True)
+
         def func(df, **kw):
             """
             Dump a chunk of rows as parquet, then save them to target maintaining order.
@@ -293,11 +293,8 @@ class PandasOnRayIO(RayIO):
                 Arguments to pass to ``pandas.to_parquet(**kwargs)`` plus an extra argument
                 `partition_idx` serving as chunk index to maintain rows order.
             """
-            output_path = kwargs["path"]
             compression = kwargs["compression"]
             partition_idx = kw["partition_idx"]
-            if not os.path.exists(output_path):
-                os.makedirs(output_path)
             kwargs[
                 "path"
             ] = f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"
@@ -312,4 +309,4 @@ class PandasOnRayIO(RayIO):
             lengths=None,
             enumerate_partitions=True,
         )
-        ray.get([part.oid for row in result for part in row])
+        ray.get([part.list_of_blocks[0] for row in result for part in row])

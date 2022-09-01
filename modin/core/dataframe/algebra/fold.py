@@ -20,7 +20,7 @@ class Fold(Operator):
     """Builder class for Fold functions."""
 
     @classmethod
-    def call(cls, fold_function, axis=None):
+    def call(cls, fold_function):
         """
         Build Fold operator that will be performed across rows/columns.
 
@@ -28,8 +28,6 @@ class Fold(Operator):
         ----------
         fold_function : callable(pandas.DataFrame) -> pandas.DataFrame
             Function to apply across rows/columns.
-        axis : int, optional
-            Specifies axis to apply function along.
 
         Returns
         -------
@@ -37,12 +35,31 @@ class Fold(Operator):
             Function that takes query compiler and executes Fold function.
         """
 
-        def caller(query_compiler, *args, **kwargs):
-            """Execute Fold function against passed query compiler."""
-            _axis = kwargs.get("axis") if axis is None else axis
+        def caller(query_compiler, fold_axis=None, *args, **kwargs):
+            """
+            Execute Fold function against passed query compiler.
+
+            Parameters
+            ----------
+            query_compiler : BaseQueryCompiler
+                The query compiler to execute the function on.
+            fold_axis : int, optional
+                0 or None means apply across full column partitions. 1 means
+                apply across full row partitions.
+            *args : iterable
+                Additional arguments passed to fold_function.
+            **kwargs: dict
+                Additional keyword arguments passed to fold_function.
+
+            Returns
+            -------
+            BaseQueryCompiler
+                A new query compiler representing the result of executing the
+                function.
+            """
             return query_compiler.__constructor__(
                 query_compiler._modin_frame.fold(
-                    cls.validate_axis(_axis),
+                    cls.validate_axis(fold_axis),
                     lambda x: fold_function(x, *args, **kwargs),
                 )
             )

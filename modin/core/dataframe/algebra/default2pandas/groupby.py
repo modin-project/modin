@@ -18,6 +18,8 @@ from .default import DefaultMethod
 import pandas
 from pandas.core.dtypes.common import is_list_like
 
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+
 
 # FIXME: there is no sence of keeping `GroupBy` and `GroupByDefault` logic in a different
 # classes. They should be combined.
@@ -56,7 +58,7 @@ class GroupBy:
                 df = df.squeeze(axis=1)
             if not isinstance(df, pandas.Series):
                 return df
-            if df.name == "__reduced__":
+            if df.name == MODIN_UNNAMED_SERIES_LABEL:
                 df.name = None
             return df
 
@@ -245,7 +247,7 @@ class GroupBy:
                     inplace=True,
                 )
 
-            if result.index.name == "__reduced__":
+            if result.index.name == MODIN_UNNAMED_SERIES_LABEL:
                 result.index.name = None
 
             return result
@@ -465,7 +467,9 @@ class GroupBy:
             internal_by_cols = pandas.Index(internal_by_cols)
 
         internal_by_cols = (
-            internal_by_cols[~internal_by_cols.str.startswith("__reduced__", na=False)]
+            internal_by_cols[
+                ~internal_by_cols.str.startswith(MODIN_UNNAMED_SERIES_LABEL, na=False)
+            ]
             if hasattr(internal_by_cols, "str")
             else internal_by_cols
         )

@@ -12,3 +12,10 @@
 # governing permissions and limitations under the License.
 
 """Package holds implementations of key dispatcher classes to read text data `.csv`, `.json` etc."""
+
+from .csv_dispatcher import cuDFCSVDispatcher
+
+
+__all__ = [
+    "cuDFCSVDispatcher",
+]

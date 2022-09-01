@@ -21,10 +21,9 @@ from .axis_partition import (
     cuDFOnRayDataframeRowPartition,
 )
 from .partition import cuDFOnRayDataframePartition
-
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.config import GpuCount
-from modin.core.execution.ray.generic.partitioning.partition_manager import (
+from modin.core.execution.ray.generic.partitioning import (
     GenericRayDataframePartitionManager,
 )
 

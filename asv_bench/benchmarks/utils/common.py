@@ -498,21 +498,26 @@ def execute(
         if ASV_USE_STORAGE_FORMAT == "omnisci":
             df._query_compiler._modin_frame._execute()
             return
-        partitions = df._query_compiler._modin_frame._partitions
+        partitions = df._query_compiler._modin_frame._partitions.flatten()
+        if hasattr(partitions[0], "wait"):
+            all(map(lambda partition: partition.wait(), partitions))
+            return
+
+        # compatibility with old Modin versions
         all(
             map(
                 lambda partition: partition.drain_call_queue() or True,
-                partitions.flatten(),
+                partitions,
             )
         )
         if ASV_USE_ENGINE == "ray":
             from ray import wait
 
-            all(map(lambda partition: wait([partition.oid]), partitions.flatten()))
+            all(map(lambda partition: wait([partition._data]), partitions))
         elif ASV_USE_ENGINE == "dask":
             from dask.distributed import wait
 
-            all(map(lambda partition: wait(partition.future), partitions.flatten()))
+            all(map(lambda partition: wait(partition._data), partitions))
         elif ASV_USE_ENGINE == "python":
             pass
 
@@ -558,8 +563,37 @@ def prepare_io_data(test_filename: str, data_type: str, shapes: list):
     test_filenames = {}
     for shape in shapes:
         shape_id = get_shape_id(shape)
-        test_filenames[shape_id] = f"{test_filename}_{shape_id}.csv"
+        test_filenames[shape_id] = f"{test_filename}_{shape_id}_{data_type}.csv"
         df = generate_dataframe("pandas", data_type, *shape, RAND_LOW, RAND_HIGH)
         df.to_csv(test_filenames[shape_id], index=False)
+
+    return test_filenames
+
+
+def prepare_io_data_parquet(test_filename: str, data_type: str, shapes: list):
+    """
+    Prepare data for IO tests with caching.
+
+    Parameters
+    ----------
+    test_filename : str
+        Unique file identifier that is used to distinguish data
+        for different tests.
+    data_type : "str_int"
+        Type of data generation.
+    shapes : list
+        Data shapes to prepare.
+
+    Returns
+    -------
+    test_filenames : dict
+        Dictionary that maps dataset shape to the file on disk.
+    """
+    test_filenames = {}
+    for shape in shapes:
+        shape_id = get_shape_id(shape)
+        test_filenames[shape_id] = f"{test_filename}_{shape_id}_{data_type}.parquet"
+        df = generate_dataframe("pandas", data_type, *shape, RAND_LOW, RAND_HIGH)
+        df.to_parquet(test_filenames[shape_id], index=False)
 
     return test_filenames
