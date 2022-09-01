@@ -2523,7 +2523,9 @@ class PandasDataframe(ClassLogger):
                 base_lengths = [obj.length() for obj in reindexed_base.T[0]]
         else:
             reindexed_base = base_frame._partitions
-            base_lengths = self._column_widths if axis else self._row_lengths
+            base_lengths = (
+                base_frame._column_widths if axis else base_frame._row_lengths
+            )
 
         others_lengths = [o._axes_lengths[axis] for o in other_frames]
 
