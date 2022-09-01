@@ -412,23 +412,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
             cond, type(self)
         ), "Must have the same QueryCompiler subclass to perform this operation"
         if isinstance(other, type(self)):
-            # Note: Currently we are doing this with two maps across the entire
-            # data. This can be done with a single map, but it will take a
-            # modification in the `BlockPartition` class.
-            # If this were in one pass it would be ~2x faster.
-            # TODO (devin-petersohn) rewrite this to take one pass.
-            def where_builder_first_pass(cond, other, **kwargs):
-                return cond.where(cond, other, **kwargs)
-
-            first_pass = cond._modin_frame.binary_op(
-                where_builder_first_pass, other._modin_frame, join_type="left"
-            )
-
-            def where_builder_second_pass(df, new_other, **kwargs):
-                return df.where(new_other.eq(True), new_other, **kwargs)
-
-            new_modin_frame = self._modin_frame.binary_op(
-                where_builder_second_pass, first_pass, join_type="left"
+            # Make sure to set join_type=None so the `where` result always has
+            # the same row and column labels as `self`.
+            new_modin_frame = self._modin_frame.n_ary_op(
+                lambda df, cond, other: df.where(cond, other, **kwargs),
+                [
+                    cond._modin_frame,
+                    other._modin_frame,
+                ],
+                join_type=None,
             )
         # This will be a Series of scalars to be applied based on the condition
         # dataframe.
@@ -437,8 +429,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def where_builder_series(df, cond):
                 return df.where(cond, other, **kwargs)
 
-            new_modin_frame = self._modin_frame.binary_op(
-                where_builder_series, cond._modin_frame, join_type="left"
+            new_modin_frame = self._modin_frame.n_ary_op(
+                where_builder_series, [cond._modin_frame], join_type="left"
             )
         return self.__constructor__(new_modin_frame)
 
@@ -1889,8 +1881,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         # objects (when `limit` parameter is absent) as it works on two `Series`.
                         return series.fillna(value=value_arg, **kwargs)
 
-                    new_modin_frame = self._modin_frame.binary_op(
-                        fillna_builder, value._modin_frame, join_type="left"
+                    new_modin_frame = self._modin_frame.n_ary_op(
+                        fillna_builder, [value._modin_frame], join_type="left"
                     )
 
                 return self.__constructor__(new_modin_frame)

@@ -1265,9 +1265,14 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def binary_operation(cls, left, func, right):
-        """
-        Apply a function that requires two ``PandasDataframe`` objects.
+    def n_ary_operation(cls, left, func, right: list):
+        r"""
+        Apply an n-ary operation to multiple ``PandasDataframe`` objects.
+
+        This method assumes that all the partitions of the dataframes in left
+        and right have the same dimensions. For each position i, j in each
+        dataframe's partitions, the result has a partition at (i, j) whose data
+        is func(left_partitions[i,j], \*each_right_partitions[i,j]).
 
         Parameters
         ----------
@@ -1275,8 +1280,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             The partitions of left ``PandasDataframe``.
         func : callable
             The function to apply.
-        right : np.ndarray
-            The partitions of right ``PandasDataframe``.
+        right : list of np.ndarray
+            The list of partitions of other ``PandasDataframe``.
 
         Returns
         -------
@@ -1285,8 +1290,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         """
         func = cls.preprocess_func(func)
 
-        def get_right_block(row_idx, col_idx):
-            blocks = right[row_idx][col_idx].list_of_blocks
+        def get_right_block(right_partitions, row_idx, col_idx):
+            blocks = right_partitions[row_idx][col_idx].list_of_blocks
             # TODO Resolve this assertion as a part of #4691, because the current implementation assumes
             # that partition contains only 1 block.
             assert (
@@ -1299,7 +1304,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 [
                     part.apply(
                         func,
-                        get_right_block(row_idx, col_idx),
+                        *(
+                            get_right_block(right_partitions, row_idx, col_idx)
+                            for right_partitions in right
+                        ),
                     )
                     for col_idx, part in enumerate(left[row_idx])
                 ]

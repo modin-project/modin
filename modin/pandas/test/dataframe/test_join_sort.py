@@ -21,6 +21,7 @@ import modin.pandas as pd
 from modin.utils import to_pandas
 
 from modin.pandas.test.utils import (
+    create_test_dfs,
     random_state,
     df_equals,
     arg_keys,
@@ -529,15 +530,24 @@ def test_sort_values_with_string_index():
 
 
 def test_where():
+    columns = list("abcdefghij")
+
     frame_data = random_state.randn(100, 10)
-    pandas_df = pandas.DataFrame(frame_data, columns=list("abcdefghij"))
-    modin_df = pd.DataFrame(frame_data, columns=list("abcdefghij"))
+    modin_df, pandas_df = create_test_dfs(frame_data, columns=columns)
     pandas_cond_df = pandas_df % 5 < 2
     modin_cond_df = modin_df % 5 < 2
 
     pandas_result = pandas_df.where(pandas_cond_df, -pandas_df)
     modin_result = modin_df.where(modin_cond_df, -modin_df)
     assert all((to_pandas(modin_result) == pandas_result).all())
+
+    # Test that we choose the right values to replace when `other` == `True`
+    # everywhere.
+    other_data = np.full(shape=pandas_df.shape, fill_value=True)
+    modin_other, pandas_other = create_test_dfs(other_data, columns=columns)
+    pandas_result = pandas_df.where(pandas_cond_df, pandas_other)
+    modin_result = modin_df.where(modin_cond_df, modin_other)
+    df_equals(modin_result, pandas_result)
 
     other = pandas_df.loc[3]
     pandas_result = pandas_df.where(pandas_cond_df, other, axis=1)
@@ -552,6 +562,30 @@ def test_where():
     pandas_result = pandas_df.where(pandas_df < 2, True)
     modin_result = modin_df.where(modin_df < 2, True)
     assert all((to_pandas(modin_result) == pandas_result).all())
+
+
+def test_where_different_axis_order():
+    # Test `where` when `cond`, `df`, and `other` each have columns and index
+    # in different orders.
+    data = test_data["float_nan_data"]
+    pandas_df = pandas.DataFrame(data)
+    pandas_cond_df = pandas_df % 5 < 2
+    pandas_cond_df = pandas_cond_df.reindex(
+        columns=pandas_df.columns[::-1], index=pandas_df.index[::-1]
+    )
+    pandas_other_df = -pandas_df
+    pandas_other_df = pandas_other_df.reindex(
+        columns=pandas_df.columns[-1:].append(pandas_df.columns[:-1]),
+        index=pandas_df.index[-1:].append(pandas_df.index[:-1]),
+    )
+
+    modin_df = pd.DataFrame(pandas_df)
+    modin_cond_df = pd.DataFrame(pandas_cond_df)
+    modin_other_df = pd.DataFrame(pandas_other_df)
+
+    pandas_result = pandas_df.where(pandas_cond_df, pandas_other_df)
+    modin_result = modin_df.where(modin_cond_df, modin_other_df)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("align_axis", ["index", "columns"])
