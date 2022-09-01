@@ -15,6 +15,8 @@
 
 try:
     # Try to use PyHDK by default
-    from .pyhdk_worker import PyHdkWorker as DbWorker  # noqa
-except ModuleNotFoundError:  # fallback to omniscidbe4py package
-    from .omnisci_worker import OmnisciWorker as DbWorker  # noqa
+    from .pyhdk_worker import PyHdkWorker as DbWorker
+except ModuleNotFoundError:  # fallback to pyomniscidbe package
+    from .omnisci_worker import OmnisciWorker as DbWorker
+
+__all__ = ["DbWorker"]

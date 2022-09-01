@@ -40,7 +40,6 @@ class PyHdkWorker(BaseDbWorker):
         """
         if cls._executor is None:
             cls._config = pyhdk.buildConfig(**OmnisciLaunchParameters.get())
-            # cls._config = pyhdk.buildConfig()
             cls._storage = pyhdk.storage.ArrowStorage(1)
             cls._data_mgr = pyhdk.storage.DataMgr(cls._config)
             cls._data_mgr.registerDataProvider(cls._storage)
