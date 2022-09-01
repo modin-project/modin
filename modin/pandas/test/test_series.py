@@ -4540,6 +4540,12 @@ def test_encode(data, encoding_type):
         df_equals(modin_result, pandas_result)
 
 
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_add_string_to_series(data):
+    eval_general(*create_test_series(data), lambda s: "string" + s)
+    eval_general(*create_test_series(data), lambda s: s + "string")
+
+
 @pytest.mark.parametrize(
     "is_sparse_data", [True, False], ids=["is_sparse", "is_not_sparse"]
 )

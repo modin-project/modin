@@ -286,3 +286,9 @@ def test_empty_df(empty_operand):
         pandas_res = pandas_df_empty + pandas_df_empty
 
     df_equals(modin_res, pandas_res)
+
+
+def test_add_string_to_df():
+    modin_df, pandas_df = create_test_dfs(["a", "b"])
+    eval_general(modin_df, pandas_df, lambda df: "string" + df)
+    eval_general(modin_df, pandas_df, lambda df: df + "string")
