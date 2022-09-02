@@ -677,9 +677,7 @@ class Series(SeriesCompat, BasePandasDataset):
                 # has to be handled by the underlying pandas.Series apply
                 # function and not our default applymap call.
                 if return_type == "DataFrame":
-                    result = self._query_compiler.apply(
-                        f, axis=1, ret_series=True, kwargs={}
-                    )
+                    result = self._query_compiler.apply_on_series(f)
                 else:
                     result = self.map(f)._query_compiler
 

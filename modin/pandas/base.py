@@ -848,13 +848,13 @@ class BasePandasDataset(BasePandasDatasetCompat):
                     FutureWarning,
                     stacklevel=2,
                 )
-        kwds["args"] = args
-        kwds["raw"] = raw
-        kwds["result_type"] = result_type
         query_compiler = self._query_compiler.apply(
             func,
             axis,
-            kwargs=kwds,
+            args=args,
+            raw=raw,
+            result_type=result_type,
+            **kwds,
         )
         return query_compiler
 
@@ -1639,9 +1639,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             }
 
             return self.__constructor__(
-                query_compiler=self._query_compiler.apply(
-                    "kurt", axis, kwargs=func_kwargs
-                )
+                query_compiler=self._query_compiler.apply("kurt", axis, **func_kwargs)
             )
 
         if numeric_only is not None and not numeric_only:
