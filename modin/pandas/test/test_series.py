@@ -4738,3 +4738,12 @@ def test_apply_return_df_multiple_partitions(data):
     )
 
     df_equals(modin_df, pandas_df)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_apply_return_df_multiple_partitions_horizontal(data):
+    modin_series, pandas_series = create_test_series(data)
+    modin_df = modin_series.apply(lambda x: pandas.Series([x, x + 1, x + 2] * 30))
+    pandas_df = pandas_series.apply(lambda x: pandas.Series([x, x + 1, x + 2] * 30))
+
+    df_equals(modin_df, pandas_df)
