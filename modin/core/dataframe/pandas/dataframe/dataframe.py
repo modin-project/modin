@@ -613,6 +613,42 @@ class PandasDataframe(ClassLogger):
                 axis is not None and axis not in [0, 1]
             )
 
+    @staticmethod
+    def _sort(axis_positions):  # noqa: GL08
+        if not (
+            # already sorted
+            (is_range_like(axis_positions) and axis_positions.step > 0)
+            # `np.sort` of empty list returns an array with `float` dtype,
+            # which doesn't work well as an indexer
+            or len(axis_positions) == 0
+        ):
+            axis_positions = np.sort(axis_positions)
+        return axis_positions
+
+    @staticmethod
+    def _compute_axis_lengths(axis_partitions_dict, axis_lengths_cache):  # noqa: GL08
+        return [
+            len(
+                # Axis lengths for slice are calculated as the length of the slice
+                # on the partition. Often this will be the same length as the current
+                # length, but sometimes it is different, thus the extra calculation.
+                range(*part_indexer.indices(axis_lengths_cache[part_idx]))
+                if isinstance(part_indexer, slice)
+                else part_indexer
+            )
+            for part_idx, part_indexer in axis_partitions_dict.items()
+        ]
+
+    @staticmethod
+    def _compute_new_index(index, positions):  # noqa: GL08
+        return index[
+            # pandas Index is more likely to preserve its metadata if the indexer is slice
+            slice(positions.start, positions.stop, positions.step)
+            # TODO: Fast range processing of non-positive-step ranges is not yet supported
+            if is_range_like(positions) and positions.step > 0
+            else positions
+        ]
+
     @lazy_metadata_decorator(apply_axis=None)
     def take_2d_labels_or_positional(
         self,
@@ -687,95 +723,44 @@ class PandasDataframe(ClassLogger):
         if row_labels is not None:
             row_positions = self.index.get_indexer_for(row_labels)
         if row_positions is not None:
-            sorted_row_positions = (
-                row_positions
-                if (
-                    (is_range_like(row_positions) and row_positions.step > 0)
-                    # `np.sort` of empty list returns an array with `float` dtype,
-                    # which doesn't work well as an indexer
-                    or len(row_positions) == 0
-                )
-                else np.sort(row_positions)
-            )
+            sorted_row_positions = self._sort(row_positions)
             # Get dict of row_parts as {row_index: row_internal_indices}
-            # TODO: Rename `row_partitions_list`->`row_partitions_dict`
-            row_partitions_list = self._get_dict_of_block_index(
+            row_partitions_dict = self._get_dict_of_block_index(
                 0, sorted_row_positions, are_indices_sorted=True
             )
-            new_row_lengths = [
-                len(
-                    # Row lengths for slice are calculated as the length of the slice
-                    # on the partition. Often this will be the same length as the current
-                    # length, but sometimes it is different, thus the extra calculation.
-                    range(*part_indexer.indices(self._row_lengths[part_idx]))
-                    if isinstance(part_indexer, slice)
-                    else part_indexer
-                )
-                for part_idx, part_indexer in row_partitions_list.items()
-            ]
-            new_index = self.index[
-                # pandas Index is more likely to preserve its metadata if the indexer is slice
-                slice(row_positions.start, row_positions.stop, row_positions.step)
-                # TODO: Fast range processing of non-positive-step ranges is not yet supported
-                if is_range_like(row_positions) and row_positions.step > 0
-                else sorted_row_positions
-            ]
+            new_row_lengths = self._compute_axis_lengths(
+                row_partitions_dict, self._row_lengths
+            )
+            new_index = self._compute_new_index(self.index, sorted_row_positions)
         else:
-            row_partitions_list = {
+            row_partitions_dict = {
                 i: slice(None) for i in range(len(self._row_lengths))
             }
             new_row_lengths = self._row_lengths
             new_index = self.index
 
+        new_dtypes = None
         # Get numpy array of positions of values from `col_labels`
         if col_labels is not None:
             col_positions = self.columns.get_indexer_for(col_labels)
         if col_positions is not None:
-            sorted_col_positions = (
-                col_positions
-                if (
-                    (is_range_like(col_positions) and col_positions.step > 0)
-                    # `np.sort` of empty list returns an array with `float` dtype,
-                    # which doesn't work well as an indexer
-                    or len(col_positions) == 0
-                )
-                else np.sort(col_positions)
-            )
+            sorted_col_positions = self._sort(col_positions)
             # Get dict of col_parts as {col_index: col_internal_indices}
-            col_partitions_list = self._get_dict_of_block_index(
+            col_partitions_dict = self._get_dict_of_block_index(
                 1, sorted_col_positions, are_indices_sorted=True
             )
-            new_col_widths = [
-                len(
-                    # Column widths for slice are calculated as the length of the slice
-                    # on the partition. Often this will be the same length as the current
-                    # length, but sometimes it is different, thus the extra calculation.
-                    range(*part_indexer.indices(self._column_widths[part_idx]))
-                    if isinstance(part_indexer, slice)
-                    else part_indexer
-                )
-                for part_idx, part_indexer in col_partitions_list.items()
-            ]
-            # Use the slice to calculate the new columns
-            # TODO: Support fast processing of negative-step ranges
-            if is_range_like(col_positions) and col_positions.step > 0:
-                # pandas Index is more likely to preserve its metadata if the indexer is slice
-                monotonic_col_idx = slice(
-                    col_positions.start, col_positions.stop, col_positions.step
-                )
-            else:
-                monotonic_col_idx = sorted_col_positions
-            new_columns = self.columns[monotonic_col_idx]
+            new_col_widths = self._compute_axis_lengths(
+                col_partitions_dict, self._column_widths
+            )
+            new_columns = self._compute_new_index(self.columns, sorted_col_positions)
             ErrorMessage.catch_bugs_and_request_email(
                 failure_condition=sum(new_col_widths) != len(new_columns),
-                extra_log=f"{sum(new_col_widths)} != {len(new_columns)}.\n{col_positions}\n{self._column_widths}\n{col_partitions_list}",
+                extra_log=f"{sum(new_col_widths)} != {len(new_columns)}.\n{col_positions}\n{self._column_widths}\n{col_partitions_dict}",
             )
             if self._dtypes is not None:
-                new_dtypes = self.dtypes.iloc[monotonic_col_idx]
-            else:
-                new_dtypes = None
+                new_dtypes = self._dtypes.iloc[sorted_col_positions]
         else:
-            col_partitions_list = {
+            col_partitions_dict = {
                 i: slice(None) for i in range(len(self._column_widths))
             }
             new_col_widths = self._column_widths
@@ -790,11 +775,11 @@ class PandasDataframe(ClassLogger):
                     self._partitions[row_idx][col_idx].mask(
                         row_internal_indices, col_internal_indices
                     )
-                    for col_idx, col_internal_indices in col_partitions_list.items()
+                    for col_idx, col_internal_indices in col_partitions_dict.items()
                     if isinstance(col_internal_indices, slice)
                     or len(col_internal_indices) > 0
                 ]
-                for row_idx, row_internal_indices in row_partitions_list.items()
+                for row_idx, row_internal_indices in row_partitions_dict.items()
                 if isinstance(row_internal_indices, slice)
                 or len(row_internal_indices) > 0
             ]
