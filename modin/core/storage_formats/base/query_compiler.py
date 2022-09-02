@@ -2227,7 +2227,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             - "reduce": keep result into a single cell (opposite of "expand").
             - "broadcast": broadcast result to original data shape (overwrite the existing column/row with the function result).
             - None: use "expand" strategy if Series is returned, "reduce" otherwise.
-        ret_series : bool
+        ret_series : bool, default: False
             Flag that specifies whether we have a func that returns a Series
             object and are working on a Series object.
         *args : iterable
