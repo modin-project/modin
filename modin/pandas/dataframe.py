@@ -329,6 +329,20 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         return len(self.columns) == 0 or len(self.index) == 0
 
     @property
+    def _empty(self):  # noqa: RT01, D200
+        """
+        Indicate whether ``DataFrame`` is empty if columns and index are materialized.
+
+        Notes
+        -----
+        It is supposed to be used as a check before calling `_default_to_pandas` function.
+        """
+        frame = self._query_compiler._modin_frame
+        if frame._index_cache is None and frame._columns_cache is None:
+            return None
+        return self.empty
+
+    @property
     def axes(self):  # noqa: RT01, D200
         """
         Return a list representing the axes of the ``DataFrame``.
