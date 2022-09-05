@@ -165,7 +165,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         Shape hint for frames known to be a column or a row, otherwise None.
     """
 
-    lazy_execution = True
+    @property
+    def lazy_execution(self):
+        return True
 
     def __init__(self, frame, shape_hint=None):
         assert frame is not None
