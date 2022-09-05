@@ -1879,7 +1879,7 @@ class PandasDataframe(ClassLogger):
             new_partitions,
             *new_axes,
             *new_lengths,
-            self.dtypes if axis == 0 else None,
+            self.dtypes if axis.value == 1 else None,
         )
 
     def filter_by_types(self, types: List[Hashable]) -> "PandasDataframe":
