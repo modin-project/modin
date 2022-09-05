@@ -2099,22 +2099,9 @@ class Series(SeriesCompat, BasePandasDataset):
     @property
     def empty(self):  # noqa: RT01, D200
         """
-        Indicate whether ``Series`` is empty.
+        Indicate whether Series is empty.
         """
         return len(self.index) == 0
-
-    @property
-    def _empty(self):  # noqa: RT01, D200
-        """
-        Indicate whether ``Series`` is empty if index are materialized.
-
-        Notes
-        -----
-        It is supposed to be used as a check before calling `_default_to_pandas` function.
-        """
-        if self._query_compiler._modin_frame._index_cache is None:
-            return None
-        return self.empty
 
     @property
     def hasnans(self):  # noqa: RT01, D200
