@@ -104,11 +104,12 @@ from modin.config import Engine, Parameter
 _is_first_update = {}
 _NOINIT_ENGINES = {
     "Python",
+    "Client",
 }  # engines that don't require initialization, useful for unit tests
 
 
 def _update_engine(publisher: Parameter):
-    from modin.config import StorageFormat, CpuCount
+    from modin.config import StorageFormat, CpuCount, Engine
     from modin.config.envvars import IsExperimental
     from modin.config.pubsub import ValueSource
 
@@ -128,6 +129,11 @@ def _update_engine(publisher: Parameter):
         )
     else:
         is_hdk = False
+
+    if Engine.get() == "Client":
+        if publisher.get_value_source() == ValueSource.DEFAULT:
+            StorageFormat.put("")
+        return
 
     if is_hdk and publisher.get_value_source() == ValueSource.DEFAULT:
         publisher.put("Native")
