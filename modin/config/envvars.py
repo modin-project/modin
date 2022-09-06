@@ -79,22 +79,6 @@ class Engine(EnvironmentVariable, type=str):
     varname = "MODIN_ENGINE"
     choices = ("Ray", "Dask", "Python", "Native", "Unidist", "Client")
 
-    @classmethod
-    def put(cls, value: Any) -> None:
-        """
-        Set config value.
-
-        Parameters
-        ----------
-        value : Any
-            Config value to set.
-        """
-        if cls._value_source == ValueSource.SET_BY_USER:
-            cls._check_callbacks(cls._put_nocallback(value))
-        else:
-            cls._value = value
-        cls._value_source = ValueSource.SET_BY_USER
-
     NOINIT_ENGINES = {
         "Python",
     }  # engines that don't require initialization, useful for unit tests
