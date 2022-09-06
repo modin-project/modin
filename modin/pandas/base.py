@@ -147,7 +147,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         # Fast track for empty dataframe.
         if len(self.index) == 0 or (
-            hasattr(self, "columns") and len(self.columns) == 0
+            len(self._query_compiler.columns) == 0
         ):
             return pandas.DataFrame(
                 index=self.index,
@@ -172,26 +172,23 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 if num_rows_for_tail is not None
                 else []
             )
-        if hasattr(self, "columns"):
-            if len(self.columns) <= num_cols:
-                col_indexer = slice(None)
-            else:
-                num_cols_for_front = num_cols // 2 + 1
-                num_cols_for_back = (
-                    num_cols_for_front
-                    if len(self.columns) > num_cols
-                    else len(self.columns) - num_cols_for_front
-                    if len(self.columns) - num_cols_for_front >= 0
-                    else None
-                )
-                col_indexer = list(range(len(self.columns))[:num_cols_for_front]) + (
-                    list(range(len(self.columns))[-num_cols_for_back:])
-                    if num_cols_for_back is not None
-                    else []
-                )
-            indexer = row_indexer, col_indexer
+        if len(self._query_compiler.columns) <= num_cols:
+            col_indexer = slice(None)
         else:
-            indexer = row_indexer
+            num_cols_for_front = num_cols // 2 + 1
+            num_cols_for_back = (
+                num_cols_for_front
+                if len(self.columns) > num_cols
+                else len(self.columns) - num_cols_for_front
+                if len(self.columns) - num_cols_for_front >= 0
+                else None
+            )
+            col_indexer = list(range(len(self.columns))[:num_cols_for_front]) + (
+                list(range(len(self.columns))[-num_cols_for_back:])
+                if num_cols_for_back is not None
+                else []
+            )
+        indexer = row_indexer, col_indexer
         return self.iloc[indexer]._query_compiler.to_pandas()
 
     def _update_inplace(self, new_query_compiler):
