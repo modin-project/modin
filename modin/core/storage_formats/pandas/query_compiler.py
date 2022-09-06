@@ -258,10 +258,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     @property
     def lazy_execution(self):
         """
-        Whether underlying execution engine is executed in a lazy mode.
+        Whether underlying Modin frame should be executed in a lazy mode.
 
         If True, such QueryCompiler will be handled differently at the front-end in order
-        to reduce execution triggering as much as possible.
+        to reduce triggering the computation as much as possible.
 
         Returns
         -------
