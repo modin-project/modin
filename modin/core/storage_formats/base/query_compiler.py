@@ -98,6 +98,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     This class defines common query compilers API, most of the methods
     are already implemented and defaulting to pandas.
 
+    Attributes
+    ----------
+    lazy_execution : bool
+        Whether underlying execution engine is designed to be executed in a lazy mode only.
+        If True, such QueryCompiler will be handled differently at the front-end in order
+        to reduce execution triggering as much as possible.
+
     Notes
     -----
     See the Abstract Methods and Fields section immediately below this
@@ -130,20 +137,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # some of these abstract methods, but for the sake of generality they are
     # treated differently.
 
-    @property
-    def lazy_execution(self):
-        """
-        Whether underlying execution engine is designed to be executed in a lazy mode only.
-
-        If True, such QueryCompiler will be handled differently at the front-end in order
-        to reduce execution triggering as much as possible.
-
-        Returns
-        -------
-        bool
-        """
-        frame = self._modin_frame
-        return frame._index_cache is None or frame._columns_cache is None
+    lazy_execution = False
 
     # Metadata modification abstract methods
     def add_prefix(self, prefix, axis=1):

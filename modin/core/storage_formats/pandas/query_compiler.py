@@ -255,6 +255,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             return result
 
+    @property
+    def lazy_execution(self):
+        """
+        Whether underlying execution engine is executed in a lazy mode.
+
+        If True, such QueryCompiler will be handled differently at the front-end in order
+        to reduce execution triggering as much as possible.
+
+        Returns
+        -------
+        bool
+        """
+        frame = self._modin_frame
+        return frame._index_cache is None or frame._columns_cache is None
+
     def finalize(self):
         self._modin_frame.finalize()
 
