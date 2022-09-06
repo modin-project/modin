@@ -2964,6 +2964,8 @@ class PandasDataframe(ClassLogger):
                     not df.axes[axis].equals(self.axes[axis]),
                     f"Internal and external indices on axis {axis} do not match.",
                 )
+            df.index = self.index
+            df.columns = self.columns
 
         return df
 
