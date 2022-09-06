@@ -754,7 +754,6 @@ class PandasDataframe(ClassLogger):
         new_idx = idx[monotonic_idx]
         return new_idx, monotonic_idx
 
-    @lazy_metadata_decorator(apply_axis=None)
     def _take_2d_positional(
         self,
         row_positions: Optional[List[int]] = None,
