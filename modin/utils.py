@@ -594,7 +594,7 @@ def get_current_execution() -> str:
     str
         Returns <StorageFormat>On<Engine>-like string.
     """
-    return f"{'Experimental' if IsExperimental.get() else ''}{StorageFormat.get()}On{Engine.get()}"
+    return f"{'Experimental' if IsExperimental.get() else ''}{StorageFormat.get()}{'On' if StorageFormat.get() != '' else ''}{Engine.get()}"
 
 
 def instancer(_class: Callable[[], T]) -> T:
