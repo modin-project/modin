@@ -2538,7 +2538,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             return False
         return (
             index.is_monotonic_increasing
-            and index.unique
-            and index.min == 0
-            and index.max == len(index) - 1
+            and index.is_unique
+            and index.min() == 0
+            and index.max() == len(index) - 1
         )
