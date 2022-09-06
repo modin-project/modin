@@ -98,6 +98,7 @@ _is_first_update = {}
 
 def _update_engine(publisher: Parameter):
     from modin.config import Engine, StorageFormat, CpuCount
+    Engine.NOINIT_ENGINES.add("Client")
     from modin.config.envvars import IsExperimental
     from modin.config.pubsub import ValueSource
 
@@ -117,6 +118,11 @@ def _update_engine(publisher: Parameter):
         )
     else:
         is_hdk = False
+
+    if Engine.get() == "Client":
+        if publisher.get_value_source() == ValueSource.DEFAULT:
+            StorageFormat.put("")
+        return
 
     if is_hdk and publisher.get_value_source() == ValueSource.DEFAULT:
         publisher.put("Native")

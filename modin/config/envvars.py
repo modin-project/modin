@@ -77,7 +77,23 @@ class Engine(EnvironmentVariable, type=str):
     """Distribution engine to run queries by."""
 
     varname = "MODIN_ENGINE"
-    choices = ("Ray", "Dask", "Python", "Native", "Unidist")
+    choices = ("Ray", "Dask", "Python", "Native", "Unidist", "Client")
+
+    @classmethod
+    def put(cls, value: Any) -> None:
+        """
+        Set config value.
+
+        Parameters
+        ----------
+        value : Any
+            Config value to set.
+        """
+        if cls._value_source == ValueSource.SET_BY_USER:
+            cls._check_callbacks(cls._put_nocallback(value))
+        else:
+            cls._value = value
+        cls._value_source = ValueSource.SET_BY_USER
 
     NOINIT_ENGINES = {
         "Python",
@@ -174,7 +190,7 @@ class StorageFormat(EnvironmentVariable, type=str):
 
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
-    choices = ("Pandas", "Hdk", "Pyarrow", "Cudf")
+    choices = ("Pandas", "OmniSci", "Pyarrow", "Cudf", "")
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
