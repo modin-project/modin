@@ -24,10 +24,6 @@ class ClientQueryCompiler(BaseQueryCompiler):
     def set_server_connection(cls, conn):
         cls._service = conn
 
-    @classmethod
-    def create_table(cls, table_name):
-        return cls(cls._service.create_query_compiler(table_name))
-
     def __init__(self, id):
         assert (
             id is not None
@@ -38,7 +34,9 @@ class ClientQueryCompiler(BaseQueryCompiler):
         self._id = self._service.rename(self._id, new_col_labels=new_columns)
 
     def _get_columns(self):
-        return self._service.columns(self._id)
+        if self._columns_cache is None:
+            self._columns_cache = pickle.loads(pickle.dumps(self._service.columns(self._id)))
+        return self._columns_cache
 
     def _set_index(self, new_index):
         self._id = self._service.rename(self._id, new_row_labels=new_index)
@@ -47,6 +45,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self._service.index(self._id)
 
     columns = property(_get_columns, _set_columns)
+    _columns_cache = None
     index = property(_get_index, _set_index)
     _dtypes_cache = None
 
