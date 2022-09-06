@@ -21,6 +21,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas
 import datetime
+from pandas.api.types import is_object_dtype
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 from pandas._libs.lib import no_default
@@ -1689,13 +1690,31 @@ class PandasDataframe(ClassLogger):
             self._column_widths,
         )
 
-    def infer_types(self, columns_list: List[str]) -> "PandasDataframe":
+    def infer_objects(self) -> "PandasDataframe":
+        """
+        Attempt to infer better dtypes for object columns.
+
+        Attempts soft conversion of object-dtyped columns, leaving non-object and unconvertible
+        columns unchanged. The inference rules are the same as during normal Series/DataFrame
+        construction.
+
+        Returns
+        -------
+        PandasDataframe
+            A new PandasDataframe with the inferred schema.
+        """
+        obj_cols = [
+            col for col, dtype in enumerate(self.dtypes) if is_object_dtype(dtype)
+        ]
+        return self.infer_types(obj_cols)
+
+    def infer_types(self, col_labels: List[str]) -> "PandasDataframe":
         """
         Determine the compatible type shared by all values in the specified columns, and coerce them to that type.
 
         Parameters
         ----------
-        columns_list : list
+        col_labels : list
             List of column labels to infer and induce types over.
 
         Returns
@@ -1703,7 +1722,19 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             A new PandasDataframe with the inferred schema.
         """
-        pass
+        # Compute dtypes on the specified columns, and then set those dtypes on a new frame
+        new_cols = self.take_2d_labels_or_positional(col_labels=col_labels)
+        new_cols_dtypes = new_cols.tree_reduce(0, pandas.DataFrame.infer_objects).dtypes
+        new_dtypes = self.dtypes.copy()
+        new_dtypes[col_labels] = new_cols_dtypes
+        return self.__constructor__(
+            self._partitions,
+            self.index,
+            self.columns,
+            self._row_lengths,
+            self._column_widths,
+            new_dtypes,
+        )
 
     def join(
         self,

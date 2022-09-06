@@ -1506,6 +1506,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def astype(self, col_dtypes, **kwargs):
         return self.__constructor__(self._modin_frame.astype(col_dtypes))
 
+    def infer_objects(self):
+        return self.__constructor__(self._modin_frame.infer_objects())
+
     # Column/Row partitions reduce operations
 
     def first_valid_index(self):
