@@ -721,11 +721,9 @@ class PandasDataframe(ClassLogger):
                 else sorted_row_positions
             ]
         else:
-            row_partitions_list = {
-                i: slice(None) for i in range(len(self._row_lengths))
-            }
-            new_row_lengths = self._row_lengths
-            new_index = self.index
+            row_partitions_list = {i: slice(None) for i in range(len(self._partitions))}
+            new_row_lengths = self._row_lengths_cache
+            new_index = self._index_cache
 
         # Get numpy array of positions of values from `col_labels`
         if col_labels is not None:
@@ -776,14 +774,11 @@ class PandasDataframe(ClassLogger):
                 new_dtypes = None
         else:
             col_partitions_list = {
-                i: slice(None) for i in range(len(self._column_widths))
+                i: slice(None) for i in range(len(self._partitions.T))
             }
-            new_col_widths = self._column_widths
-            new_columns = self.columns
-            if self._dtypes is not None:
-                new_dtypes = self.dtypes
-            else:
-                new_dtypes = None
+            new_col_widths = self._column_widths_cache
+            new_columns = self._columns_cache
+            new_dtypes = self._dtypes
         new_partitions = np.array(
             [
                 [
