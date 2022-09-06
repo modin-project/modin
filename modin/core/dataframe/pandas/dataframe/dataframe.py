@@ -1482,6 +1482,8 @@ class PandasDataframe(object):
         else:
             reduce_func = self._build_treereduce_func(axis.value, reduce_func)
 
+        #FLAG
+        print("flag")
         map_parts = self._partition_mgr_cls.map_partitions(self._partitions, map_func)
         reduce_parts = self._partition_mgr_cls.map_axis_partitions(
             axis.value, map_parts, reduce_func

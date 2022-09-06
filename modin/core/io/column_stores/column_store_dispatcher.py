@@ -126,16 +126,18 @@ class ColumnStoreDispatcher(FileDispatcher):
         index_len = (
             0 if len(partition_ids) == 0 else cls.materialize(partition_ids[-2][0])
         )
+        micro_partition_size = MicroPartitions.get()
         if isinstance(index_len, int):
             index = pandas.RangeIndex(index_len)
         else:
             index = index_len
             index_len = len(index)
-        index_chunksize = compute_chunksize(index_len, num_partitions)
+        index_chunksize = compute_chunksize(
+            index_len, num_splits=num_partitions - 2 if micro_partition_size > 0 else num_partitions
+        )
         if index_chunksize > index_len:
             row_lengths = [index_len] + [0 for _ in range(num_partitions - 1)]
         else:
-            micro_partition_size = MicroPartitions.get()
             if micro_partition_size > 0:
                 index_len -= micro_partition_size * 2
                 num_partitions -= 2  # need 2 micro_partitions for head and tail

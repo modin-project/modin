@@ -313,7 +313,7 @@ class MicroPartitions(EnvironmentVariable, type=int):
     default = 0
 
     @classmethod
-    def enable(cls, micro_partition_size=100):
+    def enable(cls, micro_partition_size=1000):
         """
         Enable MicroPartitions with a specific value.
 
@@ -356,11 +356,13 @@ class ProgressBar(EnvironmentVariable, type=bool):
     def enable(cls):
         """Enable ``ProgressBar`` feature."""
         cls.put(True)
+        MicroPartitions.enable()
 
     @classmethod
     def disable(cls):
         """Disable ``ProgressBar`` feature."""
         cls.put(False)
+        MicroPartitions.disable()
 
     @classmethod
     def put(cls, value):

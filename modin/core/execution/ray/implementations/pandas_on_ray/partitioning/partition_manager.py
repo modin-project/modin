@@ -20,6 +20,9 @@ import numpy as np
 import ray
 
 from modin.config import ProgressBar, NPartitions
+from sqlalchemy import func
+
+from modin.config import ProgressBar
 from modin.core.execution.ray.generic.partitioning.partition_manager import (
     GenericRayDataframePartitionManager,
 )
@@ -68,7 +71,7 @@ def progress_bar_wrapper(f):
                 current_frame = current_frame.f_back
             t = threading.Thread(
                 target=call_progress_bar,
-                args=(result_parts, line_number),
+                args=(result_parts, line_number, f),
             )
             t.start()
             # We need to know whether or not we are in a jupyter notebook
@@ -276,6 +279,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         np.ndarray
             A NumPy array of partitions.
         """
+        print("mapped partitions yay")
         return super(PandasOnRayDataframePartitionManager, cls).map_partitions(
             partitions, map_func
         )
@@ -298,6 +302,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         np.ndarray
             A NumPy array of partitions.
         """
+        print("lazy map")
         return super(PandasOnRayDataframePartitionManager, cls).lazy_map_partitions(
             partitions, map_func
         )
@@ -346,6 +351,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         This method should be used in the case when `map_func` relies on
         some global information about the axis.
         """
+        print("mapped axis yay", map_func)
         return super(PandasOnRayDataframePartitionManager, cls).map_axis_partitions(
             axis,
             partitions,
@@ -380,6 +386,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         -----
         This preprocesses the `func` first before applying it to the partitions.
         """
+        print("apply func to list")
         return super(
             PandasOnRayDataframePartitionManager, cls
         )._apply_func_to_list_of_partitions(func, partitions, **kwargs)
@@ -418,6 +425,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         this to work correctly. This prevents information leakage of the
         internal index to the external representation.
         """
+        print("apply to select")
         return super(
             PandasOnRayDataframePartitionManager, cls
         ).apply_func_to_select_indices(
@@ -460,6 +468,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         For your func to operate directly on the indices provided,
         it must use `internal_indices` as a keyword argument.
         """
+        print("apply along full axis")
         return super(
             PandasOnRayDataframePartitionManager, cls
         ).apply_func_to_select_indices_along_full_axis(
@@ -511,6 +520,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         it must use ``row_internal_indices`` and ``col_internal_indices`` as keyword
         arguments.
         """
+        print("apply func to indices both axis")
         return super(
             PandasOnRayDataframePartitionManager, cls
         ).apply_func_to_indices_both_axis(
@@ -545,6 +555,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         np.ndarray
             A NumPy array with new partitions.
         """
+        print("binary op")
         return super(PandasOnRayDataframePartitionManager, cls).binary_operation(
             axis, left, func, right
         )

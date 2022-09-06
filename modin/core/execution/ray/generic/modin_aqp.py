@@ -41,23 +41,23 @@ def call_progress_bar(result_parts, line_no, func):
     line_no : int
         Line number in the call stack which we're displaying progress for.
     """
-    # with warnings.catch_warnings():
-    #     warnings.simplefilter("ignore")
-    #     try:
-    #         from tqdm.autonotebook import tqdm as tqdm_notebook
-    #     except ImportError:
-    #         raise ImportError("Please pip install tqdm to use the progress bar")
-    # from IPython import get_ipython
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        try:
+            from tqdm.autonotebook import tqdm as tqdm_notebook
+        except ImportError:
+            raise ImportError("Please pip install tqdm to use the progress bar")
+    from IPython import get_ipython
 
-    # try:
-    #     cell_no = get_ipython().execution_count
-    # # This happens if we are not in ipython or jupyter.
-    # # No progress bar is supported in that case.
-    # except AttributeError:
-    #     cell_no = str(uuid.uuid4())
-    #     return
+    try:
+        cell_no = get_ipython().execution_count
+    # This happens if we are not in ipython or jupyter.
+    # No progress bar is supported in that case.
+    except AttributeError:
+        cell_no = str(uuid.uuid4())
+        return
 
-    cell_no = str(uuid.uuid4()) #fix this later, temporary hack
+    # cell_no = str(uuid.uuid4()) #fix this later, temporary hack
     pbar_id = str(cell_no) + "-" + str(line_no)
     futures = [x.oid for row in result_parts for x in row]
     head_micro_partition_ids = set(futures[:len(result_parts[0])])
@@ -77,39 +77,39 @@ def call_progress_bar(result_parts, line_no, func):
         curr_id = str(uuid.uuid4())
 
     bar_log_ids[pbar_id] = curr_id
-    # if pbar_id in progress_bars:
-    #     already_in_progress = True
-    #     if hasattr(progress_bars[pbar_id], "container"):
-    #         if hasattr(progress_bars[pbar_id].container.children[0], "max"):
-    #             index = 0
-    #         else:
-    #             index = 1
-    #         progress_bars[pbar_id].container.children[index].max = progress_bars[
-    #             pbar_id
-    #         ].container.children[index].max + len(futures)
-    #     progress_bars[pbar_id].total = progress_bars[pbar_id].total + len(futures)
-    #     progress_bars[pbar_id].refresh()
-    # else:
-    #     progress_bars[pbar_id] = tqdm_notebook(
-    #         total=len(futures),
-    #         desc="Estimated completion of line " + str(line_no),
-    #         bar_format=bar_format,
-    #     )
+    if pbar_id in progress_bars:
+        already_in_progress = True
+        if hasattr(progress_bars[pbar_id], "container"):
+            if hasattr(progress_bars[pbar_id].container.children[0], "max"):
+                index = 0
+            else:
+                index = 1
+            progress_bars[pbar_id].container.children[index].max = progress_bars[
+                pbar_id
+            ].container.children[index].max + len(futures)
+        progress_bars[pbar_id].total = progress_bars[pbar_id].total + len(futures)
+        progress_bars[pbar_id].refresh()
+    else:
+        progress_bars[pbar_id] = tqdm_notebook(
+            total=len(futures),
+            desc="Estimated completion of line " + str(line_no),
+            bar_format=bar_format,
+        )
     bar_lock.release()
 
-    log_file_group = os.environ["LOG_GROUP"]
-    # log_file_group = "2^23_group_by_2/"
+    # log_file_group = os.environ["LOG_GROUP"]
+    log_file_group = "2^22_test_joins/"
 
-    # if not already_in_progress:
+    if not already_in_progress:
         #start another thread to poll and show updates
-        # threading.Thread(target=show_time_updates, args=(progress_bars[pbar_id],)).start()
+        threading.Thread(target=show_time_updates, args=(progress_bars[pbar_id],)).start()
 
-    log_file_path = "./logs/micro_part_pbar_times/" + log_file_group + curr_id + "===" + str(time.time())
-    log_file = open(log_file_path, "w+")
+    # log_file_path = "./logs/micro_part_pbar_times/" + log_file_group + curr_id + "===" + str(time.time())
+    # log_file = open(log_file_path, "w+")
 
     start_time = time.time()
 
-    log_file.write("S " + str(start_time) + "\n")
+    # log_file.write("S " + str(start_time) + "\n")
     # first_row_micro_parts = ray.wait(futures, num_returns=len(result_parts[0]))
     # end_time = time.time()
     # micro_partition_elapsed_time = end_time - start_time
@@ -117,24 +117,24 @@ def call_progress_bar(result_parts, line_no, func):
     final_finished_list = set([])
     for i in range(1, len(futures) + 1):
         finished_partition_ids, _ = ray.wait(futures, num_returns=i)
-        for id in finished_partition_ids:
-            if id not in final_finished_list:
-                final_finished_list.add(id)
-                if id in head_micro_partition_ids:
-                    log_file.write("H " + str(time.time()) + "\n")
-                elif id in tail_partition_ids:
-                    log_file.write("T " + str(time.time()) + "\n")
-                else:
-                    log_file.write("N " + str(time.time()) + "\n")
-                break
+        # for id in finished_partition_ids:
+        #     if id not in final_finished_list:
+        #         final_finished_list.add(id)
+        #         if id in head_micro_partition_ids:
+        #             log_file.write("H " + str(time.time()) + "\n")
+        #         elif id in tail_partition_ids:
+        #             log_file.write("T " + str(time.time()) + "\n")
+        #         else:
+        #             log_file.write("N " + str(time.time()) + "\n")
+        #         break
 
-        # progress_bars[pbar_id].update(1)
-        # progress_bars[pbar_id].refresh()
-    # if progress_bars[pbar_id].n == progress_bars[pbar_id].total:
-    #     progress_bars[pbar_id].close()
+        progress_bars[pbar_id].update(1)
+        progress_bars[pbar_id].refresh()
+    if progress_bars[pbar_id].n == progress_bars[pbar_id].total:
+        progress_bars[pbar_id].close()
 
-    log_file.flush()
-    log_file.close()
+    # log_file.flush()
+    # log_file.close()
 
 
 def display_time_updates(bar):

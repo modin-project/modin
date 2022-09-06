@@ -22,6 +22,7 @@ from functools import wraps
 import numpy as np
 import pandas
 import warnings
+from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
 
 from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.utils import compute_chunksize
@@ -29,6 +30,60 @@ from modin.core.dataframe.pandas.utils import concatenate
 from modin.config import NPartitions, ProgressBar, BenchmarkMode
 
 import os
+import inspect
+import threading
+
+def progress_bar_wrapper(f):
+    """
+    Wrap computation function inside a progress bar.
+
+    Spawns another thread which displays a progress bar showing
+    estimated completion time.
+
+    Parameters
+    ----------
+    f : callable
+        The name of the function to be wrapped.
+
+    Returns
+    -------
+    callable
+        Decorated version of `f` which reports progress.
+    """
+    from functools import wraps
+
+    @wraps(f)
+    def magic(*args, **kwargs):
+        result_parts = f(*args, **kwargs)
+        if ProgressBar.get():
+            current_frame = inspect.currentframe()
+            function_name = None
+            while function_name != "<module>":
+                (
+                    filename,
+                    line_number,
+                    function_name,
+                    lines,
+                    index,
+                ) = inspect.getframeinfo(current_frame)
+                current_frame = current_frame.f_back
+            t = threading.Thread(
+                target=call_progress_bar,
+                args=(result_parts, line_number, f),
+            )
+            t.start()
+            # We need to know whether or not we are in a jupyter notebook
+            from IPython import get_ipython
+
+            try:
+                ipy_str = str(type(get_ipython()))
+                if "zmqshell" not in ipy_str:
+                    t.join()
+            except Exception:
+                pass
+        return result_parts
+
+    return magic
 
 
 def wait_computations_if_benchmark_mode(func):
@@ -325,6 +380,7 @@ class PandasDataframePartitionManager(ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
+    @progress_bar_wrapper
     def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` function.
@@ -353,6 +409,8 @@ class PandasDataframePartitionManager(ABC):
         This will often be overridden by implementations. It materializes the
         entire partitions of the right and applies them to the left through `apply`.
         """
+
+        print("broadcast applied...")
 
         def map_func(df, *others):
             other = pandas.concat(others, axis=axis ^ 1)

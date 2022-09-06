@@ -113,6 +113,7 @@ class GroupByReduce(TreeReduce):
         pandas.DataFrame
             GroupBy aggregation result for one particular partition.
         """
+        # print('executed map')
         # Set `as_index` to True to track the metadata of the grouping object
         # It is used to make sure that between phases we are constructing the
         # right index and placing columns in the correct order.
@@ -187,6 +188,7 @@ class GroupByReduce(TreeReduce):
         pandas.DataFrame
             GroupBy aggregation result.
         """
+        # print("executed reduce")
         # Wrapping names into an Index should be unnecessary, however
         # there is a bug in pandas with intersection that forces us to do so:
         # https://github.com/pandas-dev/pandas/issues/39699
