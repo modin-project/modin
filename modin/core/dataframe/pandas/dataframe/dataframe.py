@@ -2955,7 +2955,7 @@ class PandasDataframe(ClassLogger):
         pandas.DataFrame
         """
         df = self._partition_mgr_cls.to_pandas(self._partitions)
-        if len(self._partitions) == 0:
+        if len(self._partitions) == 0 or len(self._partitions.T) == 0:
             # This constructor may overwrite `dtypes` left over from previous operations.
             df = pandas.DataFrame(columns=self.columns, index=self.index)
         else:
