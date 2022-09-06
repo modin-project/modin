@@ -2955,7 +2955,8 @@ class PandasDataframe(ClassLogger):
         pandas.DataFrame
         """
         df = self._partition_mgr_cls.to_pandas(self._partitions)
-        if df.empty:
+        if len(self._partitions) == 0:
+            # This constructor may overwrite `dtypes` left over from previous operations.
             df = pandas.DataFrame(columns=self.columns, index=self.index)
         else:
             for axis in [0, 1]:
@@ -2963,8 +2964,6 @@ class PandasDataframe(ClassLogger):
                     not df.axes[axis].equals(self.axes[axis]),
                     f"Internal and external indices on axis {axis} do not match.",
                 )
-            df.index = self.index
-            df.columns = self.columns
 
         return df
 

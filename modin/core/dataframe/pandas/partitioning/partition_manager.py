@@ -657,10 +657,16 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             axis = 1
         else:
             ErrorMessage.catch_bugs_and_request_email(True)
+
+        def _empty(df):
+            # Custom function to save dtypes after previous operations.
+            # A normal function uses `or`, not `and`.
+            return len(df) == 0 and df.columns == 0
+
         df_rows = [
             pandas.concat([part for part in row], axis=axis)
             for row in retrieved_objects
-            if not all(part.empty for part in row)
+            if not all(_empty(part) for part in row)
         ]
         if len(df_rows) == 0:
             return pandas.DataFrame()

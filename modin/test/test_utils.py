@@ -12,10 +12,14 @@
 # governing permissions and limitations under the License.
 
 import pytest
-import modin.utils
 import json
-
 from textwrap import dedent, indent
+import numpy as np
+import pandas
+
+import modin.utils
+import modin.pandas as pd
+from modin.pandas.test.utils import df_equals
 from modin.error_message import ErrorMessage
 
 
@@ -287,3 +291,15 @@ def test_warns_that_defaulting_to_pandas():
 
     with warns_that_defaulting_to_pandas():
         ErrorMessage.default_to_pandas(message="Function name")
+
+
+def test_try_cast_to_pandas_preserve_dtypes():
+    modin_df = pd.DataFrame({"col": [1]}, dtype=np.int64)
+    pandas_df = pandas.DataFrame({"col": [1]}, dtype=np.int64)
+
+    # just to get empty frames
+    modin_df.query("col > 2", inplace=True), pandas_df.query("col > 2", inplace=True)
+
+    casted_to_pandas_df = modin.utils.try_cast_to_pandas(modin_df)
+    df_equals(casted_to_pandas_df, pandas_df)
+    df_equals(casted_to_pandas_df.dtypes, pandas_df.dtypes)
