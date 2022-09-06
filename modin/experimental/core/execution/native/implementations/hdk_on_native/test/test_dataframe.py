@@ -2145,6 +2145,28 @@ class TestArrowExecution:
             force_arrow_execute=True,
         )
 
+    def test_drop_row(self):
+        def drop_row(df, **kwargs):
+            return df.drop(1)
+
+        run_and_compare(
+            drop_row,
+            data=self.data1,
+            force_lazy=False,
+        )
+
+    def test_series_pop(self):
+        def pop(df, **kwargs):
+            col = df["a"]
+            col.pop(0)
+            return col
+
+        run_and_compare(
+            pop,
+            data=self.data1,
+            force_lazy=False,
+        )
+
     def test_empty_transform(self):
         def apply(df, **kwargs):
             return df + 1
