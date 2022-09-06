@@ -811,9 +811,7 @@ class PandasDataframe(ClassLogger):
                 row_positions, sorted_row_positions, axis=0
             )
         else:
-            row_partitions_dict = {
-                i: slice(None) for i in range(len(self._partitions))
-            }
+            row_partitions_dict = {i: slice(None) for i in range(len(self._partitions))}
             new_row_lengths = self._row_lengths_cache
             new_index = self._index_cache
 
