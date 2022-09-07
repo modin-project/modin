@@ -523,8 +523,8 @@ def deploy_ray_func(
     This is ALWAYS called on either ``PandasDataframeAxisPartition.deploy_axis_func``
     or ``PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions``, which both
     serve to deploy another dataframe function on a Ray worker process. The provided ``f_args``
-    and ``f_kwargs`` thus are deserialized here (on the Ray worker) before the function
-    is called.
+    is thus are deserialized here (on the Ray worker) before the function is called (``f_kwargs``
+    will never contain more Ray objects, and thus does not require deserialization).
 
     Parameters
     ----------
@@ -552,10 +552,7 @@ def deploy_ray_func(
     -----
     Ray functions are not detected by codecov (thus pragma: no cover).
     """
-    args = deserialize(args)
-    f_to_deploy = deserialize(f_to_deploy)
     f_args = deserialize(f_args)
-    f_kwargs = deserialize(f_kwargs)
     result = deployer(axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs)
     ip = get_node_ip_address()
     if isinstance(result, pandas.DataFrame):
