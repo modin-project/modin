@@ -23,7 +23,7 @@ import ray
 
 
 @ray.remote
-def _deploy_ray_func(func, args):  # pragma: no cover
+def _deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
     """
     Wrap `func` to ease calling it remotely.
 
@@ -31,7 +31,9 @@ def _deploy_ray_func(func, args):  # pragma: no cover
     ----------
     func : callable
         A local function that we want to call remotely.
-    args : dict
+    *args : iterable
+        Positional arguments to pass to `func` when calling remotely.
+    **kwargs : dict
         Keyword arguments to pass to `func` when calling remotely.
 
     Returns
@@ -39,35 +41,37 @@ def _deploy_ray_func(func, args):  # pragma: no cover
     ray.ObjectRef or list
         Ray identifier of the result being put to Plasma store.
     """
-    return func(**args)
+    return func(*args, **kwargs)
 
 
 class RayWrapper:
     """Mixin that provides means of running functions remotely and getting local results."""
 
     @classmethod
-    def deploy(cls, func, *args, num_returns=1, **kwargs):
+    def deploy(cls, func, f_args=None, f_kwargs=None, num_returns=1):
         """
         Run local `func` remotely.
 
         Parameters
         ----------
         func : callable
-            A function to call.
-        *args : list
-            Additional positional arguments to be passed in `func`.
+            The function to perform.
+        f_args : list or tuple, optional
+            Positional arguments to pass to ``func``.
+        f_kwargs : dict, optional
+            Keyword arguments to pass to ``func``.
         num_returns : int, default: 1
             Amount of return values expected from `func`.
-        **kwargs : dict
-            Additional keyword arguments to be passed in `func`.
 
         Returns
         -------
         ray.ObjectRef or list
             Ray identifier of the result being put to Plasma store.
         """
+        args = [] if f_args is None else f_args
+        kwargs = [] if f_kwargs is None else f_kwargs
         return _deploy_ray_func.options(num_returns=num_returns).remote(
-            func, *args, kwargs
+            func, *args, **kwargs
         )
 
     @classmethod

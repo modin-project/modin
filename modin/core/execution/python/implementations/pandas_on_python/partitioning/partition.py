@@ -100,9 +100,9 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
             pandas.DataFrame or pandas.Series
             """
             result = data.copy()
-            for func, args, kwargs in call_queue:
+            for func, f_args, f_kwargs in call_queue:
                 try:
-                    result = func(result, *args, **kwargs)
+                    result = func(result, *f_args, **f_kwargs)
                 except Exception as e:
                     self.call_queue = []
                     raise e
@@ -138,7 +138,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         """
         return PandasOnPythonDataframePartition(
             self._data.copy(),
-            call_queue=self.call_queue + [(func, args, kwargs)],
+            call_queue=self.call_queue + [[func, args, kwargs]],
             length=length,
             width=width,
         )

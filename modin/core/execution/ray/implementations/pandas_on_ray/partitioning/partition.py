@@ -107,15 +107,17 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         logger = get_logger()
         logger.debug(f"ENTER::Partition.apply::{self._identity}")
         data = self._data
-        call_queue = self.call_queue + [(func, args, kwargs)]
+        call_queue = self.call_queue + [[func, args, kwargs]]
         if len(call_queue) > 1:
             logger.debug(f"SUBMIT::_apply_list_of_funcs::{self._identity}")
             result, length, width, ip = _apply_list_of_funcs.remote(call_queue, data)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
-            func, args, kwargs = call_queue[0]
-            result, length, width, ip = _apply_func.remote(data, func, *args, **kwargs)
+            func, f_args, f_kwargs = call_queue[0]
+            result, length, width, ip = _apply_func.remote(
+                data, func, *f_args, **f_kwargs
+            )
             logger.debug(f"SUBMIT::_apply_func::{self._identity}")
         logger.debug(f"EXIT::Partition.apply::{self._identity}")
         return PandasOnRayDataframePartition(result, length, width, ip)
@@ -149,7 +151,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         """
         return PandasOnRayDataframePartition(
             self._data,
-            call_queue=self.call_queue + [(func, args, kwargs)],
+            call_queue=self.call_queue + [[func, args, kwargs]],
             length=length,
             width=width,
         )
@@ -173,14 +175,14 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
-            func, args, kwargs = call_queue[0]
+            func, f_args, f_kwargs = call_queue[0]
             logger.debug(f"SUBMIT::_apply_func::{self._identity}")
             (
                 self._data,
                 new_length,
                 new_width,
                 self._ip_cache,
-            ) = _apply_func.remote(data, func, *args, **kwargs)
+            ) = _apply_func.remote(data, func, *f_args, **f_kwargs)
         logger.debug(f"EXIT::Partition.drain_call_queue::{self._identity}")
         self.call_queue = []
 
@@ -382,11 +384,11 @@ def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     partition : pandas.DataFrame
         A pandas DataFrame the function needs to be executed on.
     func : callable
-        Function that needs to be executed on the partition.
-    *args : iterable
-        Additional positional arguments to be passed in `func`.
+        The function to perform.
+    *args : list
+        Positional arguments to pass to ``func``.
     **kwargs : dict
-        Additional keyword arguments to be passed in `func`.
+        Keyword arguments to pass to ``func``.
 
     Returns
     -------
@@ -398,6 +400,12 @@ def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
         The number of columns of the resulting pandas DataFrame.
     str
         The node IP address of the worker process.
+
+    Notes
+    -----
+    When _apply_func.remote(...) is called, Ray will get ``func`` from the object store, but it will
+    not do so if ``func`` is passed as an entry within a list (e.g. if a call queue entry is directly
+    passed into this function).
     """
     try:
         result = func(partition, *args, **kwargs)
@@ -415,13 +423,13 @@ def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
 
 
 @ray.remote(num_returns=4)
-def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
+def _apply_list_of_funcs(call_queue, partition):  # pragma: no cover
     """
     Execute all operations stored in the call queue on the partition in a worker process.
 
     Parameters
     ----------
-    funcs : list
+    call_queue : list
         A call queue that needs to be executed on the partition.
     partition : pandas.DataFrame
         A pandas DataFrame the call queue needs to be executed on.
@@ -437,10 +445,10 @@ def _apply_list_of_funcs(funcs, partition):  # pragma: no cover
     str
         The node IP address of the worker process.
     """
-    for func, args, kwargs in funcs:
+    for func, f_args, f_kwargs in call_queue:
         func = deserialize(func)
-        args = deserialize(args)
-        kwargs = deserialize(kwargs)
+        args = deserialize(f_args)
+        kwargs = deserialize(f_kwargs)
         try:
             partition = func(partition, *args, **kwargs)
         # Sometimes Arrow forces us to make a copy of an object before we operate on it. We

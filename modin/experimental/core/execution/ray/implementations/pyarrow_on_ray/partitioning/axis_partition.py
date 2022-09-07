@@ -41,7 +41,7 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
         # Unwrap from PandasDataframePartition object for ease of use
         self.list_of_blocks = [obj.list_of_blocks[0] for obj in list_of_blocks]
 
-    def apply(self, func, num_splits=None, other_axis_partition=None, **kwargs):
+    def apply(self, func, *args, num_splits=None, other_axis_partition=None, **kwargs):
         """
         Apply func to the object in the Plasma store.
 
@@ -49,6 +49,8 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
         ----------
         func : callable or ray.ObjectRef
             The function to apply.
+        *args : iterable
+            Positional arguments to pass with `func`.
         num_splits : int, optional
             The number of times to split the resulting object.
         other_axis_partition : PyarrowOnRayDataframeAxisPartition, optional
@@ -77,19 +79,23 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
                 ).remote(
                     self.axis,
                     func,
+                    args,
+                    kwargs,
                     num_splits,
                     len(self.list_of_blocks),
-                    kwargs,
                     *(self.list_of_blocks + other_axis_partition.list_of_blocks),
                 )
             ]
 
-        args = [self.axis, func, num_splits, kwargs]
-        args.extend(self.list_of_blocks)
         return [
             PyarrowOnRayDataframePartition(obj)
             for obj in deploy_ray_axis_func.options(num_returns=num_splits).remote(
-                *args
+                self.axis,
+                func,
+                args,
+                kwargs,
+                num_splits,
+                *self.list_of_blocks,
             )
         ]
 
@@ -213,7 +219,7 @@ def split_arrow_table_result(axis, result, num_partitions, num_splits, metadata)
 
 
 @ray.remote
-def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
+def deploy_ray_axis_func(axis, func, f_args, f_kwargs, num_splits, *partitions):
     """
     Deploy a function along a full axis in Ray.
 
@@ -222,11 +228,13 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
     axis : {0, 1}
         The axis to perform the function along.
     func : callable
-        The function to deploy.
+            The function to perform.
+    f_args : list or tuple
+        Positional arguments to pass to ``func``.
+    f_kwargs : dict
+        Keyword arguments to pass to ``func``.
     num_splits : int
         The number of splits to return.
-    kwargs : dict
-        A dictionary of keyword arguments.
     *partitions : array-like
         All partitions that make up the full axis (row or column).
 
@@ -237,9 +245,9 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
     """
     table = concat_arrow_table_partitions(axis, partitions)
     try:
-        result = func(table, **kwargs)
+        result = func(table, *f_args, **f_kwargs)
     except Exception:
-        result = pyarrow.Table.from_pandas(func(table.to_pandas(), **kwargs))
+        result = pyarrow.Table.from_pandas(func(table.to_pandas(), *f_args, **f_kwargs))
     return split_arrow_table_result(
         axis, result, len(partitions), num_splits, table.schema.metadata
     )
@@ -247,7 +255,13 @@ def deploy_ray_axis_func(axis, func, num_splits, kwargs, *partitions):
 
 @ray.remote
 def deploy_ray_func_between_two_axis_partitions(
-    axis, func, num_splits, len_of_left, kwargs, *partitions
+    axis,
+    func,
+    f_args,
+    f_kwargs,
+    num_splits,
+    len_of_left,
+    *partitions,
 ):
     """
     Deploy a function along a full axis between two data sets in Ray.
@@ -257,13 +271,15 @@ def deploy_ray_func_between_two_axis_partitions(
     axis : {0, 1}
         The axis to perform the function along.
     func : callable
-        The function to deploy.
+        The function to perform.
+    f_args : list or tuple
+        Positional arguments to pass to ``func``.
+    f_kwargs : dict
+        Keyword arguments to pass to ``func``.
     num_splits : int
         The number of splits to return.
     len_of_left : int
         The number of values in `partitions` that belong to the left data set.
-    kwargs : dict
-        A dictionary of keyword arguments.
     *partitions : array-like
         All partitions that make up the full axis (row or column)
         for both data sets.
@@ -276,11 +292,13 @@ def deploy_ray_func_between_two_axis_partitions(
     lt_table = concat_arrow_table_partitions(axis, partitions[:len_of_left])
     rt_table = concat_arrow_table_partitions(axis, partitions[len_of_left:])
     try:
-        result = func(lt_table, rt_table, **kwargs)
+        result = func(lt_table, rt_table, *f_args, **f_kwargs)
     except Exception:
         lt_frame = lt_table.from_pandas()
         rt_frame = rt_table.from_pandas()
-        result = pyarrow.Table.from_pandas(func(lt_frame, rt_frame, **kwargs))
+        result = pyarrow.Table.from_pandas(
+            func(lt_frame, rt_frame, *f_args, **f_kwargs)
+        )
     return split_arrow_table_result(
         axis, result, len(result.num_rows), num_splits, result.schema.metadata
     )
