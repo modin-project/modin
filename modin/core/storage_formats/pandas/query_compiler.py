@@ -2393,6 +2393,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             return self._callable_func(func, axis, *args, **kwargs)
 
+    def apply_on_series(self, func, *args, **kwargs):
+        args = try_cast_to_pandas(args)
+        kwargs = try_cast_to_pandas(kwargs)
+
+        assert self.is_series_like()
+
+        # We use apply_full_axis here instead of map since the latter assumes that the
+        # shape of the DataFrame does not change. However, it is possible for functions
+        # applied to Series objects to end up creating DataFrames. It is possible that
+        # using apply_full_axis is much less performant compared to using a variant of
+        # map.
+        return self.__constructor__(
+            self._modin_frame.apply_full_axis(
+                1, lambda df: df.squeeze(axis=1).apply(func, *args, **kwargs)
+            )
+        )
+
     def _dict_func(self, func, axis, *args, **kwargs):
         """
         Apply passed functions to the specified rows/columns.

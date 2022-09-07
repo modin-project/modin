@@ -2254,6 +2254,32 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             **kwargs,
         )
 
+    def apply_on_series(self, func, *args, **kwargs):
+        """
+        Apply passed function on underlying Series.
+
+        Parameters
+        ----------
+        func : callable(pandas.Series) -> scalar, str, list or dict of such
+            The function to apply to each row.
+        *args : iterable
+            Positional arguments to pass to `func`.
+        **kwargs : dict
+            Keyword arguments to pass to `func`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        assert self.is_series_like()
+
+        return SeriesDefault.register(pandas.Series.apply)(
+            self,
+            func=func,
+            *args,
+            **kwargs,
+        )
+
     def explode(self, column):
         """
         Explode the given columns.

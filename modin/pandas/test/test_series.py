@@ -4711,3 +4711,15 @@ def test_peculiar_callback():
     modin_series = modin_df["col"].apply(func)
 
     df_equals(modin_series, pandas_series)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_apply_return_df(data):
+    modin_series, pandas_series = create_test_series(data)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.apply(
+            lambda x: pandas.Series([x + i for i in range(100)])
+        ),
+    )
