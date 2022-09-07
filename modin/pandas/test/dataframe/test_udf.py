@@ -43,6 +43,7 @@ from modin.pandas.test.utils import (
 )
 from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
 
@@ -359,6 +360,10 @@ def test_pipe(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("funcs", query_func_values, ids=query_func_keys)
 def test_query(data, funcs):
+    if get_current_execution() == "BaseOnPython" and funcs != "col3 > col4":
+        pytest.xfail(
+            reason="In this case, we are faced with the problem of handling empty data frames - #4934"
+        )
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
