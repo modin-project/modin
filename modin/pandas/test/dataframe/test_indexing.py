@@ -2111,3 +2111,9 @@ def test_multiindex_from_frame(data, sortorder):
             return pd.MultiIndex.from_frame(df, sortorder)
 
     eval_general(modin_df, pandas_df, call_from_frame, comparator=assert_index_equal)
+
+
+def test__getitem_bool_single_row_dataframe():
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/4845
+    eval_general(pd, pandas, lambda lib: lib.DataFrame([1])[lib.Series([True])])

@@ -42,8 +42,9 @@ Key Features and Updates
   * FIX-#4914: `base_lengths` should be computed from `base_frame` instead of `self` in `copartition` (#4915)
   * FIX-#4848: Fix rebalancing partitions when NPartitions == 1 (#4874)
   * FIX-#4907: Implement `radd` for Series and DataFrame (#4908)
-  * FIX-#4818, PERF-#4825: Fix where by using the new n-ary operator (#4820)    
+  * FIX-#4818, PERF-#4825: Fix where by using the new n-ary operator (#4820)
   * FIX-#3983: FIX-#4107: Materialize 'rowid' columns when selecting rows by position (#4834)
+  * FIX-#4845: Fix KeyError from `__getitem_bool` for single row dataframes (#4845)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
@@ -67,6 +68,7 @@ Key Features and Updates
   * PERF-#4890: `PandasDataframeAxisPartition.drain` should be serialized only once (#4891)
   * PERF-#4886: Use lazy index and columns evaluation in `query` method (#4887)
   * PERF-#4866: `iloc` function that used in `partition.mask` should be serialized only once (#4901)
+  * PERF-#4920: Avoid index and cache computations in `take_2d_labels_or_positional` unless they are needed (#4921)
   * PERF-#4268: Implement partition-parallel __getitem__ for bool Series masks (#4753)
 * Benchmarking enhancements
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
@@ -114,6 +116,7 @@ Key Features and Updates
   * FEAT-#4598: Add support for pandas 1.4.3 (#4599)
   * FEAT-#4619: Integrate mypy static type checking (#4620)
   * FEAT-#4202: Allow dask past 2022.2.0 (#4769)
+  * FEAT-#4925: Upgrade pandas to 1.4.4 (#4926)
 * New Features
   * FEAT-4463: Add experimental fuzzydata integration for testing against a randomized dataframe workflow (#4556)
   * FEAT-#4419: Extend virtual partitioning API to pandas on Dask (#4420)
@@ -124,6 +127,7 @@ Key Features and Updates
   * FEAT-#4746: Sync interchange protocol with recent API changes (#4763)
   * FEAT-#4733: Support fastparquet as engine for `read_parquet` (#4807)
   * FEAT-#4766: Support fsspec URLs in `read_csv` and `read_csv_glob` (#4898)
+  * FEAT-#4827: Implement `infer_types` dataframe algebra operator (#4871)
 
 Contributors
 ------------
@@ -144,3 +148,4 @@ Contributors
 @jbrockmendel
 @ienkovich
 @Garra1980
+@Billy2551

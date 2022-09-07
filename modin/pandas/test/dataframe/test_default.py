@@ -70,7 +70,6 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
         ("from_dict", lambda df: {"data": None}),
         ("from_records", lambda df: {"data": to_pandas(df)}),
         ("hist", lambda df: {"column": "int_col"}),
-        ("infer_objects", None),
         ("interpolate", None),
         ("lookup", lambda df: {"row_labels": [0], "col_labels": ["int_col"]}),
         ("mask", lambda df: {"cond": df != 0}),
