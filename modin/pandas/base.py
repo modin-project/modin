@@ -149,9 +149,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             A pandas dataset with `num_rows` or fewer rows and `num_cols` or fewer columns.
         """
         # Fast track for empty dataframe.
-        if len(self.index) == 0 or (
-            len(self._query_compiler.columns) == 0
-        ):
+        if len(self.index) == 0 or (len(self._query_compiler.columns) == 0):
             return pandas.DataFrame(
                 index=self.index,
                 columns=self.columns if hasattr(self, "columns") else None,

@@ -35,7 +35,9 @@ class ClientQueryCompiler(BaseQueryCompiler):
 
     def _get_columns(self):
         if self._columns_cache is None:
-            self._columns_cache = pickle.loads(pickle.dumps(self._service.columns(self._id)))
+            self._columns_cache = pickle.loads(
+                pickle.dumps(self._service.columns(self._id))
+            )
         return self._columns_cache
 
     def _set_index(self, new_index):
