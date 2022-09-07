@@ -339,7 +339,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             self.drain_call_queue()
         result = super(PandasOnRayDataframeVirtualPartition, self).apply(
             func,
-            *deserialize(args),
+            *args,
             num_splits=num_splits,
             other_axis_partition=other_axis_partition,
             maintain_partitioning=maintain_partitioning,
@@ -514,14 +514,30 @@ class PandasOnRayDataframeRowPartition(PandasOnRayDataframeVirtualPartition):
 
 
 @ray.remote
-def deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
+def deploy_ray_func(
+    deployer, axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs
+):  # pragma: no cover
     """
     Execute a function on an axis partition in a worker process.
 
+    This is ALWAYS called on either ``PandasDataframeAxisPartition.deploy_axis_func``
+    or ``PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions``, which both
+    serve to deploy another dataframe function on a Ray worker process. The provided ``f_args``
+    and ``f_kwargs`` thus are deserialized here (on the Ray worker) before the function
+    is called.
+
     Parameters
     ----------
-    func : callable
-        The function to perform.
+    deployer : callable
+        A `PandasDataFrameAxisPartition.deploy_*` method that will call `deploy_f`.
+    axis : {0, 1}
+        The axis to perform the function along.
+    f_to_deploy : callable or RayObjectID
+        The function to deploy.
+    f_args : list or tuple
+        Positional arguments to pass to ``deploy_f``.
+    f_kwargs : dict
+        Keyword arguments to pass to ``deploy_f``.
     *args : list
         Positional arguments to pass to ``func``.
     **kwargs : dict
@@ -537,7 +553,10 @@ def deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
     Ray functions are not detected by codecov (thus pragma: no cover).
     """
     args = deserialize(args)
-    result = func(*args, **kwargs)
+    f_to_deploy = deserialize(f_to_deploy)
+    f_args = deserialize(f_args)
+    f_kwargs = deserialize(f_kwargs)
+    result = deployer(axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs)
     ip = get_node_ip_address()
     if isinstance(result, pandas.DataFrame):
         return result, len(result), len(result.columns), ip
