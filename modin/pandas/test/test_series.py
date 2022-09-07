@@ -4714,28 +4714,22 @@ def test_peculiar_callback():
 
 
 def test_apply_return_df():
-    modin_df = pd.Series(1).apply(lambda x: pandas.Series([x, x]))
-    pandas_df = pandas.Series(1).apply(lambda x: pandas.Series([x, x]))
-
-    df_equals(modin_df, pandas_df)
-
-    modin_df = pd.Series([2, 4, 6, 0, 1]).apply(lambda x: pandas.Series([x, x + 1]))
-    pandas_df = pandas.Series([2, 4, 6, 0, 1]).apply(
-        lambda x: pandas.Series([x, x + 1])
+    modin_series, pandas_series = create_test_series([2, 4, 6, 0, 1])
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.apply(lambda x: pandas.Series([x, x + 1])),
     )
-
-    df_equals(modin_df, pandas_df)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("num_columns", [4, 8, 16, 32, 64])
 def test_apply_return_df_multiple_partitions(data, num_columns):
     modin_series, pandas_series = create_test_series(data)
-    modin_df = modin_series.apply(
-        lambda x: pandas.Series([x + i for i in range(num_columns)])
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.apply(
+            lambda x: pandas.Series([x + i for i in range(num_columns)])
+        ),
     )
-    pandas_df = pandas_series.apply(
-        lambda x: pandas.Series([x + i for i in range(num_columns)])
-    )
-
-    df_equals(modin_df, pandas_df)

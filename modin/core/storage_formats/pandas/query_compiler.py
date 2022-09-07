@@ -2398,6 +2398,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         kwargs = try_cast_to_pandas(kwargs)
 
         assert self.is_series_like()
+
+        # We use apply_full_axis here instead of map since the latter assumes that the
+        # shape of the DataFrame does not change. However, it is possible for functions
+        # applied to Series objects to end up creating DataFrames. It is possible that
+        # using apply_full_axis is much less performant compared to using a variant of
+        # map.
         return self.__constructor__(
             self._modin_frame.apply_full_axis(
                 1, lambda df: df.squeeze(axis=1).apply(func, *args, **kwargs)
@@ -2506,11 +2512,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if callable(func):
             func = wrap_udf_function(func)
 
-        return self.__constructor__(
-            self._modin_frame.apply_full_axis(
-                axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
-            )
+        new_modin_frame = self._modin_frame.apply_full_axis(
+            axis, lambda df: df.apply(func, axis=axis, *args, **kwargs)
         )
+        return self.__constructor__(new_modin_frame)
 
     # END UDF
 
