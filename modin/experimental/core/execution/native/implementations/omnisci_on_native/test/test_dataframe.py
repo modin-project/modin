@@ -2178,7 +2178,7 @@ class TestLoc:
         pdf = pandas.DataFrame(data, index=idx).loc[key]
         df_equals(mdf, pdf)
 
-    def test_iloc_bol(self):
+    def test_iloc_bool(self):
         data = [1, 2, 3, 4, 5, 6]
         idx = ["a", "b", "c", "d", "e", "f"]
         key = [False, True, True, True, True, False]
