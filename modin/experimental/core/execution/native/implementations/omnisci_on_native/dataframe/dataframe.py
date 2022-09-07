@@ -333,14 +333,18 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 force_execution_mode=self._force_execution_mode,
             )
 
-        if row_labels is not None or row_positions is not None:
+        if row_labels is not None:
+            raise NotImplementedError("Row labels masking is not yet supported")
+
+        if row_positions is not None:
+            base = base._maybe_materialize_rowid()
             op = MaskNode(base, row_labels=row_labels, row_positions=row_positions)
             return self.__constructor__(
                 columns=base.columns,
                 dtypes=base._dtypes,
                 op=op,
-                index_cols=self._index_cols,
-                force_execution_mode=self._force_execution_mode,
+                index_cols=base._index_cols,
+                force_execution_mode=base._force_execution_mode,
             )
 
         return base

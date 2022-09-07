@@ -75,7 +75,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
         # no longer depend on their parent tables. So materializing buffers
         # before returning the offset
         self._materialize_actual_buffers()
-        return self._pyarrow_table.column(0).chunks[0].offset
+        return self._pyarrow_table.column(-1).chunks[0].offset
 
     @property
     def dtype(self) -> Tuple[DTypeKind, int, str, str]:
@@ -188,7 +188,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
         # Although we can retrieve codes from pandas dtype, they're unsynced with
         # the actual PyArrow data most of the time. So getting the mapping directly
         # from the materialized PyArrow table.
-        col = self._pyarrow_table.column(0)
+        col = self._pyarrow_table.column(-1)
         if len(col.chunks) > 1:
             if not self._col._allow_copy:
                 raise_copy_alert(
@@ -216,7 +216,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
 
     @property
     def describe_null(self) -> Tuple[ColumnNullType, Any]:
-        null_buffer = self._pyarrow_table.column(0).chunks[0].buffers()[0]
+        null_buffer = self._pyarrow_table.column(-1).chunks[0].buffers()[0]
         if null_buffer is None:
             return (ColumnNullType.NON_NULLABLE, None)
         else:
@@ -224,7 +224,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
 
     @property
     def null_count(self) -> int:
-        return self._pyarrow_table.column(0).null_count
+        return self._pyarrow_table.column(-1).null_count
 
     @property
     def metadata(self) -> Dict[str, Any]:
@@ -239,7 +239,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
         -------
         numpy.dtype
         """
-        return self._col._df.dtypes.iloc[0]
+        return self._col._df.dtypes.iloc[-1]
 
     @property
     def _arrow_dtype(self) -> pa.DataType:
@@ -250,7 +250,7 @@ class OmnisciProtocolColumn(ProtocolColumn):
         -------
         pyarrow.DataType
         """
-        return self._pyarrow_table.column(0).type
+        return self._pyarrow_table.column(-1).type
 
     @property
     def _pyarrow_table(self) -> pa.Table:
@@ -273,7 +273,8 @@ class OmnisciProtocolColumn(ProtocolColumn):
     def get_buffers(self) -> Dict[str, Any]:
         self._materialize_actual_buffers()
         at = self._pyarrow_table
-        pyarrow_array = at.column(0).chunks[0]
+        # Get the last column since the first one could be the index
+        pyarrow_array = at.column(-1).chunks[0]
 
         result = dict()
         result["data"] = self._get_data_buffer(pyarrow_array)
@@ -481,10 +482,10 @@ class OmnisciProtocolColumn(ProtocolColumn):
 
         at = self._pyarrow_table
         schema_to_cast = at.schema
-        field = at.schema[0]
+        field = at.schema[-1]
 
         schema_to_cast = schema_to_cast.set(
-            0, pa.field(field.name, arrow_type, field.nullable)
+            len(schema_to_cast) - 1, pa.field(field.name, arrow_type, field.nullable)
         )
 
         # TODO: currently, each column chunk casts its buffers independently which results
