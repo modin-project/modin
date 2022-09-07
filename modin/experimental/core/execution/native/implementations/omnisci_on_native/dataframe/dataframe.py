@@ -334,7 +334,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             )
 
         if row_labels is not None:
-            raise NotImplementedError("row indices masking is not yet supported")
+            raise NotImplementedError("Row labels masking is not yet supported")
 
         if row_positions is not None:
             base = base._maybe_materialize_rowid()
