@@ -1401,6 +1401,21 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, dtype=col_dtypes, **kwargs
         )
 
+    def infer_objects(self):
+        """
+        Attempt to infer better dtypes for object columns.
+
+        Attempts soft conversion of object-dtyped columns, leaving non-object
+        and unconvertible columns unchanged. The inference rules are the same
+        as during normal Series/DataFrame construction.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New query compiler with udpated dtypes.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.infer_objects)(self)
+
     def convert_dtypes(
         self,
         infer_objects: bool = True,

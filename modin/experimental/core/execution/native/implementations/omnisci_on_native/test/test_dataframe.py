@@ -2169,5 +2169,51 @@ class TestNonStrCols:
         df._query_compiler._modin_frame._set_index(pd.Index([1, 2, 3]))
 
 
+class TestLoc:
+    def test_loc(self):
+        data = [1, 2, 3, 4, 5, 6]
+        idx = ["a", "b", "c", "d", "e", "f"]
+        key = ["b", "c", "d", "e"]
+        mdf = pd.DataFrame(data, index=idx).loc[key]
+        pdf = pandas.DataFrame(data, index=idx).loc[key]
+        df_equals(mdf, pdf)
+
+    def test_iloc_bool(self):
+        data = [1, 2, 3, 4, 5, 6]
+        idx = ["a", "b", "c", "d", "e", "f"]
+        key = [False, True, True, True, True, False]
+        mdf = pd.DataFrame(data, index=idx).iloc[key]
+        pdf = pandas.DataFrame(data, index=idx).iloc[key]
+        df_equals(mdf, pdf)
+
+    def test_iloc_int(self):
+        data = range(11, 265)
+        key = list(range(0, 11)) + list(range(243, 254))
+        mdf = pd.DataFrame(data).iloc[key]
+        pdf = pandas.DataFrame(data).iloc[key]
+        df_equals(mdf, pdf)
+
+        mdf = pd.DataFrame(data).iloc[range(10, 100)]
+        pdf = pandas.DataFrame(data).iloc[range(10, 100)]
+        df_equals(mdf, pdf)
+
+        data = test_data_values[0]
+        mds = pd.Series(data[next(iter(data.keys()))]).iloc[1:]
+        pds = pandas.Series(data[next(iter(data.keys()))]).iloc[1:]
+        df_equals(mds, pds)
+
+
+class TestStr:
+    def test_str(self):
+        data = test_data_values[0]
+        mdf = pd.DataFrame(data[next(iter(data.keys()))])
+        pdf = pandas.DataFrame(data[next(iter(data.keys()))])
+        df_equals(mdf, pdf)
+
+        mds = pd.Series(data[next(iter(data.keys()))])
+        pds = pandas.Series(data[next(iter(data.keys()))])
+        assert str(mds) == str(pds)
+
+
 if __name__ == "__main__":
     pytest.main(["-v", __file__])

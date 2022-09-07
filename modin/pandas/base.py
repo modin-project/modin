@@ -1579,7 +1579,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Attempt to infer better dtypes for object columns.
         """
-        return self._default_to_pandas("infer_objects")
+        return self._query_compiler.infer_objects()
 
     def _convert_dtypes(
         self,

@@ -1506,6 +1506,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def astype(self, col_dtypes, **kwargs):
         return self.__constructor__(self._modin_frame.astype(col_dtypes))
 
+    def infer_objects(self):
+        return self.__constructor__(self._modin_frame.infer_objects())
+
     # Column/Row partitions reduce operations
 
     def first_valid_index(self):
@@ -2144,7 +2147,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # __getitem__ methods
     __getitem_bool = Binary.register(
-        lambda df, r: df[r], join_type="left", labels="drop"
+        # r is usually a list, but when r.size == 1, the array is squeezed to a scalar
+        lambda df, r: df[r] if r.size > 1 else df[[r]],
+        join_type="left",
+        labels="drop",
     )
 
     def __validate_bool_indexer(self, indexer):
