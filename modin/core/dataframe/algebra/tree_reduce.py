@@ -20,7 +20,7 @@ class TreeReduce(Operator):
     """Builder class for TreeReduce operator."""
 
     @classmethod
-    def call(cls, map_function, reduce_function, axis=None):
+    def register(cls, map_function, reduce_function=None, axis=None):
         """
         Build TreeReduce operator.
 
@@ -28,7 +28,7 @@ class TreeReduce(Operator):
         ----------
         map_function : callable(pandas.DataFrame) -> pandas.DataFrame
             Source map function.
-        reduce_function : callable(pandas.DataFrame) -> pandas.Series
+        reduce_function : callable(pandas.DataFrame) -> pandas.Series, optional
             Source reduce function.
         axis : int, optional
             Specifies axis to apply function along.
@@ -39,6 +39,8 @@ class TreeReduce(Operator):
             Function that takes query compiler and executes passed functions
             with TreeReduce algorithm.
         """
+        if reduce_function is None:
+            reduce_function = map_function
 
         def caller(query_compiler, *args, **kwargs):
             """Execute TreeReduce function against passed query compiler."""
@@ -52,28 +54,3 @@ class TreeReduce(Operator):
             )
 
         return caller
-
-    @classmethod
-    # FIXME: `register` is an alias for `call` method. One of them should be removed.
-    def register(cls, map_function, reduce_function=None, **kwargs):
-        """
-        Build TreeReduce function.
-
-        Parameters
-        ----------
-        map_function : callable(pandas.DataFrame) -> [pandas.DataFrame, pandas.Series]
-            Source map function.
-        reduce_function : callable(pandas.DataFrame) -> pandas.Series, optional
-            Source reduce function. If not specified `map_function` will be used.
-        **kwargs : dict
-            Additional parameters to pass to the builder function.
-
-        Returns
-        -------
-        callable
-            Function that takes query compiler and executes passed functions
-            with TreeReduce algorithm.
-        """
-        if reduce_function is None:
-            reduce_function = map_function
-        return cls.call(map_function, reduce_function, **kwargs)

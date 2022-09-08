@@ -541,7 +541,9 @@ class GroupByDefault(DefaultMethod):
             Functiom that takes query compiler and defaults to pandas to do GroupBy
             aggregation.
         """
-        return cls.call(GroupBy.build_groupby(func), fn_name=func.__name__, **kwargs)
+        return super().register(
+            GroupBy.build_groupby(func), fn_name=func.__name__, **kwargs
+        )
 
     # This specifies a `pandas.DataFrameGroupBy` method to pass the `agg_func` to,
     # it's based on `how` to apply it. Going by pandas documentation:

@@ -23,7 +23,7 @@ class Binary(Operator):
     """Builder class for Binary operator."""
 
     @classmethod
-    def call(cls, func, join_type="outer", labels="replace"):
+    def register(cls, func, join_type="outer", labels="replace"):
         """
         Build template binary operator.
 
