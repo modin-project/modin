@@ -46,6 +46,7 @@ Key Features and Updates
   * FIX-#3983: FIX-#4107: Materialize 'rowid' columns when selecting rows by position (#4834)
   * FIX-#4845: Fix KeyError from `__getitem_bool` for single row dataframes (#4845)
   * FIX-#4734: Handle Series.apply when return type is a DataFrame (#4830)
+  * FIX-#4945: Return empty `pandas.Index` instead of list in `get_indices` (#4948)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
