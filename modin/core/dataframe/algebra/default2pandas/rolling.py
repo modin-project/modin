@@ -72,4 +72,6 @@ class RollingDefault(DefaultMethod):
             Function that takes query compiler and defaults to pandas to apply aggregation
             `func` on a rolling window.
         """
-        return cls.call(Rolling.build_rolling(func), fn_name=func.__name__, **kwargs)
+        return super().register(
+            Rolling.build_rolling(func), fn_name=func.__name__, **kwargs
+        )

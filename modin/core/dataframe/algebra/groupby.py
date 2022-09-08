@@ -26,7 +26,7 @@ class GroupByReduce(TreeReduce):
     """Builder class for GroupBy aggregation functions."""
 
     @classmethod
-    def call(cls, map_func, reduce_func=None, **call_kwds):
+    def register(cls, map_func, reduce_func=None, **call_kwds):
         """
         Build template GroupBy aggregation function.
 

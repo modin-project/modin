@@ -33,7 +33,7 @@ class DefaultMethod(Operator):
     OBJECT_TYPE = "DataFrame"
 
     @classmethod
-    def call(cls, func, obj_type=pandas.DataFrame, inplace=None, fn_name=None):
+    def register(cls, func, obj_type=pandas.DataFrame, inplace=None, fn_name=None):
         """
         Build function that do fallback to default pandas implementation for passed `func`.
 
@@ -113,28 +113,6 @@ class DefaultMethod(Operator):
             return result if not inplace_method else df
 
         return cls.build_wrapper(applyier, fn_name)
-
-    @classmethod
-    # FIXME: `register` is an alias for `call` method. One of them should be removed.
-    def register(cls, func, **kwargs):
-        """
-        Build function that do fallback to default pandas implementation for passed `func`.
-
-        Parameters
-        ----------
-        func : callable or str,
-            Function to apply to the casted to pandas frame or its property accesed
-            by ``cls.frame_wrapper``.
-        **kwargs : kwargs
-            Additional parameters that will be used for building.
-
-        Returns
-        -------
-        callable
-            Function that takes query compiler, does fallback to pandas and applies `func`
-            to the casted to pandas frame or its property accesed by ``cls.frame_wrapper``.
-        """
-        return cls.call(func, **kwargs)
 
     @classmethod
     # FIXME: this method is almost a duplicate of `cls.build_default_to_pandas`.
