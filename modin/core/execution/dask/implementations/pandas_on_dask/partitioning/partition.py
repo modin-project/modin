@@ -97,7 +97,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             # this improves performance a bit.
             futures = DaskWrapper.deploy(
                 func=apply_func,
-                f_args=(self._data, call_queue[0]),
+                f_args=(self._data, *call_queue[0]),
                 num_returns=2,
                 pure=False,
             )
@@ -153,7 +153,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             # this improves performance a bit.
             futures = DaskWrapper.deploy(
                 func=apply_func,
-                f_args=(self._data, call_queue[0]),
+                f_args=(self._data, *call_queue[0]),
                 num_returns=2,
                 pure=False,
             )
@@ -298,7 +298,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         return self._ip_cache
 
 
-def apply_func(partition, call_queue_entry):
+def apply_func(partition, func, *args, **kwargs):
     """
     Execute a function on the partition in a worker process.
 
@@ -306,8 +306,13 @@ def apply_func(partition, call_queue_entry):
     ----------
     partition : pandas.DataFrame
         A pandas DataFrame the function needs to be executed on.
-    call_queue_entry : list
-        A triple of ``[func, args, kwargs]`` to call on the partition.
+    func : callable
+        The function to perform.
+    *args : list
+        Positional arguments to pass to ``func``.
+    **kwargs : dict
+        Keyword arguments to pass to ``func``.
+
 
     Returns
     -------
@@ -315,9 +320,13 @@ def apply_func(partition, call_queue_entry):
         The resulting pandas DataFrame.
     str
         The node IP address of the worker process.
+
+    Notes
+    -----
+    Directly passing a call queue entry (i.e. a list of [func, args, kwargs]) causes a
+    performance penalty.
     """
-    func, f_args, f_kwargs = call_queue_entry
-    result = func(partition, *f_args, **f_kwargs)
+    result = func(partition, *args, **kwargs)
     return result, get_ip()
 
 

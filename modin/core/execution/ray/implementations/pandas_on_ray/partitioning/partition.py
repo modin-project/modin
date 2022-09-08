@@ -400,12 +400,6 @@ def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
         The number of columns of the resulting pandas DataFrame.
     str
         The node IP address of the worker process.
-
-    Notes
-    -----
-    When _apply_func.remote(...) is called, Ray will get ``func`` from the object store, but it will
-    not do so if ``func`` is passed as an entry within a list (e.g. if a call queue entry is directly
-    passed into this function).
     """
     try:
         result = func(partition, *args, **kwargs)
