@@ -702,6 +702,37 @@ class PandasDataframe(ClassLogger):
         ]
         return new_lengths
 
+    def _get_new_index_obj(
+        self, positions, axis: int
+    ) -> pandas.Index:
+        """
+        Find the new Index object for take_2d_positional result.
+        Parameters
+        ----------
+        positions : Sequence[int]
+        axis : int
+        Returns
+        -------
+        pandas.Index
+        """
+        # Helper for take_2d_positional
+        # Use the slice to calculate the new columns
+        if axis == 0:
+            idx = self.index
+        else:
+            idx = self.columns
+
+        # TODO: Support fast processing of negative-step ranges
+        if is_range_like(positions) and positions.step > 0:
+            # pandas Index is more likely to preserve its metadata if the indexer
+            #  is slice
+            monotonic_idx = slice(positions.start, positions.stop, positions.step)
+        else:
+            monotonic_idx = np.asarray(positions, dtype=np.intp)
+
+        new_idx = idx[monotonic_idx]
+        return new_idx
+
     def _take_2d_positional(
         self,
         row_positions: Optional[List[int]] = None,
@@ -749,6 +780,8 @@ class PandasDataframe(ClassLogger):
         import pandas._libs.internals as libinternals
 
         if row_positions is not None:
+            new_index = self._get_new_index_obj(row_positions, axis=0)
+
             row_positions = np.asarray(row_positions, dtype=np.intp)
 
             # row_blknos[i] is the index of the row-partition in which
@@ -767,7 +800,6 @@ class PandasDataframe(ClassLogger):
                 row_partitions_list.append(item)
 
             new_row_lengths = self._get_new_lengths(row_partitions_list, axis=0)
-            new_index = self.index[row_positions]
         else:
             row_partitions_dict = {i: slice(None) for i in range(len(self._partitions))}
             row_partitions_list = list(row_partitions_dict.items())
@@ -775,6 +807,8 @@ class PandasDataframe(ClassLogger):
             new_index = self._index_cache
 
         if col_positions is not None:
+            new_columns = self._get_new_index_obj(col_positions, axis=1)
+
             col_positions = np.asarray(col_positions, dtype=np.intp)
 
             # col_blknos[i] is the index of the col-partition in which
@@ -793,7 +827,6 @@ class PandasDataframe(ClassLogger):
                 col_partitions_list.append(item)
 
             new_col_widths = self._get_new_lengths(col_partitions_list, axis=1)
-            new_columns = self.columns[col_positions]
 
             ErrorMessage.catch_bugs_and_request_email(
                 failure_condition=sum(new_col_widths) != len(new_columns),

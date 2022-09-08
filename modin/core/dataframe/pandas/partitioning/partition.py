@@ -186,9 +186,8 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         PandasDataframePartition
             New `PandasDataframePartition` object.
         """
-        # FIXME: for a `take` won't is_full_axis_mask be wrong if row_labels
-        #  is non-unique or not monotonic increasing.
-
+        # FIXME: is_full_axis_mask here assumes that labels are monotonically
+        #  increasing, which is no longer correct following GH#4880.
         # def is_full_axis_mask(index, axis_length):
         #    """Check whether `index` mask grabs `axis_length` amount of elements."""
         #    if isinstance(index, slice):
