@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING
 import sys
 import numpy as np
 import pandas
-from pandas._typing import npt
 from modin.logging import ClassLogger
 from modin.utils import _inherit_docstrings
 from .series import Series
@@ -34,6 +33,7 @@ else:
 
 if TYPE_CHECKING:
     from datetime import tzinfo
+    from pandas._typing import npt
 
 
 @_inherit_docstrings(pandas.core.arrays.categorical.CategoricalAccessor)
