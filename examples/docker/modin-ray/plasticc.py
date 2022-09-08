@@ -158,7 +158,7 @@ def read(
 
 
 def etl(df, df_meta):
-    # workaround for both Modin_on_ray and Modin_on_omnisci modes. Eventually this should be fixed
+    # workaround for both Modin_on_ray and Modin_on_hdk modes. Eventually this should be fixed
     df["flux_ratio_sq"] = (df["flux"] / df["flux_err"]) * (
         df["flux"] / df["flux_err"]
     )  # np.power(df["flux"] / df["flux_err"], 2.0)

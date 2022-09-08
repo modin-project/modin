@@ -636,20 +636,18 @@ class ExperimentalPandasOnCloudpythonFactory(ExperimentalRemoteFactory):
     wrapped_factory = PandasOnPythonFactory
 
 
-@doc(_doc_factory_class, execution_name="experimental OmnisciOnNative")
-class ExperimentalOmnisciOnNativeFactory(BaseFactory):
+@doc(_doc_factory_class, execution_name="experimental HdkOnNative")
+class ExperimentalHdkOnNativeFactory(BaseFactory):
     @classmethod
-    @doc(
-        _doc_factory_prepare_method, io_module_name="experimental ``OmnisciOnNativeIO``"
-    )
+    @doc(_doc_factory_prepare_method, io_module_name="experimental ``HdkOnNativeIO``")
     def prepare(cls):
-        from modin.experimental.core.execution.native.implementations.omnisci_on_native.io import (
-            OmnisciOnNativeIO,
+        from modin.experimental.core.execution.native.implementations.hdk_on_native.io import (
+            HdkOnNativeIO,
         )
 
-        cls.io_cls = OmnisciOnNativeIO
+        cls.io_cls = HdkOnNativeIO
 
 
-@doc(_doc_factory_class, execution_name="experimental remote OmnisciOnNative")
-class ExperimentalOmnisciOnCloudnativeFactory(ExperimentalRemoteFactory):
-    wrapped_factory = ExperimentalOmnisciOnNativeFactory
+@doc(_doc_factory_class, execution_name="experimental remote HdkOnNative")
+class ExperimentalHdkOnCloudnativeFactory(ExperimentalRemoteFactory):
+    wrapped_factory = ExperimentalHdkOnNativeFactory

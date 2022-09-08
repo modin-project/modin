@@ -83,7 +83,7 @@ class TimeReadCsvTrueFalseValues(BaseReadCsv):
                 true_values=["Yes", "true"],
                 false_values=["No", "false"],
             ),
-            trigger_omnisci_import=ASV_USE_STORAGE_FORMAT == "omnisci",
+            trigger_hdk_import=ASV_USE_STORAGE_FORMAT == "hdk",
         )
 
 
