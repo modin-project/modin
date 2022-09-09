@@ -3253,7 +3253,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # Cat operations
     def cat_codes(self):
         def func(df) -> np.ndarray:
-            # equiv: df.iloc[:, 0]
+            # equiv: df.iloc[:, 0] but slightly more performant
             ser = df._ixs(0, axis=1)
             return ser.cat.codes
 
