@@ -36,9 +36,7 @@ def concatenate(dfs):
     """
     for df in dfs:
         assert df.columns.equals(dfs[0].columns)
-    for i in range(len(dfs[0].columns)):
-        if dfs[0].dtypes.iloc[i].name != "category":
-            continue
+    for i in df.columns.get_indexer_for(df.select_dtypes("category").columns):
         columns = [df.iloc[:, i] for df in dfs]
         union = union_categoricals(columns)
         for df in dfs:
