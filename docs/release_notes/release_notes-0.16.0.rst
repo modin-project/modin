@@ -42,6 +42,7 @@ Key Features and Updates
   * FIX-#4914: `base_lengths` should be computed from `base_frame` instead of `self` in `copartition` (#4915)
   * FIX-#4848: Fix rebalancing partitions when NPartitions == 1 (#4874)
   * FIX-#4907: Implement `radd` for Series and DataFrame (#4908)
+  * FIZ-#4945: Fix `_take_2d_positional` that loses indexes due to filtering empty dataframes (#4951)
   * FIX-#4818, PERF-#4825: Fix where by using the new n-ary operator (#4820)
   * FIX-#3983: FIX-#4107: Materialize 'rowid' columns when selecting rows by position (#4834)
   * FIX-#4845: Fix KeyError from `__getitem_bool` for single row dataframes (#4845)
