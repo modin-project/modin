@@ -30,7 +30,6 @@ __all__ = [
     "SeriesDefault",
     "StrDefault",
     "BinaryDefault",
-    "AnyDefault",
     "ResampleDefault",
     "RollingDefault",
     "DefaultMethod",

@@ -61,6 +61,8 @@ class DefaultMethod(Operator):
     ----------
     OBJECT_TYPE : str
         Object type name that will be shown in default-to-pandas warning message.
+    DEFAULT_OBJECT_TYPE : object
+        Default place to search for a function.
     """
 
     OBJECT_TYPE = "DataFrame"
