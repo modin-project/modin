@@ -2121,7 +2121,7 @@ def test__getitem_bool_single_row_dataframe():
 
 # This is a very subtle bug that comes from:
 # https://github.com/modin-project/modin/issues/4945
-def test_4945():
+def test_lazy_eval_index():
     modin_df, pandas_df = create_test_dfs({"col0": [0, 1]})
 
     def func(df):
