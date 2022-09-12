@@ -55,7 +55,7 @@ Here are some blogposts and articles about Modin:
 - `Get faster pandas with Modin, even on your laptops by Parul Pandey <https://towardsdatascience.com/get-faster-pandas-with-modin-even-on-your-laptops-b527a2eeda74>`_
 - `How to speedup pandas by changing one line of code by Shrivarsheni <https://www.machinelearningplus.com/python/modin-speedup-pandas/>`_
 - `How To Accelerate Pandas With Just One Line Of Code by Analytics India <https://analyticsindiamag.com/how-to-accelerate-pandas-with-just-one-line-of-code-modin/>`_
-
+- `An Easy Introduction to Modin: A Step-by-Step Guide to Accelerating Pandas by Intel <https://www.intel.com/content/www/us/en/developer/articles/technical/modin-step-by-step-guide-to-accelerating-pandas.html#gs.c69er5>`_
 
 Here are some articles contributed by the international community:
 
