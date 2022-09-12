@@ -312,9 +312,9 @@ def apply_func(partition, func, *args, **kwargs):
         A pandas DataFrame the function needs to be executed on.
     func : callable
         The function to perform.
-    args : list
+    *args : list
         Positional arguments to pass to ``func``.
-    kwargs : dict
+    **kwargs : dict
         Keyword arguments to pass to ``func``.
 
     Returns
