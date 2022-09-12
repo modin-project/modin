@@ -122,7 +122,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         )
 
     @classmethod
-    def call_deploy(cls, path, col_partitions, storage_options, **kwargs):
+    def call_deploy(cls, path, col_partitions, storage_options, range_index, **kwargs):
         """
         Deploy remote tasks to the workers with passed parameters.
 
@@ -149,19 +149,24 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         # If we don't have any columns to read, we should just return an empty
         # set of references.
         if len(col_partitions) == 0:
-            return []
+            return [], None
 
         filesystem, parquet_files = cls.get_fs_and_files(path, storage_options)
-
         row_groups_per_file = []
+
         num_row_groups = 0
         # Count up the total number of row groups across all files and
         # keep track of row groups per file to use later.
         for file in parquet_files:
             with filesystem.open(file) as f:
-                row_groups = ParquetFile(f).num_row_groups
+                parquet_file = ParquetFile(f)
+                temp_num_row_groups = parquet_file.num_row_groups
+                parquet_file_metadata = parquet_file.metadata
+                row_groups = [None] * temp_num_row_groups
+                for i in range(temp_num_row_groups):
+                    row_groups[i] = parquet_file_metadata.row_group(i).num_rows
                 row_groups_per_file.append(row_groups)
-                num_row_groups += row_groups
+                num_row_groups += temp_num_row_groups
 
         # step determines how many row groups are going to be in a partition
         step = compute_chunksize(
@@ -184,7 +189,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             file_path = parquet_files[file_index]
             row_group_start = row_groups_used_in_current_file
             row_groups_left_in_file = (
-                row_groups_per_file[file_index] - row_groups_used_in_current_file
+                len(row_groups_per_file[file_index]) - row_groups_used_in_current_file
             )
             row_groups_left_for_this_partition = step - current_partition_size
             if row_groups_left_for_this_partition <= row_groups_left_in_file:
@@ -197,6 +202,16 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                 # it into current partition and go to next file.
                 num_row_groups_to_add = row_groups_left_in_file
                 current_partition_size += num_row_groups_to_add
+            index = None
+            if range_index is not None:
+                prev_rows = sum(
+                    [sum(row_groups) for row_groups in row_groups_per_file[:file_index]]
+                )
+                index = range_index[prev_rows:]
+                row_group_sizes = row_groups_per_file[file_index]
+                start = sum(row_group_sizes[:row_group_start])
+                stop = sum(row_group_sizes[: row_group_start + num_row_groups_to_add])
+                index = index[start:stop]
             if num_row_groups_to_add == row_groups_left_in_file:
                 file_index += 1
                 row_groups_used_in_current_file = 0
@@ -204,7 +219,10 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                 row_groups_used_in_current_file += num_row_groups_to_add
             partition_file.append(
                 ParquetFileToRead(
-                    file_path, row_group_start, row_group_start + num_row_groups_to_add
+                    file_path,
+                    row_group_start,
+                    row_group_start + num_row_groups_to_add,
+                    index=index,
                 )
             )
             total_row_groups_added += num_row_groups_to_add
@@ -228,10 +246,17 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     for cols in col_partitions
                 ]
             )
-        return all_partitions
+        lengths = None
+        if range_index is not None:
+
+            def _sum(files):
+                return sum([len(_file.index) for _file in files])
+
+            lengths = [_sum(files_to_read) for files_to_read in partition_files]
+        return all_partitions, lengths
 
     @classmethod
-    def build_partition(cls, partition_ids, column_widths):
+    def build_partition(cls, partition_ids, column_widths, row_lengths):
         """
         Build array with partitions of `cls.frame_partition_cls` class.
 
@@ -254,17 +279,19 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         for each read call:
         partition_ids[i][j] -> [ObjectRef(df), ObjectRef(df.index), ObjectRef(len(df))].
         """
+        if row_lengths is None:
+            row_lengths = [None] * len(partition_ids)
         return np.array(
             [
                 [
                     cls.frame_partition_cls(
                         part_id[0],
-                        length=part_id[2],
+                        length=row_length if row_length is not None else part_id[2],
                         width=col_width,
                     )
                     for part_id, col_width in zip(part_ids, column_widths)
                 ]
-                for part_ids in partition_ids
+                for part_ids, row_length in zip(partition_ids, row_lengths)
             ]
         )
 
@@ -352,27 +379,25 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         """
         storage_options = kwargs.pop("storage_options", {}) or {}
         col_partitions, column_widths = cls.build_columns(columns)
-        partition_ids = cls.call_deploy(path, col_partitions, storage_options, **kwargs)
-        if "row_group_sizes" not in kwargs:
-            # range index case
+        index = None
+        build_index = True
+        sync_index = False
+        if len(index_columns) == 1 and isinstance(index_columns[0], dict):
+            index, sync_index = cls.build_index(
+                path, None, index_columns, storage_options
+            )
+            build_index = False
+            sync_index = False
+        partition_ids, lengths = cls.call_deploy(
+            path, col_partitions, storage_options, index, **kwargs
+        )
+        if build_index:
             index, sync_index = cls.build_index(
                 path, partition_ids, index_columns, storage_options
             )
-        else:
-            import pandas
-
-            index = pandas.RangeIndex(
-                index_columns[0]["start"],
-                index_columns[0]["stop"],
-                index_columns[0]["step"],
-            )
-            sync_index = False
-        remote_parts = cls.build_partition(partition_ids, column_widths)
+        remote_parts = cls.build_partition(partition_ids, column_widths, lengths)
         if len(partition_ids) > 0:
-            if "row_group_sizes" not in kwargs:
-                row_lengths = [part.length() for part in remote_parts.T[0]]
-            else:
-                row_lengths = kwargs["row_group_sizes"]
+            row_lengths = [part.length() for part in remote_parts.T[0]]
         else:
             row_lengths = None
         frame = cls.frame_cls(
@@ -448,15 +473,6 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             if dataset.schema.pandas_metadata
             else []
         )
-        if (
-            index_columns is not []
-            and len(index_columns) == 1
-            and isinstance(index_columns[0], dict)
-        ):
-            row_group_sizes = [
-                group.num_rows for group in dataset.fragments[0].row_groups
-            ]
-            kwargs["row_group_sizes"] = row_group_sizes
         # If we have columns as None, then we default to reading in all the columns
         column_names = dataset.schema.names if not columns else columns
         columns = [

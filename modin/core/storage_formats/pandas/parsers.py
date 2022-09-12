@@ -654,11 +654,14 @@ class ParquetFileToRead(NamedTuple):
         Row group to start read from.
     row_group_end : int
         Row group to stop read.
+    index : pandas.RangeIndex, optional
+        Start, end and step numbers.
     """
 
     path: Any
     row_group_start: int
     row_group_end: int
+    index: pandas.RangeIndex = None
 
 
 @doc(_doc_pandas_parser_class, data_type="PARQUET data")
@@ -701,13 +704,8 @@ class PandasParquetParser(PandasParser):
                     )
                     .to_pandas()
                 )
-                if "row_group_sizes" in kwargs:
-                    row_group_sizes = kwargs["row_group_sizes"]
-                    start = sum(row_group_sizes[: file_for_parser.row_group_start])
-                    end = sum(row_group_sizes[: file_for_parser.row_group_end])
-                    # for now step=1, hack
-                    step = 1
-                    chunk.index = pandas.RangeIndex(start, end, step)
+                if file_for_parser.index is not None:
+                    chunk.index = file_for_parser.index
             chunks.append(chunk)
         df = pandas.concat(chunks)
         return df, df.index, len(df)
