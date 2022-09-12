@@ -98,7 +98,8 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             func, f_args, f_kwargs = call_queue[0]
             futures = DaskWrapper.deploy(
                 func=apply_func,
-                f_args=(self._data, func, f_args, f_kwargs),
+                f_args=(self._data, func, *f_args),
+                f_kwargs=f_kwargs,
                 num_returns=2,
                 pure=False,
             )
@@ -155,7 +156,8 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             func, f_args, f_kwargs = call_queue[0]
             futures = DaskWrapper.deploy(
                 func=apply_func,
-                f_args=(self._data, func, f_args, f_kwargs),
+                f_args=(self._data, func, *f_args),
+                f_kwargs=f_kwargs,
                 num_returns=2,
                 pure=False,
             )
@@ -300,7 +302,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         return self._ip_cache
 
 
-def apply_func(partition, func, f_args, f_kwargs):
+def apply_func(partition, func, *args, **kwargs):
     """
     Execute a function on the partition in a worker process.
 
@@ -310,9 +312,9 @@ def apply_func(partition, func, f_args, f_kwargs):
         A pandas DataFrame the function needs to be executed on.
     func : callable
         The function to perform.
-    f_args : list
+    args : list
         Positional arguments to pass to ``func``.
-    f_kwargs : dict
+    kwargs : dict
         Keyword arguments to pass to ``func``.
 
     Returns
@@ -327,7 +329,7 @@ def apply_func(partition, func, f_args, f_kwargs):
     Directly passing a call queue entry (i.e. a list of [func, args, kwargs]) instead of
     destructuring it causes a performance penalty.
     """
-    result = func(partition, *f_args, **f_kwargs)
+    result = func(partition, *args, **kwargs)
     return result, get_ip()
 
 
