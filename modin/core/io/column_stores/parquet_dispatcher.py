@@ -337,7 +337,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             raise ValueError("engine must be one of 'pyarrow', 'fastparquet'")
 
     @classmethod
-    def call_deploy(cls, dataset, col_partitions, storage_options, range_index, **kwargs):
+    def call_deploy(
+        cls, dataset, col_partitions, storage_options, range_index, **kwargs
+    ):
         """
         Deploy remote tasks to the workers with passed parameters.
 
@@ -578,9 +580,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         build_index = True
         sync_index = False
         if len(index_columns) == 1 and isinstance(index_columns[0], dict):
-            index, sync_index = cls.build_index(
-                dataset, None, index_columns, storage_options
-            )
+            index, sync_index = cls.build_index(dataset, None, index_columns)
             build_index = False
             sync_index = False
         partition_ids, lengths = cls.call_deploy(
