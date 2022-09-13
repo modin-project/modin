@@ -852,12 +852,8 @@ class PandasDataframe(ClassLogger):
                         row_internal_indices, col_internal_indices
                     )
                     for col_idx, col_internal_indices in col_partitions_dict.items()
-                    if isinstance(col_internal_indices, slice)
-                    or len(col_internal_indices) > 0
                 ]
                 for row_idx, row_internal_indices in row_partitions_dict.items()
-                if isinstance(row_internal_indices, slice)
-                or len(row_internal_indices) > 0
             ]
         )
         intermediate = self.__constructor__(
@@ -1343,6 +1339,12 @@ class PandasDataframe(ClassLogger):
         if isinstance(indices, list):
             # Converting python list to numpy for faster processing
             indices = np.array(indices, dtype=np.int64)
+        # Fasttrack empty numpy array
+        if isinstance(indices, np.ndarray) and indices.size == 0:
+            # This will help preserve metadata stored in empty dataframes (indexes and dtypes)
+            # Otherwise, we will get an empty `new_partitions` array, from which it will
+            #  no longer be possible to obtain metadata
+            return OrderedDict([(0, np.array([], dtype=np.int64))])
         negative_mask = np.less(indices, 0)
         has_negative = np.any(negative_mask)
         if has_negative:
