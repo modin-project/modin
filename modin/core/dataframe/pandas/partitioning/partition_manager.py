@@ -365,7 +365,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         """
 
         def map_func(df, *others):
-            other = pandas.concat(others, axis=axis ^ 1)
+            other = (
+                pandas.concat(others, axis=axis ^ 1) if len(others) > 1 else others[0]
+            )
             return apply_func(df, **{other_name: other})
 
         map_func = cls.preprocess_func(map_func)
@@ -599,6 +601,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         -------
         np.ndarray
             A new NumPy array with concatenated partitions.
+        list[int] or None
+            Row lengths if possible to compute it.
 
         Notes
         -----
@@ -623,7 +627,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         if axis == 0:
             return cls.rebalance_partitions(result)
         else:
-            return result
+            return result, None
 
     @classmethod
     def to_pandas(cls, partitions):
@@ -1261,9 +1265,14 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def binary_operation(cls, left, func, right):
-        """
-        Apply a function that requires two ``PandasDataframe`` objects.
+    def n_ary_operation(cls, left, func, right: list):
+        r"""
+        Apply an n-ary operation to multiple ``PandasDataframe`` objects.
+
+        This method assumes that all the partitions of the dataframes in left
+        and right have the same dimensions. For each position i, j in each
+        dataframe's partitions, the result has a partition at (i, j) whose data
+        is func(left_partitions[i,j], \*each_right_partitions[i,j]).
 
         Parameters
         ----------
@@ -1271,23 +1280,34 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             The partitions of left ``PandasDataframe``.
         func : callable
             The function to apply.
-        right : np.ndarray
-            The partitions of right ``PandasDataframe``.
+        right : list of np.ndarray
+            The list of partitions of other ``PandasDataframe``.
 
         Returns
         -------
         np.ndarray
             A NumPy array with new partitions.
         """
-        [part.drain_call_queue() for part in right.flatten()]
-
         func = cls.preprocess_func(func)
+
+        def get_right_block(right_partitions, row_idx, col_idx):
+            blocks = right_partitions[row_idx][col_idx].list_of_blocks
+            # TODO Resolve this assertion as a part of #4691, because the current implementation assumes
+            # that partition contains only 1 block.
+            assert (
+                len(blocks) == 1
+            ), f"Implementation assumes that partition contains only 1 block, but {len(blocks)} recieved."
+            return blocks[0]
+
         return np.array(
             [
                 [
                     part.apply(
                         func,
-                        right[row_idx][col_idx]._data,
+                        *(
+                            get_right_block(right_partitions, row_idx, col_idx)
+                            for right_partitions in right
+                        ),
                     )
                     for col_idx, part in enumerate(left[row_idx])
                 ]
@@ -1331,6 +1351,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         np.ndarray
             A NumPy array with the same; or new, rebalanced, partitions, depending on the execution
             engine and storage format.
+        list[int] or None
+            Row lengths if possible to compute it.
         """
         if Engine.get() in ["Ray", "Dask"] and StorageFormat.get() == "Pandas":
             # Rebalancing partitions is currently only implemented for PandasOnRay and PandasOnDask.
@@ -1344,7 +1366,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 num_existing_partitions
                 <= ideal_num_new_partitions * max_excess_of_num_partitions
             ):
-                return partitions
+                return partitions, None
             # If any partition has an unknown length, give each axis partition
             # roughly the same number of row partitions. We use `_length_cache` here
             # to avoid materializing any unmaterialized lengths.
@@ -1359,7 +1381,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 chunk_size = compute_chunksize(
                     num_existing_partitions, ideal_num_new_partitions, min_block_size=1
                 )
-                return np.array(
+                new_partitions = np.array(
                     [
                         cls.column_partitions(
                             partitions[i : i + chunk_size],
@@ -1372,6 +1394,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                         )
                     ]
                 )
+                return new_partitions, None
 
             # If we know the number of rows in every partition, then we should try
             # instead to give each new partition roughly the same number of rows.
@@ -1403,9 +1426,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 # new partition have length `ideal_partition_size`, and the second
                 # partition has the remainder.
                 if partition_size > ideal_partition_size * max_excess_of_num_partitions:
-                    new_last_partition_size = ideal_partition_size - sum(
-                        row[0].length() for row in partitions[start:stop]
-                    )
+                    prev_length = sum(row[0].length() for row in partitions[start:stop])
+                    new_last_partition_size = ideal_partition_size - prev_length
                     partitions = np.insert(
                         partitions,
                         stop + 1,
@@ -1415,17 +1437,32 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                         ],
                         0,
                     )
+                    # TODO: explicit `_length_cache` computing may be avoided after #4903 is merged
+                    for obj in partitions[stop + 1]:
+                        obj._length_cache = partition_size - (
+                            prev_length + new_last_partition_size
+                        )
+
                     partitions[stop, :] = [
                         obj.mask(slice(None, new_last_partition_size), slice(None))
                         for obj in partitions[stop]
                     ]
+                    # TODO: explicit `_length_cache` computing may be avoided after #4903 is merged
+                    for obj in partitions[stop]:
+                        obj._length_cache = new_last_partition_size
+
                     partition_size = ideal_partition_size
+                # The new virtual partitions are not `full_axis`, even if they
+                # happen to span all rows in the dataframe, because they are
+                # meant to be the final partitions of the dataframe. They've
+                # already been split up correctly along axis 0, but using the
+                # default full_axis=True would cause partition.apply() to split
+                # its result along axis 0.
                 new_partitions.append(
-                    cls.column_partitions(
-                        (partitions[start : stop + 1]),
-                        full_axis=partition_size == total_rows,
-                    )
+                    cls.column_partitions(partitions[start : stop + 1], full_axis=False)
                 )
                 start = stop + 1
-            return np.array(new_partitions)
-        return partitions
+            new_partitions = np.array(new_partitions)
+            lengths = [part.length() for part in new_partitions[:, 0]]
+            return new_partitions, lengths
+        return partitions, None

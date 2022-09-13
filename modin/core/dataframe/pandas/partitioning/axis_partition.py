@@ -28,6 +28,22 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
     Because much of the code is similar, this allows us to reuse this code.
     """
 
+    @property
+    def list_of_blocks(self):
+        """
+        Get the list of physical partition objects that compose this partition.
+
+        Returns
+        -------
+        list
+            A list of physical partition objects (``ray.ObjectRef``, ``distributed.Future`` e.g.).
+        """
+        # Defer draining call queue (which is hidden in `partition.list_of_blocks` call) until we get the partitions.
+        # TODO Look into draining call queue at the same time as the task
+        return [
+            partition.list_of_blocks[0] for partition in self.list_of_block_partitions
+        ]
+
     def apply(
         self,
         func,
@@ -135,7 +151,11 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         # args into kwargs. This is a bit of a hack, but it works.
         result = func(dataframe, *kwargs.pop("args", ()), **kwargs)
 
-        if manual_partition:
+        if num_splits == 1:
+            # If we're not going to split the result, we don't need to specify
+            # split lengths.
+            lengths = None
+        elif manual_partition:
             # The split function is expecting a list
             lengths = list(lengths)
         # We set lengths to None so we don't use the old lengths for the resulting partition
@@ -209,3 +229,22 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         # for func, we fold args into kwargs. This is a bit of a hack, but it works.
         result = func(lt_frame, rt_frame, *kwargs.pop("args", ()), **kwargs)
         return split_result_of_axis_func_pandas(axis, num_splits, result)
+
+    @classmethod
+    def drain(cls, df: pandas.DataFrame, call_queue: list):
+        """
+        Execute all operations stored in the call queue on the pandas object (helper function).
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+        call_queue : list
+            Call queue that needs to be executed on pandas DataFrame.
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
+        for func, args, kwargs in call_queue:
+            df = func(df, *args, **kwargs)
+        return df

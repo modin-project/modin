@@ -117,7 +117,7 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
             ]
         )
 
-    def mask(
+    def take_2d_labels_or_positional(
         self,
         row_labels: Optional[List[Hashable]] = None,
         row_positions: Optional[List[int]] = None,
@@ -273,40 +273,17 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
             new_col_widths,
             new_dtypes,
         )
-        # Check if monotonically increasing, return if it is. Fast track code path for
-        # common case to keep it fast.
-        if (
-            row_positions is None
-            or isinstance(row_positions, slice)
-            or len(row_positions) == 1
-            or np.all(row_positions[1:] >= row_positions[:-1])
-        ) and (
-            col_positions is None
-            or isinstance(col_positions, slice)
-            or len(col_positions) == 1
-            or np.all(col_positions[1:] >= col_positions[:-1])
-        ):
-            return intermediate
-        # The new labels are often smaller than the old labels, so we can't reuse the
-        # original order values because those were mapped to the original data. We have
-        # to reorder here based on the expected order from within the data.
-        # We create a dictionary mapping the position of the numeric index with respect
-        # to all others, then recreate that order by mapping the new order values from
-        # the old. This information is sent to `_reorder_labels`.
+
+        sorted_row_positions = sorted_col_positions = None
         if row_positions is not None:
-            row_order_mapping = dict(
-                zip(sorted(row_positions), range(len(row_positions)))
-            )
-            new_row_order = [row_order_mapping[idx] for idx in row_positions]
-        else:
-            new_row_order = None
+            sorted_row_positions = sorted(row_positions)
         if col_positions is not None:
-            col_order_mapping = dict(
-                zip(sorted(col_positions), range(len(col_positions)))
-            )
-            new_col_order = [col_order_mapping[idx] for idx in col_positions]
-        else:
-            new_col_order = None
-        return intermediate._reorder_labels(
-            row_positions=new_row_order, col_positions=new_col_order
+            sorted_col_positions = sorted(col_positions)
+
+        return self._maybe_reorder_labels(
+            intermediate,
+            row_positions,
+            sorted_row_positions,
+            col_positions,
+            sorted_col_positions,
         )

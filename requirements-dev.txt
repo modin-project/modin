@@ -1,4 +1,4 @@
-pandas==1.4.3
+pandas==1.4.4
 numpy>=1.18.5
 pyarrow>=4.0.1
 dask[complete]>=2.22.0
@@ -31,7 +31,8 @@ scikit-learn
 git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
 xgboost>=1.6.0
 tqdm
-modin-spreadsheet>=0.1.1
+# Latest modin-spreadsheet with widget fix
+git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
 pymssql
 psycopg2
 connectorx>=0.2.6a4
@@ -44,3 +45,4 @@ numpydoc==1.1.0
 fuzzydata>=0.0.6
 mypy
 pandas-stubs
+fastparquet

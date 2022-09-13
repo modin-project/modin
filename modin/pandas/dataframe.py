@@ -1697,7 +1697,6 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         )
 
     product = DataFrameCompat.prod
-    radd = add
 
     def query(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
         """
@@ -1789,6 +1788,21 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         """
         return self._binary_op(
             "rfloordiv",
+            other,
+            axis=axis,
+            level=level,
+            fill_value=fill_value,
+            broadcast=isinstance(other, Series),
+        )
+
+    def radd(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get addition of ``DataFrame`` and `other`, element-wise (binary operator `radd`).
+        """
+        return self._binary_op(
+            "radd",
             other,
             axis=axis,
             level=level,
@@ -2265,7 +2279,6 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
                 try_cast=try_cast,
             )
             return self._create_or_update_from_compiler(new_query_compiler, inplace)
-        axis = self._get_axis_number(axis)
         cond = cond(self) if callable(cond) else cond
 
         if not isinstance(cond, DataFrame):
@@ -2276,11 +2289,46 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             cond = DataFrame(cond, index=self.index, columns=self.columns)
         if isinstance(other, DataFrame):
             other = other._query_compiler
-        elif isinstance(other, pandas.Series):
-            other = other.reindex(self.index if not axis else self.columns)
         else:
-            index = self.index if not axis else self.columns
-            other = pandas.Series(other, index=index)
+            """
+            Only infer the axis number when ``other`` will be made into a
+            series. When ``other`` is a dataframe, axis=None has a meaning
+            distinct from 0 and 1, e.g. at pandas 1.4.3:
+
+            import pandas as pd
+            df = pd.DataFrame([[1,2], [3, 4]], index=[1, 0])
+            cond = pd.DataFrame([[True,False], [False, True]], columns=[1, 0])
+            other = pd.DataFrame([[5,6], [7,8]], columns=[1, 0])
+
+            print(df.where(cond, other, axis=None))
+            0  1
+            1  1  7
+            0  6  4
+
+            print(df.where(cond, other, axis=0))
+
+            0  1
+            1  1  8
+            0  5  4
+
+            print(df.where(cond, other, axis=1))
+
+            0  1
+            1  1  5
+            0  8  4
+            """
+            # _get_axis_number interprets no_default as None, but where doesn't
+            # accept no_default.
+            if axis == no_default:
+                raise ValueError(
+                    "No axis named NoDefault.no_default for object type DataFrame"
+                )
+            axis = self._get_axis_number(axis)
+            if isinstance(other, pandas.Series):
+                other = other.reindex(self.index if axis == 0 else self.columns)
+            elif is_list_like(other):
+                index = self.index if axis == 0 else self.columns
+                other = pandas.Series(other, index=index)
         query_compiler = self._query_compiler.where(
             cond._query_compiler, other, axis=axis, level=level
         )

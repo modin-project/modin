@@ -17,7 +17,7 @@ import pyarrow as pa
 import numpy as np
 import functools
 
-from modin.core.dataframe.base.exchange.dataframe_protocol.utils import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
     ArrowCTypes,
     pandas_dtype_to_arrow_c,
     raise_copy_alert,

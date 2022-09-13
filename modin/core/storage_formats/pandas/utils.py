@@ -87,27 +87,21 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
     list of pandas.DataFrames
         Splitted dataframe represented by list of frames.
     """
-    if length_list is not None:
-        length_list.insert(0, 0)
-        sums = np.cumsum(length_list)
-        if axis == 0 or isinstance(result, pandas.Series):
-            return [result.iloc[sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
-        else:
-            return [result.iloc[:, sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
-
     if num_splits == 1:
         return [result]
-    # We do this to restore block partitioning
-    chunksize = compute_chunksize(result.shape[axis], num_splits)
-    if axis == 0 or isinstance(result, pandas.Series):
-        return [
-            result.iloc[chunksize * i : chunksize * (i + 1)] for i in range(num_splits)
-        ]
+
+    if length_list is not None:
+        length_list.insert(0, 0)
     else:
-        return [
-            result.iloc[:, chunksize * i : chunksize * (i + 1)]
-            for i in range(num_splits)
-        ]
+        chunksize = compute_chunksize(result.shape[axis], num_splits)
+        length_list = np.full(num_splits + 1, chunksize)
+        length_list[0] = 0
+    sums = np.cumsum(length_list)
+    # We do this to restore block partitioning
+    if axis == 0 or isinstance(result, pandas.Series):
+        return [result.iloc[sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
+    else:
+        return [result.iloc[:, sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
 
 
 def length_fn_pandas(df):

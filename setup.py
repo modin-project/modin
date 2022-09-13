@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 import versioneer
 import sys
 
-PANDAS_VERSION = "1.4.3" if sys.version_info >= (3, 8) else "1.1.5"
+PANDAS_VERSION = "1.4.4" if sys.version_info >= (3, 8) else "1.1.5"
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()

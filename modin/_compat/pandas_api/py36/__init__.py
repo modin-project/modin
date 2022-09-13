@@ -14,9 +14,15 @@
 from .base import Python36CompatibleBasePandasDataset
 from .dataframe import Python36CompatibleDataFrame
 from .series import Python36CompatibleSeries
+from .groupby import Python36CompatibleDataFrameGroupBy, Python36CompatibleSeriesGroupBy
+from .window import Python36CompatibleWindow, Python36CompatibleRolling
 
 __all__ = [
     "Python36CompatibleBasePandasDataset",
     "Python36CompatibleDataFrame",
     "Python36CompatibleSeries",
+    "Python36CompatibleDataFrameGroupBy",
+    "Python36CompatibleSeriesGroupBy",
+    "Python36CompatibleWindow",
+    "Python36CompatibleRolling",
 ]

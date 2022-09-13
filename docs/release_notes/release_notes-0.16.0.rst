@@ -31,7 +31,22 @@ Key Features and Updates
   * FIX-#4756: Correctly propagate `storage_options` in `read_parquet` (#4764)
   * FIX-#4657: Use `fsspec` for handling s3/http-like paths instead of `s3fs` (#4710)
   * FIX-#4676: drain sub-virtual-partition call queues (#4695)
-  * FIX-#4782: Exclude certain non-parquet files in `read_parquet` (#4783)    
+  * FIX-#4782: Exclude certain non-parquet files in `read_parquet` (#4783)
+  * FIX-#4808: Set dtypes correctly after column rename (#4809)
+  * FIX-#4811: Apply dataframe -> not_dataframe functions to virtual partitions (#4812)
+  * FIX-#4099: Use mangled column names but keep the original when building frames from arrow (#4767)
+  * FIX-#4838: Bump up modin-spreadsheet to latest master (#4839)
+  * FIX-#4840: Change modin-spreadsheet version for notebook requirements (#4841)
+  * FIX-#4835: Handle Pathlike paths in `read_parquet` (#4837)
+  * FIX-#4872: Stop checking the private ray mac memory limit (#4873)
+  * FIX-#4914: `base_lengths` should be computed from `base_frame` instead of `self` in `copartition` (#4915)
+  * FIX-#4848: Fix rebalancing partitions when NPartitions == 1 (#4874)
+  * FIX-#4927: Fix `dtypes` computation in `dataframe.filter` (#4928)
+  * FIX-#4907: Implement `radd` for Series and DataFrame (#4908)
+  * FIX-#4818, PERF-#4825: Fix where by using the new n-ary operator (#4820)
+  * FIX-#3983: FIX-#4107: Materialize 'rowid' columns when selecting rows by position (#4834)
+  * FIX-#4845: Fix KeyError from `__getitem_bool` for single row dataframes (#4845)
+  * FIX-#4734: Handle Series.apply when return type is a DataFrame (#4830)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
@@ -44,7 +59,22 @@ Key Features and Updates
   * PERF-#4305: Parallelize `read_parquet` over row groups (#4700)
   * PERF-#4773: Compute `lengths` and `widths` in `put` method of Dask partition like Ray do (#4780)
   * PERF-#4732: Avoid overwriting already-evaluated `PandasOnRayDataframePartition._length_cache` and `PandasOnRayDataframePartition._width_cache` (#4754)
+  * PERF-#4862: Don't call `compute_sliced_len.remote` when `row_labels/col_labels == slice(None)` (#4863)
   * PERF-#4713: Stop overriding the ray MacOS object store size limit (#4792)
+  * PERF-#4851: Compute `dtypes` for binary operations that can only return bool type and the right operand is not a Modin object (#4852)
+  * PERF-#4842: `copy` should not trigger any previous computations (#4843)
+  * PERF-#4849: Compute `dtypes` in `concat` also for ROW_WISE case when possible (#4850)
+  * PERF-#4929: Compute `dtype` when using `Series.dt` accessor (#4930)
+  * PERF-#4892: Compute `lengths` in `rebalance_partitions` when possible (#4893)
+  * PERF-#4794: Compute caches in `_propagate_index_objs` (#4888)
+  * PERF-#4860: `PandasDataframeAxisPartition.deploy_axis_func` should be serialized only once (#4861)
+  * PERF-#4890: `PandasDataframeAxisPartition.drain` should be serialized only once (#4891)
+  * PERF-#4870: Avoid index materialization in `__getattribute__` and `__getitem__` (4911)
+  * PERF-#4886: Use lazy index and columns evaluation in `query` method (#4887)
+  * PERF-#4866: `iloc` function that used in `partition.mask` should be serialized only once (#4901)
+  * PERF-#4920: Avoid index and cache computations in `take_2d_labels_or_positional` unless they are needed (#4921)
+  * PERF-#4268: Implement partition-parallel __getitem__ for bool Series masks (#4753)
+  * PERF-#4940: Optimize categorical dtype check in `concatenate` (#4953)
 * Benchmarking enhancements
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
 * Refactor Codebase
@@ -57,11 +87,18 @@ Key Features and Updates
   * REFACTOR-#4774: remove `_build_treereduce_func` call from `_compute_dtypes` (#4775)
   * REFACTOR-#4750: Delete BaseDataframeAxisPartition.shuffle (#4751)
   * REFACTOR-#4722: Stop suppressing undefined name lint (#4723)
+  * REFACTOR-#4832: unify `split_result_of_axis_func_pandas` (#4831)
   * REFACTOR-#4796: Introduce constant for __reduced__ column name (#4799)
+  * REFACTOR-#4000: Remove code duplication for `PandasOnRayDataframePartitionManager` (#4895)
+  * REFACTOR-#3780: Remove code duplication for `PandasOnDaskDataframe` (#3781)
+  * REFACTOR-#4530: Unify access to physical data for any partition type (#4829)
+  * REFACTOR-#4885: De-duplicated take_2d_labels_or_positional methods (#4883)
+  * REFACTOR-#4942: Remove `call` method in favor of `register` due to duplication (4943)
+  * REFACTOR-#4922: Helpers for take_2d_labels_or_positional (#4865)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements
-  *
+  * FEAT-#4913: Enabling pyhdk
 * XGBoost enhancements
   *
 * Developer API enhancements
@@ -71,9 +108,11 @@ Key Features and Updates
   * TEST-#4550: Use much less data in test_partition_api (#4554)
   * TEST-#4610: Remove explicit installation of `black`/`flake8` for omnisci ci-notebooks (#4609)
   * TEST-#2564: Add caching and use mamba for conda setups in GH (#4607)
-  * TEST-#4557: Delete multiindex sorts instead of xfailing (#4559)  
+  * TEST-#4557: Delete multiindex sorts instead of xfailing (#4559)
   * TEST-#4698: Stop passing invalid storage_options param (#4699)
   * TEST-#4745: Pin flake8 to <5 to workaround installation conflict (#4752)
+  * TEST-#4875: XFail tests failing due to file gone missing (#4876)
+  * TEST-#4879: Use pandas `ensure_clean()` in place of `io_tests_data` (#4881)
 * Documentation improvements
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
   * DOCS-#4628: Add to_parquet partial support notes (#4648)
@@ -84,12 +123,18 @@ Key Features and Updates
   * FEAT-#4598: Add support for pandas 1.4.3 (#4599)
   * FEAT-#4619: Integrate mypy static type checking (#4620)
   * FEAT-#4202: Allow dask past 2022.2.0 (#4769)
+  * FEAT-#4925: Upgrade pandas to 1.4.4 (#4926)
 * New Features
   * FEAT-4463: Add experimental fuzzydata integration for testing against a randomized dataframe workflow (#4556)
   * FEAT-#4419: Extend virtual partitioning API to pandas on Dask (#4420)
   * FEAT-#4147: Add partial compatibility with Python 3.6 and pandas 1.1 (#4301)
   * FEAT-#4569: Add error message when `read_` function defaults to pandas (#4647)
   * FEAT-#4725: Make index and columns lazy in Modin DataFrame (#4726)
+  * FEAT-#4664: Finalize compatibility support for Python 3.6 (#4800)
+  * FEAT-#4746: Sync interchange protocol with recent API changes (#4763)
+  * FEAT-#4733: Support fastparquet as engine for `read_parquet` (#4807)
+  * FEAT-#4766: Support fsspec URLs in `read_csv` and `read_csv_glob` (#4898)
+  * FEAT-#4827: Implement `infer_types` dataframe algebra operator (#4871)
 
 Contributors
 ------------
@@ -108,3 +153,6 @@ Contributors
 @YarShev
 @naren-ponder
 @jbrockmendel
+@ienkovich
+@Garra1980
+@Billy2551

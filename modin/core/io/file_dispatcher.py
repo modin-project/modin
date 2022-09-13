@@ -23,9 +23,9 @@ import os
 from modin.config import StorageFormat
 from modin.logging import ClassLogger
 import numpy as np
+from pandas.io.common import is_url, is_fsspec_url
 
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
-_SUPPORTED_PROTOCOLS = {"s3", "S3", "http", "https"}
 
 
 class OpenFile:
@@ -208,12 +208,10 @@ class FileDispatcher(ClassLogger):
 
         Notes
         -----
-        if `file_path` is an S3 bucket, parameter will be returned as is, otherwise
+        if `file_path` is a URL, parameter will be returned as is, otherwise
         absolute path will be returned.
         """
-        if isinstance(file_path, str) and (
-            fsspec.core.split_protocol(file_path)[0] in _SUPPORTED_PROTOCOLS
-        ):
+        if is_fsspec_url(file_path) or is_url(file_path):
             return file_path
         else:
             return os.path.abspath(file_path)
@@ -257,14 +255,8 @@ class FileDispatcher(ClassLogger):
         bool
             Whether file exists or not.
         """
-        if (
-            not isinstance(file_path, str)
-            or fsspec.core.split_protocol(file_path)[0] not in _SUPPORTED_PROTOCOLS
-        ):
+        if not is_fsspec_url(file_path) and not is_url(file_path):
             return os.path.exists(file_path)
-
-        # `file_path` may start with a capital letter, which isn't supported by `fsspec.core.url_to_fs` used below.
-        file_path = file_path[0].lower() + file_path[1:]
 
         from botocore.exceptions import (
             NoCredentialsError,

@@ -29,6 +29,7 @@ from pandas.core.dtypes.common import (
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
     is_datetime64_any_dtype,
+    is_bool_dtype,
 )
 from pandas.core.base import DataError
 from collections.abc import Iterable
@@ -254,6 +255,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             return result
 
+    @property
+    def lazy_execution(self):
+        """
+        Whether underlying Modin frame should be executed in a lazy mode.
+
+        If True, such QueryCompiler will be handled differently at the front-end in order
+        to reduce triggering the computation as much as possible.
+
+        Returns
+        -------
+        bool
+        """
+        frame = self._modin_frame
+        return frame._index_cache is None or frame._columns_cache is None
+
     def finalize(self):
         self._modin_frame.finalize()
 
@@ -380,6 +396,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     mul = Binary.register(pandas.DataFrame.mul)
     ne = Binary.register(pandas.DataFrame.ne)
     pow = Binary.register(pandas.DataFrame.pow)
+    radd = Binary.register(pandas.DataFrame.radd)
     rfloordiv = Binary.register(pandas.DataFrame.rfloordiv)
     rmod = Binary.register(pandas.DataFrame.rmod)
     rpow = Binary.register(pandas.DataFrame.rpow)
@@ -410,23 +427,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
             cond, type(self)
         ), "Must have the same QueryCompiler subclass to perform this operation"
         if isinstance(other, type(self)):
-            # Note: Currently we are doing this with two maps across the entire
-            # data. This can be done with a single map, but it will take a
-            # modification in the `BlockPartition` class.
-            # If this were in one pass it would be ~2x faster.
-            # TODO (devin-petersohn) rewrite this to take one pass.
-            def where_builder_first_pass(cond, other, **kwargs):
-                return cond.where(cond, other, **kwargs)
-
-            first_pass = cond._modin_frame.binary_op(
-                where_builder_first_pass, other._modin_frame, join_type="left"
-            )
-
-            def where_builder_second_pass(df, new_other, **kwargs):
-                return df.where(new_other.eq(True), new_other, **kwargs)
-
-            new_modin_frame = self._modin_frame.binary_op(
-                where_builder_second_pass, first_pass, join_type="left"
+            # Make sure to set join_type=None so the `where` result always has
+            # the same row and column labels as `self`.
+            new_modin_frame = self._modin_frame.n_ary_op(
+                lambda df, cond, other: df.where(cond, other, **kwargs),
+                [
+                    cond._modin_frame,
+                    other._modin_frame,
+                ],
+                join_type=None,
             )
         # This will be a Series of scalars to be applied based on the condition
         # dataframe.
@@ -435,8 +444,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def where_builder_series(df, cond):
                 return df.where(cond, other, **kwargs)
 
-            new_modin_frame = self._modin_frame.binary_op(
-                where_builder_series, cond._modin_frame, join_type="left"
+            new_modin_frame = self._modin_frame.n_ary_op(
+                where_builder_series, [cond._modin_frame], join_type="left"
             )
         return self.__constructor__(new_modin_frame)
 
@@ -1446,32 +1455,34 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Dt map partitions operations
 
-    dt_date = Map.register(_dt_prop_map("date"))
-    dt_time = Map.register(_dt_prop_map("time"))
-    dt_timetz = Map.register(_dt_prop_map("timetz"))
-    dt_year = Map.register(_dt_prop_map("year"))
-    dt_month = Map.register(_dt_prop_map("month"))
-    dt_day = Map.register(_dt_prop_map("day"))
-    dt_hour = Map.register(_dt_prop_map("hour"))
-    dt_minute = Map.register(_dt_prop_map("minute"))
-    dt_second = Map.register(_dt_prop_map("second"))
-    dt_microsecond = Map.register(_dt_prop_map("microsecond"))
-    dt_nanosecond = Map.register(_dt_prop_map("nanosecond"))
-    dt_week = Map.register(_dt_prop_map("week"))
-    dt_weekofyear = Map.register(_dt_prop_map("weekofyear"))
-    dt_dayofweek = Map.register(_dt_prop_map("dayofweek"))
-    dt_weekday = Map.register(_dt_prop_map("weekday"))
-    dt_dayofyear = Map.register(_dt_prop_map("dayofyear"))
-    dt_quarter = Map.register(_dt_prop_map("quarter"))
-    dt_is_month_start = Map.register(_dt_prop_map("is_month_start"))
-    dt_is_month_end = Map.register(_dt_prop_map("is_month_end"))
-    dt_is_quarter_start = Map.register(_dt_prop_map("is_quarter_start"))
-    dt_is_quarter_end = Map.register(_dt_prop_map("is_quarter_end"))
-    dt_is_year_start = Map.register(_dt_prop_map("is_year_start"))
-    dt_is_year_end = Map.register(_dt_prop_map("is_year_end"))
-    dt_is_leap_year = Map.register(_dt_prop_map("is_leap_year"))
-    dt_daysinmonth = Map.register(_dt_prop_map("daysinmonth"))
-    dt_days_in_month = Map.register(_dt_prop_map("days_in_month"))
+    dt_date = Map.register(_dt_prop_map("date"), dtypes=np.object_)
+    dt_time = Map.register(_dt_prop_map("time"), dtypes=np.object_)
+    dt_timetz = Map.register(_dt_prop_map("timetz"), dtypes=np.object_)
+    dt_year = Map.register(_dt_prop_map("year"), dtypes=np.int64)
+    dt_month = Map.register(_dt_prop_map("month"), dtypes=np.int64)
+    dt_day = Map.register(_dt_prop_map("day"), dtypes=np.int64)
+    dt_hour = Map.register(_dt_prop_map("hour"), dtypes=np.int64)
+    dt_minute = Map.register(_dt_prop_map("minute"), dtypes=np.int64)
+    dt_second = Map.register(_dt_prop_map("second"), dtypes=np.int64)
+    dt_microsecond = Map.register(_dt_prop_map("microsecond"), dtypes=np.int64)
+    dt_nanosecond = Map.register(_dt_prop_map("nanosecond"), dtypes=np.int64)
+    dt_week = Map.register(_dt_prop_map("week"), dtypes=np.int64)
+    dt_weekofyear = Map.register(_dt_prop_map("weekofyear"), dtypes=np.int64)
+    dt_dayofweek = Map.register(_dt_prop_map("dayofweek"), dtypes=np.int64)
+    dt_weekday = Map.register(_dt_prop_map("weekday"), dtypes=np.int64)
+    dt_dayofyear = Map.register(_dt_prop_map("dayofyear"), dtypes=np.int64)
+    dt_quarter = Map.register(_dt_prop_map("quarter"), dtypes=np.int64)
+    dt_is_month_start = Map.register(_dt_prop_map("is_month_start"), dtypes=np.bool_)
+    dt_is_month_end = Map.register(_dt_prop_map("is_month_end"), dtypes=np.bool_)
+    dt_is_quarter_start = Map.register(
+        _dt_prop_map("is_quarter_start"), dtypes=np.bool_
+    )
+    dt_is_quarter_end = Map.register(_dt_prop_map("is_quarter_end"), dtypes=np.bool_)
+    dt_is_year_start = Map.register(_dt_prop_map("is_year_start"), dtypes=np.bool_)
+    dt_is_year_end = Map.register(_dt_prop_map("is_year_end"), dtypes=np.bool_)
+    dt_is_leap_year = Map.register(_dt_prop_map("is_leap_year"), dtypes=np.bool_)
+    dt_daysinmonth = Map.register(_dt_prop_map("daysinmonth"), dtypes=np.int64)
+    dt_days_in_month = Map.register(_dt_prop_map("days_in_month"), dtypes=np.int64)
 
     def dt_tz(self):
         def datetime_tz(df):
@@ -1486,23 +1497,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.default_to_pandas(datetime_freq)
 
     dt_to_period = Map.register(_dt_func_map("to_period"))
-    dt_to_pydatetime = Map.register(_dt_func_map("to_pydatetime"))
+    dt_to_pydatetime = Map.register(_dt_func_map("to_pydatetime"), dtypes=np.object_)
     dt_tz_localize = Map.register(_dt_func_map("tz_localize"))
     dt_tz_convert = Map.register(_dt_func_map("tz_convert"))
     dt_normalize = Map.register(_dt_func_map("normalize"))
-    dt_strftime = Map.register(_dt_func_map("strftime"))
+    dt_strftime = Map.register(_dt_func_map("strftime"), dtypes=np.object_)
     dt_round = Map.register(_dt_func_map("round"))
     dt_floor = Map.register(_dt_func_map("floor"))
     dt_ceil = Map.register(_dt_func_map("ceil"))
-    dt_month_name = Map.register(_dt_func_map("month_name"))
-    dt_day_name = Map.register(_dt_func_map("day_name"))
-    dt_to_pytimedelta = Map.register(_dt_func_map("to_pytimedelta"))
-    dt_total_seconds = Map.register(_dt_func_map("total_seconds"))
-    dt_seconds = Map.register(_dt_prop_map("seconds"))
-    dt_days = Map.register(_dt_prop_map("days"))
-    dt_microseconds = Map.register(_dt_prop_map("microseconds"))
-    dt_nanoseconds = Map.register(_dt_prop_map("nanoseconds"))
-    dt_qyear = Map.register(_dt_prop_map("qyear"))
+    dt_month_name = Map.register(_dt_func_map("month_name"), dtypes=np.object_)
+    dt_day_name = Map.register(_dt_func_map("day_name"), dtypes=np.object_)
+    dt_to_pytimedelta = Map.register(_dt_func_map("to_pytimedelta"), dtypes=np.object_)
+    dt_total_seconds = Map.register(_dt_func_map("total_seconds"), dtypes=np.float64)
+    dt_seconds = Map.register(_dt_prop_map("seconds"), dtypes=np.int64)
+    dt_days = Map.register(_dt_prop_map("days"), dtypes=np.int64)
+    dt_microseconds = Map.register(_dt_prop_map("microseconds"), dtypes=np.int64)
+    dt_nanoseconds = Map.register(_dt_prop_map("nanoseconds"), dtypes=np.int64)
+    dt_qyear = Map.register(_dt_prop_map("qyear"), dtypes=np.int64)
     dt_start_time = Map.register(_dt_prop_map("start_time"))
     dt_end_time = Map.register(_dt_prop_map("end_time"))
     dt_to_timestamp = Map.register(_dt_func_map("to_timestamp"))
@@ -1511,6 +1522,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def astype(self, col_dtypes, **kwargs):
         return self.__constructor__(self._modin_frame.astype(col_dtypes))
+
+    def infer_objects(self):
+        return self.__constructor__(self._modin_frame.infer_objects())
 
     # Column/Row partitions reduce operations
 
@@ -1887,8 +1901,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         # objects (when `limit` parameter is absent) as it works on two `Series`.
                         return series.fillna(value=value_arg, **kwargs)
 
-                    new_modin_frame = self._modin_frame.binary_op(
-                        fillna_builder, value._modin_frame, join_type="left"
+                    new_modin_frame = self._modin_frame.n_ary_op(
+                        fillna_builder, [value._modin_frame], join_type="left"
                     )
 
                 return self.__constructor__(new_modin_frame)
@@ -2149,23 +2163,38 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Map across rows/columns
 
     # __getitem__ methods
+    __getitem_bool = Binary.register(
+        # r is usually a list, but when r.size == 1, the array is squeezed to a scalar
+        lambda df, r: df[r] if r.size > 1 else df[[r]],
+        join_type="left",
+        labels="drop",
+    )
+
+    def __validate_bool_indexer(self, indexer):
+        if len(indexer) != len(self.index):
+            raise ValueError(
+                f"Item wrong length {len(indexer)} instead of {len(self.index)}."
+            )
+        if isinstance(indexer, pandas.Series) and not indexer.equals(self.index):
+            warnings.warn(
+                "Boolean Series key will be reindexed to match DataFrame index.",
+                PendingDeprecationWarning,
+                stacklevel=4,
+            )
+
     def getitem_array(self, key):
-        # TODO: dont convert to pandas for array indexing
         if isinstance(key, type(self)):
+            # here we check for a subset of bool indexers only to simplify the code;
+            # there could (potentially) be more of those, but we assume the most frequent
+            # ones are just of bool dtype
+            if len(key.dtypes) == 1 and is_bool_dtype(key.dtypes[0]):
+                self.__validate_bool_indexer(key.index)
+                return self.__getitem_bool(key, broadcast=True, dtypes="copy")
+
             key = key.to_pandas().squeeze(axis=1)
+
         if is_bool_indexer(key):
-            if isinstance(key, pandas.Series) and not key.index.equals(self.index):
-                warnings.warn(
-                    "Boolean Series key will be reindexed to match DataFrame index.",
-                    PendingDeprecationWarning,
-                    stacklevel=3,
-                )
-            elif len(key) != len(self.index):
-                raise ValueError(
-                    "Item wrong length {} instead of {}.".format(
-                        len(key), len(self.index)
-                    )
-                )
+            self.__validate_bool_indexer(key)
             key = check_bool_indexer(self.index, key)
             # We convert to a RangeIndex because getitem_row_array is expecting a list
             # of indices, and RangeIndex will give us the exact indices of each boolean
@@ -2189,13 +2218,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def getitem_column_array(self, key, numeric=False):
         # Convert to list for type checking
         if numeric:
-            new_modin_frame = self._modin_frame.mask(col_positions=key)
+            new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
+                col_positions=key
+            )
         else:
-            new_modin_frame = self._modin_frame.mask(col_labels=key)
+            new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
+                col_labels=key
+            )
         return self.__constructor__(new_modin_frame)
 
     def getitem_row_array(self, key):
-        return self.__constructor__(self._modin_frame.mask(row_positions=key))
+        return self.__constructor__(
+            self._modin_frame.take_2d_labels_or_positional(row_positions=key)
+        )
 
     def setitem(self, axis, key, value):
         return self._setitem(axis=axis, key=key, value=value, how=None)
@@ -2303,7 +2338,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             columns = np.sort(
                 self.columns.get_indexer_for(self.columns.difference(columns))
             )
-        new_modin_frame = self._modin_frame.mask(
+        new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
             row_positions=index, col_positions=columns
         )
         return self.__constructor__(new_modin_frame)
@@ -2374,6 +2409,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self._list_like_func(func, axis, *args, **kwargs)
         else:
             return self._callable_func(func, axis, *args, **kwargs)
+
+    def apply_on_series(self, func, *args, **kwargs):
+        args = try_cast_to_pandas(args)
+        kwargs = try_cast_to_pandas(kwargs)
+
+        assert self.is_series_like()
+
+        # We use apply_full_axis here instead of map since the latter assumes that the
+        # shape of the DataFrame does not change. However, it is possible for functions
+        # applied to Series objects to end up creating DataFrames. It is possible that
+        # using apply_full_axis is much less performant compared to using a variant of
+        # map.
+        return self.__constructor__(
+            self._modin_frame.apply_full_axis(
+                1, lambda df: df.squeeze(axis=1).apply(func, *args, **kwargs)
+            )
+        )
 
     def _dict_func(self, func, axis, *args, **kwargs):
         """
@@ -3096,7 +3148,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
             untouched_frame = None
         else:
-            new_modin_frame = self._modin_frame.mask(
+            new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_labels=columns
             ).apply_full_axis(
                 0, lambda df: pandas.get_dummies(df, **kwargs), new_index=self.index
@@ -3114,9 +3166,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Get_dummies
 
     # Indexing
-    def view(self, index=None, columns=None):
+    def take_2d(self, index=None, columns=None):
         return self.__constructor__(
-            self._modin_frame.mask(row_positions=index, col_positions=columns)
+            self._modin_frame.take_2d_labels_or_positional(
+                row_positions=index, col_positions=columns
+            )
         )
 
     def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):

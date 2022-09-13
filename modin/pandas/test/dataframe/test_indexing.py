@@ -15,6 +15,7 @@ import pytest
 import numpy as np
 import pandas
 from pandas.testing import assert_index_equal
+from pandas._testing import ensure_clean
 import matplotlib
 import modin.pandas as pd
 import sys
@@ -1894,13 +1895,13 @@ def test___setitem__partitions_aligning():
 
 
 def test___setitem__with_mismatched_partitions():
-    fname = "200kx99.csv"
-    np.savetxt(fname, np.random.randint(0, 100, size=(200_000, 99)), delimiter=",")
-    modin_df = pd.read_csv(fname)
-    pandas_df = pandas.read_csv(fname)
-    modin_df["new"] = pd.Series(list(range(len(modin_df))))
-    pandas_df["new"] = pandas.Series(list(range(len(pandas_df))))
-    df_equals(modin_df, pandas_df)
+    with ensure_clean(".csv") as fname:
+        np.savetxt(fname, np.random.randint(0, 100, size=(200_000, 99)), delimiter=",")
+        modin_df = pd.read_csv(fname)
+        pandas_df = pandas.read_csv(fname)
+        modin_df["new"] = pd.Series(list(range(len(modin_df))))
+        pandas_df["new"] = pandas.Series(list(range(len(pandas_df))))
+        df_equals(modin_df, pandas_df)
 
 
 def test___setitem__mask():
@@ -2110,3 +2111,9 @@ def test_multiindex_from_frame(data, sortorder):
             return pd.MultiIndex.from_frame(df, sortorder)
 
     eval_general(modin_df, pandas_df, call_from_frame, comparator=assert_index_equal)
+
+
+def test__getitem_bool_single_row_dataframe():
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/4845
+    eval_general(pd, pandas, lambda lib: lib.DataFrame([1])[lib.Series([True])])

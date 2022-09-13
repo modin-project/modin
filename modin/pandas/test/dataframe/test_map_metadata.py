@@ -205,6 +205,9 @@ def test_add_prefix(data):
     new_modin_df = modin_df.add_prefix(test_prefix)
     new_pandas_df = pandas_df.add_prefix(test_prefix)
     df_equals(new_modin_df.columns, new_pandas_df.columns)
+    # TODO(https://github.com/modin-project/modin/issues/3804):
+    # make df_equals always check dtypes.
+    df_equals(new_modin_df.dtypes, new_pandas_df.dtypes)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -565,6 +568,15 @@ def test_astype_category_large():
     modin_result = modin_df.astype("category")
     pandas_result = pandas_df.astype("category")
     df_equals(modin_result, pandas_result)
+    assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+
+def test_infer_objects_single_partition():
+    data = {"a": ["s", 2, 3]}
+    modin_df = pd.DataFrame(data).iloc[1:]
+    pandas_df = pandas.DataFrame(data).iloc[1:]
+    modin_result = modin_df.infer_objects()
+    pandas_result = pandas_df.infer_objects()
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 

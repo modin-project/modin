@@ -48,13 +48,13 @@ with test_cluster:
         # https://github.com/intel-ai/omniscripts/blob/7d4599bcacf51de876952c658048571d32275ac1/taxi/taxibench_pandas_ibis.py#L482
         import modin.experimental.engines.omnisci_on_native.frame.omnisci_worker
 
-        OmnisciServer = (
+        DbWorker = (
             get_connection()
-            .modules["modin.experimental.engines.omnisci_on_native.frame.omnisci_worker"]
-            .OmnisciServer
+            .modules["modin.experimental.engines.omnisci_on_native.frame.db_worker"]
+            .DbWorker
         )
-        modin.experimental.engines.omnisci_on_native.frame.omnisci_worker.OmnisciServer = (
-            OmnisciServer
+        modin.experimental.engines.omnisci_on_native.frame.omnisci_worker.DbWorker = (
+            DbWorker
         )
 
         # Omniscripts check for files being present when given local file paths,

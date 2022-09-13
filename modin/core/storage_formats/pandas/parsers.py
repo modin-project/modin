@@ -667,22 +667,52 @@ class ParquetFileToRead(NamedTuple):
 @doc(_doc_pandas_parser_class, data_type="PARQUET data")
 class PandasParquetParser(PandasParser):
     @staticmethod
+    def _read_row_group_chunk(
+        f, row_group_start, row_group_end, columns, engine
+    ):  # noqa: GL08
+        if engine == "pyarrow":
+            from pyarrow.parquet import ParquetFile
+
+            return (
+                ParquetFile(f)
+                .read_row_groups(
+                    range(
+                        row_group_start,
+                        row_group_end,
+                    ),
+                    columns=columns,
+                    use_pandas_metadata=True,
+                )
+                .to_pandas()
+            )
+        elif engine == "fastparquet":
+            from fastparquet import ParquetFile
+
+            return ParquetFile(f)[row_group_start:row_group_end].to_pandas(
+                columns=columns
+            )
+        else:
+            # We shouldn't ever come to this case, so something went wrong
+            raise ValueError(
+                f"engine must be one of 'pyarrow', 'fastparquet', got: {engine}"
+            )
+
+    @staticmethod
     @doc(
         _doc_parse_func,
         parameters="""files_for_parser : list
     List of files to be read.
+engine : str
+    Parquet library to use (either PyArrow or fastparquet).
 """,
     )
-    def parse(files_for_parser, **kwargs):
-        from pyarrow.parquet import ParquetFile
-
+    def parse(files_for_parser, engine, **kwargs):
         columns = kwargs.get("columns", None)
         storage_options = kwargs.pop("storage_options", {}) or {}
-
         chunks = []
         # `single_worker_read` just passes in a string path
         if isinstance(files_for_parser, str):
-            return pandas.read_parquet(files_for_parser, **kwargs)
+            return pandas.read_parquet(files_for_parser, engine=engine, **kwargs)
 
         for file_for_parser in files_for_parser:
             if isinstance(file_for_parser.path, IOBase):
@@ -690,19 +720,12 @@ class PandasParquetParser(PandasParser):
             else:
                 context = fsspec.open(file_for_parser.path, **storage_options)
             with context as f:
-                chunk = (
-                    ParquetFile(f)
-                    .read_row_groups(
-                        list(
-                            range(
-                                file_for_parser.row_group_start,
-                                file_for_parser.row_group_end,
-                            )
-                        ),
-                        columns=columns,
-                        use_pandas_metadata=True,
-                    )
-                    .to_pandas()
+                chunk = PandasParquetParser._read_row_group_chunk(
+                    f,
+                    file_for_parser.row_group_start,
+                    file_for_parser.row_group_end,
+                    columns,
+                    engine,
                 )
                 if file_for_parser.index is not None:
                     chunk.index = file_for_parser.index

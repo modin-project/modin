@@ -1,7 +1,7 @@
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.4.3
+  - pandas==1.4.4
   - numpy>=1.18.5
   - pyarrow>=4.0.1
   - fsspec
@@ -31,7 +31,8 @@ dependencies:
   - boto3
   - pip:
       - xgboost>=1.6.0
-      - modin-spreadsheet>=0.1.1
+      # Fixes breaking ipywidgets changes, but didn't release yet.
+      - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - tqdm
       - git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
       - connectorx>=0.2.6a4

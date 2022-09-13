@@ -4540,6 +4540,12 @@ def test_encode(data, encoding_type):
         df_equals(modin_result, pandas_result)
 
 
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_add_string_to_series(data):
+    eval_general(*create_test_series(data), lambda s: "string" + s)
+    eval_general(*create_test_series(data), lambda s: s + "string")
+
+
 @pytest.mark.parametrize(
     "is_sparse_data", [True, False], ids=["is_sparse", "is_not_sparse"]
 )
@@ -4705,3 +4711,15 @@ def test_peculiar_callback():
     modin_series = modin_df["col"].apply(func)
 
     df_equals(modin_series, pandas_series)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_apply_return_df(data):
+    modin_series, pandas_series = create_test_series(data)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.apply(
+            lambda x: pandas.Series([x + i for i in range(100)])
+        ),
+    )

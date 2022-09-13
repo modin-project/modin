@@ -46,4 +46,4 @@ class DataFrameDefault(DefaultMethod):
         """
         if obj_type is None:
             obj_type = pandas.DataFrame
-        return cls.call(func, obj_type=obj_type, **kwargs)
+        return super().register(func, obj_type=obj_type, **kwargs)

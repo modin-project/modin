@@ -70,6 +70,7 @@ class Python36CompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             max_cols=max_cols,
             memory_usage=memory_usage,
             null_counts=null_counts,
+            show_counts=None,
         )
 
     def pivot_table(
@@ -113,6 +114,31 @@ class Python36CompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             numeric_only=numeric_only,
             min_count=min_count,
             **kwargs,
+        )
+
+    def reindex(
+        self,
+        labels=None,
+        index=None,
+        columns=None,
+        axis=None,
+        method=None,
+        copy=True,
+        level=None,
+        fill_value=nan,
+        limit=None,
+        tolerance=None,
+    ):
+        index, columns = self._disambiguate_axes_labels(axis, index, columns, labels)
+        return super(Python36CompatibleDataFrame, self).reindex(
+            index=index,
+            columns=columns,
+            method=method,
+            copy=copy,
+            level=level,
+            fill_value=fill_value,
+            limit=limit,
+            tolerance=tolerance,
         )
 
     def replace(

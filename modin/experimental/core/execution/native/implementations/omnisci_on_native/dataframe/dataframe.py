@@ -15,7 +15,7 @@
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
-from modin.core.dataframe.base.exchange.dataframe_protocol.dataframe import (
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
 from modin.experimental.core.storage_formats.omnisci.query_compiler import (
@@ -272,7 +272,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             return InputRefExpr(self, col, get_dtype(int))
         return InputRefExpr(self, col, self.get_dtype(col))
 
-    def mask(
+    def take_2d_labels_or_positional(
         self,
         row_labels: Optional[List[Hashable]] = None,
         row_positions: Optional[List[int]] = None,
@@ -333,14 +333,18 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 force_execution_mode=self._force_execution_mode,
             )
 
-        if row_labels is not None or row_positions is not None:
+        if row_labels is not None:
+            raise NotImplementedError("Row labels masking is not yet supported")
+
+        if row_positions is not None:
+            base = base._maybe_materialize_rowid()
             op = MaskNode(base, row_labels=row_labels, row_positions=row_positions)
             return self.__constructor__(
                 columns=base.columns,
                 dtypes=base._dtypes,
                 op=op,
-                index_cols=self._index_cols,
-                force_execution_mode=self._force_execution_mode,
+                index_cols=base._index_cols,
+                force_execution_mode=base._force_execution_mode,
             )
 
         return base
@@ -441,7 +445,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                     else:
                         raise NotImplementedError("unsupported groupby args")
                 by_cols = Index.__new__(Index, data=by_cols, dtype=self.columns.dtype)
-                by_frame = self.mask(col_labels=by_cols)
+                by_frame = self.take_2d_labels_or_positional(col_labels=by_cols)
                 if by_frames:
                     by_frame = by_frame.concat(
                         axis=1, other_modin_frames=by_frames, ignore_index=True
@@ -566,7 +570,9 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 if not (isinstance(col, str) and re.match(col_to_delete, col))
             ]
             if len(filtered_columns) != len(new_frame.columns):
-                new_frame = new_frame.mask(col_labels=filtered_columns)
+                new_frame = new_frame.take_2d_labels_or_positional(
+                    col_labels=filtered_columns
+                )
         return new_frame
 
     def agg(self, agg):
@@ -1927,9 +1933,11 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 index_at = index_at.append_column(field, at.column(i))
 
             index_names = self._mangle_index_names(new_index.names)
-            index_at = index_at.rename_columns(index_names + list(self.columns))
+            index_at = index_at.rename_columns(
+                index_names + [f"F_{c}" for c in self.columns]
+            )
 
-            return self.from_arrow(index_at, index_names, new_index)
+            return self.from_arrow(index_at, index_names, new_index, self.columns)
 
     def reset_index(self, drop):
         """
@@ -2074,7 +2082,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 + "that are unsupported by OmniSci."
             )
 
-        from ..exchange.dataframe_protocol.dataframe import OmnisciProtocolDataframe
+        from ..interchange.dataframe_protocol.dataframe import OmnisciProtocolDataframe
 
         return OmnisciProtocolDataframe(
             self, nan_as_null=nan_as_null, allow_copy=allow_copy
@@ -2105,7 +2113,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
                 "`df` does not support DataFrame exchange protocol, i.e. `__dataframe__` method"
             )
 
-        from modin.core.dataframe.pandas.exchange.dataframe_protocol.from_dataframe import (
+        from modin.core.dataframe.pandas.interchange.dataframe_protocol.from_dataframe import (
             from_dataframe_to_pandas,
         )
 
@@ -2441,7 +2449,7 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         ]
 
     @classmethod
-    def from_arrow(cls, at, index_cols=None, index=None):
+    def from_arrow(cls, at, index_cols=None, index=None, columns=None):
         """
         Build a frame from an Arrow table.
 
@@ -2455,6 +2463,8 @@ class OmnisciOnNativeDataframe(PandasDataframe):
         index : pandas.Index, optional
             An index to be used by the new frame. Should present
             if `index_cols` is not None.
+        columns : Index or array-like, optional
+            Column labels to use for resulting frame.
 
         Returns
         -------
@@ -2468,15 +2478,18 @@ class OmnisciOnNativeDataframe(PandasDataframe):
             unsupported_cols,
         ) = cls._partition_mgr_cls.from_arrow(at, return_dims=True)
 
-        if index_cols:
+        if columns is not None:
+            new_columns = columns
+            new_index = pd.RangeIndex(at.num_rows) if index is None else index
+        elif index_cols:
             data_cols = [col for col in at.column_names if col not in index_cols]
+            new_columns = pd.Index(data=data_cols, dtype="O")
             new_index = index
         else:
-            data_cols = at.column_names
             assert index is None
+            new_columns = pd.Index(data=at.column_names, dtype="O")
             new_index = pd.RangeIndex(at.num_rows)
 
-        new_columns = pd.Index(data=data_cols, dtype="O")
         new_dtypes = pd.Series(
             [cls._arrow_type_to_dtype(col.type) for col in at.columns],
             index=at.column_names,

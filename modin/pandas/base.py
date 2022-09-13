@@ -1329,7 +1329,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get equality of `BasePandasDataset` and `other`, element-wise (binary operator `eq`).
         """
-        return self._binary_op("eq", other, axis=axis, level=level)
+        return self._binary_op("eq", other, axis=axis, level=level, dtypes=np.bool_)
 
     def explode(self, column, ignore_index: bool = False):  # noqa: PR01, RT01, D200
         """
@@ -1521,7 +1521,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get greater than or equal comparison of `BasePandasDataset` and `other`, element-wise (binary operator `ge`).
         """
-        return self._binary_op("ge", other, axis=axis, level=level)
+        return self._binary_op("ge", other, axis=axis, level=level, dtypes=np.bool_)
 
     def get(self, key, default=None):  # noqa: PR01, RT01, D200
         """
@@ -1536,7 +1536,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get greater than comparison of `BasePandasDataset` and `other`, element-wise (binary operator `gt`).
         """
-        return self._binary_op("gt", other, axis=axis, level=level)
+        return self._binary_op("gt", other, axis=axis, level=level, dtypes=np.bool_)
 
     def head(self, n=5):  # noqa: PR01, RT01, D200
         """
@@ -1579,7 +1579,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Attempt to infer better dtypes for object columns.
         """
-        return self._default_to_pandas("infer_objects")
+        return self._query_compiler.infer_objects()
 
     def _convert_dtypes(
         self,
@@ -1679,13 +1679,13 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get less than or equal comparison of `BasePandasDataset` and `other`, element-wise (binary operator `le`).
         """
-        return self._binary_op("le", other, axis=axis, level=level)
+        return self._binary_op("le", other, axis=axis, level=level, dtypes=np.bool_)
 
     def lt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
         Get less than comparison of `BasePandasDataset` and `other`, element-wise (binary operator `lt`).
         """
-        return self._binary_op("lt", other, axis=axis, level=level)
+        return self._binary_op("lt", other, axis=axis, level=level, dtypes=np.bool_)
 
     @property
     def loc(self):  # noqa: RT01, D200
@@ -1895,7 +1895,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get Not equal comparison of `BasePandasDataset` and `other`, element-wise (binary operator `ne`).
         """
-        return self._binary_op("ne", other, axis=axis, level=level)
+        return self._binary_op("ne", other, axis=axis, level=level, dtypes=np.bool_)
 
     def notna(self):  # noqa: RT01, D200
         """
@@ -1952,8 +1952,6 @@ class BasePandasDataset(BasePandasDatasetCompat):
         return self._binary_op(
             "pow", other, axis=axis, level=level, fill_value=fill_value
         )
-
-    radd = add
 
     def quantile(
         self, q=0.5, axis=0, numeric_only=True, interpolation="linear"
@@ -2085,6 +2083,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             if columns is not None:
                 kwargs["columns"] = columns
             return self._default_to_pandas("reindex", copy=copy, **kwargs)
+
         new_query_compiler = None
         if index is not None:
             if not isinstance(index, pandas.Index):
@@ -2261,6 +2260,16 @@ class BasePandasDataset(BasePandasDatasetCompat):
             )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
+    def radd(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return addition of `BasePandasDataset` and `other`, element-wise (binary operator `radd`).
+        """
+        return self._binary_op(
+            "radd", other, axis=axis, level=level, fill_value=fill_value
+        )
+
     def rfloordiv(
         self, other, axis="columns", level=None, fill_value=None
     ):  # noqa: PR01, RT01, D200
@@ -2284,15 +2293,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
     rmul = mul
 
     def _rolling(
-        self,
-        window,
-        min_periods,
-        center,
-        win_type,
-        on,
-        axis,
-        closed,
-        method,
+        self, window, min_periods, center, win_type, *args, **kwargs
     ):  # noqa: PR01, RT01, D200
         """
         Provide rolling window calculations.
@@ -2306,10 +2307,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 min_periods=min_periods,
                 center=center,
                 win_type=win_type,
-                on=on,
-                axis=axis,
-                closed=closed,
-                method=method,
+                *args,
+                **kwargs,
             )
         from .window import Rolling
 
@@ -2319,10 +2318,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
             min_periods=min_periods,
             center=center,
             win_type=win_type,
-            on=on,
-            axis=axis,
-            closed=closed,
-            method=method,
+            *args,
+            **kwargs,
         )
 
     def round(self, decimals=0, *args, **kwargs):  # noqa: PR01, RT01, D200

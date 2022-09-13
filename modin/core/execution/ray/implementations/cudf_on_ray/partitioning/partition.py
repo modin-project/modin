@@ -133,7 +133,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             self.get_key(), func, **kwargs
         )
 
-    def add_to_apply_calls(self, func, **kwargs):
+    def add_to_apply_calls(self, func, length=None, width=None, **kwargs):
         """
         Apply `func` to this partition and create new.
 
@@ -141,6 +141,10 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         ----------
         func : callable
             A function to apply.
+        length : ray.ObjectRef or int, optional
+            Length, or reference to length, of wrapped ``pandas.DataFrame``.
+        width : ray.ObjectRef or int, optional
+            Width, or reference to width, of wrapped ``pandas.DataFrame``.
         **kwargs : dict
             Additional keywords arguments to be passed in `func`.
 
@@ -153,7 +157,12 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         -----
         We eagerly schedule the apply `func` and produce a new ``cuDFOnRayDataframePartition``.
         """
-        return cuDFOnRayDataframePartition(self.gpu_manager, self.apply(func, **kwargs))
+        return cuDFOnRayDataframePartition(
+            self.gpu_manager,
+            self.apply(func, **kwargs),
+            length=length,
+            width=width,
+        )
 
     @classmethod
     def preprocess_func(cls, func):

@@ -19,7 +19,7 @@ import pandas
 import numpy as np
 
 import modin.pandas as pd
-from modin.core.dataframe.pandas.exchange.dataframe_protocol.from_dataframe import (
+from modin.core.dataframe.pandas.interchange.dataframe_protocol.from_dataframe import (
     primitive_column_to_ndarray,
     buffer_to_ndarray,
     set_nulls,
@@ -292,7 +292,7 @@ def test_buffer_of_chunked_at(data_has_nulls, n_chunks):
 
         buffers = col.get_buffers()
         data_buff, data_dtype = buffers["data"]
-        result = buffer_to_ndarray(data_buff, data_dtype, col.offset, col.size)
+        result = buffer_to_ndarray(data_buff, data_dtype, col.offset, col.size())
         result = set_nulls(result, col, buffers["validity"])
 
         # Our configuration in pytest.ini requires that we explicitly catch all

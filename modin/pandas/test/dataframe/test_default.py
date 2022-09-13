@@ -15,14 +15,16 @@ import pytest
 import numpy as np
 import pandas
 import matplotlib
+from numpy.testing import assert_array_equal
+import io
+import warnings
+
+from modin._compat import PandasCompatVersion
 import modin.pandas as pd
 from modin.utils import (
     to_pandas,
     get_current_execution,
 )
-from numpy.testing import assert_array_equal
-import io
-import warnings
 
 from modin.pandas.test.utils import (
     df_equals,
@@ -68,14 +70,25 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
         ("from_dict", lambda df: {"data": None}),
         ("from_records", lambda df: {"data": to_pandas(df)}),
         ("hist", lambda df: {"column": "int_col"}),
-        ("infer_objects", None),
         ("interpolate", None),
         ("lookup", lambda df: {"row_labels": [0], "col_labels": ["int_col"]}),
         ("mask", lambda df: {"cond": df != 0}),
         ("pct_change", None),
         ("to_xarray", None),
-        ("flags", None),
-        ("set_flags", lambda df: {"allows_duplicate_labels": False}),
+        pytest.param(
+            *("flags", None),
+            marks=pytest.mark.skipif(
+                condition=PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+                reason="pandas 1.1 does not support .flags",
+            ),
+        ),
+        pytest.param(
+            *("set_flags", lambda df: {"allows_duplicate_labels": False}),
+            marks=pytest.mark.skipif(
+                condition=PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+                reason="pandas 1.1 does not support .set_flags()",
+            ),
+        ),
     ],
 )
 def test_ops_defaulting_to_pandas(op, make_args):
@@ -788,7 +801,13 @@ def test_resample_specific(rule, closed, label, on, level):
         ("volume",),
         pandas.Series(["volume"]),
         pandas.Index(["volume"]),
-        ["volume", "volume", "volume"],
+        pytest.param(
+            ["volume", "volume", "volume"],
+            marks=pytest.mark.skipif(
+                condition=PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+                reason="pandas 1.1 does not support duplicate columns in resample",
+            ),
+        ),
         ["volume", "price", "date"],
     ],
     ids=[

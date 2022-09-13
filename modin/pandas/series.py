@@ -170,9 +170,9 @@ class Series(SeriesCompat, BasePandasDataset):
     def __add__(self, right):
         return self.add(right)
 
-    @_doc_binary_op(operation="addition", bin_op="add", right="left")
+    @_doc_binary_op(operation="addition", bin_op="radd", right="left")
     def __radd__(self, left):
-        return self.add(left)
+        return self.radd(left)
 
     @_doc_binary_op(operation="union", bin_op="and", right="other")
     def __and__(self, other):
@@ -495,6 +495,17 @@ class Series(SeriesCompat, BasePandasDataset):
             new_other, level=level, fill_value=fill_value, axis=axis
         )
 
+    def radd(
+        self, other, level=None, fill_value=None, axis=0
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return Addition of series and other, element-wise (binary operator radd).
+        """
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).radd(
+            new_other, level=level, fill_value=fill_value, axis=axis
+        )
+
     def add_prefix(self, prefix):  # noqa: PR01, RT01, D200
         """
         Prefix labels with string `prefix`.
@@ -660,19 +671,29 @@ class Series(SeriesCompat, BasePandasDataset):
             with np.errstate(all="ignore"):
                 if isinstance(f, np.ufunc):
                     return f(self)
-                result = self.map(f)._query_compiler
-        if return_type not in ["DataFrame", "Series"]:
-            # sometimes result can be not a query_compiler, but scalar (for example
-            # for sum or count functions)
-            if isinstance(result, type(self._query_compiler)):
-                return result.to_pandas().squeeze()
-            else:
-                return result
-        else:
-            result = globals()[return_type](query_compiler=result)
+
+                # The return_type is only a DataFrame when we have a function
+                # return a Series object. This is a very particular case that
+                # has to be handled by the underlying pandas.Series apply
+                # function and not our default applymap call.
+                if return_type == "DataFrame":
+                    result = self._query_compiler.apply_on_series(f)
+                else:
+                    result = self.map(f)._query_compiler
+
+        if return_type == "DataFrame":
+            from .dataframe import DataFrame
+
+            result = DataFrame(query_compiler=result)
+        elif return_type == "Series":
+            result = Series(query_compiler=result)
             if result.name == self.index[0]:
                 result.name = None
-            return result
+        elif isinstance(result, type(self._query_compiler)):
+            # sometimes result can be not a query_compiler, but scalar (for example
+            # for sum or count functions)
+            return result.to_pandas().squeeze()
+        return result
 
     def argmax(self, axis=None, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
@@ -1441,7 +1462,6 @@ class Series(SeriesCompat, BasePandasDataset):
         )
 
     product = SeriesCompat.prod
-    radd = add
 
     def ravel(self, order="C"):  # noqa: PR01, RT01, D200
         """

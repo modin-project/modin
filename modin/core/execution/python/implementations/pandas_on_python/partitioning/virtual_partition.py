@@ -40,10 +40,8 @@ class PandasOnPythonDataframeAxisPartition(PandasDataframeAxisPartition):
             raise NotImplementedError(
                 "Pandas on Python execution requires full-axis partitions."
             )
-        for obj in list_of_blocks:
-            obj.drain_call_queue()
-        # Unwrap from PandasDataframePartition object for ease of use
-        self.list_of_blocks = [obj._data for obj in list_of_blocks]
+
+        self.list_of_block_partitions = list_of_blocks
 
     partition_type = PandasOnPythonDataframePartition
     instance_type = pandas.DataFrame

@@ -78,4 +78,4 @@ class AnyDefault(DefaultMethod):
         if obj_type is None:
             obj_type = ObjTypeDeterminer()
 
-        return cls.call(func, obj_type=obj_type, **kwargs)
+        return super().register(func, obj_type=obj_type, **kwargs)

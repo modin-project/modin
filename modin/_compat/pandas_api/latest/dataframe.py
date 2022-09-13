@@ -144,11 +144,7 @@ class LatestCompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
         limit=None,
         tolerance=None,
     ):  # noqa: PR01, RT01, D200
-        axis = self._get_axis_number(axis)
-        if axis == 0 and labels is not None:
-            index = labels
-        elif labels is not None:
-            columns = labels
+        index, columns = self._disambiguate_axes_labels(axis, index, columns, labels)
         return super(LatestCompatibleDataFrame, self).reindex(
             index=index,
             columns=columns,
