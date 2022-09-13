@@ -559,15 +559,10 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         )
         index, sync_index = cls.build_index(dataset, partition_ids, index_columns)
         remote_parts = cls.build_partition(partition_ids, column_widths)
-        if len(partition_ids) > 0:
-            row_lengths = [part.length() for part in remote_parts.T[0]]
-        else:
-            row_lengths = None
         frame = cls.frame_cls(
             remote_parts,
             index,
             columns,
-            row_lengths=row_lengths,
             column_widths=column_widths,
             dtypes=None,
         )
