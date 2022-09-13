@@ -1341,6 +1341,9 @@ class PandasDataframe(ClassLogger):
             indices = np.array(indices, dtype=np.int64)
         # Fasttrack empty numpy array
         if isinstance(indices, np.ndarray) and indices.size == 0:
+            # This will help preserve metadata stored in empty dataframes (indexes and dtypes)
+            # Otherwise, we will get an empty `new_partitions` array, from which it will
+            #  no longer be possible to obtain metadata
             return OrderedDict([(0, np.array([], dtype=np.int64))])
         negative_mask = np.less(indices, 0)
         has_negative = np.any(negative_mask)
