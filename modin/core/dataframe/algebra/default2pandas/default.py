@@ -20,6 +20,39 @@ from pandas.core.dtypes.common import is_list_like
 import pandas
 
 
+class ObjTypeDeterminer:
+    """
+    Class that routes work to the frame.
+
+    Provides an instance which forwards all of the `__getattribute__` calls
+    to an object under which `key` function is applied.
+    """
+
+    def __getattr__(self, key):
+        """
+        Build function that executes `key` function over passed frame.
+
+        Parameters
+        ----------
+        key : str
+
+        Returns
+        -------
+        callable
+            Function that takes DataFrame and executes `key` function on it.
+        """
+
+        def func(df, *args, **kwargs):
+            """Access specified attribute of the passed object and call it if it's callable."""
+            prop = getattr(df, key)
+            if callable(prop):
+                return prop(*args, **kwargs)
+            else:
+                return prop
+
+        return func
+
+
 class DefaultMethod(Operator):
     """
     Builder for default-to-pandas methods.
@@ -28,12 +61,15 @@ class DefaultMethod(Operator):
     ----------
     OBJECT_TYPE : str
         Object type name that will be shown in default-to-pandas warning message.
+    DEFAULT_OBJECT_TYPE : object
+        Default place to search for a function.
     """
 
     OBJECT_TYPE = "DataFrame"
+    DEFAULT_OBJECT_TYPE = ObjTypeDeterminer
 
     @classmethod
-    def register(cls, func, obj_type=pandas.DataFrame, inplace=None, fn_name=None):
+    def register(cls, func, obj_type=None, inplace=None, fn_name=None):
         """
         Build function that do fallback to default pandas implementation for passed `func`.
 
@@ -42,7 +78,7 @@ class DefaultMethod(Operator):
         func : callable or str,
             Function to apply to the casted to pandas frame or its property accesed
             by ``cls.frame_wrapper``.
-        obj_type : object, default: pandas.DataFrame
+        obj_type : object, optional
             If `func` is a string with a function name then `obj_type` provides an
             object to search function in.
         inplace : bool, optional
@@ -61,6 +97,8 @@ class DefaultMethod(Operator):
         fn_name = getattr(func, "__name__", str(func)) if fn_name is None else fn_name
 
         if isinstance(func, str):
+            if obj_type is None:
+                obj_type = cls.DEFAULT_OBJECT_TYPE
             fn = getattr(obj_type, func)
         else:
             fn = func
