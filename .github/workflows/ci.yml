@@ -55,7 +55,6 @@ jobs:
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Setup upterm session
         uses: lhotari/action-upterm@v1            
-        uses: codecov/codecov-action@v2
       - name: Conda environment
         run: |
           conda info
