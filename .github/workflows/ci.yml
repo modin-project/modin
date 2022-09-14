@@ -52,14 +52,14 @@ jobs:
           python-version: 3.6
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Setup upterm session
-        uses: lhotari/action-upterm@v1   
       - name: Conda environment
         run: |
           conda info
           conda list
       - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1   
       - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
