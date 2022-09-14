@@ -71,10 +71,10 @@ def test_from_sql_defaults(make_sql_connection):  # noqa: F811
 
 
 def test_read_json_row_partitions():
-    json = "fake_json"
+    fake_json_input = "fake_json"
 
     def split_json_string(json_string):
-        assert json_string == "fake_json", "can only split fake json"
+        assert json_string == fake_json_input, "can only split fake json"
         return ["fake_json_part1", "fake_json_part2"]
 
     def json_to_dataframes(json_string):
@@ -83,15 +83,9 @@ def test_read_json_row_partitions():
             pandas.DataFrame({1: [json_string]}),
         ]
 
-    unique_filename = get_unique_filename(extension="json")
-    try:
-        with open(unique_filename, "w") as out:
-            out.write(json)
-        actual_df1, actual_df2 = pd.read_json_row_partitions(
-            unique_filename, split_json_string, json_to_dataframes
-        )
-    finally:
-        teardown_test_files([unique_filename])
+    actual_df1, actual_df2 = pd.read_json_row_partitions(
+        fake_json_input, split_json_string, json_to_dataframes
+    )
 
     df_equals(actual_df1, pandas.DataFrame({0: ["fake_json_part1", "fake_json_part2"]}))
     df_equals(actual_df2, pandas.DataFrame({1: ["fake_json_part1", "fake_json_part2"]}))
