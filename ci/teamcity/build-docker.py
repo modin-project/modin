@@ -3,7 +3,7 @@ import sys
 
 
 def execute_command(cmd):
-    status = os.system(cmd)
+    status = os.popen(cmd)
     ec = os.WEXITSTATUS(status)
     if ec != 0:
         raise SystemExit('Command "{}" failed'.format(cmd))
