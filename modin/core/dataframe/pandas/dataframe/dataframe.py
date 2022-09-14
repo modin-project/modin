@@ -246,7 +246,7 @@ class PandasDataframe(ClassLogger):
             A list of row partitions lengths.
         """
         if self._row_lengths_cache is None:
-            if len(self._partitions) > 0:
+            if len(self._partitions.T) > 0:
                 row_parts = self._partitions.T[0]
                 if self._index_cache is not None:
                     # do not do extra work to get an index that is already known
