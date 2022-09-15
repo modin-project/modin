@@ -290,7 +290,7 @@ class FileDispatcher(ClassLogger):
         """
         Deploy remote task.
 
-        Should be implemented in the task class (for example in the `RayTask`).
+        Should be implemented in the task class (for example in the `RayWrapper`).
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
@@ -307,7 +307,7 @@ class FileDispatcher(ClassLogger):
         """
         Get results from worker.
 
-        Should be implemented in the task class (for example in the `RayTask`).
+        Should be implemented in the task class (for example in the `RayWrapper`).
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
