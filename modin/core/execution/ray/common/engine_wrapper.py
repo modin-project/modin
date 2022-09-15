@@ -42,7 +42,7 @@ def _deploy_ray_func(func, args):  # pragma: no cover
     return func(**args)
 
 
-class RayTask:
+class RayWrapper:
     """Mixin that provides means of running functions remotely and getting local results."""
 
     @classmethod
