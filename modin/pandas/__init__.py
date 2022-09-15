@@ -144,7 +144,7 @@ def _update_engine(publisher: Parameter):
             )
     elif publisher.get() == "Dask":
         if _is_first_update.get("Dask", True):
-            from modin.core.execution.dask.common.utils import initialize_dask
+            from modin.core.execution.dask.common import initialize_dask
 
             initialize_dask()
     elif publisher.get() == "Cloudray":

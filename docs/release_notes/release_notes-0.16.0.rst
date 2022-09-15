@@ -95,6 +95,7 @@ Key Features and Updates
   * REFACTOR-#4000: Remove code duplication for `PandasOnRayDataframePartitionManager` (#4895)
   * REFACTOR-#3780: Remove code duplication for `PandasOnDaskDataframe` (#3781)
   * REFACTOR-#4530: Unify access to physical data for any partition type (#4829)
+  * REFACTOR-#4978: Align `modin/core/execution/dask/common/__init__.py` with `modin/core/execution/ray/common/__init__.py` (#4979)
   * REFACTOR-#4949: Remove code duplication in `default2pandas/dataframe.py` and `default2pandas/any.py` (#4950)
   * REFACTOR-#4976: Rename `RayTask` to `RayWrapper` in accordance with Dask (#4977)
   * REFACTOR-#4885: De-duplicated take_2d_labels_or_positional methods (#4883)
