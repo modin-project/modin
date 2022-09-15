@@ -3168,6 +3168,11 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         if not self._query_compiler.lazy_execution and len(self) == 0:
             return self._default_to_pandas("__getitem__", key)
+        # fastpath for common case
+        if isinstance(key, str) and key in self._query_compiler.columns:
+            return self._getitem(key)
+        elif is_list_like(key) and all(k in self._query_compiler.columns for k in key):
+            return self._getitem(key)
         # see if we can slice the rows
         # This lets us reuse code in pandas to error check
         indexer = None
