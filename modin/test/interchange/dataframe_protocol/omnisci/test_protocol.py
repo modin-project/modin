@@ -314,12 +314,13 @@ def test_buffer_of_chunked_at(data_has_nulls, n_chunks):
 
 def test_concat_chunks():
     """Regression test for https://github.com/modin-project/modin/issues/4366"""
-    pd_df = pd.DataFrame(
+    modin_df = pd.DataFrame(
         {"a": pd.Categorical(list("testdataforexchangedataframeprotocol"))}
     )
-    pd_chunks = split_df_into_chunks(pd_df, 2)
-    md_df = pd.concat(pd_chunks)
-    assert md_df["a"].dtype.name == "category"
-    protocol_df = md_df.__dataframe__()
+    n_chunks = 2
+    chunks = split_df_into_chunks(modin_df, n_chunks)
+    new_modin_df = pd.concat(chunks)
+    assert new_modin_df["a"].dtype.name == "category"
+    protocol_df = new_modin_df.__dataframe__()
     df_col = protocol_df.get_column_by_name("a")
-    assert df_col.num_chunks() == 2
+    assert df_col.num_chunks() == n_chunks
