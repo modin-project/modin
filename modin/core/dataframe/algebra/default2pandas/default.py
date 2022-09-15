@@ -125,14 +125,18 @@ class DefaultMethod(Operator):
                 and func != "to_numpy"
                 and func != pandas.DataFrame.to_numpy
             ):
-                # When applying a DatetimeProperties function, if we don't
-                # specify the dtype for the DataFrame, the frame might get the
-                # wrong dtype, e.g. for to_pydatetime in
+                # When applying a DatetimeProperties or TimedeltaProperties function,
+                # if we don't specify the dtype for the DataFrame, the frame might
+                # get the wrong dtype, e.g. for to_pydatetime in
                 # https://github.com/modin-project/modin/issues/4436
                 astype_kwargs = {}
                 dtype = getattr(result, "dtype", None)
                 if dtype and isinstance(
-                    df, pandas.core.indexes.accessors.DatetimeProperties
+                    df,
+                    (
+                        pandas.core.indexes.accessors.DatetimeProperties,
+                        pandas.core.indexes.accessors.TimedeltaProperties,
+                    ),
                 ):
                     astype_kwargs["dtype"] = dtype
                 result = (
