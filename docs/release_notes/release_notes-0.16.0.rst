@@ -73,6 +73,7 @@ Key Features and Updates
   * PERF-#4886: Use lazy index and columns evaluation in `query` method (#4887)
   * PERF-#4866: `iloc` function that used in `partition.mask` should be serialized only once (#4901)
   * PERF-#4920: Avoid index and cache computations in `take_2d_labels_or_positional` unless they are needed (#4921)
+  * PERF-#4999: don't call `apply` in virtual partition' `drain_call_queue` if `call_queue` is empty (#4975)
   * PERF-#4268: Implement partition-parallel __getitem__ for bool Series masks (#4753)
   * PERF-#4940: Optimize categorical dtype check in `concatenate` (#4953)
 * Benchmarking enhancements
