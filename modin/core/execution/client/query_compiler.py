@@ -13,7 +13,6 @@
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 import numpy as np
-import pickle
 import inspect
 from pandas.api.types import is_list_like
 from pandas.core.computation.parsing import tokenize_string
@@ -35,9 +34,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
 
     def _get_columns(self):
         if self._columns_cache is None:
-            self._columns_cache = pickle.loads(
-                pickle.dumps(self._service.columns(self._id))
-            )
+            self._columns_cache = self._service.columns(self._id)
         return self._columns_cache
 
     def _set_index(self, new_index):
@@ -54,8 +51,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
     @property
     def dtypes(self):
         if self._dtypes_cache is None:
-            ref = self._service.dtypes(self._id)
-            self._dtypes_cache = pickle.loads(pickle.dumps(ref))
+            self._dtypes_cache = self._service.dtypes(self._id)
         return self._dtypes_cache
 
     @classmethod
@@ -63,8 +59,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         raise NotImplementedError
 
     def to_pandas(self):
-        remote_obj = self._service.to_pandas(self._id)
-        return pickle.loads(pickle.dumps(remote_obj))
+        return self._service.to_pandas(self._id)
 
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         raise NotImplementedError
