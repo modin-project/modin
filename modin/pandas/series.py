@@ -301,7 +301,9 @@ class Series(BasePandasDataset):
         try:
             return object.__getattribute__(self, key)
         except AttributeError as err:
-            if key not in _ATTRS_NO_LOOKUP and key in self.index:
+            if not self._query_compiler.lazy_execution and (
+                    key not in _ATTRS_NO_LOOKUP and key in self.index
+            ):
                 return self[key]
             raise err
 
