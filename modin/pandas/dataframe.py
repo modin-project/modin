@@ -57,6 +57,7 @@ from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .groupby import DataFrameGroupBy
 from .accessor import CachedAccessor, SparseFrameAccessor
 from modin._compat.pandas_api.classes import DataFrameCompat
+from modin.core.storage_formats.pandas.small_query_compiler import SmallQueryCompiler
 
 
 @_inherit_docstrings(
@@ -189,6 +190,14 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             self._query_compiler = from_pandas(pandas_df)._query_compiler
         else:
             self._query_compiler = query_compiler
+
+        if len(self.columns) == 0 or len(self.index) == 0:
+            print("Creating empty DataFrame")
+            print(data, index, columns, dtype, copy)
+            small_dataframe = pandas.DataFrame(
+                data=data, index=index, columns=columns, dtype=dtype, copy=copy
+            )
+            self._query_compiler = SmallQueryCompiler(small_dataframe)
 
     def __repr__(self):
         """

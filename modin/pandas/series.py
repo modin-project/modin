@@ -13,6 +13,9 @@
 
 """Module houses `Series` class, that is distributed version of `pandas.Series`."""
 
+from modin.core.storage_formats.pandas.small_query_compiler import (
+    SmallQueryCompiler,
+)
 import numpy as np
 import pandas
 from pandas.api.types import is_integer
@@ -114,19 +117,33 @@ class Series(SeriesCompat, BasePandasDataset):
                 name = MODIN_UNNAMED_SERIES_LABEL
                 if isinstance(data, pandas.Series) and data.name is not None:
                     name = data.name
-
-            query_compiler = from_pandas(
-                pandas.DataFrame(
-                    pandas.Series(
-                        data=data,
-                        index=index,
-                        dtype=dtype,
-                        name=name,
-                        copy=copy,
-                        fastpath=fastpath,
+            # Not sure about checking, want to check if empty without constructing series
+            if True:
+                query_compiler = SmallQueryCompiler(
+                    pandas.DataFrame(
+                        pandas.Series(
+                            data=data,
+                            index=index,
+                            dtype=dtype,
+                            name=name,
+                            copy=copy,
+                            fastpath=fastpath,
+                        )
                     )
                 )
-            )._query_compiler
+            else:
+                query_compiler = from_pandas(
+                    pandas.DataFrame(
+                        pandas.Series(
+                            data=data,
+                            index=index,
+                            dtype=dtype,
+                            name=name,
+                            copy=copy,
+                            fastpath=fastpath,
+                        )
+                    )
+                )._query_compiler
         self._query_compiler = query_compiler.columnarize()
         if name is not None:
             self._query_compiler = self._query_compiler
