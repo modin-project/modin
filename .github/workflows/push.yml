@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.6"]
-        engine: ["python", "ray", "dask"]
+        engine: ["ray"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-compat-win (engine ${{matrix.engine}}, python ${{matrix.python-version}})
