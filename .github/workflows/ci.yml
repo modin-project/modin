@@ -15,7 +15,7 @@ on:
       - setup.py
       - versioneer.py
 jobs:
- test-compat-windows:
+  test-compat-windows:
     runs-on: windows-latest
     defaults:
       run:
