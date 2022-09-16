@@ -23,7 +23,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.8"]
-        engine: ["ray", "dask"]
+        engine: ["ray"]
         test-task:
           - modin/pandas/test/dataframe/test_binary.py
           - modin/pandas/test/dataframe/test_default.py
