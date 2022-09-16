@@ -15,6 +15,69 @@ on:
       - setup.py
       - versioneer.py
 jobs:
+ test-compat-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      matrix:
+        python-version: ["3.6"]
+        engine: ["python", "ray", "dask"]
+    env:
+      MODIN_ENGINE: ${{matrix.engine}}
+    name: test-compat-win (engine ${{matrix.engine}}, python ${{matrix.python-version}})
+    steps:
+      - name: Limit ray memory
+        run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
+        if: matrix.engine == 'ray'
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('requirements/environment-py36.yml') }}
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
+          activate-environment: modin
+          environment-file: requirements/environment-py36.yml
+          python-version: 3.6
+          channel-priority: strict
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+      - name: Conda environment
+        run: |
+          conda info
+          conda list
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
+      - run: pytest -n 2 modin/pandas/test/test_api.py
+      - run: pytest -n 2 modin/pandas/test/test_concat.py
+        if: matrix.engine == 'python'
+      - run: pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+        if: matrix.engine != 'python'
+      - run: pytest -n 2 modin/pandas/test/test_general.py
+      - run: pytest -n 2 modin/pandas/test/test_groupby.py
+      - run: pytest -n 2 modin/pandas/test/test_rolling.py
+      - run: pytest -n 2 modin/pandas/test/test_series.py
+      - run: pytest modin/pandas/test/test_io.py --verbose
+      - uses: codecov/codecov-action@v2
+
   test-windows:
     runs-on: windows-latest
     defaults:
@@ -75,11 +138,11 @@ jobs:
         run: |
           conda info
           conda list
-      - name: Start local ray cluster
-        run: |
-          ray start --head --port=6379
-          echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
-        if: matrix.engine == 'ray'
+      # - name: Start local ray cluster
+      #   run: |
+      #     ray start --head --port=6379
+      #     echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
+      #   if: matrix.engine == 'ray'
       - run: python -m pytest ${{matrix.test-task}}
         if: matrix.test-task != 'modin/pandas/test/test_io.py'
       - timeout-minutes: 30
