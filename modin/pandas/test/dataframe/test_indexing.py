@@ -1603,6 +1603,14 @@ def test_sample(data, axis):
     df_equals(modin_result, pandas_result)
 
 
+def test_empty_sample():
+    modin_df, pandas_df = create_test_dfs([1])
+    # issue #4983
+    # If we have a fraction of the dataset that results in n=0, we should
+    # make sure that we don't pass in both n and frac to sample internally.
+    eval_general(modin_df, pandas_df, lambda df: df.sample(frac=0.12))
+
+
 def test_select_dtypes():
     frame_data = {
         "test1": list("abc"),
