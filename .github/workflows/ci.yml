@@ -76,7 +76,6 @@ jobs:
       - run: pytest -n 2 modin/pandas/test/test_rolling.py
       - run: pytest -n 2 modin/pandas/test/test_series.py
       - run: pytest modin/pandas/test/test_io.py --verbose
-      - uses: codecov/codecov-action@v2
 
   test-windows:
     runs-on: windows-latest
@@ -148,4 +147,3 @@ jobs:
       - timeout-minutes: 30
         run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
-      - uses: codecov/codecov-action@v2

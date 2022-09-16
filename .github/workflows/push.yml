@@ -71,4 +71,3 @@ jobs:
       - timeout-minutes: 30
         run: python -m pytest modin/pandas/test/test_io.py
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
-      - uses: codecov/codecov-action@v2
