@@ -1,36 +1,18 @@
 name: master
 on: push
 jobs:
-  test-windows:
+  test-compat-windows:
     runs-on: windows-latest
     defaults:
       run:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.8"]
-        engine: ["ray"]
-        test-task:
-          - modin/pandas/test/dataframe/test_binary.py
-          - modin/pandas/test/dataframe/test_default.py
-          - modin/pandas/test/dataframe/test_indexing.py
-          - modin/pandas/test/dataframe/test_iter.py
-          - modin/pandas/test/dataframe/test_join_sort.py
-          - modin/pandas/test/dataframe/test_map_metadata.py
-          - modin/pandas/test/dataframe/test_reduce.py
-          - modin/pandas/test/dataframe/test_udf.py
-          # - modin/pandas/test/dataframe/test_window.py
-          # - modin/pandas/test/dataframe/test_pickle.py
-          # - modin/pandas/test/test_series.py
-          # - modin/pandas/test/test_rolling.py
-          # - modin/pandas/test/test_concat.py
-          # - modin/pandas/test/test_groupby.py
-          # - modin/pandas/test/test_reshape.py
-          # - modin/pandas/test/test_general.py
-          # - modin/pandas/test/test_io.py
+        python-version: ["3.6"]
+        engine: ["python", "ray", "dask"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
-    name: test-windows
+    name: test-compat-win (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - name: Limit ray memory
         run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
@@ -45,29 +27,38 @@ jobs:
             ~/conda_pkgs_dir
             ~/.cache/pip
           key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
+            ${{ runner.os }}-conda-${{ hashFiles('requirements/environment-py36.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           use-mamba: true
           activate-environment: modin
-          environment-file: environment-dev.yml
-          python-version: ${{matrix.python-version}}
+          environment-file: requirements/environment-py36.yml
+          python-version: 3.6
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          auto-update-conda: true # this enable `use-only-tar-bz2` feature on Windows
       - name: Conda environment
         run: |
           conda info
           conda list
-      # - name: Start local ray cluster
-      #   run: |
-      #     ray start --head --port=6379
-      #     echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
-      #   if: matrix.engine == 'ray'
-      - run: python -m pytest ${{matrix.test-task}}
-        if: matrix.test-task != 'modin/pandas/test/test_io.py'
-      - timeout-minutes: 30
-        run: python -m pytest modin/pandas/test/test_io.py
-        if: matrix.test-task == 'modin/pandas/test/test_io.py'
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
+      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
+      - run: pytest -n 2 modin/pandas/test/test_api.py
+      - run: pytest -n 2 modin/pandas/test/test_concat.py
+        if: matrix.engine == 'python'
+      - run: pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+        if: matrix.engine != 'python'
+      - run: pytest -n 2 modin/pandas/test/test_general.py
+      - run: pytest -n 2 modin/pandas/test/test_groupby.py
+      - run: pytest -n 2 modin/pandas/test/test_rolling.py
+      - run: pytest -n 2 modin/pandas/test/test_series.py
+      - run: pytest modin/pandas/test/test_io.py --verbose
