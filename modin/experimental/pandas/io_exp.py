@@ -76,31 +76,25 @@ def _get_dataframes(json_string, json_to_dataframes):
     return json_to_dataframes(json_string)
 
 
-def read_json_row_partitions(
-    json_string: str, split_json_string: Callable, json_to_dataframes: Callable
-) -> list:
+def read_json_row_partitions(json_strings: list, json_to_dataframes: Callable) -> list:
     """
     Read a JSON string to pandas dataframes by splitting it into json chunks.
 
     Parameters
     ----------
-    json_string : str
-        JSON string.
-
-    split_json_string : Callable
-        Function that takes a json string and returns a list of strings.
+    json_strings : list
+        List of JSON strings.
 
     json_to_dataframes : Callable
         Function that maps a json string to a list of dataframes. This function
-        must return the same number of dataframes for each string produced by
-        ``split_json_strings``.
+        must return the same number of dataframes for each string in ``json_strings``.
 
     Returns
     -------
     List of DataFrame
         List of dataframes where the dataframe at position i comes from
-        concatenating json_to_dataframes(chunk)[i] for each ``chunk`` in
-        split_json_string.
+        concatenating json_to_dataframes(json_string)[i] for each string in
+        ``json_strings``.
 
     Notes
     -----
@@ -108,8 +102,8 @@ def read_json_row_partitions(
     dataframes will always have the default RangeIndex.
     """
     futures_per_split = [
-        _get_dataframes.remote(string_portion, json_to_dataframes)
-        for string_portion in split_json_string(json_string)
+        _get_dataframes.remote(json_string, json_to_dataframes)
+        for json_string in json_strings
     ]
     row_partitions_per_split = ray.get(futures_per_split)
     row_partitions_per_dataframe = zip(*row_partitions_per_split)
