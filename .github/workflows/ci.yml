@@ -49,11 +49,6 @@ jobs:
       - name: Limit ray memory
         run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
         if: matrix.engine == 'ray'
-      - name: Start local ray cluster
-        run: |
-          ray start --head --port=6379
-          echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
-        if: matrix.engine == 'ray'
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
@@ -80,6 +75,11 @@ jobs:
         run: |
           conda info
           conda list
+      - name: Start local ray cluster
+        run: |
+          ray start --head --port=6379
+          echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
+        if: matrix.engine == 'ray'
       - run: python -m pytest ${{matrix.test-task}}
         if: matrix.test-task != 'modin/pandas/test/test_io.py'
       - timeout-minutes: 30
