@@ -15,6 +15,7 @@
 
 from modin.core.io.io import BaseIO
 import os
+import fsspec
 from .query_compiler import ClientQueryCompiler
 
 
@@ -66,7 +67,11 @@ class ClientIO(BaseIO):
             Query compiler with CSV data read in.
         """
         if isinstance(filepath_or_buffer, str):
-            filepath_or_buffer = os.path.abspath(filepath_or_buffer)
+            filepath_or_buffer = fsspec.open(filepath_or_buffer).full_name
+            if filepath_or_buffer.startswith("file://"):
+                # We will do this so that the backend can know whether this
+                # is a path or a URL.
+                filepath_or_buffer = filepath_or_buffer[7:]
         else:
             raise NotImplementedError("Only filepaths are supported for read_csv")
         if cls._server_conn is None:
