@@ -12,12 +12,12 @@ jobs:
         engine: ["ray"]
         test-task:
           - modin/pandas/test/dataframe/test_binary.py
-          # - modin/pandas/test/dataframe/test_default.py
-          # - modin/pandas/test/dataframe/test_indexing.py
-          # - modin/pandas/test/dataframe/test_iter.py
-          # - modin/pandas/test/dataframe/test_join_sort.py
-          # - modin/pandas/test/dataframe/test_map_metadata.py
-          # - modin/pandas/test/dataframe/test_reduce.py
+          - modin/pandas/test/dataframe/test_default.py
+          - modin/pandas/test/dataframe/test_indexing.py
+          - modin/pandas/test/dataframe/test_iter.py
+          - modin/pandas/test/dataframe/test_join_sort.py
+          - modin/pandas/test/dataframe/test_map_metadata.py
+          - modin/pandas/test/dataframe/test_reduce.py
           - modin/pandas/test/dataframe/test_udf.py
           # - modin/pandas/test/dataframe/test_window.py
           # - modin/pandas/test/dataframe/test_pickle.py
