@@ -75,6 +75,90 @@ def _set_axis(axis):
     return set_axis
 
 
+def _str_map(func_name):
+    """
+    Build function that calls specified string function on frames ``str`` accessor.
+
+    Parameters
+    ----------
+    func_name : str
+        String function name to execute on ``str`` accessor.
+
+    Returns
+    -------
+    callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
+    """
+
+    def str_op_builder(df, *args, **kwargs):
+        """Apply specified function against `str` accessor of the passed frame."""
+        str_s = df.squeeze(axis=1).str
+        return getattr(pandas.Series.str, func_name)(str_s, *args, **kwargs).to_frame()
+
+    return str_op_builder
+
+
+def _dt_prop_map(property_name):
+    """
+    Build function that access specified property of the ``dt`` property of the passed frame.
+
+    Parameters
+    ----------
+    property_name : str
+        Date-time property name to access.
+
+    Returns
+    -------
+    callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
+        Function to be applied in the partitions.
+
+    Notes
+    -----
+    This applies non-callable properties of ``Series.dt``.
+    """
+
+    def dt_op_builder(df, *args, **kwargs):
+        """Access specified date-time property of the passed frame."""
+        prop_val = getattr(df.squeeze(axis=1).dt, property_name)
+        if isinstance(prop_val, pandas.Series):
+            return prop_val.to_frame()
+        elif isinstance(prop_val, pandas.DataFrame):
+            return prop_val
+        else:
+            return pandas.DataFrame([prop_val])
+
+    return dt_op_builder
+
+
+def _dt_func_map(func_name):
+    """
+    Build function that apply specified method against ``dt`` property of the passed frame.
+
+    Parameters
+    ----------
+    func_name : str
+        Date-time function name to apply.
+
+    Returns
+    -------
+    callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
+        Function to be applied in the partitions.
+
+    Notes
+    -----
+    This applies callable methods of ``Series.dt``.
+    """
+
+    def dt_op_builder(df, *args, **kwargs):
+        """Apply specified function against ``dt`` accessor of the passed frame."""
+        dt_s = df.squeeze(axis=1).dt
+        dt_func_result = getattr(pandas.Series.dt, func_name)(dt_s, *args, **kwargs)
+        # If we don't specify the dtype for the frame, the frame might get the
+        # wrong dtype, e.g. for to_pydatetime in https://github.com/modin-project/modin/issues/4436
+        return pandas.DataFrame(dt_func_result, dtype=dt_func_result.dtype)
+
+    return dt_op_builder
+
+
 @_inherit_docstrings(BaseQueryCompiler)
 class SmallQueryCompiler(BaseQueryCompiler):
     """
@@ -115,11 +199,21 @@ class SmallQueryCompiler(BaseQueryCompiler):
         #     return result
 
     def _register_default_pandas(func):
-        def caller(dataframe, *args, **kwargs):
+        def caller(query_compiler, *args, **kwargs):
             print(func.__name__)
+            exclude_names = ["broadcast", "fold_axis"]
             args = try_cast_to_pandas(args)
+            if "fold_axis" in kwargs:
+                kwargs["axis"] = kwargs["fold_axis"]
+            kwargs = {k: v for k, v in kwargs.items() if k not in exclude_names}
             kwargs = try_cast_to_pandas(kwargs)
-            return func(dataframe, *args, **kwargs)
+            result = func(query_compiler._modin_frame, *args, **kwargs)
+            if isinstance(result, pandas.Series):
+                if result.name is None:
+                    result.name = "__reduced__"
+                result = result.to_frame()
+            # Add check if need to turn into regular query compiler here
+            return query_compiler.__constructor__(result)
 
         return caller
 
@@ -130,6 +224,219 @@ class SmallQueryCompiler(BaseQueryCompiler):
     applymap = _register_default_pandas(pandas.DataFrame.applymap)
     astype = _register_default_pandas(pandas.DataFrame.astype)
     combine = _register_default_pandas(pandas.DataFrame.combine)
+    combine_first = _register_default_pandas(pandas.DataFrame.combine_first)
+    # conj = _register_default_pandas(pandas.DataFrame.conj)
+    convert_dtypes = _register_default_pandas(pandas.DataFrame.convert_dtypes)
+    copy = _register_default_pandas(pandas.DataFrame.copy)
+    count = _register_default_pandas(pandas.DataFrame.count)
+    cummax = _register_default_pandas(pandas.DataFrame.cummax)
+    cummin = _register_default_pandas(pandas.DataFrame.cummin)
+    cumprod = _register_default_pandas(pandas.DataFrame.cumprod)
+    cumsum = _register_default_pandas(pandas.DataFrame.cumsum)
+    # df_update = _register_default_pandas(pandas.DataFrame.df_update)
+    diff = _register_default_pandas(pandas.DataFrame.diff)
+    dt_ceil = _register_default_pandas(_dt_func_map("ceil"))
+    # dt_components ?
+    dt_date = _register_default_pandas(_dt_prop_map("date"))
+    dt_day = _register_default_pandas(_dt_prop_map("day"))
+    dt_day_name = _register_default_pandas(_dt_func_map("day_name"))
+    dt_dayofweek = _register_default_pandas(_dt_prop_map("dayofweek"))
+    dt_dayofyear = _register_default_pandas(_dt_prop_map("dayofyear"))
+    dt_days = _register_default_pandas(_dt_prop_map("days"))
+    dt_days_in_month = _register_default_pandas(_dt_prop_map("days_in_month"))
+    dt_daysinmonth = _register_default_pandas(_dt_prop_map("daysinmonth"))
+    dt_end_time = _register_default_pandas(_dt_prop_map("end_time"))
+    dt_floor = _register_default_pandas(_dt_func_map("floor"))
+    # dt_freq ?
+    dt_hour = _register_default_pandas(_dt_prop_map("hour"))
+    dt_is_leap_year = _register_default_pandas(_dt_prop_map("is_leap_year"))
+    dt_is_month_end = _register_default_pandas(_dt_prop_map("is_month_end"))
+    dt_is_month_start = _register_default_pandas(_dt_prop_map("is_month_start"))
+    dt_is_quarter_end = _register_default_pandas(_dt_prop_map("is_quarter_end"))
+    dt_is_quarter_start = _register_default_pandas(_dt_prop_map("is_quarter_start"))
+    dt_is_year_end = _register_default_pandas(_dt_prop_map("is_year_end"))
+    dt_is_year_start = _register_default_pandas(_dt_prop_map("is_year_start"))
+    dt_microsecond = _register_default_pandas(_dt_prop_map("microsecond"))
+    dt_microseconds = _register_default_pandas(_dt_prop_map("microseconds"))
+    dt_minute = _register_default_pandas(_dt_prop_map("minute"))
+    dt_month = _register_default_pandas(_dt_prop_map("month"))
+    dt_month_name = _register_default_pandas(_dt_func_map("month_name"))
+    dt_nanosecond = _register_default_pandas(_dt_prop_map("nanosecond"))
+    dt_nanoseconds = _register_default_pandas(_dt_prop_map("nanoseconds"))
+    dt_normalize = _register_default_pandas(_dt_func_map("normalize"))
+    dt_quarter = _register_default_pandas(_dt_prop_map("quarter"))
+    dt_qyear = _register_default_pandas(_dt_prop_map("qyear"))
+    dt_round = _register_default_pandas(_dt_func_map("round"))
+    dt_second = _register_default_pandas(_dt_prop_map("second"))
+    dt_seconds = _register_default_pandas(_dt_prop_map("seconds"))
+    dt_start_time = _register_default_pandas(_dt_prop_map("start_time"))
+    dt_strftime = _register_default_pandas(_dt_func_map("strftime"))
+    dt_time = _register_default_pandas(_dt_prop_map("time"))
+    dt_timetz = _register_default_pandas(_dt_prop_map("timetz"))
+    dt_to_period = _register_default_pandas(_dt_func_map("to_period"))
+    dt_to_pydatetime = _register_default_pandas(_dt_func_map("to_pydatetime"))
+    dt_to_pytimedelta = _register_default_pandas(_dt_func_map("to_pytimedelta"))
+    dt_to_timestamp = _register_default_pandas(_dt_func_map("to_timestamp"))
+    dt_total_seconds = _register_default_pandas(_dt_func_map("total_seconds"))
+    # dt_tz ?
+    dt_tz_convert = _register_default_pandas(_dt_func_map("tz_convert"))
+    dt_tz_localize = _register_default_pandas(_dt_func_map("tz_localize"))
+    dt_week = _register_default_pandas(_dt_prop_map("week"))
+    dt_weekday = _register_default_pandas(_dt_prop_map("weekday"))
+    dt_weekofyear = _register_default_pandas(_dt_prop_map("weekofyear"))
+    dt_year = _register_default_pandas(_dt_prop_map("year"))
+    eq = _register_default_pandas(pandas.DataFrame.eq)
+    explode = _register_default_pandas(pandas.DataFrame.explode)
+    floordiv = _register_default_pandas(pandas.DataFrame.floordiv)
+    ge = _register_default_pandas(pandas.DataFrame.ge)
+    # groupby_agg
+    # groupby_all
+    # groupby_any
+    # groupby_count
+    # groupby_cummax
+    # groupby_cummin
+    # groupby_cumprod
+    # groupby_cumsum
+    # groupby_dtypes
+    # groupby_fillna
+    # groupby_max
+    # groupby_mean
+    # groupby_median
+    # groupby_min
+    # groupby_nunique
+    # groupby_prod
+    # groupby_quantile
+    # groupby_rank
+    # groupby_shift
+    # groupby_size
+    # groupby_skew
+    # groupby_std
+    # groupby_sum
+    # groupby_var
+    gt = _register_default_pandas(pandas.DataFrame.gt)
+    idxmax = _register_default_pandas(pandas.DataFrame.idxmax)
+    idxmin = _register_default_pandas(pandas.DataFrame.idxmin)
+    invert = _register_default_pandas(pandas.DataFrame.__invert__)
+    # is_monotonic_decreasing = _register_default_pandas(
+    #     pandas.DataFrame.is_monotonic_decreasing
+    # )
+    # is_monotonic_increasing = _register_default_pandas(
+    #     pandas.DataFrame.is_monotonic_increasing
+    # )
+    isin = _register_default_pandas(pandas.DataFrame.isin)
+    isna = _register_default_pandas(pandas.DataFrame.isna)
+    kurt = _register_default_pandas(pandas.DataFrame.kurt)
+    le = _register_default_pandas(pandas.DataFrame.le)
+    lt = _register_default_pandas(pandas.DataFrame.lt)
+    mad = _register_default_pandas(pandas.DataFrame.mad)
+    max = _register_default_pandas(pandas.DataFrame.max)
+    mean = _register_default_pandas(pandas.DataFrame.mean)
+    median = _register_default_pandas(pandas.DataFrame.median)
+    memory_usage = _register_default_pandas(pandas.DataFrame.memory_usage)
+    min = _register_default_pandas(pandas.DataFrame.min)
+    mod = _register_default_pandas(pandas.DataFrame.mod)
+    mode = _register_default_pandas(pandas.DataFrame.mode)
+    mul = _register_default_pandas(pandas.DataFrame.mul)
+    ne = _register_default_pandas(pandas.DataFrame.ne)
+    negative = _register_default_pandas(pandas.DataFrame.__neg__)
+    notna = _register_default_pandas(pandas.DataFrame.notna)
+    pow = _register_default_pandas(pandas.DataFrame.pow)
+    prod = _register_default_pandas(pandas.DataFrame.prod)
+    prod_min_count = _register_default_pandas(pandas.DataFrame.prod)
+    radd = _register_default_pandas(pandas.DataFrame.radd)
+    replace = _register_default_pandas(pandas.DataFrame.replace)
+    # resample_agg_df
+    # resample_agg_ser
+    # resample_app_df
+    # resample_app_ser
+    # resample_asfreq
+    # resample_backfill
+    # resample_bfill
+    # resample_count
+    # resample_ffill
+    # resample_fillna
+    # resample_first
+    # resample_get_group
+    # resample_interpolate
+    # resample_last
+    # resample_max
+    # resample_mean
+    # resample_median
+    # resample_min
+    # resample_nearest
+    # resample_nunique
+    # resample_ohlc_df
+    # resample_ohlc_ser
+    # resample_pad
+    # resample_pipe
+    # resample_prod
+    # resample_quantile
+    # resample_sem
+    # resample_size
+    # resample_std
+    # resample_sum
+    # resample_transform
+    # resample_var
+    rfloordiv = _register_default_pandas(pandas.DataFrame.rfloordiv)
+    rmod = _register_default_pandas(pandas.DataFrame.rmod)
+    round = _register_default_pandas(pandas.DataFrame.round)
+    rsub = _register_default_pandas(pandas.DataFrame.rsub)
+    rtruediv = _register_default_pandas(pandas.DataFrame.rtruediv)
+    sem = _register_default_pandas(pandas.DataFrame.sem)
+    skew = _register_default_pandas(pandas.DataFrame.skew)
+    std = _register_default_pandas(pandas.DataFrame.std)
+    str___getitem__ = _register_default_pandas(_str_map("__getitem__"))
+    str_capitalize = _register_default_pandas(_str_map("capitalize"))
+    str_center = _register_default_pandas(_str_map("center"))
+    str_contains = _register_default_pandas(_str_map("contains"))
+    str_count = _register_default_pandas(_str_map("count"))
+    str_endswith = _register_default_pandas(_str_map("endswith"))
+    str_find = _register_default_pandas(_str_map("find"))
+    str_findall = _register_default_pandas(_str_map("findall"))
+    str_get = _register_default_pandas(_str_map("get"))
+    str_index = _register_default_pandas(_str_map("index"))
+    str_isalnum = _register_default_pandas(_str_map("isalnum"))
+    str_isalpha = _register_default_pandas(_str_map("isalpha"))
+    str_isdecimal = _register_default_pandas(_str_map("isdecimal"))
+    str_isdigit = _register_default_pandas(_str_map("isdigit"))
+    str_islower = _register_default_pandas(_str_map("islower"))
+    str_isnumeric = _register_default_pandas(_str_map("isnumeric"))
+    str_isspace = _register_default_pandas(_str_map("isspace"))
+    str_istitle = _register_default_pandas(_str_map("istitle"))
+    str_isupper = _register_default_pandas(_str_map("isupper"))
+    str_join = _register_default_pandas(_str_map("join"))
+    str_len = _register_default_pandas(_str_map("len"))
+    str_ljust = _register_default_pandas(_str_map("ljust"))
+    str_lower = _register_default_pandas(_str_map("lower"))
+    str_lstrip = _register_default_pandas(_str_map("lstrip"))
+    str_match = _register_default_pandas(_str_map("match"))
+    str_normalize = _register_default_pandas(_str_map("normalize"))
+    str_pad = _register_default_pandas(_str_map("pad"))
+    str_partition = _register_default_pandas(_str_map("partition"))
+    str_repeat = _register_default_pandas(_str_map("repeat"))
+    str_replace = _register_default_pandas(_str_map("replace"))
+    str_rfind = _register_default_pandas(_str_map("rfind"))
+    str_rindex = _register_default_pandas(_str_map("rindex"))
+    str_rjust = _register_default_pandas(_str_map("rjust"))
+    str_rpartition = _register_default_pandas(_str_map("rpartition"))
+    str_rsplit = _register_default_pandas(_str_map("rsplit"))
+    str_rstrip = _register_default_pandas(_str_map("rstrip"))
+    str_slice = _register_default_pandas(_str_map("slice"))
+    str_slice_replace = _register_default_pandas(_str_map("slice_replace"))
+    str_split = _register_default_pandas(_str_map("split"))
+    str_startswith = _register_default_pandas(_str_map("startswith"))
+    str_strip = _register_default_pandas(_str_map("strip"))
+    str_swapcase = _register_default_pandas(_str_map("swapcase"))
+    str_title = _register_default_pandas(_str_map("title"))
+    str_translate = _register_default_pandas(_str_map("translate"))
+    str_upper = _register_default_pandas(_str_map("upper"))
+    str_wrap = _register_default_pandas(_str_map("wrap"))
+    str_zfill = _register_default_pandas(_str_map("zfill"))
+    sub = _register_default_pandas(pandas.DataFrame.sub)
+    sum = _register_default_pandas(pandas.DataFrame.sum)
+    sum_min_count = _register_default_pandas(pandas.DataFrame.sum)
+    truediv = _register_default_pandas(pandas.DataFrame.truediv)
+    var = _register_default_pandas(pandas.DataFrame.var)
 
     def to_pandas(self):
         return self._modin_frame
@@ -182,6 +489,17 @@ class SmallQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._modin_frame.add_suffix(suffix, axis))
 
     # END Metadata modification methods
+    def getitem_column_array(self, key, numeric=False):
+        # Convert to list for type checking
+        # if numeric:
+        #     new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
+        #         col_positions=key
+        #     )
+        # else:
+        #     new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
+        #         col_labels=key
+        #     )
+        return self.__constructor__(self._modin_frame[key])
 
     # Reindex/reset_index (may shuffle data)
     def reindex(self, axis, labels, **kwargs):
@@ -200,8 +518,8 @@ class SmallQueryCompiler(BaseQueryCompiler):
             len(self._modin_frame.index) == 1
             and self._modin_frame.index[0] == MODIN_UNNAMED_SERIES_LABEL
         ):
-            return self._modin_frame.transpose()
-        return self._modin_frame
+            return SmallQueryCompiler(self._modin_frame.transpose())
+        return self
 
     def reset_index(self, **kwargs):
         drop = kwargs.get("drop", False)

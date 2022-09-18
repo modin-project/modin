@@ -99,6 +99,8 @@ class Series(SeriesCompat, BasePandasDataset):
         # use this list to update inplace when there is a shallow copy.
         self._siblings = []
         Engine.subscribe(_update_engine)
+        print("HELLO")
+        print(type(data), type(query_compiler))
         if isinstance(data, type(self)):
             query_compiler = data._query_compiler.copy()
             if index is not None:
@@ -146,7 +148,7 @@ class Series(SeriesCompat, BasePandasDataset):
                 )._query_compiler
         self._query_compiler = query_compiler.columnarize()
         if name is not None:
-            self._query_compiler = self._query_compiler
+            # self._query_compiler = self._query_compiler
             self.name = name
 
     def _get_name(self):
