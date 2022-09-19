@@ -16,7 +16,6 @@ import unittest.mock as mock
 import modin.pandas as pd
 from modin.pandas.test.utils import test_data_values
 from modin.config import BenchmarkMode, Engine
-from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 
 engine = Engine.get()
@@ -43,8 +42,7 @@ else:
 
 def test_from_environment_variable():
     assert BenchmarkMode.get()
-    # On Omnisci storage, transpose() defaults to Pandas.
-    with warns_that_defaulting_to_pandas(), mock.patch(wait_method) as wait:
+    with mock.patch(wait_method) as wait:
         pd.DataFrame(test_data_values[0]).mean()
 
     wait.assert_called()
