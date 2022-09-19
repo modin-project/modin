@@ -15,7 +15,7 @@ jobs:
     name: test-compat-win (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - name: Limit ray memory
-        run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
+        run: echo "MODIN_MEMORY=4000000000" >> $GITHUB_ENV
         if: matrix.engine == 'ray'
       - uses: actions/checkout@v2
         with:
@@ -44,7 +44,7 @@ jobs:
           conda list
       - name: Start local ray cluster
         run: |
-          ray start --head --port=6379 --object-store-memory=1000000000
+          ray start --head --port=6379 --object-store-memory=4000000000
           echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
         if: matrix.engine == 'ray'
       - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
