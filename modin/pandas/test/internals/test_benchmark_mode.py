@@ -24,11 +24,22 @@ engine = Engine.get()
 
 # We have to explicitly mock subclass implementations of wait_partitions.
 if engine == "Ray":
-    wait_method = "modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition_manager.PandasOnRayDataframePartitionManager.wait_partitions"
+    wait_method = (
+        "modin.core.execution.ray.implementations.pandas_on_ray."
+        + "partitioning.partition_manager."
+        + "PandasOnRayDataframePartitionManager.wait_partitions"
+    )
 elif engine == "Dask":
-    wait_method = "modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition_manager.PandasOnDaskDataframePartitionManager.wait_partitions"
+    wait_method = (
+        "modin.core.execution.dask.implementations."
+        + "pandas_on_dask.partitioning.partition_manager."
+        + "PandasOnDaskDataframePartitionManager.wait_partitions"
+    )
 else:
-    wait_method = "modin.core.dataframe.pandas.partitioning.partition_manager.PandasDataframePartitionManager.wait_partitions"
+    wait_method = (
+        "modin.core.dataframe.pandas.partitioning."
+        + "partition_manager.PandasDataframePartitionManager.wait_partitions"
+    )
 
 
 def test_from_environment_variable():
