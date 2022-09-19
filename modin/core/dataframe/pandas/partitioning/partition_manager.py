@@ -813,7 +813,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     def wait_partitions(cls, partitions):
-        print("calling python wait_partitions")
         """
         Wait on the objects wrapped by `partitions`, without materializing them.
 
