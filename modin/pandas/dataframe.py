@@ -2631,7 +2631,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         def attrs(df):
             return df.attrs
 
-        self._default_to_pandas(attrs)
+        return self._default_to_pandas(attrs)
 
     @property
     def style(self):  # noqa: RT01, D200
