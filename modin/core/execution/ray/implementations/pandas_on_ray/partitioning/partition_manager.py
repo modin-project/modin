@@ -115,7 +115,6 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
 
     @classmethod
     def wait_partitions(cls, partitions):
-        print('calling ray wait_partitions')
         """
         Wait on the objects wrapped by `partitions` in parallel, without materializing them.
 
