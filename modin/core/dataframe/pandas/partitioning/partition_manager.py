@@ -51,16 +51,16 @@ def wait_computations_if_benchmark_mode(func):
     -----
     `func` should return NumPy array with partitions.
     """
-    if BenchmarkMode.get():
 
-        @wraps(func)
-        def wait(cls, *args, **kwargs):
-            """Wait for computation results."""
-            result = func(cls, *args, **kwargs)
-            if isinstance(result, tuple):
-                partitions = result[0]
-            else:
-                partitions = result
+    @wraps(func)
+    def wait(cls, *args, **kwargs):
+        """Wait for computation results."""
+        result = func(cls, *args, **kwargs)
+        if isinstance(result, tuple):
+            partitions = result[0]
+        else:
+            partitions = result
+        if BenchmarkMode.get():
             # When partitions have a deferred call queue, calling
             # partition.wait() on each partition serially will serially kick
             # off each deferred computation and wait for each partition to
@@ -73,10 +73,9 @@ def wait_computations_if_benchmark_mode(func):
             # (We can't just add a `cls` argument to this `wait` function, since doing so
             # seems to be incompatible with the way function decorators work)
             cls.wait_partitions(partitions.flatten())
-            return result
+        return result
 
-        return wait
-    return func
+    return wait
 
 
 class PandasDataframePartitionManager(ClassLogger, ABC):
@@ -814,6 +813,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     def wait_partitions(cls, partitions):
+        print("calling python wait_partitions")
         """
         Wait on the objects wrapped by `partitions`, without materializing them.
 
