@@ -3,18 +3,14 @@ These benchmarks are for Series and DataFrame indexing methods.  For the
 lower-level methods directly on Index and subclasses, see index_object.py,
 indexing_engine.py, and index_cached.py
 """
-import itertools
-import string
 import warnings
 
 import numpy as np
 
 from modin.pandas import (
-    CategoricalIndex,
     DataFrame,
     Float64Index,
     Int64Index,
-    IntervalIndex,
     MultiIndex,
     Series,
     UInt64Index,
@@ -289,43 +285,6 @@ class MultiIndexing:
         self.df.xs(target)
 
 
-class IntervalIndexing:
-    def setup_cache(self):
-        idx = IntervalIndex.from_breaks(np.arange(1000001))
-        monotonic = Series(np.arange(1000000), index=idx)
-        return monotonic
-
-    def time_getitem_scalar(self, monotonic):
-        monotonic[80000]
-
-    def time_loc_scalar(self, monotonic):
-        monotonic.loc[80000]
-
-    def time_getitem_list(self, monotonic):
-        monotonic[80000:]
-
-    def time_loc_list(self, monotonic):
-        monotonic.loc[80000:]
-
-
-class SortedAndUnsortedDatetimeIndexLoc:
-    def setup(self):
-        dti = date_range("2016-01-01", periods=10000, tz="US/Pacific")
-        index = np.array(dti)
-
-        unsorted_index = index.copy()
-        unsorted_index[10] = unsorted_index[20]
-
-        self.df_unsorted = DataFrame(index=unsorted_index, data={"a": 1})
-        self.df_sort = DataFrame(index=index, data={"a": 1})
-
-    def time_loc_unsorted(self):
-        self.df_unsorted.loc["2016-6-11"]
-
-    def time_loc_sorted(self):
-        self.df_sort.loc["2016-6-11"]
-
-
 class GetItemSingleColumn:
     def setup(self):
         self.df_string_col = DataFrame(np.random.randn(3000, 1), columns=["A"])
@@ -386,7 +345,7 @@ class InsertColumns:
     def time_insert_middle(self):
         # same as time_insert but inserting to a middle column rather than
         #  front or back (which have fast-paths)
-        for i in range(100):
+        for _ in range(100):
             self.df2.insert(
                 1, "colname", np.random.randn(self.N), allow_duplicates=True
             )
