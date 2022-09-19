@@ -17,17 +17,6 @@ from modin.pandas import (
 import pandas._testing as tm
 
 
-class GetNumericData:
-    def setup(self):
-        self.df = DataFrame(np.random.randn(10000, 25))
-        self.df["foo"] = "bar"
-        self.df["bar"] = "baz"
-        self.df = self.df._consolidate()
-
-    def time_frame_get_numeric_data(self):
-        self.df._get_numeric_data()
-
-
 class Reindex:
     def setup(self):
         N = 10**3
@@ -178,47 +167,6 @@ class Isnull:
         isnull(self.df_obj)
 
 
-class Fillna:
-
-    params = (
-        [True, False],
-        ["pad", "bfill"],
-        [
-            "float64",
-            "float32",
-            "object",
-            "Int64",
-            "Float64",
-            "datetime64[ns]",
-            "datetime64[ns, tz]",
-            "timedelta64[ns]",
-        ],
-    )
-    param_names = ["inplace", "method", "dtype"]
-
-    def setup(self, inplace, method, dtype):
-        N, M = 10000, 100
-        if dtype in ("datetime64[ns]", "datetime64[ns, tz]", "timedelta64[ns]"):
-            data = {
-                "datetime64[ns]": date_range("2011-01-01", freq="H", periods=N),
-                "datetime64[ns, tz]": date_range(
-                    "2011-01-01", freq="H", periods=N, tz="Asia/Tokyo"
-                ),
-                "timedelta64[ns]": timedelta_range(start="1 day", periods=N, freq="1D"),
-            }
-            self.df = DataFrame({f"col_{i}": data[dtype] for i in range(M)})
-            self.df[::2] = None
-        else:
-            values = np.random.randn(N, M)
-            values[::2] = np.nan
-            if dtype == "Int64":
-                values = values.round()
-            self.df = DataFrame(values, dtype=dtype)
-
-    def time_frame_fillna(self, inplace, method, dtype):
-        self.df.fillna(inplace=inplace, method=method)
-
-
 class Dropna:
 
     params = (["all", "any"], [0, 1])
@@ -237,62 +185,6 @@ class Dropna:
 
     def time_dropna_axis_mixed_dtypes(self, how, axis):
         self.df_mixed.dropna(how=how, axis=axis)
-
-
-class Count:
-
-    params = [0, 1]
-    param_names = ["axis"]
-
-    def setup(self, axis):
-        self.df = DataFrame(np.random.randn(10000, 1000))
-        self.df.iloc[50:1000, 20:50] = np.nan
-        self.df.iloc[2000:3000] = np.nan
-        self.df.iloc[:, 60:70] = np.nan
-        self.df_mixed = self.df.copy()
-        self.df_mixed["foo"] = "bar"
-
-        self.df.index = MultiIndex.from_arrays([self.df.index, self.df.index])
-        self.df.columns = MultiIndex.from_arrays([self.df.columns, self.df.columns])
-        self.df_mixed.index = MultiIndex.from_arrays(
-            [self.df_mixed.index, self.df_mixed.index]
-        )
-        self.df_mixed.columns = MultiIndex.from_arrays(
-            [self.df_mixed.columns, self.df_mixed.columns]
-        )
-
-    def time_count_level_multi(self, axis):
-        self.df.count(axis=axis, level=1)
-
-    def time_count_level_mixed_dtypes_multi(self, axis):
-        self.df_mixed.count(axis=axis, level=1)
-
-
-class Apply:
-    def setup(self):
-        self.df = DataFrame(np.random.randn(1000, 100))
-
-        self.s = Series(np.arange(1028.0))
-        self.df2 = DataFrame({i: self.s for i in range(1028)})
-        self.df3 = DataFrame(np.random.randn(1000, 3), columns=list("ABC"))
-
-    def time_apply_user_func(self):
-        self.df2.apply(lambda x: np.corrcoef(x, self.s)[(0, 1)])
-
-    def time_apply_axis_1(self):
-        self.df.apply(lambda x: x + 1, axis=1)
-
-    def time_apply_lambda_mean(self):
-        self.df.apply(lambda x: x.mean())
-
-    def time_apply_np_mean(self):
-        self.df.apply(np.mean)
-
-    def time_apply_pass_thru(self):
-        self.df.apply(lambda x: x)
-
-    def time_apply_ref_by_name(self):
-        self.df3.apply(lambda x: x["A"] + x["B"], axis=1)
 
 
 class Dtypes:
@@ -381,22 +273,6 @@ class Shift:
 
     def time_shift(self, axis):
         self.df.shift(1, axis=axis)
-
-
-class Nunique:
-    def setup(self):
-        self.df = DataFrame(np.random.randn(10000, 1000))
-
-    def time_frame_nunique(self):
-        self.df.nunique()
-
-
-class SeriesNuniqueWithNan:
-    def setup(self):
-        self.ser = Series(100000 * (100 * [np.nan] + list(range(100)))).astype(float)
-
-    def time_series_nunique_nan(self):
-        self.ser.nunique()
 
 
 class Duplicated:
@@ -495,23 +371,6 @@ class NSort:
 
     def time_nsmallest_two_columns(self, keep):
         self.df.nsmallest(100, ["A", "B"], keep=keep)
-
-
-class Describe:
-    def setup(self):
-        self.df = DataFrame(
-            {
-                "a": np.random.randint(0, 100, 10**6),
-                "b": np.random.randint(0, 100, 10**6),
-                "c": np.random.randint(0, 100, 10**6),
-            }
-        )
-
-    def time_series_describe(self):
-        self.df["a"].describe()
-
-    def time_dataframe_describe(self):
-        self.df.describe()
 
 
 class MemoryUsage:

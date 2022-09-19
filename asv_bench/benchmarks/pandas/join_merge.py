@@ -14,39 +14,6 @@ from modin.pandas import (
 import pandas._testing as tm
 
 
-class Concat:
-
-    params = [0, 1]
-    param_names = ["axis"]
-
-    def setup(self, axis):
-        N = 1000
-        s = Series(N, index=tm.makeStringIndex(N))
-        self.series = [s[i:-i] for i in range(1, 10)] * 50
-        self.small_frames = [DataFrame(np.random.randn(5, 4))] * 1000
-        df = DataFrame(
-            {"A": range(N)}, index=date_range("20130101", periods=N, freq="s")
-        )
-        self.empty_left = [DataFrame(), df]
-        self.empty_right = [df, DataFrame()]
-        self.mixed_ndims = [df, df.head(N // 2)]
-
-    def time_concat_series(self, axis):
-        concat(self.series, axis=axis, sort=False)
-
-    def time_concat_small_frames(self, axis):
-        concat(self.small_frames, axis=axis)
-
-    def time_concat_empty_right(self, axis):
-        concat(self.empty_right, axis=axis)
-
-    def time_concat_empty_left(self, axis):
-        concat(self.empty_left, axis=axis)
-
-    def time_concat_mixed_ndims(self, axis):
-        concat(self.mixed_ndims, axis=axis)
-
-
 class ConcatDataFrames:
 
     params = ([0, 1], [True, False])
