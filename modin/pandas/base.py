@@ -1254,9 +1254,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
-    def dropna(
-        self, axis=0, how="any", thresh=None, subset=None, inplace=False
-    ):  # noqa: PR01, RT01, D200
+    def _dropna(self, axis, how, thresh, subset, inplace):  # noqa: PR01, RT01, D200
         """
         Remove missing values.
         """

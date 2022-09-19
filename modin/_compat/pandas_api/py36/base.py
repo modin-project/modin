@@ -62,6 +62,11 @@ class Python36CompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
             convert_floating=None,
         )
 
+    def dropna(self, axis=0, how="any", thresh=None, subset=None, inplace=False):
+        return self._dropna(
+            axis=axis, how=how, thresh=thresh, subset=subset, inplace=inplace
+        )
+
     def ewm(
         self,
         com=None,

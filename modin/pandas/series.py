@@ -1786,8 +1786,6 @@ class Series(SeriesCompat, BasePandasDataset):
         Return the sum of the values.
         """
         axis = self._get_axis_number(axis)
-        if numeric_only is True:
-            raise NotImplementedError("Series.sum does not implement numeric_only")
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)

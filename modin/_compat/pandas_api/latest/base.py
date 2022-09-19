@@ -87,6 +87,11 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
             convert_floating=convert_floating,
         )
 
+    def dropna(self, axis=0, how="any", thresh=no_default, subset=None, inplace=False):
+        return self._dropna(
+            axis=axis, how=how, thresh=thresh, subset=subset, inplace=inplace
+        )
+
     @_inherit_docstrings(
         parent=pandas.DataFrame.explode, apilink="pandas.DataFrame.explode"
     )
