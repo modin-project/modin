@@ -45,6 +45,8 @@ class Python36CompatibleSeries(BaseCompatibleSeries):
         numeric_only=None,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
+        if numeric_only is True:
+            raise NotImplementedError("Series.kurt does not implement numeric_only.")
         return self._kurt(
             axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
         )
@@ -78,6 +80,10 @@ class Python36CompatibleSeries(BaseCompatibleSeries):
         min_count=0,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
+        if level is None and numeric_only:
+            raise NotImplementedError(
+                f"Series.{self.name} does not implement numeric_only."
+            )
         return self._prod(
             axis=axis,
             skipna=skipna,

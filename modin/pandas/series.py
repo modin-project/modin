@@ -1204,8 +1204,6 @@ class Series(SeriesCompat, BasePandasDataset):
         Return unbiased kurtosis over requested axis.
         """
         axis = self._get_axis_number(axis)
-        if numeric_only is True:
-            raise NotImplementedError("Series.kurt does not implement numeric_only.")
         return super(Series, self)._kurt(axis, skipna, level, numeric_only, **kwargs)
 
     kurtosis = SeriesCompat.kurt
@@ -1429,10 +1427,6 @@ class Series(SeriesCompat, BasePandasDataset):
                 raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
             return self.groupby(level=level, axis=axis, sort=False).prod(
                 numeric_only=numeric_only, min_count=min_count, **kwargs
-            )
-        if numeric_only:
-            raise NotImplementedError(
-                f"Series.{self.name} does not implement numeric_only."
             )
         new_index = self.columns if axis else self.index
         if min_count > len(new_index):
