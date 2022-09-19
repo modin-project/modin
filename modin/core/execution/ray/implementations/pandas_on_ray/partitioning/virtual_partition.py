@@ -326,10 +326,10 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
 
         Notes
         -----
-        The ``args`` iterable is deserialized before being passed to the superclass ``apply``
-        method. In older versions of Modin, ``args`` was instead passed internally as
-        ``kwargs["args"]``, and this deserialization was handled in a special case in
-        ``deploy_ray_func``, making control flow difficult to follow.
+        In older versions of Modin, ``args`` was passed internally as ``kwargs["args"]``, and
+        deserialization was handled in a special case in ``deploy_ray_func``, making control flow
+        difficult to follow. All deserialization is still handled in ``deploy_ray_func``, but
+        in a more direct fashion.
         """
         if not self.full_axis:
             # If this is not a full axis partition, it already contains a subset of
@@ -529,15 +529,15 @@ def deploy_ray_func(
     Parameters
     ----------
     deployer : callable
-        A `PandasDataFrameAxisPartition.deploy_*` method that will call `deploy_f`.
+        A `PandasDataFrameAxisPartition.deploy_*` method that will call ``f_to_deploy``.
     axis : {0, 1}
         The axis to perform the function along.
     f_to_deploy : callable or RayObjectID
         The function to deploy.
     f_args : list or tuple
-        Positional arguments to pass to ``deploy_f``.
+        Positional arguments to pass to ``f_to_deploy``.
     f_kwargs : dict
-        Keyword arguments to pass to ``deploy_f``.
+        Keyword arguments to pass to ``f_to_deploy``.
     *args : list
         Positional arguments to pass to ``func``.
     **kwargs : dict
