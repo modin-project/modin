@@ -400,6 +400,11 @@ def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
         The number of columns of the resulting pandas DataFrame.
     str
         The node IP address of the worker process.
+
+    Notes
+    -----
+    Directly passing a call queue entry (i.e. a list of [func, args, kwargs]) instead of
+    destructuring it causes a performance penalty.
     """
     try:
         result = func(partition, *args, **kwargs)

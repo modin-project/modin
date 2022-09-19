@@ -69,7 +69,7 @@ class RayWrapper:
             Ray identifier of the result being put to Plasma store.
         """
         args = [] if f_args is None else f_args
-        kwargs = [] if f_kwargs is None else f_kwargs
+        kwargs = {} if f_kwargs is None else f_kwargs
         return _deploy_ray_func.options(num_returns=num_returns).remote(
             func, *args, **kwargs
         )
