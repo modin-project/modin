@@ -49,6 +49,7 @@ Key Features and Updates
   * FIX-#4845: Fix KeyError from `__getitem_bool` for single row dataframes (#4845)
   * FIX-#4734: Handle Series.apply when return type is a DataFrame (#4830)
   * FIX-#4983: Set `frac` to `None` in _sample when `n=0` (#4984)
+  * FIX-#4993: Return `_default_to_pandas` in `df.attrs` (#4995)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
