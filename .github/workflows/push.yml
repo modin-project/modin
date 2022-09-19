@@ -47,23 +47,59 @@ jobs:
       #     ray start --head --port=6379 --object-store-memory=1000000000
       #     echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
       #   if: matrix.engine == 'ray'
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
-      - run: pytest -n 2 modin/pandas/test/test_api.py
-      - run: pytest -n 2 modin/pandas/test/test_concat.py
+      - run: |
+          pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+          sleep 1
+      - run: |
+          pytest -n 2 modin/pandas/test/dataframe/test_default.py
+          sleep 1
+      - run: |
+          pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
+          sleep 1
+      - run: |
+          pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+          sleep 1
+      - run: |
+          pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
+          sleep 1
+      - run: |
+          pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+          sleep 1
+      - run: |
+          pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
+          sleep 1
+      - run: |
+          pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
+          sleep 1
+      - run: |
+          pytest -n 2 modin/pandas/test/dataframe/test_udf.py
+          sleep 1
+      - run: |
+          pytest -n 2 modin/pandas/test/dataframe/test_window.py
+          sleep 1
+      - run: |
+          pytest -n 2 modin/pandas/test/test_api.py
+          sleep 1
+      - run: |
+          pytest -n 2 modin/pandas/test/test_concat.py
+          sleep 1
         if: matrix.engine == 'python'
-      - run: pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+      - run: | # Ray and Dask versions fails with -n 2
+          pytest modin/pandas/test/test_concat.py 
+          sleep 1
         if: matrix.engine != 'python'
-      - run: pytest -n 2 modin/pandas/test/test_general.py
-      - run: pytest -n 2 modin/pandas/test/test_groupby.py
-      - run: pytest -n 2 modin/pandas/test/test_rolling.py
-      - run: pytest -n 2 modin/pandas/test/test_series.py
-      - run: pytest modin/pandas/test/test_io.py --verbose
+      - run: |
+          pytest -n 2 modin/pandas/test/test_general.py
+          sleep 1
+      - run: |
+          pytest -n 2 modin/pandas/test/test_groupby.py
+          sleep 1
+      - run: |
+          pytest -n 2 modin/pandas/test/test_rolling.py
+          sleep 1
+      - run: |
+          pytest -n 2 modin/pandas/test/test_series.py
+          sleep 1
+      - run: |
+          pytest modin/pandas/test/test_io.py --verbose
+          sleep 1
