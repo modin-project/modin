@@ -436,34 +436,6 @@ class XS:
         self.df.xs(self.N / 2, axis=axis)
 
 
-class SortValues:
-
-    params = [True, False]
-    param_names = ["ascending"]
-
-    def setup(self, ascending):
-        self.df = DataFrame(np.random.randn(1000000, 2), columns=list("AB"))
-
-    def time_frame_sort_values(self, ascending):
-        self.df.sort_values(by="A", ascending=ascending)
-
-
-class SortIndexByColumns:
-    def setup(self):
-        N = 10000
-        K = 10
-        self.df = DataFrame(
-            {
-                "key1": tm.makeStringIndex(N).values.repeat(K),
-                "key2": tm.makeStringIndex(N).values.repeat(K),
-                "value": np.random.randn(N * K),
-            }
-        )
-
-    def time_frame_sort_values_by_columns(self):
-        self.df.sort_values(by=["key1", "key2"])
-
-
 class Quantile:
 
     params = [0, 1]

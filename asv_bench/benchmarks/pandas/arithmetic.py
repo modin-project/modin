@@ -25,18 +25,11 @@ class IntFrameWithScalar:
         [np.float64, np.int64],
         [2, 3.0, np.int32(4), np.float64(5)],
         [
+            # subset of operators used in the corresponding pandas asv;
+            #  include floordiv in particular bc it goes through
+            #  its own code-path.
             operator.add,
-            operator.sub,
-            operator.mul,
-            operator.truediv,
             operator.floordiv,
-            operator.pow,
-            operator.mod,
-            operator.eq,
-            operator.ne,
-            operator.gt,
-            operator.ge,
-            operator.lt,
             operator.le,
         ],
     ]
@@ -48,57 +41,6 @@ class IntFrameWithScalar:
 
     def time_frame_op_with_scalar(self, dtype, scalar, op):
         op(self.df, scalar)
-
-
-class OpWithFillValue:
-    def setup(self):
-        # GH#31300
-        arr = np.arange(10**6)
-        df = DataFrame({"A": arr})
-        ser = df["A"]
-
-        self.df = df
-        self.ser = ser
-
-    def time_frame_op_with_fill_value_no_nas(self):
-        self.df.add(self.df, fill_value=4)
-
-    def time_series_op_with_fill_value_no_nas(self):
-        self.ser.add(self.ser, fill_value=4)
-
-
-class MixedFrameWithSeriesAxis:
-    params = [
-        [
-            "eq",
-            "ne",
-            "lt",
-            "le",
-            "ge",
-            "gt",
-            "add",
-            "sub",
-            "truediv",
-            "floordiv",
-            "mul",
-            "pow",
-        ]
-    ]
-    param_names = ["opname"]
-
-    def setup(self, opname):
-        arr = np.arange(10**6).reshape(1000, -1)
-        df = DataFrame(arr)
-        df["C"] = 1.0
-        self.df = df
-        self.ser = df[0]
-        self.row = df.iloc[0]
-
-    def time_frame_op_with_series_axis0(self, opname):
-        getattr(self.df, opname)(self.ser, axis=0)
-
-    def time_frame_op_with_series_axis1(self, opname):
-        getattr(operator, opname)(self.df, self.ser)
 
 
 class FrameWithFrameWide:
@@ -160,61 +102,6 @@ class FrameWithFrameWide:
     def time_op_same_blocks(self, op, shape):
         # blocks (and dtypes) are aligned
         op(self.left, self.left)
-
-
-
-
-class Ops2:
-    def setup(self):
-        N = 10**3
-        self.df = DataFrame(np.random.randn(N, N))
-        self.df2 = DataFrame(np.random.randn(N, N))
-
-        self.df_int = DataFrame(
-            np.random.randint(
-                np.iinfo(np.int16).min, np.iinfo(np.int16).max, size=(N, N)
-            )
-        )
-        self.df2_int = DataFrame(
-            np.random.randint(
-                np.iinfo(np.int16).min, np.iinfo(np.int16).max, size=(N, N)
-            )
-        )
-
-        self.s = Series(np.random.randn(N))
-
-    # Division
-
-    def time_frame_float_div(self):
-        self.df // self.df2
-
-    def time_frame_float_div_by_zero(self):
-        self.df / 0
-
-    def time_frame_float_floor_by_zero(self):
-        self.df // 0
-
-    def time_frame_int_div_by_zero(self):
-        self.df_int / 0
-
-    # Modulo
-
-    def time_frame_int_mod(self):
-        self.df_int % self.df2_int
-
-    def time_frame_float_mod(self):
-        self.df % self.df2
-
-    # Dot product
-
-    def time_frame_dot(self):
-        self.df.dot(self.df2)
-
-    def time_series_dot(self):
-        self.s.dot(self.s)
-
-    def time_frame_series_dot(self):
-        self.df.dot(self.s)
 
 
 class Timeseries:
