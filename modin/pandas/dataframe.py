@@ -2623,7 +2623,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         )
 
     @property
-    def attrs(self):  # noqa: D200
+    def attrs(self):  # noqa: RT01, D200
         """
         Return dictionary of global attributes of this dataset.
         """
