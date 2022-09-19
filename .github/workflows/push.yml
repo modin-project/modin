@@ -42,11 +42,11 @@ jobs:
         run: |
           conda info
           conda list
-      - name: Start local ray cluster
-        run: |
-          ray start --head --port=6379 --object-store-memory=1000000000
-          echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
-        if: matrix.engine == 'ray'
+      # - name: Start local ray cluster
+      #   run: |
+      #     ray start --head --port=6379 --object-store-memory=1000000000
+      #     echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
+      #   if: matrix.engine == 'ray'
       - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
       - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py

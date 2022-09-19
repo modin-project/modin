@@ -18,6 +18,7 @@ import pandas
 from pandas.util._decorators import doc
 import numpy as np
 import shutil
+import time
 from typing import Optional
 
 assert (
@@ -554,3 +555,5 @@ def pytest_sessionfinish(session, exitstatus):
         ray.util.disconnect()
         if ray_client_server:
             ray_client_server.stop(0)
+        
+        time.sleep(1)
