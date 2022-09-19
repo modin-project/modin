@@ -1,5 +1,4 @@
 import operator
-import warnings
 
 import numpy as np
 
@@ -11,13 +10,6 @@ from modin.pandas import (
 )
 
 from .pandas_vb_common import numeric_dtypes
-
-import pandas.tseries
-from pandas.tseries import offsets
-try:
-    import pandas.tseries.holiday
-except ImportError:
-    pass
 
 
 class IntFrameWithScalar:
@@ -185,57 +177,6 @@ class DateInferOps:
 
     def time_add_timedeltas(self, df):
         df["timedelta"] + df["timedelta"]
-
-
-hcal = pandas.tseries.holiday.USFederalHolidayCalendar()
-# These offsets currently raise a NotImplementedError with .apply_index()
-non_apply = [
-    offsets.Day(),
-    offsets.BYearEnd(),
-    offsets.BYearBegin(),
-    offsets.BQuarterEnd(),
-    offsets.BQuarterBegin(),
-    offsets.BMonthEnd(),
-    offsets.BMonthBegin(),
-    offsets.CustomBusinessDay(),
-    offsets.CustomBusinessDay(calendar=hcal),
-    offsets.CustomBusinessMonthBegin(calendar=hcal),
-    offsets.CustomBusinessMonthEnd(calendar=hcal),
-    offsets.CustomBusinessMonthEnd(calendar=hcal),
-]
-other_offsets = [
-    offsets.YearEnd(),
-    offsets.YearBegin(),
-    offsets.QuarterEnd(),
-    offsets.QuarterBegin(),
-    offsets.MonthEnd(),
-    offsets.MonthBegin(),
-    offsets.DateOffset(months=2, days=2),
-    offsets.BusinessDay(),
-    offsets.SemiMonthEnd(),
-    offsets.SemiMonthBegin(),
-]
-offsets = non_apply + other_offsets
-
-
-class OffsetArrayArithmetic:
-
-    params = offsets
-    param_names = ["offset"]
-
-    def setup(self, offset):
-        N = 10000
-        rng = date_range(start="1/1/2000", periods=N, freq="T")
-        self.rng = rng
-        self.ser = Series(rng)
-
-    def time_add_series_offset(self, offset):
-        with warnings.catch_warnings(record=True):
-            self.ser + offset
-
-    def time_add_dti_offset(self, offset):
-        with warnings.catch_warnings(record=True):
-            self.rng + offset
 
 
 class BinaryOpsMultiIndex:
