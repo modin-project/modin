@@ -3774,12 +3774,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, resample_kwargs, method, limit
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="first element", refer_to="first", params="_method : str"
-    )
-    def resample_first(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="first element", refer_to="first")
+    def resample_first(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.first)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
     # FIXME: This function takes Modin DataFrame via `obj` parameter,
@@ -3849,44 +3847,34 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             **kwargs,
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="last element", params="_method : str", refer_to="last"
-    )
-    def resample_last(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="last element", refer_to="last")
+    def resample_last(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.last)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="maximum value", params="_method : str", refer_to="max"
-    )
-    def resample_max(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="maximum value", refer_to="max")
+    def resample_max(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.max)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="mean value", params="_method : str", refer_to="mean"
-    )
-    def resample_mean(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="mean value", refer_to="mean")
+    def resample_mean(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.mean)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="median value", params="_method : str", refer_to="median"
-    )
-    def resample_median(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="median value", refer_to="median")
+    def resample_median(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.median)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="minimum value", params="_method : str", refer_to="min"
-    )
-    def resample_min(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="minimum value", refer_to="min")
+    def resample_min(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.min)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
     @doc_utils.doc_resample_fillna(method="'nearest'", refer_to="nearest")
@@ -3895,37 +3883,33 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, resample_kwargs, limit
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="number of unique values", params="_method : str", refer_to="nunique"
-    )
-    def resample_nunique(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="number of unique values", refer_to="nunique")
+    def resample_nunique(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.nunique)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
     # FIXME: Query Compiler shouldn't care about differences between Series and DataFrame
     # so `resample_ohlc_df` and `resample_ohlc_ser` should be combined (Modin issue #3104).
     @doc_utils.doc_resample_agg(
         action="compute open, high, low and close values",
-        params="_method : str",
         output="labels of columns containing computed values",
         refer_to="ohlc",
     )
-    def resample_ohlc_df(self, resample_kwargs, _method, *args, **kwargs):
+    def resample_ohlc_df(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.ohlc)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
     @doc_utils.doc_resample_agg(
         action="compute open, high, low and close values",
-        params="_method : str",
         output="labels of columns containing computed values",
         refer_to="ohlc",
     )
-    def resample_ohlc_ser(self, resample_kwargs, _method, *args, **kwargs):
+    def resample_ohlc_ser(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(
             pandas.core.resample.Resampler.ohlc, squeeze_self=True
-        )(self, resample_kwargs, _method, *args, **kwargs)
+        )(self, resample_kwargs, *args, **kwargs)
 
     @doc_utils.doc_resample_fillna(method="'pad'", refer_to="pad")
     def resample_pad(self, resample_kwargs, limit):
@@ -3966,14 +3950,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.doc_resample_reduce(
         result="product",
-        params="""
-        _method : str
-        min_count : int""",
+        params="min_count : int",
         refer_to="prod",
     )
-    def resample_prod(self, resample_kwargs, _method, min_count, *args, **kwargs):
+    def resample_prod(self, resample_kwargs, min_count, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.prod)(
-            self, resample_kwargs, _method, min_count, *args, **kwargs
+            self, resample_kwargs, min_count, *args, **kwargs
         )
 
     @doc_utils.doc_resample_reduce(
@@ -3986,12 +3968,11 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.doc_resample_reduce(
         result="standard error of the mean",
-        params="ddof : int, default: 1",
         refer_to="sem",
     )
-    def resample_sem(self, resample_kwargs, ddof=1, *args, **kwargs):
+    def resample_sem(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.sem)(
-            self, resample_kwargs, ddof, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
     @doc_utils.doc_resample_reduce(
@@ -4012,14 +3993,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.doc_resample_reduce(
         result="sum",
-        params="""
-        _method : str
-        min_count : int""",
+        params="min_count : int",
         refer_to="sum",
     )
-    def resample_sum(self, resample_kwargs, _method, min_count, *args, **kwargs):
+    def resample_sum(self, resample_kwargs, min_count, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.sum)(
-            self, resample_kwargs, _method, min_count, *args, **kwargs
+            self, resample_kwargs, min_count, *args, **kwargs
         )
 
     def resample_transform(self, resample_kwargs, arg, *args, **kwargs):
