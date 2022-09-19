@@ -163,6 +163,7 @@ Key Features and Updates
   * FEAT-#4733: Support fastparquet as engine for `read_parquet` (#4807)
   * FEAT-#4766: Support fsspec URLs in `read_csv` and `read_csv_glob` (#4898)
   * FEAT-#4827: Implement `infer_types` dataframe algebra operator (#4871)
+  * FEAT-#4989: Switch pandas version to 1.5 (#5037)
 
 Contributors
 ------------

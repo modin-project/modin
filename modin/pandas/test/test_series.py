@@ -18,7 +18,7 @@ import pandas
 import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
-from pandas.core.base import SpecificationError
+from pandas.errors import SpecificationError
 from modin._compat import PandasCompatVersion
 from modin.utils import get_current_execution
 from modin.test.test_utils import warns_that_defaulting_to_pandas

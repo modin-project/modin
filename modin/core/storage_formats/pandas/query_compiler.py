@@ -31,7 +31,7 @@ from pandas.core.dtypes.common import (
     is_datetime64_any_dtype,
     is_bool_dtype,
 )
-from pandas.core.base import DataError
+from pandas.errors import DataError
 from collections.abc import Iterable
 from typing import List, Hashable
 import warnings
