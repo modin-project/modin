@@ -21,8 +21,9 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
 
     if pandas.__version__ != __pandas_version__:
         warnings.warn(
-            f"The pandas version installed {pandas.__version__} does not match the supported pandas version in"
-            + f" Modin {__pandas_version__} compatibility mode. This may cause undesired side effects!"
+            f"The pandas version installed ({pandas.__version__}) does not match the pandas version"
+            + f" Modin supports ({__pandas_version__}) in Python 3.6 legacy compatibility mode."
+            + " This may cause undesired side effects!"
         )
     else:
         warnings.warn(
@@ -33,8 +34,8 @@ elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
 
     if pandas.__version__ != __pandas_version__:
         warnings.warn(
-            f"The pandas version installed {pandas.__version__} does not match the supported pandas version in"
-            + f" Modin {__pandas_version__}. This may cause undesired side effects!"
+            f"The pandas version installed ({pandas.__version__}) does not match the pandas version"
+            + f" Modin supports ({__pandas_version__}). This may cause undesired side effects!"
         )
 
 with warnings.catch_warnings():

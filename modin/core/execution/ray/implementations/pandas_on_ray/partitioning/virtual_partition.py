@@ -455,6 +455,10 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         num_splits : int, default: None
             The number of times to split the result object.
         """
+        if len(self.call_queue) == 0:
+            # this implicitly calls `drain_call_queue`
+            _ = self.list_of_blocks
+            return
         drained = super(PandasOnRayDataframeVirtualPartition, self).apply(
             _DRAIN, num_splits=num_splits, call_queue=self.call_queue
         )

@@ -51,6 +51,7 @@ Key Features and Updates
   * FIX-#4983: Set `frac` to `None` in _sample when `n=0` (#4984)
   * FIX-#4993: Return `_default_to_pandas` in `df.attrs` (#4995)
   * FIX-#4597: Refactor Partition handling of func, args, kwargs (#4715)
+  * FIX-#4996: Evaluate BenchmarkMode at each function call (#4997)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
@@ -77,6 +78,7 @@ Key Features and Updates
   * PERF-#4886: Use lazy index and columns evaluation in `query` method (#4887)
   * PERF-#4866: `iloc` function that used in `partition.mask` should be serialized only once (#4901)
   * PERF-#4920: Avoid index and cache computations in `take_2d_labels_or_positional` unless they are needed (#4921)
+  * PERF-#4999: don't call `apply` in virtual partition' `drain_call_queue` if `call_queue` is empty (#4975)
   * PERF-#4268: Implement partition-parallel __getitem__ for bool Series masks (#4753)
   * PERF-#4963: Use partition `width/length` methods instead of `_compute_axis_labels_and_lengths` if index is already known (#4964)
   * PERF-#4940: Optimize categorical dtype check in `concatenate` (#4953)
@@ -102,8 +104,11 @@ Key Features and Updates
   * REFACTOR-#4949: Remove code duplication in `default2pandas/dataframe.py` and `default2pandas/any.py` (#4950)
   * REFACTOR-#4976: Rename `RayTask` to `RayWrapper` in accordance with Dask (#4977)
   * REFACTOR-#4885: De-duplicated take_2d_labels_or_positional methods (#4883)
+  * REFACTOR-#5001: Remove `jenkins` stuff (#5002)
+  * REFACTOR-#4970: Rewrite base implementations of a partition' `width/length` (#4971)  
   * REFACTOR-#4942: Remove `call` method in favor of `register` due to duplication (4943)
   * REFACTOR-#4922: Helpers for take_2d_labels_or_positional (#4865)
+  * REFACTOR-#4755: Rewrite Pandas version mismatch warning (#4965)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements
@@ -133,6 +138,7 @@ Key Features and Updates
   * FEAT-#4619: Integrate mypy static type checking (#4620)
   * FEAT-#4202: Allow dask past 2022.2.0 (#4769)
   * FEAT-#4925: Upgrade pandas to 1.4.4 (#4926)
+  * TEST-#4998: Add flake8 plugins to dev requirements (#5000)
 * New Features
   * FEAT-4463: Add experimental fuzzydata integration for testing against a randomized dataframe workflow (#4556)
   * FEAT-#4419: Extend virtual partitioning API to pandas on Dask (#4420)
