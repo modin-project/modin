@@ -204,6 +204,7 @@ to be modular so we can plug in different components as they develop and improve
 - [10-min Quickstart Guide](https://modin.readthedocs.io/en/latest/getting_started/quickstart.html)
 - [Examples and Tutorials](https://modin.readthedocs.io/en/latest/getting_started/examples.html)
 - [Videos and Blogposts](https://modin.readthedocs.io/en/latest/getting_started/examples.html#talks-podcasts)
+- [Benchmarking Modin](https://modin.readthedocs.io/en/latest/usage_guide/benchmarking.html)
 
 #### Modin Community
 
