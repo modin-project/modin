@@ -25,26 +25,22 @@ class LatestCompatibleWindow(BaseCompatibleWindow):
     def __init__(
         self,
         dataframe,
-        window,
+        window=None,
         min_periods=None,
         center=False,
         win_type=None,
         on=None,
         axis=0,
         closed=None,
+        step=None,
         method="single",
+        **kwargs,
     ):
         self._init(
             dataframe,
             [
-                window,
-                min_periods,
-                center,
-                win_type,
-                on,
-                axis,
-                closed,
-                method,
+                (window, min_periods, center, win_type, on, axis, closed, step, method),
+                kwargs,
             ],
             axis,
         )
@@ -56,26 +52,22 @@ class LatestCompatibleRolling(BaseCompatibleRolling):
     def __init__(
         self,
         dataframe,
-        window,
+        window=None,
         min_periods=None,
         center=False,
         win_type=None,
         on=None,
         axis=0,
         closed=None,
+        step=None,
         method="single",
+        **kwargs,
     ):
         self._init(
             dataframe,
             [
-                window,
-                min_periods,
-                center,
-                win_type,
-                on,
-                axis,
-                closed,
-                method,
+                (window, min_periods, center, win_type, on, axis, closed, step, method),
+                kwargs,
             ],
             axis,
         )

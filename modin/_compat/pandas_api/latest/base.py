@@ -236,6 +236,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
         on=None,
         axis=0,
         closed=None,
+        step=None,
         method="single",
     ):
         return self._rolling(
@@ -246,6 +247,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
             on=on,
             axis=axis,
             closed=closed,
+            step=step,
             method=method,
         )
 
