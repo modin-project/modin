@@ -22,7 +22,7 @@ except ModuleNotFoundError:  # fallback to pyomniscidbe package
 
     warnings.warn(
         "The OmniSci backend has been deprecated. "
-        + 'Please use MODIN_STORAGE_FORMAT="hdk" instead.'
+        + 'Please use `StorageFormat.put("hdk")` or `MODIN_STORAGE_FORMAT="hdk"` instead.'
     )
 
 __all__ = ["DbWorker"]

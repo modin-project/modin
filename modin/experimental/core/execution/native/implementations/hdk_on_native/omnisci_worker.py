@@ -73,7 +73,7 @@ class OmnisciWorker(BaseDbWorker):
 
         Parameters
         ----------
-        curs : hdkdbe.PyCursor
+        curs : omniscidbe.PyCursor
             DML/RA execution result.
 
         Returns

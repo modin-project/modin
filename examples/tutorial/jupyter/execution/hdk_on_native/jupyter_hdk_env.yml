@@ -2,5 +2,5 @@ name: jupyter_modin_on_hdk
 channels:
   - conda-forge
 dependencies:
-  - modin-pyhdk
+  - modin-hdk
   - jupyter

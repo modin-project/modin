@@ -22,7 +22,7 @@ import subprocess
         pytest.param(
             """
 import modin.config as cfg
-cfg.Engine.put('Native') # 'hdkdbe'/'dbe' would be imported with dlopen flags first time
+cfg.Engine.put('Native') # 'hdk'/'dbe' would be imported with dlopen flags first time
 cfg.StorageFormat.put('HDK')
 cfg.IsExperimental.put(True)
 import modin.pandas as pd

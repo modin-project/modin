@@ -1,5 +1,5 @@
 HdkOnNativeDataframePartitionManager
-""""""""""""""""""""""""""""""""""""""""
+""""""""""""""""""""""""""""""""""""
 
 Public API
 ----------

@@ -1,5 +1,5 @@
 HDK storage format
-""""""""""""""""""""""
+""""""""""""""""""
 
 .. toctree::
     :hidden:

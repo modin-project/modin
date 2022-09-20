@@ -197,7 +197,7 @@ Common errors
 -------------
 
 Error when using HDK engine along with ``pyarrow.gandiva``: ``LLVM ERROR: inconsistency in registered CommandLine options``
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 This can happen when you use HDK engine along with ``pyarrow.gandiva``:
 

@@ -524,7 +524,7 @@ def monkeypatching():
 
     Docstring._load_obj = staticmethod(load_obj)
 
-    # for testing hdk-engine docs without `dbe` installation
+    # for testing hdk-engine docs without `pyhdk` installation
     # TODO: check if we could remove these lines
     sys.modules["pyhdk"] = Mock()
     # enable docs testing on windows
