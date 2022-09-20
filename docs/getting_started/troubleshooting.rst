@@ -205,7 +205,7 @@ This can happen when you use HDK engine along with ``pyarrow.gandiva``:
 
   import modin.config as cfg
   cfg.Engine.put("Native")  # The engine would be imported with dlopen flags
-  cfg.StorageFormat.put("hdk")
+  cfg.StorageFormat.put("Hdk")
   cfg.IsExperimental.put(True)
   import modin.pandas as pd
   import pyarrow.gandiva as gandiva  # Error
