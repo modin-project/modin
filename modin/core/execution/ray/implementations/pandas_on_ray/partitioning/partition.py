@@ -17,6 +17,7 @@ import ray
 from ray.util import get_node_ip_address
 import uuid
 from modin.core.execution.ray.common.utils import deserialize, ObjectIDType
+from modin.core.execution.ray.common import RayWrapper
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
@@ -77,7 +78,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         logger.debug(f"ENTER::Partition.get::{self._identity}")
         if len(self.call_queue):
             self.drain_call_queue()
-        result = ray.get(self._data)
+        result = RayWrapper.materialize(self._data)
         logger.debug(f"EXIT::Partition.get::{self._identity}")
         return result
 
@@ -310,7 +311,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                     self._data
                 )
         if isinstance(self._length_cache, ObjectIDType):
-            self._length_cache = ray.get(self._length_cache)
+            self._length_cache = RayWrapper.materialize(self._length_cache)
         return self._length_cache
 
     def width(self):
@@ -330,7 +331,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                     self._data
                 )
         if isinstance(self._width_cache, ObjectIDType):
-            self._width_cache = ray.get(self._width_cache)
+            self._width_cache = RayWrapper.materialize(self._width_cache)
         return self._width_cache
 
     def ip(self):
@@ -348,7 +349,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             else:
                 self._ip_cache = self.apply(lambda df: df)._ip_cache
         if isinstance(self._ip_cache, ObjectIDType):
-            self._ip_cache = ray.get(self._ip_cache)
+            self._ip_cache = RayWrapper.materialize(self._ip_cache)
         return self._ip_cache
 
 

@@ -34,6 +34,7 @@ from modin.config import (
     ValueSource,
 )
 from modin.error_message import ErrorMessage
+from .engine_wrapper import RayWrapper
 
 _OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO = 0.6
 # This constant should be in sync with the limit in ray, which is private,
@@ -222,14 +223,14 @@ def deserialize(obj):
         The deserialized object.
     """
     if isinstance(obj, ObjectIDType):
-        return ray.get(obj)
+        return RayWrapper.materialize(obj)
     elif isinstance(obj, (tuple, list)) and any(
         isinstance(o, ObjectIDType) for o in obj
     ):
-        return ray.get(list(obj))
+        return RayWrapper.materialize(list(obj))
     elif isinstance(obj, dict) and any(
         isinstance(val, ObjectIDType) for val in obj.values()
     ):
-        return dict(zip(obj.keys(), ray.get(list(obj.values()))))
+        return dict(zip(obj.keys(), RayWrapper.materialize(list(obj.values()))))
     else:
         return obj

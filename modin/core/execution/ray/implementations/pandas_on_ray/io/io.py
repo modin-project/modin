@@ -17,7 +17,6 @@ import io
 import os
 
 import pandas
-import ray
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.ray.generic.io import RayIO
@@ -203,7 +202,7 @@ class PandasOnRayIO(RayIO):
             csv_kwargs["path_or_buf"].close()
 
             # each process waits for its turn to write to a file
-            ray.get(signals.wait.remote(partition_idx))
+            RayWrapper.materialize(signals.wait.remote(partition_idx))
 
             # preparing to write data from the buffer to a file
             with pd_get_handle(
@@ -220,12 +219,12 @@ class PandasOnRayIO(RayIO):
                 handles.handle.write(content)
 
             # signal that the next process can start writing to the file
-            ray.get(signals.send.remote(partition_idx + 1))
+            RayWrapper.materialize(signals.send.remote(partition_idx + 1))
             # used for synchronization purposes
             return pandas.DataFrame()
 
         # signaling that the partition with id==0 can be written to the file
-        ray.get(signals.send.remote(0))
+        RayWrapper.materialize(signals.send.remote(0))
         # Ensure that the metadata is syncrhonized
         qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
@@ -238,7 +237,9 @@ class PandasOnRayIO(RayIO):
             max_retries=0,
         )
         # pending completion
-        ray.get([partition.list_of_blocks[0] for partition in result.flatten()])
+        RayWrapper.materialize(
+            [partition.list_of_blocks[0] for partition in result.flatten()]
+        )
 
     @staticmethod
     def _to_parquet_check_support(kwargs):
@@ -311,4 +312,6 @@ class PandasOnRayIO(RayIO):
             lengths=None,
             enumerate_partitions=True,
         )
-        ray.get([part.list_of_blocks[0] for row in result for part in row])
+        RayWrapper.materialize(
+            [part.list_of_blocks[0] for row in result for part in row]
+        )
