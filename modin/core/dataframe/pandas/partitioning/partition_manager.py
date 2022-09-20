@@ -56,11 +56,11 @@ def wait_computations_if_benchmark_mode(func):
     def wait(cls, *args, **kwargs):
         """Wait for computation results."""
         result = func(cls, *args, **kwargs)
-        if isinstance(result, tuple):
-            partitions = result[0]
-        else:
-            partitions = result
         if BenchmarkMode.get():
+            if isinstance(result, tuple):
+                partitions = result[0]
+            else:
+                partitions = result
             # When partitions have a deferred call queue, calling
             # partition.wait() on each partition serially will serially kick
             # off each deferred computation and wait for each partition to
