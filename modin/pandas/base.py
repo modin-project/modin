@@ -1264,7 +1264,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             raise TypeError("supplying multiple axes to axis is no longer supported.")
 
         axis = self._get_axis_number(axis)
-        if how is not None and how not in ["any", "all"]:
+        if how is not None and how not in ["any", "all", no_default]:
             raise ValueError("invalid how option: %s" % how)
         if how is None and thresh is None:
             raise TypeError("must specify how or thresh")
