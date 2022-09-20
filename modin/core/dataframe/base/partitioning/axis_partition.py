@@ -42,8 +42,8 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         func : callable
             The function to apply. This will be preprocessed according to
             the corresponding `BaseDataframePartition` objects.
-        *args : tuple
-            Positional arguments to be passed to `func`.
+        *args : iterable
+            Positional arguments to pass to `func`.
         num_splits : int, default: None
             The number of times to split the result object.
         other_axis_partition : BaseDataframeAxisPartition, default: None

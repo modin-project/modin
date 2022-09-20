@@ -236,7 +236,8 @@ def deserialize(obj):
         new_lst = list(obj[:])
         for i, deser_item in zip(oid_indices, ray_result):
             new_lst[i] = deser_item
-        assert not any([isinstance(o, ObjectIDType) for o in new_lst]), new_lst
+        # Check that all objects have been deserialized
+        assert not any([isinstance(o, ObjectIDType) for o in new_lst])
         return new_lst
     elif isinstance(obj, dict) and any(
         isinstance(val, ObjectIDType) for val in obj.values()

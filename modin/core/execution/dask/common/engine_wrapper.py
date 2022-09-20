@@ -35,9 +35,9 @@ class DaskWrapper:
         ----------
         func : callable
             Function to be deployed in a worker process.
-        f_args : list or tuple, default: None
+        f_args : list or tuple, optional
             Positional arguments to pass to ``func``.
-        f_kwargs : dict, default: None
+        f_kwargs : dict, optional
             Keyword arguments to pass to ``func``.
         num_returns : int, default: 1
             The number of returned objects.

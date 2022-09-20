@@ -384,7 +384,7 @@ def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     partition : pandas.DataFrame
         A pandas DataFrame the function needs to be executed on.
     func : callable
-        The function to perform.
+        The function to perform on the partition.
     *args : list
         Positional arguments to pass to ``func``.
     **kwargs : dict

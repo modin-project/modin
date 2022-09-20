@@ -62,8 +62,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         ----------
         func : callable
             The function to apply.
-        *args : tuple
-            Positional arguments to be passed to `func`.
+        *args : iterable
+            Positional arguments to pass to `func`.
         num_splits : int, default: None
             The number of times to split the result object.
         other_axis_partition : PandasDataframeAxisPartition, default: None

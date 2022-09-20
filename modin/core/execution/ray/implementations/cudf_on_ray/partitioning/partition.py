@@ -99,10 +99,10 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         ----------
         func : callable
             A function to apply.
-        *args : tuple
-            Positional arguments to be passed in `func`.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
         **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
+            Additional keyword arguments to be passed in `func`.
 
         Returns
         -------

@@ -539,9 +539,9 @@ def deploy_ray_func(
     f_kwargs : dict
         Keyword arguments to pass to ``f_to_deploy``.
     *args : list
-        Positional arguments to pass to ``func``.
+        Positional arguments to pass to ``deployer``.
     **kwargs : dict
-        Keyword arguments to pass to ``func``.
+        Keyword arguments to pass to ``deployer``.
 
     Returns
     -------
