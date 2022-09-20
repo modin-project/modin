@@ -103,6 +103,7 @@ Key Features and Updates
   * REFACTOR-#4976: Rename `RayTask` to `RayWrapper` in accordance with Dask (#4977)
   * REFACTOR-#4885: De-duplicated take_2d_labels_or_positional methods (#4883)
   * REFACTOR-#5001: Remove `jenkins` stuff (#5002)
+  * REFACTOR-#4970: Rewrite base implementations of a partition' `width/length` (#4971)  
   * REFACTOR-#4942: Remove `call` method in favor of `register` due to duplication (4943)
   * REFACTOR-#4922: Helpers for take_2d_labels_or_positional (#4865)
   * REFACTOR-#4755: Rewrite Pandas version mismatch warning (#4965)
