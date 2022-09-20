@@ -67,7 +67,7 @@ def wait_computations_if_benchmark_mode(func):
             # finish before kicking off the next one. Instead, we want to
             # serially kick off all the deferred computations so that they can
             # all run asynchronously, then wait on all the results.
-            [part.drain_call_queue() for part in partitions.flatten()]
+            cls.finalize(partitions)
             # The partition manager invokes the relevant .wait() method under
             # the hood, which should wait in parallel for all computations to finish
             # (We can't just add a `cls` argument to this `wait` function, since doing so

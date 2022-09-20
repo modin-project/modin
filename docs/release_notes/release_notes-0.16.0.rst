@@ -102,6 +102,7 @@ Key Features and Updates
   * REFACTOR-#4949: Remove code duplication in `default2pandas/dataframe.py` and `default2pandas/any.py` (#4950)
   * REFACTOR-#4976: Rename `RayTask` to `RayWrapper` in accordance with Dask (#4977)
   * REFACTOR-#4885: De-duplicated take_2d_labels_or_positional methods (#4883)
+  * REFACTOR-#5005: Use `finalize` method instead of list comprehension + `drain_call_queue` (#5006)
   * REFACTOR-#5001: Remove `jenkins` stuff (#5002)
   * REFACTOR-#4942: Remove `call` method in favor of `register` due to duplication (4943)
   * REFACTOR-#4922: Helpers for take_2d_labels_or_positional (#4865)
