@@ -45,9 +45,9 @@ jobs:
       - name: Setup parallel jobs env
         run: echo "PYTEST_DIST_WORKERS=2"
         if: matrix.engine != 'ray'
-      - name: Setup parallel jobs env
         run: echo "PYTEST_DIST_WORKERS=1"
         if: matrix.engine == 'ray'
+  
       - name: Start local ray cluster
         run: |
           ray start --head --port=6379 --object-store-memory=1000000000
