@@ -190,7 +190,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         """
         result_num_splits = len(lengths) if lengths else num_splits
         return DaskWrapper.deploy(
-            deploy_dask_func,
+            func=deploy_dask_func,
             f_args=(
                 PandasDataframeAxisPartition.deploy_axis_func,
                 axis,
