@@ -73,21 +73,6 @@ class FromSeries:
         DataFrame(self.s)
 
 
-class FromDictwithTimestamp:
-
-    params = [Nano(1), Hour(1)]
-    param_names = ["offset"]
-
-    def setup(self, offset):
-        N = 10**3
-        idx = date_range(Timestamp("1/1/1900"), freq=offset, periods=N)
-        df = DataFrame(np.random.randn(N, 10), index=idx)
-        self.d = df.to_dict()
-
-    def time_dict_with_timestamp_offsets(self, offset):
-        DataFrame(self.d)
-
-
 class FromRecords:
 
     params = [None, 1000]
@@ -158,50 +143,6 @@ class FromScalar:
             index=range(self.nrows),
             columns=list("abc"),
             dtype=Float64Dtype(),
-        )
-
-
-class FromArrays:
-
-    goal_time = 0.2
-
-    def setup(self):
-        N_rows = 1000
-        N_cols = 1000
-        self.float_arrays = [np.random.randn(N_rows) for _ in range(N_cols)]
-        self.sparse_arrays = [
-            pd.arrays.SparseArray(np.random.randint(0, 2, N_rows), dtype="float64")
-            for _ in range(N_cols)
-        ]
-        self.int_arrays = [
-            pd.array(np.random.randint(1000, size=N_rows), dtype="Int64")
-            for _ in range(N_cols)
-        ]
-        self.index = pd.Index(range(N_rows))
-        self.columns = pd.Index(range(N_cols))
-
-    def time_frame_from_arrays_float(self):
-        self.df = DataFrame._from_arrays(
-            self.float_arrays,
-            index=self.index,
-            columns=self.columns,
-            verify_integrity=False,
-        )
-
-    def time_frame_from_arrays_int(self):
-        self.df = DataFrame._from_arrays(
-            self.int_arrays,
-            index=self.index,
-            columns=self.columns,
-            verify_integrity=False,
-        )
-
-    def time_frame_from_arrays_sparse(self):
-        self.df = DataFrame._from_arrays(
-            self.sparse_arrays,
-            index=self.index,
-            columns=self.columns,
-            verify_integrity=False,
         )
 
 
