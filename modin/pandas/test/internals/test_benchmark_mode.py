@@ -11,21 +11,55 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-# test BenchmarkMode == True
+import unittest.mock as mock
 
-from contextlib import nullcontext
 import modin.pandas as pd
 from modin.pandas.test.utils import test_data_values
-from modin.config import BenchmarkMode, StorageFormat
-from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.config import BenchmarkMode, Engine
 
 
-def test_syncronous_mode():
+engine = Engine.get()
+
+# We have to explicitly mock subclass implementations of wait_partitions.
+if engine == "Ray":
+    wait_method = (
+        "modin.core.execution.ray.implementations.pandas_on_ray."
+        + "partitioning.partition_manager."
+        + "PandasOnRayDataframePartitionManager.wait_partitions"
+    )
+elif engine == "Dask":
+    wait_method = (
+        "modin.core.execution.dask.implementations."
+        + "pandas_on_dask.partitioning.partition_manager."
+        + "PandasOnDaskDataframePartitionManager.wait_partitions"
+    )
+else:
+    wait_method = (
+        "modin.core.dataframe.pandas.partitioning."
+        + "partition_manager.PandasDataframePartitionManager.wait_partitions"
+    )
+
+
+def test_from_environment_variable():
     assert BenchmarkMode.get()
-    # On Omnisci storage, transpose() defaults to Pandas.
-    with (
-        warns_that_defaulting_to_pandas()
-        if StorageFormat.get() == "Omnisci"
-        else nullcontext()
-    ):
+    with mock.patch(wait_method) as wait:
         pd.DataFrame(test_data_values[0]).mean()
+
+    wait.assert_called()
+
+
+def test_turn_off():
+    df = pd.DataFrame([0])
+    BenchmarkMode.put(False)
+    with mock.patch(wait_method) as wait:
+        df.dropna()
+    wait.assert_not_called()
+
+
+def test_turn_on():
+    BenchmarkMode.put(False)
+    df = pd.DataFrame([0])
+    BenchmarkMode.put(True)
+    with mock.patch(wait_method) as wait:
+        df.dropna()
+    wait.assert_called()
