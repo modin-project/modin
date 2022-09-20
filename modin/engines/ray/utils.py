@@ -146,7 +146,6 @@ def initialize_ray(
                 _redis_password=redis_password,
                 logging_level=100,
                 _memory=object_store_memory,
-                _lru_evict=True,
             )
 
             global_node = ray.worker._global_node
