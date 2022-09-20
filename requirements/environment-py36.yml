@@ -49,5 +49,7 @@ dependencies:
       - black
       # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
       - flake8<5
+      - flake8-no-implicit-concat
+      - flake8-print
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
       - numpydoc==1.1.0

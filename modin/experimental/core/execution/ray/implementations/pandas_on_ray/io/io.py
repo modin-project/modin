@@ -41,7 +41,7 @@ from modin.core.execution.ray.implementations.pandas_on_ray.dataframe import (
 from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
     PandasOnRayDataframePartition,
 )
-from modin.core.execution.ray.common import RayTask
+from modin.core.execution.ray.common import RayWrapper
 from modin.config import NPartitions
 
 import ray
@@ -61,17 +61,17 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         frame_cls=PandasOnRayDataframe,
     )
     read_csv_glob = type(
-        "", (RayTask, PandasCSVGlobParser, CSVGlobDispatcher), build_args
+        "", (RayWrapper, PandasCSVGlobParser, CSVGlobDispatcher), build_args
     )._read
     read_pickle_distributed = type(
         "",
-        (RayTask, PandasPickleExperimentalParser, PickleExperimentalDispatcher),
+        (RayWrapper, PandasPickleExperimentalParser, PickleExperimentalDispatcher),
         build_args,
     )._read
 
     read_custom_text = type(
         "",
-        (RayTask, CustomTextExperimentalParser, CustomTextExperimentalDispatcher),
+        (RayWrapper, CustomTextExperimentalParser, CustomTextExperimentalDispatcher),
         build_args,
     )._read
 

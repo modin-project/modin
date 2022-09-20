@@ -1210,3 +1210,9 @@ def test_setattr_axes():
     # Check that ensure_index was called
     pandas.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
     pandas.testing.assert_index_equal(df.columns, pandas.Index([9, 10]))
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_attrs(data):
+    modin_df, pandas_df = create_test_dfs(data)
+    eval_general(modin_df, pandas_df, lambda df: df.attrs)

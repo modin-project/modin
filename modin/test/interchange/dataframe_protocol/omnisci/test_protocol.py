@@ -310,3 +310,17 @@ def test_buffer_of_chunked_at(data_has_nulls, n_chunks):
         # Catch exception on attempt of doing a copy due to chunks combining
         with pytest.raises(RuntimeError):
             col.get_buffers()
+
+
+def test_concat_chunks():
+    """Regression test for https://github.com/modin-project/modin/issues/4366"""
+    modin_df = pd.DataFrame(
+        {"a": pd.Categorical(list("testdataforexchangedataframeprotocol"))}
+    )
+    n_chunks = 2
+    chunks = split_df_into_chunks(modin_df, n_chunks)
+    new_modin_df = pd.concat(chunks)
+    assert new_modin_df["a"].dtype.name == "category"
+    protocol_df = new_modin_df.__dataframe__()
+    df_col = protocol_df.get_column_by_name("a")
+    assert df_col.num_chunks() == n_chunks

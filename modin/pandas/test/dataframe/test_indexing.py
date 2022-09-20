@@ -1603,6 +1603,14 @@ def test_sample(data, axis):
     df_equals(modin_result, pandas_result)
 
 
+def test_empty_sample():
+    modin_df, pandas_df = create_test_dfs([1])
+    # issue #4983
+    # If we have a fraction of the dataset that results in n=0, we should
+    # make sure that we don't pass in both n and frac to sample internally.
+    eval_general(modin_df, pandas_df, lambda df: df.sample(frac=0.12))
+
+
 def test_select_dtypes():
     frame_data = {
         "test1": list("abc"),
@@ -2117,3 +2125,22 @@ def test__getitem_bool_single_row_dataframe():
     # This test case comes from
     # https://github.com/modin-project/modin/issues/4845
     eval_general(pd, pandas, lambda lib: lib.DataFrame([1])[lib.Series([True])])
+
+
+# This is a very subtle bug that comes from:
+# https://github.com/modin-project/modin/issues/4945
+def test_lazy_eval_index():
+    modin_df, pandas_df = create_test_dfs({"col0": [0, 1]})
+
+    def func(df):
+        df_copy = df[df["col0"] < 6].copy()
+        # The problem here is that the index is not copied over so it needs
+        # to get recomputed at some point. Our implementation of __setitem__
+        # requires us to build a mask and insert the value from the right
+        # handside into the new DataFrame. However, it's possible that we
+        # won't have any new partitions, so we will end up computing an empty
+        # index.
+        df_copy["col0"] = df_copy["col0"].apply(lambda x: x + 1)
+        return df_copy
+
+    eval_general(modin_df, pandas_df, func)

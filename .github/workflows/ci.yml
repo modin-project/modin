@@ -4,7 +4,7 @@ on:
     paths:
       # NOTE: keep these paths in sync with the paths that trigger the
       # fuzzydata Github Actions in .github/workflows/fuzzydata-test.yml
-      - .github/**
+      - .github/workflows/**
       - asv_bench/**
       - modin/**
       - requirements/**
@@ -154,6 +154,8 @@ jobs:
         with:
           python-version: "3.8.x"
           architecture: "x64"
+      # NOTE: If you are changing the set of packages installed here, make sure that
+      # the dev requirements match them.
       # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
       - run: pip install "flake8<5" flake8-print flake8-no-implicit-concat
       - run: flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py

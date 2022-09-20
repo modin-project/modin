@@ -246,13 +246,16 @@ class PandasDataframe(ClassLogger):
             A list of row partitions lengths.
         """
         if self._row_lengths_cache is None:
-            if len(self._partitions) > 0:
-                (
-                    index,
-                    self._row_lengths_cache,
-                ) = self._compute_axis_labels_and_lengths(0)
-                if self._index_cache is None:
-                    self._index_cache = index
+            if len(self._partitions.T) > 0:
+                row_parts = self._partitions.T[0]
+                if self._index_cache is not None:
+                    # do not do extra work to get an index that is already known
+                    self._row_lengths_cache = [part.length() for part in row_parts]
+                else:
+                    (
+                        self._index_cache,
+                        self._row_lengths_cache,
+                    ) = self._compute_axis_labels_and_lengths(0)
             else:
                 self._row_lengths_cache = []
         return self._row_lengths_cache
@@ -269,12 +272,15 @@ class PandasDataframe(ClassLogger):
         """
         if self._column_widths_cache is None:
             if len(self._partitions) > 0:
-                (
-                    columns,
-                    self._column_widths_cache,
-                ) = self._compute_axis_labels_and_lengths(1)
-                if self._columns_cache is None:
-                    self._columns_cache = columns
+                col_parts = self._partitions[0]
+                if self._columns_cache is not None:
+                    # do not do extra work to get columns that is already known
+                    self._column_widths_cache = [part.width() for part in col_parts]
+                else:
+                    (
+                        self._columns_cache,
+                        self._column_widths_cache,
+                    ) = self._compute_axis_labels_and_lengths(1)
             else:
                 self._column_widths_cache = []
         return self._column_widths_cache
@@ -852,12 +858,8 @@ class PandasDataframe(ClassLogger):
                         row_internal_indices, col_internal_indices
                     )
                     for col_idx, col_internal_indices in col_partitions_dict.items()
-                    if isinstance(col_internal_indices, slice)
-                    or len(col_internal_indices) > 0
                 ]
                 for row_idx, row_internal_indices in row_partitions_dict.items()
-                if isinstance(row_internal_indices, slice)
-                or len(row_internal_indices) > 0
             ]
         )
         intermediate = self.__constructor__(
@@ -1343,6 +1345,12 @@ class PandasDataframe(ClassLogger):
         if isinstance(indices, list):
             # Converting python list to numpy for faster processing
             indices = np.array(indices, dtype=np.int64)
+        # Fasttrack empty numpy array
+        if isinstance(indices, np.ndarray) and indices.size == 0:
+            # This will help preserve metadata stored in empty dataframes (indexes and dtypes)
+            # Otherwise, we will get an empty `new_partitions` array, from which it will
+            #  no longer be possible to obtain metadata
+            return OrderedDict([(0, np.array([], dtype=np.int64))])
         negative_mask = np.less(indices, 0)
         has_negative = np.any(negative_mask)
         if has_negative:

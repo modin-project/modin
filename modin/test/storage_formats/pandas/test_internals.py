@@ -46,7 +46,7 @@ elif Engine.get() == "Dask":
     from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition import (
         PandasOnDaskDataframePartition,
     )
-    from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
+    from modin.core.execution.dask.common import DaskWrapper
 
     # initialize modin dataframe to initialize dask
     pd.DataFrame()

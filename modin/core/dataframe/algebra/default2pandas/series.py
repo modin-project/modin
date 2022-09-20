@@ -13,10 +13,10 @@
 
 """Module houses default Series functions builder class."""
 
-from .any import AnyDefault
+from .default import DefaultMethod
 
 
-class SeriesDefault(AnyDefault):
+class SeriesDefault(DefaultMethod):
     """Builder for default-to-pandas methods which is executed under Series."""
 
     OBJECT_TYPE = "Series"
