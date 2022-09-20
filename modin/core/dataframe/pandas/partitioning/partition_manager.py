@@ -1316,7 +1316,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         )
 
     @classmethod
-    @wait_computations_if_benchmark_mode
     def finalize(cls, partitions):
         """
         Perform all deferred calls on partitions.
