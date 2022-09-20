@@ -506,9 +506,8 @@ class HdkLaunchParameters(EnvironmentVariable, type=dict):
         dict
             Decoded and verified config value.
         """
-        if (
-            cls == HdkLaunchParameters
-            and OmnisciLaunchParameters.varname in os.environ
+        if cls == OmnisciLaunchParameters or (
+            OmnisciLaunchParameters.varname in os.environ
             and HdkLaunchParameters.varname not in os.environ
         ):
             return OmnisciLaunchParameters.get()
