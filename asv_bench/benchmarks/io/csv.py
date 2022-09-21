@@ -114,7 +114,7 @@ class TimeReadCsvNamesDtype:
         cache = {}
         for shape in self.shapes:
             for dtype in self._dtypes_params:
-                df = generate_dataframe("pandas", "int", *shape, RAND_LOW, RAND_HIGH)
+                df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH, "pandas")
                 if dtype == "Int64_Timestamp":
                     df = self._add_timestamp_columns(df)
 

@@ -73,7 +73,7 @@ data_cache = dict()
 dataframes_cache = dict()
 
 
-def gen_nan_data(impl: str, nrows: int, ncols: int) -> dict:
+def gen_nan_data(nrows: int, ncols: int) -> dict:
     """
     Generate nan data with caching.
 
@@ -83,9 +83,6 @@ def gen_nan_data(impl: str, nrows: int, ncols: int) -> dict:
 
     Parameters
     ----------
-    impl : str
-        Implementation used to create the DataFrame or Series;
-        supported implemetations: {"modin", "pandas"}.
     nrows : int
         Number of rows.
     ncols : int
@@ -96,7 +93,7 @@ def gen_nan_data(impl: str, nrows: int, ncols: int) -> dict:
     modin.pandas.DataFrame or pandas.DataFrame or modin.pandas.Series or pandas.Series
         DataFrame or Series with shape (nrows, ncols) or (nrows,), respectively.
     """
-    cache_key = (impl, nrows, ncols)
+    cache_key = (ASV_USE_IMPL, nrows, ncols)
     if cache_key in data_cache:
         return data_cache[cache_key]
 
@@ -104,9 +101,11 @@ def gen_nan_data(impl: str, nrows: int, ncols: int) -> dict:
 
     if ncols > 1:
         columns = [f"col{x}" for x in range(ncols)]
-        data = IMPL[impl].DataFrame(np.nan, index=pd.RangeIndex(nrows), columns=columns)
+        data = IMPL[ASV_USE_IMPL].DataFrame(
+            np.nan, index=pd.RangeIndex(nrows), columns=columns
+        )
     elif ncols == 1:
-        data = IMPL[impl].Series(np.nan, index=pd.RangeIndex(nrows))
+        data = IMPL[ASV_USE_IMPL].Series(np.nan, index=pd.RangeIndex(nrows))
     else:
         assert False, "Number of columns (ncols) should be >= 1"
 
@@ -300,7 +299,6 @@ def gen_data(
 
 
 def generate_dataframe(
-    impl: str,
     data_type: str,
     nrows: int,
     ncols: int,
@@ -310,6 +308,7 @@ def generate_dataframe(
     count_groups: Optional[int] = None,
     gen_unique_key: bool = False,
     cache_prefix: str = None,
+    impl: str = None,
 ) -> Union[pd.DataFrame, pandas.DataFrame]:
     """
     Generate DataFrame with caching.
@@ -320,9 +319,6 @@ def generate_dataframe(
 
     Parameters
     ----------
-    impl : str
-        Implementation used to create the dataframe;
-        supported implemetations: {"modin", "pandas"}.
     data_type : str
         Type of data generation;
         supported types: {"int", "str_int"}.
@@ -344,6 +340,9 @@ def generate_dataframe(
         Generate `col1` column where all elements are unique.
     cache_prefix : str, optional
         Prefix to add to the cache key of the requested frame.
+    impl : str, optional
+        Implementation used to create the dataframe;
+        supported implemetations: {"modin", "pandas"}.
 
     Returns
     -------
@@ -359,6 +358,9 @@ def generate_dataframe(
 
     if groupby_ncols and count_groups:
         ncols -= groupby_ncols
+
+    if impl is None:
+        impl = ASV_USE_IMPL
 
     cache_key = (
         impl,
@@ -393,12 +395,7 @@ def generate_dataframe(
     if gen_unique_key:
         data["col1"] = np.arange(nrows)
 
-    if impl == "modin":
-        df = pd.DataFrame(data)
-    elif impl == "pandas":
-        df = pandas.DataFrame(data)
-    else:
-        assert False
+    df = IMPL[impl].DataFrame(data)
 
     if groupby_ncols and count_groups:
         dataframes_cache[cache_key] = df, groupby_columns
@@ -564,7 +561,7 @@ def prepare_io_data(test_filename: str, data_type: str, shapes: list):
     for shape in shapes:
         shape_id = get_shape_id(shape)
         test_filenames[shape_id] = f"{test_filename}_{shape_id}_{data_type}.csv"
-        df = generate_dataframe("pandas", data_type, *shape, RAND_LOW, RAND_HIGH)
+        df = generate_dataframe(data_type, *shape, RAND_LOW, RAND_HIGH, "pandas")
         df.to_csv(test_filenames[shape_id], index=False)
 
     return test_filenames
@@ -593,7 +590,7 @@ def prepare_io_data_parquet(test_filename: str, data_type: str, shapes: list):
     for shape in shapes:
         shape_id = get_shape_id(shape)
         test_filenames[shape_id] = f"{test_filename}_{shape_id}_{data_type}.parquet"
-        df = generate_dataframe("pandas", data_type, *shape, RAND_LOW, RAND_HIGH)
+        df = generate_dataframe(data_type, *shape, RAND_LOW, RAND_HIGH, "pandas")
         df.to_parquet(test_filenames[shape_id], index=False)
 
     return test_filenames
