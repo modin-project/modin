@@ -2,7 +2,7 @@ import numpy as np
 
 import modin.pandas as pd
 
-ops = ["mean", "sum", "median", "std", "skew", "kurt", "mad", "prod", "sem", "var"]
+ops = ["mean", "median", "kurt", "mad", "var"]
 
 
 class FrameOps:
