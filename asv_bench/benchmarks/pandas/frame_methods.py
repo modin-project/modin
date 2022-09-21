@@ -96,12 +96,6 @@ class Repr:
         self.df_tall = DataFrame(np.random.randn(nrows, 10))
         self.df_wide = DataFrame(np.random.randn(10, nrows))
 
-    def time_html_repr_trunc_mi(self):
-        self.df3._repr_html_()
-
-    def time_html_repr_trunc_si(self):
-        self.df4._repr_html_()
-
     def time_repr_tall(self):
         repr(self.df_tall)
 
