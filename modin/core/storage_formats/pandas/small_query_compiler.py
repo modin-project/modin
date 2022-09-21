@@ -159,6 +159,254 @@ def _dt_func_map(func_name):
     return dt_op_builder
 
 
+def _resample_func(
+    df, resample_kwargs, func_name, new_columns=None, df_op=None, *args, **kwargs
+):
+    """
+    Resample underlying time-series data and apply aggregation on it.
+
+    Parameters
+    ----------
+    resample_kwargs : dict
+        Resample parameters in the format of ``modin.pandas.DataFrame.resample`` signature.
+    func_name : str
+        Aggregation function name to apply on resampler object.
+    new_columns : list of labels, optional
+        Actual column labels of the resulted frame, supposed to be a hint for the
+        Modin frame. If not specified will be computed automaticly.
+    df_op : callable(pandas.DataFrame) -> [pandas.DataFrame, pandas.Series], optional
+        Preprocessor function to apply to the passed frame before resampling.
+    *args : args
+        Arguments to pass to the aggregation function.
+    **kwargs : kwargs
+        Arguments to pass to the aggregation function.
+
+    Returns
+    -------
+    PandasQueryCompiler
+        New QueryCompiler containing the result of resample aggregation.
+    """
+
+    """Resample time-series data of the passed frame and apply aggregation function on it."""
+    if df_op is not None:
+        df = df_op(df)
+    resampled_val = df.resample(**resample_kwargs)
+    op = getattr(pandas.core.resample.Resampler, func_name)
+    if callable(op):
+        try:
+            # This will happen with Arrow buffer read-only errors. We don't want to copy
+            # all the time, so this will try to fast-path the code first.
+            return op(df, resampled_val, *args, **kwargs)
+        except (ValueError):
+            resampled_val = df.copy().resample(**resample_kwargs)
+            return op(df, resampled_val, *args, **kwargs)
+    else:
+        return getattr(df, resampled_val, func_name)
+
+
+def _resample_get_group(df, resample_kwargs, name, obj):
+    return _resample_func(df, resample_kwargs, "get_group", name=name, obj=obj)
+
+
+def _resample_app_ser(df, resample_kwargs, func, *args, **kwargs):
+    return _resample_func(
+        resample_kwargs,
+        "apply",
+        df_op=lambda df: df.squeeze(axis=1),
+        func=func,
+        *args,
+        **kwargs,
+    )
+
+
+def _resample_app_df(df, resample_kwargs, func, *args, **kwargs):
+    return _resample_func(df, resample_kwargs, "apply", func=func, *args, **kwargs)
+
+
+def _resample_agg_ser(df, resample_kwargs, func, *args, **kwargs):
+    return _resample_func(
+        resample_kwargs,
+        "aggregate",
+        df_op=lambda df: df.squeeze(axis=1),
+        func=func,
+        *args,
+        **kwargs,
+    )
+
+
+def _resample_agg_df(df, resample_kwargs, func, *args, **kwargs):
+    return _resample_func(df, resample_kwargs, "aggregate", func=func, *args, **kwargs)
+
+
+def _resample_transform(df, resample_kwargs, arg, *args, **kwargs):
+    return _resample_func(df, resample_kwargs, "transform", arg=arg, *args, **kwargs)
+
+
+def _resample_pipe(df, resample_kwargs, func, *args, **kwargs):
+    return _resample_func(df, resample_kwargs, "pipe", func=func, *args, **kwargs)
+
+
+def _resample_ffill(df, resample_kwargs, limit):
+    return _resample_func(df, resample_kwargs, "ffill", limit=limit)
+
+
+def _resample_backfill(df, resample_kwargs, limit):
+    return _resample_func(df, resample_kwargs, "backfill", limit=limit)
+
+
+def _resample_bfill(df, resample_kwargs, limit):
+    return _resample_func(df, resample_kwargs, "bfill", limit=limit)
+
+
+def _resample_pad(df, resample_kwargs, limit):
+    return _resample_func(df, resample_kwargs, "pad", limit=limit)
+
+
+def _resample_nearest(df, resample_kwargs, limit):
+    return _resample_func(df, resample_kwargs, "nearest", limit=limit)
+
+
+def _resample_fillna(df, resample_kwargs, method, limit):
+    return _resample_func(df, resample_kwargs, "fillna", method=method, limit=limit)
+
+
+def _resample_asfreq(df, resample_kwargs, fill_value):
+    return _resample_func(df, resample_kwargs, "asfreq", fill_value=fill_value)
+
+
+def _resample_interpolate(
+    self,
+    resample_kwargs,
+    method,
+    axis,
+    limit,
+    inplace,
+    limit_direction,
+    limit_area,
+    downcast,
+    **kwargs,
+):
+    return _resample_func(
+        resample_kwargs,
+        "interpolate",
+        axis=axis,
+        limit=limit,
+        inplace=inplace,
+        limit_direction=limit_direction,
+        limit_area=limit_area,
+        downcast=downcast,
+        **kwargs,
+    )
+
+
+def _resample_count(df, resample_kwargs):
+    return _resample_func(df, resample_kwargs, "count")
+
+
+def _resample_nunique(df, resample_kwargs, _method, *args, **kwargs):
+    return _resample_func(
+        df, resample_kwargs, "nunique", _method=_method, *args, **kwargs
+    )
+
+
+def _resample_first(df, resample_kwargs, _method, *args, **kwargs):
+    return _resample_func(
+        df, resample_kwargs, "first", _method=_method, *args, **kwargs
+    )
+
+
+def _resample_last(df, resample_kwargs, _method, *args, **kwargs):
+    return _resample_func(df, resample_kwargs, "last", _method=_method, *args, **kwargs)
+
+
+def _resample_max(df, resample_kwargs, _method, *args, **kwargs):
+    return _resample_func(df, resample_kwargs, "max", _method=_method, *args, **kwargs)
+
+
+def _resample_mean(df, resample_kwargs, _method, *args, **kwargs):
+    return _resample_func(
+        df, resample_kwargs, "median", _method=_method, *args, **kwargs
+    )
+
+
+def _resample_median(df, resample_kwargs, _method, *args, **kwargs):
+    return _resample_func(
+        df, resample_kwargs, "median", _method=_method, *args, **kwargs
+    )
+
+
+def _resample_min(df, resample_kwargs, _method, *args, **kwargs):
+    return _resample_func(df, resample_kwargs, "min", _method=_method, *args, **kwargs)
+
+
+def _resample_ohlc_ser(df, resample_kwargs, _method, *args, **kwargs):
+    return _resample_func(
+        resample_kwargs,
+        "ohlc",
+        df_op=lambda df: df.squeeze(axis=1),
+        _method=_method,
+        *args,
+        **kwargs,
+    )
+
+
+def _resample_ohlc_df(df, resample_kwargs, _method, *args, **kwargs):
+    return _resample_func(df, resample_kwargs, "ohlc", _method=_method, *args, **kwargs)
+
+
+def _resample_prod(df, resample_kwargs, _method, min_count, *args, **kwargs):
+    return _resample_func(
+        resample_kwargs,
+        "prod",
+        _method=_method,
+        min_count=min_count,
+        *args,
+        **kwargs,
+    )
+
+
+def _resample_size(df, resample_kwargs):
+    return _resample_func(
+        resample_kwargs, "size", new_columns=[MODIN_UNNAMED_SERIES_LABEL]
+    )
+
+
+def _resample_sem(df, resample_kwargs, _method, *args, **kwargs):
+    return _resample_func(df, resample_kwargs, "sem", _method=_method, *args, **kwargs)
+
+
+def _resample_std(df, resample_kwargs, ddof, *args, **kwargs):
+    return _resample_func(df, resample_kwargs, "std", ddof=ddof, *args, **kwargs)
+
+
+def _resample_sum(df, resample_kwargs, _method, min_count, *args, **kwargs):
+    return _resample_func(
+        resample_kwargs,
+        "sum",
+        _method=_method,
+        min_count=min_count,
+        *args,
+        **kwargs,
+    )
+
+
+def _resample_var(df, resample_kwargs, ddof, *args, **kwargs):
+    return _resample_func(df, resample_kwargs, "var", ddof=ddof, *args, **kwargs)
+
+
+def _resample_quantile(df, resample_kwargs, q, **kwargs):
+    return _resample_func(df, resample_kwargs, "quantile", q=q, **kwargs)
+
+
+def _rolling_func(func):
+    def rolling_builder(df, rolling_args, *args, **kwargs):
+        rolling_result = df.rolling(*rolling_args)
+        rolling_op = getattr(rolling_result, func)
+        return rolling_op(rolling_result, *args, **kwargs)
+
+    return rolling_builder
+
+
 @_inherit_docstrings(BaseQueryCompiler)
 class SmallQueryCompiler(BaseQueryCompiler):
     """
@@ -199,13 +447,13 @@ class SmallQueryCompiler(BaseQueryCompiler):
         #     return result
 
     def _register_default_pandas(func):
-        def caller(query_compiler, *args, **kwargs):
+        def caller(query_compiler, broadcast=None, fold_axis=None, *args, **kwargs):
             print(func.__name__)
-            exclude_names = ["broadcast", "fold_axis"]
+            # exclude_names = ["broadcast", "fold_axis"]
             args = try_cast_to_pandas(args)
-            if "fold_axis" in kwargs:
-                kwargs["axis"] = kwargs["fold_axis"]
-            kwargs = {k: v for k, v in kwargs.items() if k not in exclude_names}
+            # if "fold_axis" in kwargs:
+            #     kwargs["axis"] = kwargs["fold_axis"]
+            # kwargs = {k: v for k, v in kwargs.items() if k not in exclude_names}
             kwargs = try_cast_to_pandas(kwargs)
             result = func(query_compiler._modin_frame, *args, **kwargs)
             if isinstance(result, pandas.Series):
@@ -345,40 +593,55 @@ class SmallQueryCompiler(BaseQueryCompiler):
     prod_min_count = _register_default_pandas(pandas.DataFrame.prod)
     radd = _register_default_pandas(pandas.DataFrame.radd)
     replace = _register_default_pandas(pandas.DataFrame.replace)
-    # resample_agg_df
-    # resample_agg_ser
-    # resample_app_df
-    # resample_app_ser
-    # resample_asfreq
-    # resample_backfill
-    # resample_bfill
-    # resample_count
-    # resample_ffill
-    # resample_fillna
-    # resample_first
-    # resample_get_group
-    # resample_interpolate
-    # resample_last
-    # resample_max
-    # resample_mean
-    # resample_median
-    # resample_min
-    # resample_nearest
-    # resample_nunique
-    # resample_ohlc_df
-    # resample_ohlc_ser
-    # resample_pad
-    # resample_pipe
-    # resample_prod
-    # resample_quantile
-    # resample_sem
-    # resample_size
-    # resample_std
-    # resample_sum
-    # resample_transform
-    # resample_var
+    resample_agg_df = _register_default_pandas(_resample_agg_df)
+    resample_agg_ser = _register_default_pandas(_resample_agg_ser)
+    resample_app_df = _register_default_pandas(_resample_app_df)
+    resample_app_ser = _register_default_pandas(_resample_app_ser)
+    resample_asfreq = _register_default_pandas(_resample_asfreq)
+    resample_backfill = _register_default_pandas(_resample_backfill)
+    resample_bfill = _register_default_pandas(_resample_bfill)
+    resample_count = _register_default_pandas(_resample_count)
+    resample_ffill = _register_default_pandas(_resample_ffill)
+    resample_fillna = _register_default_pandas(_resample_fillna)
+    resample_first = _register_default_pandas(_resample_first)
+    resample_get_group = _register_default_pandas(_resample_get_group)
+    resample_interpolate = _register_default_pandas(_resample_interpolate)
+    resample_last = _register_default_pandas(_resample_last)
+    resample_max = _register_default_pandas(_resample_max)
+    resample_mean = _register_default_pandas(_resample_mean)
+    resample_median = _register_default_pandas(_resample_median)
+    resample_min = _register_default_pandas(_resample_min)
+    resample_nearest = _register_default_pandas(_resample_nearest)
+    resample_nunique = _register_default_pandas(_resample_nunique)
+    resample_ohlc_df = _register_default_pandas(_resample_ohlc_df)
+    resample_ohlc_ser = _register_default_pandas(_resample_ohlc_ser)
+    resample_pad = _register_default_pandas(_resample_pad)
+    resample_pipe = _register_default_pandas(_resample_pipe)
+    resample_prod = _register_default_pandas(_resample_prod)
+    resample_quantile = _register_default_pandas(_resample_quantile)
+    resample_sem = _register_default_pandas(_resample_sem)
+    resample_size = _register_default_pandas(_resample_size)
+    resample_std = _register_default_pandas(_resample_std)
+    resample_sum = _register_default_pandas(_resample_sum)
+    resample_transform = _register_default_pandas(_resample_transform)
+    resample_var = _register_default_pandas(_resample_var)
     rfloordiv = _register_default_pandas(pandas.DataFrame.rfloordiv)
     rmod = _register_default_pandas(pandas.DataFrame.rmod)
+    # rolling_aggregate
+    rolling_apply = _register_default_pandas(_rolling_func("apply"))
+    # rolling_corr
+    rolling_count = _register_default_pandas(_rolling_func("count"))
+    # rolling_cov
+    rolling_kurt = _register_default_pandas(_rolling_func("kurt"))
+    rolling_max = _register_default_pandas(_rolling_func("max"))
+    rolling_mean = _register_default_pandas(_rolling_func("mean"))
+    rolling_median = _register_default_pandas(_rolling_func("median"))
+    rolling_min = _register_default_pandas(_rolling_func("min"))
+    rolling_quantile = _register_default_pandas(_rolling_func("quantile"))
+    rolling_skew = _register_default_pandas(_rolling_func("skew"))
+    rolling_std = _register_default_pandas(_rolling_func("std"))
+    rolling_sum = _register_default_pandas(_rolling_func("sum"))
+    rolling_var = _register_default_pandas(_rolling_func("var"))
     round = _register_default_pandas(pandas.DataFrame.round)
     rsub = _register_default_pandas(pandas.DataFrame.rsub)
     rtruediv = _register_default_pandas(pandas.DataFrame.rtruediv)
