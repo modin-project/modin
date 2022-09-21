@@ -118,3 +118,7 @@ class ClientIO(BaseIO):
         return ClientQueryCompiler(
             cls._server_conn.read_sql(sql, cls._data_conn, **kwargs)
         )
+
+    @classmethod
+    def to_sql(cls, qc, **kwargs):
+        qc.to_sql(**kwargs)
