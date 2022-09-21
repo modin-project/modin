@@ -505,6 +505,9 @@ class ClientQueryCompiler(BaseQueryCompiler):
     def str_find(self, sub, start=0, end=None):
         return self.__constructor__(self._service.str_find(self._id, sub, start, end))
 
+    def str_rfind(self, sub, start=0, end=None):
+        return self.__constructor__(self._service.str_rfind(self._id, sub, start, end))
+
     def str_findall(self, pat, flags=0, **kwargs):
         return self.__constructor__(
             self._service.str_findall(self._id, pat, flags, **kwargs)
@@ -524,6 +527,9 @@ class ClientQueryCompiler(BaseQueryCompiler):
     def str_ljust(self, width, fillchar=" "):
         return self.__constructor__(self._service.str_ljust(self._id, width, fillchar))
 
+    def str_rjust(self, width, fillchar=" "):
+        return self.__constructor__(self._service.str_rjust(self._id, width, fillchar))
+
     def str_match(self, pat, case=True, flags=0, na=np.nan):
         return self.__constructor__(
             self._service.str_match(self._id, pat, case, flags, na)
@@ -536,6 +542,9 @@ class ClientQueryCompiler(BaseQueryCompiler):
 
     def str_repeat(self, repeats):
         return self.__constructor__(self._service.str_repeat(self._id, repeats))
+
+    def str_split(self, pat=None, n=-1, expand=False):
+        return self.__constructor__(self._service.str_split(self._id, pat, n, expand))
 
     def str_rsplit(self, pat=None, n=-1, expand=False):
         return self.__constructor__(self._service.str_rsplit(self._id, pat, n, expand))
