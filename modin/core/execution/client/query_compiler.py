@@ -84,7 +84,6 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def to_pandas(self):
-        print("calling to_pandas in server")
         return self._service.to_pandas(self._id)
 
     def default_to_pandas(self, pandas_op, *args, **kwargs):
