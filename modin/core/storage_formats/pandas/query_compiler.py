@@ -550,7 +550,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     if len(level) < self.index.nlevels
                     else pandas.RangeIndex(len(self.index))
                 )
-        else:
+        elif not drop:
             uniq_sorted_level = list(range(self.index.nlevels))
 
         if not drop:
@@ -627,7 +627,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             new_self = self.copy()
             new_self.index = (
-                pandas.RangeIndex(len(new_self.index))
+                # Cheaper to compute row lengths than index
+                pandas.RangeIndex(sum(new_self._modin_frame._row_lengths))
                 if new_index is None
                 else new_index
             )
