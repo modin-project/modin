@@ -29,7 +29,7 @@ import sys
 import json
 import codecs
 
-if sys.version_info < (3, 7):
+if sys.version_info < (3, 8):
     from typing_extensions import Protocol, runtime_checkable
 else:
     from typing import Protocol, runtime_checkable
@@ -299,8 +299,6 @@ def _replace_doc(
     target_doc = target_obj.__doc__ or ""
     overwrite = overwrite or not target_doc
     doc = source_doc if overwrite else target_doc
-    apilink_l: Optional[List[str]]
-    apilink_l = [apilink] if not isinstance(apilink, list) and apilink else apilink  # type: ignore
 
     if parent_cls and not attr_name:
         if isinstance(target_obj, property):
@@ -312,10 +310,11 @@ def _replace_doc(
 
     if (
         source_doc.strip()
-        and apilink_l
+        and apilink
         and "pandas API documentation for " not in target_doc
         and (not (attr_name or "").startswith("_"))
     ):
+        apilink_l = [apilink] if not isinstance(apilink, list) and apilink else apilink
         links = []
         for i, link in enumerate(apilink_l):
             if attr_name:

@@ -19,7 +19,7 @@ from modin.utils import get_current_execution
 
 class ErrorMessage(object):
     # Only print full ``default to pandas`` warning one time.
-    printed_default_to_pandas: bool = False
+    printed_default_to_pandas = False
     printed_warnings: Set[int] = set()  # Set of hashes of printed warnings
 
     @classmethod
