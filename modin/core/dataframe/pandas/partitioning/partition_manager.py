@@ -452,7 +452,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             "other_axis_partition": right_partitions,
         }
         if lengths:
-            kw["_lengths"] = lengths
+            kw["lengths"] = lengths
             kw["manual_partition"] = True
 
         if apply_indices is None:

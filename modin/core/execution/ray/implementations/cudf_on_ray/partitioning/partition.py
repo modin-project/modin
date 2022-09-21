@@ -91,7 +91,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         """
         return gpu_manager.put.remote(pandas_dataframe)
 
-    def apply(self, func, **kwargs):
+    def apply(self, func, *args, **kwargs):
         """
         Apply `func` to this partition.
 
@@ -99,8 +99,10 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         ----------
         func : callable
             A function to apply.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
         **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
+            Additional keyword arguments to be passed in `func`.
 
         Returns
         -------
@@ -108,7 +110,9 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             A reference to integer key of result
             in internal dict-storage of `self.gpu_manager`.
         """
-        return self.gpu_manager.apply.remote(self.get_key(), None, func, **kwargs)
+        return self.gpu_manager.apply.remote(
+            self.get_key(), None, func, *args, **kwargs
+        )
 
     # TODO: Check the need of this method
     def apply_result_not_dataframe(self, func, **kwargs):
@@ -133,7 +137,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             self.get_key(), func, **kwargs
         )
 
-    def add_to_apply_calls(self, func, length=None, width=None, **kwargs):
+    def add_to_apply_calls(self, func, length=None, width=None, *args, **kwargs):
         """
         Apply `func` to this partition and create new.
 
@@ -145,6 +149,8 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             Length, or reference to length, of wrapped ``pandas.DataFrame``.
         width : ray.ObjectRef or int, optional
             Width, or reference to width, of wrapped ``pandas.DataFrame``.
+        *args : tuple
+            Positional arguments to be passed in `func`.
         **kwargs : dict
             Additional keywords arguments to be passed in `func`.
 
@@ -159,7 +165,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         """
         return cuDFOnRayDataframePartition(
             self.gpu_manager,
-            self.apply(func, **kwargs),
+            self.apply(func, *args, **kwargs),
             length=length,
             width=width,
         )

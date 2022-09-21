@@ -608,9 +608,9 @@ class TextFileDispatcher(FileDispatcher):
         for idx, (start, end) in enumerate(splits):
             partition_kwargs.update({"start": start, "end": end})
             *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
-                cls.parse,
+                func=cls.parse,
+                f_kwargs=partition_kwargs,
                 num_returns=partition_kwargs.get("num_splits") + 2,
-                **partition_kwargs,
             )
         return partition_ids, index_ids, dtypes_ids
 

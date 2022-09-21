@@ -223,10 +223,22 @@ def deserialize(obj):
     """
     if isinstance(obj, ObjectIDType):
         return ray.get(obj)
-    elif isinstance(obj, (tuple, list)) and any(
-        isinstance(o, ObjectIDType) for o in obj
-    ):
-        return ray.get(list(obj))
+    elif isinstance(obj, (tuple, list)):
+        # Ray will error if any elements are not ObjectIDType, but we still want ray to
+        # perform batch deserialization for us -- thus, we must submit only the list elements
+        # that are ObjectIDType, deserialize them, and restore them to their correct list index
+        oid_indices, oids = [], []
+        for i, ray_id in enumerate(obj):
+            if isinstance(ray_id, ObjectIDType):
+                oid_indices.append(i)
+                oids.append(ray_id)
+        ray_result = ray.get(oids)
+        new_lst = list(obj[:])
+        for i, deser_item in zip(oid_indices, ray_result):
+            new_lst[i] = deser_item
+        # Check that all objects have been deserialized
+        assert not any([isinstance(o, ObjectIDType) for o in new_lst])
+        return new_lst
     elif isinstance(obj, dict) and any(
         isinstance(val, ObjectIDType) for val in obj.values()
     ):

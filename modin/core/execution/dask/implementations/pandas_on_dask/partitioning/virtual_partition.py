@@ -150,10 +150,13 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         cls,
         axis,
         func,
+        f_args,
+        f_kwargs,
         num_splits,
         maintain_partitioning,
         *partitions,
-        **kwargs,
+        lengths=None,
+        manual_partition=False,
     ):
         """
         Deploy a function along a full axis.
@@ -164,6 +167,10 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             The axis to perform the function along.
         func : callable
             The function to perform.
+        f_args : list or tuple
+            Positional arguments to pass to ``func``.
+        f_kwargs : dict
+            Keyword arguments to pass to ``func``.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).
         maintain_partitioning : bool
@@ -171,32 +178,48 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             If False, create a new partition layout.
         *partitions : iterable
             All partitions that make up the full axis (row or column).
-        **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
+        lengths : iterable, default: None
+            The list of lengths to shuffle the partition into.
+        manual_partition : bool, default: False
+            If True, partition the result with `lengths`.
 
         Returns
         -------
         list
             A list of distributed.Future.
         """
-        lengths = kwargs.get("_lengths", None)
         result_num_splits = len(lengths) if lengths else num_splits
         return DaskWrapper.deploy(
-            deploy_dask_func,
-            PandasDataframeAxisPartition.deploy_axis_func,
-            axis,
-            func,
-            num_splits,
-            maintain_partitioning,
-            *partitions,
+            func=deploy_dask_func,
+            f_args=(
+                PandasDataframeAxisPartition.deploy_axis_func,
+                axis,
+                func,
+                f_args,
+                f_kwargs,
+                num_splits,
+                maintain_partitioning,
+                *partitions,
+            ),
+            f_kwargs={
+                "lengths": lengths,
+                "manual_partition": manual_partition,
+            },
             num_returns=result_num_splits * 4,
             pure=False,
-            **kwargs,
         )
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
-        cls, axis, func, num_splits, len_of_left, other_shape, *partitions, **kwargs
+        cls,
+        axis,
+        func,
+        f_args,
+        f_kwargs,
+        num_splits,
+        len_of_left,
+        other_shape,
+        *partitions,
     ):
         """
         Deploy a function along a full axis between two data sets.
@@ -207,6 +230,10 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             The axis to perform the function along.
         func : callable
             The function to perform.
+        f_args : list or tuple
+            Positional arguments to pass to ``func``.
+        f_kwargs : dict
+            Keyword arguments to pass to ``func``.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).
         len_of_left : int
@@ -216,8 +243,6 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
         *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
-        **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -225,17 +250,20 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             A list of distributed.Future.
         """
         return DaskWrapper.deploy(
-            deploy_dask_func,
-            PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
-            axis,
-            func,
-            num_splits,
-            len_of_left,
-            other_shape,
-            *partitions,
+            func=deploy_dask_func,
+            f_args=(
+                PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
+                axis,
+                func,
+                f_args,
+                f_kwargs,
+                num_splits,
+                len_of_left,
+                other_shape,
+                *partitions,
+            ),
             num_returns=num_splits * 4,
             pure=False,
-            **kwargs,
         )
 
     def _wrap_partitions(self, partitions):
@@ -301,9 +329,13 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             num_splits = 1
         if len(self.call_queue) > 0:
             self.drain_call_queue()
-        kwargs["args"] = args
         result = super(PandasOnDaskDataframeVirtualPartition, self).apply(
-            func, num_splits, other_axis_partition, maintain_partitioning, **kwargs
+            func,
+            *args,
+            num_splits=num_splits,
+            other_axis_partition=other_axis_partition,
+            maintain_partitioning=maintain_partitioning,
+            **kwargs,
         )
         if self.full_axis:
             return result
@@ -457,7 +489,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         return type(self)(
             self.list_of_block_partitions,
             full_axis=self.full_axis,
-            call_queue=self.call_queue + [(func, args, kwargs)],
+            call_queue=self.call_queue + [[func, args, kwargs]],
             length=length,
             width=width,
         )
@@ -473,25 +505,37 @@ class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeVirtualPartition):
     axis = 1
 
 
-def deploy_dask_func(func, *args, **kwargs):
+def deploy_dask_func(deployer, axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs):
     """
     Execute a function on an axis partition in a worker process.
 
+    This is ALWAYS called on either ``PandasDataframeAxisPartition.deploy_axis_func``
+    or ``PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions``, which both
+    serve to deploy another dataframe function on a Dask worker process.
+
     Parameters
     ----------
-    func : callable
-        Function to be executed on an axis partition.
-    *args : iterable
-        Additional arguments that need to passed in ``func``.
+    deployer : callable
+        A `PandasDataFrameAxisPartition.deploy_*` method that will call `deploy_f`.
+    axis : {0, 1}
+        The axis to perform the function along.
+    f_to_deploy : callable or RayObjectID
+        The function to deploy.
+    f_args : list or tuple
+        Positional arguments to pass to ``f_to_deploy``.
+    f_kwargs : dict
+        Keyword arguments to pass to ``f_to_deploy``.
+    *args : list
+        Positional arguments to pass to ``func``.
     **kwargs : dict
-        Additional keyword arguments to be passed in `func`.
+        Keyword arguments to pass to ``func``.
 
     Returns
     -------
     list
         The result of the function ``func`` and metadata for it.
     """
-    result = func(*args, **kwargs)
+    result = deployer(axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs)
     ip = get_ip()
     if isinstance(result, pandas.DataFrame):
         return result, len(result), len(result.columns), ip
