@@ -2,6 +2,14 @@
 
 HdkOnNative execution
 =====================
+.. raw:: html
+
+    <style>.red {color:red; font-weight:bold;}</style>
+
+.. role:: red
+
+:red:`Note\: After migration to HDK, this documentation is temporarily
+out-of-date and will be fixed in the next release!`
 
 HDK is a low-level execution library for data analytics processing.
 HDK is used as a fast execution backend in Modin. The HDK library provides
