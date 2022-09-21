@@ -58,7 +58,33 @@ class ClientQueryCompiler(BaseQueryCompiler):
     def from_pandas(cls, df, data_cls):
         raise NotImplementedError
 
+    def to_sql(
+        self,
+        name,
+        con,
+        schema=None,
+        if_exists="fail",
+        index=True,
+        index_label=None,
+        chunksize=None,
+        dtype=None,
+        method=None,
+    ):
+        return self._service.to_sql(
+            self._id,
+            name,
+            con,
+            schema,
+            if_exists,
+            index,
+            index_label,
+            chunksize,
+            dtype,
+            method,
+        )
+
     def to_pandas(self):
+        print("calling to_pandas in server")
         return self._service.to_pandas(self._id)
 
     def default_to_pandas(self, pandas_op, *args, **kwargs):
@@ -77,7 +103,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._service.add_prefix(self._id, prefix, axis))
 
     def add_suffix(self, suffix, axis=1):
-        return self.__constructor__(self._service.add_prefix(self._id, suffix, axis))
+        return self.__constructor__(self._service.add_suffix(self._id, suffix, axis))
 
     def insert(self, loc, column, value):
         if isinstance(value, ClientQueryCompiler):
