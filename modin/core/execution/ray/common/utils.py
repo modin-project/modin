@@ -34,6 +34,7 @@ from modin.config import (
     ValueSource,
 )
 from modin.error_message import ErrorMessage
+from .engine_wrapper import RayWrapper
 
 _OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO = 0.6
 # This constant should be in sync with the limit in ray, which is private,
@@ -222,7 +223,7 @@ def deserialize(obj):
         The deserialized object.
     """
     if isinstance(obj, ObjectIDType):
-        return ray.get(obj)
+        return RayWrapper.materialize(obj)
     elif isinstance(obj, (tuple, list)):
         # Ray will error if any elements are not ObjectIDType, but we still want ray to
         # perform batch deserialization for us -- thus, we must submit only the list elements
@@ -232,7 +233,7 @@ def deserialize(obj):
             if isinstance(ray_id, ObjectIDType):
                 oid_indices.append(i)
                 oids.append(ray_id)
-        ray_result = ray.get(oids)
+        ray_result = RayWrapper.materialize(oids)
         new_lst = list(obj[:])
         for i, deser_item in zip(oid_indices, ray_result):
             new_lst[i] = deser_item
@@ -242,6 +243,6 @@ def deserialize(obj):
     elif isinstance(obj, dict) and any(
         isinstance(val, ObjectIDType) for val in obj.values()
     ):
-        return dict(zip(obj.keys(), ray.get(list(obj.values()))))
+        return dict(zip(obj.keys(), RayWrapper.materialize(list(obj.values()))))
     else:
         return obj

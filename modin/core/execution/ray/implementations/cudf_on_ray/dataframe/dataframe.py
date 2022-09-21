@@ -16,13 +16,13 @@
 from typing import List, Hashable, Optional
 
 import numpy as np
-import ray
 
 from modin.error_message import ErrorMessage
 from modin.pandas.utils import check_both_not_none
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe import (
     PandasOnRayDataframe,
 )
+from modin.core.execution.ray.common import RayWrapper
 from ..partitioning import (
     cuDFOnRayDataframePartition,
     cuDFOnRayDataframePartitionManager,
@@ -260,7 +260,7 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
         )
 
         shape = key_and_gpus.shape[:2]
-        keys = ray.get(key_and_gpus[:, :, 0].flatten().tolist())
+        keys = RayWrapper.materialize(key_and_gpus[:, :, 0].flatten().tolist())
         gpu_managers = key_and_gpus[:, :, 1].flatten().tolist()
         new_partitions = self._partition_mgr_cls._create_partitions(
             keys, gpu_managers

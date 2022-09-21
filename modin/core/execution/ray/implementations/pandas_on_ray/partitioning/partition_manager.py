@@ -22,6 +22,7 @@ from modin.config import ProgressBar
 from modin.core.execution.ray.generic.partitioning import (
     GenericRayDataframePartitionManager,
 )
+from modin.core.execution.ray.common import RayWrapper
 from .virtual_partition import (
     PandasOnRayDataframeColumnPartition,
     PandasOnRayDataframeRowPartition,
@@ -111,7 +112,9 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         assert all(
             [len(partition.list_of_blocks) == 1 for partition in partitions]
         ), "Implementation assumes that each partition contains a signle block."
-        return ray.get([partition.list_of_blocks[0] for partition in partitions])
+        return RayWrapper.materialize(
+            [partition.list_of_blocks[0] for partition in partitions]
+        )
 
     @classmethod
     def wait_partitions(cls, partitions):

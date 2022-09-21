@@ -198,7 +198,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
                 [PandasOnRayDataframePartition(obj) for obj in partition_id[:-1]]
             )
             index_ids.append(partition_id[-1])
-        new_index = pandas.RangeIndex(sum(ray.get(index_ids)))
+        new_index = pandas.RangeIndex(sum(RayWrapper.materialize(index_ids)))
         new_query_compiler = cls.query_compiler_cls(
             cls.frame_cls(np.array(partition_ids), new_index, cols_names)
         )
