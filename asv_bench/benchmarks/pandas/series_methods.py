@@ -124,43 +124,6 @@ class ClipDt:
         self.s.clip(upper=self.clipper_dt)
 
 
-class ValueCounts:
-
-    params = [[10**3, 10**4, 10**5], ["int", "uint", "float", "object"]]
-    param_names = ["N", "dtype"]
-
-    def setup(self, N, dtype):
-        self.s = Series(np.random.randint(0, N, size=10 * N)).astype(dtype)
-
-    def time_value_counts(self, N, dtype):
-        self.s.value_counts()
-
-
-class ValueCountsEA:
-
-    params = [[10**3, 10**4, 10**5], [True, False]]
-    param_names = ["N", "dropna"]
-
-    def setup(self, N, dropna):
-        self.s = Series(np.random.randint(0, N, size=10 * N), dtype="Int64")
-        self.s.loc[1] = NA
-
-    def time_value_counts(self, N, dropna):
-        self.s.value_counts(dropna=dropna)
-
-
-class ValueCountsObjectDropNAFalse:
-
-    params = [10**3, 10**4, 10**5]
-    param_names = ["N"]
-
-    def setup(self, N):
-        self.s = Series(np.random.randint(0, N, size=10 * N)).astype("object")
-
-    def time_value_counts(self, N):
-        self.s.value_counts(dropna=False)
-
-
 class Mode:
 
     params = [[10**3, 10**4, 10**5], ["int", "uint", "float", "object"]]
@@ -183,23 +146,6 @@ class ModeObjectDropNAFalse:
 
     def time_mode(self, N):
         self.s.mode(dropna=False)
-
-
-class Dir:
-    def setup(self):
-        self.s = Series(index=tm.makeStringIndex(10000))
-
-    def time_dir_strings(self):
-        dir(self.s)
-
-
-class SeriesGetattr:
-    # https://github.com/pandas-dev/pandas/issues/19764
-    def setup(self):
-        self.s = Series(1, index=date_range("2012-01-01", freq="s", periods=10**6))
-
-    def time_series_datetimeindex_repr(self):
-        getattr(self.s, "a", None)
 
 
 class All:
@@ -259,20 +205,6 @@ class NanOps:
 
     def time_func(self, func, N, dtype):
         self.func()
-
-
-class Rank:
-
-    param_names = ["dtype"]
-    params = [
-        ["int", "uint", "float", "object"],
-    ]
-
-    def setup(self, dtype):
-        self.s = Series(np.random.randint(0, 1000, size=100000), dtype=dtype)
-
-    def time_rank(self, dtype):
-        self.s.rank()
 
 
 from .pandas_vb_common import setup  # noqa: F401 isort:skip
