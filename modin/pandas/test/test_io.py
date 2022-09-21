@@ -67,8 +67,8 @@ from .utils import (
     time_parsing_csv_path,
 )
 
-if StorageFormat.get() == "Omnisci":
-    from modin.experimental.core.execution.native.implementations.omnisci_on_native.test.utils import (
+if StorageFormat.get() == "Hdk":
+    from modin.experimental.core.execution.native.implementations.hdk_on_native.test.utils import (
         eval_io,
         align_datetime_dtypes,
     )
@@ -370,7 +370,7 @@ class TestCsv:
         encoding,
     ):
         xfail_case = (
-            StorageFormat.get() == "Omnisci"
+            StorageFormat.get() == "Hdk"
             and header is not None
             and isinstance(skiprows, int)
             and names is None
@@ -433,7 +433,7 @@ class TestCsv:
         xfail_case = (
             (false_values or true_values)
             and Engine.get() != "Python"
-            and StorageFormat.get() != "Omnisci"
+            and StorageFormat.get() != "Hdk"
         )
         if xfail_case:
             pytest.xfail("modin and pandas dataframes differs - issue #2446")
@@ -486,9 +486,9 @@ class TestCsv:
             )
 
     def test_read_csv_mangle_dupe_cols(self):
-        if StorageFormat.get() == "Omnisci":
+        if StorageFormat.get() == "Hdk":
             pytest.xfail(
-                "processing of duplicated columns in OmniSci storage format is not supported yet - issue #3080"
+                "processing of duplicated columns in HDK storage format is not supported yet - issue #3080"
             )
         with ensure_clean() as unique_filename:
             str_non_unique_cols = "col,col,col,col\n5, 6, 7, 8\n9, 10, 11, 12\n"
@@ -542,12 +542,12 @@ class TestCsv:
         cache_dates,
     ):
         if (
-            StorageFormat.get() == "Omnisci"
+            StorageFormat.get() == "Hdk"
             and isinstance(parse_dates, list)
             and ("col4" in parse_dates or 3 in parse_dates)
         ):
             pytest.xfail(
-                "In some cases read_csv with `parse_dates` with OmniSci storage format outputs incorrect result - issue #3081"
+                "In some cases read_csv with `parse_dates` with HDK storage format outputs incorrect result - issue #3081"
             )
 
         raising_exceptions = io_ops_bad_exc  # default value
@@ -809,7 +809,7 @@ class TestCsv:
         if (
             not raise_exception_case
             and Engine.get() not in ["Python", "Cloudpython"]
-            and StorageFormat.get() != "Omnisci"
+            and StorageFormat.get() != "Hdk"
         ):
             pytest.xfail("read_csv doesn't raise `bad lines` exceptions - issue #2500")
         eval_io(
@@ -1006,12 +1006,12 @@ class TestCsv:
     @pytest.mark.parametrize("names", [list("XYZ"), None])
     @pytest.mark.parametrize("skiprows", [1, 2, 3, 4, None])
     def test_read_csv_skiprows_names(self, names, skiprows):
-        if StorageFormat.get() == "Omnisci" and names is None and skiprows in [1, None]:
+        if StorageFormat.get() == "Hdk" and names is None and skiprows in [1, None]:
             # If these conditions are satisfied, columns names will be inferred
             # from the first row, that will contain duplicated values, that is
-            # not supported by  `Omnisci` storage format yet.
+            # not supported by  `HDK` storage format yet.
             pytest.xfail(
-                "processing of duplicated columns in OmniSci storage format is not supported yet - issue #3080"
+                "processing of duplicated columns in HDK storage format is not supported yet - issue #3080"
             )
         eval_io(
             fn_name="read_csv",
@@ -1024,7 +1024,7 @@ class TestCsv:
     def _has_pandas_fallback_reason(self):
         # The Python engine does not use custom IO dispatchers, so specialized error messages
         # won't appear
-        return Engine.get() != "Python" and StorageFormat.get() != "Omnisci"
+        return Engine.get() != "Python" and StorageFormat.get() != "Hdk"
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1052,10 +1052,10 @@ class TestCsv:
             fn_name="read_csv",
             # read_csv kwargs
             filepath_or_buffer="https://raw.githubusercontent.com/modin-project/modin/master/modin/pandas/test/data/blah.csv",
-            # It takes about ~17Gb of RAM for Omnisci to import the whole table from this test
+            # It takes about ~17Gb of RAM for HDK to import the whole table from this test
             # because of too many (~1000) string columns in it. Taking a subset of columns
             # to be able to run this test on low-RAM machines.
-            usecols=[0, 1, 2, 3] if StorageFormat.get() == "Omnisci" else None,
+            usecols=[0, 1, 2, 3] if StorageFormat.get() == "Hdk" else None,
         )
 
     @pytest.mark.parametrize("nrows", [21, 5, None])
@@ -1067,7 +1067,7 @@ class TestCsv:
             filepath_or_buffer="modin/pandas/test/data/newlines.csv",
             nrows=nrows,
             skiprows=skiprows,
-            cast_to_str=StorageFormat.get() != "Omnisci",
+            cast_to_str=StorageFormat.get() != "Hdk",
         )
 
     @pytest.mark.parametrize("skiprows", [None, 0, [], [1, 2], np.arange(0, 2)])
@@ -1131,8 +1131,8 @@ class TestCsv:
         )
 
     @pytest.mark.skipif(
-        StorageFormat.get() == "Omnisci",
-        reason="to_csv is not implemented with OmniSci storage format yet - issue #3082",
+        StorageFormat.get() == "Hdk",
+        reason="to_csv is not implemented with HDK storage format yet - issue #3082",
     )
     @pytest.mark.parametrize("header", [False, True])
     @pytest.mark.parametrize("mode", ["w", "wb+"])
@@ -1157,8 +1157,8 @@ class TestCsv:
         )
 
     @pytest.mark.skipif(
-        StorageFormat.get() == "Omnisci",
-        reason="to_csv is not implemented with OmniSci storage format yet - issue #3082",
+        StorageFormat.get() == "Hdk",
+        reason="to_csv is not implemented with HDK storage format yet - issue #3082",
     )
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1172,8 +1172,8 @@ class TestCsv:
         )
 
     @pytest.mark.skipif(
-        StorageFormat.get() == "Omnisci",
-        reason="to_csv is not implemented with OmniSci storage format yet - issue #3082",
+        StorageFormat.get() == "Hdk",
+        reason="to_csv is not implemented with HDK storage format yet - issue #3082",
     )
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1204,7 +1204,7 @@ class TestCsv:
             pytest.csvs_names["test_read_csv_regular"], method="modin"
         )
 
-        if StorageFormat.get() == "Omnisci":
+        if StorageFormat.get() == "Hdk":
             # Aligning DateTime dtypes because of the bug related to the `parse_dates` parameter:
             # https://github.com/modin-project/modin/issues/3485
             modin_df, pandas_df = align_datetime_dtypes(modin_df, pandas_df)

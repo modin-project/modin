@@ -66,7 +66,7 @@ Component View
 
 User queries which perform data transformation, data ingress or data egress pass through the Modin components
 detailed below. The path the query takes is mostly similar across execution systems, with some minor exceptions like
-:doc:`OmnisciOnNative </flow/modin/experimental/core/execution/native/implementations/omnisci_on_native/index>`.
+:doc:`HdkOnNative </flow/modin/experimental/core/execution/native/implementations/hdk_on_native/index>`.
 
 Data Transformation
 '''''''''''''''''''
@@ -224,10 +224,10 @@ documentation page on :doc:`contributing </development/contributing>`.
     - Uses the Ray_ execution framework.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`experimental pandas on Ray </flow/modin/experimental/core/execution/ray/implementations/pandas_on_ray/index>` page.
-- :doc:`OmniSci on Native </development/using_omnisci>` (experimental)
-    - Uses OmniSciDB as an engine.
-    - The storage format is `omnisci` and the in-memory partition type is a pyarrow Table. When defaulting to pandas, the pandas DataFrame is used.
-    - For more information on the execution path, see the :doc:`OmniSci on Native </flow/modin/experimental/core/execution/native/implementations/omnisci_on_native/index>` page.
+- :doc:`HDK on Native </development/using_hdk>` (experimental)
+    - Uses HDK as an engine.
+    - The storage format is `hdk` and the in-memory partition type is a pyarrow Table. When defaulting to pandas, the pandas DataFrame is used.
+    - For more information on the execution path, see the :doc:`HDK on Native </flow/modin/experimental/core/execution/native/implementations/hdk_on_native/index>` page.
 - :doc:`Pyarrow on Ray </development/using_pyarrow_on_ray>` (experimental)
     - Uses the Ray_ execution framework.
     - The storage format is `pyarrow` and the in-memory partition type is a pyarrow Table.
@@ -252,7 +252,7 @@ following figure illustrates this concept.
    :align: center
 
 Currently, the main in-memory format of each partition is a `pandas DataFrame`_ (:doc:`pandas storage format </flow/modin/core/storage_formats/pandas/index>`).
-:doc:`Omnisci </flow/modin/experimental/core/storage_formats/omnisci/index>`, :doc:`PyArrow </flow/modin/experimental/core/storage_formats/pyarrow/index>`
+:doc:`HDK </flow/modin/experimental/core/storage_formats/hdk/index>`, :doc:`PyArrow </flow/modin/experimental/core/storage_formats/pyarrow/index>`
 and cuDF are also supported as experimental in-memory formats in Modin.
 
 
@@ -326,13 +326,13 @@ details. The documentation covers most modules, with more docs being added every
    │   │   │   ├───execution
    │   │   │   │   ├───native
    │   │   │   │   │   └───implementations
-   │   │   │   │   │       └─── :doc:`omnisci_on_native </flow/modin/experimental/core/execution/native/implementations/omnisci_on_native/index>`
+   │   │   │   │   │       └─── :doc:`hdk_on_native </flow/modin/experimental/core/execution/native/implementations/hdk_on_native/index>`
    │   │   │   │   └───ray
    │   │   │   │       └───implementations
    │   │   │   │           ├─── :doc:`pandas_on_ray </flow/modin/experimental/core/execution/ray/implementations/pandas_on_ray/index>`
    │   │   │   │           └─── :doc:`pyarrow_on_ray </flow/modin/experimental/core/execution/ray/implementations/pyarrow_on_ray>`
    │   │   │   └─── :doc:`storage_formats </flow/modin/experimental/core/storage_formats/index>`
-   |   │   │       ├─── :doc:`omnisci </flow/modin/experimental/core/storage_formats/omnisci/index>`
+   |   │   │       ├─── :doc:`hdk </flow/modin/experimental/core/storage_formats/hdk/index>`
    │   │   │       └─── :doc:`pyarrow </flow/modin/experimental/core/storage_formats/pyarrow/index>`
    │   │   ├─── :doc:`pandas </flow/modin/experimental/pandas>`
    │   │   ├─── :doc:`sklearn </flow/modin/experimental/sklearn>`

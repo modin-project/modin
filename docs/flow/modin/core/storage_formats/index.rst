@@ -10,7 +10,7 @@ partitions that hold ``pandas.DataFrame`` objects. Pandas is the most natural st
 since high-level DataFrame objects mirror its API, however, Modin's storage formats are not
 limited to the objects that conform to pandas API. There are formats that are able to store
 ``pyarrow.Table`` (:doc:`pyarrow storage format </flow/modin/experimental/core/storage_formats/pyarrow/index>`) or even instances of
-SQL-like databases (:doc:`OmniSci storage format </flow/modin/experimental/core/storage_formats/omnisci/index>`)
+SQL-like databases (:doc:`HDK storage format </flow/modin/experimental/core/storage_formats/hdk/index>`)
 inside Modin Dataframe's partitions.
 
 The storage format + execution engine (Ray, Dask, etc.) form the execution backend. 

@@ -15,7 +15,7 @@ Key Features and Updates
   *
 * Pandas API implementations and improvements
   *
-* OmniSci enhancements
+* HDK enhancements
   *
 * XGBoost enhancements
   *

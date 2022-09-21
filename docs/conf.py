@@ -24,7 +24,7 @@ def noop_decorator(*args, **kwargs):
 ray.remote = noop_decorator
 
 # fake modules if they're missing
-for mod_name in ("cudf", "cupy", "pyarrow.gandiva", "omniscidbe"):
+for mod_name in ("cudf", "cupy", "pyarrow.gandiva", "pyhdk"):
     try:
         __import__(mod_name)
     except ImportError:
@@ -35,8 +35,8 @@ if not hasattr(sys.modules["cudf"], "DataFrame"):
     sys.modules["cudf"].DataFrame = type("DataFrame", (object,), {})
 if not hasattr(sys.modules["cupy"], "ndarray"):
     sys.modules["cupy"].ndarray = type("ndarray", (object,), {})
-if not hasattr(sys.modules["omniscidbe"], "PyDbEngine"):
-    sys.modules["omniscidbe"].PyDbEngine = type("PyDbEngine", (object,), {})
+if not hasattr(sys.modules["pyhdk"], "PyDbEngine"):
+    sys.modules["pyhdk"].PyDbEngine = type("PyDbEngine", (object,), {})
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import modin
