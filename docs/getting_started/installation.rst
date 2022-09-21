@@ -122,9 +122,9 @@ or explicitly:
 
 .. code-block:: bash
 
-  conda install -c conda-forge modin-ray modin-dask pyhdk
+  conda install -c conda-forge modin-ray modin-dask modin-hdk
 
-``conda`` may be slow installing ``pyhdk`` and hence ``modin-all`` packages so it's worth trying to set ``channel_priority`` to ``strict`` prior the installation process:
+``conda`` may be slow installing ``modin-hdk`` and hence ``modin-all`` packages so it's worth trying to set ``channel_priority`` to ``strict`` prior the installation process:
 
 .. code-block:: bash
 
