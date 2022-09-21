@@ -38,7 +38,7 @@ class TimeReadCsvNames:
         # filenames with a metadata of saved dataframes
         cache = {}
         for shape in self.shapes:
-            df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH, "pandas")
+            df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH, impl="pandas")
             file_id = get_shape_id(shape)
             cache[file_id] = (
                 f"{test_filename}_{file_id}.csv",

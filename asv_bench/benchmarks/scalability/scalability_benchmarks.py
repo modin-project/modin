@@ -61,7 +61,7 @@ class TimeToPandas:
         from modin.config import NPartitions
 
         NPartitions.get = lambda: cpus
-        self.data = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH, "modin")
+        self.data = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH, impl="modin")
 
     def time_to_pandas(self, shape, cpus):
         # to_pandas is already synchronous

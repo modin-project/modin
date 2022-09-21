@@ -561,7 +561,7 @@ def prepare_io_data(test_filename: str, data_type: str, shapes: list):
     for shape in shapes:
         shape_id = get_shape_id(shape)
         test_filenames[shape_id] = f"{test_filename}_{shape_id}_{data_type}.csv"
-        df = generate_dataframe(data_type, *shape, RAND_LOW, RAND_HIGH, "pandas")
+        df = generate_dataframe(data_type, *shape, RAND_LOW, RAND_HIGH, impl="pandas")
         df.to_csv(test_filenames[shape_id], index=False)
 
     return test_filenames
@@ -590,7 +590,7 @@ def prepare_io_data_parquet(test_filename: str, data_type: str, shapes: list):
     for shape in shapes:
         shape_id = get_shape_id(shape)
         test_filenames[shape_id] = f"{test_filename}_{shape_id}_{data_type}.parquet"
-        df = generate_dataframe(data_type, *shape, RAND_LOW, RAND_HIGH, "pandas")
+        df = generate_dataframe(data_type, *shape, RAND_LOW, RAND_HIGH, impl="pandas")
         df.to_parquet(test_filenames[shape_id], index=False)
 
     return test_filenames
