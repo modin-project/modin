@@ -50,6 +50,8 @@ Key Features and Updates
   * FIX-#4734: Handle Series.apply when return type is a DataFrame (#4830)
   * FIX-#4983: Set `frac` to `None` in _sample when `n=0` (#4984)
   * FIX-#4993: Return `_default_to_pandas` in `df.attrs` (#4995)
+  * FIX-#4597: Refactor Partition handling of func, args, kwargs (#4715)
+  * FIX-#4996: Evaluate BenchmarkMode at each function call (#4997)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
@@ -103,6 +105,7 @@ Key Features and Updates
   * REFACTOR-#4976: Rename `RayTask` to `RayWrapper` in accordance with Dask (#4977)
   * REFACTOR-#4885: De-duplicated take_2d_labels_or_positional methods (#4883)
   * REFACTOR-#5001: Remove `jenkins` stuff (#5002)
+  * REFACTOR-#4970: Rewrite base implementations of a partition' `width/length` (#4971)  
   * REFACTOR-#4942: Remove `call` method in favor of `register` due to duplication (4943)
   * REFACTOR-#4922: Helpers for take_2d_labels_or_positional (#4865)
   * REFACTOR-#5009: Use `RayWrapper.materialize` instead of `ray.get` (#5010)

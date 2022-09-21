@@ -70,10 +70,12 @@ class PickleExperimentalDispatcher(FileDispatcher):
 
         for idx, file_name in enumerate(filepath_or_buffer):
             *partition_ids[idx], lengths_ids[idx], widths_ids[idx] = cls.deploy(
-                cls.parse,
+                func=cls.parse,
+                f_kwargs={
+                    "fname": file_name,
+                    **kwargs,
+                },
                 num_returns=3,
-                fname=file_name,
-                **kwargs,
             )
         lengths = cls.materialize(lengths_ids)
         widths = cls.materialize(widths_ids)

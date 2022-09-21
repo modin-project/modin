@@ -51,12 +51,12 @@ def wait_computations_if_benchmark_mode(func):
     -----
     `func` should return NumPy array with partitions.
     """
-    if BenchmarkMode.get():
 
-        @wraps(func)
-        def wait(cls, *args, **kwargs):
-            """Wait for computation results."""
-            result = func(cls, *args, **kwargs)
+    @wraps(func)
+    def wait(cls, *args, **kwargs):
+        """Wait for computation results."""
+        result = func(cls, *args, **kwargs)
+        if BenchmarkMode.get():
             if isinstance(result, tuple):
                 partitions = result[0]
             else:
@@ -70,13 +70,10 @@ def wait_computations_if_benchmark_mode(func):
             [part.drain_call_queue() for part in partitions.flatten()]
             # The partition manager invokes the relevant .wait() method under
             # the hood, which should wait in parallel for all computations to finish
-            # (We can't just add a `cls` argument to this `wait` function, since doing so
-            # seems to be incompatible with the way function decorators work)
             cls.wait_partitions(partitions.flatten())
-            return result
+        return result
 
-        return wait
-    return func
+    return wait
 
 
 class PandasDataframePartitionManager(ClassLogger, ABC):
@@ -455,7 +452,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             "other_axis_partition": right_partitions,
         }
         if lengths:
-            kw["_lengths"] = lengths
+            kw["lengths"] = lengths
             kw["manual_partition"] = True
 
         if apply_indices is None:

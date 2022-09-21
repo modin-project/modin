@@ -424,13 +424,15 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             all_partitions.append(
                 [
                     cls.deploy(
-                        cls.parse,
-                        files_for_parser=files_to_read,
-                        columns=cols,
-                        engine=dataset.engine,
+                        func=cls.parse,
+                        f_kwargs={
+                            "files_for_parser": files_to_read,
+                            "columns": cols,
+                            "engine": dataset.engine,
+                            "storage_options": storage_options,
+                            **kwargs,
+                        },
                         num_returns=3,
-                        storage_options=storage_options,
-                        **kwargs,
                     )
                     for cols in col_partitions
                 ]

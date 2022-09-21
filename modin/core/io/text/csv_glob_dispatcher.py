@@ -237,7 +237,9 @@ class CSVGlobDispatcher(CSVDispatcher):
             for idx, chunks in enumerate(splits):
                 args.update({"chunks": chunks})
                 *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
-                    cls.parse, num_returns=num_splits + 2, **args
+                    func=cls.parse,
+                    f_kwargs=args,
+                    num_returns=num_splits + 2,
                 )
 
         # Compute the index based on a sum of the lengths of each partition (by default)

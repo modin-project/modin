@@ -298,10 +298,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             The length of the object.
         """
         if self._length_cache is None:
-            cls = type(self)
-            func = cls._length_extraction_fn()
-            preprocessed_func = cls.preprocess_func(func)
-            self._length_cache = self.apply(preprocessed_func)
+            self._length_cache = self.apply(self._length_extraction_fn()).get()
         return self._length_cache
 
     def width(self):
@@ -314,10 +311,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             The width of the object.
         """
         if self._width_cache is None:
-            cls = type(self)
-            func = cls._width_extraction_fn()
-            preprocessed_func = cls.preprocess_func(func)
-            self._width_cache = self.apply(preprocessed_func)
+            self._width_cache = self.apply(self._width_extraction_fn()).get()
         return self._width_cache
 
     @classmethod

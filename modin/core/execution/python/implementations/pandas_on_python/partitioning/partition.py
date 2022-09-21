@@ -63,7 +63,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         Since this object is a simple wrapper, just return the copy of data.
         """
         self.drain_call_queue()
-        return self._data.copy()
+        return self._data.copy() if hasattr(self._data, "copy") else self._data
 
     def apply(self, func, *args, **kwargs):
         """
@@ -100,9 +100,9 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
             pandas.DataFrame or pandas.Series
             """
             result = data.copy()
-            for func, args, kwargs in call_queue:
+            for func, f_args, f_kwargs in call_queue:
                 try:
-                    result = func(result, *args, **kwargs)
+                    result = func(result, *f_args, **f_kwargs)
                 except Exception as e:
                     self.call_queue = []
                     raise e
@@ -138,7 +138,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         """
         return PandasOnPythonDataframePartition(
             self._data.copy(),
-            call_queue=self.call_queue + [(func, args, kwargs)],
+            call_queue=self.call_queue + [[func, args, kwargs]],
             length=length,
             width=width,
         )
@@ -195,29 +195,3 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         `func` will be returned.
         """
         return func
-
-    def length(self):
-        """
-        Get the length of the object wrapped by this partition.
-
-        Returns
-        -------
-        int
-            The length of the object.
-        """
-        if self._length_cache is None:
-            self._length_cache = self.apply(self._length_extraction_fn())._data
-        return self._length_cache
-
-    def width(self):
-        """
-        Get the width of the object wrapped by the partition.
-
-        Returns
-        -------
-        int
-            The width of the object.
-        """
-        if self._width_cache is None:
-            self._width_cache = self.apply(self._width_extraction_fn())._data
-        return self._width_cache
