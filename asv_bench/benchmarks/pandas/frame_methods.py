@@ -274,56 +274,6 @@ class Shift:
     def time_shift(self, axis):
         self.df.shift(1, axis=axis)
 
-
-class Duplicated:
-    def setup(self):
-        n = 1 << 20
-        t = date_range("2015-01-01", freq="S", periods=(n // 64))
-        xs = np.random.randn(n // 64).round(2)
-        self.df = DataFrame(
-            {
-                "a": np.random.randint(-1 << 8, 1 << 8, n),
-                "b": np.random.choice(t, n),
-                "c": np.random.choice(xs, n),
-            }
-        )
-        self.df2 = DataFrame(np.random.randn(1000, 100).astype(str)).T
-
-    def time_frame_duplicated(self):
-        self.df.duplicated()
-
-    def time_frame_duplicated_wide(self):
-        self.df2.duplicated()
-
-    def time_frame_duplicated_subset(self):
-        self.df.duplicated(subset=["a"])
-
-
-class XS:
-
-    params = [0, 1]
-    param_names = ["axis"]
-
-    def setup(self, axis):
-        self.N = 10**4
-        self.df = DataFrame(np.random.randn(self.N, self.N))
-
-    def time_frame_xs(self, axis):
-        self.df.xs(self.N / 2, axis=axis)
-
-
-class Quantile:
-
-    params = [0, 1]
-    param_names = ["axis"]
-
-    def setup(self, axis):
-        self.df = DataFrame(np.random.randn(1000, 3), columns=list("ABC"))
-
-    def time_frame_quantile(self, axis):
-        self.df.quantile([0.1, 0.5], axis=axis)
-
-
 class Rank:
     param_names = ["dtype"]
     params = [
@@ -337,53 +287,6 @@ class Rank:
 
     def time_rank(self, dtype):
         self.df.rank()
-
-
-class GetDtypeCounts:
-    # 2807
-    def setup(self):
-        self.df = DataFrame(np.random.randn(10, 10000))
-
-    def time_frame_get_dtype_counts(self):
-        with warnings.catch_warnings(record=True):
-            self.df.dtypes.value_counts()
-
-    def time_info(self):
-        self.df.info()
-
-
-class NSort:
-
-    params = ["first", "last", "all"]
-    param_names = ["keep"]
-
-    def setup(self, keep):
-        self.df = DataFrame(np.random.randn(100000, 3), columns=list("ABC"))
-
-    def time_nlargest_one_column(self, keep):
-        self.df.nlargest(100, "A", keep=keep)
-
-    def time_nlargest_two_columns(self, keep):
-        self.df.nlargest(100, ["A", "B"], keep=keep)
-
-    def time_nsmallest_one_column(self, keep):
-        self.df.nsmallest(100, "A", keep=keep)
-
-    def time_nsmallest_two_columns(self, keep):
-        self.df.nsmallest(100, ["A", "B"], keep=keep)
-
-
-class MemoryUsage:
-    def setup(self):
-        self.df = DataFrame(np.random.randn(100000, 2), columns=list("AB"))
-        self.df2 = self.df.copy()
-        self.df2["A"] = self.df2["A"].astype("object")
-
-    def time_memory_usage(self):
-        self.df.memory_usage(deep=True)
-
-    def time_memory_usage_object_dtype(self):
-        self.df2.memory_usage(deep=True)
 
 
 from .pandas_vb_common import setup  # noqa: F401 isort:skip
