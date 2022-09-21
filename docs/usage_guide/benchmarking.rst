@@ -120,7 +120,7 @@ time, as pointed out above.
 Turning on :doc:`Modin logging </usage_guide/advanced_usage/modin_logging>` and
 using the Modin logs can also help you profile your workflow. The Modin logs
 can also give a detailed break down of the performance of each Modin function
-at each Modin :doc:`layer </development/architecture.rst>`. Log mode is more
+at each Modin :doc:`layer </development/architecture>`. Log mode is more
 useful when used in conjuction with benchmark mode.
 
 Sometimes, if you don't have a natural end-point to your workflow, you can
