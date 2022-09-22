@@ -27,6 +27,8 @@ class ClientQueryCompiler(BaseQueryCompiler):
         assert (
             id is not None
         ), "Make sure the client is properly connected and returns and ID"
+        if isinstance(id, Exception):
+            raise id
         self._id = id
 
     def _set_columns(self, new_columns):
