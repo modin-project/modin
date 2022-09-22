@@ -81,9 +81,6 @@ class Join:
     def time_join_dataframe_index_shuffle_key_bigger_sort(self, sort):
         self.df_shuf.join(self.df_key2, on="key2", sort=sort)
 
-    def time_join_dataframes_cross(self, sort):
-        self.df.loc[:2000].join(self.df_key1, how="cross", sort=sort)
-
 
 class JoinNonUnique:
     # outer join of non-unique
