@@ -697,7 +697,11 @@ class _LocIndexer(_LocationIndexerBase):
         if self.qc.lazy_execution:
             # Since we don't know if the row labels are present or not in lazy evaluation,
             # immediately hand off computation to the engine
-            return type(self.df)(query_compiler=self.qc.getitem_row_labels_array(row_loc).getitem_column_array(col_loc))
+            return type(self.df)(
+                query_compiler=self.qc.getitem_row_labels_array(
+                    row_loc
+                ).getitem_column_array(col_loc)
+            )
         qc_view = self.qc.take_2d_labels(row_loc, col_loc)
         result = self._get_pandas_object_from_qc_view(
             qc_view,
