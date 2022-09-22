@@ -36,10 +36,11 @@ from .data_shapes import RAND_LOW, RAND_HIGH
 
 random_state = np.random.RandomState(seed=42)
 
-IMPL = {
+POSSIBLE_IMPL = {
     "modin": modin.pandas,
     "pandas": pandas,
-}[ASV_USE_IMPL]
+}
+IMPL = POSSIBLE_IMPL[ASV_USE_IMPL]
 
 
 def translator_groupby_ngroups(groupby_ngroups: Union[str, int], shape: tuple) -> int:
@@ -393,7 +394,7 @@ def generate_dataframe(
     if gen_unique_key:
         data["col1"] = np.arange(nrows)
 
-    df = IMPL[impl].DataFrame(data)
+    df = POSSIBLE_IMPL[impl].DataFrame(data)
 
     if groupby_ncols and count_groups:
         dataframes_cache[cache_key] = df, groupby_columns
