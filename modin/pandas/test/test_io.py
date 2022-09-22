@@ -2398,7 +2398,7 @@ class TestFwf:
 
 
 class TestGbq:
-    @pytest.mark.xfail(reason="Need to verify GBQ access")
+    @pytest.mark.skip(reason="Can not pass without GBQ access")
     def test_read_gbq(self):
         # Test API, but do not supply credentials until credits can be secured.
         with pytest.raises(
@@ -2406,7 +2406,7 @@ class TestGbq:
         ):
             pd.read_gbq("SELECT 1")
 
-    @pytest.mark.xfail(reason="Need to verify GBQ access")
+    @pytest.mark.skip(reason="Can not pass without GBQ access")
     def test_to_gbq(self):
         modin_df, _ = create_test_dfs(TEST_DATA)
         # Test API, but do not supply credentials until credits can be secured.
