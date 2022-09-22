@@ -123,8 +123,8 @@ class Engine(EnvironmentVariable, type=str):
             return "Dask"
         try:
             # We import ``DbWorker`` from this module since correct import of ``DbWorker`` itself
-            # from Omnisci is located in it with all the necessary options for dlopen.
-            from modin.experimental.core.execution.native.implementations.omnisci_on_native.db_worker import (  # noqa
+            # from HDK is located in it with all the necessary options for dlopen.
+            from modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker import (  # noqa
                 DbWorker,
             )
         except ImportError:
@@ -141,7 +141,7 @@ class StorageFormat(EnvironmentVariable, type=str):
 
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
-    choices = ("Pandas", "OmniSci", "Pyarrow", "Cudf")
+    choices = ("Pandas", "Hdk", "Pyarrow", "Cudf")
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
@@ -261,6 +261,12 @@ class DoTraceRpyc(EnvironmentVariable, type=bool):
     """Whether to trace RPyC calls (applicable for remote context)."""
 
     varname = "MODIN_TRACE_RPYC"
+
+
+class HdkFragmentSize(EnvironmentVariable, type=int):
+    """How big a fragment in HDK should be when creating a table (in rows)."""
+
+    varname = "MODIN_HDK_FRAGMENT_SIZE"
 
 
 class OmnisciFragmentSize(EnvironmentVariable, type=int):
@@ -470,7 +476,7 @@ class PersistentPickle(EnvironmentVariable, type=bool):
     default = False
 
 
-class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
+class HdkLaunchParameters(EnvironmentVariable, type=dict):
     """
     Additional command line options for the OmniSci engine.
 
@@ -478,7 +484,7 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
     https://docs.omnisci.com/installation-and-configuration/config-parameters#configuration-parameters-for-omniscidb
     """
 
-    varname = "MODIN_OMNISCI_LAUNCH_PARAMETERS"
+    varname = "MODIN_HDK_LAUNCH_PARAMETERS"
     default = {
         "enable_union": 1,
         "enable_columnar_output": 1,
@@ -489,7 +495,7 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
     }
 
     @classmethod
-    def get(self) -> dict:
+    def get(cls) -> dict:
         """
         Get the resulted command-line options.
 
@@ -500,12 +506,29 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
         dict
             Decoded and verified config value.
         """
+        if cls == OmnisciLaunchParameters or (
+            OmnisciLaunchParameters.varname in os.environ
+            and HdkLaunchParameters.varname not in os.environ
+        ):
+            return OmnisciLaunchParameters.get()
+
         custom_parameters = super().get()
-        result = self.default.copy()
+        result = cls.default.copy()
         result.update(
             {key.replace("-", "_"): value for key, value in custom_parameters.items()}
         )
         return result
+
+
+class OmnisciLaunchParameters(HdkLaunchParameters, type=dict):
+    """
+    Additional command line options for the OmniSci engine.
+
+    Please visit OmniSci documentation for the description of available parameters:
+    https://docs.omnisci.com/installation-and-configuration/config-parameters#configuration-parameters-for-omniscidb
+    """
+
+    varname = "MODIN_OMNISCI_LAUNCH_PARAMETERS"
 
 
 class MinPartitionSize(EnvironmentVariable, type=int):

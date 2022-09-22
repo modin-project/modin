@@ -257,7 +257,7 @@ def create(
         the same as local version.
     cluster_type : str, optional
         How to spawn the cluster.
-        Currently spawning by Ray autoscaler ("rayscale" for general and "omnisci" for Omnisci-based) is supported
+        Currently spawning by Ray autoscaler ("rayscale" for general and "hdk" for HDK-based) is supported
 
     Returns
     -------
@@ -290,8 +290,8 @@ def create(
             )
     if cluster_type == "rayscale":
         from .rayscale import RayCluster as Spawner
-    elif cluster_type == "omnisci":
-        from .omnisci import RemoteOmnisci as Spawner
+    elif cluster_type == "hdk":
+        from .hdk import RemoteHdk as Spawner
     elif cluster_type == "local":
         from .local_cluster import LocalCluster as Spawner
     else:

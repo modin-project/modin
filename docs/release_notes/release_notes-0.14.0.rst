@@ -56,7 +56,7 @@ Key Features and Updates
   *
 * Developer API enhancements
   * FEAT-#4245: Define base interface for dataframe exchange protocol (#4246)
-  * FEAT-#4244: Implement dataframe exchange protocol for OmnisciOnNative execution (#4269)
+  * FEAT-#4244: Implement dataframe exchange protocol for HdkOnNative execution (#4269)
   * FEAT-#4144: Implement dataframe exchange protocol for pandas storage format (#4150)
   * FEAT-#4342: Support `from_dataframe`` for pandas storage format (#4343)
 * Update testing suite

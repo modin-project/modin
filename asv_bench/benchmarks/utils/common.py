@@ -451,17 +451,17 @@ def random_booleans(number: int) -> list:
 
 def trigger_import(*dfs):
     """
-    Trigger import execution for DataFrames obtained by OmniSci engine.
+    Trigger import execution for DataFrames obtained by HDK engine.
 
     Parameters
     ----------
     *dfs : iterable
         DataFrames to trigger import.
     """
-    if ASV_USE_STORAGE_FORMAT != "omnisci" or ASV_USE_IMPL == "pandas":
+    if ASV_USE_STORAGE_FORMAT != "hdk" or ASV_USE_IMPL == "pandas":
         return
 
-    from modin.experimental.core.execution.native.implementations.omnisci_on_native.db_worker import (
+    from modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker import (
         DbWorker,
     )
 
@@ -476,7 +476,7 @@ def trigger_import(*dfs):
 
 def execute(
     df: Union[modin.pandas.DataFrame, pandas.DataFrame],
-    trigger_omnisci_import: bool = False,
+    trigger_hdk_import: bool = False,
 ):
     """
     Make sure the calculations are finished.
@@ -485,14 +485,14 @@ def execute(
     ----------
     df : modin.pandas.DataFrame or pandas.Datarame
         DataFrame to be executed.
-    trigger_omnisci_import : bool, default: False
-        Whether `df` are obtained by import with OmniSci engine.
+    trigger_hdk_import : bool, default: False
+        Whether `df` are obtained by import with HDK engine.
     """
-    if trigger_omnisci_import:
+    if trigger_hdk_import:
         trigger_import(df)
         return
     if ASV_USE_IMPL == "modin":
-        if ASV_USE_STORAGE_FORMAT == "omnisci":
+        if ASV_USE_STORAGE_FORMAT == "hdk":
             df._query_compiler._modin_frame._execute()
             return
         partitions = df._query_compiler._modin_frame._partitions.flatten()

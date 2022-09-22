@@ -102,7 +102,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
       - uses: codecov/codecov-action@v2
 
-  test-omnisci:
+  test-hdk:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -110,8 +110,8 @@ jobs:
     env:
       MODIN_EXPERIMENTAL: "True"
       MODIN_ENGINE: "native"
-      MODIN_STORAGE_FORMAT: "omnisci"
-    name: Test OmniSci storage format, Python 3.8
+      MODIN_STORAGE_FORMAT: "hdk"
+    name: Test HDK storage format, Python 3.8
     steps:
       - uses: actions/checkout@v2
         with:
@@ -119,8 +119,8 @@ jobs:
       - name: Setting up Modin environment
         uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: modin_on_omnisci
-          environment-file: requirements/env_omnisci.yml
+          activate-environment: modin_on_hdk
+          environment-file: requirements/env_hdk.yml
           python-version: 3.8
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
@@ -129,11 +129,11 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest modin/test/storage_formats/omnisci/test_internals.py
-      - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
+      - run: pytest modin/test/storage_formats/hdk/test_internals.py
+      - run: pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv
       - run: pytest modin/test/interchange/dataframe_protocol/test_general.py
-      - run: pytest modin/test/interchange/dataframe_protocol/omnisci
+      - run: pytest modin/test/interchange/dataframe_protocol/hdk
       - uses: codecov/codecov-action@v2
 
   test-all:

@@ -15,12 +15,12 @@ default to pandas.
 
 .. note::
     Currently, the second column reflects implementation status for ``Ray`` and ``Dask`` engines. By default, support for a method
-    in the ``Omnisci`` engine could be treated as ``D`` unless ``Notes`` column contains additional information.
+    in the ``Hdk`` engine could be treated as ``D`` unless ``Notes`` column contains additional information.
 
 +--------------------+---------------------------------+----------------------------------------------------+
 | IO method          | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
 +--------------------+---------------------------------+----------------------------------------------------+
-| `read_csv`_        | Y                               | **Omnisci**: ``P``, only basic cases and parameters|
+| `read_csv`_        | Y                               | **Hdk**: ``P``, only basic cases and parameters    |
 |                    |                                 | supported: ``filepath_or_buffer`` can be local file|
 |                    |                                 | only, ``sep``, ``delimiter``,  ``header`` (partly) |
 |                    |                                 | ``names``, ``usecols``, ``dtype``,                 |

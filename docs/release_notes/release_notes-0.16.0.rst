@@ -105,10 +105,12 @@ Key Features and Updates
   * REFACTOR-#4949: Remove code duplication in `default2pandas/dataframe.py` and `default2pandas/any.py` (#4950)
   * REFACTOR-#4976: Rename `RayTask` to `RayWrapper` in accordance with Dask (#4977)
   * REFACTOR-#4885: De-duplicated take_2d_labels_or_positional methods (#4883)
+  * REFACTOR-#5005: Use `finalize` method instead of list comprehension + `drain_call_queue` (#5006)
   * REFACTOR-#5001: Remove `jenkins` stuff (#5002)
   * REFACTOR-#4970: Rewrite base implementations of a partition' `width/length` (#4971)  
   * REFACTOR-#4942: Remove `call` method in favor of `register` due to duplication (4943)
   * REFACTOR-#4922: Helpers for take_2d_labels_or_positional (#4865)
+  * REFACTOR-#5009: Use `RayWrapper.materialize` instead of `ray.get` (#5010)
   * REFACTOR-#4755: Rewrite Pandas version mismatch warning (#4965)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
@@ -128,6 +130,7 @@ Key Features and Updates
   * TEST-#4745: Pin flake8 to <5 to workaround installation conflict (#4752)
   * TEST-#4875: XFail tests failing due to file gone missing (#4876)
   * TEST-#4879: Use pandas `ensure_clean()` in place of `io_tests_data` (#4881)
+  * TEST-#4562: Use local Ray cluster in CI to resolve flaky `test-compat-win` (#5007)
 * Documentation improvements
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
   * DOCS-#4628: Add to_parquet partial support notes (#4648)

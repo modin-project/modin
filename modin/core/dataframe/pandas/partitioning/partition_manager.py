@@ -67,7 +67,7 @@ def wait_computations_if_benchmark_mode(func):
             # finish before kicking off the next one. Instead, we want to
             # serially kick off all the deferred computations so that they can
             # all run asynchronously, then wait on all the results.
-            [part.drain_call_queue() for part in partitions.flatten()]
+            cls.finalize(partitions)
             # The partition manager invokes the relevant .wait() method under
             # the hood, which should wait in parallel for all computations to finish
             cls.wait_partitions(partitions.flatten())
@@ -1313,7 +1313,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         )
 
     @classmethod
-    @wait_computations_if_benchmark_mode
     def finalize(cls, partitions):
         """
         Perform all deferred calls on partitions.

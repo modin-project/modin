@@ -196,16 +196,16 @@ excessive resource usage and conflict over the available resources.
 Common errors
 -------------
 
-Error when using OmniSci engine along with ``pyarrow.gandiva``: ``LLVM ERROR: inconsistency in registered CommandLine options``
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+Error when using HDK engine along with ``pyarrow.gandiva``: ``LLVM ERROR: inconsistency in registered CommandLine options``
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-This can happen when you use OmniSci engine along with ``pyarrow.gandiva``:
+This can happen when you use HDK engine along with ``pyarrow.gandiva``:
 
 .. code-block:: python
 
   import modin.config as cfg
-  cfg.Engine.put("Native")  # 'omniscidbe'/'dbe' would be imported with dlopen flags
-  cfg.StorageFormat.put("Omnisci")
+  cfg.Engine.put("Native")  # The engine would be imported with dlopen flags
+  cfg.StorageFormat.put("Hdk")
   cfg.IsExperimental.put(True)
   import modin.pandas as pd
   import pyarrow.gandiva as gandiva  # Error
@@ -215,7 +215,7 @@ This can happen when you use OmniSci engine along with ``pyarrow.gandiva``:
 
 **Solution**
 
-Do not use OmniSci engine along with ``pyarrow.gandiva``.
+Do not use HDK engine along with ``pyarrow.gandiva``.
 
 Error when using Dask engine: ``RuntimeError: if __name__ == '__main__':``
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""

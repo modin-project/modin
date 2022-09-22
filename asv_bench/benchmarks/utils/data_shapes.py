@@ -19,7 +19,7 @@ import json
 from .compatibility import ASV_USE_STORAGE_FORMAT, ASV_DATASET_SIZE
 
 RAND_LOW = 0
-RAND_HIGH = 1_000_000_000 if ASV_USE_STORAGE_FORMAT == "omnisci" else 100
+RAND_HIGH = 1_000_000_000 if ASV_USE_STORAGE_FORMAT == "hdk" else 100
 
 BINARY_OP_DATA_SIZE = {
     "big": [
@@ -45,15 +45,15 @@ SERIES_DATA_SIZE = {
 }
 
 
-OMNISCI_BINARY_OP_DATA_SIZE = {
+HDK_BINARY_OP_DATA_SIZE = {
     "big": [[[500_000, 20], [1_000_000, 10]]],
     "small": [[[10_000, 20], [25_000, 10]]],
 }
-OMNISCI_UNARY_OP_DATA_SIZE = {
+HDK_UNARY_OP_DATA_SIZE = {
     "big": [[1_000_000, 10]],
     "small": [[10_000, 10]],
 }
-OMNISCI_SERIES_DATA_SIZE = {
+HDK_SERIES_DATA_SIZE = {
     "big": [[10_000_000, 1]],
     "small": [[100_000, 1]],
 }
@@ -120,39 +120,39 @@ _DEFAULT_CONFIG_T = [
     ),
 ]
 
-_DEFAULT_OMNISCI_CONFIG_T = [
+_DEFAULT_HDK_CONFIG_T = [
     (
-        OMNISCI_UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        HDK_UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
         [
-            "omnisci.TimeJoin",
-            "omnisci.TimeBinaryOpDataFrame",
-            "omnisci.TimeArithmetic",
-            "omnisci.TimeSortValues",
-            "omnisci.TimeDrop",
-            "omnisci.TimeHead",
-            "omnisci.TimeFillna",
-            "omnisci.TimeIndexing",
-            "omnisci.TimeResetIndex",
-            "omnisci.TimeAstype",
-            "omnisci.TimeDescribe",
-            "omnisci.TimeProperties",
-            "omnisci.TimeGroupByDefaultAggregations",
-            "omnisci.TimeGroupByMultiColumn",
-            "omnisci.TimeValueCountsDataFrame",
-            "omnisci.TimeReadCsvNames",
+            "hdk.TimeJoin",
+            "hdk.TimeBinaryOpDataFrame",
+            "hdk.TimeArithmetic",
+            "hdk.TimeSortValues",
+            "hdk.TimeDrop",
+            "hdk.TimeHead",
+            "hdk.TimeFillna",
+            "hdk.TimeIndexing",
+            "hdk.TimeResetIndex",
+            "hdk.TimeAstype",
+            "hdk.TimeDescribe",
+            "hdk.TimeProperties",
+            "hdk.TimeGroupByDefaultAggregations",
+            "hdk.TimeGroupByMultiColumn",
+            "hdk.TimeValueCountsDataFrame",
+            "hdk.TimeReadCsvNames",
         ],
     ),
     (
-        OMNISCI_BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-        ["omnisci.TimeMerge", "omnisci.TimeAppend"],
+        HDK_BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        ["hdk.TimeMerge", "hdk.TimeAppend"],
     ),
     (
-        OMNISCI_SERIES_DATA_SIZE[ASV_DATASET_SIZE],
-        ["omnisci.TimeBinaryOpSeries", "omnisci.TimeValueCountsSeries"],
+        HDK_SERIES_DATA_SIZE[ASV_DATASET_SIZE],
+        ["hdk.TimeBinaryOpSeries", "hdk.TimeValueCountsSeries"],
     ),
 ]
 DEFAULT_CONFIG = {}
-for config in (_DEFAULT_CONFIG_T, _DEFAULT_OMNISCI_CONFIG_T):
+for config in (_DEFAULT_CONFIG_T, _DEFAULT_HDK_CONFIG_T):
     for _shape, _names in config:
         DEFAULT_CONFIG.update({_name: _shape for _name in _names})
 
@@ -190,6 +190,6 @@ def get_benchmark_shapes(bench_id: str):
                 CONFIG_FROM_FILE = json.load(_f)
 
     if CONFIG_FROM_FILE and bench_id in CONFIG_FROM_FILE:
-        # example: "omnisci.TimeReadCsvNames": [[5555, 55], [3333, 33]]
+        # example: "hdk.TimeReadCsvNames": [[5555, 55], [3333, 33]]
         return CONFIG_FROM_FILE[bench_id]
     return DEFAULT_CONFIG[bench_id]
