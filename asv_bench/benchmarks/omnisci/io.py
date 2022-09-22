@@ -56,7 +56,7 @@ class TimeReadCsvNames:
         self.filename, self.names, self.dtype = cache[file_id]
 
     def time_read_csv_names(self, cache, shape):
-        df = IMPL[ASV_USE_IMPL].read_csv(
+        df = IMPL.read_csv(
             self.filename,
             names=self.names,
             header=0,

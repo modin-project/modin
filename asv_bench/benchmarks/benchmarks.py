@@ -29,7 +29,6 @@ from .utils import (
     random_string,
     random_columns,
     random_booleans,
-    ASV_USE_IMPL,
     GROUPBY_NGROUPS,
     IMPL,
     execute,
@@ -37,8 +36,6 @@ from .utils import (
     get_benchmark_shapes,
     trigger_import,
 )
-
-pd = IMPL[ASV_USE_IMPL]
 
 
 class BaseTimeGroupBy:
@@ -164,7 +161,7 @@ class TimeConcat:
         self.df2 = generate_dataframe("int", *shapes[1], RAND_LOW, RAND_HIGH)
 
     def time_concat(self, shapes, how, axis):
-        execute(pd.concat([self.df1, self.df2], axis=axis, join=how))
+        execute(IMPL.concat([self.df1, self.df2], axis=axis, join=how))
 
 
 class TimeAppend:
@@ -431,8 +428,8 @@ class TimeFillnaSeries:
         elif value_type == "dict":
             self.value = {k: k * 1.23 for k in range(shape[0])}
         elif value_type == "Series":
-            self.value = pd.Series(
-                [k * 1.23 for k in range(shape[0])], index=pd.RangeIndex(shape[0])
+            self.value = IMPL.Series(
+                [k * 1.23 for k in range(shape[0])], index=IMPL.RangeIndex(shape[0])
             )
         else:
             assert False
@@ -464,16 +461,16 @@ class TimeFillnaDataFrame:
         elif value_type == "dict":
             self.value = {k: i * 1.23 for i, k in enumerate(columns)}
         elif value_type == "Series":
-            self.value = pd.Series(
+            self.value = IMPL.Series(
                 [i * 1.23 for i in range(len(columns))], index=columns
             )
         elif value_type == "DataFrame":
-            self.value = pd.DataFrame(
+            self.value = IMPL.DataFrame(
                 {
                     k: [i + j * 1.23 for j in range(shape[0])]
                     for i, k in enumerate(columns)
                 },
-                index=pd.RangeIndex(shape[0]),
+                index=IMPL.RangeIndex(shape[0]),
                 columns=columns,
             )
         else:
@@ -564,7 +561,7 @@ class TimeIndexing:
         trigger_import(self.df)
 
         self.indexer = self.indexer_getters[indexer_type](self.df)
-        if isinstance(self.indexer, (pd.Series, pd.DataFrame)):
+        if isinstance(self.indexer, (IMPL.Series, IMPL.DataFrame)):
             # HACK: Triggering `dtypes` meta-data computation in advance,
             # so it won't affect the `loc/iloc` time:
             self.indexer.dtypes
@@ -608,8 +605,10 @@ class TimeMultiIndexing:
     def setup(self, shape):
         df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
 
-        index = pd.MultiIndex.from_product([df.index[: shape[0] // 2], ["bar", "foo"]])
-        columns = pd.MultiIndex.from_product(
+        index = IMPL.MultiIndex.from_product(
+            [df.index[: shape[0] // 2], ["bar", "foo"]]
+        )
+        columns = IMPL.MultiIndex.from_product(
             [df.columns[: shape[1] // 2], ["buz", "fuz"]]
         )
 
@@ -639,7 +638,7 @@ class TimeResetIndex:
         self.df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
 
         if level:
-            index = pd.MultiIndex.from_product(
+            index = IMPL.MultiIndex.from_product(
                 [self.df.index[: shape[0] // 2], ["bar", "foo"]],
                 names=["level_1", "level_2"],
             )

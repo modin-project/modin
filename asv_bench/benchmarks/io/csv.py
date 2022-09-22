@@ -63,11 +63,7 @@ class TimeReadCsvSkiprows(BaseReadCsv):
         self.skiprows = self.skiprows_mapping[skiprows] if skiprows else None
 
     def time_skiprows(self, test_filenames, shape, skiprows):
-        execute(
-            IMPL[ASV_USE_IMPL].read_csv(
-                test_filenames[self.shape_id], skiprows=self.skiprows
-            )
-        )
+        execute(IMPL.read_csv(test_filenames[self.shape_id], skiprows=self.skiprows))
 
 
 class TimeReadCsvTrueFalseValues(BaseReadCsv):
@@ -78,7 +74,7 @@ class TimeReadCsvTrueFalseValues(BaseReadCsv):
 
     def time_true_false_values(self, test_filenames, shape):
         execute(
-            IMPL[ASV_USE_IMPL].read_csv(
+            IMPL.read_csv(
                 test_filenames[self.shape_id],
                 true_values=["Yes", "true"],
                 false_values=["No", "false"],
@@ -146,7 +142,7 @@ class TimeReadCsvNamesDtype:
 
     def time_read_csv_names_dtype(self, cache, shape, names, dtype):
         execute(
-            IMPL[ASV_USE_IMPL].read_csv(
+            IMPL.read_csv(
                 self.filename,
                 names=self.names,
                 header=0,

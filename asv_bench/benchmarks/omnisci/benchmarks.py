@@ -18,7 +18,6 @@ from ..utils import (
     gen_nan_data,
     RAND_LOW,
     RAND_HIGH,
-    ASV_USE_IMPL,
     GROUPBY_NGROUPS,
     IMPL,
     execute,
@@ -366,13 +365,12 @@ class TimeResetIndex:
     ]
 
     def setup(self, shape, drop, level):
-        pd = IMPL[ASV_USE_IMPL]
         if not drop or level == "level_1":
             raise NotImplementedError
 
         self.df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
         if level:
-            index = pd.MultiIndex.from_product(
+            index = IMPL.MultiIndex.from_product(
                 [self.df.index[: shape[0] // 2], ["bar", "foo"]],
                 names=["level_1", "level_2"],
             )

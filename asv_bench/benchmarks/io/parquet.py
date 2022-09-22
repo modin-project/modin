@@ -47,7 +47,7 @@ class TimeReadParquet:
 
     def time_read_parquet(self, test_filenames, shape):
         execute(
-            IMPL[ASV_USE_IMPL].read_parquet(
+            IMPL.read_parquet(
                 test_filenames[self.shape_id],
             )
         )

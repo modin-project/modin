@@ -20,7 +20,7 @@ the performance results, hence some utility functions are duplicated here.
 """
 
 import logging
-import modin.pandas as pd
+import modin.pandas
 import pandas
 import numpy as np
 import uuid
@@ -37,9 +37,9 @@ from .data_shapes import RAND_LOW, RAND_HIGH
 random_state = np.random.RandomState(seed=42)
 
 IMPL = {
-    "modin": pd,
+    "modin": modin.pandas,
     "pandas": pandas,
-}
+}[ASV_USE_IMPL]
 
 
 def translator_groupby_ngroups(groupby_ngroups: Union[str, int], shape: tuple) -> int:
@@ -101,11 +101,9 @@ def gen_nan_data(nrows: int, ncols: int) -> dict:
 
     if ncols > 1:
         columns = [f"col{x}" for x in range(ncols)]
-        data = IMPL[ASV_USE_IMPL].DataFrame(
-            np.nan, index=pd.RangeIndex(nrows), columns=columns
-        )
+        data = IMPL.DataFrame(np.nan, index=IMPL.RangeIndex(nrows), columns=columns)
     elif ncols == 1:
-        data = IMPL[ASV_USE_IMPL].Series(np.nan, index=pd.RangeIndex(nrows))
+        data = IMPL.Series(np.nan, index=IMPL.RangeIndex(nrows))
     else:
         assert False, "Number of columns (ncols) should be >= 1"
 
@@ -309,7 +307,7 @@ def generate_dataframe(
     gen_unique_key: bool = False,
     cache_prefix: str = None,
     impl: str = None,
-) -> Union[pd.DataFrame, pandas.DataFrame]:
+) -> Union[modin.pandas.DataFrame, pandas.DataFrame]:
     """
     Generate DataFrame with caching.
 
@@ -476,7 +474,8 @@ def trigger_import(*dfs):
 
 
 def execute(
-    df: Union[pd.DataFrame, pandas.DataFrame], trigger_omnisci_import: bool = False
+    df: Union[modin.pandas.DataFrame, pandas.DataFrame],
+    trigger_omnisci_import: bool = False,
 ):
     """
     Make sure the calculations are finished.
