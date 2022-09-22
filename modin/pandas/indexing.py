@@ -680,7 +680,11 @@ class _LocIndexer(_LocationIndexerBase):
         if self.qc.lazy_execution:
             # Since we don't know if the row labels are present or not in lazy evaluation,
             # immediately hand off computation to the engine
-            return type(self.df)(query_compiler=self.qc.getitem_row_labels_array(row_loc).getitem_column_array(col_loc))
+            return type(self.df)(
+                query_compiler=self.qc.getitem_row_labels_array(
+                    row_loc
+                ).getitem_column_array(col_loc)
+            )
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
 
         result = self._getitem_positional(

@@ -577,7 +577,13 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._service.merge(self._id, right._id, **kwargs))
 
     def groupby_mean(
-        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
     ):
         return self.__constructor__(
             self._service.groupby_mean(
@@ -586,7 +592,13 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def groupby_count(
-        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
     ):
         return self.__constructor__(
             self._service.groupby_count(
@@ -595,7 +607,13 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def groupby_max(
-        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
     ):
         return self.__constructor__(
             self._service.groupby_max(
@@ -604,7 +622,13 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def groupby_min(
-        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
     ):
         return self.__constructor__(
             self._service.groupby_min(
@@ -613,7 +637,13 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def groupby_sum(
-        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
     ):
         return self.__constructor__(
             self._service.groupby_sum(
