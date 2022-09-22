@@ -14,7 +14,6 @@
 """The module holds the factory which performs I/O using pandas on a Client."""
 
 from modin.core.io.io import BaseIO
-import os
 import fsspec
 from .query_compiler import ClientQueryCompiler
 
