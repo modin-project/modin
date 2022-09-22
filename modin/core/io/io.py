@@ -34,6 +34,7 @@ from modin._compat.core.base_io import (
     _doc_returns_qc,
     _doc_returns_qc_or_parser,
 )
+from modin._compat.core.pd_common import pd_to_csv
 
 
 class BaseIO(BaseIOCompat):
@@ -246,26 +247,29 @@ class BaseIO(BaseIOCompat):
         na_values=None,
         keep_default_na=True,
         displayed_only=True,
+        **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_html`")
-        kwargs = {
-            "io": io,
-            "match": match,
-            "flavor": flavor,
-            "header": header,
-            "index_col": index_col,
-            "skiprows": skiprows,
-            "attrs": attrs,
-            "parse_dates": parse_dates,
-            "thousands": thousands,
-            "encoding": encoding,
-            "decimal": decimal,
-            "converters": converters,
-            "na_values": na_values,
-            "keep_default_na": keep_default_na,
-            "displayed_only": displayed_only,
-        }
-        return cls.from_pandas(pandas.read_html(**kwargs)[0])
+        return cls.from_pandas(
+            pandas.read_html(
+                io=io,
+                match=match,
+                flavor=flavor,
+                header=header,
+                index_col=index_col,
+                skiprows=skiprows,
+                attrs=attrs,
+                parse_dates=parse_dates,
+                thousands=thousands,
+                encoding=encoding,
+                decimal=decimal,
+                converters=converters,
+                na_values=na_values,
+                keep_default_na=keep_default_na,
+                displayed_only=displayed_only,
+                **kwargs,
+            )[0]
+        )
 
     @classmethod
     @_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")
@@ -450,6 +454,7 @@ class BaseIO(BaseIOCompat):
         encoding=None,
         chunksize=None,
         iterator=False,
+        **kwargs,
     ):  # pragma: no cover # noqa: PR01
         ErrorMessage.default_to_pandas("`read_sas`")
         return cls.from_pandas(
@@ -460,6 +465,7 @@ class BaseIO(BaseIOCompat):
                 encoding=encoding,
                 chunksize=chunksize,
                 iterator=iterator,
+                **kwargs,
             )
         )
 
@@ -680,7 +686,7 @@ class BaseIO(BaseIOCompat):
         if isinstance(obj, BaseQueryCompiler):
             obj = obj.to_pandas()
 
-        return obj.to_csv(**kwargs)
+        return pd_to_csv(obj, **kwargs)
 
     @classmethod
     @_inherit_docstrings(

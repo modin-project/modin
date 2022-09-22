@@ -16,6 +16,7 @@
 from contextlib import contextmanager
 from collections import namedtuple
 
+from pandas import DataFrame as pd_DataFrame
 from pandas.io.common import get_handle as pd_get_handle
 from pandas.core.aggregation import reconstruct_func
 
@@ -70,4 +71,26 @@ def pd_convert_dtypes(df, **kwargs):  # noqa: PR01, RT01
     return df.convert_dtypes(**kwargs)
 
 
-__all__ = ["get_handle", "pd_pivot_table", "pd_convert_dtypes", "reconstruct_func"]
+def pd_reset_index(df, **kwargs):
+    allow_duplicates = kwargs.pop("allow_duplicates", None)
+    names = kwargs.pop("names", None)
+    assert (
+        allow_duplicates is None
+    ), "Unsupported argument passed to reset_index: allow_duplicates"
+    assert names is None, "Unsupported argument passed to reset_index: name"
+    return pd_DataFrame.reset_index(df, **kwargs)
+
+
+def pd_to_csv(df, **kwargs):
+    kwargs["line_terminator"] = kwargs.pop("lineterminator", None)
+    return df.to_csv(**kwargs)
+
+
+__all__ = [
+    "get_handle",
+    "pd_pivot_table",
+    "pd_convert_dtypes",
+    "reconstruct_func",
+    "pd_reset_index",
+    "pd_to_csv",
+]

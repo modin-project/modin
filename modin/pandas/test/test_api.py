@@ -25,6 +25,7 @@ def test_top_level_api_equality():
     missing_from_modin = set(pandas_dir) - set(modin_dir)
     extra_in_modin = set(modin_dir) - set(pandas_dir)
     ignore_pandas = [
+        "annotations",
         "np",
         "testing",
         "tests",

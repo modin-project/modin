@@ -15,6 +15,7 @@
 
 from pandas.io.common import get_handle
 from pandas.core.apply import reconstruct_func
+from pandas import DataFrame as pd_DataFrame
 
 
 def pd_pivot_table(df, **kwargs):  # noqa: PR01, RT01
@@ -27,4 +28,19 @@ def pd_convert_dtypes(df, **kwargs):  # noqa: PR01, RT01
     return df.convert_dtypes(**kwargs)
 
 
-__all__ = ["get_handle", "pd_pivot_table", "pd_convert_dtypes", "reconstruct_func"]
+def pd_reset_index(df, **kwargs):
+    return pd_DataFrame.reset_index(df, **kwargs)
+
+
+def pd_to_csv(df, **kwargs):
+    return df.to_csv(**kwargs)
+
+
+__all__ = [
+    "get_handle",
+    "pd_pivot_table",
+    "pd_convert_dtypes",
+    "reconstruct_func",
+    "pd_reset_index",
+    "pd_to_csv",
+]

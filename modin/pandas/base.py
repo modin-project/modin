@@ -42,6 +42,8 @@ import re
 from typing import Optional, Union, Sequence, Hashable
 import warnings
 
+from modin._compat import PandasCompatVersion
+
 from .utils import is_full_grab_slice, _doc_binary_op
 from modin.utils import try_cast_to_pandas, _inherit_docstrings
 from modin.error_message import ErrorMessage
@@ -1551,7 +1553,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
         return _iLocIndexer(self)
 
-    def idxmax(self, axis=0, skipna=True):  # noqa: PR01, RT01, D200
+    def _idxmax(self, axis=0, skipna=True, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return index of first occurrence of maximum over requested axis.
         """
@@ -1559,10 +1561,10 @@ class BasePandasDataset(BasePandasDatasetCompat):
             raise TypeError("reduce operation 'argmax' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
-            self._query_compiler.idxmax(axis=axis, skipna=skipna)
+            self._query_compiler.idxmax(axis=axis, skipna=skipna, **kwargs)
         )
 
-    def idxmin(self, axis=0, skipna=True):  # noqa: PR01, RT01, D200
+    def _idxmin(self, axis=0, skipna=True, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return index of first occurrence of minimum over requested axis.
         """
@@ -1570,7 +1572,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             raise TypeError("reduce operation 'argmin' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
-            self._query_compiler.idxmin(axis=axis, skipna=skipna)
+            self._query_compiler.idxmin(axis=axis, skipna=skipna, **kwargs)
         )
 
     def infer_objects(self):  # noqa: RT01, D200
@@ -1951,12 +1953,19 @@ class BasePandasDataset(BasePandasDatasetCompat):
             "pow", other, axis=axis, level=level, fill_value=fill_value
         )
 
-    def quantile(
-        self, q=0.5, axis=0, numeric_only=True, interpolation="linear"
+    def _quantile(
+        self, q, axis, numeric_only, interpolation, method
     ):  # noqa: PR01, RT01, D200
         """
         Return values at the given quantile over requested axis.
         """
+        if PandasCompatVersion.CURRENT != PandasCompatVersion.LATEST:
+            if method != "single":
+                raise ValueError(f"Unsupported method={method} for quantile")
+            quantile_kw = {}
+        else:
+            quantile_kw = {"method": method}
+
         axis = self._get_axis_number(axis)
 
         def check_dtype(t):
@@ -1996,6 +2005,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
                     axis=axis,
                     numeric_only=numeric_only,
                     interpolation=interpolation,
+                    **quantile_kw,
                 )
             )
         else:
@@ -2005,6 +2015,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
                     axis=axis,
                     numeric_only=numeric_only,
                     interpolation=interpolation,
+                    **quantile_kw,
                 )
             )
             if isinstance(result, BasePandasDataset):
@@ -2123,8 +2134,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
             tolerance=tolerance,
         )
 
-    def rename_axis(
-        self, mapper=None, index=None, columns=None, axis=None, copy=True, inplace=False
+    def _rename_axis(
+        self, mapper, index, columns, axis, copy, inplace
     ):  # noqa: PR01, RT01, D200
         """
         Set the name of the axis for the index or columns.
@@ -2134,8 +2145,11 @@ class BasePandasDataset(BasePandasDatasetCompat):
             "columns": columns,
             "axis": axis,
             "copy": copy,
-            "inplace": inplace,
         }
+        if inplace is not None:
+            kwargs["inplace"] = inplace
+        else:
+            inplace = False
         axes, kwargs = getattr(
             pandas, type(self).__name__
         )()._construct_axes_from_arguments((), kwargs, sentinel=sentinel)
@@ -2197,20 +2211,21 @@ class BasePandasDataset(BasePandasDatasetCompat):
         new_labels = self.axes[axis].reorder_levels(order)
         return self.set_axis(new_labels, axis=axis, inplace=False)
 
-    def resample(
+    def _resample(
         self,
         rule,
-        axis=0,
-        closed=None,
-        label=None,
-        convention="start",
-        kind=None,
-        loffset=None,
-        base: Optional[int] = None,
-        on=None,
-        level=None,
-        origin: Union[str, TimestampConvertibleTypes] = "start_day",
-        offset: Optional[TimedeltaConvertibleTypes] = None,
+        axis,
+        closed,
+        label,
+        convention,
+        kind,
+        loffset,
+        base,
+        on,
+        level,
+        origin,
+        offset,
+        group_keys,
     ):  # noqa: PR01, RT01, D200
         """
         Resample time-series data.
@@ -2231,10 +2246,11 @@ class BasePandasDataset(BasePandasDatasetCompat):
             level=level,
             origin=origin,
             offset=offset,
+            group_keys=group_keys,
         )
 
-    def reset_index(
-        self, level=None, drop=False, inplace=False, col_level=0, col_fill=""
+    def _reset_index(
+        self, level, drop, inplace, col_level, col_fill, allow_duplicates, names
     ):  # noqa: PR01, RT01, D200
         """
         Reset the index, or a level of it.
@@ -2255,6 +2271,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 level=level,
                 col_level=col_level,
                 col_fill=col_fill,
+                allow_duplicates=allow_duplicates,
+                names=names,
             )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
@@ -2504,7 +2522,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             "sem", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
         )
 
-    def set_axis(self, labels, axis=0, inplace=False):  # noqa: PR01, RT01, D200
+    def _set_axis(self, labels, axis, inplace, copy):  # noqa: PR01, RT01, D200
         """
         Assign desired index to given axis.
         """
@@ -2519,9 +2537,13 @@ class BasePandasDataset(BasePandasDatasetCompat):
             )
             labels, axis = axis, labels
         if inplace:
+            assert (
+                not copy
+            ), f"Conflicting values for `inplace` ({inplace}) and `copy` ({copy})"
             setattr(self, pandas.DataFrame()._get_axis_name(axis), labels)
         else:
-            obj = self.copy()
+            if copy:
+                obj = self.copy()
             obj.set_axis(labels, axis=axis, inplace=True)
             return obj
 

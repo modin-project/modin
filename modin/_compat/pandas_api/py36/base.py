@@ -13,6 +13,7 @@
 
 """Module for 'Python 3.6 pandas' compatibility layer for Dataset (common DataFrame/Series)."""
 
+from unittest import skip
 import pandas
 from pandas.util._validators import validate_bool_kwarg
 import pickle as pkl
@@ -94,6 +95,12 @@ class Python36CompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
     def expanding(self, min_periods=1, center=None, axis=0):
         return self._expanding(min_periods=min_periods, center=center, axis=axis)
 
+    def idxmax(self, axis=0, skipna=True):
+        return self._idxmax(axis=axis, skipna=skipna)
+
+    def idxmin(self, axis=0, skipna=True):
+        return self._idxmin(axis=axis, skipna=skipna)
+
     def kurt(self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs):
         return self._kurt(
             axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
@@ -167,6 +174,62 @@ class Python36CompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
             **kwargs,
         )
 
+    def rename_axis(
+        self, mapper=None, index=None, columns=None, axis=None, copy=True, inplace=False
+    ):
+        return self._rename_axis(
+            mapper=mapper,
+            index=index,
+            columns=columns,
+            axis=axis,
+            copy=copy,
+            inplace=inplace,
+        )
+
+    def resample(
+        self,
+        rule,
+        axis=0,
+        closed=None,
+        label=None,
+        convention="start",
+        kind=None,
+        loffset=None,
+        base=None,
+        on=None,
+        level=None,
+        origin="start_day",
+        offset=None,
+    ):
+        return self._resample(
+            rule=rule,
+            axis=axis,
+            closed=closed,
+            label=label,
+            convention=convention,
+            kind=kind,
+            loffset=loffset,
+            base=base,
+            on=on,
+            level=level,
+            origin=origin,
+            offset=offset,
+            group_keys=None,
+        )
+
+    def reset_index(
+        self, level=None, drop=False, inplace=False, col_level=0, col_fill=""
+    ):
+        return self._reset_index(
+            level=level,
+            drop=drop,
+            inplace=inplace,
+            col_level=col_fill,
+            col_fill=col_fill,
+            allow_duplicates=None,
+            names=None,
+        )
+
     def rolling(
         self,
         window,
@@ -203,6 +266,11 @@ class Python36CompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
             weights=weights,
             random_state=random_state,
             axis=axis,
+        )
+
+    def set_axis(self, labels, axis=0, inplace=False):
+        return self._set_axis(
+            labels=labels, axis=axis, inplace=inplace, copy=not inplace
         )
 
     def sem(
@@ -279,7 +347,7 @@ class Python36CompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
             compression=compression,
             quoting=quoting,
             quotechar=quotechar,
-            line_terminator=line_terminator,
+            lineterminator=line_terminator,
             chunksize=chunksize,
             date_format=date_format,
             doublequote=doublequote,

@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas
+import pandas._libs.lib
 
 from ..abc.series import BaseCompatibleSeries
 from modin.utils import _inherit_docstrings
@@ -37,6 +38,27 @@ class Python36CompatibleSeries(BaseCompatibleSeries):
     def between(self, left, right, inclusive=True):  # noqa: PR01, RT01, D200
         return self._between(left, right, inclusive=inclusive)
 
+    def compare(
+        self,
+        other,
+        align_axis=1,
+        keep_shape=False,
+        keep_equal=False,
+    ):
+        return self._compare(
+            other=other,
+            align_axis=align_axis,
+            keep_shape=keep_shape,
+            keep_equal=keep_equal,
+            result_names=("self", "other"),
+        )
+
+    def idxmax(self, axis=0, skipna=True, *args, **kwargs):
+        return self._idxmax(axis=axis, skipna=skipna)
+
+    def idxmin(self, axis=0, skipna=True, *args, **kwargs):
+        return self._idxmin(axis=axis, skipna=skipna)
+
     def kurt(
         self,
         axis=None,
@@ -49,6 +71,33 @@ class Python36CompatibleSeries(BaseCompatibleSeries):
             raise NotImplementedError("Series.kurt does not implement numeric_only.")
         return self._kurt(
             axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs
+        )
+
+    def factorize(self, sort=False, na_sentinel=-1):
+        return self._factorize(sort=sort, na_sentinel=na_sentinel)
+
+    def groupby(
+        self,
+        by=None,
+        axis=0,
+        level=None,
+        as_index=True,
+        sort=True,
+        group_keys=True,
+        squeeze: bool = pandas._libs.lib.no_default,
+        observed=False,
+        dropna: bool = True,
+    ):
+        return self._groupby(
+            by=by,
+            axis=axis,
+            level=level,
+            as_index=as_index,
+            sort=sort,
+            group_keys=group_keys,
+            squeeze=squeeze,
+            observed=observed,
+            dropna=dropna,
         )
 
     def mask(
@@ -117,7 +166,9 @@ class Python36CompatibleSeries(BaseCompatibleSeries):
     def reset_index(
         self, level=None, drop=False, name=None, inplace=False
     ):  # noqa: PR01, RT01, D200
-        return self._reset_index(level=level, drop=drop, name=name, inplace=inplace)
+        return self._reset_index(
+            level=level, drop=drop, name=name, inplace=inplace, allow_duplicates=False
+        )
 
     def sum(
         self,

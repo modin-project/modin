@@ -368,9 +368,17 @@ __all__ = [  # noqa: F405
 ]
 
 if PandasCompatVersion.CURRENT != PandasCompatVersion.PY36:
-    from modin._compat.pandas_api.namespace import Flags, Float32Dtype, Float64Dtype
+    from modin._compat.pandas_api.namespace import (
+        ArrowDtype,
+        Flags,
+        Float32Dtype,
+        Float64Dtype,
+        from_dummies,
+    )
 
-    __all__.extend(["Flags", "Float32Dtype", "Float64Dtype"])
+    __all__.extend(
+        ["ArrowDtype", "Flags", "Float32Dtype", "Float64Dtype", "from_dummies"]
+    )
 del PandasCompatVersion
 
 del pandas, Engine, Parameter

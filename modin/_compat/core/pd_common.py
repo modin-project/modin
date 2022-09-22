@@ -21,6 +21,8 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
         pd_pivot_table,
         pd_convert_dtypes,
         reconstruct_func,
+        pd_reset_index,
+        pd_to_csv,
     )
 
 
@@ -30,6 +32,15 @@ elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
         pd_pivot_table,
         pd_convert_dtypes,
         reconstruct_func,
+        pd_reset_index,
+        pd_to_csv,
     )
 
-__all__ = ["get_handle", "pd_pivot_table", "pd_convert_dtypes", "reconstruct_func"]
+__all__ = [
+    "get_handle",
+    "pd_pivot_table",
+    "pd_convert_dtypes",
+    "reconstruct_func",
+    "pd_reset_index",
+    "pd_to_csv",
+]

@@ -743,12 +743,13 @@ class Series(SeriesCompat, BasePandasDataset):
             other, lambda s1, s2: s1.combine(s2, func, fill_value=fill_value)
         )
 
-    def compare(
+    def _compare(
         self,
         other: "Series",
-        align_axis: Union[str, int] = 1,
-        keep_shape: bool = False,
-        keep_equal: bool = False,
+        align_axis: Union[str, int],
+        keep_shape: bool,
+        keep_equal: bool,
+        result_names,
     ):  # noqa: PR01, RT01, D200
         """
         Compare to another Series and show the differences.
@@ -760,6 +761,7 @@ class Series(SeriesCompat, BasePandasDataset):
             align_axis=align_axis,
             keep_shape=keep_shape,
             keep_equal=keep_equal,
+            result_names=result_names,
         )
         if align_axis == "columns" or align_axis == 1:
             # Pandas.DataFrame.Compare returns a dataframe with a multidimensional index object as the
@@ -976,12 +978,14 @@ class Series(SeriesCompat, BasePandasDataset):
             ignore_index=ignore_index,
         )
 
-    def factorize(self, sort=False, na_sentinel=-1):  # noqa: PR01, RT01, D200
+    def _factorize(
+        self, sort=False, na_sentinel=-1, **kwargs
+    ):  # noqa: PR01, RT01, D200
         """
         Encode the object as an enumerated type or categorical variable.
         """
         return self._default_to_pandas(
-            pandas.Series.factorize, sort=sort, na_sentinel=na_sentinel
+            pandas.Series.factorize, sort=sort, na_sentinel=na_sentinel, **kwargs
         )
 
     def fillna(
@@ -1030,17 +1034,17 @@ class Series(SeriesCompat, BasePandasDataset):
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).ge(new_other, level=level, axis=axis)
 
-    def groupby(
+    def _groupby(
         self,
-        by=None,
-        axis=0,
-        level=None,
-        as_index=True,
-        sort=True,
-        group_keys=True,
-        squeeze: bool = no_default,
-        observed=False,
-        dropna: bool = True,
+        by,
+        axis,
+        level,
+        as_index,
+        sort,
+        group_keys,
+        squeeze,
+        observed,
+        dropna,
     ):  # noqa: PR01, RT01, D200
         """
         Group Series using a mapper or by a Series of columns.
@@ -1541,7 +1545,9 @@ class Series(SeriesCompat, BasePandasDataset):
 
         return self.__constructor__(query_compiler=self._query_compiler.repeat(repeats))
 
-    def _reset_index(self, level, drop, name, inplace):  # noqa: PR01, RT01, D200
+    def _reset_index(
+        self, level, drop, name, inplace, allow_duplicates
+    ):  # noqa: PR01, RT01, D200
         """
         Generate a new Series with the index reset.
         """
@@ -1567,7 +1573,12 @@ class Series(SeriesCompat, BasePandasDataset):
             obj.name = name
             from .dataframe import DataFrame
 
-            return DataFrame(obj).reset_index(level=level, drop=drop, inplace=inplace)
+            return DataFrame(obj).reset_index(
+                level=level,
+                drop=drop,
+                inplace=inplace,
+                allow_duplicates=allow_duplicates,
+            )
 
     def rdivmod(
         self, other, level=None, fill_value=None, axis=0

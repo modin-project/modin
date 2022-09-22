@@ -401,17 +401,17 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
         return output_type(query_compiler=query_compiler)
 
-    def groupby(
+    def _groupby(
         self,
-        by=None,
-        axis=0,
-        level=None,
-        as_index=True,
-        sort=True,
-        group_keys=True,
-        squeeze: bool = no_default,
-        observed=False,
-        dropna: bool = True,
+        by,
+        axis,
+        level,
+        as_index,
+        sort,
+        group_keys,
+        squeeze,
+        observed,
+        dropna,
     ):  # noqa: PR01, RT01, D200
         """
         Group ``DataFrame`` using a mapper or by a ``Series`` of columns.
@@ -665,12 +665,13 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             other, func, fill_value=fill_value, overwrite=overwrite
         )
 
-    def compare(
+    def _compare(
         self,
         other: "DataFrame",
         align_axis: Union[str, int] = 1,
         keep_shape: bool = False,
         keep_equal: bool = False,
+        **kwargs,
     ) -> "DataFrame":  # noqa: PR01, RT01, D200
         """
         Compare to another ``DataFrame`` and show the differences.
@@ -684,13 +685,23 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
                 align_axis=align_axis,
                 keep_shape=keep_shape,
                 keep_equal=keep_equal,
+                **kwargs,
             )
         )
 
-    def corr(self, method="pearson", min_periods=1):  # noqa: PR01, RT01, D200
+    def _corr(
+        self, method="pearson", min_periods=1, numeric_only=True
+    ):  # noqa: PR01, RT01, D200
         """
         Compute pairwise correlation of columns, excluding NA/null values.
         """
+        if not numeric_only:
+            return self._default_to_pandas(
+                pandas.DataFrame.corr,
+                method=method,
+                min_periods=min_periods,
+                numeric_only=numeric_only,
+            )
         return self.__constructor__(
             query_compiler=self._query_compiler.corr(
                 method=method,
@@ -698,8 +709,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             )
         )
 
-    def corrwith(
-        self, other, axis=0, drop=False, method="pearson"
+    def _corrwith(
+        self, other, axis=0, drop=False, method="pearson", **kwargs
     ):  # noqa: PR01, RT01, D200
         """
         Compute pairwise correlation.
@@ -707,13 +718,27 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         if isinstance(other, DataFrame):
             other = other._query_compiler.to_pandas()
         return self._default_to_pandas(
-            pandas.DataFrame.corrwith, other, axis=axis, drop=drop, method=method
+            pandas.DataFrame.corrwith,
+            other,
+            axis=axis,
+            drop=drop,
+            method=method,
+            **kwargs,
         )
 
-    def cov(self, min_periods=None, ddof: Optional[int] = 1):  # noqa: PR01, RT01, D200
+    def _cov(
+        self, min_periods=None, ddof: Optional[int] = 1, numeric_only=True
+    ):  # noqa: PR01, RT01, D200
         """
         Compute pairwise covariance of columns, excluding NA/null values.
         """
+        if not numeric_only:
+            return self._default_to_pandas(
+                pandas.DataFrame.cov,
+                min_periods=min_periods,
+                ddof=ddof,
+                numeric_only=numeric_only,
+            )
         numeric_df = self.drop(
             columns=[
                 i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
@@ -1137,7 +1162,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         output.append("")
         buf.write("\n".join(output))
 
-    def insert(self, loc, column, value, allow_duplicates=False):  # noqa: PR01, D200
+    def _insert(self, loc, column, value, allow_duplicates):  # noqa: PR01, D200
         """
         Insert column into ``DataFrame`` at specified location.
         """
@@ -1266,12 +1291,31 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         for v in partition_iterator:
             yield v
 
-    def join(
-        self, other, on=None, how="left", lsuffix="", rsuffix="", sort=False
+    def _join(
+        self,
+        other,
+        on=None,
+        how="left",
+        lsuffix="",
+        rsuffix="",
+        sort=False,
+        validate=None,
     ):  # noqa: PR01, RT01, D200
         """
         Join columns of another ``DataFrame``.
         """
+        if validate is not None:
+            return self._default_to_pandas(
+                pandas.DataFrame.join,
+                other,
+                on=on,
+                how=how,
+                lsuffix=lsuffix,
+                rsuffix=rsuffix,
+                sort=sort,
+                validate=validate,
+            )
+
         if isinstance(other, Series):
             if other.name is None:
                 raise ValueError("Other Series must have a name")
@@ -1285,6 +1329,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
                     lsuffix=lsuffix,
                     rsuffix=rsuffix,
                     sort=sort,
+                    validate=validate,
                 )
             )
         if isinstance(other, DataFrame):
@@ -1708,16 +1753,16 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         new_query_compiler = self._query_compiler.query(expr, **kwargs)
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
-    def rename(
+    def _rename(
         self,
-        mapper=None,
-        index=None,
-        columns=None,
-        axis=None,
-        copy=True,
-        inplace=False,
-        level=None,
-        errors="ignore",
+        mapper,
+        index,
+        columns,
+        axis,
+        copy,
+        inplace,
+        level,
+        errors,
     ):  # noqa: PR01, RT01, D200
         """
         Alter axes labels.
@@ -2096,18 +2141,18 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         """
         return self._default_to_pandas(pandas.DataFrame.to_feather, path, **kwargs)
 
-    def to_gbq(
+    def _to_gbq(
         self,
         destination_table,
-        project_id=None,
-        chunksize=None,
-        reauth=False,
-        if_exists="fail",
-        auth_local_webserver=False,
-        table_schema=None,
-        location=None,
-        progress_bar=True,
-        credentials=None,
+        project_id,
+        chunksize,
+        reauth,
+        if_exists,
+        auth_local_webserver,
+        table_schema,
+        location,
+        progress_bar,
+        credentials,
     ):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Write a ``DataFrame`` to a Google BigQuery table.

@@ -18,6 +18,8 @@ Module contains class ``BaseQueryCompiler``.
 """
 
 import abc
+from modin._compat import PandasCompatVersion
+from modin._compat.core.pd_common import pd_reset_index
 
 from modin.core.dataframe.algebra.default2pandas import (
     DataFrameDefault,
@@ -978,7 +980,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             QueryCompiler with reset index.
         """
-        return DataFrameDefault.register(pandas.DataFrame.reset_index)(self, **kwargs)
+        return DataFrameDefault.register(pd_reset_index)(self, **kwargs)
 
     def set_index_from_columns(
         self, keys: List[Hashable], drop: bool = True, append: bool = False
@@ -4693,7 +4695,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     prod_min_count = prod
 
     @doc_utils.add_refer_to("DataFrame.compare")
-    def compare(self, other, align_axis, keep_shape, keep_equal):
+    def compare(self, other, align_axis, keep_shape, keep_equal, **kwargs):
         """
         Compare data of two QueryCompilers and highlight the difference.
 
@@ -4718,6 +4720,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             align_axis=align_axis,
             keep_shape=keep_shape,
             keep_equal=keep_equal,
+            **kwargs,
         )
 
     # End of DataFrame methods

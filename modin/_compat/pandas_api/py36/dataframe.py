@@ -15,6 +15,7 @@
 
 from typing import Union, Tuple, Mapping
 import pandas
+import pandas._libs.lib
 from numpy import nan
 
 from ..abc import BaseCompatibleDataFrame
@@ -53,6 +54,29 @@ class Python36CompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             func, axis=axis, raw=raw, result_type=result_type, args=args, **kwds
         )
 
+    def compare(
+        self,
+        other,
+        align_axis=1,
+        keep_shape=False,
+        keep_equal=False,
+    ):
+        return self._compare(
+            other=other,
+            align_axis=align_axis,
+            keep_shape=keep_shape,
+            keep_equal=keep_equal,
+        )
+
+    def corr(self, method="pearson", min_periods=1):
+        return self._corr(method=method, min_periods=min_periods)
+
+    def corrwith(self, other, axis=0, drop=False, method="pearson"):
+        return self._corrwith(other=other, axis=axis, drop=drop, method=method)
+
+    def cov(self, min_periods=None, ddof=1):
+        return self._cov(min_periods=min_periods, ddof=ddof)
+
     def explode(self, column: Union[str, Tuple], ignore_index: bool = False):
         exploded = self.__constructor__(
             query_compiler=self._query_compiler.explode(column)
@@ -60,6 +84,30 @@ class Python36CompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
         if ignore_index:
             exploded = exploded.reset_index(drop=True)
         return exploded
+
+    def groupby(
+        self,
+        by=None,
+        axis=0,
+        level=None,
+        as_index=True,
+        sort=True,
+        group_keys=True,
+        squeeze: bool = pandas._libs.lib.no_default,
+        observed=False,
+        dropna: bool = True,
+    ):
+        return self._groupby(
+            by=by,
+            axis=axis,
+            level=level,
+            as_index=as_index,
+            sort=sort,
+            group_keys=group_keys,
+            squeeze=squeeze,
+            observed=observed,
+            dropna=dropna,
+        )
 
     def info(
         self, verbose=None, buf=None, max_cols=None, memory_usage=None, null_counts=None
@@ -71,6 +119,24 @@ class Python36CompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             memory_usage=memory_usage,
             null_counts=null_counts,
             show_counts=None,
+        )
+
+    def insert(self, loc, column, value, allow_duplicates=False):
+        return self._insert(
+            loc=loc, column=column, value=value, allow_duplicates=allow_duplicates
+        )
+
+    def join(
+        self,
+        other,
+        on=None,
+        how="left",
+        lsuffix="",
+        rsuffix="",
+        sort=False,
+    ):
+        return self._join(
+            other=other, on=on, how=how, lsuffix=lsuffix, rsuffix=rsuffix, sort=sort
         )
 
     def pivot_table(
@@ -116,6 +182,15 @@ class Python36CompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             **kwargs,
         )
 
+    def quantile(self, q=0.5, axis=0, numeric_only=True, interpolation="linear"):
+        return self._quantile(
+            q=q,
+            axis=axis,
+            numeric_only=numeric_only,
+            interpolation=interpolation,
+            method="single",
+        )
+
     def reindex(
         self,
         labels=None,
@@ -139,6 +214,28 @@ class Python36CompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             fill_value=fill_value,
             limit=limit,
             tolerance=tolerance,
+        )
+
+    def rename(
+        self,
+        mapper=None,
+        index=None,
+        columns=None,
+        axis=None,
+        copy=True,
+        inplace=False,
+        level=None,
+        errors="ignore",
+    ):
+        return self._rename(
+            mapper=mapper,
+            index=index,
+            columns=columns,
+            axis=axis,
+            copy=copy,
+            inplace=inplace,
+            level=level,
+            errors=errors,
         )
 
     def replace(
@@ -175,6 +272,32 @@ class Python36CompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             numeric_only=numeric_only,
             min_count=min_count,
             **kwargs,
+        )
+
+    def to_gbq(
+        self,
+        destination_table,
+        project_id=None,
+        chunksize=None,
+        reauth=False,
+        if_exists="fail",
+        auth_local_webserver=False,
+        table_schema=None,
+        location=None,
+        progress_bar=True,
+        credentials=None,
+    ):
+        return self._to_gbq(
+            destination_table=destination_table,
+            project_id=project_id,
+            chunksize=chunksize,
+            reauth=reauth,
+            if_exists=if_exists,
+            auth_local_webserver=auth_local_webserver,
+            table_schema=table_schema,
+            location=location,
+            progress_bar=progress_bar,
+            credentials=credentials,
         )
 
     def to_parquet(

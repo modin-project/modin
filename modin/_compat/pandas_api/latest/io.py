@@ -55,9 +55,13 @@ def read_xml(
     elems_only=False,
     attrs_only=False,
     names=None,
+    dtype=None,
+    converters=None,
+    parse_dates=None,
     encoding="utf-8",
     parser="lxml",
     stylesheet=None,
+    iterparse=None,
     compression="infer",
     storage_options=None,
 ) -> DataFrame:
@@ -71,9 +75,13 @@ def read_xml(
             elems_only=elems_only,
             attrs_only=attrs_only,
             names=names,
+            dtype=dtype,
+            converters=converters,
+            parse_dates=parse_dates,
             encoding=encoding,
             parser=parser,
             stylesheet=stylesheet,
+            iterparse=iterparse,
             compression=compression,
             storage_options=storage_options,
         )
@@ -143,6 +151,54 @@ def read_csv(
     _, _, _, f_locals = inspect.getargvalues(inspect.currentframe())
     kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_csv_signature}
     return _read(**kwargs)
+
+
+@_inherit_docstrings(pandas.read_html, apilink="pandas.read_html")
+@enable_logging
+def read_html(
+    io,
+    match=".+",
+    flavor=None,
+    header=None,
+    index_col=None,
+    skiprows=None,
+    attrs=None,
+    parse_dates=False,
+    thousands=",",
+    encoding=None,
+    decimal=".",
+    converters=None,
+    na_values=None,
+    keep_default_na=True,
+    displayed_only=True,
+    extract_links=None,
+):  # noqa: PR01, RT01, D200
+    """
+    Read HTML tables into a ``DataFrame`` object.
+    """
+    Engine.subscribe(_update_engine)
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return DataFrame(
+        query_compiler=FactoryDispatcher.read_html(
+            io,
+            match=match,
+            flavor=flavor,
+            header=header,
+            index_col=index_col,
+            skiprows=skiprows,
+            attrs=attrs,
+            parse_dates=parse_dates,
+            thousands=thousands,
+            encoding=encoding,
+            decimal=decimal,
+            converters=converters,
+            na_values=na_values,
+            keep_default_na=keep_default_na,
+            displayed_only=displayed_only,
+            extract_links=extract_links,
+        )
+    )
 
 
 @_inherit_docstrings(pandas.read_table, apilink="pandas.read_table")
@@ -240,7 +296,7 @@ def read_parquet(
 @_inherit_docstrings(pandas.read_json, apilink="pandas.read_json")
 @enable_logging
 def read_json(
-    path_or_buf=None,
+    path_or_buf,
     orient=None,
     typ="frame",
     dtype=None,
@@ -274,7 +330,7 @@ def read_gbq(
     index_col: Optional[str] = None,
     col_order: Optional[List[str]] = None,
     reauth: bool = False,
-    auth_local_webserver: bool = False,
+    auth_local_webserver: bool = True,
     dialect: Optional[str] = None,
     location: Optional[str] = None,
     configuration: Optional[Dict[str, Any]] = None,
@@ -352,6 +408,36 @@ def read_feather(
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(query_compiler=FactoryDispatcher.read_feather(**kwargs))
+
+
+@_inherit_docstrings(pandas.read_sas, apilink="pandas.read_sas")
+@enable_logging
+def read_sas(
+    filepath_or_buffer,
+    format=None,
+    index=None,
+    encoding=None,
+    chunksize=None,
+    iterator=False,
+    compression="infer",
+):  # pragma: no cover  # noqa: PR01, RT01, D200
+    """
+    Read SAS files stored as either XPORT or SAS7BDAT format files.
+    """
+    Engine.subscribe(_update_engine)
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return DataFrame(
+        query_compiler=FactoryDispatcher.read_sas(
+            filepath_or_buffer,
+            format=format,
+            index=index,
+            encoding=encoding,
+            chunksize=chunksize,
+            iterator=iterator,
+            compression=compression,
+        )
+    )
 
 
 @_inherit_docstrings(pandas.read_stata)

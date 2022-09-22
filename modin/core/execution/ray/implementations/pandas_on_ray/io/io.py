@@ -17,6 +17,8 @@ import io
 import os
 
 import pandas
+import ray
+from modin._compat.core.pd_common import pd_to_csv
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.ray.generic.io import RayIO
@@ -197,7 +199,7 @@ class PandasOnRayIO(RayIO):
             path_or_buf = csv_kwargs["path_or_buf"]
             is_binary = "b" in csv_kwargs["mode"]
             csv_kwargs["path_or_buf"] = io.BytesIO() if is_binary else io.StringIO()
-            df.to_csv(**csv_kwargs)
+            pd_to_csv(df, **csv_kwargs)
             content = csv_kwargs["path_or_buf"].getvalue()
             csv_kwargs["path_or_buf"].close()
 

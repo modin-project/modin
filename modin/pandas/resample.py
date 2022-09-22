@@ -13,6 +13,7 @@
 
 """Implement Resampler public API."""
 
+from tokenize import group
 import numpy as np
 import pandas
 import pandas.core.resample
@@ -22,6 +23,7 @@ from pandas._typing import (
 )
 from pandas.core.dtypes.common import is_list_like
 from typing import Optional, Union
+from modin._compat import PandasCompatVersion
 from modin.utils import _inherit_docstrings
 from modin.logging import ClassLogger
 
@@ -43,6 +45,7 @@ class Resampler(ClassLogger):
         level=None,
         origin: Union[str, TimestampConvertibleTypes] = "start_day",
         offset: Optional[TimedeltaConvertibleTypes] = None,
+        group_keys=None,
     ):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
@@ -61,6 +64,11 @@ class Resampler(ClassLogger):
             "origin": origin,
             "offset": offset,
         }
+        if PandasCompatVersion.CURRENT != PandasCompatVersion.LATEST:
+            assert group_keys is None, f"Unsupported value for group_keys={group_keys}"
+        elif group_keys is not None:
+            self.resample_kwargs["group_keys"] = group_keys
+
         self.__groups = self.__get_groups(**self.resample_kwargs)
 
     def __getitem__(self, key):
@@ -113,6 +121,7 @@ class Resampler(ClassLogger):
         level,
         origin,
         offset,
+        group_keys,
     ):
         if axis == 0:
             df = self._dataframe

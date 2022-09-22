@@ -163,6 +163,34 @@ def read_parquet(path, engine: str = "auto", columns=None, **kwargs):
     )
 
 
+@_inherit_docstrings(pandas.read_sas, apilink="pandas.read_sas")
+@enable_logging
+def read_sas(
+    filepath_or_buffer,
+    format=None,
+    index=None,
+    encoding=None,
+    chunksize=None,
+    iterator=False,
+):  # pragma: no cover  # noqa: PR01, RT01, D200
+    """
+    Read SAS files stored as either XPORT or SAS7BDAT format files.
+    """
+    Engine.subscribe(_update_engine)
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return DataFrame(
+        query_compiler=FactoryDispatcher.read_sas(
+            filepath_or_buffer,
+            format=format,
+            index=index,
+            encoding=encoding,
+            chunksize=chunksize,
+            iterator=iterator,
+        )
+    )
+
+
 @_inherit_docstrings(pandas.read_json)
 @enable_logging
 def read_json(
@@ -271,6 +299,52 @@ def read_feather(path, columns=None, use_threads: bool = True):
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(query_compiler=FactoryDispatcher.read_feather(**kwargs))
+
+
+@_inherit_docstrings(pandas.read_html, apilink="pandas.read_html")
+@enable_logging
+def read_html(
+    io,
+    match=".+",
+    flavor=None,
+    header=None,
+    index_col=None,
+    skiprows=None,
+    attrs=None,
+    parse_dates=False,
+    thousands=",",
+    encoding=None,
+    decimal=".",
+    converters=None,
+    na_values=None,
+    keep_default_na=True,
+    displayed_only=True,
+):  # noqa: PR01, RT01, D200
+    """
+    Read HTML tables into a ``DataFrame`` object.
+    """
+    Engine.subscribe(_update_engine)
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return DataFrame(
+        query_compiler=FactoryDispatcher.read_html(
+            io,
+            match=match,
+            flavor=flavor,
+            header=header,
+            index_col=index_col,
+            skiprows=skiprows,
+            attrs=attrs,
+            parse_dates=parse_dates,
+            thousands=thousands,
+            encoding=encoding,
+            decimal=decimal,
+            converters=converters,
+            na_values=na_values,
+            keep_default_na=keep_default_na,
+            displayed_only=displayed_only,
+        )
+    )
 
 
 @_inherit_docstrings(pandas.read_stata)
