@@ -85,36 +85,8 @@ class Join:
         self.df.loc[:2000].join(self.df_key1, how="cross", sort=sort)
 
 
-class JoinIndex:
-    def setup(self):
-        N = 50000
-        self.left = DataFrame(
-            np.random.randint(1, N / 500, (N, 2)), columns=["jim", "joe"]
-        )
-        self.right = DataFrame(
-            np.random.randint(1, N / 500, (N, 2)), columns=["jolie", "jolia"]
-        ).set_index("jolie")
-
-    def time_left_outer_join_index(self):
-        self.left.join(self.right, on="jim")
-
-
-class JoinEmpty:
-    def setup(self):
-        N = 100_000
-        self.df = DataFrame({"A": np.arange(N)})
-        self.df_empty = DataFrame(columns=["B", "C"], dtype="int64")
-
-    def time_inner_join_left_empty(self):
-        self.df_empty.join(self.df, how="inner")
-
-    def time_inner_join_right_empty(self):
-        self.df.join(self.df_empty, how="inner")
-
-
 class JoinNonUnique:
     # outer join of non-unique
-    # GH 6329
     def setup(self):
         date_index = date_range("01-Jan-2013", "23-Jan-2013", freq="T")
         daily_dates = date_index.to_period("D").to_timestamp("S", "S")
@@ -180,25 +152,6 @@ class Merge:
         merge(self.left.loc[:2000], self.right.loc[:2000], how="cross", sort=sort)
 
 
-class I8Merge:
-
-    params = ["inner", "outer", "left", "right"]
-    param_names = ["how"]
-
-    def setup(self, how):
-        low, high, n = -1000, 1000, 10**6
-        self.left = DataFrame(
-            np.random.randint(low, high, (n, 7)), columns=list("ABCDEFG")
-        )
-        self.left["left"] = self.left.sum(axis=1)
-        self.right = self.left.sample(frac=1).rename({"left": "right"}, axis=1)
-        self.right = self.right.reset_index(drop=True)
-        self.right["right"] *= -1
-
-    def time_i8merge(self, how):
-        merge(self.left, self.right, how=how)
-
-
 class MergeCategoricals:
     def setup(self):
         self.left_object = DataFrame(
@@ -222,40 +175,11 @@ class MergeCategoricals:
             Z=self.right_object["Z"].astype("category")
         )
 
-        self.left_cat_col = self.left_object.astype({"X": "category"})
-        self.right_cat_col = self.right_object.astype({"X": "category"})
-
-        self.left_cat_idx = self.left_cat_col.set_index("X")
-        self.right_cat_idx = self.right_cat_col.set_index("X")
-
     def time_merge_object(self):
         merge(self.left_object, self.right_object, on="X")
 
     def time_merge_cat(self):
         merge(self.left_cat, self.right_cat, on="X")
-
-    def time_merge_on_cat_col(self):
-        merge(self.left_cat_col, self.right_cat_col, on="X")
-
-    def time_merge_on_cat_idx(self):
-        merge(self.left_cat_idx, self.right_cat_idx, on="X")
-
-
-class Align:
-    def setup(self):
-        size = 5 * 10**5
-        rng = np.arange(0, 10**13, 10**7)
-        stamps = np.datetime64("now").view("i8") + rng
-        idx1 = np.sort(np.random.choice(stamps, size, replace=False))
-        idx2 = np.sort(np.random.choice(stamps, size, replace=False))
-        self.ts1 = Series(np.random.randn(size), idx1)
-        self.ts2 = Series(np.random.randn(size), idx2)
-
-    def time_series_align_int64_index(self):
-        self.ts1 + self.ts2
-
-    def time_series_align_left_monotonic(self):
-        self.ts1.align(self.ts2, join="left")
 
 
 from .pandas_vb_common import setup  # noqa: F401 isort:skip
