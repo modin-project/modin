@@ -36,15 +36,15 @@ Consider the following ipython script:
     import ray
 
     ray.init()
-    df = pd.DataFrame(list(range(MinPartitionSize.get())))
-    %time result = df.applymap(lambda x: time.sleep(0.2) or x)
+    df = pd.DataFrame(list(range(MinPartitionSize.get() * 2)))
+    %time result = df.applymap(lambda x: time.sleep(0.1) or x)
     %time print(result)
 
 
-Modin takes just 2.68 milliseconds for the ``applymap``, and 6.78 seconds to print
+Modin takes just 2.68 milliseconds for the ``applymap``, and 3.78 seconds to print
 the result. However, if we run this script in pandas by replacing
 :code:`import modin.pandas as pd` with :code:`import pandas as pd`, the ``applymap``
-takes 6.5 seconds, and printing the result takes just 3.36 milliseconds.
+takes 6.63 seconds, and printing the result takes just 5.53 milliseconds.
 
 Both pandas and Modin start executing the ``applymap`` as soon as the interpreter
 evalutes it. While pandas blocks until the ``applymap`` has finished, Modin just kicks
@@ -53,7 +53,8 @@ is fairly fast in pandas and Modin, but before Modin can print the data, it has 
 wait until all the remote functions complete.
 
 To time how long Modin takes for a single operation, you should typically use
-benchmark mode. You can turn on benchmark mode on at any point as follows:
+benchmark mode. Benchmark mode will wait for all asynchronous remote execution
+to complete. You can turn on benchmark mode on at any point as follows:
 
 .. code-block:: python
 
@@ -61,7 +62,7 @@ benchmark mode. You can turn on benchmark mode on at any point as follows:
     BenchmarkMode.put(True)
 
 Rerunning the script above with benchmark mode on, the Modin ``applymap`` takes
-6.79 seconds, and the ``print`` takes 5.46 milliseconds. These timings better
+3.59 seconds, and the ``print`` takes 183 milliseconds. These timings better
 reflect where Modin is spending its execution time.
 
 A caveat about benchmark mode
@@ -167,8 +168,8 @@ computing asynchronously in the background even after ``repr`` finishes.
     not fair to compare the speed of an async Modin function call to an equivalent
     synchronous call using another library.
 
-Appendix: specs
----------------
+Appendix: System Information
+----------------------------
 The example scripts here were run on the following system:
 
 - **OS Platform and Distribution (e.g., Linux Ubuntu 16.04)**: macOS Monterey 12.4
