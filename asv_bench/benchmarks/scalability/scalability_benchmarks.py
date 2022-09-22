@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""These benchmarks are supposed to be run only for modin, since they do not make sense for pandas."""
+
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas
 

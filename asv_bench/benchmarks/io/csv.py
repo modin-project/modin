@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import modin.pandas as pd
 import numpy as np
 
 from ..utils import (
@@ -39,7 +38,7 @@ class BaseReadCsv:
     def setup(self, test_filenames, shape, *args, **kwargs):
         # ray init
         if ASV_USE_IMPL == "modin":
-            pd.DataFrame([])
+            IMPL.DataFrame([])
         self.shape_id = get_shape_id(shape)
 
 
@@ -128,7 +127,7 @@ class TimeReadCsvNamesDtype:
     def setup(self, cache, shape, names, dtype):
         # ray init
         if ASV_USE_IMPL == "modin":
-            pd.DataFrame([])
+            IMPL.DataFrame([])
         file_id = self._get_file_id(shape, dtype)
         self.filename, self.names, self.dtype = cache[file_id]
 

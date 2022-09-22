@@ -13,8 +13,6 @@
 
 """IO Modin on OmniSci storage format benchmarks."""
 
-import modin.pandas as pd
-
 from ..utils import (
     generate_dataframe,
     RAND_LOW,
@@ -51,7 +49,7 @@ class TimeReadCsvNames:
     def setup(self, cache, shape):
         # ray init
         if ASV_USE_IMPL == "modin":
-            pd.DataFrame([])
+            IMPL.DataFrame([])
         file_id = get_shape_id(shape)
         self.filename, self.names, self.dtype = cache[file_id]
 
