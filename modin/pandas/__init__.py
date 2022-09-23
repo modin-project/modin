@@ -55,7 +55,6 @@ with warnings.catch_warnings():
         DatetimeIndex,
         Timedelta,
         Timestamp,
-        to_timedelta,
         set_eng_float_format,
         options,
         set_option,
@@ -251,6 +250,7 @@ from .general import (
     crosstab,
     lreshape,
     wide_to_long,
+    to_timedelta,
 )
 
 from modin._compat.pandas_api.namespace import pivot_table

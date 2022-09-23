@@ -759,3 +759,11 @@ def _determine_name(objs: Iterable[BaseQueryCompiler], axis: Union[int, str]):
         return list(names[0]) if is_list_like(names[0]) else [names[0]]
     else:
         return None
+
+
+def to_timedelta(arg, unit=None, errors="raise"):
+    if isinstance(arg, Series):
+        arg = arg._to_pandas()
+    result = pandas.to_timedelta(arg, unit=unit, errors=errors)
+    if isinstance(result, pandas.Series):
+        return Series(result)

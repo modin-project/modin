@@ -26,6 +26,7 @@ from .utils import (
     test_data_keys,
     df_equals,
     sort_index_for_equal_values,
+    eval_general,
 )
 
 
@@ -801,3 +802,9 @@ def test_empty_dataframe():
 def test_empty_series():
     s = pd.Series([])
     pd.to_numeric(s)
+
+
+def test_to_timedelta():
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/4966
+    eval_general(pd, pandas, lambda lib: lib.to_timedelta(lib.Series([1])))
