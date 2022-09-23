@@ -804,7 +804,20 @@ def test_empty_series():
     pd.to_numeric(s)
 
 
-def test_to_timedelta():
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_to_timedelta(data):
     # This test case comes from
     # https://github.com/modin-project/modin/issues/4966
-    eval_general(pd, pandas, lambda lib: lib.to_timedelta(lib.Series([1])))
+    if isinstance(data, dict):
+        modin_series = pd.Series(data[next(iter(data.keys()))])
+        pandas_series = pandas.Series(data[next(iter(data.keys()))])
+    else:
+        modin_series = pd.Series(data)
+        pandas_series = pandas.Series(data)
+
+    modin_series = pd.to_timedelta(modin_series)
+    pandas_series = pandas.to_timedelta(pandas_series)
+    df_equals(
+        modin_series.to_frame(name="timedelta"),
+        pandas_series.to_frame(name="timedelta"),
+    )

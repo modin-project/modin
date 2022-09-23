@@ -1363,7 +1363,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
     to_timedelta = Map.register(
         lambda s, *args, **kwargs: pandas.to_timedelta(
             s.squeeze(1), *args, **kwargs
-        ).to_frame()
+        ).to_frame(),
+        dtypes="timedelta64[ns]",
     )
 
     # END Map partitions operations
