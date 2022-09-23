@@ -138,6 +138,7 @@ Key Features and Updates
   * DOCS-#4668: Set light theme for readthedocs page, remove theme switcher (#4669)
   * DOCS-#4748: Apply the Triage label to new issues (#4749)
   * DOCS-#4790: Give all templates issue type and triage labels (#4791)
+  * DOCS-#4521: Document how to benchmark modin (#5020)
 * Dependencies
   * FEAT-#4598: Add support for pandas 1.4.3 (#4599)
   * FEAT-#4619: Integrate mypy static type checking (#4620)

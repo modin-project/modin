@@ -12,6 +12,7 @@ how you can further optimize the performance of your workload with Modin.
     examples/index
     advanced_usage/index
     optimization_notes/index
+    benchmarking
 
 .. meta::
     :description lang=en:
