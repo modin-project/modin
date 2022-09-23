@@ -1037,8 +1037,8 @@ def test_truncate(data):
     after = modin_df.columns[-3]
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
@@ -1048,8 +1048,8 @@ def test_truncate(data):
     after = modin_df.columns[3]
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
@@ -1060,8 +1060,8 @@ def test_truncate(data):
     df_equals(modin_df.truncate(before, after), pandas_df.truncate(before, after))
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)

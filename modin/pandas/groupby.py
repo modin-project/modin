@@ -110,10 +110,10 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
         """
         try:
             return object.__getattribute__(self, key)
-        except AttributeError as e:
+        except AttributeError as err:
             if key in self._columns:
                 return self.__getitem__(key)
-            raise e
+            raise err
 
     @property
     def ngroups(self):

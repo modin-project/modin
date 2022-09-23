@@ -93,10 +93,10 @@ def build_method_wrapper(name, method):
         try:
             return method(self, *args, **kwargs)
         # Defaulting to pandas if `NotImplementedError` was arisen
-        except NotImplementedError as e:
+        except NotImplementedError as err:
             if default_method is None:
-                raise e
-            ErrorMessage.default_to_pandas(message=str(e))
+                raise err
+            ErrorMessage.default_to_pandas(message=str(err))
             return default_method(*args, **kwargs)
 
     return method_wrapper

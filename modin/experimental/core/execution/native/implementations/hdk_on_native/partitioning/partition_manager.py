@@ -178,10 +178,10 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
 
             try:
                 at = pyarrow.Table.from_pandas(obj)
-            except (pyarrow.lib.ArrowTypeError, pyarrow.lib.ArrowInvalid) as e:
+            except (pyarrow.lib.ArrowTypeError, pyarrow.lib.ArrowInvalid) as err:
                 regex = r"Conversion failed for column ([^\W]*)"
                 unsupported_cols = []
-                for msg in e.args:
+                for msg in err.args:
                     match = re.findall(regex, msg)
                     unsupported_cols.extend(match)
 
