@@ -874,7 +874,9 @@ def test_simple_col_groupby():
     )
     eval_fillna(modin_groupby, pandas_groupby)
     eval_count(modin_groupby, pandas_groupby)
-    eval_size(modin_groupby, pandas_groupby)
+    if PandasCompatVersion.CURRENT != PandasCompatVersion.LATEST:
+        # due to https://github.com/pandas-dev/pandas/issues/48738, that would fail on pandas 1.5.0
+        eval_size(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take())
     eval_groups(modin_groupby, pandas_groupby)
 
@@ -1361,7 +1363,9 @@ def test_groupby_multiindex(groupby_kwargs):
     )
     modin_groupby_equals_pandas(md_grp, pd_grp)
     df_equals(md_grp.sum(), pd_grp.sum())
-    df_equals(md_grp.size(), pd_grp.size())
+    if PandasCompatVersion.CURRENT != PandasCompatVersion.LATEST:
+        # due to https://github.com/pandas-dev/pandas/issues/48738, that would fail on pandas 1.5.0
+        df_equals(md_grp.size(), pd_grp.size())
     # Grouping on level works incorrect in case of aggregation:
     # https://github.com/modin-project/modin/issues/2912
     # df_equals(md_grp.quantile(), pd_grp.quantile())
