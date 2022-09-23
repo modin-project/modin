@@ -107,6 +107,7 @@ Key Features and Updates
   * REFACTOR-#4885: De-duplicated take_2d_labels_or_positional methods (#4883)
   * REFACTOR-#5005: Use `finalize` method instead of list comprehension + `drain_call_queue` (#5006)
   * REFACTOR-#5001: Remove `jenkins` stuff (#5002)
+  * REFACTOR-#5026: Change exception names to simplify grepping (#5027)
   * REFACTOR-#4970: Rewrite base implementations of a partition' `width/length` (#4971)  
   * REFACTOR-#4942: Remove `call` method in favor of `register` due to duplication (4943)
   * REFACTOR-#4922: Helpers for take_2d_labels_or_positional (#4865)

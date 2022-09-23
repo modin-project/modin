@@ -106,16 +106,16 @@ def inter_df_math_helper(modin_series, pandas_series, op):
 def inter_df_math_helper_one_side(modin_series, pandas_series, op):
     try:
         pandas_attr = getattr(pandas_series, op)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             _ = getattr(modin_series, op)
         return
     modin_attr = getattr(modin_series, op)
 
     try:
         pandas_result = pandas_attr(4)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_attr(4))  # repr to force materialization
     else:
         modin_result = modin_attr(4)
@@ -123,8 +123,8 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
 
     try:
         pandas_result = pandas_attr(4.0)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_attr(4.0))  # repr to force materialization
     else:
         modin_result = modin_attr(4.0)
@@ -149,8 +149,8 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
 
     try:
         pandas_result = pandas_attr(pandas_series)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_attr(modin_series))  # repr to force materialization
     else:
         modin_result = modin_attr(modin_series)
@@ -159,8 +159,8 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
     list_test = random_state.randint(RAND_LOW, RAND_HIGH, size=(modin_series.shape[0]))
     try:
         pandas_result = pandas_attr(list_test)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_attr(list_test))  # repr to force materialization
     else:
         modin_result = modin_attr(list_test)
@@ -170,8 +170,8 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
     series_test_pandas = pandas.Series(list_test, index=pandas_series.index)
     try:
         pandas_result = pandas_attr(series_test_pandas)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_attr(series_test_modin))  # repr to force materialization
     else:
         modin_result = modin_attr(series_test_modin)
@@ -265,8 +265,8 @@ def test___bool__(data):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.__bool__()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.__bool__()
     else:
         modin_result = modin_series.__bool__()
@@ -396,8 +396,8 @@ def test___int__(data):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = int(pandas_series[0])
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             int(modin_series[0])
     else:
         assert int(modin_series[0]) == pandas_result
@@ -408,8 +408,8 @@ def test___invert__(data):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.__invert__()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_series.__invert__())
     else:
         df_equals(modin_series.__invert__(), pandas_result)
@@ -439,8 +439,8 @@ def test___long__(data):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series[0].__long__()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series[0].__long__()
     else:
         assert modin_series[0].__long__() == pandas_result
@@ -475,8 +475,8 @@ def test___neg__(request, data):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.__neg__()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_series.__neg__())
     else:
         df_equals(modin_series.__neg__(), pandas_result)
@@ -806,8 +806,8 @@ def test_append(data):
     for ignore in ignore_idx_values:
         try:
             pandas_result = pandas_series.append(data_to_append, ignore_index=ignore)
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_series.append(data_to_append, ignore_index=ignore)
         else:
             modin_result = modin_series.append(data_to_append, ignore_index=ignore)
@@ -815,8 +815,8 @@ def test_append(data):
 
     try:
         pandas_result = pandas_series.append(pandas_series.iloc[-1])
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.append(modin_series.iloc[-1])
     else:
         modin_result = modin_series.append(modin_series.iloc[-1])
@@ -824,8 +824,8 @@ def test_append(data):
 
     try:
         pandas_result = pandas_series.append([pandas_series.iloc[-1]])
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.append([modin_series.iloc[-1]])
     else:
         modin_result = modin_series.append([modin_series.iloc[-1]])
@@ -838,8 +838,8 @@ def test_append(data):
             pandas_result = pandas_series.append(
                 [pandas_series, pandas_series], verify_integrity=verify_integrity
             )
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_series.append(
                     [modin_series, modin_series], verify_integrity=verify_integrity
                 )
@@ -853,8 +853,8 @@ def test_append(data):
             pandas_result = pandas_series.append(
                 pandas_series, verify_integrity=verify_integrity
             )
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_series.append(modin_series, verify_integrity=verify_integrity)
         else:
             modin_result = modin_series.append(
@@ -1035,24 +1035,24 @@ def test_astype(data):
     modin_series.name = pandas_series.name = series_name
     try:
         pandas_result = pandas_series.astype(str)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_series.astype(str))  # repr to force materialization
     else:
         df_equals(modin_series.astype(str), pandas_result)
 
     try:
         pandas_result = pandas_series.astype(np.int64)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_series.astype(np.int64))  # repr to force materialization
     else:
         df_equals(modin_series.astype(np.int64), pandas_result)
 
     try:
         pandas_result = pandas_series.astype(np.float64)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_series.astype(np.float64))  # repr to force materialization
     else:
         df_equals(modin_series.astype(np.float64), pandas_result)
@@ -1261,8 +1261,8 @@ def test_compress(data):
     modin_series, pandas_series = create_test_series(data)  # noqa: F841
     try:
         pandas_series.compress(pandas_series > 30)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.compress(modin_series > 30)
     else:
         modin_series.compress(modin_series > 30)
@@ -1334,8 +1334,8 @@ def test_cummax(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.cummax(skipna=skipna)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.cummax(skipna=skipna)
     else:
         df_equals(modin_series.cummax(skipna=skipna), pandas_result)
@@ -1349,8 +1349,8 @@ def test_cummin(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.cummin(skipna=skipna)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.cummin(skipna=skipna)
     else:
         df_equals(modin_series.cummin(skipna=skipna), pandas_result)
@@ -1364,8 +1364,8 @@ def test_cumprod(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.cumprod(skipna=skipna)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.cumprod(skipna=skipna)
     else:
         df_equals(modin_series.cumprod(skipna=skipna), pandas_result)
@@ -1379,8 +1379,8 @@ def test_cumsum(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.cumsum(skipna=skipna)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.cumsum(skipna=skipna)
     else:
         df_equals(modin_series.cumsum(skipna=skipna), pandas_result)
@@ -1398,8 +1398,8 @@ def test_describe(data):
 
     try:
         pandas_result = pandas_series.describe(exclude=[np.float64])
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.describe(exclude=[np.float64])
     else:
         modin_result = modin_series.describe(exclude=[np.float64])
@@ -1407,8 +1407,8 @@ def test_describe(data):
 
     try:
         pandas_result = pandas_series.describe(exclude=np.float64)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.describe(exclude=np.float64)
     else:
         modin_result = modin_series.describe(exclude=np.float64)
@@ -1418,8 +1418,8 @@ def test_describe(data):
         pandas_result = pandas_series.describe(
             include=[np.timedelta64, np.datetime64, np.object, np.bool_]
         )
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.describe(
                 include=[np.timedelta64, np.datetime64, np.object, np.bool_]
             )
@@ -1451,8 +1451,8 @@ def test_diff(data, periods):
 
     try:
         pandas_result = pandas_series.diff(periods=periods)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.diff(periods=periods)
     else:
         modin_result = modin_series.diff(periods=periods)
@@ -1460,8 +1460,8 @@ def test_diff(data, periods):
 
     try:
         pandas_result = pandas_series.T.diff(periods=periods)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.T.diff(periods=periods)
     else:
         modin_result = modin_series.T.diff(periods=periods)
@@ -2539,8 +2539,8 @@ def test_rank(data, na_option):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.rank(na_option=na_option)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.rank(na_option=na_option)
     else:
         modin_result = modin_series.rank(na_option=na_option)
@@ -2911,8 +2911,8 @@ def test_sample(data):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.sample(frac=0.5, random_state=21019)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.sample(frac=0.5, random_state=21019)
     else:
         modin_result = modin_series.sample(frac=0.5, random_state=21019)
@@ -2920,8 +2920,8 @@ def test_sample(data):
 
     try:
         pandas_result = pandas_series.sample(n=12, random_state=21019)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.sample(n=12, random_state=21019)
     else:
         modin_result = modin_series.sample(n=12, random_state=21019)
@@ -3168,8 +3168,8 @@ def test_std(request, data, skipna, ddof):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.std(skipna=skipna, ddof=ddof)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.std(skipna=skipna, ddof=ddof)
     else:
         modin_result = modin_series.std(skipna=skipna, ddof=ddof)
@@ -3221,8 +3221,8 @@ def test_swapaxes(data, axis1, axis2):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.swapaxes(axis1, axis2)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.swapaxes(axis1, axis2)
     else:
         modin_result = modin_series.swapaxes(axis1, axis2)
@@ -3279,8 +3279,8 @@ def test_take():
     df_equals(a, pandas_s.take([0, 3]))
     try:
         pandas_s.take([2], axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_s.take([2], axis=1)
 
 
@@ -3610,8 +3610,8 @@ def test_var(data, skipna, ddof):
 
     try:
         pandas_result = pandas_series.var(skipna=skipna, ddof=ddof)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.var(skipna=skipna, ddof=ddof)
     else:
         modin_result = modin_series.var(skipna=skipna, ddof=ddof)
@@ -3709,8 +3709,8 @@ def test_str_split(data, pat, n, expand):
         elif not expand:
             try:
                 pandas_result = pandas_series.str.split(pat, n=n, expand=expand)
-            except Exception as e:
-                with pytest.raises(type(e)):
+            except Exception as err:
+                with pytest.raises(type(err)):
                     modin_series.str.split(pat, n=n, expand=expand)
             else:
                 modin_result = modin_series.str.split(pat, n=n, expand=expand)
@@ -3733,8 +3733,8 @@ def test_str_rsplit(data, pat, n, expand):
         elif not expand:
             try:
                 pandas_result = pandas_series.str.rsplit(pat, n=n, expand=expand)
-            except Exception as e:
-                with pytest.raises(type(e)):
+            except Exception as err:
+                with pytest.raises(type(err)):
                     modin_series.str.rsplit(pat, n=n, expand=expand)
             else:
                 modin_result = modin_series.str.rsplit(pat, n=n, expand=expand)
@@ -3748,8 +3748,8 @@ def test_str_get(data, i):
 
     try:
         pandas_result = pandas_series.str.get(i)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.get(i)
     else:
         modin_result = modin_series.str.get(i)
@@ -3765,8 +3765,8 @@ def test_str_join(data, sep):
 
     try:
         pandas_result = pandas_series.str.join(sep)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.join(sep)
     else:
         modin_result = modin_series.str.join(sep)
@@ -3796,8 +3796,8 @@ def test_str_contains(data, pat, case, na):
 
     try:
         pandas_result = pandas_series.str.contains(pat, case=case, na=na, regex=False)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.contains(pat, case=case, na=na, regex=False)
     else:
         modin_result = modin_series.str.contains(pat, case=case, na=na, regex=False)
@@ -3807,8 +3807,8 @@ def test_str_contains(data, pat, case, na):
     pat = ",|b"
     try:
         pandas_result = pandas_series.str.contains(pat, case=case, na=na, regex=True)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.contains(pat, case=case, na=na, regex=True)
     else:
         modin_result = modin_series.str.contains(pat, case=case, na=na, regex=True)
@@ -3841,8 +3841,8 @@ def test_str_repeat(data, repeats):
 
     try:
         pandas_result = pandas_series.str.repeat(repeats)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.repeat(repeats)
     else:
         modin_result = modin_series.str.repeat(repeats)
@@ -3860,8 +3860,8 @@ def test_str_pad(data, width, side, fillchar):
 
     try:
         pandas_result = pandas_series.str.pad(width, side=side, fillchar=fillchar)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.pad(width, side=side, fillchar=fillchar)
     else:
         modin_result = modin_series.str.pad(width, side=side, fillchar=fillchar)
@@ -3876,8 +3876,8 @@ def test_str_center(data, width, fillchar):
 
     try:
         pandas_result = pandas_series.str.center(width, fillchar=fillchar)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.center(width, fillchar=fillchar)
     else:
         modin_result = modin_series.str.center(width, fillchar=fillchar)
@@ -3892,8 +3892,8 @@ def test_str_ljust(data, width, fillchar):
 
     try:
         pandas_result = pandas_series.str.ljust(width, fillchar=fillchar)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.ljust(width, fillchar=fillchar)
     else:
         modin_result = modin_series.str.ljust(width, fillchar=fillchar)
@@ -3908,8 +3908,8 @@ def test_str_rjust(data, width, fillchar):
 
     try:
         pandas_result = pandas_series.str.rjust(width, fillchar=fillchar)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.rjust(width, fillchar=fillchar)
     else:
         modin_result = modin_series.str.rjust(width, fillchar=fillchar)
@@ -3923,8 +3923,8 @@ def test_str_zfill(data, width):
 
     try:
         pandas_result = pandas_series.str.zfill(width)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.zfill(width)
     else:
         modin_result = modin_series.str.zfill(width)
@@ -3938,8 +3938,8 @@ def test_str_wrap(data, width):
 
     try:
         pandas_result = pandas_series.str.wrap(width)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.wrap(width)
     else:
         modin_result = modin_series.str.wrap(width)
@@ -3955,8 +3955,8 @@ def test_str_slice(data, start, stop, step):
 
     try:
         pandas_result = pandas_series.str.slice(start=start, stop=stop, step=step)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.slice(start=start, stop=stop, step=step)
     else:
         modin_result = modin_series.str.slice(start=start, stop=stop, step=step)
@@ -3974,8 +3974,8 @@ def test_str_slice_replace(data, start, stop, repl):
         pandas_result = pandas_series.str.slice_replace(
             start=start, stop=stop, repl=repl
         )
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.slice_replace(start=start, stop=stop, repl=repl)
     else:
         modin_result = modin_series.str.slice_replace(start=start, stop=stop, repl=repl)
@@ -3989,8 +3989,8 @@ def test_str_count(data, pat):
 
     try:
         pandas_result = pandas_series.str.count(pat)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.count(pat)
     else:
         modin_result = modin_series.str.count(pat)
@@ -4005,8 +4005,8 @@ def test_str_startswith(data, pat, na):
 
     try:
         pandas_result = pandas_series.str.startswith(pat, na=na)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.startswith(pat, na=na)
     else:
         modin_result = modin_series.str.startswith(pat, na=na)
@@ -4021,8 +4021,8 @@ def test_str_endswith(data, pat, na):
 
     try:
         pandas_result = pandas_series.str.endswith(pat, na=na)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.endswith(pat, na=na)
     else:
         modin_result = modin_series.str.endswith(pat, na=na)
@@ -4036,8 +4036,8 @@ def test_str_findall(data, pat):
 
     try:
         pandas_result = pandas_series.str.findall(pat)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.findall(pat)
     else:
         modin_result = modin_series.str.findall(pat)
@@ -4053,8 +4053,8 @@ def test_str_match(data, pat, case, na):
 
     try:
         pandas_result = pandas_series.str.match(pat, case=case, na=na)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.match(pat, case=case, na=na)
     else:
         modin_result = modin_series.str.match(pat, case=case, na=na)
@@ -4089,8 +4089,8 @@ def test_str_len(data):
 
     try:
         pandas_result = pandas_series.str.len()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.len()
     else:
         modin_result = modin_series.str.len()
@@ -4104,8 +4104,8 @@ def test_str_strip(data, to_strip):
 
     try:
         pandas_result = pandas_series.str.strip(to_strip=to_strip)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.strip(to_strip=to_strip)
     else:
         modin_result = modin_series.str.strip(to_strip=to_strip)
@@ -4119,8 +4119,8 @@ def test_str_rstrip(data, to_strip):
 
     try:
         pandas_result = pandas_series.str.rstrip(to_strip=to_strip)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.rstrip(to_strip=to_strip)
     else:
         modin_result = modin_series.str.rstrip(to_strip=to_strip)
@@ -4134,8 +4134,8 @@ def test_str_lstrip(data, to_strip):
 
     try:
         pandas_result = pandas_series.str.lstrip(to_strip=to_strip)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.lstrip(to_strip=to_strip)
     else:
         modin_result = modin_series.str.lstrip(to_strip=to_strip)
@@ -4150,8 +4150,8 @@ def test_str_partition(data, sep, expand):
 
     try:
         pandas_result = pandas_series.str.partition(sep, expand=expand)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.partition(sep, expand=expand)
     else:
         modin_result = modin_series.str.partition(sep, expand=expand)
@@ -4166,8 +4166,8 @@ def test_str_rpartition(data, sep, expand):
 
     try:
         pandas_result = pandas_series.str.rpartition(sep, expand=expand)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.rpartition(sep, expand=expand)
     else:
         modin_result = modin_series.str.rpartition(sep, expand=expand)
@@ -4180,8 +4180,8 @@ def test_str_lower(data):
 
     try:
         pandas_result = pandas_series.str.lower()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.lower()
     else:
         modin_result = modin_series.str.lower()
@@ -4194,8 +4194,8 @@ def test_str_upper(data):
 
     try:
         pandas_result = pandas_series.str.upper()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.upper()
     else:
         modin_result = modin_series.str.upper()
@@ -4208,8 +4208,8 @@ def test_str_title(data):
 
     try:
         pandas_result = pandas_series.str.title()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.title()
     else:
         modin_result = modin_series.str.title()
@@ -4225,8 +4225,8 @@ def test_str_find(data, sub, start, end):
 
     try:
         pandas_result = pandas_series.str.find(sub, start=start, end=end)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.find(sub, start=start, end=end)
     else:
         modin_result = modin_series.str.find(sub, start=start, end=end)
@@ -4242,8 +4242,8 @@ def test_str_rfind(data, sub, start, end):
 
     try:
         pandas_result = pandas_series.str.rfind(sub, start=start, end=end)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.rfind(sub, start=start, end=end)
     else:
         modin_result = modin_series.str.rfind(sub, start=start, end=end)
@@ -4262,8 +4262,8 @@ def test_str_index(data, sub, start, end):
     except ValueError:
         # pytest does not get the RayGetErrors
         assert True
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.index(sub, start=start, end=end)
     else:
         modin_result = modin_series.str.index(sub, start=start, end=end)
@@ -4282,8 +4282,8 @@ def test_str_rindex(data, sub, start, end):
     except ValueError:
         # pytest does not get the RayGetErrors
         assert True
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.rindex(sub, start=start, end=end)
     else:
         modin_result = modin_series.str.rindex(sub, start=start, end=end)
@@ -4296,8 +4296,8 @@ def test_str_capitalize(data):
 
     try:
         pandas_result = pandas_series.str.capitalize()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.capitalize()
     else:
         modin_result = modin_series.str.capitalize()
@@ -4310,8 +4310,8 @@ def test_str_swapcase(data):
 
     try:
         pandas_result = pandas_series.str.swapcase()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.swapcase()
     else:
         modin_result = modin_series.str.swapcase()
@@ -4327,8 +4327,8 @@ def test_str_normalize(data, form):
 
     try:
         pandas_result = pandas_series.str.normalize(form)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.normalize(form)
     else:
         modin_result = modin_series.str.normalize(form)
@@ -4343,8 +4343,8 @@ def test_str_translate(data, pat):
     # Test none table
     try:
         pandas_result = pandas_series.str.translate(None)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.translate(None)
     else:
         modin_result = modin_series.str.translate(None)
@@ -4354,8 +4354,8 @@ def test_str_translate(data, pat):
     table = {pat: "DDD"}
     try:
         pandas_result = pandas_series.str.translate(table)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.translate(table)
     else:
         modin_result = modin_series.str.translate(table)
@@ -4366,8 +4366,8 @@ def test_str_translate(data, pat):
         table = str.maketrans(pat, "d" * len(pat))
         try:
             pandas_result = pandas_series.str.translate(table)
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_series.str.translate(table)
         else:
             modin_result = modin_series.str.translate(table)
@@ -4377,8 +4377,8 @@ def test_str_translate(data, pat):
     deletechars = "|"
     try:
         pandas_result = pandas_series.str.translate(table, deletechars)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.translate(table, deletechars)
     else:
         modin_result = modin_series.str.translate(table, deletechars)
@@ -4391,8 +4391,8 @@ def test_str_isalnum(data):
 
     try:
         pandas_result = pandas_series.str.isalnum()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.isalnum()
     else:
         modin_result = modin_series.str.isalnum()
@@ -4405,8 +4405,8 @@ def test_str_isalpha(data):
 
     try:
         pandas_result = pandas_series.str.isalpha()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.isalpha()
     else:
         modin_result = modin_series.str.isalpha()
@@ -4419,8 +4419,8 @@ def test_str_isdigit(data):
 
     try:
         pandas_result = pandas_series.str.isdigit()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.isdigit()
     else:
         modin_result = modin_series.str.isdigit()
@@ -4433,8 +4433,8 @@ def test_str_isspace(data):
 
     try:
         pandas_result = pandas_series.str.isspace()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.isspace()
     else:
         modin_result = modin_series.str.isspace()
@@ -4447,8 +4447,8 @@ def test_str_islower(data):
 
     try:
         pandas_result = pandas_series.str.islower()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.islower()
     else:
         modin_result = modin_series.str.islower()
@@ -4461,8 +4461,8 @@ def test_str_isupper(data):
 
     try:
         pandas_result = pandas_series.str.isupper()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.isupper()
     else:
         modin_result = modin_series.str.isupper()
@@ -4475,8 +4475,8 @@ def test_str_istitle(data):
 
     try:
         pandas_result = pandas_series.str.istitle()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.istitle()
     else:
         modin_result = modin_series.str.istitle()
@@ -4489,8 +4489,8 @@ def test_str_isnumeric(data):
 
     try:
         pandas_result = pandas_series.str.isnumeric()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.isnumeric()
     else:
         modin_result = modin_series.str.isnumeric()
@@ -4503,8 +4503,8 @@ def test_str_isdecimal(data):
 
     try:
         pandas_result = pandas_series.str.isdecimal()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.isdecimal()
     else:
         modin_result = modin_series.str.isdecimal()
@@ -4517,8 +4517,8 @@ def test_casefold(data):
 
     try:
         pandas_result = pandas_series.str.casefold()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.casefold()
     else:
         modin_result = modin_series.str.casefold()
@@ -4532,8 +4532,8 @@ def test_encode(data, encoding_type):
 
     try:
         pandas_result = pandas_series.str.encode(encoding=encoding_type)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.str.encode(encoding=encoding_type)
     else:
         modin_result = modin_series.str.encode(encoding=encoding_type)

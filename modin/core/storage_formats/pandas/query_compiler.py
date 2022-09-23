@@ -2972,8 +2972,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     pandas.DataFrame(index=[1], columns=[1]).groupby(level=0),
                     **agg_kwargs,
                 )
-            except Exception as e:
-                raise type(e)("No numeric types to aggregate.")
+            except Exception as err:
+                raise type(err)("No numeric types to aggregate.")
 
         return result
 

@@ -144,8 +144,8 @@ def test_fillna(data, method, axis, limit):
 
         try:
             pandas_result = pandas_df.fillna(0, method=method, axis=axis, limit=limit)
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_df.fillna(0, method=method, axis=axis, limit=limit)
         else:
             modin_result = modin_df.fillna(0, method=method, axis=axis, limit=limit)
@@ -618,8 +618,8 @@ def test_quantile(request, data, q):
 
         try:
             pandas_result = pandas_df.quantile(q, axis=1, numeric_only=False)
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_df.quantile(q, axis=1, numeric_only=False)
         else:
             modin_result = modin_df.quantile(q, axis=1, numeric_only=False)
@@ -634,8 +634,8 @@ def test_quantile(request, data, q):
 
         try:
             pandas_result = pandas_df.T.quantile(q, axis=1, numeric_only=False)
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_df.T.quantile(q, axis=1, numeric_only=False)
         else:
             modin_result = modin_df.T.quantile(q, axis=1, numeric_only=False)
