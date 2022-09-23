@@ -1320,6 +1320,29 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return SeriesDefault.register(pandas.to_numeric)(self, *args, **kwargs)
 
+    @doc_utils.add_one_column_warning
+    @doc_utils.add_refer_to("to_timedelta")
+    def to_timedelta(self, *args, **kwargs):
+        """
+        Convert argument to timedelta.
+
+        Parameters
+        ----------
+        unit : str
+            Denotes the unit of the arg for numeric arg. Defaults to "ns".
+        errors : {"ignore", "raise", "coerce"}
+        *args : iterable
+            Serves the compatibility purpose. Does not affect the result.
+        **kwargs : dict
+            Serves the compatibility purpose. Does not affect the result.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler with converted to timedelta values.
+        """
+        return SeriesDefault.register(pandas.to_timedelta)(self, *args, **kwargs)
+
     # FIXME: get rid of `**kwargs` parameter (Modin issue #3108).
     @doc_utils.add_one_column_warning
     @doc_utils.add_refer_to("Series.unique")

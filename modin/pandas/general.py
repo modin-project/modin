@@ -762,6 +762,9 @@ def _determine_name(objs: Iterable[BaseQueryCompiler], axis: Union[int, str]):
 
 
 def to_timedelta(arg, unit=None, errors="raise"):
+    """
+    Convert argument to timedelta.
+    """
     if isinstance(arg, Series):
         query_compiler = arg._query_compiler.to_timedelta(unit=unit, errors=errors)
         return Series(query_compiler=query_compiler)
