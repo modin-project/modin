@@ -1436,7 +1436,13 @@ def test_groupby_with_kwarg_dropna(groupby_kwargs, dropna):
         and any(col in modin_df.columns for col in by_kwarg)
     ):
         df_equals(md_grp.sum(), pd_grp.sum())
-        df_equals(md_grp.size(), pd_grp.size())
+        if not (
+            groupby_kwargs == {"level": 1, "axis": 1}
+            and PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST
+        ):
+            # skip the check for df.groupby().size() on pandas 1.5.0
+            # as it's failing due to pandas bug: https://github.com/pandas-dev/pandas/issues/48738
+            df_equals(md_grp.size(), pd_grp.size())
     # Grouping on level works incorrect in case of aggregation:
     # https://github.com/modin-project/modin/issues/2912
     # "BaseOnPython" tests are disabled because of the bug:

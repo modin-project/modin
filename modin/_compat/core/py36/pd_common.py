@@ -71,6 +71,21 @@ def pd_convert_dtypes(df, **kwargs):  # noqa: PR01, RT01
     return df.convert_dtypes(**kwargs)
 
 
+def pd_compare(df, **kwargs):
+    result_names = kwargs.pop("result_names", ("self", "other"))
+    assert result_names == (
+        "self",
+        "other",
+    ), "Unsupported argument passed to DataFrame.join: result_names"
+    return df.compare(**kwargs)
+
+
+def pd_dataframe_join(df, other, **kwargs):
+    validate = kwargs.pop("validate", None)
+    assert validate is None, "Unsupported argument passed to DataFrame.join: validate"
+    return pd_DataFrame.join(df, other, **kwargs)
+
+
 def pd_reset_index(df, **kwargs):
     allow_duplicates = kwargs.pop("allow_duplicates", None)
     names = kwargs.pop("names", None)
@@ -90,6 +105,8 @@ __all__ = [
     "get_handle",
     "pd_pivot_table",
     "pd_convert_dtypes",
+    "pd_compare",
+    "pd_dataframe_join",
     "reconstruct_func",
     "pd_reset_index",
     "pd_to_csv",

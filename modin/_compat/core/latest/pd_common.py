@@ -28,7 +28,18 @@ def pd_convert_dtypes(df, **kwargs):  # noqa: PR01, RT01
     return df.convert_dtypes(**kwargs)
 
 
-def pd_reset_index(df, **kwargs):
+def pd_compare(df, **kwargs):  # noqa: PR01, RT01
+    """Perform pandas compare against a dataframe or series."""
+    return df.compare(**kwargs)
+
+
+def pd_dataframe_join(df, other, **kwargs):  # noqa: PR01, RT01
+    """Perform pandas DataFrame.join against a dataframe or series."""
+    return pd_DataFrame.join(df, other, **kwargs)
+
+
+def pd_reset_index(df, **kwargs):  # noqa: PR01, RT01
+    """Perform pandas reset_index against a dataframe or series."""
     return pd_DataFrame.reset_index(df, **kwargs)
 
 
@@ -40,6 +51,8 @@ __all__ = [
     "get_handle",
     "pd_pivot_table",
     "pd_convert_dtypes",
+    "pd_compare",
+    "pd_dataframe_join",
     "reconstruct_func",
     "pd_reset_index",
     "pd_to_csv",

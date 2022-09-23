@@ -118,7 +118,7 @@ class LatestCompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             as_index=as_index,
             sort=sort,
             group_keys=group_keys,
-            squeeze=squeeze,
+            squeeze=False if squeeze is no_default else squeeze,
             observed=observed,
             dropna=dropna,
         )
@@ -149,7 +149,12 @@ class LatestCompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
 
     def insert(self, loc, column, value, allow_duplicates=no_default):
         return self._insert(
-            loc=loc, column=column, value=value, allow_duplicates=allow_duplicates
+            loc=loc,
+            column=column,
+            value=value,
+            allow_duplicates=False
+            if allow_duplicates is no_default
+            else allow_duplicates,
         )
 
     def join(

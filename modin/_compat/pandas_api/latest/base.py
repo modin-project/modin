@@ -92,7 +92,11 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
         self, axis=0, how=no_default, thresh=no_default, subset=None, inplace=False
     ):
         return self._dropna(
-            axis=axis, how=how, thresh=thresh, subset=subset, inplace=inplace
+            axis=axis,
+            how=how,
+            thresh=thresh,
+            subset=subset,
+            inplace=inplace,
         )
 
     @_inherit_docstrings(
@@ -228,16 +232,6 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
     ):
         return self._reindex(index=index, columns=columns, copy=copy, **kwargs)
 
-    def rename_axis(self, mapper=None, index=None, columns=None, axis=None, copy=True):
-        return self._rename_axis(
-            mapper=mapper,
-            index=index,
-            columns=columns,
-            axis=axis,
-            copy=copy,
-            inplace=None,
-        )
-
     def resample(
         self,
         rule,
@@ -284,7 +278,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
             level=level,
             drop=drop,
             inplace=inplace,
-            col_level=col_fill,
+            col_level=col_level,
             col_fill=col_fill,
             allow_duplicates=False
             if allow_duplicates is no_default

@@ -668,10 +668,10 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
     def _compare(
         self,
         other: "DataFrame",
-        align_axis: Union[str, int] = 1,
-        keep_shape: bool = False,
-        keep_equal: bool = False,
-        **kwargs,
+        align_axis: Union[str, int],
+        keep_shape: bool,
+        keep_equal: bool,
+        result_names,
     ) -> "DataFrame":  # noqa: PR01, RT01, D200
         """
         Compare to another ``DataFrame`` and show the differences.
@@ -685,7 +685,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
                 align_axis=align_axis,
                 keep_shape=keep_shape,
                 keep_equal=keep_equal,
-                **kwargs,
+                result_names=result_names,
             )
         )
 

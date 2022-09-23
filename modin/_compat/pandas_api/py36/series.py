@@ -67,6 +67,8 @@ class Python36CompatibleSeries(BaseCompatibleSeries):
         numeric_only=None,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
+        if axis not in (None, 0, "index", "rows"):
+            raise ValueError(f"No axis named {axis} for object type Series")
         if numeric_only is True:
             raise NotImplementedError("Series.kurt does not implement numeric_only.")
         return self._kurt(
@@ -179,6 +181,8 @@ class Python36CompatibleSeries(BaseCompatibleSeries):
         min_count=0,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
+        if axis not in (None, 0, "index", "rows"):
+            raise ValueError(f"No axis named {axis} for object type Series")
         if numeric_only is True:
             raise NotImplementedError("Series.sum does not implement numeric_only")
         return self._sum(

@@ -756,7 +756,7 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         if not isinstance(other, Series):
             raise TypeError(f"Cannot compare Series to {type(other)}")
-        result = self.to_frame().compare(
+        result = self.to_frame()._compare(
             other.to_frame(),
             align_axis=align_axis,
             keep_shape=keep_shape,
@@ -1573,11 +1573,14 @@ class Series(SeriesCompat, BasePandasDataset):
             obj.name = name
             from .dataframe import DataFrame
 
-            return DataFrame(obj).reset_index(
+            return DataFrame(obj)._reset_index(
                 level=level,
                 drop=drop,
                 inplace=inplace,
+                col_level=0,
+                col_fill="",
                 allow_duplicates=allow_duplicates,
+                names=None,
             )
 
     def rdivmod(
@@ -1651,8 +1654,12 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         Return value at the given quantile.
         """
-        return super(Series, self).quantile(
-            q=q, numeric_only=False, interpolation=interpolation
+        return self._quantile(
+            q=q,
+            axis=0,
+            numeric_only=False,
+            interpolation=interpolation,
+            method="single",
         )
 
     def reorder_levels(self, order):  # noqa: PR01, RT01, D200

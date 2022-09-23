@@ -174,18 +174,6 @@ class Python36CompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
             **kwargs,
         )
 
-    def rename_axis(
-        self, mapper=None, index=None, columns=None, axis=None, copy=True, inplace=False
-    ):
-        return self._rename_axis(
-            mapper=mapper,
-            index=index,
-            columns=columns,
-            axis=axis,
-            copy=copy,
-            inplace=inplace,
-        )
-
     def resample(
         self,
         rule,
@@ -224,7 +212,7 @@ class Python36CompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
             level=level,
             drop=drop,
             inplace=inplace,
-            col_level=col_fill,
+            col_level=col_level,
             col_fill=col_fill,
             allow_duplicates=None,
             names=None,

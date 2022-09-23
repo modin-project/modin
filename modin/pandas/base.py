@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 """Implement DataFrame/Series public API as pandas does."""
-
+import copy
 import numpy as np
 import pandas
 from pandas.compat import numpy as numpy_compat
@@ -2117,7 +2117,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 )
         if final_query_compiler is None:
             final_query_compiler = new_query_compiler
-        return self._create_or_update_from_compiler(final_query_compiler, not copy)
+        return self._create_or_update_from_compiler(
+            final_query_compiler, inplace=False if copy is None else not copy
+        )
 
     def reindex_like(
         self, other, method=None, copy=True, limit=None, tolerance=None
@@ -2134,8 +2136,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
             tolerance=tolerance,
         )
 
-    def _rename_axis(
-        self, mapper, index, columns, axis, copy, inplace
+    def rename_axis(
+        self, mapper=None, index=None, columns=None, axis=None, copy=True, inplace=False
     ):  # noqa: PR01, RT01, D200
         """
         Set the name of the axis for the index or columns.
@@ -2537,9 +2539,6 @@ class BasePandasDataset(BasePandasDatasetCompat):
             )
             labels, axis = axis, labels
         if inplace:
-            assert (
-                not copy
-            ), f"Conflicting values for `inplace` ({inplace}) and `copy` ({copy})"
             setattr(self, pandas.DataFrame()._get_axis_name(axis), labels)
         else:
             if copy:

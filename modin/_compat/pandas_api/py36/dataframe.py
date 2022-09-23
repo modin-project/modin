@@ -66,6 +66,7 @@ class Python36CompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             align_axis=align_axis,
             keep_shape=keep_shape,
             keep_equal=keep_equal,
+            result_names=("self", "other"),
         )
 
     def corr(self, method="pearson", min_periods=1):

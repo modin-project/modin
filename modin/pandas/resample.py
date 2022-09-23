@@ -121,7 +121,6 @@ class Resampler(ClassLogger):
         level,
         origin,
         offset,
-        group_keys,
     ):
         if axis == 0:
             df = self._dataframe

@@ -18,8 +18,7 @@ Module contains class ``BaseQueryCompiler``.
 """
 
 import abc
-from modin._compat import PandasCompatVersion
-from modin._compat.core.pd_common import pd_reset_index
+from modin._compat.core.pd_common import pd_reset_index, pd_compare
 
 from modin.core.dataframe.algebra.default2pandas import (
     DataFrameDefault,
@@ -4695,7 +4694,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     prod_min_count = prod
 
     @doc_utils.add_refer_to("DataFrame.compare")
-    def compare(self, other, align_axis, keep_shape, keep_equal, **kwargs):
+    def compare(self, other, align_axis, keep_shape, keep_equal, result_names):
         """
         Compare data of two QueryCompilers and highlight the difference.
 
@@ -4707,6 +4706,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         align_axis : {0, 1}
         keep_shape : bool
         keep_equal : bool
+        result_names : tuple
 
         Returns
         -------
@@ -4714,13 +4714,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             New QueryCompiler containing the differences between `self` and passed
             query compiler.
         """
-        return DataFrameDefault.register(pandas.DataFrame.compare)(
+        return DataFrameDefault.register(pd_compare)(
             self,
             other=other,
             align_axis=align_axis,
             keep_shape=keep_shape,
             keep_equal=keep_equal,
-            **kwargs,
+            result_names=result_names,
         )
 
     # End of DataFrame methods

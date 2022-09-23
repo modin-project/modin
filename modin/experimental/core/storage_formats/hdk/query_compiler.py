@@ -25,8 +25,9 @@ from modin.core.storage_formats.base.query_compiler import (
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.utils import _inherit_docstrings, MODIN_UNNAMED_SERIES_LABEL
 from modin.error_message import ErrorMessage
-import pandas
 
+import pandas
+from pandas._libs.lib import no_default
 from pandas.core.common import is_bool_indexer
 from pandas.core.dtypes.common import is_list_like
 from functools import wraps
@@ -558,14 +559,16 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             )
         )
 
-    def dropna(self, axis=0, how="any", thresh=None, subset=None):
-        if thresh is not None or axis != 0:
+    def dropna(self, axis=0, how="any", thresh=no_default, subset=None):
+        if thresh is not no_default or axis != 0:
             raise NotImplementedError(
                 "HDK's dropna does not support 'thresh' and 'axis' parameters."
             )
 
         if subset is None:
             subset = self.columns
+        if how is no_default:
+            how = "any"
         return self.__constructor__(
             self._modin_frame.dropna(subset=subset, how=how),
             shape_hint=self._shape_hint,
