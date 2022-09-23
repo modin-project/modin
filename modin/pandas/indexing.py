@@ -765,16 +765,19 @@ class _LocIndexer(_LocationIndexerBase):
             )
             return
         # row_loc, col_loc, _ = self._parse_row_and_column_locators(key)
-        self._maybe_enlarge_labels(row_loc, col_loc)
-        print(key)
-        print(item)
-        print(type(item))
+        # self._maybe_enlarge_labels(row_loc, col_loc)
+        # print(key)
+        # print(item)
+        # print(type(item))
         row_loc, col_loc, ndims = self._parse_row_and_column_locators(key)
+        print(row_loc, col_loc, ndims)
         append_axis = self._check_missing_loc(row_loc, col_loc)
+        print(append_axis)
         if ndims >= 1 and append_axis is not None:
             # We enter this codepath if we're either appending a row or a column
             if append_axis:
-                if len(col_loc) == 1:
+                if is_scalar(col_loc) or len(col_loc) == 1:
+                    print("HELLOOOOO")
                     if is_scalar(item):
                         item = [item] * len(self.qc.index)
                     if not isinstance(item, (Series, DataFrame)):
@@ -808,19 +811,24 @@ class _LocIndexer(_LocationIndexerBase):
                             else item[common_label_loc]
                         )
                     print(exist_items)
+                    print(common_label_loc)
                     if len(common_label_loc) != 0:
                         # In this case we have some new cols and some old ones
                         self._set_item_existing_loc(
                             row_loc, np.array(col_loc)[common_label_loc], exist_items
                         )
             else:
-                pass
+                if is_scalar(row_loc) or len(row_loc) == 1:
+                    index = self.qc.index.insert(len(self.qc.index), row_loc)
+                    self.qc = self.qc.reindex(labels=index, axis=0, fill_value=0)
+                    self.df._update_inplace(new_query_compiler=self.qc)
+                self._set_item_existing_loc(row_loc, col_loc, item)
         else:
             self._set_item_existing_loc(row_loc, col_loc, item)
 
     def _set_item_existing_loc(self, row_loc, col_loc, item):
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-        super(_LocIndexer, self).__setitem__(
+        self._setitem_positional(
             row_lookup,
             col_lookup,
             item,
@@ -869,28 +877,16 @@ class _LocIndexer(_LocationIndexerBase):
             )
 
     def _check_missing_loc(self, row_loc, col_loc):
-        if (
-            isinstance(row_loc, list)
-            and len(row_loc) == 1
-            and row_loc[0] not in self.qc.index
-        ):
-            return 0
-        if (
-            not (is_list_like(row_loc) or isinstance(row_loc, slice))
-            and row_loc not in self.qc.index
-        ):
-            return 0
-        if isinstance(row_loc, list):
-            if len(row_loc) == 1:
-                return 0 if row_loc[0] not in self.qc.index else None
-            else:
-                missing_labels = self._compute_enlarge_labels(
-                    pandas.Index(row_loc), self.qc.index
-                )
-                # We cast to list to copy pandas' error:
-                # In pandas, we get: KeyError: [a, b,...] not in index
-                # If we don't convert to list we get: KeyError: [a b ...] not in index
-                raise KeyError("{} not in index".format(list(missing_labels)))
+        if is_scalar(row_loc):
+            return 0 if row_loc not in self.qc.index else None
+        elif isinstance(row_loc, list):
+            missing_labels = self._compute_enlarge_labels(
+                pandas.Index(row_loc), self.qc.index
+            )
+            # We cast to list to copy pandas' error:
+            # In pandas, we get: KeyError: [a, b,...] not in index
+            # If we don't convert to list we get: KeyError: [a b ...] not in index
+            raise KeyError("{} not in index".format(list(missing_labels)))
         if (
             not (is_list_like(row_loc) or isinstance(row_loc, slice))
             and row_loc not in self.qc.index
@@ -900,6 +896,8 @@ class _LocIndexer(_LocationIndexerBase):
             isinstance(col_loc, list)
             and len(pandas.Index(col_loc).difference(self.qc.columns)) >= 1
         ):
+            return 1
+        if is_scalar(col_loc) and col_loc not in self.qc.columns:
             return 1
         return None
 
