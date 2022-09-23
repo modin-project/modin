@@ -1322,7 +1322,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.add_one_column_warning
     @doc_utils.add_refer_to("to_timedelta")
-    def to_timedelta(self, *args, **kwargs):
+    def to_timedelta(self, *args, **kwargs):  # noqa: PR02
         """
         Convert argument to timedelta.
 
