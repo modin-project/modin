@@ -22,7 +22,6 @@ from modin.test.test_utils import warns_that_defaulting_to_pandas
 from pandas.testing import assert_frame_equal
 
 from .utils import (
-    eval_general,
     test_data_values,
     test_data_keys,
     df_equals,
