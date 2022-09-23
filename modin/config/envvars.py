@@ -21,7 +21,7 @@ from packaging import version
 import secrets
 
 from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
-from typing import Optional, Any
+from typing import Optional
 
 
 class EnvironmentVariable(Parameter, type=str, abstract=True):
@@ -78,22 +78,6 @@ class Engine(EnvironmentVariable, type=str):
     choices = ("Ray", "Dask", "Python", "Native", "Client")
 
     @classmethod
-    def put(cls, value: Any) -> None:
-        """
-        Set config value.
-
-        Parameters
-        ----------
-        value : Any
-            Config value to set.
-        """
-        if cls._value_source == ValueSource.SET_BY_USER:
-            cls._check_callbacks(cls._put_nocallback(value))
-        else:
-            cls._value = value
-        cls._value_source = ValueSource.SET_BY_USER
-
-    @classmethod
     def _get_default(cls) -> str:
         """
         Get default value of the config.
@@ -147,9 +131,9 @@ class Engine(EnvironmentVariable, type=str):
             pass
         else:
             return "Native"
-        raise ImportError(
-            "Please refer to installation documentation page to install an engine"
-        )
+
+        warnings.warn("No other engine was found so defaulting backend to Python.")
+        return "Python"
 
 
 class StorageFormat(EnvironmentVariable, type=str):
@@ -157,7 +141,7 @@ class StorageFormat(EnvironmentVariable, type=str):
 
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
-    choices = ("Pandas", "OmniSci", "Pyarrow", "Cudf", "")
+    choices = ("Pandas", "Hdk", "Pyarrow", "Cudf", "")
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
