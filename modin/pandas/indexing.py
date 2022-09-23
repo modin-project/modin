@@ -35,6 +35,7 @@ import itertools
 from pandas.api.types import is_list_like, is_bool
 from pandas.core.dtypes.common import is_integer, is_bool_dtype, is_integer_dtype
 from pandas.core.indexing import IndexingError
+from modin.core.execution.client.query_compiler import ClientQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
 
@@ -694,7 +695,7 @@ class _LocIndexer(_LocationIndexerBase):
 
         if isinstance(row_loc, Series) and is_boolean_array(row_loc):
             return self._handle_boolean_masking(row_loc, col_loc)
-        if self.qc.lazy_execution:
+        if isinstance(self.qc, ClientQueryCompiler) and self.qc.lazy_execution:
             # Since we don't know if the row labels are present or not in lazy evaluation,
             # immediately hand off computation to the engine
             return type(self.df)(
