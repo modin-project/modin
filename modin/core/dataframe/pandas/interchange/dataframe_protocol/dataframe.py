@@ -152,7 +152,7 @@ class PandasProtocolDataframe(ProtocolDataframe):
         cur_n_chunks = self.num_chunks()
         n_rows = self.num_rows()
         if n_chunks is None or n_chunks == cur_n_chunks:
-            cum_row_lengths = np.cumsum([0] + self._df._row_lengths)
+            cum_row_lengths = np.cumsum([0] + self._df.row_lengths)
             for i in range(len(cum_row_lengths) - 1):
                 yield PandasProtocolDataframe(
                     self._df.take_2d_labels_or_positional(
@@ -188,9 +188,9 @@ class PandasProtocolDataframe(ProtocolDataframe):
             self._df.index,
             self._df.columns,
             new_lengths,
-            self._df._column_widths,
+            self._df.column_widths,
         )
-        cum_row_lengths = np.cumsum([0] + new_df._row_lengths)
+        cum_row_lengths = np.cumsum([0] + new_df.row_lengths)
         for i in range(len(cum_row_lengths) - 1):
             yield PandasProtocolDataframe(
                 new_df.take_2d_labels_or_positional(
