@@ -86,22 +86,6 @@ class Engine(EnvironmentVariable, type=str):
     has_custom_engine = False
 
     @classmethod
-    def put(cls, value: Any) -> None:
-        """
-        Set config value.
-
-        Parameters
-        ----------
-        value : Any
-            Config value to set.
-        """
-        if cls._value_source == ValueSource.SET_BY_USER:
-            cls._check_callbacks(cls._put_nocallback(value))
-        else:
-            cls._value = value
-        cls._value_source = ValueSource.SET_BY_USER
-
-    @classmethod
     def _get_default(cls) -> str:
         """
         Get default value of the config.
@@ -190,7 +174,7 @@ class StorageFormat(EnvironmentVariable, type=str):
 
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
-    choices = ("Pandas", "OmniSci", "Pyarrow", "Cudf", "")
+    choices = ("Pandas", "Hdk", "Pyarrow", "Cudf", "")
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
