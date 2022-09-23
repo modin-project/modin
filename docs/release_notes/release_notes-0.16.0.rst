@@ -80,6 +80,7 @@ Key Features and Updates
   * PERF-#4920: Avoid index and cache computations in `take_2d_labels_or_positional` unless they are needed (#4921)
   * PERF-#4999: don't call `apply` in virtual partition' `drain_call_queue` if `call_queue` is empty (#4975)
   * PERF-#4268: Implement partition-parallel __getitem__ for bool Series masks (#4753)
+  * PERF-#5017: `reset_index` shouldn't trigger index materialization if possible (#5018)
   * PERF-#4963: Use partition `width/length` methods instead of `_compute_axis_labels_and_lengths` if index is already known (#4964)
   * PERF-#4940: Optimize categorical dtype check in `concatenate` (#4953)
 * Benchmarking enhancements
