@@ -761,6 +761,8 @@ def _determine_name(objs: Iterable[BaseQueryCompiler], axis: Union[int, str]):
         return None
 
 
+@_inherit_docstrings(pandas.to_datetime, apilink="pandas.to_timedelta")
+@enable_logging
 def to_timedelta(arg, unit=None, errors="raise"):
     """
     Convert argument to timedelta.
