@@ -210,7 +210,7 @@ def tokenize(text):
         filtered_tokens = [w.lower() for w in filtered_tokens if len(w) >= 3]
         return filtered_tokens
     except TypeError as err:
-        print(text, e)
+        print(text, err)
 
 
 cat_desc = {}
@@ -246,7 +246,7 @@ def tokenize(text):
         filtered_tokens = [w.lower() for w in filtered_tokens if len(w) >= 3]
         return filtered_tokens
     except TypeError as err:
-        print(text, e)
+        print(text, err)
 
 
 train["tokens"] = train["item_description"].map(tokenize)
