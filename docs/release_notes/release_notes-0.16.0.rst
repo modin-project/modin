@@ -83,6 +83,7 @@ Key Features and Updates
   * PERF-#4890: `PandasDataframeAxisPartition.drain` should be serialized only once (#4891)
   * PERF-#4870: Avoid index materialization in `__getattribute__` and `__getitem__` (4911)
   * PERF-#4886: Use lazy index and columns evaluation in `query` method (#4887)
+  * PERF-#5087: Use cache for widths/lengths if possible (#5031)
   * PERF-#4866: `iloc` function that used in `partition.mask` should be serialized only once (#4901)
   * PERF-#4920: Avoid index and cache computations in `take_2d_labels_or_positional` unless they are needed (#4921)
   * PERF-#4999: don't call `apply` in virtual partition' `drain_call_queue` if `call_queue` is empty (#4975)

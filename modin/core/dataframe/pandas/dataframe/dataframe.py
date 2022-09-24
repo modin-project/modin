@@ -1174,8 +1174,8 @@ class PandasDataframe(ClassLogger):
             new_frame,
             self.index,
             self.columns,
-            self.row_lengths,
-            self.column_widths,
+            self._row_lengths_cache,
+            self._column_widths_cache,
             new_dtypes,
         )
 
@@ -1759,8 +1759,8 @@ class PandasDataframe(ClassLogger):
             new_partitions,
             self.index,
             self.columns,
-            self.row_lengths,
-            self.column_widths,
+            self._row_lengths_cache,
+            self._column_widths_cache,
         )
 
     def infer_objects(self) -> "PandasDataframe":
@@ -1804,8 +1804,8 @@ class PandasDataframe(ClassLogger):
             self._partitions,
             self.index,
             self.columns,
-            self.row_lengths,
-            self.column_widths,
+            self._row_lengths_cache,
+            self._column_widths_cache,
             new_dtypes,
         )
 
@@ -1910,8 +1910,8 @@ class PandasDataframe(ClassLogger):
             new_parts,
             new_index,
             new_cols,
-            self.row_lengths,
-            self.column_widths,
+            self._row_lengths_cache,
+            self._column_widths_cache,
             new_dtypes,
         )
 
@@ -3107,8 +3107,8 @@ class PandasDataframe(ClassLogger):
             new_partitions,
             self.columns,
             self.index,
-            self.column_widths,
-            self.row_lengths,
+            self._column_widths_cache,
+            self._row_lengths_cache,
             dtypes=new_dtypes,
         )
 
