@@ -14,6 +14,7 @@
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 import numpy as np
 import inspect
+from pandas._libs.lib import no_default, NoDefault
 from pandas.api.types import is_list_like
 from pandas.core.computation.parsing import tokenize_string
 
@@ -170,6 +171,37 @@ class ClientQueryCompiler(BaseQueryCompiler):
 
     def notna(self):
         return self.__constructor__(self._service.notna(self._id))
+
+    def replace(
+        self,
+        to_replace=None,
+        value=no_default,
+        inplace=False,
+        limit=None,
+        regex=False,
+        method: "str | NoDefault" = no_default,
+    ):
+        if isinstance(to_replace, ClientQueryCompiler):
+            is_to_replace_qc = True
+        else:
+            is_to_replace_qc = False
+        if isinstance(regex, ClientQueryCompiler):
+            is_regex_qc = True
+        else:
+            is_regex_qc = False
+        return self.__constructor__(
+            self._service.replace(
+                self._id,
+                to_replace,
+                value,
+                inplace,
+                limit,
+                regex,
+                method,
+                is_to_replace_qc,
+                is_regex_qc,
+            )
+        )
 
     def fillna(
         self,
