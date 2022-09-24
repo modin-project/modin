@@ -13,8 +13,6 @@
 
 """IO Modin on HDK storage format benchmarks."""
 
-import modin.pandas as pd
-
 from ..utils import (
     generate_dataframe,
     RAND_LOW,
@@ -38,7 +36,7 @@ class TimeReadCsvNames:
         # filenames with a metadata of saved dataframes
         cache = {}
         for shape in self.shapes:
-            df = generate_dataframe("pandas", "int", *shape, RAND_LOW, RAND_HIGH)
+            df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH, impl="pandas")
             file_id = get_shape_id(shape)
             cache[file_id] = (
                 f"{test_filename}_{file_id}.csv",
@@ -51,12 +49,12 @@ class TimeReadCsvNames:
     def setup(self, cache, shape):
         # ray init
         if ASV_USE_IMPL == "modin":
-            pd.DataFrame([])
+            IMPL.DataFrame([])
         file_id = get_shape_id(shape)
         self.filename, self.names, self.dtype = cache[file_id]
 
     def time_read_csv_names(self, cache, shape):
-        df = IMPL[ASV_USE_IMPL].read_csv(
+        df = IMPL.read_csv(
             self.filename,
             names=self.names,
             header=0,

@@ -470,7 +470,7 @@ jobs:
 
               # check pure pandas
               MODIN_ASV_USE_IMPL=pandas asv run --quick --strict --show-stderr --launch-method=spawn \
-                -b ^benchmarks -b ^io -b ^scalability | tee benchmarks.log
+                -b ^benchmarks -b ^io | tee benchmarks.log
 
               # HDK: ERR_OUT_OF_CPU_MEM: Not enough host memory to execute the query (MODIN#4270)
               # just disable test for testing - it works well in a machine with more memory
