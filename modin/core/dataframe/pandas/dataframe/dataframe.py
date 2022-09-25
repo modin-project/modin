@@ -236,7 +236,7 @@ class PandasDataframe(ClassLogger):
             )
 
     @property
-    def _row_lengths(self):
+    def row_lengths(self):
         """
         Compute the row partitions lengths if they are not cached.
 
@@ -261,7 +261,7 @@ class PandasDataframe(ClassLogger):
         return self._row_lengths_cache
 
     @property
-    def _column_widths(self):
+    def column_widths(self):
         """
         Compute the column partitions widths if they are not cached.
 
@@ -295,7 +295,7 @@ class PandasDataframe(ClassLogger):
         list
             The pair of row partitions lengths and column partitions widths.
         """
-        return [self._row_lengths, self._column_widths]
+        return [self.row_lengths, self.column_widths]
 
     @property
     def dtypes(self):
@@ -500,14 +500,14 @@ class PandasDataframe(ClassLogger):
                 [
                     self._partitions[i][j]
                     for j in range(len(self._partitions[i]))
-                    if j < len(self._column_widths) and self._column_widths[j] != 0
+                    if j < len(self.column_widths) and self.column_widths[j] != 0
                 ]
                 for i in range(len(self._partitions))
-                if i < len(self._row_lengths) and self._row_lengths[i] != 0
+                if i < len(self.row_lengths) and self.row_lengths[i] != 0
             ]
         )
-        self._column_widths_cache = [w for w in self._column_widths if w != 0]
-        self._row_lengths_cache = [r for r in self._row_lengths if r != 0]
+        self._column_widths_cache = [w for w in self.column_widths if w != 0]
+        self._row_lengths_cache = [r for r in self.row_lengths if r != 0]
 
     def synchronize_labels(self, axis=None):
         """
@@ -541,9 +541,9 @@ class PandasDataframe(ClassLogger):
         """
         self._filter_empties()
         if axis is None or axis == 0:
-            cum_row_lengths = np.cumsum([0] + self._row_lengths)
+            cum_row_lengths = np.cumsum([0] + self.row_lengths)
         if axis is None or axis == 1:
-            cum_col_widths = np.cumsum([0] + self._column_widths)
+            cum_col_widths = np.cumsum([0] + self.column_widths)
 
         if axis is None:
 
@@ -563,8 +563,8 @@ class PandasDataframe(ClassLogger):
                             cols=self.columns[
                                 slice(cum_col_widths[j], cum_col_widths[j + 1])
                             ],
-                            length=self._row_lengths[i],
-                            width=self._column_widths[j],
+                            length=self.row_lengths[i],
+                            width=self.column_widths[j],
                         )
                         for j in range(len(self._partitions[i]))
                     ]
@@ -586,8 +586,8 @@ class PandasDataframe(ClassLogger):
                             idx=self.index[
                                 slice(cum_row_lengths[i], cum_row_lengths[i + 1])
                             ],
-                            length=self._row_lengths[i],
-                            width=self._column_widths[j],
+                            length=self.row_lengths[i],
+                            width=self.column_widths[j],
                         )
                         for j in range(len(self._partitions[i]))
                     ]
@@ -608,8 +608,8 @@ class PandasDataframe(ClassLogger):
                             cols=self.columns[
                                 slice(cum_col_widths[j], cum_col_widths[j + 1])
                             ],
-                            length=self._row_lengths[i],
-                            width=self._column_widths[j],
+                            length=self.row_lengths[i],
+                            width=self.column_widths[j],
                         )
                         for j in range(len(self._partitions[i]))
                     ]
@@ -709,9 +709,9 @@ class PandasDataframe(ClassLogger):
         """
         # Helper for take_2d_positional
         if axis == 0:
-            axis_lengths = self._row_lengths
+            axis_lengths = self.row_lengths
         else:
-            axis_lengths = self._column_widths
+            axis_lengths = self.column_widths
 
         new_lengths = [
             len(
@@ -836,7 +836,7 @@ class PandasDataframe(ClassLogger):
             ErrorMessage.catch_bugs_and_request_email(
                 failure_condition=sum(new_col_widths) != len(new_columns),
                 extra_log=f"{sum(new_col_widths)} != {len(new_columns)}.\n"
-                + f"{col_positions}\n{self._column_widths}\n{col_partitions_dict}",
+                + f"{col_positions}\n{self.column_widths}\n{col_partitions_dict}",
             )
 
             if self._dtypes is not None:
@@ -1026,8 +1026,8 @@ class PandasDataframe(ClassLogger):
             keep_remaining=True,
         )
         new_column_widths = [
-            self.index.nlevels + self._column_widths[0]
-        ] + self._column_widths[1:]
+            self.index.nlevels + self.column_widths[0]
+        ] + self.column_widths[1:]
         result = self.__constructor__(
             new_parts,
             new_row_labels,
@@ -1174,8 +1174,8 @@ class PandasDataframe(ClassLogger):
             new_frame,
             self.index,
             self.columns,
-            self._row_lengths,
-            self._column_widths,
+            self.row_lengths,
+            self.column_widths,
             new_dtypes,
         )
 
@@ -1366,9 +1366,9 @@ class PandasDataframe(ClassLogger):
         if has_negative or not are_indices_sorted:
             indices = np.sort(indices)
         if axis == 0:
-            bins = np.array(self._row_lengths)
+            bins = np.array(self.row_lengths)
         else:
-            bins = np.array(self._column_widths)
+            bins = np.array(self.column_widths)
         # INT_MAX to make sure we don't try to compute on partitions that don't exist.
         cumulative = np.append(bins[:-1].cumsum(), np.iinfo(bins.dtype).max)
 
@@ -1759,8 +1759,8 @@ class PandasDataframe(ClassLogger):
             new_partitions,
             self.index,
             self.columns,
-            self._row_lengths,
-            self._column_widths,
+            self.row_lengths,
+            self.column_widths,
         )
 
     def infer_objects(self) -> "PandasDataframe":
@@ -1804,8 +1804,8 @@ class PandasDataframe(ClassLogger):
             self._partitions,
             self.index,
             self.columns,
-            self._row_lengths,
-            self._column_widths,
+            self.row_lengths,
+            self.column_widths,
             new_dtypes,
         )
 
@@ -1910,8 +1910,8 @@ class PandasDataframe(ClassLogger):
             new_parts,
             new_index,
             new_cols,
-            self._row_lengths,
-            self._column_widths,
+            self.row_lengths,
+            self.column_widths,
             new_dtypes,
         )
 
@@ -2218,8 +2218,8 @@ class PandasDataframe(ClassLogger):
             lengths_objs = {
                 axis: [len(apply_indices)]
                 if not keep_remaining
-                else [self._row_lengths, self._column_widths][axis],
-                axis ^ 1: [self._row_lengths, self._column_widths][axis ^ 1],
+                else [self.row_lengths, self.column_widths][axis],
+                axis ^ 1: [self.row_lengths, self.column_widths][axis ^ 1],
             }
             return self.__constructor__(
                 new_partitions, new_index, new_columns, lengths_objs[0], lengths_objs[1]
@@ -2352,7 +2352,7 @@ class PandasDataframe(ClassLogger):
         broadcast [self[key1], self[key2]] partitions and internal indices for `self` must be [[0, 1], [5]]
         """
         if broadcast_all:
-            sizes = self._row_lengths if axis else self._column_widths
+            sizes = self.row_lengths if axis else self.column_widths
             return {key: dict(enumerate(sizes)) for key in indices.keys()}
         passed_len = 0
         result_dict = {}
@@ -2622,9 +2622,7 @@ class PandasDataframe(ClassLogger):
                 base_lengths = [obj.length() for obj in reindexed_base.T[0]]
         else:
             reindexed_base = base_frame._partitions
-            base_lengths = (
-                base_frame._column_widths if axis else base_frame._row_lengths
-            )
+            base_lengths = base_frame.column_widths if axis else base_frame.row_lengths
 
         others_lengths = [o._axes_lengths[axis] for o in other_frames]
 
@@ -2686,7 +2684,7 @@ class PandasDataframe(ClassLogger):
             0, right_frames, join_type, sort=True
         )
         new_left_frame = self.__constructor__(
-            left_parts, joined_index, self.columns, row_lengths, self._column_widths
+            left_parts, joined_index, self.columns, row_lengths, self.column_widths
         )
         new_right_frames = [
             self.__constructor__(
@@ -2694,7 +2692,7 @@ class PandasDataframe(ClassLogger):
                 joined_index,
                 right_frame.columns,
                 row_lengths,
-                right_frame._column_widths,
+                right_frame.column_widths,
             )
             for right_parts, right_frame in zip(list_of_right_parts, right_frames)
         ]
@@ -2768,7 +2766,7 @@ class PandasDataframe(ClassLogger):
         if (
             axis == Axis.ROW_WISE
             and all(o.columns.equals(self.columns) for o in others)
-            and all(o._column_widths == self._column_widths for o in others)
+            and all(o.column_widths == self.column_widths for o in others)
         ):
             joined_index = self.columns
             left_parts = self._partitions
@@ -2777,7 +2775,7 @@ class PandasDataframe(ClassLogger):
         elif (
             axis == Axis.COL_WISE
             and all(o.index.equals(self.index) for o in others)
-            and all(o._row_lengths == self._row_lengths for o in others)
+            and all(o.row_lengths == self.row_lengths for o in others)
         ):
             joined_index = self.index
             left_parts = self._partitions
@@ -3109,8 +3107,8 @@ class PandasDataframe(ClassLogger):
             new_partitions,
             self.columns,
             self.index,
-            self._column_widths,
-            self._row_lengths,
+            self.column_widths,
+            self.row_lengths,
             dtypes=new_dtypes,
         )
 

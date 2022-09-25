@@ -100,7 +100,7 @@ class DMatrix:
         self.metadata = (
             data.index,
             data.columns,
-            data._query_compiler._modin_frame._row_lengths,
+            data._query_compiler._modin_frame.row_lengths,
         )
 
     def __iter__(self):
