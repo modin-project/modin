@@ -474,29 +474,29 @@ class ExperimentalBaseFactory(BaseFactory):
     @classmethod
     @_inherit_docstrings(BaseFactory._read_sql)
     def _read_sql(cls, **kwargs):
-        if Engine.get() != "Ray":
+        if Engine.get() not in ("Ray", "Unidist"):
             if "partition_column" in kwargs:
                 if kwargs["partition_column"] is not None:
                     warnings.warn(
-                        "Distributed read_sql() was only implemented for Ray engine."
+                        "Distributed read_sql() was only implemented for Ray and Unidist engines."
                     )
                 del kwargs["partition_column"]
             if "lower_bound" in kwargs:
                 if kwargs["lower_bound"] is not None:
                     warnings.warn(
-                        "Distributed read_sql() was only implemented for Ray engine."
+                        "Distributed read_sql() was only implemented for Ray and Unidist engines."
                     )
                 del kwargs["lower_bound"]
             if "upper_bound" in kwargs:
                 if kwargs["upper_bound"] is not None:
                     warnings.warn(
-                        "Distributed read_sql() was only implemented for Ray engine."
+                        "Distributed read_sql() was only implemented for Ray and Unidist engines."
                     )
                 del kwargs["upper_bound"]
             if "max_sessions" in kwargs:
                 if kwargs["max_sessions"] is not None:
                     warnings.warn(
-                        "Distributed read_sql() was only implemented for Ray engine."
+                        "Distributed read_sql() was only implemented for Ray and Unidist engines."
                     )
                 del kwargs["max_sessions"]
         return cls.io_cls.read_sql(**kwargs)
@@ -651,3 +651,72 @@ class ExperimentalHdkOnNativeFactory(BaseFactory):
 @doc(_doc_factory_class, execution_name="experimental remote HdkOnNative")
 class ExperimentalHdkOnCloudnativeFactory(ExperimentalRemoteFactory):
     wrapped_factory = ExperimentalHdkOnNativeFactory
+
+
+@doc(_doc_factory_class, execution_name="PandasOnUnidist")
+class PandasOnUnidistFactory(BaseFactory):
+    @classmethod
+    @doc(_doc_factory_prepare_method, io_module_name="``PandasOnUnidistIO``")
+    def prepare(cls):
+        from modin.core.execution.unidist.implementations.pandas_on_unidist.io import (
+            PandasOnUnidistIO,
+        )
+
+        cls.io_cls = PandasOnUnidistIO
+
+
+@doc(_doc_factory_class, execution_name="experimental PandasOnUnidist")
+class ExperimentalPandasOnUnidistFactory(
+    ExperimentalBaseFactory, PandasOnUnidistFactory
+):
+    @classmethod
+    @doc(
+        _doc_factory_prepare_method, io_module_name="``ExperimentalPandasOnUnidistIO``"
+    )
+    def prepare(cls):
+        from modin.experimental.core.execution.unidist.implementations.pandas_on_unidist.io import (
+            ExperimentalPandasOnUnidistIO,
+        )
+
+        cls.io_cls = ExperimentalPandasOnUnidistIO
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="CSV files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_csv_glob(cls, **kwargs):
+        return cls.io_cls.read_csv_glob(**kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="Pickle files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_pickle_distributed(cls, **kwargs):
+        return cls.io_cls.read_pickle_distributed(**kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="Custom text files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_custom_text(cls, **kwargs):
+        return cls.io_cls.read_custom_text(**kwargs)
+
+    @classmethod
+    def _to_pickle_distributed(cls, *args, **kwargs):
+        """
+        Distributed pickle query compiler object.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to the writer method.
+        **kwargs : kwargs
+            Arguments to the writer method.
+        """
+        return cls.io_cls.to_pickle_distributed(*args, **kwargs)

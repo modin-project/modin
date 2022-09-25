@@ -156,6 +156,11 @@ def _update_engine(publisher: Parameter):
             from modin.core.execution.dask.common import initialize_dask
 
             initialize_dask()
+    elif publisher.get() == "Unidist":
+        if _is_first_update.get("Unidist", True):
+            from modin.core.execution.unidist.common import initialize_unidist
+
+            initialize_unidist()
     elif publisher.get() == "Cloudray":
         from modin.experimental.cloud import get_connection
 

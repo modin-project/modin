@@ -73,6 +73,7 @@ class SupportsPublicToPandas(Protocol):  # noqa: PR01
 
 MIN_RAY_VERSION = version.parse("1.4.0")
 MIN_DASK_VERSION = version.parse("2.22.0")
+MIN_UNIDIST_VERSION = version.parse("0.2.0")
 
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
 
