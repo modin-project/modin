@@ -316,7 +316,7 @@ def _replace_doc(
     ):
         apilink_l = [apilink] if not isinstance(apilink, list) and apilink else apilink
         links = []
-        for i, link in enumerate(apilink_l):
+        for link in apilink_l:
             if attr_name:
                 token = f"{link}.{attr_name}"
             else:
