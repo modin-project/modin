@@ -764,20 +764,12 @@ class _LocIndexer(_LocationIndexerBase):
                 new_query_compiler=self.df._default_to_pandas(_loc)._query_compiler
             )
             return
-        # row_loc, col_loc, _ = self._parse_row_and_column_locators(key)
-        # self._maybe_enlarge_labels(row_loc, col_loc)
-        # print(key)
-        # print(item)
-        # print(type(item))
         row_loc, col_loc, ndims = self._parse_row_and_column_locators(key)
-        print(row_loc, col_loc, ndims)
         append_axis = self._check_missing_loc(row_loc, col_loc)
-        print(append_axis)
         if ndims >= 1 and append_axis is not None:
             # We enter this codepath if we're either appending a row or a column
-            if append_axis:
+            if append_axis:  # Appending new column
                 if is_scalar(col_loc) or len(col_loc) == 1:
-                    print("HELLOOOOO")
                     if is_scalar(item):
                         item = [item] * len(self.qc.index)
                     if not isinstance(item, (Series, DataFrame)):
@@ -810,14 +802,12 @@ class _LocIndexer(_LocationIndexerBase):
                             if len(item.shape) > 1
                             else item[common_label_loc]
                         )
-                    print(exist_items)
-                    print(common_label_loc)
                     if len(common_label_loc) != 0:
                         # In this case we have some new cols and some old ones
                         self._set_item_existing_loc(
                             row_loc, np.array(col_loc)[common_label_loc], exist_items
                         )
-            else:
+            else:  # Appending new row
                 if is_scalar(row_loc) or len(row_loc) == 1:
                     index = self.qc.index.insert(len(self.qc.index), row_loc)
                     self.qc = self.qc.reindex(labels=index, axis=0, fill_value=0)
@@ -837,45 +827,6 @@ class _LocIndexer(_LocationIndexerBase):
             ),
         )
 
-    def _maybe_enlarge_labels(self, row_loc, col_loc):
-        """
-        Add missing labels to the appropriate axis' index.
-
-        Parameters
-        ----------
-        row_loc : list or int
-            List of labels (or singular label) along row axis.
-        col_loc : list or int
-            List of labels (or singular label) along col axis.
-        """
-        if (isinstance(row_loc, list) and len(row_loc) == 1) or not (
-            is_list_like(row_loc) or isinstance(row_loc, slice)
-        ):
-            row_loc = row_loc[0] if isinstance(row_loc, list) else row_loc
-            if row_loc not in self.qc.index:
-                index = self.qc.index.insert(len(self.qc.index), row_loc)
-                self.qc = self.qc.reindex(labels=index, axis=0)
-                self.df._update_inplace(new_query_compiler=self.qc)
-
-        if (
-            isinstance(col_loc, list)
-            and len(col_loc) == 1
-            and col_loc[0] not in self.qc.columns
-        ):
-            new_col = pandas.Series(index=self.df.index)
-            self.df.insert(loc=len(self.df.columns), column=col_loc[0], value=new_col)
-            self.qc = self.df._query_compiler
-        else:
-            row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-            self._setitem_positional(
-                row_lookup,
-                col_lookup,
-                item,
-                axis=self._determine_setitem_axis(
-                    row_lookup, col_lookup, is_scalar(row_loc), is_scalar(col_loc)
-                ),
-            )
-
     def _check_missing_loc(self, row_loc, col_loc):
         if is_scalar(row_loc):
             return 0 if row_loc not in self.qc.index else None
@@ -883,10 +834,11 @@ class _LocIndexer(_LocationIndexerBase):
             missing_labels = self._compute_enlarge_labels(
                 pandas.Index(row_loc), self.qc.index
             )
-            # We cast to list to copy pandas' error:
-            # In pandas, we get: KeyError: [a, b,...] not in index
-            # If we don't convert to list we get: KeyError: [a b ...] not in index
-            raise KeyError("{} not in index".format(list(missing_labels)))
+            if len(missing_labels) > 1:
+                # We cast to list to copy pandas' error:
+                # In pandas, we get: KeyError: [a, b,...] not in index
+                # If we don't convert to list we get: KeyError: [a b ...] not in index
+                raise KeyError("{} not in index".format(list(missing_labels)))
         if (
             not (is_list_like(row_loc) or isinstance(row_loc, slice))
             and row_loc not in self.qc.index
@@ -920,16 +872,16 @@ class _LocIndexer(_LocationIndexerBase):
         # base_index_type can be pd.Index or pd.DatetimeIndex
         # depending on user input and pandas behavior
         # See issue #2264
-        base_index_type = type(base_index)
-        locator_as_index = base_index_type(locator)
+        base_as_index = pandas.Index(list(base_index))
+        locator_as_index = pandas.Index(list(locator))
 
-        nan_labels = locator_as_index.difference(base_index)
-        common_labels = locator_as_index.intersection(base_index)
+        nan_labels = locator_as_index.difference(base_as_index)
+        common_labels = locator_as_index.intersection(base_as_index)
 
         if len(common_labels) == 0:
             raise KeyError(
                 "None of [{labels}] are in the [{base_index_name}]".format(
-                    labels=list(locator_as_index), base_index_name=base_index
+                    labels=list(locator_as_index), base_index_name=base_as_index
                 )
             )
         return nan_labels
