@@ -708,24 +708,24 @@ class ClientQueryCompiler(BaseQueryCompiler):
             )
         )
 
-    def cummax(self, fold_axis, skipna, *args, **kwargs):
+    def cummax(self, fold_axis, axis, skipna, *args, **kwargs):
         return self.__constructor__(
-            self._service.cummax(self._id, fold_axis, skipna, *args, **kwargs)
+            self._service.cummax(self._id, fold_axis, axis, skipna, *args, **kwargs)
         )
 
-    def cummin(self, fold_axis, skipna, *args, **kwargs):
+    def cummin(self, fold_axis, axis, skipna, *args, **kwargs):
         return self.__constructor__(
-            self._service.cummin(self._id, fold_axis, skipna, *args, **kwargs)
+            self._service.cummin(self._id, fold_axis, axis, skipna, *args, **kwargs)
         )
 
-    def cumsum(self, fold_axis, skipna, *args, **kwargs):
+    def cumsum(self, fold_axis, axis, skipna, *args, **kwargs):
         return self.__constructor__(
-            self._service.cumsum(self._id, fold_axis, skipna, *args, **kwargs)
+            self._service.cumsum(self._id, fold_axis, axis, skipna, *args, **kwargs)
         )
 
-    def cumprod(self, fold_axis, skipna, *args, **kwargs):
+    def cumprod(self, fold_axis, axis, skipna, *args, **kwargs):
         return self.__constructor__(
-            self._service.cumprod(self._id, fold_axis, skipna, *args, **kwargs)
+            self._service.cumprod(self._id, fold_axis, axis, skipna, *args, **kwargs)
         )
 
     def get_index_names(self, axis=0):
