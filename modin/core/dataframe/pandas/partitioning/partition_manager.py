@@ -1456,7 +1456,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         """
         # Sample each partition
         ptn_and_samples = cls.map_axis_partitions(
-            1, partitions, sample_func, _impure=True
+            1, partitions, sample_func, lengths=[None]
         ).T
         # Get row partitions from the samples
         row_partitions = ptn_and_samples[0]

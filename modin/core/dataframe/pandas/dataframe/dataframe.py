@@ -1871,7 +1871,7 @@ class PandasDataframe(ClassLogger):
             new_axes[axis.value ^ 1] = self.axes[axis.value ^ 1]
             new_lengths = [None, None]
             new_modin_frame = self.__constructor__(
-                new_partitions, *new_axes, *new_lengths, self.dtypes
+                new_partitions, *new_axes, *new_lengths, self._dtypes
             )
             return new_modin_frame
 
