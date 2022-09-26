@@ -1,0 +1,29 @@
+name: modin_on_hdk
+channels:
+  - conda-forge
+dependencies:
+  - pandas==1.4.4
+  - pyarrow=6
+  - numpy>=1.23
+  - fsspec
+  - pip
+  - pytest>=6.0.1
+  - pytest-cov>=2.10.1
+  - pytest-xdist>=2.1.0
+  - coverage<5.0
+  - pygithub==1.53
+  - pyhdk==0.1
+  - s3fs>=2021.8
+  - psutil
+  - openpyxl
+  - xlrd
+  - sqlalchemy
+  - scipy
+  - pip:
+      - black
+      # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
+      - flake8<5
+      - flake8-no-implicit-concat
+      - flake8-print
+      # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
+      - numpydoc==1.1.0

@@ -127,7 +127,7 @@ This can also be done with:
     Engine.put("ray")  # Modin will use Ray
     Engine.put("dask")  # Modin will use Dask
 
-We also have an experimental OmniSciDB-based engine of Modin you can read about :doc:`here </development/using_omnisci>`.
+We also have an experimental HDK-based engine of Modin you can read about :doc:`here </development/using_hdk>`.
 We plan to support more execution engines in future. If you have a specific request,
 please post on the #feature-requests channel on our Slack_ community.
 

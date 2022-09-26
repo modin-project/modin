@@ -40,7 +40,7 @@ API.
 
     # Setting `MODIN_STORAGE_FORMAT` environment variable.
     # Also can be set outside the script.
-    os.environ["MODIN_STORAGE_FORMAT"] = "OmniSci"
+    os.environ["MODIN_STORAGE_FORMAT"] = "Hdk"
 
     import modin.config
     import modin.pandas as pd
@@ -48,7 +48,7 @@ API.
     # Checking initially set `StorageFormat` config,
     # which corresponds to `MODIN_STORAGE_FORMAT` environment
     # variable
-    print(modin.config.StorageFormat.get()) # prints 'Omnisci'
+    print(modin.config.StorageFormat.get()) # prints 'Hdk'
 
     # Checking default value of `NPartitions`
     print(modin.config.NPartitions.get()) # prints '8'

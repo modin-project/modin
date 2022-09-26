@@ -23,7 +23,8 @@ from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
 from .partition import PandasOnDaskDataframePartition
-from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
+from modin.core.execution.dask.common import DaskWrapper
+from modin.utils import _inherit_docstrings
 
 
 class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
@@ -42,6 +43,10 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         Whether or not the virtual partition encompasses the whole axis.
     call_queue : list, optional
         A list of tuples (callable, args, kwargs) that contains deferred calls.
+    length : distributed.Future or int, optional
+        Length, or reference to length, of wrapped ``pandas.DataFrame``.
+    width : distributed.Future or int, optional
+        Width, or reference to width, of wrapped ``pandas.DataFrame``.
     """
 
     axis = None
@@ -49,12 +54,20 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
     instance_type = Future
 
     def __init__(
-        self, list_of_partitions, get_ip=False, full_axis=True, call_queue=None
+        self,
+        list_of_partitions,
+        get_ip=False,
+        full_axis=True,
+        call_queue=None,
+        length=None,
+        width=None,
     ):
         if isinstance(list_of_partitions, PandasOnDaskDataframePartition):
             list_of_partitions = [list_of_partitions]
         self.call_queue = call_queue or []
         self.full_axis = full_axis
+        self._length_cache = length
+        self._width_cache = width
         # Check that all virtual partition axes are the same in `list_of_partitions`
         # We should never have mismatching axis in the current implementation. We add this
         # defensive assertion to ensure that undefined behavior does not happen.
@@ -116,24 +129,6 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         return self._list_of_block_partitions
 
     @property
-    def list_of_blocks(self):
-        """
-        Get the list of physical partition objects that compose this partition.
-
-        Returns
-        -------
-        List
-            A list of ``distributed.Future``.
-        """
-        # Defer draining call queue until we get the partitions
-        # TODO Look into draining call queue at the same time as the task
-        result = [None] * len(self.list_of_block_partitions)
-        for idx, partition in enumerate(self.list_of_block_partitions):
-            partition.drain_call_queue()
-            result[idx] = partition._data
-        return result
-
-    @property
     def list_of_ips(self):
         """
         Get the IPs holding the physical objects composing this partition.
@@ -155,10 +150,13 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         cls,
         axis,
         func,
+        f_args,
+        f_kwargs,
         num_splits,
         maintain_partitioning,
         *partitions,
-        **kwargs,
+        lengths=None,
+        manual_partition=False,
     ):
         """
         Deploy a function along a full axis.
@@ -169,6 +167,10 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             The axis to perform the function along.
         func : callable
             The function to perform.
+        f_args : list or tuple
+            Positional arguments to pass to ``func``.
+        f_kwargs : dict
+            Keyword arguments to pass to ``func``.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).
         maintain_partitioning : bool
@@ -176,32 +178,48 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             If False, create a new partition layout.
         *partitions : iterable
             All partitions that make up the full axis (row or column).
-        **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
+        lengths : iterable, default: None
+            The list of lengths to shuffle the partition into.
+        manual_partition : bool, default: False
+            If True, partition the result with `lengths`.
 
         Returns
         -------
         list
             A list of distributed.Future.
         """
-        lengths = kwargs.get("_lengths", None)
         result_num_splits = len(lengths) if lengths else num_splits
         return DaskWrapper.deploy(
-            deploy_dask_func,
-            PandasDataframeAxisPartition.deploy_axis_func,
-            axis,
-            func,
-            num_splits,
-            maintain_partitioning,
-            *partitions,
+            func=deploy_dask_func,
+            f_args=(
+                PandasDataframeAxisPartition.deploy_axis_func,
+                axis,
+                func,
+                f_args,
+                f_kwargs,
+                num_splits,
+                maintain_partitioning,
+                *partitions,
+            ),
+            f_kwargs={
+                "lengths": lengths,
+                "manual_partition": manual_partition,
+            },
             num_returns=result_num_splits * 4,
             pure=False,
-            **kwargs,
         )
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
-        cls, axis, func, num_splits, len_of_left, other_shape, *partitions, **kwargs
+        cls,
+        axis,
+        func,
+        f_args,
+        f_kwargs,
+        num_splits,
+        len_of_left,
+        other_shape,
+        *partitions,
     ):
         """
         Deploy a function along a full axis between two data sets.
@@ -212,6 +230,10 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             The axis to perform the function along.
         func : callable
             The function to perform.
+        f_args : list or tuple
+            Positional arguments to pass to ``func``.
+        f_kwargs : dict
+            Keyword arguments to pass to ``func``.
         num_splits : int
             The number of splits to return (see `split_result_of_axis_func_pandas`).
         len_of_left : int
@@ -221,8 +243,6 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
         *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
-        **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
 
         Returns
         -------
@@ -230,17 +250,20 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             A list of distributed.Future.
         """
         return DaskWrapper.deploy(
-            deploy_dask_func,
-            PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
-            axis,
-            func,
-            num_splits,
-            len_of_left,
-            other_shape,
-            *partitions,
+            func=deploy_dask_func,
+            f_args=(
+                PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
+                axis,
+                func,
+                f_args,
+                f_kwargs,
+                num_splits,
+                len_of_left,
+                other_shape,
+                *partitions,
+            ),
             num_returns=num_splits * 4,
             pure=False,
-            **kwargs,
         )
 
     def _wrap_partitions(self, partitions):
@@ -306,9 +329,13 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             num_splits = 1
         if len(self.call_queue) > 0:
             self.drain_call_queue()
-        kwargs["args"] = args
         result = super(PandasOnDaskDataframeVirtualPartition, self).apply(
-            func, num_splits, other_axis_partition, maintain_partitioning, **kwargs
+            func,
+            *args,
+            num_splits=num_splits,
+            other_axis_partition=other_axis_partition,
+            maintain_partitioning=maintain_partitioning,
+            **kwargs,
         )
         if self.full_axis:
             return result
@@ -418,14 +445,12 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         num_splits : int, default: None
             The number of times to split the result object.
         """
-
-        def drain(df):
-            for func, args, kwargs in self.call_queue:
-                df = func(df, *args, **kwargs)
-            return df
-
+        # TODO: Need to check if `drain_call_queue` speeds up if helper
+        # `drain` function is serialized only once.
         drained = super(PandasOnDaskDataframeVirtualPartition, self).apply(
-            drain, num_splits=num_splits
+            PandasDataframeAxisPartition.drain,
+            num_splits=num_splits,
+            call_queue=self.call_queue,
         )
         self._list_of_block_partitions = drained
         self.call_queue = []
@@ -435,7 +460,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         self.drain_call_queue()
         wait(self.list_of_blocks)
 
-    def add_to_apply_calls(self, func, *args, **kwargs):
+    def add_to_apply_calls(self, func, *args, length=None, width=None, **kwargs):
         """
         Add a function to the call queue.
 
@@ -445,6 +470,10 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             Function to be added to the call queue.
         *args : iterable
             Additional positional arguments to be passed in `func`.
+        length : distributed.Future or int, optional
+            Length, or reference to length, of wrapped ``pandas.DataFrame``.
+        width : distributed.Future or int, optional
+            Width, or reference to width, of wrapped ``pandas.DataFrame``.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
@@ -460,77 +489,53 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         return type(self)(
             self.list_of_block_partitions,
             full_axis=self.full_axis,
-            call_queue=self.call_queue + [(func, args, kwargs)],
+            call_queue=self.call_queue + [[func, args, kwargs]],
+            length=length,
+            width=width,
         )
 
 
+@_inherit_docstrings(PandasOnDaskDataframeVirtualPartition.__init__)
 class PandasOnDaskDataframeColumnPartition(PandasOnDaskDataframeVirtualPartition):
-    """
-    The column partition implementation.
-
-    All of the implementation for this class is in the parent class,
-    and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_partitions : Union[list, PandasOnDaskDataframePartition]
-        List of ``PandasOnDaskDataframePartition`` and
-        ``PandasOnDaskDataframeColumnPartition`` objects, or a single
-        ``PandasOnDaskDataframePartition``.
-    get_ip : bool, default: False
-        Whether to get node IP addresses to conforming partitions or not.
-    full_axis : bool, default: True
-        Whether this partition spans an entire axis of the dataframe.
-    call_queue : list, optional
-        A list of tuples (callable, args, kwargs) that contains deferred calls.
-    """
-
     axis = 0
 
 
+@_inherit_docstrings(PandasOnDaskDataframeVirtualPartition.__init__)
 class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeVirtualPartition):
-    """
-    The row partition implementation.
-
-    All of the implementation for this class is in the parent class,
-    and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_partitions : Union[list, PandasOnDaskDataframePartition]
-        List of ``PandasOnDaskDataframePartition`` and
-        ``PandasOnDaskDataframeRowPartition`` objects, or a single
-        ``PandasOnDaskDataframePartition``.
-    get_ip : bool, default: False
-        Whether to get node IP addresses to conforming partitions or not.
-    full_axis : bool, default: True
-        Whether this partition spans an entire axis of the dataframe.
-    call_queue : list, optional
-        A list of tuples (callable, args, kwargs) that contains deferred calls.
-    """
-
     axis = 1
 
 
-def deploy_dask_func(func, *args, **kwargs):
+def deploy_dask_func(deployer, axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs):
     """
     Execute a function on an axis partition in a worker process.
 
+    This is ALWAYS called on either ``PandasDataframeAxisPartition.deploy_axis_func``
+    or ``PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions``, which both
+    serve to deploy another dataframe function on a Dask worker process.
+
     Parameters
     ----------
-    func : callable
-        Function to be executed on an axis partition.
-    *args : iterable
-        Additional arguments that need to passed in ``func``.
+    deployer : callable
+        A `PandasDataFrameAxisPartition.deploy_*` method that will call `deploy_f`.
+    axis : {0, 1}
+        The axis to perform the function along.
+    f_to_deploy : callable or RayObjectID
+        The function to deploy.
+    f_args : list or tuple
+        Positional arguments to pass to ``f_to_deploy``.
+    f_kwargs : dict
+        Keyword arguments to pass to ``f_to_deploy``.
+    *args : list
+        Positional arguments to pass to ``func``.
     **kwargs : dict
-        Additional keyword arguments to be passed in `func`.
+        Keyword arguments to pass to ``func``.
 
     Returns
     -------
     list
         The result of the function ``func`` and metadata for it.
     """
-    result = func(*args, **kwargs)
+    result = deployer(axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs)
     ip = get_ip()
     if isinstance(result, pandas.DataFrame):
         return result, len(result), len(result.columns), ip

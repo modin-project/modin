@@ -14,13 +14,13 @@ default to pandas.
 
 .. note::
     Currently, the second column reflects implementation status for Ray and Dask engines. By default, support for a method
-    in the Omnisci engine could be treated as ``D`` unless ``Notes`` column contains additional information. Similarly,
-    by default ``Notes`` contains information about ``Ray`` and ``Dask`` engines unless ``Omnisci`` is explicitly mentioned.
+    in the HDK engine could be treated as ``D`` unless ``Notes`` column contains additional information. Similarly,
+    by default ``Notes`` contains information about ``Ray`` and ``Dask`` engines unless ``Hdk`` is explicitly mentioned.
 
 +---------------------------+---------------------------------+----------------------------------------------------+
 | Utility method            | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.concat`_              | Y                               | **Omnisci**: ``Y`` but ``sort`` and                |
+| `pd.concat`_              | Y                               | **Hdk**: ``Y`` but ``sort`` and                    |
 |                           |                                 | `ignore_index`` parameters ignored                 |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | `pd.eval`_                | Y                               |                                                    |

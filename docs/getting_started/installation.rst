@@ -24,7 +24,7 @@ To install the most recent stable release run the following:
 
   pip install -U modin # -U for upgrade in case you have an older version
 
-Modin can be used with :doc:`Ray</development/using_pandas_on_ray>`, :doc:`Dask</development/using_pandas_on_dask>`, or :doc:`OmniSci</development/using_omnisci>` engines. If you don't have Ray_ or Dask_ installed, you will need to install Modin with one of the targets:
+Modin can be used with :doc:`Ray</development/using_pandas_on_ray>`, :doc:`Dask</development/using_pandas_on_dask>`, or :doc:`HDK</development/using_hdk>` engines. If you don't have Ray_ or Dask_ installed, you will need to install Modin with one of the targets:
 
 .. code-block:: bash
 
@@ -33,7 +33,7 @@ Modin can be used with :doc:`Ray</development/using_pandas_on_ray>`, :doc:`Dask<
   pip install modin[all] # Install all of the above
 
 Modin will automatically detect which engine you have installed and use that for
-scheduling computation! See below for OmniSci engine installation.
+scheduling computation! See below for HDK engine installation.
 
 Release candidates
 """"""""""""""""""
@@ -101,9 +101,9 @@ it is possible to install modin with chosen engine(s) alongside. Current options
 +---------------------------------+---------------------------+-----------------------------+
 | modin-ray                       | Ray_                      |       Linux, Windows        |
 +---------------------------------+---------------------------+-----------------------------+
-| modin-omnisci                   | OmniSci_                  |          Linux              |
+| modin-hdk                       | HDK_                      |          Linux              |
 +---------------------------------+---------------------------+-----------------------------+
-| modin-all                       | Dask, Ray, OmniSci        |          Linux              |
+| modin-all                       | Dask, Ray, HDK            |          Linux              |
 +---------------------------------+---------------------------+-----------------------------+
 
 For installing Dask and Ray engines into conda environment following command should be used:
@@ -122,9 +122,9 @@ or explicitly:
 
 .. code-block:: bash
 
-  conda install -c conda-forge modin-ray modin-dask modin-omnisci
+  conda install -c conda-forge modin-ray modin-dask modin-hdk
 
-``conda`` may be slow installing ``modin-omnisci`` and hence ``modin-all`` packages so it's worth trying to set ``channel_priority`` to ``strict`` prior the installation process:
+``conda`` may be slow installing ``modin-hdk`` and hence ``modin-all`` packages so it's worth trying to set ``channel_priority`` to ``strict`` prior the installation process:
 
 .. code-block:: bash
 
@@ -135,7 +135,7 @@ Using Intel\ |reg| Distribution of Modin
 """"""""""""""""""""""""""""""""""""""""
 
 With ``conda`` it is also possible to install `Intel Distribution of Modin`_, a special version of Modin
-that is part of Intel\ |reg| oneAPI AI Analytics Toolkit. This version of Modin is powered by :doc:`OmniSci</development/using_omnisci>`
+that is part of Intel\ |reg| oneAPI AI Analytics Toolkit. This version of Modin is powered by :doc:`HDK</development/using_hdk>`
 engine that contains a bunch of optimizations for Intel hardware. More details to get started can be found in the `Intel Distribution of Modin Getting Started`_ guide.
 
 Installing from the GitHub master branch
@@ -156,7 +156,7 @@ If you would like to install Modin with a specific engine, you can use ``modin[r
 Windows
 -------
 
-All Modin engines except :doc:`OmniSci</development/using_omnisci>` are available both on Windows and Linux as mentioned above.
+All Modin engines except :doc:`HDK</development/using_hdk>` are available both on Windows and Linux as mentioned above.
 Default engine on Windows is :doc:`Ray</development/using_pandas_on_ray>`.
 It is also possible to use Windows Subsystem For Linux (WSL_), but this is generally 
 not recommended due to the limitations and poor performance of Ray on WSL, a roughly 
@@ -193,7 +193,7 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
 .. _WSL: https://docs.microsoft.com/en-us/windows/wsl/install-win10
 .. _Ray: http://ray.readthedocs.io
 .. _Dask: https://github.com/dask/dask
-.. _OmniSci: https://www.omnisci.com/platform/omniscidb
+.. _HDK: https://github.com/intel-ai/hdk
 .. _`Intel Distribution of Modin`: https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html#gs.86stqv
 .. _`Intel Distribution of Modin Getting Started`: https://www.intel.com/content/www/us/en/developer/articles/technical/intel-distribution-of-modin-getting-started-guide.html
 .. |reg|    unicode:: U+000AE .. REGISTERED SIGN

@@ -60,7 +60,7 @@ class ColumnStoreDataset:
     """
 
     def __init__(self, path, storage_options):  # noqa : PR01
-        self.path = path
+        self.path = path.__fspath__() if isinstance(path, os.PathLike) else path
         self.storage_options = storage_options
         self._fs_path = None
         self._fs = None
@@ -424,13 +424,15 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             all_partitions.append(
                 [
                     cls.deploy(
-                        cls.parse,
-                        files_for_parser=files_to_read,
-                        columns=cols,
-                        engine=dataset.engine,
+                        func=cls.parse,
+                        f_kwargs={
+                            "files_for_parser": files_to_read,
+                            "columns": cols,
+                            "engine": dataset.engine,
+                            "storage_options": storage_options,
+                            **kwargs,
+                        },
                         num_returns=3,
-                        storage_options=storage_options,
-                        **kwargs,
                     )
                     for cols in col_partitions
                 ]

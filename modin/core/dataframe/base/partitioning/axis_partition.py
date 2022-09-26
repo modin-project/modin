@@ -26,9 +26,12 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
     def apply(
         self,
         func,
+        *args,
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
+        lengths=None,
+        manual_partition=False,
         **kwargs,
     ):
         """
@@ -39,6 +42,8 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         func : callable
             The function to apply. This will be preprocessed according to
             the corresponding `BaseDataframePartition` objects.
+        *args : iterable
+            Positional arguments to pass to `func`.
         num_splits : int, default: None
             The number of times to split the result object.
         other_axis_partition : BaseDataframeAxisPartition, default: None
@@ -51,6 +56,10 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
             In this case, we have to return the partitioning to its previous
             orientation (the lengths will remain the same). This is ignored between
             two axis partitions.
+        lengths : iterable, default: None
+            The list of lengths to shuffle the partition into.
+        manual_partition : bool, default: False
+            If True, partition the result with `lengths`.
         **kwargs : dict
             Additional keywords arguments to be passed in `func`.
 

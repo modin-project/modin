@@ -51,6 +51,21 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
+    @property
+    def list_of_blocks(self):
+        """
+        Get the list of physical partition objects that compose this partition.
+
+        Returns
+        -------
+        list
+            A list of physical partition objects (``ray.ObjectRef``, ``distributed.Future`` e.g.).
+        """
+        # Defer draining call queue until we get the partitions.
+        # TODO Look into draining call queue at the same time as the task
+        self.drain_call_queue()
+        return [self._data]
+
     def apply(self, func, *args, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
@@ -77,7 +92,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
-    def add_to_apply_calls(self, func, *args, **kwargs):
+    def add_to_apply_calls(self, func, *args, length=None, width=None, **kwargs):
         """
         Add a function to the call queue.
 
@@ -87,6 +102,10 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             Function to be added to the call queue.
         *args : iterable
             Additional positional arguments to be passed in `func`.
+        length : reference or int, optional
+            Length, or reference to length, of wrapped ``pandas.DataFrame``.
+        width : reference or int, optional
+            Width, or reference to width, of wrapped ``pandas.DataFrame``.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
@@ -147,6 +166,11 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
 
+    @staticmethod
+    def _iloc(df, row_labels, col_labels):  # noqa: RT01, PR01
+        """Perform `iloc` on dataframes wrapped in partitions (helper function)."""
+        return df.iloc[row_labels, col_labels]
+
     def mask(self, row_labels, col_labels):
         """
         Lazily create a mask that extracts the indices provided.
@@ -185,7 +209,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         ):
             return copy(self)
 
-        new_obj = self.add_to_apply_calls(lambda df: df.iloc[row_labels, col_labels])
+        new_obj = self.add_to_apply_calls(self._iloc, row_labels, col_labels)
 
         def try_recompute_cache(indices, previous_cache):
             """Compute new axis-length cache for the masked frame based on its previous cache."""
@@ -274,10 +298,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             The length of the object.
         """
         if self._length_cache is None:
-            cls = type(self)
-            func = cls._length_extraction_fn()
-            preprocessed_func = cls.preprocess_func(func)
-            self._length_cache = self.apply(preprocessed_func)
+            self._length_cache = self.apply(self._length_extraction_fn()).get()
         return self._length_cache
 
     def width(self):
@@ -290,10 +311,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             The width of the object.
         """
         if self._width_cache is None:
-            cls = type(self)
-            func = cls._width_extraction_fn()
-            preprocessed_func = cls.preprocess_func(func)
-            self._width_cache = self.apply(preprocessed_func)
+            self._width_cache = self.apply(self._width_extraction_fn()).get()
         return self._width_cache
 
     def split(self, split_func, num_splits, *args):

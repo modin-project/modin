@@ -70,7 +70,6 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
         ("from_dict", lambda df: {"data": None}),
         ("from_records", lambda df: {"data": to_pandas(df)}),
         ("hist", lambda df: {"column": "int_col"}),
-        ("infer_objects", None),
         ("interpolate", None),
         ("lookup", lambda df: {"row_labels": [0], "col_labels": ["int_col"]}),
         ("mask", lambda df: {"cond": df != 0}),
@@ -1038,8 +1037,8 @@ def test_truncate(data):
     after = modin_df.columns[-3]
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
@@ -1049,8 +1048,8 @@ def test_truncate(data):
     after = modin_df.columns[3]
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
@@ -1061,8 +1060,8 @@ def test_truncate(data):
     df_equals(modin_df.truncate(before, after), pandas_df.truncate(before, after))
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
@@ -1211,3 +1210,9 @@ def test_setattr_axes():
     # Check that ensure_index was called
     pandas.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
     pandas.testing.assert_index_equal(df.columns, pandas.Index([9, 10]))
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_attrs(data):
+    modin_df, pandas_df = create_test_dfs(data)
+    eval_general(modin_df, pandas_df, lambda df: df.attrs)

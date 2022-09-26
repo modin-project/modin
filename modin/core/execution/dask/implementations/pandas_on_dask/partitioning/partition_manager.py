@@ -18,7 +18,7 @@ from dask.distributed import wait
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
-from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
+from modin.core.execution.dask.common import DaskWrapper
 from .virtual_partition import (
     PandasOnDaskDataframeColumnPartition,
     PandasOnDaskDataframeRowPartition,
@@ -39,6 +39,8 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         """
         Get the objects wrapped by `partitions` in parallel.
 
+        This function assumes that each partition in `partitions` contains a single block.
+
         Parameters
         ----------
         partitions : np.ndarray
@@ -49,7 +51,12 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         list
             The objects wrapped by `partitions`.
         """
-        return DaskWrapper.materialize([partition._data for partition in partitions])
+        assert all(
+            [len(partition.list_of_blocks) == 1 for partition in partitions]
+        ), "Implementation assumes that each partition contains a signle block."
+        return DaskWrapper.materialize(
+            [partition.list_of_blocks[0] for partition in partitions]
+        )
 
     @classmethod
     def wait_partitions(cls, partitions):
@@ -63,4 +70,7 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         partitions : np.ndarray
             NumPy array with ``PandasDataframePartition``-s.
         """
-        wait([partition._data for partition in partitions], return_when="ALL_COMPLETED")
+        wait(
+            [block for partition in partitions for block in partition.list_of_blocks],
+            return_when="ALL_COMPLETED",
+        )

@@ -2,10 +2,10 @@
 # the repo unless a later match takes precedence,
 *    @modin-project/modin-core
 
-# These owners will review everything in the Omnisci engine component
+# These owners will review everything in the HDK engine component
 # of Modin.
-/modin/experimental/core/storage_formats/omnisci/**    @modin-project/modin-omnisci
-/modin/experimental/core/execution/native/implementations/omnisci_on_native/**    @modin-project/modin-omnisci
+/modin/experimental/core/storage_formats/hdk/**    @modin-project/modin-hdk
+/modin/experimental/core/execution/native/implementations/hdk_on_native/**    @modin-project/modin-hdk
 
 # These owners will review everything related to the xgboost implementation
 # in Modin

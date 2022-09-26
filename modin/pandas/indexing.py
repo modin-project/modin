@@ -374,7 +374,7 @@ class _LocationIndexerBase(ClassLogger):
             )
             col_lookup = None
 
-        qc_view = self.qc.view(row_lookup, col_lookup)
+        qc_view = self.qc.take_2d(row_lookup, col_lookup)
 
         if ndim == 2:
             return self.df.__constructor__(query_compiler=qc_view)

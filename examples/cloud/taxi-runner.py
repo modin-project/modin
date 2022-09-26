@@ -19,7 +19,7 @@
 
 import sys
 
-USE_OMNISCI = "--omnisci" in sys.argv
+USE_HDK = "--hdk" in sys.argv
 
 # the following import turns on experimental mode in Modin,
 # including enabling running things in remote cloud
@@ -29,8 +29,8 @@ from modin.experimental.cloud import create_cluster
 from taxi import run_benchmark as run_benchmark
 
 cluster_params = {}
-if USE_OMNISCI:
-    cluster_params["cluster_type"] = "omnisci"
+if USE_HDK:
+    cluster_params["cluster_type"] = "hdk"
 test_cluster = create_cluster(
     "aws",
     "aws_credentials",
@@ -41,27 +41,27 @@ test_cluster = create_cluster(
     **cluster_params,
 )
 with test_cluster:
-    if USE_OMNISCI:
+    if USE_HDK:
         from modin.experimental.cloud import get_connection
 
         # We should move omniscripts trigger in remote conext
         # https://github.com/intel-ai/omniscripts/blob/7d4599bcacf51de876952c658048571d32275ac1/taxi/taxibench_pandas_ibis.py#L482
-        import modin.experimental.engines.omnisci_on_native.frame.omnisci_worker
+        import modin.experimental.core.execution.native.implementations.hdk_on_native.hdk_worker
 
-        OmnisciServer = (
+        DbWorker = (
             get_connection()
-            .modules["modin.experimental.engines.omnisci_on_native.frame.omnisci_worker"]
-            .OmnisciServer
+            .modules["modin.experimental.engines.hdk_on_native.frame.db_worker"]
+            .DbWorker
         )
-        modin.experimental.engines.omnisci_on_native.frame.omnisci_worker.OmnisciServer = (
-            OmnisciServer
+        modin.experimental.core.execution.native.implementations.hdk_on_native.hdk_worker.DbWorker = (
+            DbWorker
         )
 
         # Omniscripts check for files being present when given local file paths,
         # so replace "glob" there with a remote one
-        import utils.utils
+        import utils
 
-        utils.utils.glob = get_connection().modules["glob"]
+        utils.glob = get_connection().modules["glob"]
 
     parameters = {
         "data_file": "s3://modin-datasets/cloud/taxi/trips_xaa.csv",
@@ -69,7 +69,7 @@ with test_cluster:
         "validation": False,
         "no_ibis": True,
         "no_pandas": False,
-        "pandas_mode": "Modin_on_omnisci" if USE_OMNISCI else "Modin_on_ray",
+        "pandas_mode": "Modin_on_hdk" if USE_HDK else "Modin_on_ray",
         "ray_tmpdir": "/tmp",
         "ray_memory": 1024 * 1024 * 1024,
     }

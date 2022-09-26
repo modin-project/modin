@@ -600,6 +600,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def pow(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.pow)(self, other=other, **kwargs)
 
+    @doc_utils.doc_binary_method(operation="addition", sign="+", self_on_right=True)
+    def radd(self, other, **kwargs):  # noqa: PR02
+        return BinaryDefault.register(pandas.DataFrame.radd)(
+            self, other=other, **kwargs
+        )
+
     @doc_utils.doc_binary_method(
         operation="integer division", sign="//", self_on_right=True
     )
@@ -1394,6 +1400,21 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.astype)(
             self, dtype=col_dtypes, **kwargs
         )
+
+    def infer_objects(self):
+        """
+        Attempt to infer better dtypes for object columns.
+
+        Attempts soft conversion of object-dtyped columns, leaving non-object
+        and unconvertible columns unchanged. The inference rules are the same
+        as during normal Series/DataFrame construction.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New query compiler with udpated dtypes.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.infer_objects)(self)
 
     def convert_dtypes(
         self,
@@ -2233,6 +2254,32 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             **kwargs,
         )
 
+    def apply_on_series(self, func, *args, **kwargs):
+        """
+        Apply passed function on underlying Series.
+
+        Parameters
+        ----------
+        func : callable(pandas.Series) -> scalar, str, list or dict of such
+            The function to apply to each row.
+        *args : iterable
+            Positional arguments to pass to `func`.
+        **kwargs : dict
+            Keyword arguments to pass to `func`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        assert self.is_series_like()
+
+        return SeriesDefault.register(pandas.Series.apply)(
+            self,
+            func=func,
+            *args,
+            **kwargs,
+        )
+
     def explode(self, column):
         """
         Explode the given columns.
@@ -3008,9 +3055,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return self.index if axis == 0 else self.columns
 
-    def view(self, index=None, columns=None):
+    def take_2d(self, index=None, columns=None):
         """
-        Mask QueryCompiler with passed keys.
+        Index QueryCompiler with passed keys.
 
         Parameters
         ----------
@@ -3027,10 +3074,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         index = slice(None) if index is None else index
         columns = slice(None) if columns is None else columns
 
-        def applyier(df):
+        def applyer(df):
             return df.iloc[index, columns]
 
-        return DataFrameDefault.register(applyier)(self)
+        return DataFrameDefault.register(applyer)(self)
 
     def insert_item(self, axis, loc, value, how="inner", replace=False):
         """
