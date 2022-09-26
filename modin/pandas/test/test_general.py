@@ -828,7 +828,11 @@ def test_series_to_timedelta(data):
     eval_general(pd, pandas, make_frame)
 
 
-def test_get():
+@pytest.mark.parametrize(
+    "key",
+    [["col1"], "col1", "col2"],
+    ids=["valid_list_of_string", "valid_string", "invalid_string"],
+)
+def test_get(key):
     modin_df, pandas_df = create_test_dfs({"col0": [0, 1]})
-    eval_general(modin_df, pandas_df, lambda df: df.get(["col0"]))
-    eval_general(modin_df, pandas_df, lambda df: df.get(["col1"]))
+    eval_general(modin_df, pandas_df, lambda df: df.get(key))
