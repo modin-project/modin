@@ -1328,9 +1328,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         Parameters
         ----------
-        unit : str
+        unit : str, default: "ns"
             Denotes the unit of the arg for numeric arg. Defaults to "ns".
-        errors : {"ignore", "raise", "coerce"}
+        errors : {"ignore", "raise", "coerce"}, default: "raise"
         *args : iterable
             Serves the compatibility purpose. Does not affect the result.
         **kwargs : dict
