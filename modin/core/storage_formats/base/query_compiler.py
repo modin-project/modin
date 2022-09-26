@@ -1322,7 +1322,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.add_one_column_warning
     @doc_utils.add_refer_to("to_timedelta")
-    def to_timedelta(self, *args, **kwargs):  # noqa: PR02
+    def to_timedelta(self, unit="ns", errors="raise", *args, **kwargs):  # noqa: PR02
         """
         Convert argument to timedelta.
 
@@ -1341,7 +1341,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             New QueryCompiler with converted to timedelta values.
         """
-        return SeriesDefault.register(pandas.to_timedelta)(self, *args, **kwargs)
+        return SeriesDefault.register(pandas.to_timedelta)(
+            self, unit=unit, errors=errors, *args, **kwargs
+        )
 
     # FIXME: get rid of `**kwargs` parameter (Modin issue #3108).
     @doc_utils.add_one_column_warning

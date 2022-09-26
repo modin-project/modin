@@ -1362,7 +1362,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     )
     to_timedelta = Map.register(
         lambda s, *args, **kwargs: pandas.to_timedelta(
-            s.squeeze(1), *args, **kwargs
+            s.squeeze(axis=1), *args, **kwargs
         ).to_frame(),
         dtypes="timedelta64[ns]",
     )

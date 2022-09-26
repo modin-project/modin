@@ -770,4 +770,7 @@ def to_timedelta(arg, unit=None, errors="raise"):  # noqa: PR01, RT01, D200
     if isinstance(arg, Series):
         query_compiler = arg._query_compiler.to_timedelta(unit=unit, errors=errors)
         return Series(query_compiler=query_compiler)
-    return pandas.to_timedelta(arg, unit=unit, errors=errors)
+    result = pandas.to_timedelta(arg, unit=unit, errors=errors)
+    if isinstance(result, pandas.Series):
+        return Series(result)
+    return result
