@@ -87,7 +87,10 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def to_pandas(self):
-        return self._service.to_pandas(self._id)
+        value = self._service.to_pandas(self._id)
+        if isinstance(value, Exception):
+            raise value
+        return value
 
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         raise NotImplementedError
