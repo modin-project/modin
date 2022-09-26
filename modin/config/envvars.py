@@ -132,7 +132,8 @@ class Engine(EnvironmentVariable, type=str):
         else:
             return "Native"
 
-        warnings.warn("No other engine was found so defaulting backend to Python.")
+        # If we can't import any other engines we should go ahead and default to Python being
+        # the default backend engine.
         return "Python"
 
 
