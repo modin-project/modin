@@ -748,7 +748,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         raise NotImplementedError
 
     def free(self):
-        raise NotImplementedError
+        return
 
     @classmethod
     def from_arrow(cls, at, data_cls):
