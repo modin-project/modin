@@ -118,7 +118,7 @@ class LatestCompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             as_index=as_index,
             sort=sort,
             group_keys=group_keys,
-            squeeze=False if squeeze is no_default else squeeze,
+            squeeze=squeeze,
             observed=observed,
             dropna=dropna,
         )
