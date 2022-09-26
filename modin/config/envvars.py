@@ -142,6 +142,7 @@ class Engine(EnvironmentVariable, type=str):
             pass
         else:
             return "Native"
+
         try:
             import unidist
 
@@ -155,9 +156,9 @@ class Engine(EnvironmentVariable, type=str):
                     + f"(>={MIN_UNIDIST_VERSION})."
                 )
             return "Unidist"
-        raise ImportError(
-            "Please refer to installation documentation page to install an engine"
-        )
+        # If we can't import any other engines we should go ahead and default to Python being
+        # the default backend engine.
+        return "Python"
 
     @classmethod
     @doc(Parameter.add_option.__doc__)
