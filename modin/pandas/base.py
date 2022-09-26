@@ -1230,6 +1230,10 @@ class BasePandasDataset(BasePandasDatasetCompat):
             elif axes[axis] is not None:
                 if not is_list_like(axes[axis]):
                     axes[axis] = [axes[axis]]
+                # In case of lazy execution we should bypass these error checking components
+                # because they can force the materialization of the row or column labels.
+                if self._query_compiler.lazy_execution:
+                    continue
                 if errors == "raise":
                     non_existent = pandas.Index(axes[axis]).difference(
                         getattr(self, axis)
