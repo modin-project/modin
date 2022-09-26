@@ -22,6 +22,8 @@ from modin.test.test_utils import warns_that_defaulting_to_pandas
 from pandas.testing import assert_frame_equal
 
 from .utils import (
+    create_test_dfs,
+    eval_general,
     test_data_values,
     test_data_keys,
     df_equals,
@@ -824,3 +826,9 @@ def test_series_to_timedelta(data):
         return lib.to_timedelta(series).to_frame(name="timedelta")
 
     eval_general(pd, pandas, make_frame)
+
+
+def test_get():
+    modin_df, pandas_df = create_test_dfs({"col0": [0, 1]})
+    eval_general(modin_df, pandas_df, lambda df: df.get(["col0"]))
+    eval_general(modin_df, pandas_df, lambda df: df.get(["col1"]))
