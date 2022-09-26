@@ -1977,15 +1977,19 @@ class Series(SeriesCompat, BasePandasDataset):
                 bins=bins,
                 dropna=dropna,
             )
-        counted_values = super(Series, self)._value_counts(
-            subset=self,
-            normalize=normalize,
-            sort=sort,
-            ascending=ascending,
-            dropna=dropna,
-        )
+        counted_values = self.groupby(by=self, dropna=dropna, observed=True).size()
         # pandas sets output index names to None because the Series name already contains it
         counted_values._query_compiler.set_index_name(None)
+        if sort:
+            counted_values.sort_values(ascending=ascending, inplace=True)
+        if normalize:
+            counted_values = counted_values / counted_values.sum()
+        # TODO: uncomment when strict compability mode will be implemented:
+        # https://github.com/modin-project/modin/issues/3411
+        # if STRICT_COMPABILITY and not isinstance(counted_values.index, MultiIndex):
+        #     counted_values.index = pandas.MultiIndex.from_arrays(
+        #         [counted_values.index], names=counted_values.index.names
+        #     )
         return counted_values
 
     def view(self, dtype=None):  # noqa: PR01, RT01, D200
