@@ -15,9 +15,12 @@
 
 import numpy as np
 import pandas
-from typing import Callable, Union
+from typing import Callable, Union, TYPE_CHECKING
 
 from modin.config import NPartitions
+
+if TYPE_CHECKING:
+    from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
 
 def build_sort_functions(
