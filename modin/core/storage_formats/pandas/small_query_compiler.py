@@ -446,16 +446,19 @@ class SmallQueryCompiler(BaseQueryCompiler):
         # else:
         #     return result
 
-    def _register_default_pandas(func):
+    def _register_default_pandas(func, is_series=False):
         def caller(query_compiler, broadcast=None, fold_axis=None, *args, **kwargs):
             print(func.__name__)
+            df = query_compiler._modin_frame
+            if is_series:
+                df = df.squeeze(axis=1)
             # exclude_names = ["broadcast", "fold_axis"]
             args = try_cast_to_pandas(args)
             # if "fold_axis" in kwargs:
             #     kwargs["axis"] = kwargs["fold_axis"]
             # kwargs = {k: v for k, v in kwargs.items() if k not in exclude_names}
             kwargs = try_cast_to_pandas(kwargs)
-            result = func(query_compiler._modin_frame, *args, **kwargs)
+            result = func(df, *args, **kwargs)
             if isinstance(result, pandas.Series):
                 if result.name is None:
                     result.name = "__reduced__"
@@ -469,11 +472,16 @@ class SmallQueryCompiler(BaseQueryCompiler):
     add = _register_default_pandas(pandas.DataFrame.add)
     all = _register_default_pandas(pandas.DataFrame.all)
     any = _register_default_pandas(pandas.DataFrame.any)
+    apply = _register_default_pandas(pandas.DataFrame.apply)
+    apply_on_series = _register_default_pandas(pandas.Series.apply, is_series=True)
     applymap = _register_default_pandas(pandas.DataFrame.applymap)
     astype = _register_default_pandas(pandas.DataFrame.astype)
+    cat_codes = _register_default_pandas(pandas.Series.cat.codes, is_series=True)
+    clip = _register_default_pandas(pandas.DataFrame.clip)
     combine = _register_default_pandas(pandas.DataFrame.combine)
     combine_first = _register_default_pandas(pandas.DataFrame.combine_first)
     # conj = _register_default_pandas(pandas.DataFrame.conj)
+    compare = _register_default_pandas(pandas.DataFrame.compare)
     convert_dtypes = _register_default_pandas(pandas.DataFrame.convert_dtypes)
     copy = _register_default_pandas(pandas.DataFrame.copy)
     count = _register_default_pandas(pandas.DataFrame.count)
@@ -700,6 +708,26 @@ class SmallQueryCompiler(BaseQueryCompiler):
     sum_min_count = _register_default_pandas(pandas.DataFrame.sum)
     truediv = _register_default_pandas(pandas.DataFrame.truediv)
     var = _register_default_pandas(pandas.DataFrame.var)
+
+    _add_prefix_df = _register_default_pandas(pandas.DataFrame.add_prefix)
+    _add_prefix_series = _register_default_pandas(
+        pandas.Series.add_prefix, is_series=True
+    )
+
+    def add_prefix(self, prefix, axis=1):
+        if axis:
+            return self._add_prefix_df(prefix=prefix)
+        return self._add_prefix_series(prefix=prefix)
+
+    _add_suffix_df = _register_default_pandas(pandas.DataFrame.add_suffix)
+    _add_suffix_series = _register_default_pandas(
+        pandas.Series.add_suffix, is_series=True
+    )
+
+    def add_suffix(self, suffix, axis=1):
+        if axis:
+            return self._add_suffix_df(suffix=suffix)
+        return self._add_suffix_series(suffix=suffix)
 
     def to_pandas(self):
         return self._modin_frame
