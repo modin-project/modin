@@ -11,6 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+# We turn off mypy type checks in this file because it's not imported anywhere
+# type: ignore
+
 import os
 import sys
 import pytest
