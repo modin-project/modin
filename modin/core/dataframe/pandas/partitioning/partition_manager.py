@@ -1488,14 +1488,14 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             A list of row-partitions that have been shuffled.
         """
         # Sample each partition
-        ptn_and_samples = cls.map_axis_partitions(
+        samples = cls.map_axis_partitions(
             1, partitions, sample_func, lengths=[None]
-        ).T
-        # Get row partitions from the samples
-        row_partitions = ptn_and_samples[0]
+        )
         # Get each sample to pass in to the pivot function
-        samples = [sample.get() for sample in ptn_and_samples[1]]
+        samples = [sample.get() for sample in samples.flatten()]
         pivots = pivot_func(samples)
+        # Convert our list of block partitions to row partitions
+        row_partitions = [partition.force_materialization().list_of_block_partitions[0] for partition in cls.row_partitions(partitions)]
         # Gather together all of the sub-partitions
         split_row_partitions = np.array(
             [

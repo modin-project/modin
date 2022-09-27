@@ -118,8 +118,8 @@ def get_partition_quantiles_for_sort(
 
     Returns
     -------
-    pandas.Dataframe, np.ndarray:
-        The partition that was provided as input, as well as the quantiles for the partition.
+    np.ndarray:
+        The quantiles for the partition.
 
     Notes
     -----
@@ -128,11 +128,11 @@ def get_partition_quantiles_for_sort(
     quantiles = [i / (NPartitions.get() * 2) for i in range(NPartitions.get() * 2)]
     # Heuristic for a "small" df we will compute quantiles over entirety of.
     if len(df) <= A:
-        return df, np.quantile(df[columns[0]], quantiles, method=method)
+        return np.quantile(df[columns[0]], quantiles, method=method)
     # Heuristic for a "medium" df where we will include first 100 (A) rows, and sample
     # of remaining rows when computing quantiles.
     if len(df) <= (A * (1 - k)) / (q - k):
-        return df, np.quantile(
+        return np.quantile(
             np.concatenate(
                 (
                     df[columns[0]][:100].values,
@@ -144,7 +144,7 @@ def get_partition_quantiles_for_sort(
         )
     # Heuristic for a "large" df where we will sample 10% (q) of all rows to compute quantiles
     # over.
-    return df, np.quantile(df[columns[0]].sample(frac=q), quantiles, method=method)
+    return np.quantile(df[columns[0]].sample(frac=q), quantiles, method=method)
 
 
 def pick_pivots_from_quantiles_for_sort(

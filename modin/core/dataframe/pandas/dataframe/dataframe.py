@@ -1981,7 +1981,7 @@ class PandasDataframe(ClassLogger):
             else:
                 new_axes[axis.value] = self._compute_axis_labels_and_lengths(
                     axis.value, new_partitions
-                )
+                )[0]
             if isinstance(self.axes[axis.value], pandas.MultiIndex):
                 new_axes[axis.value] = pandas.MultiIndex.from_tuples(
                     new_axes[axis.value].values
@@ -1991,7 +1991,7 @@ class PandasDataframe(ClassLogger):
             )
             new_axes[axis.value ^ 1] = self.axes[axis.value ^ 1]
             new_lengths = [None, None]
-            new_partitions = self._partition_mgr_cls.rebalance_partitions(
+            new_partitions, new_lengths[axis.value] = self._partition_mgr_cls.rebalance_partitions(
                 new_partitions
             )
             new_modin_frame = self.__constructor__(
