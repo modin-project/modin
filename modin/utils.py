@@ -41,7 +41,7 @@ import pandas
 import numpy as np
 
 from pandas.util._decorators import Appender
-from pandas.util._print_versions import _get_sys_info, _get_dependency_info  # type: ignore
+from pandas.util._print_versions import _get_sys_info, _get_dependency_info  # type: ignore[attr-defined]
 from pandas._typing import JSONSerializable
 
 from modin.config import Engine, StorageFormat, IsExperimental
@@ -302,11 +302,11 @@ def _replace_doc(
 
     if parent_cls and not attr_name:
         if isinstance(target_obj, property):
-            attr_name = target_obj.fget.__name__  # type: ignore
+            attr_name = target_obj.fget.__name__  # type: ignore[union-attr]
         elif isinstance(target_obj, (staticmethod, classmethod)):
             attr_name = target_obj.__func__.__name__
         else:
-            attr_name = target_obj.__name__  # type: ignore
+            attr_name = target_obj.__name__  # type: ignore[attr-defined]
 
     if (
         source_doc.strip()
@@ -337,7 +337,7 @@ def _replace_doc(
 
     if parent_cls and isinstance(target_obj, property):
         if overwrite:
-            target_obj.fget.__doc_inherited__ = True  # type: ignore
+            target_obj.fget.__doc_inherited__ = True  # type: ignore[union-attr]
         assert attr_name is not None
         setattr(
             parent_cls,
@@ -346,7 +346,7 @@ def _replace_doc(
         )
     else:
         if overwrite:
-            target_obj.__doc_inherited__ = True  # type: ignore
+            target_obj.__doc_inherited__ = True  # type: ignore[attr-defined]
         target_obj.__doc__ = doc
 
 
@@ -403,7 +403,7 @@ def _inherit_docstrings(
 
         if not isinstance(cls_or_func, types.FunctionType):
             seen = set()
-            for base in cls_or_func.__mro__:  # type: ignore
+            for base in cls_or_func.__mro__:  # type: ignore[attr-defined]
                 if base is object:
                     continue
                 for attr, obj in base.__dict__.items():

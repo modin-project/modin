@@ -102,7 +102,7 @@ def run_command(
             break
         except EnvironmentError:
             e = sys.exc_info()[1]
-            if e.errno == errno.ENOENT:  # type: ignore
+            if e.errno == errno.ENOENT:  # type: ignore[union-attr]
                 continue
             if verbose:
                 print("unable to run %s" % dispcmd)
