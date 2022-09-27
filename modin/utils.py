@@ -55,18 +55,19 @@ Fn = TypeVar("Fn", bound=Callable)
 
 
 @runtime_checkable
-class SupportsPrivateToPandas(Protocol):
+class SupportsPrivateToPandas(Protocol):  # noqa: PR01
     """Structural type for objects with a ``_to_pandas`` method (note the leading underscore)."""
 
-    def _to_pandas(self) -> Any:  # TODO add proper return type
+    def _to_pandas(self) -> Any:  # noqa: GL08
+        # TODO add proper return type
         pass
 
 
 @runtime_checkable
-class SupportsPublicToPandas(Protocol):
+class SupportsPublicToPandas(Protocol):  # noqa: PR01
     """Structural type for objects with a ``to_pandas`` method (without a leading underscore)."""
 
-    def to_pandas(self) -> Any:
+    def to_pandas(self) -> Any:  # noqa: GL08
         pass
 
 
