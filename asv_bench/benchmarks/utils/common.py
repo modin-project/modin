@@ -496,7 +496,7 @@ def execute(
             df._query_compiler._modin_frame._execute()
             return
         partitions = df._query_compiler._modin_frame._partitions.flatten()
-        if hasattr(partitions[0], "wait"):
+        if len(partitions) > 0 and hasattr(partitions[0], "wait"):
             all(map(lambda partition: partition.wait(), partitions))
             return
 
