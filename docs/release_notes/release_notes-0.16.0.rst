@@ -50,6 +50,7 @@ Key Features and Updates
   * FIX-#4734: Handle Series.apply when return type is a DataFrame (#4830)
   * FIX-#4983: Set `frac` to `None` in _sample when `n=0` (#4984)
   * FIX-#4993: Return `_default_to_pandas` in `df.attrs` (#4995)
+  * FIX-#5043: Fix `execute` function in ASV utils failed if `len(partitions) == 0` (#5044)
   * FIX-#4597: Refactor Partition handling of func, args, kwargs (#4715)
   * FIX-#4996: Evaluate BenchmarkMode at each function call (#4997)
   * FIX-#4022: Fixed empty data frame with index (#4910)
