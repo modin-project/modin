@@ -2020,6 +2020,11 @@ class PandasDataframe(ClassLogger):
         # column partitions, and sort each by their index in parallel, which should be faster than
         # shuffling our data and sorting.
         elif axis == Axis.ROW_WISE and len(columns) == 1 and columns[0] == "__index__":
+            sort_kwargs = {}
+            if "na_position" in kwargs:
+                sort_kwargs["na_position"] = kwargs["na_position"]
+            if "key" in kwargs:
+                sort_kwargs["key"] = kwargs["key"]
             new_partitions = self._partition_mgr_cls.map_axis_partitions(
                 axis.value,
                 self._partitions,
@@ -2027,10 +2032,7 @@ class PandasDataframe(ClassLogger):
             )
             new_axes = self.axes
             new_axes[axis.value] = self.axes[axis.value].sort_values(
-                ascending=ascending,
-                return_indexer=False,
-                na_position=kwargs.pop("na_position", "last"),
-                key=kwargs.pop("key", None),
+                ascending=ascending, return_indexer=False, **sort_kwargs
             )
             new_axes[axis.value ^ 1] = self.axes[axis.value ^ 1]
             new_lengths = [None, None]

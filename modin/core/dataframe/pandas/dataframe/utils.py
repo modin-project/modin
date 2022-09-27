@@ -75,6 +75,45 @@ def build_sort_functions(
     }
 
 
+def _find_quantiles(df: pandas.DataFrame, quantiles: list, method: str) -> np.ndarray:
+    """
+    Find quantiles of a given dataframe using the specified method.
+
+    We use this method to provide backwards compatibility with NumPy versions < 1.23 (e.g. when
+    the user is using Modin in compat mode). This is basically a wrapper around `np.quantile` that
+    ensures we provide the correct `method` argument - i.e. if we are dealing with objects (which
+    may or may not support algebra), we do not want to use a method to find quantiles that will
+    involve algebra operations (e.g. mean) between the objects, since that may fail.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The dataframe to pick quantiles from.
+    quantiles : list[float]
+        The quantiles to compute.
+    method : str
+        The method to use. `linear` if dealing with numeric types, otherwise `inverted_cdf`.
+
+    Returns
+    -------
+    np.ndarray
+        A NumPy array with the quantiles of the data.
+    """
+    if method == "linear":
+        # This is the default method for finding quantiles, so it does not need to be specified,
+        # which keeps backwards compatibility with older versions of NumPy that do not have a
+        # `method` keyword argument in np.quantile.
+        return np.quantile(df, quantiles)
+    else:
+        try:
+            return np.quantile(df, quantiles, method=method)
+        except Exception:
+            # In this case, we're dealing with an array of objects, but the current version of
+            # NumPy does not have a `method` kwarg. We need to use the older kwarg, `interpolation`
+            # instead.
+            return np.quantile(df, quantiles, interpolation="lower")
+
+
 def get_partition_quantiles_for_sort(
     df: pandas.DataFrame,
     columns: list,
@@ -82,7 +121,7 @@ def get_partition_quantiles_for_sort(
     k: float = 0.05,
     q: float = 0.1,
     method: str = "linear",
-) -> "tuple[pandas.DataFrame, np.ndarray]":
+) -> np.ndarray:
     """
     Pick quantiles over the given partition.
 
@@ -128,11 +167,11 @@ def get_partition_quantiles_for_sort(
     quantiles = [i / (NPartitions.get() * 2) for i in range(NPartitions.get() * 2)]
     # Heuristic for a "small" df we will compute quantiles over entirety of.
     if len(df) <= A:
-        return np.quantile(df[columns[0]], quantiles, method=method)
+        return _find_quantiles(df[columns[0]], quantiles, method)
     # Heuristic for a "medium" df where we will include first 100 (A) rows, and sample
     # of remaining rows when computing quantiles.
     if len(df) <= (A * (1 - k)) / (q - k):
-        return np.quantile(
+        return _find_quantiles(
             np.concatenate(
                 (
                     df[columns[0]][:100].values,
@@ -140,11 +179,11 @@ def get_partition_quantiles_for_sort(
                 )
             ),
             quantiles,
-            method=method,
+            method,
         )
     # Heuristic for a "large" df where we will sample 10% (q) of all rows to compute quantiles
     # over.
-    return np.quantile(df[columns[0]].sample(frac=q), quantiles, method=method)
+    return _find_quantiles(df[columns[0]].sample(frac=q), quantiles, method)
 
 
 def pick_pivots_from_quantiles_for_sort(
@@ -178,8 +217,10 @@ def pick_pivots_from_quantiles_for_sort(
     # partition's samples, this is probably an indicator of skew in the dataset, and we
     # want our final partitions to take this into account.
     all_pivots = np.array(samples).flatten()
-    quantiles = [i / (NPartitions.get() * 2) for i in range(NPartitions.get() * 2)]
-    overall_quantiles = np.quantile(all_pivots, quantiles, method=method)
+    # We don't want to pick very many quantiles if we have a very small dataframe.
+    num_quantiles = len(df._partitions) * 2
+    quantiles = [i / num_quantiles for i in range(num_quantiles)]
+    overall_quantiles = _find_quantiles(all_pivots, quantiles, method)
     if df.dtypes[columns[0]] != object:
         overall_quantiles[0] = np.NINF
         overall_quantiles[-1] = np.inf
