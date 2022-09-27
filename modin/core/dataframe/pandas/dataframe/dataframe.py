@@ -20,6 +20,7 @@ for pandas storage format.
 from collections import OrderedDict
 import numpy as np
 import datetime
+import inspect
 import pandas
 from pandas.api.types import is_object_dtype
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
@@ -2021,7 +2022,11 @@ class PandasDataframe(ClassLogger):
         # shuffling our data and sorting.
         elif axis == Axis.ROW_WISE and len(columns) == 1 and columns[0] == "__index__":
             sort_kwargs = {}
-            if "na_position" in kwargs:
+            if (
+                "na_position" in kwargs
+                and "na_position"
+                in inspect.signature(pandas.Index.sort_values).parameters
+            ):
                 sort_kwargs["na_position"] = kwargs["na_position"]
             if "key" in kwargs:
                 sort_kwargs["key"] = kwargs["key"]
