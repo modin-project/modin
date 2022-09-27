@@ -1952,10 +1952,12 @@ class PandasDataframe(ClassLogger):
         # of the column, and the name of the index, since resetting our index name hasn't been
         # propagated yet. This causes an error, so we need to ensure that our index names are
         # propagated here before doing our sort.
+
         def sort_function(df):
             if df.index.names != self.index.name:
                 df.index = df.index.set_names(self.index.names)
             return df.sort_values(by=columns, ascending=ascending, **kwargs)
+
         axis = Axis(axis)
         # This if selects cases where we are either sorting by a single column that is not
         # the index, or we are sorting by multiple columns, since in this case, we will have to
