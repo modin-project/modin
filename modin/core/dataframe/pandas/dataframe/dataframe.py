@@ -1944,6 +1944,14 @@ class PandasDataframe(ClassLogger):
         """
         if not isinstance(columns, list):
             columns = [columns]
+        # Sometimes, when we rename an index, the new name is not propagated to all partitions. This
+        # can lead to an issue where we are trying to sort by an ambiguous label. Say we are doing
+        # a `value_count` on a Series. The index of the `value_count` object should be changed from
+        # the Series' name to None, but this may not be propagated to the partitions, so when we
+        # try and sort the Series, our `by` argument is the name of the Series, which is the name
+        # of the column, and the name of the index, since resetting our index name hasn't been
+        # propagated yet. This causes an error, so we need to ensure that our index names are
+        # propagated here before doing our sort.
         def sort_function(df):
             if df.index.names != self.index.name:
                 df.index = df.index.set_names(self.index.names)
