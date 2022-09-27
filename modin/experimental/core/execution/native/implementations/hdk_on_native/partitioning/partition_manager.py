@@ -74,33 +74,30 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
             Tuple holding array of partitions, list of columns with unsupported
             data and optionally partitions' dimensions.
         """
-
-        def tuple_wrapper(obj):
-            """
-            Wrap non-tuple object into a tuple.
-
-            Parameters
-            ----------
-            obj : Any.
-                Wrapped object.
-
-            Returns
-            -------
-            tuple
-            """
-            if not isinstance(obj, tuple):
-                obj = (obj,)
-            return obj
-
-        if df.empty:
-            return (*tuple_wrapper(super().from_pandas(df, return_dims)), [])
-
         at, unsupported_cols = cls._get_unsupported_cols(df)
 
         if len(unsupported_cols) > 0:
             # Putting pandas frame into partitions instead of arrow table, because we know
             # that all of operations with this frame will be default to pandas and don't want
             # unnecessaries conversion pandas->arrow->pandas
+
+            def tuple_wrapper(obj):
+                """
+                Wrap non-tuple object into a tuple.
+
+                Parameters
+                ----------
+                obj : Any.
+                    Wrapped object.
+
+                Returns
+                -------
+                tuple
+                """
+                if not isinstance(obj, tuple):
+                    obj = (obj,)
+                return obj
+
             return (
                 *tuple_wrapper(super().from_pandas(df, return_dims)),
                 unsupported_cols,
@@ -163,21 +160,24 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         if isinstance(obj, (pandas.Series, pandas.DataFrame)):
             # picking first rows from cols with `dtype="object"` to check its actual type,
             # in case of homogen columns that saves us unnecessary convertion to arrow table
-            cols = [name for name, col in obj.dtypes.items() if col == "object"]
-            type_samples = obj.iloc[0][cols]
 
-            unsupported_cols = [
-                name
-                for name, col in type_samples.items()
-                if not isinstance(col, str)
-                and not (is_scalar(col) and pandas.isna(col))
-            ]
+            if obj.empty:
+                unsupported_cols = []
+            else:
+                cols = [name for name, col in obj.dtypes.items() if col == "object"]
+                type_samples = obj.iloc[0][cols]
+                unsupported_cols = [
+                    name
+                    for name, col in type_samples.items()
+                    if not isinstance(col, str)
+                    and not (is_scalar(col) and pandas.isna(col))
+                ]
 
             if len(unsupported_cols) > 0:
                 return None, unsupported_cols
 
             try:
-                at = pyarrow.Table.from_pandas(obj)
+                at = pyarrow.Table.from_pandas(obj, preserve_index=False)
             except (pyarrow.lib.ArrowTypeError, pyarrow.lib.ArrowInvalid) as err:
                 regex = r"Conversion failed for column ([^\W]*)"
                 unsupported_cols = []
@@ -197,6 +197,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                 pyarrow.types.is_string(dtype)
                 or pyarrow.types.is_time(dtype)
                 or pyarrow.types.is_dictionary(dtype)
+                or pyarrow.types.is_null(dtype)
             ):
                 return True
             try:
