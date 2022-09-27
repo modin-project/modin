@@ -1944,6 +1944,10 @@ class PandasDataframe(ClassLogger):
         """
         if not isinstance(columns, list):
             columns = [columns]
+        def sort_function(df):
+            if df.index.names != self.index.name:
+                df.index = df.index.set_names(self.index.names)
+            return df.sort_values(by=columns, ascending=ascending, **kwargs)
         axis = Axis(axis)
         # This if selects cases where we are either sorting by a single column that is not
         # the index, or we are sorting by multiple columns, since in this case, we will have to
@@ -1973,7 +1977,7 @@ class PandasDataframe(ClassLogger):
             )
             new_partitions = self._partition_mgr_cls.lazy_map_partitions(
                 new_partitions,
-                lambda df: df.sort_values(by=columns, ascending=ascending, **kwargs),
+                sort_function,
             )
             new_axes = self.axes
             if kwargs.get("ignore_index", False):
