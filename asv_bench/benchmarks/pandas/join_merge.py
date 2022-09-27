@@ -1,5 +1,3 @@
-import string
-
 import numpy as np
 
 from modin.pandas import (
@@ -179,4 +177,4 @@ class MergeCategoricals:
         merge(self.left_cat, self.right_cat, on="X")
 
 
-from .pandas_vb_common import setup  # noqa: F401 isort:skip
+from .pandas_vb_common import setup  # noqa: E402, F401
