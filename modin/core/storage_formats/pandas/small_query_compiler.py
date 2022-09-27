@@ -18,11 +18,14 @@ Module contains ``SmallQueryCompiler`` class.
 queries for small data and empty ``PandasDataFrame``.
 """
 
+import numpy as np
 import pandas
 from pandas.core.indexes.api import ensure_index_from_sequences
+from pandas.core.dtypes.common import is_list_like
 from typing import List, Hashable
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 from modin.utils import (
     _inherit_docstrings,
@@ -423,7 +426,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
 
     def __init__(self, modin_frame):
         self._modin_frame = modin_frame
-        print("THERES SOMETHING HERE")
 
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         # type(self) might not work
@@ -468,6 +470,34 @@ class SmallQueryCompiler(BaseQueryCompiler):
 
         return caller
 
+    # __and__
+    # __class__
+    # __delattr__
+    # __dir__
+    # __eq__
+    # __format__
+    # __ge__
+    # __getattribute__
+    # __gt__
+    # __hash__
+    # __init__
+    # __init_subclass__
+    # __le__
+    # __lt__
+    # __ne__
+    # __new__
+    # __or__
+    # __rand__
+    # __reduce__
+    # __reduce_ex__
+    # __repr__
+    # __ror__
+    # __rxor__
+    # __setattr__
+    # __sizeof__
+    # __str__
+    # __subclasshook__
+    # __xor__
     abs = _register_default_pandas(pandas.DataFrame.abs)
     add = _register_default_pandas(pandas.DataFrame.add)
     all = _register_default_pandas(pandas.DataFrame.all)
@@ -482,15 +512,22 @@ class SmallQueryCompiler(BaseQueryCompiler):
     combine_first = _register_default_pandas(pandas.DataFrame.combine_first)
     # conj = _register_default_pandas(pandas.DataFrame.conj)
     compare = _register_default_pandas(pandas.DataFrame.compare)
+    conj = _register_default_pandas(
+        lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df))
+    )
     convert_dtypes = _register_default_pandas(pandas.DataFrame.convert_dtypes)
     copy = _register_default_pandas(pandas.DataFrame.copy)
     count = _register_default_pandas(pandas.DataFrame.count)
+    corr = _register_default_pandas(pandas.DataFrame.corr)
+    cov = _register_default_pandas(pandas.DataFrame.cov)
     cummax = _register_default_pandas(pandas.DataFrame.cummax)
     cummin = _register_default_pandas(pandas.DataFrame.cummin)
     cumprod = _register_default_pandas(pandas.DataFrame.cumprod)
     cumsum = _register_default_pandas(pandas.DataFrame.cumsum)
-    # df_update = _register_default_pandas(pandas.DataFrame.df_update)
+    describe = _register_default_pandas(pandas.DataFrame.describe)
+    # df_update = _register_default_pandas(pandas.DataFrame.update)
     diff = _register_default_pandas(pandas.DataFrame.diff)
+    dropna = _register_default_pandas(pandas.DataFrame.dropna)  # axis values switched?
     dt_ceil = _register_default_pandas(_dt_func_map("ceil"))
     # dt_components ?
     dt_date = _register_default_pandas(_dt_prop_map("date"))
@@ -542,7 +579,10 @@ class SmallQueryCompiler(BaseQueryCompiler):
     dt_weekofyear = _register_default_pandas(_dt_prop_map("weekofyear"))
     dt_year = _register_default_pandas(_dt_prop_map("year"))
     eq = _register_default_pandas(pandas.DataFrame.eq)
+    eval = _register_default_pandas(pandas.DataFrame.eval)
     explode = _register_default_pandas(pandas.DataFrame.explode)
+    fillna = _register_default_pandas(pandas.DataFrame.fillna)
+    first_valid_index = _register_default_pandas(pandas.DataFrame.first_valid_index)
     floordiv = _register_default_pandas(pandas.DataFrame.floordiv)
     ge = _register_default_pandas(pandas.DataFrame.ge)
     # groupby_agg
@@ -572,6 +612,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     gt = _register_default_pandas(pandas.DataFrame.gt)
     idxmax = _register_default_pandas(pandas.DataFrame.idxmax)
     idxmin = _register_default_pandas(pandas.DataFrame.idxmin)
+    insert = _register_default_pandas(pandas.DataFrame.insert)
     invert = _register_default_pandas(pandas.DataFrame.__invert__)
     # is_monotonic_decreasing = _register_default_pandas(
     #     pandas.DataFrame.is_monotonic_decreasing
@@ -581,25 +622,39 @@ class SmallQueryCompiler(BaseQueryCompiler):
     # )
     isin = _register_default_pandas(pandas.DataFrame.isin)
     isna = _register_default_pandas(pandas.DataFrame.isna)
+    join = _register_default_pandas(pandas.DataFrame.join)
     kurt = _register_default_pandas(pandas.DataFrame.kurt)
+    last_valid_index = _register_default_pandas(pandas.DataFrame.last_valid_index)
     le = _register_default_pandas(pandas.DataFrame.le)
     lt = _register_default_pandas(pandas.DataFrame.lt)
     mad = _register_default_pandas(pandas.DataFrame.mad)
     max = _register_default_pandas(pandas.DataFrame.max)
     mean = _register_default_pandas(pandas.DataFrame.mean)
     median = _register_default_pandas(pandas.DataFrame.median)
+    melt = _register_default_pandas(pandas.DataFrame.melt)
     memory_usage = _register_default_pandas(pandas.DataFrame.memory_usage)
+    merge = _register_default_pandas(pandas.DataFrame.merge)
     min = _register_default_pandas(pandas.DataFrame.min)
     mod = _register_default_pandas(pandas.DataFrame.mod)
     mode = _register_default_pandas(pandas.DataFrame.mode)
     mul = _register_default_pandas(pandas.DataFrame.mul)
     ne = _register_default_pandas(pandas.DataFrame.ne)
     negative = _register_default_pandas(pandas.DataFrame.__neg__)
+    nlargest = _register_default_pandas(pandas.DataFrame.nlargest)
     notna = _register_default_pandas(pandas.DataFrame.notna)
+    nsmallest = _register_default_pandas(pandas.DataFrame.nsmallest)
+    nunique = _register_default_pandas(pandas.DataFrame.nunique)
+    pivot = _register_default_pandas(pandas.DataFrame.pivot)
+    pivot_table = _register_default_pandas(pandas.DataFrame.pivot_table)
     pow = _register_default_pandas(pandas.DataFrame.pow)
     prod = _register_default_pandas(pandas.DataFrame.prod)
     prod_min_count = _register_default_pandas(pandas.DataFrame.prod)
+    # quantile_for_list_of_values = _register_default_pandas(pandas.DataFrame.quantile_for_list_of_values)
+    quantile_for_single_value = _register_default_pandas(pandas.DataFrame.quantile)
+    query = _register_default_pandas(pandas.DataFrame.query)
     radd = _register_default_pandas(pandas.DataFrame.radd)
+    rank = _register_default_pandas(pandas.DataFrame.rank)
+    repeat = _register_default_pandas(pandas.Series.repeat, is_series=True)
     replace = _register_default_pandas(pandas.DataFrame.replace)
     resample_agg_df = _register_default_pandas(_resample_agg_df)
     resample_agg_ser = _register_default_pandas(_resample_agg_ser)
@@ -653,7 +708,10 @@ class SmallQueryCompiler(BaseQueryCompiler):
     round = _register_default_pandas(pandas.DataFrame.round)
     rsub = _register_default_pandas(pandas.DataFrame.rsub)
     rtruediv = _register_default_pandas(pandas.DataFrame.rtruediv)
+    searchsorted = _register_default_pandas(pandas.Series.searchsorted, is_series=True)
     sem = _register_default_pandas(pandas.DataFrame.sem)
+    # series_update = _register_default_pandas(pandas.Series.update, is_series=True)
+    series_view = _register_default_pandas(pandas.Series.view, is_series=True)
     skew = _register_default_pandas(pandas.DataFrame.skew)
     std = _register_default_pandas(pandas.DataFrame.std)
     str___getitem__ = _register_default_pandas(_str_map("__getitem__"))
@@ -706,8 +764,12 @@ class SmallQueryCompiler(BaseQueryCompiler):
     sub = _register_default_pandas(pandas.DataFrame.sub)
     sum = _register_default_pandas(pandas.DataFrame.sum)
     sum_min_count = _register_default_pandas(pandas.DataFrame.sum)
+    transpose = _register_default_pandas(pandas.DataFrame.transpose)
     truediv = _register_default_pandas(pandas.DataFrame.truediv)
+    unique = _register_default_pandas(pandas.Series.unique, is_series=True)
+    unstack = _register_default_pandas(pandas.DataFrame.unstack)
     var = _register_default_pandas(pandas.DataFrame.var)
+    where = _register_default_pandas(pandas.DataFrame.where)
 
     _add_prefix_df = _register_default_pandas(pandas.DataFrame.add_prefix)
     _add_prefix_series = _register_default_pandas(
@@ -728,6 +790,67 @@ class SmallQueryCompiler(BaseQueryCompiler):
         if axis:
             return self._add_suffix_df(suffix=suffix)
         return self._add_suffix_series(suffix=suffix)
+
+    def concat(self, axis, other, **kwargs):
+        other = try_cast_to_pandas(other)
+        result = self._modin_frame.concat(other, axis, **kwargs)
+        if isinstance(result, pandas.Series):
+            if result.name is None:
+                result.name = "__reduced__"
+            result = result.to_frame()
+        return self.__constructor__(result)
+
+    def dot(self, other, squeeze_self=None, squeeze_other=None):
+        if isinstance(other, PandasQueryCompiler) or isinstance(
+            other, SmallQueryCompiler
+        ):
+            other = (
+                other.to_pandas().squeeze(axis=1)
+                if squeeze_other
+                else other.to_pandas()
+            )
+        if squeeze_self:
+            result = self._modin_frame.squeeze(axis=1).dot(other)
+        else:
+            self._modin_frame.dot(other)
+        if is_list_like(result):
+            result = pandas.DataFrame(result)
+        else:
+            result = pandas.DataFrame([result])
+
+        return self.__constructor__(result)
+
+    def drop(self, index=None, columns=None):
+        result = self._modin_frame.drop(index=index, columns=columns)
+        return self.__constructor__(result)
+
+    def finalize(self):
+        pass
+
+    def get_axis(self, axis):
+        return self._modin_frame.index if axis == 0 else self._modin_frame.columns
+
+    def get_dummies(self, columns, **kwargs):
+        return pandas.get_dummies(self._modin_frame, columns=columns, **kwargs)
+
+    def get_index_name(self, axis=0):
+        return self.get_axis(axis).name
+
+    def get_index_names(self, axis=0):
+        return self.get_axis(axis).names
+
+    def has_multiindex(self, axis=0):
+        if axis == 0:
+            return isinstance(self._modin_frame.index, pandas.MultiIndex)
+        assert axis == 1
+        return isinstance(self._modin_frame.columns, pandas.MultiIndex)
+
+    def infer_objects(self):
+        return self
+
+    def insert_item(self, *args, **kwargs):
+        print("Not implemented")
+        return
 
     def to_pandas(self):
         return self._modin_frame
@@ -772,13 +895,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
 
     # END Index, columns, and dtypes objects
 
-    # Metadata modification methods
-    def add_prefix(self, prefix, axis=1):
-        return self.__constructor__(self._modin_frame.add_prefix(prefix, axis))
-
-    def add_suffix(self, suffix, axis=1):
-        return self.__constructor__(self._modin_frame.add_suffix(suffix, axis))
-
     # END Metadata modification methods
     def getitem_column_array(self, key, numeric=False):
         # Convert to list for type checking
@@ -812,138 +928,138 @@ class SmallQueryCompiler(BaseQueryCompiler):
             return SmallQueryCompiler(self._modin_frame.transpose())
         return self
 
-    def reset_index(self, **kwargs):
-        drop = kwargs.get("drop", False)
-        level = kwargs.get("level", None)
-        new_index = None
-        if level is not None:
-            if not isinstance(level, (tuple, list)):
-                level = [level]
-            level = [self.index._get_level_number(lev) for lev in level]
-            uniq_sorted_level = sorted(set(level))
-            if len(uniq_sorted_level) < self.index.nlevels:
-                # We handle this by separately computing the index. We could just
-                # put the labels into the data and pull them back out, but that is
-                # expensive.
-                new_index = (
-                    self.index.droplevel(uniq_sorted_level)
-                    if len(level) < self.index.nlevels
-                    else pandas.RangeIndex(len(self.index))
-                )
-        else:
-            uniq_sorted_level = list(range(self.index.nlevels))
+    # def reset_index(self, **kwargs):
+    #     drop = kwargs.get("drop", False)
+    #     level = kwargs.get("level", None)
+    #     new_index = None
+    #     if level is not None:
+    #         if not isinstance(level, (tuple, list)):
+    #             level = [level]
+    #         level = [self.index._get_level_number(lev) for lev in level]
+    #         uniq_sorted_level = sorted(set(level))
+    #         if len(uniq_sorted_level) < self.index.nlevels:
+    #             # We handle this by separately computing the index. We could just
+    #             # put the labels into the data and pull them back out, but that is
+    #             # expensive.
+    #             new_index = (
+    #                 self.index.droplevel(uniq_sorted_level)
+    #                 if len(level) < self.index.nlevels
+    #                 else pandas.RangeIndex(len(self.index))
+    #             )
+    #     else:
+    #         uniq_sorted_level = list(range(self.index.nlevels))
 
-        if not drop:
-            if len(uniq_sorted_level) < self.index.nlevels:
-                # These are the index levels that will remain after the reset_index
-                keep_levels = [
-                    i for i in range(self.index.nlevels) if i not in uniq_sorted_level
-                ]
-                new_copy = self.copy()
-                # Change the index to have only the levels that will be inserted
-                # into the data. We will replace the old levels later.
-                new_copy.index = self.index.droplevel(keep_levels)
-                new_copy.index.names = [
-                    "level_{}".format(level_value)
-                    if new_copy.index.names[level_index] is None
-                    else new_copy.index.names[level_index]
-                    for level_index, level_value in enumerate(uniq_sorted_level)
-                ]
-                new_modin_frame = new_copy._modin_frame.from_labels()
-                # Replace the levels that will remain as a part of the index.
-                new_modin_frame.index = new_index
-            else:
-                new_modin_frame = self._modin_frame.from_labels()
-            if isinstance(new_modin_frame.columns, pandas.MultiIndex):
-                # Fix col_level and col_fill in generated column names because from_labels works with assumption
-                # that col_level and col_fill are not specified but it expands tuples in level names.
-                col_level = kwargs.get("col_level", 0)
-                col_fill = kwargs.get("col_fill", "")
-                if col_level != 0 or col_fill != "":
-                    # Modify generated column names if col_level and col_fil have values different from default.
-                    levels_names_list = [
-                        f"level_{level_index}" if level_name is None else level_name
-                        for level_index, level_name in enumerate(self.index.names)
-                    ]
-                    if col_fill is None:
-                        # Initialize col_fill if it is None.
-                        # This is some weird undocumented Pandas behavior to take first
-                        # element of the last column name.
-                        last_col_name = levels_names_list[uniq_sorted_level[-1]]
-                        last_col_name = (
-                            list(last_col_name)
-                            if isinstance(last_col_name, tuple)
-                            else [last_col_name]
-                        )
-                        if len(last_col_name) not in (1, self.columns.nlevels):
-                            raise ValueError(
-                                "col_fill=None is incompatible "
-                                + f"with incomplete column name {last_col_name}"
-                            )
-                        col_fill = last_col_name[0]
-                    columns_list = new_modin_frame.columns.tolist()
-                    for level_index, level_value in enumerate(uniq_sorted_level):
-                        level_name = levels_names_list[level_value]
-                        # Expand tuples into separate items and fill the rest with col_fill
-                        top_level = [col_fill] * col_level
-                        middle_level = (
-                            list(level_name)
-                            if isinstance(level_name, tuple)
-                            else [level_name]
-                        )
-                        bottom_level = [col_fill] * (
-                            self.columns.nlevels - (col_level + len(middle_level))
-                        )
-                        item = tuple(top_level + middle_level + bottom_level)
-                        if len(item) > self.columns.nlevels:
-                            raise ValueError(
-                                "Item must have length equal to number of levels."
-                            )
-                        columns_list[level_index] = item
-                    new_modin_frame.columns = pandas.MultiIndex.from_tuples(
-                        columns_list, names=self.columns.names
-                    )
-            new_self = self.__constructor__(new_modin_frame)
-        else:
-            new_self = self.copy()
-            new_self.index = (
-                pandas.RangeIndex(len(new_self.index))
-                if new_index is None
-                else new_index
-            )
-        return new_self
+    #     if not drop:
+    #         if len(uniq_sorted_level) < self.index.nlevels:
+    #             # These are the index levels that will remain after the reset_index
+    #             keep_levels = [
+    #                 i for i in range(self.index.nlevels) if i not in uniq_sorted_level
+    #             ]
+    #             new_copy = self.copy()
+    #             # Change the index to have only the levels that will be inserted
+    #             # into the data. We will replace the old levels later.
+    #             new_copy.index = self.index.droplevel(keep_levels)
+    #             new_copy.index.names = [
+    #                 "level_{}".format(level_value)
+    #                 if new_copy.index.names[level_index] is None
+    #                 else new_copy.index.names[level_index]
+    #                 for level_index, level_value in enumerate(uniq_sorted_level)
+    #             ]
+    #             new_modin_frame = new_copy._modin_frame.from_labels()
+    #             # Replace the levels that will remain as a part of the index.
+    #             new_modin_frame.index = new_index
+    #         else:
+    #             new_modin_frame = self._modin_frame.from_labels()
+    #         if isinstance(new_modin_frame.columns, pandas.MultiIndex):
+    #             # Fix col_level and col_fill in generated column names because from_labels works with assumption
+    #             # that col_level and col_fill are not specified but it expands tuples in level names.
+    #             col_level = kwargs.get("col_level", 0)
+    #             col_fill = kwargs.get("col_fill", "")
+    #             if col_level != 0 or col_fill != "":
+    #                 # Modify generated column names if col_level and col_fil have values different from default.
+    #                 levels_names_list = [
+    #                     f"level_{level_index}" if level_name is None else level_name
+    #                     for level_index, level_name in enumerate(self.index.names)
+    #                 ]
+    #                 if col_fill is None:
+    #                     # Initialize col_fill if it is None.
+    #                     # This is some weird undocumented Pandas behavior to take first
+    #                     # element of the last column name.
+    #                     last_col_name = levels_names_list[uniq_sorted_level[-1]]
+    #                     last_col_name = (
+    #                         list(last_col_name)
+    #                         if isinstance(last_col_name, tuple)
+    #                         else [last_col_name]
+    #                     )
+    #                     if len(last_col_name) not in (1, self.columns.nlevels):
+    #                         raise ValueError(
+    #                             "col_fill=None is incompatible "
+    #                             + f"with incomplete column name {last_col_name}"
+    #                         )
+    #                     col_fill = last_col_name[0]
+    #                 columns_list = new_modin_frame.columns.tolist()
+    #                 for level_index, level_value in enumerate(uniq_sorted_level):
+    #                     level_name = levels_names_list[level_value]
+    #                     # Expand tuples into separate items and fill the rest with col_fill
+    #                     top_level = [col_fill] * col_level
+    #                     middle_level = (
+    #                         list(level_name)
+    #                         if isinstance(level_name, tuple)
+    #                         else [level_name]
+    #                     )
+    #                     bottom_level = [col_fill] * (
+    #                         self.columns.nlevels - (col_level + len(middle_level))
+    #                     )
+    #                     item = tuple(top_level + middle_level + bottom_level)
+    #                     if len(item) > self.columns.nlevels:
+    #                         raise ValueError(
+    #                             "Item must have length equal to number of levels."
+    #                         )
+    #                     columns_list[level_index] = item
+    #                 new_modin_frame.columns = pandas.MultiIndex.from_tuples(
+    #                     columns_list, names=self.columns.names
+    #                 )
+    #         new_self = self.__constructor__(new_modin_frame)
+    #     else:
+    #         new_self = self.copy()
+    #         new_self.index = (
+    #             pandas.RangeIndex(len(new_self.index))
+    #             if new_index is None
+    #             else new_index
+    #         )
+    #     return new_self
 
-    def set_index_from_columns(
-        self, keys: List[Hashable], drop: bool = True, append: bool = False
-    ):
-        new_modin_frame = self._modin_frame.to_labels(keys)
-        if append:
-            arrays = []
-            # Appending keeps the original order of the index levels, then appends the
-            # new index objects.
-            names = list(self.index.names)
-            if isinstance(self.index, pandas.MultiIndex):
-                for i in range(self.index.nlevels):
-                    arrays.append(self.index._get_level_values(i))
-            else:
-                arrays.append(self.index)
+    # def set_index_from_columns(
+    #     self, keys: List[Hashable], drop: bool = True, append: bool = False
+    # ):
+    #     new_modin_frame = self._modin_frame.to_labels(keys)
+    #     if append:
+    #         arrays = []
+    #         # Appending keeps the original order of the index levels, then appends the
+    #         # new index objects.
+    #         names = list(self.index.names)
+    #         if isinstance(self.index, pandas.MultiIndex):
+    #             for i in range(self.index.nlevels):
+    #                 arrays.append(self.index._get_level_values(i))
+    #         else:
+    #             arrays.append(self.index)
 
-            # Add the names in the correct order.
-            names.extend(new_modin_frame.index.names)
-            if isinstance(new_modin_frame.index, pandas.MultiIndex):
-                for i in range(new_modin_frame.index.nlevels):
-                    arrays.append(new_modin_frame.index._get_level_values(i))
-            else:
-                arrays.append(new_modin_frame.index)
-            new_modin_frame.index = ensure_index_from_sequences(arrays, names)
-        if not drop:
-            # The algebraic operator for this operation always drops the column, but we
-            # can copy the data in this object and just use the index from the result of
-            # the query compiler call.
-            result = self._modin_frame.copy()
-            result.index = new_modin_frame.index
-        else:
-            result = new_modin_frame
-        return self.__constructor__(result)
+    #         # Add the names in the correct order.
+    #         names.extend(new_modin_frame.index.names)
+    #         if isinstance(new_modin_frame.index, pandas.MultiIndex):
+    #             for i in range(new_modin_frame.index.nlevels):
+    #                 arrays.append(new_modin_frame.index._get_level_values(i))
+    #         else:
+    #             arrays.append(new_modin_frame.index)
+    #         new_modin_frame.index = ensure_index_from_sequences(arrays, names)
+    #     if not drop:
+    #         # The algebraic operator for this operation always drops the column, but we
+    #         # can copy the data in this object and just use the index from the result of
+    #         # the query compiler call.
+    #         result = self._modin_frame.copy()
+    #         result.index = new_modin_frame.index
+    #     else:
+    #         result = new_modin_frame
+    #     return self.__constructor__(result)
 
     # END Reindex/reset_index
