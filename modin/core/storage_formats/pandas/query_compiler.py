@@ -2052,10 +2052,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
             ascending = False
         kwargs["ascending"] = ascending
         if axis:
-            new_columns = pandas.Series(self.columns).sort_values(**kwargs)
+            new_columns = self.columns.to_frame().sort_index(**kwargs).index
             new_index = self.index
         else:
-            new_index = pandas.Series(self.index).sort_values(**kwargs)
+            new_index = self.index.to_frame().sort_index(**kwargs).index
             new_columns = self.columns
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
