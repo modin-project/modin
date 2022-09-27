@@ -157,7 +157,7 @@ class TimeConcat:
         [True, False],
     ]
 
-    def setup(self, shapes, how, axis):
+    def setup(self, shapes, how, axis, ignore_index):
         self.df1 = generate_dataframe("int", *shapes[0], RAND_LOW, RAND_HIGH)
         self.df2 = generate_dataframe("int", *shapes[1], RAND_LOW, RAND_HIGH)
 
