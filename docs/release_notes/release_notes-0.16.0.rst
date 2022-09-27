@@ -135,6 +135,7 @@ Key Features and Updates
   * TEST-#4875: XFail tests failing due to file gone missing (#4876)
   * TEST-#4879: Use pandas `ensure_clean()` in place of `io_tests_data` (#4881)
   * TEST-#4562: Use local Ray cluster in CI to resolve flaky `test-compat-win` (#5007)
+  * TEST-#5040: Rework test_series using eval_general() (#5041)
 * Documentation improvements
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
   * DOCS-#4628: Add to_parquet partial support notes (#4648)
