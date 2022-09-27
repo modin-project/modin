@@ -1991,9 +1991,10 @@ class PandasDataframe(ClassLogger):
             )
             new_axes[axis.value ^ 1] = self.axes[axis.value ^ 1]
             new_lengths = [None, None]
-            new_partitions, new_lengths[axis.value] = self._partition_mgr_cls.rebalance_partitions(
-                new_partitions
-            )
+            (
+                new_partitions,
+                new_lengths[axis.value],
+            ) = self._partition_mgr_cls.rebalance_partitions(new_partitions)
             new_modin_frame = self.__constructor__(
                 new_partitions, *new_axes, *new_lengths, self.dtypes
             )
