@@ -5,24 +5,6 @@ import pandas._testing as tm
 from ..utils import IMPL, execute
 
 
-class ConcatDataFrames:
-
-    params = ([0, 1], [True, False])
-    param_names = ["axis", "ignore_index"]
-
-    def setup(self, axis, ignore_index):
-        frame_c = IMPL.DataFrame(np.zeros((10000, 200), dtype=np.float32, order="C"))
-        self.frame_c = [frame_c] * 20
-        frame_f = IMPL.DataFrame(np.zeros((10000, 200), dtype=np.float32, order="F"))
-        self.frame_f = [frame_f] * 20
-
-    def time_c_ordered(self, axis, ignore_index):
-        execute(IMPL.concat(self.frame_c, axis=axis, ignore_index=ignore_index))
-
-    def time_f_ordered(self, axis, ignore_index):
-        execute(IMPL.concat(self.frame_f, axis=axis, ignore_index=ignore_index))
-
-
 class Join:
 
     params = [True, False]
