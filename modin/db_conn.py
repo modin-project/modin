@@ -23,6 +23,8 @@ make a db connection. It can make and provide a connection whenever the Modin
 driver or a worker wants one.
 """
 
+from typing import Any, Sequence, Dict, Optional
+
 _PSYCOPG_LIB_NAME = "psycopg2"
 _SQLALCHEMY_LIB_NAME = "sqlalchemy"
 
@@ -47,7 +49,12 @@ class ModinDatabaseConnection:
         Keyword arguments to pass when creating the connection.
     """
 
-    def __init__(self, lib, *args, **kwargs):
+    lib: str
+    args: Sequence
+    kwargs: Dict
+    _dialect_is_microsoft_sql_cache: Optional[bool]
+
+    def __init__(self, lib: str, *args: Any, **kwargs: Any) -> None:
         lib = lib.lower()
         if lib not in (_PSYCOPG_LIB_NAME, _SQLALCHEMY_LIB_NAME):
             raise UnsupportedDatabaseException(f"Unsupported database library {lib}")
@@ -56,7 +63,7 @@ class ModinDatabaseConnection:
         self.kwargs = kwargs
         self._dialect_is_microsoft_sql_cache = None
 
-    def _dialect_is_microsoft_sql(self):
+    def _dialect_is_microsoft_sql(self) -> bool:
         """
         Tell whether this connection requires Microsoft SQL dialect.
 
@@ -66,7 +73,7 @@ class ModinDatabaseConnection:
 
         Returns
         -------
-        Boolean
+        bool
         """
         if self._dialect_is_microsoft_sql_cache is None:
             self._dialect_is_microsoft_sql_cache = False
@@ -79,7 +86,7 @@ class ModinDatabaseConnection:
 
         return self._dialect_is_microsoft_sql_cache
 
-    def get_connection(self):
+    def get_connection(self) -> Any:
         """
         Make the database connection and get it.
 
@@ -104,7 +111,7 @@ class ModinDatabaseConnection:
 
         raise UnsupportedDatabaseException("Unsupported database library")
 
-    def get_string(self):
+    def get_string(self) -> str:
         """
         Get input connection string.
 
@@ -114,7 +121,7 @@ class ModinDatabaseConnection:
         """
         return self.args[0]
 
-    def column_names_query(self, query):
+    def column_names_query(self, query: str) -> str:
         """
         Get a query that gives the names of columns that `query` would produce.
 
@@ -131,7 +138,7 @@ class ModinDatabaseConnection:
         # SQL, which doesn't let you use a "limit" clause to select 0 rows.
         return f"SELECT * FROM ({query}) AS _ WHERE 1 = 0"
 
-    def row_count_query(self, query):
+    def row_count_query(self, query: str) -> str:
         """
         Get a query that gives the names of rows that `query` would produce.
 
@@ -146,7 +153,7 @@ class ModinDatabaseConnection:
         """
         return f"SELECT COUNT(*) FROM ({query}) AS _"
 
-    def partition_query(self, query, limit, offset):
+    def partition_query(self, query: str, limit: int, offset: int) -> str:
         """
         Get a query that partitions the original `query`.
 
