@@ -2452,7 +2452,7 @@ class Series(SeriesCompat, BasePandasDataset):
                 row_positions = self.index.get_indexer_for(key)
         except TypeError:
             pass
-        if not all(is_integer(x) for x in key):
+        if not all(is_integer(x) for x in row_positions):
             raise KeyError(key[0] if reduce_dimension else key)
         result = self._query_compiler.getitem_row_array(row_positions)
 
