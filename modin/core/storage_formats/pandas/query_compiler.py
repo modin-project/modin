@@ -541,7 +541,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def reset_index(self, **kwargs):
         allow_duplicates = kwargs.pop("allow_duplicates", None)
         names = kwargs.pop("names", None)
-        if allow_duplicates is not None or names is not None:
+        if allow_duplicates not in (None, False) or names is not None:
             return self.default_to_pandas(
                 pandas.DataFrame.reset_index,
                 allow_duplicates=allow_duplicates,

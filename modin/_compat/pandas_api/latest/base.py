@@ -280,7 +280,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
             inplace=inplace,
             col_level=col_level,
             col_fill=col_fill,
-            allow_duplicates=False
+            allow_duplicates=None
             if allow_duplicates is no_default
             else allow_duplicates,
             names=names,
