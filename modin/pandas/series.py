@@ -15,6 +15,7 @@
 
 import numpy as np
 import pandas
+from pandas.api.types import is_integer
 from pandas.core.common import apply_if_callable, is_bool_indexer
 from pandas.util._validators import validate_bool_kwarg
 from pandas.core.dtypes.common import (
@@ -2436,23 +2437,25 @@ class Series(SeriesCompat, BasePandasDataset):
         # TODO: More efficiently handle `tuple` case for `Series.__getitem__`
         if isinstance(key, tuple):
             return self._default_to_pandas(pandas.Series.__getitem__, key)
+
+        if not is_list_like(key):
+            reduce_dimension = True
+            key = [key]
         else:
-            if not is_list_like(key):
-                reduce_dimension = True
-                key = [key]
-            else:
-                reduce_dimension = False
-            # The check for whether or not `key` is in `keys()` will throw a TypeError
-            # if the object is not hashable. When that happens, we just use the `iloc`.
-            try:
-                if all(k in self.keys() for k in key):
-                    result = self._query_compiler.getitem_row_array(
-                        self.index.get_indexer_for(key)
-                    )
-                else:
-                    result = self._query_compiler.getitem_row_array(key)
-            except TypeError:
-                result = self._query_compiler.getitem_row_array(key)
+            reduce_dimension = False
+        row_positions = key
+        # The check for whether or not `key` is in `keys()` will throw a TypeError
+        # if the object is not hashable. When that happens, we just assume the
+        # key is a list-like of row positions.
+        try:
+            if all(k in self.keys() for k in key):
+                row_positions = self.index.get_indexer_for(key)
+        except TypeError:
+            pass
+        if not all(is_integer(x) for x in key):
+            raise KeyError(key[0] if reduce_dimension else key)
+        result = self._query_compiler.getitem_row_array(row_positions)
+
         if reduce_dimension:
             return self._reduce_dimension(result)
         return self.__constructor__(query_compiler=result)

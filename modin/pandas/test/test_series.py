@@ -363,6 +363,9 @@ def test___getitem__(data):
     df_equals(modin_series[:30], pandas_series[:30])
     df_equals(modin_series[modin_series > 500], pandas_series[pandas_series > 500])
     df_equals(modin_series[::2], pandas_series[::2])
+    # Test getting an invalid string key
+    eval_general(modin_series, pandas_series, lambda s: s['a'])
+    eval_general(modin_series, pandas_series, lambda s: s[['a']])
 
     # Test empty series
     df_equals(pd.Series([])[:30], pandas.Series([])[:30])
