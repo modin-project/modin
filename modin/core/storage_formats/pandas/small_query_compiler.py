@@ -410,6 +410,31 @@ def _rolling_func(func):
     return rolling_builder
 
 
+def _reindex(df, axis, labels, **kwargs):
+    return df.reindex(labels=labels, axis=axis)
+
+
+def _concat(df, axis, other, join=None, **kwargs):
+    if not isinstance(other, list):
+        other = [other]
+    return pandas.concat([df] + other, axis=axis, **kwargs)
+
+
+def _unique(values, **kwargs):
+    # print(type(df))
+    if isinstance(values, pandas.DataFrame):
+        values = values.squeeze(axis=1)
+    return pandas.unique(values, **kwargs)
+
+
+def _to_datetime(df, *args, **kwargs):
+    return pandas.to_datetime(df.squeeze(axis=1), *args, **kwargs)
+
+
+def _to_numeric(df, *args, **kwargs):
+    return pandas.to_numeric(df.squeeze(axis=1), *args, **kwargs)
+
+
 @_inherit_docstrings(BaseQueryCompiler)
 class SmallQueryCompiler(BaseQueryCompiler):
     """
@@ -425,6 +450,8 @@ class SmallQueryCompiler(BaseQueryCompiler):
     """
 
     def __init__(self, modin_frame):
+        if not isinstance(modin_frame, pandas.DataFrame):
+            modin_frame = pandas.DataFrame(modin_frame)
         self._modin_frame = modin_frame
 
     def default_to_pandas(self, pandas_op, *args, **kwargs):
@@ -448,19 +475,26 @@ class SmallQueryCompiler(BaseQueryCompiler):
         # else:
         #     return result
 
-    def _register_default_pandas(func, is_series=False):
-        def caller(query_compiler, broadcast=None, fold_axis=None, *args, **kwargs):
+    def _register_default_pandas(func, is_series=False, return_modin=True):
+        def caller(query_compiler, *args, **kwargs):
             print(func.__name__)
             df = query_compiler._modin_frame
             if is_series:
                 df = df.squeeze(axis=1)
-            # exclude_names = ["broadcast", "fold_axis"]
+            exclude_names = ["broadcast", "fold_axis"]
+            for name in exclude_names:
+                kwargs.pop(name, None)
+            print("BEFORE ARGS:", args)
             args = try_cast_to_pandas(args)
             # if "fold_axis" in kwargs:
             #     kwargs["axis"] = kwargs["fold_axis"]
             # kwargs = {k: v for k, v in kwargs.items() if k not in exclude_names}
             kwargs = try_cast_to_pandas(kwargs)
+            print("ARGS:", args)
+            print("KWARGS:", kwargs)
             result = func(df, *args, **kwargs)
+            if not return_modin:
+                return result
             if isinstance(result, pandas.Series):
                 if result.name is None:
                     result.name = "__reduced__"
@@ -470,34 +504,34 @@ class SmallQueryCompiler(BaseQueryCompiler):
 
         return caller
 
-    # __and__
-    # __class__
-    # __delattr__
-    # __dir__
-    # __eq__
-    # __format__
-    # __ge__
-    # __getattribute__
-    # __gt__
-    # __hash__
-    # __init__
-    # __init_subclass__
-    # __le__
-    # __lt__
-    # __ne__
-    # __new__
-    # __or__
-    # __rand__
-    # __reduce__
-    # __reduce_ex__
-    # __repr__
-    # __ror__
-    # __rxor__
-    # __setattr__
-    # __sizeof__
-    # __str__
-    # __subclasshook__
-    # __xor__
+    __and__ = _register_default_pandas(pandas.DataFrame.__and__)
+    # __class__ = _register_default_pandas(pandas.DataFrame.__class__)
+    __delattr__ = _register_default_pandas(pandas.DataFrame.__delattr__)
+    __dir__ = _register_default_pandas(pandas.DataFrame.__dir__)
+    __eq__ = _register_default_pandas(pandas.DataFrame.__eq__)
+    __format__ = _register_default_pandas(pandas.DataFrame.__format__)
+    __ge__ = _register_default_pandas(pandas.DataFrame.__ge__)
+    __getattribute__ = _register_default_pandas(pandas.DataFrame.__getattribute__)
+    __gt__ = _register_default_pandas(pandas.DataFrame.__gt__)
+    # __hash__ = _register_default_pandas(pandas.DataFrame.__hash__)
+    __init__ = _register_default_pandas(pandas.DataFrame.__init__)
+    __init_subclass__ = _register_default_pandas(pandas.DataFrame.__init_subclass__)
+    __le__ = _register_default_pandas(pandas.DataFrame.__le__)
+    __lt__ = _register_default_pandas(pandas.DataFrame.__lt__)
+    __ne__ = _register_default_pandas(pandas.DataFrame.__ne__)
+    __new__ = _register_default_pandas(pandas.DataFrame.__new__)
+    __or__ = _register_default_pandas(pandas.DataFrame.__or__)
+    __rand__ = _register_default_pandas(pandas.DataFrame.__rand__)
+    __reduce__ = _register_default_pandas(pandas.DataFrame.__reduce__)
+    __reduce_ex__ = _register_default_pandas(pandas.DataFrame.__reduce_ex__)
+    __repr__ = _register_default_pandas(pandas.DataFrame.__repr__)
+    __ror__ = _register_default_pandas(pandas.DataFrame.__ror__)
+    __rxor__ = _register_default_pandas(pandas.DataFrame.__rxor__)
+    __setattr__ = _register_default_pandas(pandas.DataFrame.__setattr__)
+    __sizeof__ = _register_default_pandas(pandas.DataFrame.__sizeof__)
+    __str__ = _register_default_pandas(pandas.DataFrame.__str__)
+    # __subclasshook__ = _register_default_pandas(pandas.DataFrame.__subclasshook__)
+    __xor__ = _register_default_pandas(pandas.DataFrame.__xor__)
     abs = _register_default_pandas(pandas.DataFrame.abs)
     add = _register_default_pandas(pandas.DataFrame.add)
     all = _register_default_pandas(pandas.DataFrame.all)
@@ -512,6 +546,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     combine_first = _register_default_pandas(pandas.DataFrame.combine_first)
     # conj = _register_default_pandas(pandas.DataFrame.conj)
     compare = _register_default_pandas(pandas.DataFrame.compare)
+    concat = _register_default_pandas(_concat)
     conj = _register_default_pandas(
         lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df))
     )
@@ -654,6 +689,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     query = _register_default_pandas(pandas.DataFrame.query)
     radd = _register_default_pandas(pandas.DataFrame.radd)
     rank = _register_default_pandas(pandas.DataFrame.rank)
+    reindex = _register_default_pandas(_reindex)
     repeat = _register_default_pandas(pandas.Series.repeat, is_series=True)
     replace = _register_default_pandas(pandas.DataFrame.replace)
     resample_agg_df = _register_default_pandas(_resample_agg_df)
@@ -764,8 +800,11 @@ class SmallQueryCompiler(BaseQueryCompiler):
     sub = _register_default_pandas(pandas.DataFrame.sub)
     sum = _register_default_pandas(pandas.DataFrame.sum)
     sum_min_count = _register_default_pandas(pandas.DataFrame.sum)
+    to_datetime = _register_default_pandas(_to_datetime)
+    to_numeric = _register_default_pandas(_to_numeric)
     transpose = _register_default_pandas(pandas.DataFrame.transpose)
     truediv = _register_default_pandas(pandas.DataFrame.truediv)
+    # unique = _register_default_pandas(_unique, return_modin=False)
     unique = _register_default_pandas(pandas.Series.unique, is_series=True)
     unstack = _register_default_pandas(pandas.DataFrame.unstack)
     var = _register_default_pandas(pandas.DataFrame.var)
@@ -791,14 +830,16 @@ class SmallQueryCompiler(BaseQueryCompiler):
             return self._add_suffix_df(suffix=suffix)
         return self._add_suffix_series(suffix=suffix)
 
-    def concat(self, axis, other, **kwargs):
-        other = try_cast_to_pandas(other)
-        result = self._modin_frame.concat(other, axis, **kwargs)
-        if isinstance(result, pandas.Series):
-            if result.name is None:
-                result.name = "__reduced__"
-            result = result.to_frame()
-        return self.__constructor__(result)
+    # def apply_full_axis()
+
+    # def concat(self, axis, other, **kwargs):
+    #     other = try_cast_to_pandas(other)
+    #     result = self._modin_frame.concat(other, axis, **kwargs)
+    #     if isinstance(result, pandas.Series):
+    #         if result.name is None:
+    #             result.name = "__reduced__"
+    #         result = result.to_frame()
+    #     return self.__constructor__(result)
 
     def dot(self, other, squeeze_self=None, squeeze_other=None):
         if isinstance(other, PandasQueryCompiler) or isinstance(
@@ -907,18 +948,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
         #         col_labels=key
         #     )
         return self.__constructor__(self._modin_frame[key])
-
-    # Reindex/reset_index (may shuffle data)
-    def reindex(self, axis, labels, **kwargs):
-        new_index = self.index if axis else labels
-        new_columns = labels if axis else self.columns
-        new_modin_frame = self._modin_frame.apply_full_axis(
-            axis,
-            lambda df: df.reindex(labels=labels, axis=axis, **kwargs),
-            new_index=new_index,
-            new_columns=new_columns,
-        )
-        return self.__constructor__(new_modin_frame)
 
     def columnarize(self):
         if len(self._modin_frame.columns) != 1 or (
