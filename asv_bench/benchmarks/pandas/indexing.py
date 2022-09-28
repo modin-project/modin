@@ -119,25 +119,6 @@ class DataFrameNumericIndexing:
         self.df[self.bool_indexer]
 
 
-class Take:
-
-    params = ["int", "datetime"]
-    param_names = ["index"]
-
-    def setup(self, index):
-        N = 100000
-        indexes = {
-            "int": Int64Index(np.arange(N)),
-            "datetime": date_range("2011-01-01", freq="S", periods=N),
-        }
-        index = indexes[index]
-        self.s = Series(np.random.rand(N), index=index)
-        self.indexer = np.random.randint(0, N, size=N)
-
-    def time_take(self, index):
-        self.s.take(self.indexer)
-
-
 class MultiIndexing:
 
     params = [True, False]
@@ -251,16 +232,6 @@ class IndexSingleRow:
 
     def time_loc_row(self, unique_cols):
         self.df.loc[10000]
-
-
-class AssignTimeseriesIndex:
-    def setup(self):
-        N = 100000
-        idx = date_range("1/1/2000", periods=N, freq="H")
-        self.df = DataFrame(np.random.randn(N, 1), columns=["A"], index=idx)
-
-    def time_frame_assign_timeseries_index(self):
-        self.df["date"] = self.df.index
 
 
 class InsertColumns:
