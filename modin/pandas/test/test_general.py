@@ -26,6 +26,7 @@ from .utils import (
     test_data_keys,
     df_equals,
     sort_index_for_equal_values,
+    eval_general,
 )
 
 
@@ -803,10 +804,19 @@ def test_empty_series():
     pd.to_numeric(s)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_to_timedelta(data):
+@pytest.mark.parametrize(
+    "arg",
+    [[1, 2], ["a"], 1, "a"],
+    ids=["list_of_ints", "list_of_invalid_strings", "scalar", "invalid_scalar"],
+)
+def test_to_timedelta(arg):
     # This test case comes from
     # https://github.com/modin-project/modin/issues/4966
+    eval_general(pd, pandas, lambda lib: lib.to_timedelta(arg))
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_series_to_timedelta(data):
     if isinstance(data, dict):
         modin_series = pd.Series(data[next(iter(data.keys()))])
         pandas_series = pandas.Series(data[next(iter(data.keys()))])
