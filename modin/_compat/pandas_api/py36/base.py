@@ -13,7 +13,6 @@
 
 """Module for 'Python 3.6 pandas' compatibility layer for Dataset (common DataFrame/Series)."""
 
-from unittest import skip
 import pandas
 from pandas.util._validators import validate_bool_kwarg
 import pickle as pkl

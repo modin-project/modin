@@ -17,7 +17,6 @@ import io
 import os
 
 import pandas
-import ray
 from modin._compat.core.pd_common import pd_to_csv
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler

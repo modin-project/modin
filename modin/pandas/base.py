@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 """Implement DataFrame/Series public API as pandas does."""
-import copy
 import numpy as np
 import pandas
 from pandas.compat import numpy as numpy_compat
@@ -33,11 +32,7 @@ import pandas.core.generic
 from pandas.core.indexing import convert_to_index_sliceable
 from pandas.util._validators import validate_percentile
 from pandas._libs.lib import no_default
-from pandas._typing import (
-    IndexKeyFunc,
-    TimedeltaConvertibleTypes,
-    TimestampConvertibleTypes,
-)
+from pandas._typing import IndexKeyFunc
 import re
 from typing import Optional, Union, Sequence, Hashable
 import warnings

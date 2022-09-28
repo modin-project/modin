@@ -13,7 +13,6 @@
 
 """Implement Resampler public API."""
 
-from tokenize import group
 import numpy as np
 import pandas
 import pandas.core.resample
