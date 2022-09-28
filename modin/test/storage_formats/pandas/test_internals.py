@@ -19,6 +19,7 @@ from modin.pandas.test.utils import (
 )
 from modin.config import NPartitions, Engine
 
+import numpy as np
 import pandas
 import pytest
 
@@ -414,3 +415,21 @@ def test_virtual_partition_apply_not_returning_pandas_dataframe(
 
     apply_result = partition.apply(lambda df: 1).get()
     assert apply_result == 1
+
+
+@pytest.mark.skipif(
+    Engine.get() != "Ray",
+    reason="Only ray.wait() does not take duplicate object refs.",
+)
+def test_virtual_partition_dup_object_ref():
+    # See https://github.com/modin-project/modin/issues/5045
+    frame_c = pd.DataFrame(np.zeros((100, 20), dtype=np.float32, order="C"))
+    frame_c = [frame_c] * 20
+    df = pd.concat(frame_c)
+    partition = df._query_compiler._modin_frame._partitions.flatten()[0]
+    obj_refs = partition.list_of_blocks
+    assert len(obj_refs) != len(
+        set(obj_refs)
+    ), "Test setup did not contain duplicate objects"
+    # The below call to wait() should not crash
+    partition.wait()
