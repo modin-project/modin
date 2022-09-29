@@ -50,7 +50,7 @@ with test_cluster:
 
         DbWorker = (
             get_connection()
-            .modules["modin.experimental.engines.hdk_on_native.frame.db_worker"]
+            .modules["modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker"]
             .DbWorker
         )
         modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker.DbWorker = (
