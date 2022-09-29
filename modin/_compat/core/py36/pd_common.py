@@ -19,6 +19,7 @@ from collections import namedtuple
 from pandas import DataFrame as pd_DataFrame
 from pandas.io.common import get_handle as pd_get_handle
 from pandas.core.aggregation import reconstruct_func
+from pandas.core.base import DataError, SpecificationError
 
 from modin.utils import _inherit_docstrings
 
@@ -110,4 +111,6 @@ __all__ = [
     "reconstruct_func",
     "pd_reset_index",
     "pd_to_csv",
+    "DataError",
+    "SpecificationError",
 ]

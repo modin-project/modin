@@ -16,6 +16,7 @@
 from pandas.io.common import get_handle
 from pandas.core.apply import reconstruct_func
 from pandas import DataFrame as pd_DataFrame
+from pandas.errors import DataError, SpecificationError
 
 
 def pd_pivot_table(df, **kwargs):  # noqa: PR01, RT01
@@ -57,4 +58,6 @@ __all__ = [
     "reconstruct_func",
     "pd_reset_index",
     "pd_to_csv",
+    "DataError",
+    "SpecificationError",
 ]

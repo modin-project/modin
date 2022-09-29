@@ -544,7 +544,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                 )
 
             if any(i not in self._df.columns for i in func_dict.keys()):
-                from pandas.core.base import SpecificationError
+                from modin._compat.core.pd_common import SpecificationError
 
                 raise SpecificationError("nested renamer is not supported")
             if func is None:

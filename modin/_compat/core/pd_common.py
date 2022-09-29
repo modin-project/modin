@@ -25,6 +25,8 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
         reconstruct_func,
         pd_reset_index,
         pd_to_csv,
+        DataError,
+        SpecificationError,
     )
 
 
@@ -38,6 +40,8 @@ elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
         reconstruct_func,
         pd_reset_index,
         pd_to_csv,
+        DataError,
+        SpecificationError,
     )
 
 __all__ = [
@@ -49,4 +53,6 @@ __all__ = [
     "reconstruct_func",
     "pd_reset_index",
     "pd_to_csv",
+    "DataError",
+    "SpecificationError",
 ]
