@@ -198,6 +198,26 @@ class TimeBinaryOp:
         execute(self.op(self.df2, axis=axis))
 
 
+class TimeBinaryOpSeries:
+    param_names = ["shapes", "binary_op"]
+    params = [
+        get_benchmark_shapes("TimeBinaryOpSeries"),
+        ["mul"],
+    ]
+
+    def setup(self, shapes, binary_op):
+        df1 = generate_dataframe("int", *shapes[0], RAND_LOW, RAND_HIGH)
+        df2 = generate_dataframe("int", *shapes[1], RAND_LOW, RAND_HIGH)
+        self.series1 = df1[df1.columns[0]]
+        self.series2 = df2[df2.columns[0]]
+        self.op = getattr(self.series1, binary_op)
+        execute(self.series1)
+        execute(self.series2)
+
+    def time_binary_op_series(self, shapes, binary_op):
+        execute(self.op(self.series2))
+
+
 class BaseTimeSetItem:
     param_names = ["shape", "item_length", "loc", "is_equal_indices"]
 
