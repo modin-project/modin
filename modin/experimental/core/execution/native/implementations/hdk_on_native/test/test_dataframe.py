@@ -19,13 +19,12 @@ import pytest
 import re
 
 from modin.config import StorageFormat
-from modin.pandas.test.utils import io_ops_bad_exc, default_to_pandas_ignore_string
-from .utils import eval_io, ForceHdkImport, set_execution_mode, run_and_compare
 from modin.pandas.test.utils import (
     io_ops_bad_exc,
     default_to_pandas_ignore_string,
     random_state,
 )
+from .utils import eval_io, ForceHdkImport, set_execution_mode, run_and_compare
 from pandas.core.dtypes.common import is_list_like
 
 StorageFormat.put("hdk")
