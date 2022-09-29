@@ -149,19 +149,24 @@ class TimeMerge:
 
 
 class TimeConcat:
-    param_names = ["shapes", "how", "axis"]
+    param_names = ["shapes", "how", "axis", "ignore_index"]
     params = [
         get_benchmark_shapes("TimeConcat"),
         ["inner"],
         [0, 1],
+        [True, False],
     ]
 
-    def setup(self, shapes, how, axis):
+    def setup(self, shapes, how, axis, ignore_index):
         self.df1 = generate_dataframe("int", *shapes[0], RAND_LOW, RAND_HIGH)
         self.df2 = generate_dataframe("int", *shapes[1], RAND_LOW, RAND_HIGH)
 
-    def time_concat(self, shapes, how, axis):
-        execute(IMPL.concat([self.df1, self.df2], axis=axis, join=how))
+    def time_concat(self, shapes, how, axis, ignore_index):
+        execute(
+            IMPL.concat(
+                [self.df1, self.df2], axis=axis, join=how, ignore_index=ignore_index
+            )
+        )
 
 
 class TimeAppend:

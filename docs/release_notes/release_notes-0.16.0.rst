@@ -89,6 +89,7 @@ Key Features and Updates
 * Benchmarking enhancements
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
   * TEST-#5014: Simplify adding new ASV benchmarks (#5015)
+  * TEST-#5064: Update `TimeConcat` benchmark with new parameter `ignore_index` (#5065)
   * PERF-#4944: Avoid default_to_pandas in ``Series.cat.codes``, ``Series.dt.tz``, and ``Series.dt.to_pytimedelta`` (#4833)
 * Refactor Codebase
   * REFACTOR-#4530: Standardize access to physical data in partitions (#4563)
