@@ -1495,9 +1495,9 @@ class TestParquet:
                 start="1/1/2018", periods=2000
             )
 
-        with ensure_clean(".parquet") as unique_filename:
-            for col in pandas_df.columns:
-                if col.startswith("idx"):
+        for col in pandas_df.columns:
+            if col.startswith("idx"):
+                with ensure_clean(".parquet") as unique_filename:
                     pandas_df.set_index(col).to_parquet(unique_filename)
                     # read the same parquet using modin.pandas
                     eval_io(
@@ -1507,6 +1507,7 @@ class TestParquet:
                         engine=engine,
                     )
 
+        with ensure_clean(".parquet") as unique_filename:
             pandas_df.set_index(["idx", "A"]).to_parquet(unique_filename)
             eval_io(
                 "read_parquet",
