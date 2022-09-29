@@ -43,7 +43,8 @@ def pd_reset_index(df, **kwargs):  # noqa: PR01, RT01
     return pd_DataFrame.reset_index(df, **kwargs)
 
 
-def pd_to_csv(df, **kwargs):
+def pd_to_csv(df, **kwargs):  # noqa: PR01, RT01
+    """Perform pandas to_csv against a dataframe or series."""
     return df.to_csv(**kwargs)
 
 
