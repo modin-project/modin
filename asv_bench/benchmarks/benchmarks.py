@@ -152,7 +152,7 @@ class TimeConcat:
     param_names = ["shapes", "how", "axis"]
     params = [
         get_benchmark_shapes("TimeConcat"),
-        ["inner"],
+        ["inner", "outer"],
         [0, 1],
     ]
 

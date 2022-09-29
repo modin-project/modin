@@ -87,6 +87,7 @@ Key Features and Updates
   * PERF-#4963: Use partition `width/length` methods instead of `_compute_axis_labels_and_lengths` if index is already known (#4964)
   * PERF-#4940: Optimize categorical dtype check in `concatenate` (#4953)
 * Benchmarking enhancements
+  * TEST-#5066: Add outer join case for `TimeConcat` benchmark (#5067)
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
   * TEST-#5014: Simplify adding new ASV benchmarks (#5015)
   * PERF-#4944: Avoid default_to_pandas in ``Series.cat.codes``, ``Series.dt.tz``, and ``Series.dt.to_pytimedelta`` (#4833)
