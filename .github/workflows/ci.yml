@@ -429,6 +429,15 @@ jobs:
       - run: pytest modin/pandas/test/test_io.py::TestCsv --verbose
       - run: pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: pytest modin/test/interchange/dataframe_protocol/hdk
+      - run: python examples/docker/modin-hdk/census-hdk.py examples/data/census_1k.csv -no-ml
+      - run: python examples/docker/modin-hdk/nyc-taxi-hdk.py examples/data/nyc-taxi_1k.csv
+      - run: |
+          python examples/docker/modin-hdk/plasticc-hdk.py \
+          examples/data/plasticc_training_set_1k.csv \
+          examples/data/plasticc_test_set_1k.csv \
+          examples/data/plasticc_training_set_metadata_1k.csv \
+          examples/data/plasticc_test_set_metadata_1k.csv \
+          -no-ml
       - uses: codecov/codecov-action@v2
 
   test-asv-benchmarks:

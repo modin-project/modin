@@ -19,6 +19,8 @@ dependencies:
   - xlrd
   - sqlalchemy
   - scipy
+  - xgboost
+  - scikit-learn-intelex
   - pip:
       - black
       # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
