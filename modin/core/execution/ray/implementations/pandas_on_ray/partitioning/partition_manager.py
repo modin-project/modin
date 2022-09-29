@@ -21,7 +21,7 @@ from modin.core.execution.ray.generic.partitioning import (
     GenericRayDataframePartitionManager,
 )
 from modin.core.execution.ray.common import RayWrapper
-from modin.core.execution.ray.utils import wait
+from modin.core.execution.ray.common.utils import wait
 from .virtual_partition import (
     PandasOnRayDataframeColumnPartition,
     PandasOnRayDataframeRowPartition,
