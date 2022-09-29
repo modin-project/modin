@@ -14,9 +14,7 @@
 import sys
 import time
 import modin.pandas as pd
-from modin.experimental.core.execution.native.implementations.hdk_on_native.hdk_worker import (
-    DbWorker,
-)
+from modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker import DbWorker
 
 
 def read(filename):
