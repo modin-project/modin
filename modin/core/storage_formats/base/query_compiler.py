@@ -255,7 +255,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                     other = other[0]
                 ignore_index = kwargs.pop("ignore_index", None)
                 kwargs["how"] = kwargs.pop("join", None)
-                result = df.join(other, rsuffix="r_", **kwargs)
+                if (
+                    isinstance(other, (pandas.DataFrame, pandas.Series))
+                    or len(other) <= 1
+                ):
+                    kwargs["rsuffix"] = "r_"
+                result = df.join(other, **kwargs)
             if ignore_index:
                 if axis == 0:
                     result = result.reset_index(drop=True)
