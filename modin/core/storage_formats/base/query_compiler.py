@@ -4066,6 +4066,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # End of Resample methods
 
+    @doc_utils.doc_str_method(refer_to="capitalize", params="")
+    def str_capitalize(self):
+        return StrDefault.register(pandas.Series.str.capitalize)(self)
+
     # Str methods
 
     @doc_utils.doc_str_method(refer_to="capitalize", params="")
