@@ -1308,6 +1308,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             """
             if len(blocks) > 1:
                 partition.force_materialization()
+            assert len(partition.list_of_blocks) == 1
             return partition.list_of_blocks[0]
 
         return np.array(
