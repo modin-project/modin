@@ -817,16 +817,10 @@ def test_to_timedelta(arg):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_series_to_timedelta(data):
-    if isinstance(data, dict):
-        modin_series = pd.Series(data[next(iter(data.keys()))])
-        pandas_series = pandas.Series(data[next(iter(data.keys()))])
-    else:
-        modin_series = pd.Series(data)
-        pandas_series = pandas.Series(data)
+    def make_frame(lib):
+        series = lib.Series(
+            next(iter(data.values())) if isinstance(data, dict) else data
+        )
+        return lib.to_timedelta(series).to_frame(name="timedelta")
 
-    modin_series = pd.to_timedelta(modin_series)
-    pandas_series = pandas.to_timedelta(pandas_series)
-    df_equals(
-        modin_series.to_frame(name="timedelta"),
-        pandas_series.to_frame(name="timedelta"),
-    )
+    eval_general(pd, pandas, make_frame)

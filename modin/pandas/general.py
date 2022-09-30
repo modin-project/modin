@@ -766,6 +766,9 @@ def _determine_name(objs: Iterable[BaseQueryCompiler], axis: Union[int, str]):
 def to_timedelta(arg, unit=None, errors="raise"):  # noqa: PR01, RT01, D200
     """
     Convert argument to timedelta.
+
+    Accepts str, timedelta, list-like or Series for arg parameter.
+    Returns a Series if and only if arg is provided as a Series.
     """
     if isinstance(arg, Series):
         query_compiler = arg._query_compiler.to_timedelta(unit=unit, errors=errors)
