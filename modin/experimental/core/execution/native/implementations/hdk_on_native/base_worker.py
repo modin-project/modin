@@ -176,11 +176,11 @@ class BaseDbWorker(abc.ABC):
         if need_cast:
             try:
                 table = table.cast(new_schema)
-            except pa.lib.ArrowInvalid as e:
+            except pa.lib.ArrowInvalid as err:
                 raise (OverflowError if uint_to_int_cast else RuntimeError)(
                     "An error occurred when trying to convert unsupported by HDK 'dtypes' "
                     + f"to the supported ones, the schema to cast was: \n{new_schema}."
-                ) from e
+                ) from err
 
         return table
 

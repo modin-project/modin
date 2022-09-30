@@ -550,7 +550,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     if len(level) < self.index.nlevels
                     else pandas.RangeIndex(len(self.index))
                 )
-        else:
+        elif not drop:
             uniq_sorted_level = list(range(self.index.nlevels))
 
         if not drop:
@@ -627,7 +627,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             new_self = self.copy()
             new_self.index = (
-                pandas.RangeIndex(len(new_self.index))
+                # Cheaper to compute row lengths than index
+                pandas.RangeIndex(sum(new_self._modin_frame.row_lengths))
                 if new_index is None
                 else new_index
             )
@@ -964,61 +965,43 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def resample_count(self, resample_kwargs):
         return self._resample_func(resample_kwargs, "count")
 
-    def resample_nunique(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "nunique", _method=_method, *args, **kwargs
-        )
+    def resample_nunique(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "nunique", *args, **kwargs)
 
-    def resample_first(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "first", _method=_method, *args, **kwargs
-        )
+    def resample_first(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "first", *args, **kwargs)
 
-    def resample_last(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "last", _method=_method, *args, **kwargs
-        )
+    def resample_last(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "last", *args, **kwargs)
 
-    def resample_max(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "max", _method=_method, *args, **kwargs
-        )
+    def resample_max(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "max", *args, **kwargs)
 
-    def resample_mean(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "median", _method=_method, *args, **kwargs
-        )
+    def resample_mean(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "median", *args, **kwargs)
 
-    def resample_median(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "median", _method=_method, *args, **kwargs
-        )
+    def resample_median(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "median", *args, **kwargs)
 
-    def resample_min(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "min", _method=_method, *args, **kwargs
-        )
+    def resample_min(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "min", *args, **kwargs)
 
-    def resample_ohlc_ser(self, resample_kwargs, _method, *args, **kwargs):
+    def resample_ohlc_ser(self, resample_kwargs, *args, **kwargs):
         return self._resample_func(
             resample_kwargs,
             "ohlc",
             df_op=lambda df: df.squeeze(axis=1),
-            _method=_method,
             *args,
             **kwargs,
         )
 
-    def resample_ohlc_df(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "ohlc", _method=_method, *args, **kwargs
-        )
+    def resample_ohlc_df(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "ohlc", *args, **kwargs)
 
-    def resample_prod(self, resample_kwargs, _method, min_count, *args, **kwargs):
+    def resample_prod(self, resample_kwargs, min_count, *args, **kwargs):
         return self._resample_func(
             resample_kwargs,
             "prod",
-            _method=_method,
             min_count=min_count,
             *args,
             **kwargs,
@@ -1029,19 +1012,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
             resample_kwargs, "size", new_columns=[MODIN_UNNAMED_SERIES_LABEL]
         )
 
-    def resample_sem(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "sem", _method=_method, *args, **kwargs
-        )
+    def resample_sem(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "sem", *args, **kwargs)
 
     def resample_std(self, resample_kwargs, ddof, *args, **kwargs):
         return self._resample_func(resample_kwargs, "std", ddof=ddof, *args, **kwargs)
 
-    def resample_sum(self, resample_kwargs, _method, min_count, *args, **kwargs):
+    def resample_sum(self, resample_kwargs, min_count, *args, **kwargs):
         return self._resample_func(
             resample_kwargs,
             "sum",
-            _method=_method,
             min_count=min_count,
             *args,
             **kwargs,
@@ -2971,8 +2951,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     pandas.DataFrame(index=[1], columns=[1]).groupby(level=0),
                     **agg_kwargs,
                 )
-            except Exception as e:
-                raise type(e)("No numeric types to aggregate.")
+            except Exception as err:
+                raise type(err)("No numeric types to aggregate.")
 
         return result
 

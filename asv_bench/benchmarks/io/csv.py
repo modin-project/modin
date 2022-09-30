@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import modin.pandas as pd
 import numpy as np
 
 from ..utils import (
@@ -39,7 +38,7 @@ class BaseReadCsv:
     def setup(self, test_filenames, shape, *args, **kwargs):
         # ray init
         if ASV_USE_IMPL == "modin":
-            pd.DataFrame([])
+            IMPL.DataFrame([])
         self.shape_id = get_shape_id(shape)
 
 
@@ -63,11 +62,7 @@ class TimeReadCsvSkiprows(BaseReadCsv):
         self.skiprows = self.skiprows_mapping[skiprows] if skiprows else None
 
     def time_skiprows(self, test_filenames, shape, skiprows):
-        execute(
-            IMPL[ASV_USE_IMPL].read_csv(
-                test_filenames[self.shape_id], skiprows=self.skiprows
-            )
-        )
+        execute(IMPL.read_csv(test_filenames[self.shape_id], skiprows=self.skiprows))
 
 
 class TimeReadCsvTrueFalseValues(BaseReadCsv):
@@ -78,7 +73,7 @@ class TimeReadCsvTrueFalseValues(BaseReadCsv):
 
     def time_true_false_values(self, test_filenames, shape):
         execute(
-            IMPL[ASV_USE_IMPL].read_csv(
+            IMPL.read_csv(
                 test_filenames[self.shape_id],
                 true_values=["Yes", "true"],
                 false_values=["No", "false"],
@@ -104,7 +99,7 @@ class TimeReadCsvNamesDtype:
 
     def _add_timestamp_columns(self, df):
         df = df.copy()
-        date_column = IMPL["pandas"].date_range("2000", periods=df.shape[0], freq="ms")
+        date_column = IMPL.date_range("2000", periods=df.shape[0], freq="ms")
         for col in self._timestamp_columns:
             df[col] = date_column
         return df
@@ -114,7 +109,9 @@ class TimeReadCsvNamesDtype:
         cache = {}
         for shape in self.shapes:
             for dtype in self._dtypes_params:
-                df = generate_dataframe("pandas", "int", *shape, RAND_LOW, RAND_HIGH)
+                df = generate_dataframe(
+                    "int", *shape, RAND_LOW, RAND_HIGH, impl="pandas"
+                )
                 if dtype == "Int64_Timestamp":
                     df = self._add_timestamp_columns(df)
 
@@ -130,7 +127,7 @@ class TimeReadCsvNamesDtype:
     def setup(self, cache, shape, names, dtype):
         # ray init
         if ASV_USE_IMPL == "modin":
-            pd.DataFrame([])
+            IMPL.DataFrame([])
         file_id = self._get_file_id(shape, dtype)
         self.filename, self.names, self.dtype = cache[file_id]
 
@@ -144,7 +141,7 @@ class TimeReadCsvNamesDtype:
 
     def time_read_csv_names_dtype(self, cache, shape, names, dtype):
         execute(
-            IMPL[ASV_USE_IMPL].read_csv(
+            IMPL.read_csv(
                 self.filename,
                 names=self.names,
                 header=0,

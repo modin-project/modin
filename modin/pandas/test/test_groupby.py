@@ -910,8 +910,8 @@ def test_series_groupby(by, as_index_series_or_dataframe):
         pandas_groupby = pandas_series.groupby(by, as_index=as_index)
         if as_index_series_or_dataframe == 2:
             pandas_groupby = pandas_groupby["col1"]
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.groupby(by, as_index=as_index)
     else:
         modin_groupby = modin_series.groupby(by, as_index=as_index)
@@ -1174,8 +1174,8 @@ def eval_pipe(modin_groupby, pandas_groupby, func):
 def eval_quantile(modin_groupby, pandas_groupby):
     try:
         pandas_result = pandas_groupby.quantile(q=0.4)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_groupby.quantile(q=0.4)
     else:
         df_equals(modin_groupby.quantile(q=0.4), pandas_result)

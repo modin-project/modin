@@ -19,7 +19,11 @@ import pytest
 import re
 
 from modin.config import StorageFormat
-from modin.pandas.test.utils import io_ops_bad_exc, default_to_pandas_ignore_string
+from modin.pandas.test.utils import (
+    io_ops_bad_exc,
+    default_to_pandas_ignore_string,
+    random_state,
+)
 from .utils import eval_io, ForceHdkImport, set_execution_mode, run_and_compare
 from pandas.core.dtypes.common import is_list_like
 
@@ -452,7 +456,7 @@ class TestMultiIndex:
                 names=["l1", "l2", "l3"],
             )
             if is_multiindex
-            else pandas.Index(np.arange(len(self.data["a"])), name="index")
+            else pandas.Index(np.arange(1, len(self.data["a"]) + 1), name="index")
         )
         columns = pandas.MultiIndex.from_tuples(
             [("a", "b"), ("b", "c")], names=column_names
@@ -2213,6 +2217,35 @@ class TestStr:
         mds = pd.Series(data[next(iter(data.keys()))])
         pds = pandas.Series(data[next(iter(data.keys()))])
         assert str(mds) == str(pds)
+
+    def test_no_cols(self):
+        def run_cols(df, **kwargs):
+            return df.loc[1]
+
+        run_and_compare(
+            fn=run_cols,
+            data=None,
+            constructor_kwargs={"index": range(5)},
+            force_lazy=False,
+        )
+
+
+class TestCompare:
+    def test_compare_float(self):
+        def run_compare(df1, df2, **kwargs):
+            return df1.compare(df2, align_axis="columns", keep_shape=False)
+
+        data1 = random_state.randn(100, 10)
+        data2 = random_state.randn(100, 10)
+        columns = list("abcdefghij")
+
+        run_and_compare(
+            run_compare,
+            data=data1,
+            data2=data2,
+            constructor_kwargs={"columns": columns},
+            force_lazy=False,
+        )
 
 
 if __name__ == "__main__":

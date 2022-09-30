@@ -309,10 +309,10 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         try:
             return object.__getattribute__(self, key)
-        except AttributeError as e:
+        except AttributeError as err:
             if key not in _ATTRS_NO_LOOKUP and key in self.index:
                 return self[key]
-            raise e
+            raise err
 
     def __int__(self):
         """

@@ -50,8 +50,11 @@ Key Features and Updates
   * FIX-#4734: Handle Series.apply when return type is a DataFrame (#4830)
   * FIX-#4983: Set `frac` to `None` in _sample when `n=0` (#4984)
   * FIX-#4993: Return `_default_to_pandas` in `df.attrs` (#4995)
+  * FIX-#5043: Fix `execute` function in ASV utils failed if `len(partitions) == 0` (#5044)
   * FIX-#4597: Refactor Partition handling of func, args, kwargs (#4715)
   * FIX-#4996: Evaluate BenchmarkMode at each function call (#4997)
+  * FIX-#4022: Fixed empty data frame with index (#4910)
+  * FIX-#4090: Fixed check if the index is trivial (#4936)
   * FIX-#3764: Fix `df.loc` with scalar out of bounds appends to df (#3765)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
@@ -81,10 +84,14 @@ Key Features and Updates
   * PERF-#4920: Avoid index and cache computations in `take_2d_labels_or_positional` unless they are needed (#4921)
   * PERF-#4999: don't call `apply` in virtual partition' `drain_call_queue` if `call_queue` is empty (#4975)
   * PERF-#4268: Implement partition-parallel __getitem__ for bool Series masks (#4753)
+  * PERF-#5017: `reset_index` shouldn't trigger index materialization if possible (#5018)
   * PERF-#4963: Use partition `width/length` methods instead of `_compute_axis_labels_and_lengths` if index is already known (#4964)
   * PERF-#4940: Optimize categorical dtype check in `concatenate` (#4953)
 * Benchmarking enhancements
+  * TEST-#5066: Add outer join case for `TimeConcat` benchmark (#5067)
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
+  * TEST-#5014: Simplify adding new ASV benchmarks (#5015)
+  * TEST-#5064: Update `TimeConcat` benchmark with new parameter `ignore_index` (#5065)
   * PERF-#4944: Avoid default_to_pandas in ``Series.cat.codes``, ``Series.dt.tz``, and ``Series.dt.to_pytimedelta`` (#4833)
 * Refactor Codebase
   * REFACTOR-#4530: Standardize access to physical data in partitions (#4563)
@@ -107,11 +114,15 @@ Key Features and Updates
   * REFACTOR-#4885: De-duplicated take_2d_labels_or_positional methods (#4883)
   * REFACTOR-#5005: Use `finalize` method instead of list comprehension + `drain_call_queue` (#5006)
   * REFACTOR-#5001: Remove `jenkins` stuff (#5002)
+  * REFACTOR-#5026: Change exception names to simplify grepping (#5027)
   * REFACTOR-#4970: Rewrite base implementations of a partition' `width/length` (#4971)  
   * REFACTOR-#4942: Remove `call` method in favor of `register` due to duplication (4943)
   * REFACTOR-#4922: Helpers for take_2d_labels_or_positional (#4865)
+  * REFACTOR-#5024: Make `_row_lengths` and `_column_widths` public (#5025)
   * REFACTOR-#5009: Use `RayWrapper.materialize` instead of `ray.get` (#5010)
   * REFACTOR-#4755: Rewrite Pandas version mismatch warning (#4965)
+  * REFACTOR-#5012: Add mypy checks for singleton files in base modin directory (#5013)
+  * REFACTOR-#5038: Remove unnecessary _method argument from resamplers (#5039)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements
@@ -131,12 +142,15 @@ Key Features and Updates
   * TEST-#4875: XFail tests failing due to file gone missing (#4876)
   * TEST-#4879: Use pandas `ensure_clean()` in place of `io_tests_data` (#4881)
   * TEST-#4562: Use local Ray cluster in CI to resolve flaky `test-compat-win` (#5007)
+  * TEST-#5040: Rework test_series using eval_general() (#5041)
+  * TEST-#5050: Add black to pre-commit hook (#5051)
 * Documentation improvements
   * DOCS-#4552: Change default sphinx language to en to fix sphinx >= 5.0.0 build (#4553)
   * DOCS-#4628: Add to_parquet partial support notes (#4648)
   * DOCS-#4668: Set light theme for readthedocs page, remove theme switcher (#4669)
   * DOCS-#4748: Apply the Triage label to new issues (#4749)
   * DOCS-#4790: Give all templates issue type and triage labels (#4791)
+  * DOCS-#4521: Document how to benchmark modin (#5020)
 * Dependencies
   * FEAT-#4598: Add support for pandas 1.4.3 (#4599)
   * FEAT-#4619: Integrate mypy static type checking (#4620)

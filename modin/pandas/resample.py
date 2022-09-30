@@ -294,81 +294,74 @@ class Resampler(ClassLogger):
             query_compiler=self._query_compiler.resample_count(self.resample_kwargs)
         )
 
-    def nunique(self, _method="nunique", *args, **kwargs):
+    def nunique(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_nunique(
-                self.resample_kwargs, _method, *args, **kwargs
+                self.resample_kwargs, *args, **kwargs
             )
         )
 
-    def first(self, _method="first", *args, **kwargs):
+    def first(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_first(
                 self.resample_kwargs,
-                _method,
                 *args,
                 **kwargs,
             )
         )
 
-    def last(self, _method="last", *args, **kwargs):
+    def last(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_last(
                 self.resample_kwargs,
-                _method,
                 *args,
                 **kwargs,
             )
         )
 
-    def max(self, _method="max", *args, **kwargs):
+    def max(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_max(
                 self.resample_kwargs,
-                _method,
                 *args,
                 **kwargs,
             )
         )
 
-    def mean(self, _method="mean", *args, **kwargs):
+    def mean(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_mean(
                 self.resample_kwargs,
-                _method,
                 *args,
                 **kwargs,
             )
         )
 
-    def median(self, _method="median", *args, **kwargs):
+    def median(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_median(
                 self.resample_kwargs,
-                _method,
                 *args,
                 **kwargs,
             )
         )
 
-    def min(self, _method="min", *args, **kwargs):
+    def min(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_min(
                 self.resample_kwargs,
-                _method,
                 *args,
                 **kwargs,
             )
         )
 
-    def ohlc(self, _method="ohlc", *args, **kwargs):
+    def ohlc(self, *args, **kwargs):
         from .dataframe import DataFrame
 
         if isinstance(self._dataframe, DataFrame):
             return DataFrame(
                 query_compiler=self._query_compiler.resample_ohlc_df(
                     self.resample_kwargs,
-                    _method,
                     *args,
                     **kwargs,
                 )
@@ -377,13 +370,12 @@ class Resampler(ClassLogger):
             return DataFrame(
                 query_compiler=self._query_compiler.resample_ohlc_ser(
                     self.resample_kwargs,
-                    _method,
                     *args,
                     **kwargs,
                 )
             )
 
-    def prod(self, _method="prod", min_count=0, *args, **kwargs):
+    def prod(self, min_count=0, *args, **kwargs):
         if self.resample_kwargs["axis"] == 0:
             result = self.__groups.prod(min_count=min_count, *args, **kwargs)
         else:
@@ -397,11 +389,10 @@ class Resampler(ClassLogger):
             query_compiler=self._query_compiler.resample_size(self.resample_kwargs)
         )
 
-    def sem(self, _method="sem", *args, **kwargs):
+    def sem(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_sem(
                 self.resample_kwargs,
-                _method,
                 *args,
                 **kwargs,
             )
@@ -414,7 +405,7 @@ class Resampler(ClassLogger):
             )
         )
 
-    def sum(self, _method="sum", min_count=0, *args, **kwargs):
+    def sum(self, min_count=0, *args, **kwargs):
         if self.resample_kwargs["axis"] == 0:
             result = self.__groups.sum(min_count=min_count, *args, **kwargs)
         else:

@@ -55,6 +55,7 @@ jobs:
         env:
           MODIN_ENGINE: ${{matrix.engine}}
       - uses: actions/upload-artifact@v3
+        if: success() || failure()
         with:
            name: fuzzydata-test-workflow-${{matrix.engine}}
            path: /tmp/fuzzydata-test-wf-${{matrix.engine}}/* # Must match output dir in test_fuzzydata.py

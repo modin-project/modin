@@ -121,8 +121,8 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
 
     if has_frame_shape_cache:
         # Explicitly compute rows & columns shapes to store this info in frame's cache
-        modin_frame._row_lengths
-        modin_frame._column_widths
+        modin_frame.row_lengths
+        modin_frame.column_widths
     else:
         # Explicitly reset frame's cache
         modin_frame._row_lengths_cache = None

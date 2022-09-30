@@ -188,8 +188,8 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
         for _ in range(3):
             try:
                 getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
-            except EXCEPTIONS as exc:
-                last_exception = exc
+            except EXCEPTIONS as err:
+                last_exception = err
                 continue
             break
         else:

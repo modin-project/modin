@@ -188,8 +188,8 @@ def test_abs(request, data):
 
     try:
         pandas_result = pandas_df.abs()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.abs()
     else:
         modin_result = modin_df.abs()
@@ -234,8 +234,8 @@ def test_applymap_numeric(request, data, testfunc):
     if name_contains(request.node.name, numeric_dfs):
         try:
             pandas_result = pandas_df.applymap(testfunc)
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_df.applymap(testfunc)
         else:
             modin_result = modin_df.applymap(testfunc)
@@ -344,8 +344,8 @@ def test_get_dummies(request, data, dummy_na, drop_first):
         pandas_result = pandas.get_dummies(
             pandas_df, dummy_na=dummy_na, drop_first=drop_first
         )
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             pd.get_dummies(modin_df, dummy_na=dummy_na, drop_first=drop_first)
     else:
         modin_result = pd.get_dummies(
@@ -388,8 +388,8 @@ def test_append(data):
     for ignore in ignore_idx_values:
         try:
             pandas_result = pandas_df.append(data_to_append, ignore_index=ignore)
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_df.append(data_to_append, ignore_index=ignore)
         else:
             modin_result = modin_df.append(data_to_append, ignore_index=ignore)
@@ -397,8 +397,8 @@ def test_append(data):
 
     try:
         pandas_result = pandas_df.append(pandas_df.iloc[-1])
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.append(modin_df.iloc[-1])
     else:
         modin_result = modin_df.append(modin_df.iloc[-1])
@@ -406,8 +406,8 @@ def test_append(data):
 
     try:
         pandas_result = pandas_df.append(list(pandas_df.iloc[-1]))
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.append(list(modin_df.iloc[-1]))
     else:
         modin_result = modin_df.append(list(modin_df.iloc[-1]))
@@ -427,8 +427,8 @@ def test_append(data):
             pandas_result = pandas_df.append(
                 [pandas_df, pandas_df], verify_integrity=verify_integrity
             )
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_df.append([modin_df, modin_df], verify_integrity=verify_integrity)
         else:
             modin_result = modin_df.append(
@@ -440,8 +440,8 @@ def test_append(data):
             pandas_result = pandas_df.append(
                 pandas_df, verify_integrity=verify_integrity
             )
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_df.append(modin_df, verify_integrity=verify_integrity)
         else:
             modin_result = modin_df.append(modin_df, verify_integrity=verify_integrity)
@@ -851,8 +851,8 @@ def test_drop_duplicates(data, keep, subset, ignore_index):
         pandas_df.drop_duplicates(
             keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
         )
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.drop_duplicates(
                 keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
             )
@@ -870,8 +870,8 @@ def test_drop_duplicates(data, keep, subset, ignore_index):
         pandas_results = pandas_df.drop_duplicates(
             keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
         )
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.drop_duplicates(
                 keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
             )
@@ -1397,8 +1397,8 @@ def test___neg__(request, data):
 
     try:
         pandas_result = pandas_df.__neg__()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.__neg__()
     else:
         modin_result = modin_df.__neg__()
@@ -1411,8 +1411,8 @@ def test___invert__(data):
     pandas_df = pandas.DataFrame(data)
     try:
         pandas_result = ~pandas_df
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(~modin_df)
     else:
         modin_result = ~modin_df
@@ -1464,8 +1464,8 @@ def test___abs__(request, data):
 
     try:
         pandas_result = abs(pandas_df)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             abs(modin_df)
     else:
         modin_result = abs(modin_df)

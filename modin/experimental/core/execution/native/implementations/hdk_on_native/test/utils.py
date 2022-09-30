@@ -292,8 +292,8 @@ def run_and_compare(
         kwargs["df2"] = pandas.DataFrame(data2, **constructor_kwargs)
         kwargs["df"] = kwargs["df1"]
         ref_res = fn(lib=pandas, **kwargs)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             exp_res = run_modin(
                 fn=fn,
                 data=data,

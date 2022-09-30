@@ -369,8 +369,8 @@ def test_query(data, funcs):
 
     try:
         pandas_result = pandas_df.query(funcs)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.query(funcs)
     else:
         modin_result = modin_df.query(funcs)

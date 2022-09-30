@@ -103,9 +103,9 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
             for func, f_args, f_kwargs in call_queue:
                 try:
                     result = func(result, *f_args, **f_kwargs)
-                except Exception as e:
+                except Exception as err:
                     self.call_queue = []
-                    raise e
+                    raise err
             return result
 
         self._data = call_queue_closure(self._data, self.call_queue)

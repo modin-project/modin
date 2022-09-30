@@ -218,9 +218,9 @@ class RayCluster(BaseCluster):
             with open(self.config_file) as inp:
                 self.config = yaml.safe_load(inp.read())
             self.ready = True
-        except BaseException as ex:
+        except BaseException as err:
             self.spawner.exc = CannotSpawnCluster(
-                "Cannot spawn cluster", cause=ex, traceback=traceback.format_exc()
+                "Cannot spawn cluster", cause=err, traceback=traceback.format_exc()
             )
             if not self.spawner.silent:
                 sys.stderr.write(f"Cannot spawn cluster:\n{traceback.format_exc()}\n")
@@ -230,9 +230,9 @@ class RayCluster(BaseCluster):
             teardown_cluster(self.config_file)
             self.ready = False
             self.config = None
-        except BaseException as ex:
+        except BaseException as err:
             self.destroyer.exc = CannotDestroyCluster(
-                "Cannot destroy cluster", cause=ex, traceback=traceback.format_exc()
+                "Cannot destroy cluster", cause=err, traceback=traceback.format_exc()
             )
             if not self.destroyer.silent:
                 sys.stderr.write(f"Cannot destroy cluster:\n{traceback.format_exc()}\n")
