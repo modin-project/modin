@@ -2443,15 +2443,14 @@ class Series(SeriesCompat, BasePandasDataset):
             key = [key]
         else:
             reduce_dimension = False
-        row_positions = key
         # The check for whether or not `key` is in `keys()` will throw a TypeError
         # if the object is not hashable. When that happens, we just assume the
         # key is a list-like of row positions.
         try:
-            if all(k in self.keys() for k in key):
-                row_positions = self.index.get_indexer_for(key)
+            is_indexer = all(k in self.keys() for k in key)
         except TypeError:
-            pass
+            is_indexer = False
+        row_positions = self.index.get_indexer_for(key) if is_indexer else key
         if not all(is_integer(x) for x in row_positions):
             raise KeyError(key[0] if reduce_dimension else key)
         result = self._query_compiler.getitem_row_array(row_positions)
