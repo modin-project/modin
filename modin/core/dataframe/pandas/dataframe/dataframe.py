@@ -1889,23 +1889,14 @@ class PandasDataframe(ClassLogger):
         
         axis = Axis(axis)
 
-        #print("INSIDE WINDOW FUNCTION")
-
-        #print(reduce_fn)
-        #print(axis)
-        #print(window_size)
-        #print(result_schema)
-
         def window_function_complete(virtual_partition):
-            #print("INSIDE WINDOW FUNCTION")
             virtual_partition_copy = virtual_partition.copy()
-            window_result = reduce_fn(virtual_partition_copy)#virtual_partition_copy.rolling(window=window_size, axis=axis.value).sum() # hardcode a reduction function for now
+            window_result = reduce_fn(virtual_partition_copy)
             return window_result
 
         def window_function_partition(virtual_partition):
-            #print("INSIDE WINDOW FUNCTION")
             virtual_partition_copy = virtual_partition.copy()
-            window_result = reduce_fn(virtual_partition_copy)#virtual_partition_copy.rolling(window=window_size, axis=axis.value).sum() # hardcode a reduction function for now
+            window_result = reduce_fn(virtual_partition_copy)
             return window_result.iloc[:, window_size - 1 : ] if axis == Axis.COL_WISE else window_result.iloc[window_size - 1: , :]
 
         num_parts = len(self._partitions[0]) if axis == Axis.COL_WISE else len(self._partitions)
@@ -1967,12 +1958,14 @@ class PandasDataframe(ClassLogger):
                     for x, r in enumerate(results):
                         r.append(reduce_result[x])              
 
+        results = np.array(results)
+        
         return self.__constructor__(
             results,
             self.index,
             self.columns,
-            self._row_lengths,
-            self._column_widths,
+            None,
+            None,
             result_schema
         )                    
 
