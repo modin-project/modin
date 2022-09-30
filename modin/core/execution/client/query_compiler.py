@@ -481,6 +481,60 @@ class ClientQueryCompiler(BaseQueryCompiler):
     def sort_index(self, **kwargs):
         return self.__constructor__(self._service.sort_index(self._id, **kwargs))
 
+    def dt_nanosecond(self):
+        return self.__constructor__(self._service.dt_nanosecond(self._id))
+
+    def dt_microsecond(self):
+        return self.__constructor__(self._service.dt_microsecond(self._id))
+
+    def dt_second(self):
+        return self.__constructor__(self._service.dt_second(self._id))
+
+    def dt_minute(self):
+        return self.__constructor__(self._service.dt_minute(self._id))
+
+    def dt_hour(self):
+        return self.__constructor__(self._service.dt_hour(self._id))
+
+    def dt_day(self):
+        return self.__constructor__(self._service.dt_day(self._id))
+
+    def dt_dayofweek(self):
+        return self.__constructor__(self._service.dt_dayofweek(self._id))
+
+    def dt_day_of_week(self):
+        return self.__constructor__(self._service.dt_day_of_week(self._id))
+
+    def dt_weekday(self):
+        return self.__constructor__(self._service.dt_weekday(self._id))
+
+    def dt_day_name(self):
+        return self.__constructor__(self._service.dt_day_name(self._id))
+
+    def dt_dayofyear(self):
+        return self.__constructor__(self._service.dt_dayofyear(self._id))
+
+    def dt_day_of_year(self):
+        return self.__constructor__(self._service.dt_day_of_year(self._id))
+
+    def dt_week(self):
+        return self.__constructor__(self._service.dt_week(self._id))
+
+    def dt_weekofyear(self):
+        return self.__constructor__(self._service.dt_weekofyear(self._id))
+
+    def dt_month(self):
+        return self.__constructor__(self._service.dt_month(self._id))
+
+    def dt_month_name(self):
+        return self.__constructor__(self._service.dt_month_name(self._id))
+
+    def dt_quarter(self):
+        return self.__constructor__(self._service.dt_quarter(self._id))
+
+    def dt_year(self):
+        return self.__constructor__(self._service.dt_year(self._id))
+
     def str_capitalize(self):
         return self.__constructor__(self._service.str_capitalize(self._id))
 
