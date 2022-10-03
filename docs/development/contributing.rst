@@ -192,9 +192,8 @@ To build the documentation, please follow the steps below from the project root:
 
 .. code-block:: bash
 
-    cd docs
-    pip install -r requirements-doc.txt
-    sphinx-build -b html . build
+    pip install -r docs/requirements-doc.txt
+    sphinx-build -b html docs docs/build
 
 To visualize the documentation locally, run the following from `build` folder:
 
