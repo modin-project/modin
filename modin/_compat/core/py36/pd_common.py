@@ -16,8 +16,8 @@
 from contextlib import contextmanager
 from collections import namedtuple
 
-from pandas import DataFrame as pd_DataFrame
-from pandas.io.common import get_handle as pd_get_handle
+from pandas import DataFrame as pandas_DataFrame
+from pandas.io.common import get_handle as pandas_get_handle
 from pandas.core.aggregation import reconstruct_func
 from pandas.core.base import DataError, SpecificationError
 
@@ -27,7 +27,7 @@ _HandleWrapper = namedtuple("_HandleWrapper", ["handle"])
 
 
 @contextmanager
-@_inherit_docstrings(pd_get_handle)
+@_inherit_docstrings(pandas_get_handle)
 def get_handle(
     path_or_buf,
     mode: str,
@@ -39,7 +39,7 @@ def get_handle(
     storage_options=None,
 ):
     assert storage_options is None
-    f, handles = pd_get_handle(
+    f, handles = pandas_get_handle(
         path_or_buf,
         mode=mode,
         encoding=encoding,
@@ -58,14 +58,14 @@ def get_handle(
                 pass
 
 
-def pd_pivot_table(df, **kwargs):  # noqa: PR01, RT01
+def pandas_pivot_table(df, **kwargs):  # noqa: PR01, RT01
     """Perform pandas pivot_table against a dataframe ignoring unsupported args."""
     unsupported_sort = kwargs.pop("sort", None)
     assert unsupported_sort is None
     return df.pivot_table(**kwargs)
 
 
-def pd_convert_dtypes(df, **kwargs):  # noqa: PR01, RT01
+def pandas_convert_dtypes(df, **kwargs):  # noqa: PR01, RT01
     """Perform pandas convert_dtypes against a dataframe or series ignoring unsupported args."""
     unsupported_convert = kwargs.pop("convert_floating", None)
     assert unsupported_convert is None
@@ -81,36 +81,36 @@ def pd_compare(df, **kwargs):
     return df.compare(**kwargs)
 
 
-def pd_dataframe_join(df, other, **kwargs):
+def pandas_dataframe_join(df, other, **kwargs):
     validate = kwargs.pop("validate", None)
     assert validate is None, "Unsupported argument passed to DataFrame.join: validate"
-    return pd_DataFrame.join(df, other, **kwargs)
+    return pandas_DataFrame.join(df, other, **kwargs)
 
 
-def pd_reset_index(df, **kwargs):
+def pandas_reset_index(df, **kwargs):
     allow_duplicates = kwargs.pop("allow_duplicates", None)
     names = kwargs.pop("names", None)
     assert (
         allow_duplicates is None
     ), "Unsupported argument passed to reset_index: allow_duplicates"
     assert names is None, "Unsupported argument passed to reset_index: name"
-    return pd_DataFrame.reset_index(df, **kwargs)
+    return pandas_DataFrame.reset_index(df, **kwargs)
 
 
-def pd_to_csv(df, **kwargs):
+def pandas_to_csv(df, **kwargs):
     kwargs["line_terminator"] = kwargs.pop("lineterminator", None)
     return df.to_csv(**kwargs)
 
 
 __all__ = [
     "get_handle",
-    "pd_pivot_table",
-    "pd_convert_dtypes",
+    "pandas_pivot_table",
+    "pandas_convert_dtypes",
     "pd_compare",
-    "pd_dataframe_join",
+    "pandas_dataframe_join",
     "reconstruct_func",
-    "pd_reset_index",
-    "pd_to_csv",
+    "pandas_reset_index",
+    "pandas_to_csv",
     "DataError",
     "SpecificationError",
 ]

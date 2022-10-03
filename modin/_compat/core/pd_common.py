@@ -18,13 +18,13 @@ from modin._compat import PandasCompatVersion
 if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
     from .py36.pd_common import (
         get_handle,
-        pd_pivot_table,
-        pd_convert_dtypes,
+        pandas_pivot_table,
+        pandas_convert_dtypes,
         pd_compare,
-        pd_dataframe_join,
+        pandas_dataframe_join,
         reconstruct_func,
-        pd_reset_index,
-        pd_to_csv,
+        pandas_reset_index,
+        pandas_to_csv,
         DataError,
         SpecificationError,
     )
@@ -33,26 +33,26 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
     from .latest.pd_common import (
         get_handle,
-        pd_pivot_table,
-        pd_convert_dtypes,
+        pandas_pivot_table,
+        pandas_convert_dtypes,
         pd_compare,
-        pd_dataframe_join,
+        pandas_dataframe_join,
         reconstruct_func,
-        pd_reset_index,
-        pd_to_csv,
+        pandas_reset_index,
+        pandas_to_csv,
         DataError,
         SpecificationError,
     )
 
 __all__ = [
     "get_handle",
-    "pd_pivot_table",
-    "pd_convert_dtypes",
+    "pandas_pivot_table",
+    "pandas_convert_dtypes",
     "pd_compare",
-    "pd_dataframe_join",
+    "pandas_dataframe_join",
     "reconstruct_func",
-    "pd_reset_index",
-    "pd_to_csv",
+    "pandas_reset_index",
+    "pandas_to_csv",
     "DataError",
     "SpecificationError",
 ]

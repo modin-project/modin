@@ -34,7 +34,7 @@ from modin._compat.core.base_io import (
     _doc_returns_qc,
     _doc_returns_qc_or_parser,
 )
-from modin._compat.core.pd_common import pd_to_csv
+from modin._compat.core.pd_common import pandas_to_csv
 
 
 class BaseIO(BaseIOCompat):
@@ -686,7 +686,7 @@ class BaseIO(BaseIOCompat):
         if isinstance(obj, BaseQueryCompiler):
             obj = obj.to_pandas()
 
-        return pd_to_csv(obj, **kwargs)
+        return pandas_to_csv(obj, **kwargs)
 
     @classmethod
     @_inherit_docstrings(

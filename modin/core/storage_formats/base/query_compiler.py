@@ -18,7 +18,7 @@ Module contains class ``BaseQueryCompiler``.
 """
 
 import abc
-from modin._compat.core.pd_common import pd_reset_index, pd_compare
+from modin._compat.core.pd_common import pandas_reset_index, pd_compare
 
 from modin.core.dataframe.algebra.default2pandas import (
     DataFrameDefault,
@@ -984,7 +984,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             QueryCompiler with reset index.
         """
-        return DataFrameDefault.register(pd_reset_index)(self, **kwargs)
+        return DataFrameDefault.register(pandas_reset_index)(self, **kwargs)
 
     def set_index_from_columns(
         self, keys: List[Hashable], drop: bool = True, append: bool = False

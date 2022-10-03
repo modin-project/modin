@@ -15,16 +15,16 @@
 
 from pandas.io.common import get_handle
 from pandas.core.apply import reconstruct_func
-from pandas import DataFrame as pd_DataFrame
+from pandas import DataFrame as pandas_DataFrame
 from pandas.errors import DataError, SpecificationError
 
 
-def pd_pivot_table(df, **kwargs):  # noqa: PR01, RT01
+def pandas_pivot_table(df, **kwargs):  # noqa: PR01, RT01
     """Perform pandas pivot_table against a dataframe."""
     return df.pivot_table(**kwargs)
 
 
-def pd_convert_dtypes(df, **kwargs):  # noqa: PR01, RT01
+def pandas_convert_dtypes(df, **kwargs):  # noqa: PR01, RT01
     """Perform pandas convert_dtypes against a dataframe or series."""
     return df.convert_dtypes(**kwargs)
 
@@ -34,30 +34,30 @@ def pd_compare(df, **kwargs):  # noqa: PR01, RT01
     return df.compare(**kwargs)
 
 
-def pd_dataframe_join(df, other, **kwargs):  # noqa: PR01, RT01
+def pandas_dataframe_join(df, other, **kwargs):  # noqa: PR01, RT01
     """Perform pandas DataFrame.join against a dataframe or series."""
-    return pd_DataFrame.join(df, other, **kwargs)
+    return pandas_DataFrame.join(df, other, **kwargs)
 
 
-def pd_reset_index(df, **kwargs):  # noqa: PR01, RT01
+def pandas_reset_index(df, **kwargs):  # noqa: PR01, RT01
     """Perform pandas reset_index against a dataframe or series."""
-    return pd_DataFrame.reset_index(df, **kwargs)
+    return pandas_DataFrame.reset_index(df, **kwargs)
 
 
-def pd_to_csv(df, **kwargs):  # noqa: PR01, RT01
+def pandas_to_csv(df, **kwargs):  # noqa: PR01, RT01
     """Perform pandas to_csv against a dataframe or series."""
     return df.to_csv(**kwargs)
 
 
 __all__ = [
     "get_handle",
-    "pd_pivot_table",
-    "pd_convert_dtypes",
+    "pandas_pivot_table",
+    "pandas_convert_dtypes",
     "pd_compare",
-    "pd_dataframe_join",
+    "pandas_dataframe_join",
     "reconstruct_func",
-    "pd_reset_index",
-    "pd_to_csv",
+    "pandas_reset_index",
+    "pandas_to_csv",
     "DataError",
     "SpecificationError",
 ]
