@@ -1288,13 +1288,28 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         func = cls.preprocess_func(func)
 
         def get_right_block(right_partitions, row_idx, col_idx):
-            blocks = right_partitions[row_idx][col_idx].list_of_blocks
-            # TODO Resolve this assertion as a part of #4691, because the current implementation assumes
-            # that partition contains only 1 block.
-            assert (
-                len(blocks) == 1
-            ), f"Implementation assumes that partition contains only 1 block, but {len(blocks)} recieved."
-            return blocks[0]
+            partition = right_partitions[row_idx][col_idx]
+            blocks = partition.list_of_blocks
+            """
+            NOTE:
+            Currently we do one remote call per right virtual partition to
+            materialize the partitions' blocks, then another remote call to do
+            the n_ary operation. we could get better performance if we
+            assembled the other partition within the remote `apply` call, by
+            passing the partition in as `other_axis_partition`. However,
+            passing `other_axis_partition` requires some extra care that would
+            complicate the code quite a bit:
+            - block partitions don't know how to deal with `other_axis_partition`
+            - the right axis partition's axis could be different from the axis
+              of the corresponding left partition
+            - there can be multiple other_axis_partition because this is an n-ary
+              operation and n can be > 2.
+            So for now just do the materialization in a separate remote step.
+            """
+            if len(blocks) > 1:
+                partition.force_materialization()
+            assert len(partition.list_of_blocks) == 1
+            return partition.list_of_blocks[0]
 
         return np.array(
             [
