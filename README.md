@@ -141,6 +141,15 @@ which is a part of [Intel® oneAPI AI Analytics Toolkit (AI Kit)](https://www.in
 Some pandas APIs are easier to implement than others, so if something is missing feel
 free to open an issue!
 
+<span id="switch_to_modin"></span>
+### Script to switch to modin
+The below script when added to pre commit hooks on developer's machines, will ensure that modin is being used
+```bash
+find . -type f -name "*.py" ! -name "file_to_exclude.py" -exec sed -i '' 's/import pandas as pd/import modin.pandas as pd/g' {} +
+```
+
+Incase their are certain files in which pandas has to be used, those files can be excluded as well.
+
 ### More about Modin
 
 For the complete documentation on Modin, visit our [ReadTheDocs](https://modin.readthedocs.io/en/latest/index.html) page.
