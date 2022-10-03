@@ -16,7 +16,7 @@
 from modin._compat import PandasCompatVersion
 
 if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-    from .py36.pd_common import (
+    from .py36.pandas_common import (
         get_handle,
         pandas_pivot_table,
         pandas_convert_dtypes,
@@ -31,7 +31,7 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
 
 
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
-    from .latest.pd_common import (
+    from .latest.pandas_common import (
         get_handle,
         pandas_pivot_table,
         pandas_convert_dtypes,

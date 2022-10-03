@@ -55,7 +55,7 @@ from modin.core.dataframe.algebra import (
     is_reduce_function,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
-from modin._compat.core.pd_common import (
+from modin._compat.core.pandas_common import (
     pandas_pivot_table,
     pandas_convert_dtypes,
     pd_compare,

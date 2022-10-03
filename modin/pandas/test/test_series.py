@@ -20,7 +20,7 @@ import modin.pandas as pd
 from numpy.testing import assert_array_equal
 
 from modin._compat import PandasCompatVersion
-from modin._compat.core.pd_common import SpecificationError
+from modin._compat.core.pandas_common import SpecificationError
 from modin.utils import get_current_execution
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 import sys

@@ -37,7 +37,7 @@ from modin.config import IsExperimental
 from .series import Series
 from .utils import is_label
 from modin._compat import PandasCompatVersion
-from modin._compat.core.pd_common import reconstruct_func
+from modin._compat.core.pandas_common import reconstruct_func
 from modin._compat.pandas_api.classes import DataFrameGroupByCompat, SeriesGroupByCompat
 
 
@@ -544,7 +544,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                 )
 
             if any(i not in self._df.columns for i in func_dict.keys()):
-                from modin._compat.core.pd_common import SpecificationError
+                from modin._compat.core.pandas_common import SpecificationError
 
                 raise SpecificationError("nested renamer is not supported")
             if func is None:

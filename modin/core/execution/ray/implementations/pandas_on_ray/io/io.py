@@ -17,7 +17,7 @@ import io
 import os
 
 import pandas
-from modin._compat.core.pd_common import pandas_to_csv
+from modin._compat.core.pandas_common import pandas_to_csv
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.ray.generic.io import RayIO
@@ -30,7 +30,7 @@ from modin.core.io import (
     SQLDispatcher,
     ExcelDispatcher,
 )
-from modin._compat.core.pd_common import get_handle as pd_get_handle
+from modin._compat.core.pandas_common import get_handle as pd_get_handle
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVParser,
     PandasFWFParser,

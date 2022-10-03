@@ -18,7 +18,7 @@ Module contains class ``BaseQueryCompiler``.
 """
 
 import abc
-from modin._compat.core.pd_common import pandas_reset_index, pd_compare
+from modin._compat.core.pandas_common import pandas_reset_index, pd_compare
 
 from modin.core.dataframe.algebra.default2pandas import (
     DataFrameDefault,
