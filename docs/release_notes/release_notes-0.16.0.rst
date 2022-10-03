@@ -56,6 +56,7 @@ Key Features and Updates
   * FIX-#4022: Fixed empty data frame with index (#4910)
   * FIX-#4090: Fixed check if the index is trivial (#4936)
   * FIX-#5042: Fix series __getitem__ with invalid strings (#5048)
+  * FIX-#4691: Fix binary operations between virtual partitions (#5049)  
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
