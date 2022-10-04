@@ -158,7 +158,7 @@ def test_apply_text_func_with_level(level, data, func, axis):
         and PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST
     ):
         pytest.xfail(
-            "df.apply('str', axis=1) is broken in pandas 1.5: https://github.com/pandas-dev/pandas/issues/48656"
+            "df.apply('str', axis=1) is broken in pandas 1.5.0: https://github.com/modin-project/modin/issues/5076"
         )
     func_kwargs = {"level": level, "axis": axis}
     rows_number = len(next(iter(data.values())))  # length of the first data column

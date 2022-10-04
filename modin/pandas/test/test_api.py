@@ -169,7 +169,7 @@ def test_dataframe_api_equality():
 
     # These have to be checked manually
     allowed_different = ["to_hdf", "hist"]
-    # skip verifying .rename_axis() due to https://github.com/pandas-dev/pandas/issues/48730
+    # skip verifying .rename_axis() due to https://github.com/modin-project/modin/issues/5077
     allowed_different.append("rename_axis")
     difference = []
 
@@ -258,7 +258,7 @@ def test_series_api_equality():
 
     # These have to be checked manually
     allowed_different = ["to_hdf", "hist"]
-    # skip verifying .rename_axis() due to https://github.com/pandas-dev/pandas/issues/48730
+    # skip verifying .rename_axis() due to https://github.com/modin-project/modin/issues/5077
     allowed_different.append("rename_axis")
     difference = []
 

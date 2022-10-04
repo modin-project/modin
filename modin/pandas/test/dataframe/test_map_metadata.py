@@ -72,7 +72,7 @@ def eval_insert(modin_df, pandas_df, **kwargs):
     eval_general(
         modin_df,
         pandas_df,
-        operation=lambda df, **kwargs: (df.insert(**kwargs), df)[1],
+        operation=lambda df, **kwargs: df.insert(**kwargs),
         __inplace__=True,
         **_kwargs,
     )
