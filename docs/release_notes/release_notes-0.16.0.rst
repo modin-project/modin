@@ -56,6 +56,9 @@ Key Features and Updates
   * FIX-#4022: Fixed empty data frame with index (#4910)
   * FIX-#4090: Fixed check if the index is trivial (#4936)
   * FIX-#4966: Fix `to_timedelta` to return Series instead of TimedeltaIndex (#5028)
+  * FIX-#5042: Fix series __getitem__ with invalid strings (#5048)
+  * FIX-#4691: Fix binary operations between virtual partitions (#5049)  
+  * FIX-#5045: Fix ray virtual_partition.wait with duplicate object refs (#5058)
 * Performance enhancements
   * PERF-#4182: Add cell-wise execution for binary ops, fix bin ops for empty dataframes (#4391)
   * PERF-#4288: Improve perf of `groupby.mean` for narrow data (#4591)
@@ -88,8 +91,10 @@ Key Features and Updates
   * PERF-#4963: Use partition `width/length` methods instead of `_compute_axis_labels_and_lengths` if index is already known (#4964)
   * PERF-#4940: Optimize categorical dtype check in `concatenate` (#4953)
 * Benchmarking enhancements
+  * TEST-#5066: Add outer join case for `TimeConcat` benchmark (#5067)
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
   * TEST-#5014: Simplify adding new ASV benchmarks (#5015)
+  * TEST-#5064: Update `TimeConcat` benchmark with new parameter `ignore_index` (#5065)
   * PERF-#4944: Avoid default_to_pandas in ``Series.cat.codes``, ``Series.dt.tz``, and ``Series.dt.to_pytimedelta`` (#4833)
 * Refactor Codebase
   * REFACTOR-#4530: Standardize access to physical data in partitions (#4563)
