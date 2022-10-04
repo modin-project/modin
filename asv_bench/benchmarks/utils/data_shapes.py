@@ -166,6 +166,9 @@ _DEFAULT_HDK_CONFIG_T = [
     ),
 ]
 DEFAULT_CONFIG = {}
+DEFAULT_CONFIG["MergeCategoricals"] = (
+    [[10_000, 2]] if ASV_DATASET_SIZE == "big" else [[1_000, 2]]
+)
 for config in (_DEFAULT_CONFIG_T, _DEFAULT_HDK_CONFIG_T):
     for _shape, _names in config:
         DEFAULT_CONFIG.update({_name: _shape for _name in _names})

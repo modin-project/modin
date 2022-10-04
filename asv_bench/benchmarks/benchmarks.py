@@ -148,6 +148,45 @@ class TimeMerge:
         )
 
 
+class TimeMergeCategoricals:
+    param_names = ["shapes", "data_type"]
+    params = [
+        get_benchmark_shapes("MergeCategoricals"),
+        ["object", "category"],
+    ]
+
+    def setup(self, shapes, data_type):
+        assert len(shapes) == 2
+        assert shapes[1] == 2
+        size = (shapes[0],)
+        self.left = IMPL.DataFrame(
+            {
+                "X": np.random.choice(range(0, 10), size=size),
+                "Y": np.random.choice(["one", "two", "three"], size=size),
+            }
+        )
+
+        self.right = IMPL.DataFrame(
+            {
+                "X": np.random.choice(range(0, 10), size=size),
+                "Z": np.random.choice(["jjj", "kkk", "sss"], size=size),
+            }
+        )
+
+        if data_type == "category":
+            self.left = self.left.assign(
+                Y=self.left["Y"].astype("category")
+            )
+            execute(self.left)
+            self.right = self.right.assign(
+                Z=self.right["Z"].astype("category")
+            )
+            execute(self.right)
+
+    def time_merge_categoricals(self, shapes, data_type):
+        execute(IMPL.merge(self.left, self.right, on="X"))
+
+
 class TimeConcat:
     param_names = ["shapes", "how", "axis", "ignore_index"]
     params = [
