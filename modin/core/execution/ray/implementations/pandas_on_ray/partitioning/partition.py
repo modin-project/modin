@@ -16,7 +16,7 @@
 import ray
 from ray.util import get_node_ip_address
 import uuid
-from modin.core.execution.ray.common.utils import deserialize, ObjectIDType
+from modin.core.execution.ray.common.utils import deserialize, ObjectIDType, wait
 from modin.core.execution.ray.common import RayWrapper
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
@@ -197,7 +197,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        ray.wait([self._data])
+        wait([self._data])
 
     def __copy__(self):
         """
