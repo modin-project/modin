@@ -84,18 +84,19 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``copy``                   | `copy`_                   | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``corr``                   | `corr`_                   | Y                      | Correlation floating point precision may slightly  |
+| ``corr``                   | `corr`_                   | P                      | Correlation floating point precision may slightly  |
 |                            |                           |                        | differ from pandas. For now pearson method is      |
-|                            |                           |                        | available only.                                    |
-|                            |                           |                        | For other methods defaults to pandas               |
+|                            |                           |                        | available only. For other methods and for          |
+|                            |                           |                        | ``numeric_only`` defaults to pandas.               |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``corrwith``               | `corrwith`_               | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``count``                  | `count`_                  | Y                      | **Hdk**: ``P``, only default params supported,     |
 |                            |                           |                        | otherwise ``D``                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``cov``                    | `cov`_                    | Y                      | Covariance floating point precision may slightly   |
-|                            |                           |                        | differ from pandas                                 |
+| ``cov``                    | `cov`_                    | P                      | Covariance floating point precision may slightly   |
+|                            |                           |                        | differ from pandas. For ``numeric_only``           |
+|                            |                           |                        | defaults to pandas.                                |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``cummax``                 | `cummax`_                 | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
@@ -193,6 +194,8 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``interpolate``            | `interpolate`_            | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
+| ``isetitem``               | `isetitem`_               | D                      |                                                    |
++----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``isin``                   | `isin`_                   | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``isna``                   | `isna`_                   | Y                      |                                                    |
@@ -207,8 +210,8 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``itertuples``             | `itertuples`_             | P                      | Modin does not parallelize iteration in Python     |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``join``                   | `join`_                   | P                      | When ``on`` is set to ``right`` or ``outer``       |
-|                            |                           |                        | it defaults to pandas                              |
+| ``join``                   | `join`_                   | P                      | When ``on`` is set to ``right`` or ``outer`` or    |
+|                            |                           |                        | when ``validate`` is given defaults to pandas      |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``keys``                   | `keys`_                   | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
@@ -328,7 +331,9 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``resample``               | `resample`_               | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``reset_index``            | `reset_index`_            | Y                      | **Hdk**: ``P``. ``D`` for ``level`` parameter      |
+| ``reset_index``            | `reset_index`_            | P                      | **Hdk**: ``P``. ``D`` for ``level`` parameter      |
+|                            |                           |                        | **Others**: ``D`` when ``allow_duplicates`` or     |
+|                            |                           |                        | ``names`` is non-default                           |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``rfloordiv``              | `rfloordiv`_              | Y                      | See ``add``; **Hdk**: ``D``                        |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
@@ -417,6 +422,8 @@ default to pandas.
 | ``to_json``                | `to_json`_                | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_latex``               | `to_latex`_               | D                      |                                                    |
++----------------------------+---------------------------+------------------------+----------------------------------------------------+
+| ``to_orc``                 | `to_orc`_                 | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_parquet``             | `to_parquet`_             | P                      | **Dask**: Defaults to Pandas implementation and    |
 |                            |                           |                        | writes a  single output file.                      |
@@ -556,6 +563,7 @@ default to pandas.
 .. _`insert`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.insert.html#pandas.DataFrame.insert
 .. _`interpolate`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.interpolate.html#pandas.DataFrame.interpolate
 .. _`is_copy`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.is_copy.html#pandas.DataFrame.is_copy
+.. _`isetitem`: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.isetitem.html?#pandas-dataframe-isetitem
 .. _`isin`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.isin.html#pandas.DataFrame.isin
 .. _`isna`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.isna.html#pandas.DataFrame.isna
 .. _`isnull`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.isnull.html#pandas.DataFrame.isnull
@@ -659,6 +667,7 @@ default to pandas.
 .. _`to_html`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_html.html#pandas.DataFrame.to_html
 .. _`to_json`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_json.html#pandas.DataFrame.to_json
 .. _`to_latex`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_latex.html#pandas.DataFrame.to_latex
+.. _`to_orc`: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_orc.html#pandas.DataFrame.to_orc
 .. _`to_parquet`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_parquet.html#pandas.DataFrame.to_parquet
 .. _`to_period`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_period.html#pandas.DataFrame.to_period
 .. _`to_pickle`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_pickle.html#pandas.DataFrame.to_pickle
