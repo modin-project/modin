@@ -43,6 +43,13 @@ SERIES_DATA_SIZE = {
     "big": [[100_000, 1]],
     "small": [[10_000, 1]],
 }
+BINARY_OP_SERIES_DATA_SIZE = {
+    "big": [
+        [[500_000, 1], [1_000_000, 1]],
+        [[500_000, 1], [500_000, 1]],
+    ],
+    "small": [[[5_000, 1], [10_000, 1]]],
+}
 
 
 HDK_BINARY_OP_DATA_SIZE = {
@@ -116,6 +123,13 @@ _DEFAULT_CONFIG_T = [
         [
             # Pandas storage format benchmarks
             "TimeFillnaSeries",
+        ],
+    ),
+    (
+        BINARY_OP_SERIES_DATA_SIZE[ASV_DATASET_SIZE],
+        [
+            # Pandas storage format benchmarks
+            "TimeBinaryOpSeries",
         ],
     ),
 ]

@@ -96,6 +96,7 @@ Key Features and Updates
   * TEST-#5014: Simplify adding new ASV benchmarks (#5015)
   * TEST-#5064: Update `TimeConcat` benchmark with new parameter `ignore_index` (#5065)
   * PERF-#4944: Avoid default_to_pandas in ``Series.cat.codes``, ``Series.dt.tz``, and ``Series.dt.to_pytimedelta`` (#4833)
+  * TEST-#5068: Add binary op benchmark for Series (#5069)
 * Refactor Codebase
   * REFACTOR-#4530: Standardize access to physical data in partitions (#4563)
   * REFACTOR-#4534: Replace logging meta class with class decorator (#4535)
