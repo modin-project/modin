@@ -1360,6 +1360,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             pandas.to_numeric(df.squeeze(axis=1), *args, **kwargs)
         )
     )
+    to_timedelta = Map.register(
+        lambda s, *args, **kwargs: pandas.to_timedelta(
+            s.squeeze(axis=1), *args, **kwargs
+        ).to_frame(),
+        dtypes="timedelta64[ns]",
+    )
 
     # END Map partitions operations
 

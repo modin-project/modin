@@ -759,3 +759,18 @@ def _determine_name(objs: Iterable[BaseQueryCompiler], axis: Union[int, str]):
         return list(names[0]) if is_list_like(names[0]) else [names[0]]
     else:
         return None
+
+
+@_inherit_docstrings(pandas.to_datetime, apilink="pandas.to_timedelta")
+@enable_logging
+def to_timedelta(arg, unit=None, errors="raise"):  # noqa: PR01, RT01, D200
+    """
+    Convert argument to timedelta.
+
+    Accepts str, timedelta, list-like or Series for arg parameter.
+    Returns a Series if and only if arg is provided as a Series.
+    """
+    if isinstance(arg, Series):
+        query_compiler = arg._query_compiler.to_timedelta(unit=unit, errors=errors)
+        return Series(query_compiler=query_compiler)
+    return pandas.to_timedelta(arg, unit=unit, errors=errors)

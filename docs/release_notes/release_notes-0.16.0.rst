@@ -55,6 +55,7 @@ Key Features and Updates
   * FIX-#4996: Evaluate BenchmarkMode at each function call (#4997)
   * FIX-#4022: Fixed empty data frame with index (#4910)
   * FIX-#4090: Fixed check if the index is trivial (#4936)
+  * FIX-#4966: Fix `to_timedelta` to return Series instead of TimedeltaIndex (#5028)
   * FIX-#5042: Fix series __getitem__ with invalid strings (#5048)
   * FIX-#4691: Fix binary operations between virtual partitions (#5049)  
   * FIX-#5045: Fix ray virtual_partition.wait with duplicate object refs (#5058)
