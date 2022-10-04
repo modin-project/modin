@@ -1955,8 +1955,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         Return values at the given quantile over requested axis.
         """
         if PandasCompatVersion.CURRENT != PandasCompatVersion.LATEST:
-            if method != "single":
-                raise ValueError(f"Unsupported method={method} for quantile")
+            assert method == "single", f"Unsupported method={method} for quantile"
             quantile_kw = {}
         else:
             quantile_kw = {"method": method}
