@@ -34,6 +34,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
 
     def _set_columns(self, new_columns):
         self._id = self._service.rename(self._id, new_col_labels=new_columns)
+        self._columns_cache = self._service.columns(self._id)
 
     def _get_columns(self):
         if self._columns_cache is None:
