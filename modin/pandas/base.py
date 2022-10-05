@@ -2228,8 +2228,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         from .resample import Resampler
 
-        return Resampler(
-            self,
+        return Resampler._make(
+            dataframe=self,
             rule=rule,
             axis=axis,
             closed=closed,

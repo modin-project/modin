@@ -79,3 +79,10 @@ class Python36CompatibleResampler(BaseCompatibleResampler):
             )
         )
         return groups
+
+    @classmethod
+    def _make(cls, **kwargs):  # noqa: PR01
+        """Create Resampler potentially skipping unsupported parameters."""
+        group_keys = kwargs.pop("group_keys", None)
+        assert group_keys is None, f"Unexpected argument: {group_keys}"
+        return cls(**kwargs)

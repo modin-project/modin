@@ -87,3 +87,8 @@ class LatestCompatibleResampler(BaseCompatibleResampler):
             group_keys=self.resample_kwargs["group_keys"],
         )
         return groups
+
+    @classmethod
+    def _make(cls, **kwargs):  # noqa: PR01
+        """Create Resampler potentially skipping unsupported parameters."""
+        return cls(**kwargs)
