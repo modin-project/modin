@@ -18,6 +18,7 @@ Module contains class ``BaseQueryCompiler``.
 """
 
 import abc
+from modin._compat.core.pandas_common import pandas_reset_index, pandas_compare
 
 from modin.core.dataframe.algebra.default2pandas import (
     DataFrameDefault,
@@ -254,7 +255,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                     other = other[0]
                 ignore_index = kwargs.pop("ignore_index", None)
                 kwargs["how"] = kwargs.pop("join", None)
-                result = df.join(other, rsuffix="r_", **kwargs)
+                if (
+                    isinstance(other, (pandas.DataFrame, pandas.Series))
+                    or len(other) <= 1
+                ):
+                    kwargs["rsuffix"] = "r_"
+                result = df.join(other, **kwargs)
             if ignore_index:
                 if axis == 0:
                     result = result.reset_index(drop=True)
@@ -978,7 +984,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             QueryCompiler with reset index.
         """
-        return DataFrameDefault.register(pandas.DataFrame.reset_index)(self, **kwargs)
+        return DataFrameDefault.register(pandas_reset_index)(self, **kwargs)
 
     def set_index_from_columns(
         self, keys: List[Hashable], drop: bool = True, append: bool = False
@@ -4714,7 +4720,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     prod_min_count = prod
 
     @doc_utils.add_refer_to("DataFrame.compare")
-    def compare(self, other, align_axis, keep_shape, keep_equal):
+    def compare(self, other, align_axis, keep_shape, keep_equal, result_names):
         """
         Compare data of two QueryCompilers and highlight the difference.
 
@@ -4726,6 +4732,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         align_axis : {0, 1}
         keep_shape : bool
         keep_equal : bool
+        result_names : tuple
 
         Returns
         -------
@@ -4733,12 +4740,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             New QueryCompiler containing the differences between `self` and passed
             query compiler.
         """
-        return DataFrameDefault.register(pandas.DataFrame.compare)(
+        return DataFrameDefault.register(pandas_compare)(
             self,
             other=other,
             align_axis=align_axis,
             keep_shape=keep_shape,
             keep_equal=keep_equal,
+            result_names=result_names,
         )
 
     # End of DataFrame methods

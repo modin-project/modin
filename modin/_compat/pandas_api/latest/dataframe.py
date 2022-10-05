@@ -29,6 +29,8 @@ from pandas._typing import (
     FilePath,
     StorageOptions,
     WriteBuffer,
+    Axis,
+    Suffixes,
 )
 from numpy import nan
 
@@ -68,6 +70,67 @@ class LatestCompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             func, axis=axis, raw=raw, result_type=result_type, args=args, **kwargs
         )
 
+    def compare(
+        self,
+        other,
+        align_axis: Axis = 1,
+        keep_shape: bool = False,
+        keep_equal: bool = False,
+        result_names: Suffixes = ("self", "other"),
+    ):
+        return self._compare(
+            other=other,
+            align_axis=align_axis,
+            keep_shape=keep_shape,
+            keep_equal=keep_equal,
+            result_names=result_names,
+        )
+
+    def corr(self, method="pearson", min_periods=1, numeric_only=no_default):
+        return self._corr(
+            method=method, min_periods=min_periods, numeric_only=numeric_only
+        )
+
+    def corrwith(
+        self, other, axis=0, drop=False, method="pearson", numeric_only=no_default
+    ):
+        return self._corrwith(
+            other=other, axis=axis, drop=drop, method=method, numeric_only=numeric_only
+        )
+
+    def cov(self, min_periods=None, ddof: Optional[int] = 1, numeric_only=no_default):
+        return self._cov(min_periods=min_periods, ddof=ddof, numeric_only=numeric_only)
+
+    def groupby(
+        self,
+        by=None,
+        axis=0,
+        level=None,
+        as_index=True,
+        sort=True,
+        group_keys=no_default,
+        squeeze: bool = no_default,
+        observed=False,
+        dropna: bool = True,
+    ):
+        return self._groupby(
+            by=by,
+            axis=axis,
+            level=level,
+            as_index=as_index,
+            sort=sort,
+            group_keys=group_keys,
+            squeeze=squeeze,
+            observed=observed,
+            dropna=dropna,
+        )
+
+    def idxmax(self, axis=0, skipna=True, numeric_only=False):
+        return self._idxmax(axis=axis, skipna=skipna, numeric_only=numeric_only)
+
+    def idxmin(self, axis=0, skipna=True, numeric_only=False):
+        return self._idxmin(axis=axis, skipna=skipna, numeric_only=numeric_only)
+
     def info(
         self,
         verbose: Optional[bool] = None,
@@ -84,6 +147,43 @@ class LatestCompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             memory_usage=memory_usage,
             show_counts=show_counts,
             null_counts=null_counts,
+        )
+
+    def insert(self, loc, column, value, allow_duplicates=no_default):
+        return self._insert(
+            loc=loc,
+            column=column,
+            value=value,
+            allow_duplicates=False
+            if allow_duplicates is no_default
+            else allow_duplicates,
+        )
+
+    def join(
+        self,
+        other,
+        on=None,
+        how="left",
+        lsuffix="",
+        rsuffix="",
+        sort=False,
+        validate=None,
+    ):
+        return self._join(
+            other=other,
+            on=on,
+            how=how,
+            lsuffix=lsuffix,
+            rsuffix=rsuffix,
+            sort=sort,
+            validate=validate,
+        )
+
+    def isetitem(self, loc, value):
+        return self._default_to_pandas(
+            pandas.DataFrame.isetitem,
+            loc=loc,
+            value=value,
         )
 
     def pivot_table(
@@ -131,6 +231,22 @@ class LatestCompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             **kwargs,
         )
 
+    def quantile(
+        self,
+        q=0.5,
+        axis=0,
+        numeric_only=no_default,
+        interpolation="linear",
+        method="single",
+    ):
+        return self._quantile(
+            q=q,
+            axis=axis,
+            numeric_only=True if numeric_only is no_default else numeric_only,
+            interpolation=interpolation,
+            method=method,
+        )
+
     def reindex(
         self,
         labels=None,
@@ -138,7 +254,7 @@ class LatestCompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
         columns=None,
         axis=None,
         method=None,
-        copy=True,
+        copy=None,
         level=None,
         fill_value=nan,
         limit=None,
@@ -154,6 +270,28 @@ class LatestCompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             fill_value=fill_value,
             limit=limit,
             tolerance=tolerance,
+        )
+
+    def rename(
+        self,
+        mapper=None,
+        index=None,
+        columns=None,
+        axis=None,
+        copy=None,
+        inplace=False,
+        level=None,
+        errors="ignore",
+    ):
+        return self._rename(
+            mapper=mapper,
+            index=index,
+            columns=columns,
+            axis=axis,
+            copy=copy,
+            inplace=inplace,
+            level=level,
+            errors=errors,
         )
 
     def replace(
@@ -191,6 +329,41 @@ class LatestCompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             numeric_only=numeric_only,
             min_count=min_count,
             **kwargs,
+        )
+
+    def to_gbq(
+        self,
+        destination_table,
+        project_id=None,
+        chunksize=None,
+        reauth=False,
+        if_exists="fail",
+        auth_local_webserver=True,
+        table_schema=None,
+        location=None,
+        progress_bar=True,
+        credentials=None,
+    ):
+        return self._to_gbq(
+            destination_table=destination_table,
+            project_id=project_id,
+            chunksize=chunksize,
+            reauth=reauth,
+            if_exists=if_exists,
+            auth_local_webserver=auth_local_webserver,
+            table_schema=table_schema,
+            location=location,
+            progress_bar=progress_bar,
+            credentials=credentials,
+        )
+
+    def to_orc(self, path=None, *, engine="pyarrow", index=None, engine_kwargs=None):
+        return self._default_to_pandas(
+            pandas.DataFrame.to_orc,
+            path=path,
+            engine=engine,
+            index=index,
+            engine_kwargs=engine_kwargs,
         )
 
     def to_parquet(

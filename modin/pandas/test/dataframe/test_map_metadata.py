@@ -1089,9 +1089,8 @@ def test_insert_dtypes(data, astype):
 @pytest.mark.parametrize("loc", int_arg_values, ids=arg_keys("loc", int_arg_keys))
 def test_insert_loc(data, loc):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    value = modin_df.iloc[:, 0]
 
-    eval_insert(modin_df, pandas_df, loc=loc, value=value)
+    eval_insert(modin_df, pandas_df, loc=loc, value=lambda df: df.iloc[:, 0])
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

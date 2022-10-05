@@ -1495,9 +1495,9 @@ class TestParquet:
                 start="1/1/2018", periods=2000
             )
 
-        with ensure_clean(".parquet") as unique_filename:
-            for col in pandas_df.columns:
-                if col.startswith("idx"):
+        for col in pandas_df.columns:
+            if col.startswith("idx"):
+                with ensure_clean(".parquet") as unique_filename:
                     pandas_df.set_index(col).to_parquet(unique_filename)
                     # read the same parquet using modin.pandas
                     eval_io(
@@ -1507,6 +1507,7 @@ class TestParquet:
                         engine=engine,
                     )
 
+        with ensure_clean(".parquet") as unique_filename:
             pandas_df.set_index(["idx", "A"]).to_parquet(unique_filename)
             eval_io(
                 "read_parquet",
@@ -2398,7 +2399,7 @@ class TestFwf:
 
 
 class TestGbq:
-    @pytest.mark.xfail(reason="Need to verify GBQ access")
+    @pytest.mark.skip(reason="Can not pass without GBQ access")
     def test_read_gbq(self):
         # Test API, but do not supply credentials until credits can be secured.
         with pytest.raises(
@@ -2406,7 +2407,7 @@ class TestGbq:
         ):
             pd.read_gbq("SELECT 1")
 
-    @pytest.mark.xfail(reason="Need to verify GBQ access")
+    @pytest.mark.skip(reason="Can not pass without GBQ access")
     def test_to_gbq(self):
         modin_df, _ = create_test_dfs(TEST_DATA)
         # Test API, but do not supply credentials until credits can be secured.
