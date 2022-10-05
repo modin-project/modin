@@ -174,13 +174,9 @@ class TimeMergeCategoricals:
         )
 
         if data_type == "category":
-            self.left = self.left.assign(
-                Y=self.left["Y"].astype("category")
-            )
+            self.left = self.left.assign(Y=self.left["Y"].astype("category"))
             execute(self.left)
-            self.right = self.right.assign(
-                Z=self.right["Z"].astype("category")
-            )
+            self.right = self.right.assign(Z=self.right["Z"].astype("category"))
             execute(self.right)
 
     def time_merge_categoricals(self, shapes, data_type):
