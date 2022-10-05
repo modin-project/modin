@@ -829,7 +829,7 @@ def test_series_to_timedelta(data):
 
 @pytest.mark.parametrize(
     "key",
-    [["col1"], "col1", "col2"],
+    [["col0"], "col0", "col1"],
     ids=["valid_list_of_string", "valid_string", "invalid_string"],
 )
 def test_get(key):
