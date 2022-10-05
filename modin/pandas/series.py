@@ -749,8 +749,8 @@ class Series(SeriesCompat, BasePandasDataset):
         align_axis: Union[str, int],
         keep_shape: bool,
         keep_equal: bool,
-        result_names,
-    ):  # noqa: PR01, RT01, D200
+        result_names: tuple,
+    ) -> "Series":  # noqa: PR01, RT01, D200
         """
         Compare to another Series and show the differences.
         """

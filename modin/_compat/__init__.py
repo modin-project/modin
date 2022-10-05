@@ -25,7 +25,7 @@ class PandasCompatVersion:
 
     if version.parse("1.1.0") <= pandas_version <= version.parse("1.1.5"):
         CURRENT = PY36
-    elif version.parse("1.5.0") <= pandas_version <= version.parse("1.5.99"):
+    elif version.parse("1.5.0") <= pandas_version < version.parse("1.6"):
         CURRENT = LATEST
     else:
         raise ImportError(f"Unsupported pandas version: {pandas.__version__}")

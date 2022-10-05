@@ -13,13 +13,13 @@
 
 """Module for 'latest pandas' compatibility layer for Series."""
 
-from typing import IO, Hashable, TYPE_CHECKING, Union
+from typing import IO, Hashable, TYPE_CHECKING
 
 import numpy as np
 import pandas
 from pandas.util._validators import validate_bool_kwarg
 from pandas._libs.lib import no_default, NoDefault
-from pandas._typing import Axis
+from pandas._typing import Axis, Suffixes
 
 from ..abc.series import BaseCompatibleSeries
 
@@ -39,10 +39,10 @@ class LatestCompatibleSeries(BaseCompatibleSeries):
     def compare(
         self,
         other,
-        align_axis: Union[str, int] = 1,
+        align_axis: Axis = 1,
         keep_shape: bool = False,
         keep_equal: bool = False,
-        result_names=("self", "other"),
+        result_names: Suffixes = ("self", "other"),
     ):
         return self._compare(
             other=other,

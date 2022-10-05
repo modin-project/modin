@@ -50,6 +50,7 @@ class Python36CompatibleSeries(BaseCompatibleSeries):
             align_axis=align_axis,
             keep_shape=keep_shape,
             keep_equal=keep_equal,
+            # pass the value that would describe 'older pandas' behaviour for our query compiler
             result_names=("self", "other"),
         )
 

@@ -1548,7 +1548,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
         return _iLocIndexer(self)
 
-    def _idxmax(self, axis=0, skipna=True, **kwargs):  # noqa: PR01, RT01, D200
+    def _idxmax(self, axis, skipna, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return index of first occurrence of maximum over requested axis.
         """
@@ -1559,7 +1559,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             self._query_compiler.idxmax(axis=axis, skipna=skipna, **kwargs)
         )
 
-    def _idxmin(self, axis=0, skipna=True, **kwargs):  # noqa: PR01, RT01, D200
+    def _idxmin(self, axis, skipna, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return index of first occurrence of minimum over requested axis.
         """

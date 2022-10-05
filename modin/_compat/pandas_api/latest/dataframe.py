@@ -29,6 +29,8 @@ from pandas._typing import (
     FilePath,
     StorageOptions,
     WriteBuffer,
+    Axis,
+    Suffixes,
 )
 from numpy import nan
 
@@ -71,10 +73,10 @@ class LatestCompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
     def compare(
         self,
         other,
-        align_axis=1,
-        keep_shape=False,
-        keep_equal=False,
-        result_names=("self", "other"),
+        align_axis: Axis = 1,
+        keep_shape: bool = False,
+        keep_equal: bool = False,
+        result_names: Suffixes = ("self", "other"),
     ):
         return self._compare(
             other=other,

@@ -671,7 +671,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         align_axis: Union[str, int],
         keep_shape: bool,
         keep_equal: bool,
-        result_names,
+        result_names: tuple,
     ) -> "DataFrame":  # noqa: PR01, RT01, D200
         """
         Compare to another ``DataFrame`` and show the differences.
@@ -689,9 +689,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             )
         )
 
-    def _corr(
-        self, method="pearson", min_periods=1, numeric_only=True
-    ):  # noqa: PR01, RT01, D200
+    def _corr(self, method, min_periods, numeric_only):  # noqa: PR01, RT01, D200
         """
         Compute pairwise correlation of columns, excluding NA/null values.
         """
@@ -709,9 +707,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             )
         )
 
-    def _corrwith(
-        self, other, axis=0, drop=False, method="pearson", **kwargs
-    ):  # noqa: PR01, RT01, D200
+    def _corrwith(self, other, axis, drop, method, **kwargs):  # noqa: PR01, RT01, D200
         """
         Compute pairwise correlation.
         """
@@ -726,9 +722,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             **kwargs,
         )
 
-    def _cov(
-        self, min_periods=None, ddof: Optional[int] = 1, numeric_only=True
-    ):  # noqa: PR01, RT01, D200
+    def _cov(self, min_periods, ddof, numeric_only):  # noqa: PR01, RT01, D200
         """
         Compute pairwise covariance of columns, excluding NA/null values.
         """
@@ -1294,12 +1288,12 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
     def _join(
         self,
         other,
-        on=None,
-        how="left",
-        lsuffix="",
-        rsuffix="",
-        sort=False,
-        validate=None,
+        on,
+        how,
+        lsuffix,
+        rsuffix,
+        sort,
+        validate,
     ):  # noqa: PR01, RT01, D200
         """
         Join columns of another ``DataFrame``.

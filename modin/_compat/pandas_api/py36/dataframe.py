@@ -66,17 +66,18 @@ class Python36CompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
             align_axis=align_axis,
             keep_shape=keep_shape,
             keep_equal=keep_equal,
+            # pass the value that would describe 'older pandas' behaviour for our query compiler
             result_names=("self", "other"),
         )
 
     def corr(self, method="pearson", min_periods=1):
-        return self._corr(method=method, min_periods=min_periods)
+        return self._corr(method=method, min_periods=min_periods, numeric_only=True)
 
     def corrwith(self, other, axis=0, drop=False, method="pearson"):
         return self._corrwith(other=other, axis=axis, drop=drop, method=method)
 
     def cov(self, min_periods=None, ddof=1):
-        return self._cov(min_periods=min_periods, ddof=ddof)
+        return self._cov(min_periods=min_periods, ddof=ddof, numeric_only=True)
 
     def explode(self, column: Union[str, Tuple], ignore_index: bool = False):
         exploded = self.__constructor__(
@@ -137,7 +138,13 @@ class Python36CompatibleDataFrame(BaseCompatibleDataFrame):  # noqa: PR01
         sort=False,
     ):
         return self._join(
-            other=other, on=on, how=how, lsuffix=lsuffix, rsuffix=rsuffix, sort=sort
+            other=other,
+            on=on,
+            how=how,
+            lsuffix=lsuffix,
+            rsuffix=rsuffix,
+            sort=sort,
+            validate=None,
         )
 
     def pivot_table(
