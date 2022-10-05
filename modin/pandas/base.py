@@ -1527,14 +1527,11 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get item from object for given key.
         """
-
-        def _get(key, list_like):
-            if all(k in self.keys() for k in key):
-                return self.__getitem__(key if list_like else key[0])
-            else:
-                return default
-
-        return _get(key, True) if is_list_like(key) else _get([key], False)
+        # Match pandas behavior here
+        try:
+            return self.__getitem__(key)
+        except (KeyError, ValueError, IndexError):
+            return default
 
     def gt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """

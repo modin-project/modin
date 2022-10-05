@@ -23,7 +23,6 @@ from pandas.testing import assert_frame_equal
 
 from .utils import (
     create_test_dfs,
-    eval_general,
     test_data_values,
     test_data_keys,
     df_equals,
