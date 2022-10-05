@@ -978,9 +978,7 @@ class Series(SeriesCompat, BasePandasDataset):
             ignore_index=ignore_index,
         )
 
-    def _factorize(
-        self, sort=False, na_sentinel=-1, **kwargs
-    ):  # noqa: PR01, RT01, D200
+    def _factorize(self, sort, na_sentinel, **kwargs):  # noqa: PR01, RT01, D200
         """
         Encode the object as an enumerated type or categorical variable.
         """
