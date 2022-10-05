@@ -351,10 +351,10 @@ def test_sort_index(axis, ascending, na_position):
     # Add NaNs to sorted index
     for df in [modin_df, pandas_df]:
         sort_index = df.axes[axis]
-        df.set_axis(
+        df = df.set_axis(
             [np.nan if i % 2 == 0 else sort_index[i] for i in range(len(sort_index))],
             axis=axis,
-            inplace=True,
+            copy=False,
         )
 
     eval_general(

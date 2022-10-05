@@ -1217,12 +1217,12 @@ def test_set_axis(data, axis):
     index = modin_df.columns if x else modin_df.index
     labels = ["{0}_{1}".format(index[i], i) for i in range(modin_df.shape[x])]
 
-    modin_result = modin_df.set_axis(labels, axis=axis, inplace=False)
-    pandas_result = pandas_df.set_axis(labels, axis=axis, inplace=False)
+    modin_result = modin_df.set_axis(labels, axis=axis)
+    pandas_result = pandas_df.set_axis(labels, axis=axis)
     df_equals(modin_result, pandas_result)
 
     modin_df_copy = modin_df.copy()
-    modin_df.set_axis(labels, axis=axis, inplace=True)
+    modin_df = modin_df.set_axis(labels, axis=axis, copy=False)
 
     # Check that the copy and original are different
     try:
@@ -1232,7 +1232,7 @@ def test_set_axis(data, axis):
     else:
         assert False
 
-    pandas_df.set_axis(labels, axis=axis, inplace=True)
+    pandas_df = pandas_df.set_axis(labels, axis=axis, copy=False)
     df_equals(modin_df, pandas_df)
 
 
