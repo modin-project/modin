@@ -559,7 +559,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             )
         )
 
-    def dropna(self, axis=0, how="any", thresh=no_default, subset=None):
+    def dropna(self, axis=0, how=no_default, thresh=no_default, subset=None):
         if thresh is not no_default or axis != 0:
             raise NotImplementedError(
                 "HDK's dropna does not support 'thresh' and 'axis' parameters."

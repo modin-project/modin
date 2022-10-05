@@ -61,23 +61,29 @@ def get_handle(
 def pandas_pivot_table(df, **kwargs):  # noqa: PR01, RT01
     """Perform pandas pivot_table against a dataframe ignoring unsupported args."""
     unsupported_sort = kwargs.pop("sort", None)
-    assert unsupported_sort is None
+    assert (
+        unsupported_sort is None
+    ), "Unsupported argument passed to DataFrame.pivot_table: sort"
     return df.pivot_table(**kwargs)
 
 
 def pandas_convert_dtypes(df, **kwargs):  # noqa: PR01, RT01
     """Perform pandas convert_dtypes against a dataframe or series ignoring unsupported args."""
     unsupported_convert = kwargs.pop("convert_floating", None)
-    assert unsupported_convert is None
+    assert (
+        unsupported_convert is None
+    ), "Unsupported argument passed to DataFrame.convert_dtypes: convert_floating"
     return df.convert_dtypes(**kwargs)
 
 
-def pd_compare(df, **kwargs):
-    result_names = kwargs.pop("result_names", ("self", "other"))
-    assert result_names == (
-        "self",
-        "other",
-    ), "Unsupported argument passed to DataFrame.join: result_names"
+_RESULT_NAMES_DEFAULT = ("self", "other")
+
+
+def pandas_compare(df, **kwargs):
+    result_names = kwargs.pop("result_names", _RESULT_NAMES_DEFAULT)
+    assert (
+        result_names == _RESULT_NAMES_DEFAULT
+    ), "Unsupported argument passed to DataFrame.compare: result_names"
     return df.compare(**kwargs)
 
 
@@ -106,7 +112,7 @@ __all__ = [
     "get_handle",
     "pandas_pivot_table",
     "pandas_convert_dtypes",
-    "pd_compare",
+    "pandas_compare",
     "pandas_dataframe_join",
     "reconstruct_func",
     "pandas_reset_index",

@@ -29,7 +29,7 @@ def pandas_convert_dtypes(df, **kwargs):  # noqa: PR01, RT01
     return df.convert_dtypes(**kwargs)
 
 
-def pd_compare(df, **kwargs):  # noqa: PR01, RT01
+def pandas_compare(df, **kwargs):  # noqa: PR01, RT01
     """Perform pandas compare against a dataframe or series."""
     return df.compare(**kwargs)
 
@@ -53,7 +53,7 @@ __all__ = [
     "get_handle",
     "pandas_pivot_table",
     "pandas_convert_dtypes",
-    "pd_compare",
+    "pandas_compare",
     "pandas_dataframe_join",
     "reconstruct_func",
     "pandas_reset_index",

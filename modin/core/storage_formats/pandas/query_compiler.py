@@ -58,7 +58,7 @@ from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupBy
 from modin._compat.core.pandas_common import (
     pandas_pivot_table,
     pandas_convert_dtypes,
-    pd_compare,
+    pandas_compare,
     pandas_dataframe_join,
     DataError,
 )
@@ -3289,7 +3289,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(
             self._modin_frame.broadcast_apply_full_axis(
                 0,
-                lambda l, r: pd_compare(l, other=r, **kwargs),
+                lambda l, r: pandas_compare(l, other=r, **kwargs),
                 other._modin_frame,
             )
         )
