@@ -830,6 +830,8 @@ class ClientQueryCompiler(BaseQueryCompiler):
                 is_variable = True
                 continue
             else:
+                if v in self.columns:
+                    v = f'`{v}`'
                 variable_list.append(v)
         expr = " ".join(variable_list)
         return self.__constructor__(self._service.query(self._id, expr, **kwargs))
