@@ -92,6 +92,7 @@ Key Features and Updates
   * PERF-#4940: Optimize categorical dtype check in `concatenate` (#4953)
 * Benchmarking enhancements
   * TEST-#5066: Add outer join case for `TimeConcat` benchmark (#5067)
+  * TEST-#5083: Add `merge` op with categorical data (#5084)
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
   * TEST-#5014: Simplify adding new ASV benchmarks (#5015)
   * TEST-#5064: Update `TimeConcat` benchmark with new parameter `ignore_index` (#5065)
