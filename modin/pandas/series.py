@@ -1652,6 +1652,10 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         Return value at the given quantile.
         """
+        # We cannot use super().quantile() here as it's failing into infinite recursion
+        # because SeriesCompat is selected as super-class in this case due to how MRO works.
+        # We cannot change the order because it would break in other places by picking methods
+        # from BasePandasDataset instead of special-crafted SeriesCompat.
         return self._quantile(
             q=q,
             axis=0,
