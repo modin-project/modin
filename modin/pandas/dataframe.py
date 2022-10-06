@@ -34,6 +34,7 @@ import sys
 from typing import IO, Optional, Union, Iterator
 import warnings
 
+import modin.pandas as pd
 from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
 from modin.utils import (
@@ -1421,7 +1422,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
                 self._query_compiler.memory_usage(index=False, deep=deep)
             )
             index_value = self.index.memory_usage(deep=deep)
-            return Series(index_value, index=["Index"]).append(result)
+            return pd.concat([Series(index_value, index=["Index"]), result])
         return super(DataFrame, self).memory_usage(index=index, deep=deep)
 
     def merge(
