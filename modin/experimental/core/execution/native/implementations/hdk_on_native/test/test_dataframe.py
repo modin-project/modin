@@ -1722,9 +1722,6 @@ class TestBinaryOp:
 
         run_and_compare(filter, data=self.cmp_data)
 
-    @pytest.mark.xfail(
-        reason="Requires fix in OmniSci: https://github.com/intel-ai/omniscidb/pull/178"
-    )
     def test_filter_empty_result(self):
         def filter(df, **kwargs):
             return df[df.a < 0]
@@ -2433,6 +2430,36 @@ class TestSparseArray:
         mds = pd.Series(data)
         pds = pandas.Series(data)
         df_equals(mds, pds)
+
+
+class TestEmpty:
+    def test_frame_insert(self):
+        def insert(df, **kwargs):
+            df["a"] = [1, 2, 3, 4, 5]
+            return df
+
+        run_and_compare(
+            insert,
+            data=None,
+        )
+        run_and_compare(
+            insert,
+            data=None,
+            constructor_kwargs={"index": ["a", "b", "c", "d", "e"]},
+        )
+        run_and_compare(
+            insert,
+            data=None,
+            constructor_kwargs={"columns": ["a", "b", "c", "d", "e"]},
+            # Do not force lazy since setitem() defaults to pandas
+            force_lazy=False,
+        )
+
+    def test_series_getitem(self):
+        df_equals(pd.Series([])[:30], pandas.Series([])[:30])
+
+    def test_series_to_pandas(self):
+        df_equals(pd.Series([])._to_pandas(), pandas.Series([]))
 
 
 if __name__ == "__main__":
