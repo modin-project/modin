@@ -1522,9 +1522,10 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get item from object for given key.
         """
-        if key in self.keys():
+        # Match pandas behavior here
+        try:
             return self.__getitem__(key)
-        else:
+        except (KeyError, ValueError, IndexError):
             return default
 
     def gt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
