@@ -2537,7 +2537,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         else:
             if copy:
                 obj = self.copy()
-            obj = obj.set_axis(labels, axis=axis, copy=False)
+            # only `inplace=True` is allowed here to avoid `RecursionError`
+            obj.set_axis(labels, axis=axis, inplace=True)
             return obj
 
     def _shift(self, periods, freq, axis, fill_value):  # noqa: PR01, RT01, D200
