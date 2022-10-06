@@ -2535,8 +2535,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         if inplace:
             setattr(self, pandas.DataFrame()._get_axis_name(axis), labels)
         else:
-            if copy:
-                obj = self.copy()
+            obj = self.copy() if copy else self
             # only `inplace=True` is allowed here to avoid `RecursionError`
             obj.set_axis(labels, axis=axis, inplace=True)
             return obj
