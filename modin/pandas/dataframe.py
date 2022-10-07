@@ -123,6 +123,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         self._siblings = []
         Engine.subscribe(_update_engine)
         if isinstance(data, (DataFrame, Series)):
+            query_compiler = data._query_compiler.copy()
             self._query_compiler = data._query_compiler.copy()
             if index is not None and any(i not in data.index for i in index):
                 raise NotImplementedError(
@@ -156,7 +157,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
                 self._query_compiler = data.loc[index, columns]._query_compiler
 
         # Check type of data and use appropriate constructor
-        elif query_compiler is None:
+        elif query_compiler is None and data is not None:
             distributed_frame = from_non_pandas(data, index, columns, dtype)
             if distributed_frame is not None:
                 self._query_compiler = distributed_frame._query_compiler
@@ -192,9 +193,9 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             self._query_compiler = query_compiler
 
         # if len(self.columns) == 0 or len(self.index) == 0:
-        if query_compiler is None and data is not None:
-            print("Creating empty DataFrame")
-            print(data, index, columns, dtype, copy)
+        if query_compiler is None:
+            # print("Creating empty DataFrame")
+            # print(data, index, columns, dtype, copy)
             small_dataframe = pandas.DataFrame(
                 data=data, index=index, columns=columns, dtype=dtype, copy=copy
             )

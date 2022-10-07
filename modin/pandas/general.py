@@ -25,6 +25,7 @@ from .dataframe import DataFrame
 from .series import Series
 from modin.utils import to_pandas
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats.pandas.small_query_compiler import SmallQueryCompiler
 from modin.utils import _inherit_docstrings
 from modin.logging import enable_logging
 

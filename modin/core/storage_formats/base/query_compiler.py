@@ -87,6 +87,29 @@ def _set_axis(axis):
     return axis_setter
 
 
+def decorate_all_functions(function_decorator):
+    def decorator(cls):
+        for name, obj in vars(cls).items():
+            if callable(obj):
+                setattr(cls, name, function_decorator(obj, name))
+        return cls
+
+    return decorator
+
+
+from functools import wraps
+
+
+def small_query_compiler(func, name):
+    @wraps(func)
+    def wrapper(self, *args, **kw):
+        print("Currently in BaseQueryCompiler:", name)
+        assert False
+
+    return wrapper
+
+
+@decorate_all_functions(small_query_compiler)
 # FIXME: many of the BaseQueryCompiler methods are hiding actual arguments
 # by using *args and **kwargs. They should be spread into actual parameters.
 # Currently actual arguments are placed in the methods docstrings, but since they're

@@ -3186,6 +3186,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         BasePandasDataset
             Located dataset.
         """
+        # if isinstance(self._query_compiler, SmallQueryCompiler):
+        #     return self._default_to_pandas("__getitem__", key)
         if not self._query_compiler.lazy_execution and len(self) == 0:
             return self._default_to_pandas("__getitem__", key)
         # see if we can slice the rows

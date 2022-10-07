@@ -653,6 +653,7 @@ class _LocIndexer(_LocationIndexerBase):
         --------
         pandas.DataFrame.loc
         """
+        print(type(self.qc))
         if self.df.empty:
             return self.df._default_to_pandas(lambda df: df.loc[key])
         row_loc, col_loc, ndim = self._parse_row_and_column_locators(key)
@@ -1058,6 +1059,8 @@ class _iLocIndexer(_LocationIndexerBase):
         col_scalar = is_scalar(col_loc)
         self._check_dtypes(row_loc)
         self._check_dtypes(col_loc)
+        print("ROW SCALAR:", row_scalar)
+        print("is series:", isinstance(self.df, Series))
 
         if isinstance(row_loc, Series) and is_boolean_array(row_loc):
             return self._handle_boolean_masking(row_loc, col_loc)
