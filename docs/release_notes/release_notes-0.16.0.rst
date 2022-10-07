@@ -127,7 +127,6 @@ Key Features and Updates
   * REFACTOR-#5009: Use `RayWrapper.materialize` instead of `ray.get` (#5010)
   * REFACTOR-#4755: Rewrite Pandas version mismatch warning (#4965)
   * REFACTOR-#5012: Add mypy checks for singleton files in base modin directory (#5013)
-  * REFACTOR-#5092: Fix future warning for `set_axis` function (#5093)
   * REFACTOR-#5038: Remove unnecessary _method argument from resamplers (#5039)
   * REFACTOR-#5081: Remove `c323f7fe385011ed849300155de07645.db` file (#5082)
 * Pandas API implementations and improvements
