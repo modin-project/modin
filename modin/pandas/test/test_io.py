@@ -501,7 +501,7 @@ class TestCsv:
             pytest.warns(
                 FutureWarning, match="'mangle_dupe_cols' keyword is deprecated"
             )
-            if version.parse(pandas.__version__) >= version.parse("1.5.0")
+            if PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST
             else _nullcontext()
         ):
             str_non_unique_cols = "col,col,col,col\n5, 6, 7, 8\n9, 10, 11, 12\n"
@@ -512,10 +512,6 @@ class TestCsv:
     # Putting this filterwarnings in setup.cfg doesn't seem to catch the error.
     @pytest.mark.filterwarnings(
         "error:.*'mangle_dupe_cols' keyword is deprecated:FutureWarning"
-    )
-    @pytest.mark.xfail(
-        StorageFormat.get() == "Hdk",
-        reason="processing of duplicated columns in HDK storage format is not supported yet - issue #3080",
     )
     def test_read_csv_does_not_warn_mangle_dupe_cols_kwarg(self):
         with ensure_clean() as unique_filename:
