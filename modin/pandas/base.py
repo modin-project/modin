@@ -2988,7 +2988,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             )
             .index
         )
-        return self.set_axis(labels=new_labels, axis=axis, copy=copy)
+        return self._set_axis(new_labels, axis, inplace=False, copy=copy)
 
     # TODO: uncomment the following lines when #3331 issue will be closed
     # @prepend_to_notes(
