@@ -348,18 +348,18 @@ def test_sort_index(axis, ascending, na_position):
         for df in [modin_df, pandas_df]:
             df.index = [(i - length / 2) % length for i in range(length)]
 
+    dfs = [modin_df, pandas_df]
     # Add NaNs to sorted index
-    for df in [modin_df, pandas_df]:
-        sort_index = df.axes[axis]
-        df = df.set_axis(
+    for idx in range(len(dfs)):
+        sort_index = dfs[idx].axes[axis]
+        dfs[idx] = dfs[idx].set_axis(
             [np.nan if i % 2 == 0 else sort_index[i] for i in range(len(sort_index))],
             axis=axis,
             copy=False,
         )
 
     eval_general(
-        modin_df,
-        pandas_df,
+        *dfs,
         lambda df: df.sort_index(
             axis=axis, ascending=ascending, na_position=na_position
         ),
