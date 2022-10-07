@@ -13,16 +13,16 @@
 
 import sys
 import time
-from os.path import dirname, realpath
+from os.path import abspath, join, dirname
 
-MODIN_DIR = dirname(dirname(dirname(dirname(realpath(__file__)))))
+MODIN_DIR = abspath(join(dirname(__file__), *[".." for _ in range(3)]))
 if MODIN_DIR not in sys.path:
     sys.path.insert(0, MODIN_DIR)
 
 
-def measure(name, func, *args, **kw):
+def measure(name, func, *args, **kwargs):
     t0 = time.time()
-    res = func(*args, **kw)
+    res = func(*args, **kwargs)
     t1 = time.time()
     print(f"{name}: {t1 - t0} sec")
     return res
