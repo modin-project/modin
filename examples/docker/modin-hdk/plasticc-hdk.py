@@ -12,9 +12,9 @@
 # governing permissions and limitations under the License.
 
 import sys
-import time
 from collections import OrderedDict
 from functools import partial
+from utils import measure
 import modin.pandas as pd
 
 import numpy as np
@@ -72,14 +72,6 @@ def ravel_column_names(cols):
     d0 = cols.get_level_values(0)
     d1 = cols.get_level_values(1)
     return ["%s_%s" % (i, j) for i, j in zip(d0, d1)]
-
-
-def measure(name, func, *args, **kw):
-    t0 = time.time()
-    res = func(*args, **kw)
-    t1 = time.time()
-    print(f"{name}: {t1 - t0} sec")
-    return res
 
 
 def all_etl(train, train_meta, test, test_meta):
@@ -249,9 +241,14 @@ def ml(train_final, test_final):
 
 
 def main():
-    if len(sys.argv) != 5:
+    if len(sys.argv) < 5:
         print(
-            f"USAGE: docker run --rm -v /path/to/dataset:/dataset python plasticc-hdk.py <training set file name startin with /dataset> <test set file name starting with /dataset> <training set metadata file name starting with /dataset> <test set metadata file name starting with /dataset>"
+            "USAGE: docker run --rm -v /path/to/dataset:/dataset python plasticc-hdk.py"
+            + " <training set file name starting with /dataset>"
+            + " <test set file name starting with /dataset>"
+            + " <training set metadata file name starting with /dataset>"
+            + " <test set metadata file name starting with /dataset>"
+            + " [-no-ml]"
         )
         return
 
@@ -270,9 +267,10 @@ def main():
     train_final, test_final = measure(
         "ETL", all_etl, train, train_meta, test, test_meta
     )
-    cpu_loss = measure("ML", ml, train_final, test_final)
 
-    print("validation cpu_loss:", cpu_loss)
+    if "-no-ml" not in sys.argv[5:]:
+        cpu_loss = measure("ML", ml, train_final, test_final)
+        print("validation cpu_loss:", cpu_loss)
 
 
 if __name__ == "__main__":
