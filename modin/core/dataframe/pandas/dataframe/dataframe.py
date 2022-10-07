@@ -2833,7 +2833,7 @@ class PandasDataframe(ClassLogger):
             new_columns = self.columns.append([other.columns for other in others])
             new_index = joined_index
             if self._dtypes is not None and all(o._dtypes is not None for o in others):
-                new_dtypes = self.dtypes.append([o.dtypes for o in others])
+                new_dtypes = pandas.concat([self.dtypes] + [o.dtypes for o in others])
             # If we have already cached the width of each column in at least one
             # of the column's partitions, we can build new_widths for the new
             # frame. Typically, if we know the width for any partition in a
