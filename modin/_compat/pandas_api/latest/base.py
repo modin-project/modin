@@ -331,6 +331,8 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
         )
 
     def set_axis(self, labels, axis=0, inplace=no_default, *, copy=no_default):
+        if inplace is True and copy is True:
+            raise ValueError("Cannot specify both inplace=True and copy=True")
         return self._set_axis(
             labels=labels,
             axis=axis,

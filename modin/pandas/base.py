@@ -2532,7 +2532,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 stacklevel=2,
             )
             labels, axis = axis, labels
-        obj = self.copy() if copy and not inplace else self
+        obj = self.copy() if copy else self
         setattr(obj, pandas.DataFrame._get_axis_name(axis), labels)
         return None if inplace else obj
 
