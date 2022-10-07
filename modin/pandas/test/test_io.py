@@ -501,7 +501,7 @@ class TestCsv:
             pytest.warns(
                 FutureWarning, match="'mangle_dupe_cols' keyword is deprecated"
             )
-            if PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST
+            if version.parse(pandas.__version__) >= version.parse("1.5.0")
             else _nullcontext()
         ):
             str_non_unique_cols = "col,col,col,col\n5, 6, 7, 8\n9, 10, 11, 12\n"
