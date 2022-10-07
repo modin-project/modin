@@ -56,7 +56,8 @@ You now need to tag the commit that corresponds to the above PR with the appropr
   * Push the tag to master: `git push upstream X.Y.Z`
     * If you're re-pushing a tag (beware! you shouldn't be doing that, no, _really_!), you can remove remote tag and push a local one by `git push upstream :refs/tags/X.Y.Z`
 
-***Note***: We are currently working on automating the release notes procedure - check #4747 for updates!
+***Note***: We are currently working on automating the release notes procedure - check 
+[#4747](https://github.com/modin-project/modin/issues/4747) for updates!
 
 ### Update the link to release in readme
 
