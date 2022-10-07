@@ -359,7 +359,8 @@ def test_sort_index(axis, ascending, na_position):
         )
 
     eval_general(
-        *dfs,
+        dfs[0],
+        dfs[1],
         lambda df: df.sort_index(
             axis=axis, ascending=ascending, na_position=na_position
         ),

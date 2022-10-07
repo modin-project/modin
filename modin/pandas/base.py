@@ -2532,13 +2532,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 stacklevel=2,
             )
             labels, axis = axis, labels
-        if inplace:
-            setattr(self, pandas.DataFrame()._get_axis_name(axis), labels)
-        else:
-            obj = self.copy() if copy else self
-            # only `inplace=True` is allowed here to avoid `RecursionError`
-            obj.set_axis(labels, axis=axis, inplace=True)
-            return obj
+        obj = self.copy() if copy and inplace == False else self
+        setattr(obj, pandas.DataFrame._get_axis_name(axis), labels)
+        return None if inplace else obj
 
     def _shift(self, periods, freq, axis, fill_value):  # noqa: PR01, RT01, D200
         """
