@@ -2585,9 +2585,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
         if freq is None:
             if axis == "index" or axis == 0:
                 new_frame = (
-                    filled_df.append(self.iloc[:-periods], ignore_index=True)
+                    pd.concat([filled_df, self.iloc[:-periods]], ignore_index=True)
                     if periods > 0
-                    else self.iloc[-periods:].append(filled_df, ignore_index=True)
+                    else pd.concat([self.iloc[-periods:], filled_df], ignore_index=True)
                 )
                 new_frame.index = self.index.copy()
                 if isinstance(self, DataFrame):
