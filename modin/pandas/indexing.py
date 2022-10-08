@@ -768,46 +768,13 @@ class _LocIndexer(_LocationIndexerBase):
         append_axis = self._check_missing_loc(row_loc, col_loc)
         if ndims >= 1 and append_axis is not None:
             # We enter this codepath if we're either appending a row or a column
-            if append_axis:  # Appending new column
-                if is_scalar(col_loc) or len(col_loc) == 1:
-                    if is_scalar(item):
-                        item = [item] * len(self.qc.index)
-                    if not isinstance(item, (Series, DataFrame)):
-                        item = Series(item, name=col_loc[0])
-                    elif isinstance(item, Series):
-                        item = item.rename(index=col_loc[0])
-                    else:
-                        item = item.rename(columns=lambda x: col_loc[0])
-                    new_qc = self.qc.concat(1, item._query_compiler)
-                    self.df._update_inplace(new_query_compiler=new_qc)
-                else:
-                    exist_items = item
-                    common_label_loc = np.isin(col_loc, self.qc.columns.values)
-                    if is_list_like(item) and not isinstance(item, (DataFrame, Series)):
-                        item = np.array(item)
-                        if len(item.shape) == 1:
-                            if item.shape[0] != len(col_loc):
-                                raise ValueError(
-                                    "Must have equal len keys and value when setting with an iterable"
-                                )
-                        else:
-                            if item.shape[0] != len(self.qc.index) or item.shape[
-                                1
-                            ] != len(col_loc):
-                                raise ValueError(
-                                    "Must have equal len keys and value when setting with an iterable"
-                                )
-                        exist_items = (
-                            item[:, common_label_loc]
-                            if len(item.shape) > 1
-                            else item[common_label_loc]
-                        )
-                    if len(common_label_loc) != 0:
-                        # In this case we have some new cols and some old ones
-                        self._set_item_existing_loc(
-                            row_loc, np.array(col_loc)[common_label_loc], exist_items
-                        )
-            else:  # Appending new row
+            if append_axis:
+                # Appending at least one new column
+                if is_scalar(col_loc):
+                    col_loc = [col_loc]
+                self._setitem_with_new_columns(row_loc, col_loc, item)
+            else:
+                # Appending at most one new row
                 if is_scalar(row_loc) or len(row_loc) == 1:
                     index = self.qc.index.insert(len(self.qc.index), row_loc)
                     self.qc = self.qc.reindex(labels=index, axis=0, fill_value=0)
@@ -815,6 +782,36 @@ class _LocIndexer(_LocationIndexerBase):
                 self._set_item_existing_loc(row_loc, col_loc, item)
         else:
             self._set_item_existing_loc(row_loc, col_loc, item)
+
+    def _setitem_with_new_columns(self, row_loc, col_loc, item):
+        exist_items = item
+        common_label_loc = np.isin(col_loc, self.qc.columns.values)
+        if is_list_like(item) and not isinstance(item, (DataFrame, Series)):
+            item = np.array(item)
+            if len(item.shape) == 1:
+                if item.shape[0] != len(col_loc):
+                    raise ValueError(
+                        "Must have equal len keys and value when setting with an iterable"
+                    )
+            else:
+                if item.shape[0] != len(self.qc.index) or item.shape[1] != len(col_loc):
+                    raise ValueError(
+                        "Must have equal len keys and value when setting with an iterable"
+                    )
+            exist_items = (
+                item[:, common_label_loc]
+                if len(item.shape) > 1
+                else item[common_label_loc]
+            )
+        if not all(common_label_loc):
+            # In this case we have some new cols and some old ones
+            columns = self.qc.columns
+            for i in range(len(common_label_loc)):
+                if not common_label_loc[i]:
+                    columns = columns.insert(len(columns), col_loc[i])
+            self.qc = self.qc.reindex(labels=columns, axis=1, fill_value=0)
+            self.df._update_inplace(new_query_compiler=self.qc)
+        self._set_item_existing_loc(row_loc, np.array(col_loc), exist_items)
 
     def _set_item_existing_loc(self, row_loc, col_loc, item):
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)

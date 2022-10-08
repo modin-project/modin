@@ -416,21 +416,26 @@ def test_loc(data):
     pandas_df = pandas.DataFrame([[1, 2, 3], [4, 5, 6]])
     modin_df = pd.DataFrame([[1, 2, 3], [4, 5, 6]])
 
-    pandas_df.loc[2] = pandas_df.loc[1]
-    modin_df.loc[2] = modin_df.loc[1]
-    df_equals(modin_df, pandas_df)
+    for left, right in [(2, 1), (6, 1), (lambda df: 70, 1), (90, 70)]:
 
-    pandas_df.loc[6] = pandas_df.loc[1]
-    modin_df.loc[6] = modin_df.loc[1]
-    df_equals(modin_df, pandas_df)
+        def _test_loc_rows(df):
+            df.loc[left] = df.loc[right]
+            return df
 
-    pandas_df.loc[lambda df: 70] = pandas_df.loc[1]
-    modin_df.loc[lambda df: 70] = modin_df.loc[1]
-    df_equals(modin_df, pandas_df)
+        eval_general(modin_df, pandas_df, _test_loc_rows)
 
-    pandas_df.loc[90] = pandas_df.loc[70]
-    modin_df.loc[90] = modin_df.loc[70]
-    df_equals(modin_df, pandas_df)
+    for columns in [10, (100, 102), (2, 6), [10, 11, 12], "a", ["b", "c", "d"]]:
+        if isinstance(columns, tuple) and len(columns) == 2:
+
+            def _test_loc_cols(df):
+                df.loc[:, columns[0] : columns[1]] = 1
+
+        else:
+
+            def _test_loc_cols(df):
+                df.loc[:, columns] = 1
+
+        eval_general(modin_df, pandas_df, _test_loc_cols)
 
 
 @pytest.mark.parametrize(
