@@ -349,13 +349,16 @@ def test_sort_index(axis, ascending, na_position):
             df.index = [(i - length / 2) % length for i in range(length)]
 
     dfs = [modin_df, pandas_df]
+    kw = {"copy": False}
+    if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+        kw = {"inplace": False}
     # Add NaNs to sorted index
     for idx in range(len(dfs)):
         sort_index = dfs[idx].axes[axis]
         dfs[idx] = dfs[idx].set_axis(
             [np.nan if i % 2 == 0 else sort_index[i] for i in range(len(sort_index))],
             axis=axis,
-            copy=False,
+            **kw,
         )
     modin_df, pandas_df = dfs
 
