@@ -18,9 +18,9 @@ See more in https://data-apis.org/dataframe-protocol/latest/index.html.
 """
 
 from abc import ABC, abstractmethod
-from typing import Optional, Iterable, Sequence, Any, Tuple, Dict, TypedDict
+from typing import Any, Dict, Iterable, Optional, Sequence, Tuple, TypedDict
 
-from .utils import DlpackDeviceType, DTypeKind, ColumnNullType
+from .utils import ColumnNullType, DlpackDeviceType, DTypeKind
 
 
 class ColumnBuffers(TypedDict):  # noqa: GL08
@@ -89,7 +89,7 @@ class ProtocolBuffer(ABC):
         pass
 
     @abstractmethod
-    def __dlpack__(self):
+    def __dlpack__(self) -> Any:
         """
         Produce DLPack capsule (see array API standard).
 

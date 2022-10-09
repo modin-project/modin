@@ -14,6 +14,7 @@
 """Base class of an axis partition for a Modin Dataframe."""
 
 from abc import ABC
+from typing import Any, Callable, Iterable, Optional, Tuple, Union
 
 
 class BaseDataframeAxisPartition(ABC):  # pragma: no cover
@@ -25,15 +26,15 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
 
     def apply(
         self,
-        func,
-        *args,
-        num_splits=None,
-        other_axis_partition=None,
-        maintain_partitioning=True,
-        lengths=None,
-        manual_partition=False,
-        **kwargs,
-    ):
+        func: Callable,
+        *args: Iterable,
+        num_splits: Optional[int] = None,
+        other_axis_partition: Optional["BaseDataframeAxisPartition"] = None,
+        maintain_partitioning: bool = True,
+        lengths: Optional[Iterable] = None,
+        manual_partition: bool = False,
+        **kwargs: dict,
+    ) -> Any:
         """
         Apply a function to this axis partition along full axis.
 
@@ -81,7 +82,7 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
     instance_type = None
     partition_type = None
 
-    def _wrap_partitions(self, partitions):
+    def _wrap_partitions(self, partitions: list) -> list:
         """
         Wrap remote partition objects with `BaseDataframePartition` class.
 
@@ -95,9 +96,11 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         list
             List of wrapped remote partition objects.
         """
-        return [self.partition_type(obj) for obj in partitions]
+        return [self.partition_type(obj) for obj in partitions]  # type: ignore
 
-    def force_materialization(self, get_ip=False):
+    def force_materialization(
+        self, get_ip: bool = False
+    ) -> "BaseDataframeAxisPartition":
         """
         Materialize axis partitions into a single partition.
 
@@ -114,9 +117,9 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         materialized = self.apply(
             lambda x: x, num_splits=1, maintain_partitioning=False
         )
-        return type(self)(materialized, get_ip=get_ip)
+        return type(self)(materialized, get_ip=get_ip)  # type: ignore[call-arg]
 
-    def unwrap(self, squeeze=False, get_ip=False):
+    def unwrap(self, squeeze: bool = False, get_ip: bool = False) -> Union[list,Tuple[Any, Any]]:
         """
         Unwrap partitions from this axis partition.
 
@@ -138,13 +141,13 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         unwrapped partitions, respectively, is returned if Ray/Dask is used as an engine
         (i.e. [(Ray.ObjectRef/Dask.Future, Ray.ObjectRef/Dask.Future), ...]).
         """
-        if squeeze and len(self.list_of_blocks) == 1:
+        if squeeze and len(self.list_of_blocks) == 1:  # type: ignore[attr-defined]
             if get_ip:
-                return self.list_of_ips[0], self.list_of_blocks[0]
+                return self.list_of_ips[0], self.list_of_blocks[0]  # type: ignore[attr-defined]
             else:
-                return self.list_of_blocks[0]
+                return self.list_of_blocks[0]  # type: ignore[attr-defined]
         else:
             if get_ip:
-                return list(zip(self.list_of_ips, self.list_of_blocks))
+                return list(zip(self.list_of_ips, self.list_of_blocks))  # type: ignore[attr-defined]
             else:
-                return self.list_of_blocks
+                return self.list_of_blocks  # type: ignore[attr-defined]
