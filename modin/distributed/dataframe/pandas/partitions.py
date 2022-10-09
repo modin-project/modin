@@ -13,13 +13,14 @@
 
 """Module houses API to operate on Modin DataFrame partitions that are pandas DataFrame(s)."""
 
+from typing import Optional
 import numpy as np
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.pandas.dataframe import DataFrame
 
 
-def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
+def unwrap_partitions(api_layer_object: DataFrame, axis: int = None, get_ip: bool = False) -> list:
     """
     Unwrap partitions of the ``api_layer_object``.
 
@@ -54,10 +55,10 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
     modin_frame._propagate_index_objs(None)
     if axis is None:
 
-        def _unwrap_partitions():
+        def _unwrap_partitions() -> list:
             [p.drain_call_queue() for p in modin_frame._partitions.flatten()]
 
-            def get_block(partition):
+            def get_block(partition: DataFrame) -> np.ndarray:
                 blocks = partition.list_of_blocks
                 assert (
                     len(blocks) == 1
@@ -99,8 +100,13 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
 
 
 def from_partitions(
-    partitions, axis, index=None, columns=None, row_lengths=None, column_widths=None
-):
+    partitions: list,
+    axis: int,
+    index: Optional[list] | None = None,
+    columns: Optional[list] | None = None,
+    row_lengths: Optional[list] | None = None,
+    column_widths: Optional[list] | None = None
+) -> DataFrame:
     """
     Create DataFrame from remote partitions.
 
@@ -141,10 +147,16 @@ def from_partitions(
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     factory = FactoryDispatcher.get_factory()
-
-    partition_class = factory.io_cls.frame_cls._partition_mgr_cls._partition_class
+    assert factory is not None
+    assert factory.io_cls is not None
+    assert factory.io_cls.frame_cls is not None
+    assert factory.io_cls.frame_cls._partition_mgr_cls is not None
     partition_frame_class = factory.io_cls.frame_cls
+    assert partition_frame_class is not None
     partition_mgr_class = factory.io_cls.frame_cls._partition_mgr_cls
+    assert partition_mgr_class is not None
+    partition_class = factory.io_cls.frame_cls._partition_mgr_cls._partition_class
+    assert partition_class is not None
 
     # Since we store partitions of Modin DataFrame as a 2D NumPy array we need to place
     # passed partitions to 2D NumPy array to pass it to internal Modin Frame class.
