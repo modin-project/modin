@@ -154,7 +154,6 @@ def from_partitions(
 
     factory = FactoryDispatcher.get_factory()
     partition_frame_class = factory.io_cls.frame_cls
-    assert partition_frame_class is not None
     partition_mgr_class = factory.io_cls.frame_cls._partition_mgr_cls
     partition_class = factory.io_cls.frame_cls._partition_mgr_cls._partition_class
 
