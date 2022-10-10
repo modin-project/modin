@@ -1220,9 +1220,7 @@ def test_set_axis(data, axis):
     kw = {"copy": True}
     if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
         kw = {"inplace": False}
-    modin_result = modin_df.set_axis(labels, axis=axis, **kw)
-    pandas_result = pandas_df.set_axis(labels, axis=axis, **kw)
-    df_equals(modin_result, pandas_result)
+    eval_general(modin_df, pandas_df, lambda df: df.set_axis(labels, axis=axis, **kw))
 
     modin_df_copy = modin_df.copy()
     if "copy" in kw:
