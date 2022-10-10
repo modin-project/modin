@@ -12,7 +12,7 @@ OmniSciDB is an open-source SQL-based relational database designed for the
 massive parallelism of modern CPU and GPU hardware. Its execution engine
 is built on LLVM JIT compiler.
 
-HDK can be embedded into an application as a python module - `pyhdk`, This module
+HDK can be embedded into an application as a python module - ``pyhdk``. This module
 provides Python APIs to the HDK library. A specialized in-memory storage layer
 provides an efficient way to import data in Arrow table format.
 
@@ -184,12 +184,11 @@ find all leaves of an operation tree and import their Arrow tables. Partitions
 with imported tables hold corresponding table names used to refer to them in
 queries.
 
-HDK executes queries in the HDK-specific IR format. In Modin we don't generate
-SQL queries, but use relation algebra JSON format instead. This format is
-translated into HDK IR, that is executed by HDK. Optionally, the Apache Calcite
-framework could be used, to convert SQL queries into the relation algebra JSON
-format. Also, the Calcite framework is used for the queries optimization. HDK
-provides a wrapper around the Apache Calcite framework - :py:class:`~pyhdk.sql.Calcite`.
+HDK executes queries expressed in HDK-specific intermediate representation (IR) format.
+It also provides components to translate SQL queries to relational algebra JSON format
+which can be later optimized and translated to HDK IR. Modin generates queries in relational
+algebra JSON format. These queries are optionally optimized with Apache Calcite
+based optimizer provided by HDK (:py:class:`~pyhdk.sql.Calcite`) and then executed.
 
 Operations used by Calcite in its intermediate representation are implemented
 in classes derived from
