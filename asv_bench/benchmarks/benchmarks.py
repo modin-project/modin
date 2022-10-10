@@ -197,12 +197,12 @@ class TimeMerge:
 
     def time_merge_dataframe_empty_right(self, shapes, how, sort):
         # Getting an empty dataframe using `iloc` should be very fast,
-        #  so the impact on the time of the merge operation should be negligible.
+        # so the impact on the time of the merge operation should be negligible.
         execute(IMPL.merge(self.df1, self.df2.iloc[:0], how=how, sort=sort))
 
     def time_merge_dataframe_empty_left(self, shapes, how, sort):
         # Getting an empty dataframe using `iloc` should be very fast,
-        #  so the impact on the time of the merge operation should be negligible.
+        # so the impact on the time of the merge operation should be negligible.
         execute(IMPL.merge(self.df1.iloc[:0], self.df2, how=how, sort=sort))
 
 
