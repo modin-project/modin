@@ -104,6 +104,7 @@ def small_query_compiler(func, name):
     @wraps(func)
     def wrapper(self, *args, **kw):
         print("Currently in BaseQueryCompiler:", name)
+        print(args)
         assert False
 
     return wrapper

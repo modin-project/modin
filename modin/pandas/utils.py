@@ -16,6 +16,7 @@
 from pandas.util._decorators import doc
 import pandas
 import numpy as np
+from modin.core.storage_formats.pandas.small_query_compiler import SmallQueryCompiler
 
 from modin.utils import hashable
 
@@ -80,7 +81,8 @@ def from_pandas(df):
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
     from .dataframe import DataFrame
 
-    return DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
+    # return DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
+    return DataFrame(query_compiler=SmallQueryCompiler(df))
 
 
 def from_arrow(at):

@@ -2990,6 +2990,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         """
         key = apply_if_callable(key, self)
         # Shortcut if key is an actual column
+        print(type(self._query_compiler))
         is_mi_columns = self._query_compiler.has_multiindex(axis=1)
         try:
             if key in self.columns and not is_mi_columns:

@@ -2282,7 +2282,7 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         Validate data dtype for `sum`, `prod` and `mean` methods.
 
-        Parameters
+        Parameter
         ----------
         axis : {0, 1}
             Axis to validate over.

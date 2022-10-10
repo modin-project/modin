@@ -28,7 +28,6 @@ from pandas.core.dtypes.common import (
 from typing import List, Hashable
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 from modin.utils import (
     _inherit_docstrings,
@@ -203,12 +202,30 @@ def _to_numeric(df, *args, **kwargs):
 
 
 def _groupby(agg_name):
-    def groupby_callable(
-        df, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False
-    ):
+    __aggregation_methods_dict = {
+        "axis_wise": pandas.core.groupby.DataFrameGroupBy.aggregate,
+        "group_wise": pandas.core.groupby.DataFrameGroupBy.apply,
+        "transform": pandas.core.groupby.DataFrameGroupBy.transform,
+    }
+
+    def groupby_callable(df, by, axis, groupby_kwargs, agg_args, agg_kwargs, agg_func=None, how="axis_wise", **kwargs):
+        print("groupby df", df)
+        print("groupby by", by)
+        if isinstance(by, pandas.DataFrame):
+            by = by.columns
         groupby_obj = df.groupby(by=by, axis=axis, **groupby_kwargs)
-        agg_func = getattr(groupby_obj, agg_name)
-        return agg_func(*agg_args, **agg_kwargs)
+        print("whhhattt:", agg_name)
+        # if agg_func is None:
+        #     agg_func = getattr(groupby_obj, agg_name)
+        if agg_name == "agg":
+            groupby_agg = __aggregation_methods_dict[how]
+            return groupby_agg(groupby_obj, agg_func, *agg_args, **agg_kwargs)
+        groupby_agg = getattr(groupby_obj, agg_name)
+        # print(groupby_agg.__name__)
+        # print(groupby_agg.__code__.co_varnames)
+        if callable(groupby_agg):
+            return groupby_agg(*agg_args, **agg_kwargs)
+        return groupby_agg
 
     return groupby_callable
 
@@ -224,11 +241,13 @@ def _take_2d(df, index=None, columns=None):
 def _register_binary(op):
     def binary_operator(df, other, **kwargs):
         if isinstance(other, pandas.DataFrame) and (
-            not df.empty or (len(other.columns) > 1 and other.columns[0] == MODIN_UNNAMED_SERIES_LABEL)
+            not df.empty
+            or (
+                len(other.columns) == 1
+                and other.columns[0] == MODIN_UNNAMED_SERIES_LABEL
+            )
         ):
-            print("BEFORE SQUEEZE:", other)
-            something = other.squeeze()
-            print("AFTER SQUEEZE:", something)
+            other = other.squeeze()
         return getattr(df, op)(other, **kwargs)
 
     return binary_operator
@@ -241,6 +260,22 @@ def _register_resample(op):
         return result
 
     return resample_operator
+
+
+def _drop(df, **kwargs):
+    if (
+        kwargs.get("labels", None) is not None
+        or kwargs.get("index", None) is not None
+        or kwargs.get("columns", None) is not None
+    ):
+        return df.drop(**kwargs)
+    return df
+
+
+def _fillna(df, squeeze_self=True, squeeze_value=False, **kwargs):
+    if len(df.columns) == 1 and df.columns[0] == "__reduced__":
+        df = df["__reduced__"]
+    return df.fillna(**kwargs)
 
 
 @_inherit_docstrings(BaseQueryCompiler)
@@ -298,6 +333,10 @@ class SmallQueryCompiler(BaseQueryCompiler):
                 df = df.copy()
             if is_series:
                 df = df.squeeze(axis=1)
+            # elif len(df.columns) == 1 and df.columns[0] == MODIN_UNNAMED_SERIES_LABEL:
+            #     print("BEFORE SQUEEZE:", df)
+            #     df = df.squeeze(axis=1)
+            #     print("AFTER SQUEEZE:", df)
             exclude_names = [
                 "broadcast",
                 "fold_axis",
@@ -311,9 +350,9 @@ class SmallQueryCompiler(BaseQueryCompiler):
             kwargs = try_cast_to_pandas_sqc(kwargs)
             print("ARGS:", args)
             print("KWARGS:", kwargs)
-            if func.__name__ == "transform":
-                assert False
             result = func(df, *args, **kwargs)
+            if func.__name__ == "fillna":
+                print(result)
             if in_place:
                 result = df
             if not return_modin:
@@ -390,10 +429,10 @@ class SmallQueryCompiler(BaseQueryCompiler):
         pandas.DataFrame.update, in_place=True, df_copy=True
     )
     diff = _register_default_pandas(pandas.DataFrame.diff)
-    drop = _register_default_pandas(pandas.DataFrame.drop)
+    drop = _register_default_pandas(_drop)
     dropna = _register_default_pandas(pandas.DataFrame.dropna)  # axis values switched?
     dt_ceil = _register_default_pandas(_dt_func_map("ceil"))
-    # dt_components ?
+    dt_components = _register_default_pandas(_dt_prop_map("components"))
     dt_date = _register_default_pandas(_dt_prop_map("date"))
     dt_day = _register_default_pandas(_dt_prop_map("day"))
     dt_day_name = _register_default_pandas(_dt_func_map("day_name"))
@@ -404,7 +443,9 @@ class SmallQueryCompiler(BaseQueryCompiler):
     dt_daysinmonth = _register_default_pandas(_dt_prop_map("daysinmonth"))
     dt_end_time = _register_default_pandas(_dt_prop_map("end_time"))
     dt_floor = _register_default_pandas(_dt_func_map("floor"))
-    # dt_freq ?
+    dt_freq = _register_default_pandas(
+        lambda df: pandas.DataFrame([df.squeeze(axis=1).dt.freq])
+    )
     dt_hour = _register_default_pandas(_dt_prop_map("hour"))
     dt_is_leap_year = _register_default_pandas(_dt_prop_map("is_leap_year"))
     dt_is_month_end = _register_default_pandas(_dt_prop_map("is_month_end"))
@@ -435,7 +476,9 @@ class SmallQueryCompiler(BaseQueryCompiler):
     dt_to_pytimedelta = _register_default_pandas(_dt_func_map("to_pytimedelta"))
     dt_to_timestamp = _register_default_pandas(_dt_func_map("to_timestamp"))
     dt_total_seconds = _register_default_pandas(_dt_func_map("total_seconds"))
-    # dt_tz ?
+    dt_tz = _register_default_pandas(
+        lambda df: pandas.DataFrame([df.squeeze(axis=1).dt.tz])
+    )
     dt_tz_convert = _register_default_pandas(_dt_func_map("tz_convert"))
     dt_tz_localize = _register_default_pandas(_dt_func_map("tz_localize"))
     dt_week = _register_default_pandas(_dt_prop_map("week"))
@@ -445,7 +488,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     eq = _register_default_pandas(_register_binary("eq"), filter_kwargs=["dtypes"])
     eval = _register_default_pandas(pandas.DataFrame.eval)
     explode = _register_default_pandas(pandas.DataFrame.explode)
-    fillna = _register_default_pandas(pandas.DataFrame.fillna)
+    fillna = _register_default_pandas(_fillna)
     first_valid_index = _register_default_pandas(
         pandas.DataFrame.first_valid_index, return_modin=False
     )
@@ -693,14 +736,9 @@ class SmallQueryCompiler(BaseQueryCompiler):
         return self._add_suffix_series(suffix=suffix)
 
     def dot(self, other, squeeze_self=None, squeeze_other=None):
-        if isinstance(other, PandasQueryCompiler) or isinstance(
-            other, SmallQueryCompiler
-        ):
-            other = (
-                other.to_pandas().squeeze(axis=1)
-                if squeeze_other
-                else other.to_pandas()
-            )
+        other = try_cast_to_pandas_sqc(other)
+        if squeeze_other:
+            other = other.squeeze()
         if squeeze_self:
             result = self._modin_frame.squeeze(axis=1).dot(other)
         else:
@@ -735,6 +773,9 @@ class SmallQueryCompiler(BaseQueryCompiler):
     def get_index_names(self, axis=0):
         return self.get_axis(axis).names
 
+    def set_index_name(self, name, axis=0):
+        self.get_axis(axis).name = name
+
     def has_multiindex(self, axis=0):
         if axis == 0:
             return isinstance(self._modin_frame.index, pandas.MultiIndex)
@@ -763,7 +804,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
         return
 
     def finalize(self):
-        self._modin_frame.finalize()
+        return
 
     # Dataframe exchange protocol
 
