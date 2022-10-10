@@ -183,11 +183,6 @@ class TimeMerge:
     def setup(self, shapes, how, sort):
         self.df1 = generate_dataframe("int", *shapes[0], RAND_LOW, RAND_HIGH)
         self.df2 = generate_dataframe("int", *shapes[1], RAND_LOW, RAND_HIGH)
-        if how == "cross":
-            self.rows_count = int(0.25 * shapes[1][0])
-            self.df1 = self.df1.loc[: self.rows_count]
-            self.df2 = self.df2.loc[: self.rows_count]
-            execute(self.df1), execute(self.df2)
 
     def time_merge(self, shapes, how, sort):
         # merge dataframes by index to get the predictable shape
