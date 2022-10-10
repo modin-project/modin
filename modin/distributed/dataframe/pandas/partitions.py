@@ -64,7 +64,7 @@ def unwrap_partitions(api_layer_object: Union[DataFrame, Series], axis: int = No
         def _unwrap_partitions() -> list:
             [p.drain_call_queue() for p in modin_frame._partitions.flatten()]
 
-            def get_block(partition: Union[PandasOnRayDataframePartition,PandasOnDaskDataframePartition]) -> np.ndarray:
+            def get_block(partition: Union[PandasOnRayDataframePartition, PandasOnDaskDataframePartition]) -> np.ndarray:
                 blocks = partition.list_of_blocks
                 assert (
                     len(blocks) == 1
