@@ -2206,7 +2206,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         axis = self._get_axis_number(axis)
         new_labels = self.axes[axis].reorder_levels(order)
-        return self.set_axis(new_labels, axis=axis, inplace=False)
+        return self.set_axis(new_labels, axis=axis)
 
     def _resample(
         self,
@@ -2533,13 +2533,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 stacklevel=2,
             )
             labels, axis = axis, labels
-        if inplace:
-            setattr(self, pandas.DataFrame()._get_axis_name(axis), labels)
-        else:
-            if copy:
-                obj = self.copy()
-            obj.set_axis(labels, axis=axis, inplace=True)
-            return obj
+        obj = self.copy() if copy else self
+        setattr(obj, pandas.DataFrame._get_axis_name(axis), labels)
+        return None if inplace else obj
 
     def _shift(self, periods, freq, axis, fill_value):  # noqa: PR01, RT01, D200
         """
@@ -2745,7 +2741,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         axis = self._get_axis_number(axis)
         idx = self.index if axis == 0 else self.columns
-        return self.set_axis(idx.swaplevel(i, j), axis=axis, inplace=False)
+        return self.set_axis(idx.swaplevel(i, j), axis=axis)
 
     def tail(self, n=5):  # noqa: PR01, RT01, D200
         """
@@ -2940,7 +2936,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         axis = self._get_axis_number(axis)
         new_labels = self.axes[axis].shift(periods, freq=freq)
-        return self.set_axis(new_labels, axis=axis, inplace=False)
+        return self.set_axis(new_labels, axis=axis)
 
     def transform(self, func, axis=0, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
@@ -2972,7 +2968,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         else:
             new_labels = self.axes[axis].tz_convert(tz)
         obj = self.copy() if copy else self
-        return obj.set_axis(new_labels, axis, inplace=not copy)
+        return obj._set_axis(new_labels, axis, inplace=False, copy=copy)
 
     def tz_localize(
         self, tz, axis=0, level=None, copy=True, ambiguous="raise", nonexistent="raise"
@@ -2993,7 +2989,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             )
             .index
         )
-        return self.set_axis(labels=new_labels, axis=axis, inplace=not copy)
+        return self._set_axis(new_labels, axis, inplace=False, copy=copy)
 
     # TODO: uncomment the following lines when #3331 issue will be closed
     # @prepend_to_notes(
