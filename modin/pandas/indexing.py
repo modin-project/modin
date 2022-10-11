@@ -784,6 +784,18 @@ class _LocIndexer(_LocationIndexerBase):
             self._set_item_existing_loc(row_loc, col_loc, item)
 
     def _setitem_with_new_columns(self, row_loc, col_loc, item):
+        """
+        Assign `item` value to dataset located by `row_loc` and `col_loc` with new columns.
+
+        Parameters
+        ----------
+        row_loc : scalar, slice, list, array or tuple
+            Row locator.
+        col_loc : scalar, slice, list, array or tuple
+            Columns locator.
+        item : modin.pandas.DataFrame, modin.pandas.Series or scalar
+            Value that should be assigned to located dataset.
+        """
         exist_items = item
         common_label_loc = np.isin(col_loc, self.qc.columns.values)
         if is_list_like(item) and not isinstance(item, (DataFrame, Series)):
@@ -814,6 +826,18 @@ class _LocIndexer(_LocationIndexerBase):
         self._set_item_existing_loc(row_loc, np.array(col_loc), exist_items)
 
     def _set_item_existing_loc(self, row_loc, col_loc, item):
+        """
+        Assign `item` value to dataset located by `row_loc` and `col_loc` with existing rows and columns.
+
+        Parameters
+        ----------
+        row_loc : scalar, slice, list, array or tuple
+            Row locator.
+        col_loc : scalar, slice, list, array or tuple
+            Columns locator.
+        item : modin.pandas.DataFrame, modin.pandas.Series or scalar
+            Value that should be assigned to located dataset.
+        """
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
         self._setitem_positional(
             row_lookup,
@@ -825,6 +849,21 @@ class _LocIndexer(_LocationIndexerBase):
         )
 
     def _check_missing_loc(self, row_loc, col_loc):
+        """
+        Helps `__setitem__` compute whether an axis needs appending.
+
+        Parameters
+        ----------
+        row_loc : scalar, slice, list, array or tuple
+            Row locator.
+        col_loc : scalar, slice, list, array or tuple
+            Columns locator.
+
+        Returns
+        -------
+        int or None :
+            0 if new row, 1 if new column, None if neither.
+        """
         if is_scalar(row_loc):
             return 0 if row_loc not in self.qc.index else None
         elif isinstance(row_loc, list):
@@ -872,8 +911,16 @@ class _LocIndexer(_LocationIndexerBase):
         base_as_index = pandas.Index(list(base_index))
         locator_as_index = pandas.Index(list(locator))
 
-        nan_labels = locator_as_index.difference(base_as_index)
-        common_labels = locator_as_index.intersection(base_as_index)
+        if locator_as_index.inferred_type == "boolean":
+            if len(locator_as_index) != len(base_as_index):
+                raise ValueError(
+                    f"Item wrong length {len(locator_as_index)} instead of {len(base_as_index)}!"
+                )
+            common_labels = base_as_index[locator_as_index]
+            nan_labels = pandas.Index([])
+        else:
+            common_labels = locator_as_index.intersection(base_as_index)
+            nan_labels = locator_as_index.difference(base_as_index)
 
         if len(common_labels) == 0:
             raise KeyError(
