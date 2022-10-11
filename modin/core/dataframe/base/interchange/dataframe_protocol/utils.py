@@ -19,7 +19,7 @@ See more in https://data-apis.org/dataframe-protocol/latest/index.html.
 
 import enum
 import re
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import pandas
@@ -135,7 +135,7 @@ class Endianness:
     NA = "|"
 
 
-def pandas_dtype_to_arrow_c(dtype: np.dtype) -> str:
+def pandas_dtype_to_arrow_c(dtype: Union[np.dtype, pandas.CategoricalDtype]) -> str:
     """
     Represent pandas `dtype` as a format string in Apache Arrow C notation.
 
