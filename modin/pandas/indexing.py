@@ -850,7 +850,7 @@ class _LocIndexer(_LocationIndexerBase):
 
     def _check_missing_loc(self, row_loc, col_loc):
         """
-        Helps `__setitem__` compute whether an axis needs appending.
+        Help `__setitem__` compute whether an axis needs appending.
 
         Parameters
         ----------
