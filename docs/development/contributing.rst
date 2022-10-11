@@ -87,7 +87,7 @@ after this with ``git push -f``.
 Commit Message formatting
 -------------------------
 To ensure that all commit messages in the master branch follow a specific format, we
-enforce that all commit messages must follow the following format:
+request that your first commit follow the following format:
 
 .. code-block:: bash
 
@@ -108,6 +108,11 @@ GitHub issue tracker: https://github.com/modin-project/modin/issues. This is imp
 because it links commits to their issues.
 
 The commit message should follow a colon (:) and be descriptive and succinct.
+
+A Modin CI job on GitHub will enforce that your pull request title follows the
+format we suggest. Note that if you update the PR title, you have to push
+another commit (even if it's empty) or amend your last commit for the job to
+pick up the new PR title. Re-running the job in Github Actions won't work.
 
 General Rules for committers
 ----------------------------
