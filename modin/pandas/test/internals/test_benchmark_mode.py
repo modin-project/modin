@@ -50,6 +50,7 @@ def test_from_environment_variable():
 
 def test_turn_off():
     df = pd.DataFrame([0])
+    pass
     BenchmarkMode.put(False)
     with mock.patch(wait_method) as wait:
         df.dropna()
