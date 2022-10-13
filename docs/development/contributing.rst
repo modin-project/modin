@@ -86,8 +86,8 @@ after this with ``git push -f``.
 
 Commit Message formatting
 -------------------------
-To ensure that all commit messages in the master branch follow a specific format, we
-request that your first commit follow the following format:
+We request that your first commit follow a particular format, and we
+**require** thatyour PR title follow the format. The format is:
 
 .. code-block:: bash
 
