@@ -87,7 +87,7 @@ after this with ``git push -f``.
 Commit Message formatting
 -------------------------
 We request that your first commit follow a particular format, and we
-**require** thatyour PR title follow the format. The format is:
+**require** that your PR title follow the format. The format is:
 
 .. code-block:: bash
 
