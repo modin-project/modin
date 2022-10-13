@@ -563,11 +563,8 @@ def try_cast_to_pandas_sqc(obj, squeeze=False):
             and result.name == MODIN_UNNAMED_SERIES_LABEL
         ):
             result.name = None
-        print(result)
-        print(type(result))
         return result
     if isinstance(obj, (list, tuple)):
-        print("WHATS GOING ONlist???")
         return type(obj)([try_cast_to_pandas_sqc(o, squeeze=squeeze) for o in obj])
     if isinstance(obj, dict):
         return {k: try_cast_to_pandas_sqc(v, squeeze=squeeze) for k, v in obj.items()}

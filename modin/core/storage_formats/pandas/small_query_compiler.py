@@ -209,20 +209,32 @@ def _groupby(agg_name):
     }
 
     def groupby_callable(df, by, axis, groupby_kwargs, agg_args, agg_kwargs, agg_func=None, how="axis_wise", **kwargs):
-        print("groupby df", df)
-        print("groupby by", by)
+        print("groupby df", df, type(df))
+        print("groupby by", by, type(by))
         if isinstance(by, pandas.DataFrame):
-            by = by.columns
+            by = by.squeeze()
+        print("BEFORE BYYY:", by)
+        if isinstance(by, list):
+            for i in range(len(by)):
+                if isinstance(by[i], pandas.DataFrame):
+                    by[i] = by[i].squeeze()
+                    if isinstance(by[i], pandas.Series) and by[i].name in df.columns:
+                        by[i] = by[i].name
+        if isinstance(by, pandas.Series) and by.name in df.columns:
+            by = by.name
+        if isinstance(by, pandas.DataFrame) and all(by.columns.isin(df.columns)):
+            by = list(by.columns)
+        elif isinstance(by, pandas.DataFrame):
+            by = [by[col] for col in by]
+        print("BYYY:", by)
+        print(groupby_kwargs)
+        # groupby_kwargs.pop("as_index")
         groupby_obj = df.groupby(by=by, axis=axis, **groupby_kwargs)
         print("whhhattt:", agg_name)
-        # if agg_func is None:
-        #     agg_func = getattr(groupby_obj, agg_name)
         if agg_name == "agg":
             groupby_agg = __aggregation_methods_dict[how]
             return groupby_agg(groupby_obj, agg_func, *agg_args, **agg_kwargs)
         groupby_agg = getattr(groupby_obj, agg_name)
-        # print(groupby_agg.__name__)
-        # print(groupby_agg.__code__.co_varnames)
         if callable(groupby_agg):
             return groupby_agg(*agg_args, **agg_kwargs)
         return groupby_agg
@@ -233,8 +245,6 @@ def _groupby(agg_name):
 def _take_2d(df, index=None, columns=None):
     columns = columns if columns is not None else slice(None)
     index = index if index is not None else slice(None)
-    print(df.iloc[index, columns])
-    print(type(df.iloc[index, columns]))
     return df.iloc[index, columns]
 
 
@@ -345,7 +355,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
             ] + filter_kwargs
             for name in exclude_names:
                 kwargs.pop(name, None)
-            print("BEFORE ARGS:", args)
+            # print("BEFORE ARGS:", args)
             args = try_cast_to_pandas_sqc(args)
             kwargs = try_cast_to_pandas_sqc(kwargs)
             print("ARGS:", args)

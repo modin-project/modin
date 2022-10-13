@@ -503,6 +503,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
         isinstance(o, (pd.Series, pandas.Series)) for o in by
     ):
         # Not yet supported for non-original-column-from-dataframe Series in by:
+        # return modin_groupby
         eval___getattr__(modin_groupby, pandas_groupby, "col3")
         eval___getitem__(modin_groupby, pandas_groupby, "col3")
     eval_groups(modin_groupby, pandas_groupby)
