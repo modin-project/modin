@@ -1579,7 +1579,7 @@ class TestParquet:
             engine=engine,
         )
 
-    @pytest.mark.parametrize("path_type", ["url", "object"])
+    @pytest.mark.parametrize("path_type", ["url", "object", "directory"])
     @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1593,6 +1593,15 @@ class TestParquet:
             fs = s3fs.S3FileSystem(anon=True)
             with fs.open(dataset_url, "rb") as file_obj:
                 eval_io("read_parquet", path=file_obj, engine=engine)
+        elif path_type == "directory":
+            # TODO(mvashishtha): DO NOT MERGE until we make
+            # s3://modin-datasets/testing publicly accessible and test reading
+            # that directory instead.
+            eval_io(
+                "read_parquet",
+                path="s3://mahesh-vashishtha/part",
+                engine=engine,
+            )
         else:
             if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
                 pytest.xfail(
