@@ -323,7 +323,11 @@ class HdkOnNativeDataframe(PandasDataframe):
                 new_columns = base.columns[col_positions]
             exprs = self._index_exprs()
             for col in new_columns:
-                exprs[col] = base.ref(col)
+                expr = base.ref(col)
+                if exprs.setdefault(col, expr) is not expr:
+                    raise NotImplementedError(
+                        "duplicate column names are not supported"
+                    )
             dtypes = self._dtypes_for_exprs(exprs)
             base = self.__constructor__(
                 columns=new_columns,
@@ -2030,7 +2034,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         """
         exprs = self._index_exprs()
         for old, new in zip(self.columns, new_columns):
-            exprs[new] = self.ref(old)
+            expr = self.ref(old)
+            if exprs.setdefault(new, expr) is not expr:
+                raise NotImplementedError("duplicate column names are not supported")
         return self.__constructor__(
             columns=new_columns,
             dtypes=self._dtypes.tolist(),
