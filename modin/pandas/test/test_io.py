@@ -1579,7 +1579,20 @@ class TestParquet:
             engine=engine,
         )
 
-    @pytest.mark.parametrize("path_type", ["url", "object", "directory"])
+    @pytest.mark.parametrize(
+        "path_type",
+        [
+            "object",
+            "directory",
+            pytest.param(
+                "url",
+                marks=pytest.mark.xfail(
+                    PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+                    reason="older pandas.read_parquet does not support storage_options",
+                ),
+            ),
+        ],
+    )
     @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1594,12 +1607,28 @@ class TestParquet:
             with fs.open(dataset_url, "rb") as file_obj:
                 eval_io("read_parquet", path=file_obj, engine=engine)
         elif path_type == "directory":
+            if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+                if engine == "pyarrow":
+                    pytest.xfail(
+                        reason="older pandas.read_parquet does not support storage_options"
+                    )
+                else:
+                    pytest.skip(
+                        reason=(
+                            "older pandas.read_parquet does not "
+                            + "support storage_options, but modin "
+                            + "and pandas both happen to give "
+                            + "different ValueErrors, so we cannot "
+                            + "xfail"
+                        )
+                    )
             # TODO(mvashishtha): DO NOT MERGE until we make
             # s3://modin-datasets/testing publicly accessible and test reading
             # that directory instead.
             eval_io(
                 "read_parquet",
                 path="s3://mahesh-vashishtha/part",
+                storage_options={"anon": True},
                 engine=engine,
             )
         else:
