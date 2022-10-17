@@ -1613,15 +1613,12 @@ class TestParquet:
                         reason="older pandas.read_parquet does not support storage_options"
                     )
                 else:
-                    pytest.skip(
-                        reason=(
-                            "older pandas.read_parquet does not "
-                            + "support storage_options, but modin "
-                            + "and pandas both happen to give "
-                            + "different ValueErrors, so we cannot "
-                            + "xfail"
-                        )
-                    )
+                    # older pandas.read_parquet does not support
+                    # storage_options, but modin and pandas both happen to
+                    # give different ValueErrors, so we cannot xfail.
+                    # n.b. conda doesn't seem to have pytest>6.2.5 for python
+                    # 3.6, and pytest 6.2.5 doesn't accept "skip" parameter.
+                    pytest.skip()
             # TODO(mvashishtha): DO NOT MERGE until we make
             # s3://modin-datasets/testing publicly accessible and test reading
             # that directory instead.
