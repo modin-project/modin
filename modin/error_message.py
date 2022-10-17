@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from typing import NoReturn, Set
 import warnings
 from modin.logging import get_logger
 from modin.utils import get_current_execution
@@ -19,10 +20,10 @@ from modin.utils import get_current_execution
 class ErrorMessage(object):
     # Only print full ``default to pandas`` warning one time.
     printed_default_to_pandas = False
-    printed_warnings = set()
+    printed_warnings: Set[int] = set()  # Set of hashes of printed warnings
 
     @classmethod
-    def not_implemented(cls, message=""):
+    def not_implemented(cls, message: str = "") -> NoReturn:
         if message == "":
             message = "This functionality is not yet available in Modin."
         get_logger().info(f"Modin Error: NotImplementedError: {message}")
@@ -34,7 +35,7 @@ class ErrorMessage(object):
         )
 
     @classmethod
-    def single_warning(cls, message):
+    def single_warning(cls, message: str) -> None:
         message_hash = hash(message)
         logger = get_logger()
         if message_hash in cls.printed_warnings:
@@ -48,7 +49,7 @@ class ErrorMessage(object):
         cls.printed_warnings.add(message_hash)
 
     @classmethod
-    def default_to_pandas(cls, message="", reason=""):
+    def default_to_pandas(cls, message: str = "", reason: str = "") -> None:
         if message != "":
             execution_str = get_current_execution()
             message = (
@@ -71,7 +72,9 @@ class ErrorMessage(object):
         warnings.warn(message)
 
     @classmethod
-    def catch_bugs_and_request_email(cls, failure_condition, extra_log=""):
+    def catch_bugs_and_request_email(
+        cls, failure_condition: bool, extra_log: str = ""
+    ) -> None:
         if failure_condition:
             get_logger().info(f"Modin Error: Internal Error: {extra_log}")
             raise Exception(
@@ -83,7 +86,7 @@ class ErrorMessage(object):
             )
 
     @classmethod
-    def non_verified_udf(cls):
+    def non_verified_udf(cls) -> None:
         get_logger().debug("Modin Warning: Non Verified UDF")
         warnings.warn(
             "User-defined function verification is still under development in Modin. "
@@ -91,7 +94,7 @@ class ErrorMessage(object):
         )
 
     @classmethod
-    def missmatch_with_pandas(cls, operation, message):
+    def missmatch_with_pandas(cls, operation: str, message: str) -> None:
         get_logger().debug(
             f"Modin Warning: {operation} mismatch with pandas: {message}"
         )
@@ -100,7 +103,7 @@ class ErrorMessage(object):
         )
 
     @classmethod
-    def not_initialized(cls, engine, code):
+    def not_initialized(cls, engine: str, code: str) -> None:
         get_logger().debug(f"Modin Warning: Not Initialized: {engine}")
         warnings.warn(
             f"{engine} execution environment not yet initialized. Initializing...\n"

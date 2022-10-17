@@ -214,7 +214,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         if self._has_arrow_table() and self._partitions.size > 0:
             assert self._partitions.size == 1
             table = self._partitions[0][0].get()
-            if table.column_names[0] != f"F_{self._table_cols[0]}":
+            if len(table) > 0 and table.column_names[0] != f"F_{self._table_cols[0]}":
                 new_names = [f"F_{col}" for col in table.column_names]
                 new_table = table.rename_columns(new_names)
                 self._partitions[0][
@@ -323,7 +323,11 @@ class HdkOnNativeDataframe(PandasDataframe):
                 new_columns = base.columns[col_positions]
             exprs = self._index_exprs()
             for col in new_columns:
-                exprs[col] = base.ref(col)
+                expr = base.ref(col)
+                if exprs.setdefault(col, expr) is not expr:
+                    raise NotImplementedError(
+                        "duplicate column names are not supported"
+                    )
             dtypes = self._dtypes_for_exprs(exprs)
             base = self.__constructor__(
                 columns=new_columns,
@@ -359,7 +363,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         """
         if not isinstance(self._op, FrameNode):
             return False
-        return all(p.arrow_table for p in self._partitions.flatten())
+        return all(p.arrow_table is not None for p in self._partitions.flatten())
 
     def _dtypes_for_cols(self, new_index, new_columns):
         """
@@ -2030,7 +2034,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         """
         exprs = self._index_exprs()
         for old, new in zip(self.columns, new_columns):
-            exprs[new] = self.ref(old)
+            expr = self.ref(old)
+            if exprs.setdefault(new, expr) is not expr:
+                raise NotImplementedError("duplicate column names are not supported")
         return self.__constructor__(
             columns=new_columns,
             dtypes=self._dtypes.tolist(),
@@ -2380,17 +2386,21 @@ class HdkOnNativeDataframe(PandasDataframe):
         new_index = df.index
         new_columns = df.columns
         # If there is non-trivial index, we put it into columns.
+        # If the index is trivial, but there are no columns, we put
+        # it into columns either because, otherwise, we don't know
+        # the number of rows and, thus, unable to restore the index.
         # That's what we usually have for arrow tables and execution
         # result. Unnamed index is renamed to __index__. Also all
-        # columns get 'F_' prefix to handle names unsupported in
-        # HDK.
-        if cls._is_trivial_index(df.index):
+        # columns get 'F_' prefix to handle names unsupported in HDK.
+        if len(new_index) == 0 or (
+            len(new_columns) != 0 and cls._is_trivial_index(new_index)
+        ):
             index_cols = None
         else:
-            orig_index_names = df.index.names
+            orig_index_names = new_index.names
             orig_df = df
 
-            index_cols = cls._mangle_index_names(df.index.names)
+            index_cols = cls._mangle_index_names(new_index.names)
             df.index.names = index_cols
             df = df.reset_index()
 
@@ -2534,7 +2544,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             return False
         return (
             index.is_monotonic_increasing
-            and index.unique
-            and index.min == 0
-            and index.max == len(index) - 1
+            and index.is_unique
+            and index.min() == 0
+            and index.max() == len(index) - 1
         )

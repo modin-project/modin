@@ -15,9 +15,21 @@
 
 import pandas
 
-from modin.utils import _inherit_docstrings
+from modin.utils import _inherit_docstrings, to_pandas
 from modin.logging import enable_logging
 from modin.pandas import DataFrame
+from modin.error_message import ErrorMessage
+
+
+@_inherit_docstrings(pandas.from_dummies, apilink="pandas.from_dummies")
+@enable_logging
+def from_dummies(data, sep=None, default_category=None):
+    ErrorMessage.default_to_pandas("from_dummies")
+    if isinstance(data, DataFrame):
+        data = to_pandas(data)
+    return DataFrame(
+        pandas.from_dummies(data, sep=sep, default_category=default_category)
+    )
 
 
 @_inherit_docstrings(pandas.pivot_table, apilink="pandas.pivot_table")

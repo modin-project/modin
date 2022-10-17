@@ -11,20 +11,18 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module that houses compat functions and objects for `pandas.io.common`."""
+import sys
+import time
+from os.path import abspath, join, dirname
 
-from pandas.io.common import get_handle
-from pandas.core.apply import reconstruct_func
-
-
-def pd_pivot_table(df, **kwargs):  # noqa: PR01, RT01
-    """Perform pandas pivot_table against a dataframe."""
-    return df.pivot_table(**kwargs)
+MODIN_DIR = abspath(join(dirname(__file__), *[".." for _ in range(3)]))
+if MODIN_DIR not in sys.path:
+    sys.path.insert(0, MODIN_DIR)
 
 
-def pd_convert_dtypes(df, **kwargs):  # noqa: PR01, RT01
-    """Perform pandas convert_dtypes against a dataframe or series."""
-    return df.convert_dtypes(**kwargs)
-
-
-__all__ = ["get_handle", "pd_pivot_table", "pd_convert_dtypes", "reconstruct_func"]
+def measure(name, func, *args, **kwargs):
+    t0 = time.time()
+    res = func(*args, **kwargs)
+    t1 = time.time()
+    print(f"{name}: {t1 - t0} sec")
+    return res

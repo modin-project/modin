@@ -2,7 +2,7 @@ name: modin_on_hdk
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.4.4
+  - pandas==1.5.0
   - pyarrow=6
   - numpy>=1.23
   - fsspec
@@ -12,13 +12,15 @@ dependencies:
   - pytest-xdist>=2.1.0
   - coverage<5.0
   - pygithub==1.53
-  - pyhdk==0.1
+  - pyhdk==0.2
   - s3fs>=2021.8
   - psutil
   - openpyxl
   - xlrd
   - sqlalchemy
   - scipy
+  - xgboost
+  - scikit-learn-intelex
   - pip:
       - black
       # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745

@@ -31,7 +31,6 @@ from pandas.core.dtypes.common import (
     is_datetime64_any_dtype,
     is_bool_dtype,
 )
-from pandas.core.base import DataError
 from collections.abc import Iterable
 from typing import List, Hashable
 import warnings
@@ -57,7 +56,13 @@ from modin.core.dataframe.algebra import (
     is_reduce_function,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
-from modin._compat.core.pd_common import pd_pivot_table, pd_convert_dtypes
+from modin._compat.core.pandas_common import (
+    pandas_pivot_table,
+    pandas_convert_dtypes,
+    pandas_compare,
+    pandas_dataframe_join,
+    DataError,
+)
 
 
 def _get_axis(axis):
@@ -510,14 +515,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             right = right.to_pandas()
 
             def map_func(left, right=right, kwargs=kwargs):
-                return pandas.DataFrame.join(left, right, **kwargs)
+                return pandas_dataframe_join(left, right, **kwargs)
 
             new_self = self.__constructor__(
                 self._modin_frame.apply_full_axis(1, map_func)
             )
             return new_self.sort_rows_by_column_values(on) if sort else new_self
         else:
-            return self.default_to_pandas(pandas.DataFrame.join, right, **kwargs)
+            return self.default_to_pandas(pandas_dataframe_join, right, **kwargs)
 
     # END Inter-Data operations
 
@@ -534,6 +539,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def reset_index(self, **kwargs):
+        allow_duplicates = kwargs.pop("allow_duplicates", None)
+        names = kwargs.pop("names", None)
+        if allow_duplicates not in (None, False) or names is not None:
+            return self.default_to_pandas(
+                pandas.DataFrame.reset_index,
+                allow_duplicates=allow_duplicates,
+                names=names,
+                **kwargs,
+            )
+
         drop = kwargs.get("drop", False)
         level = kwargs.get("level", None)
         new_index = None
@@ -966,61 +981,43 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def resample_count(self, resample_kwargs):
         return self._resample_func(resample_kwargs, "count")
 
-    def resample_nunique(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "nunique", _method=_method, *args, **kwargs
-        )
+    def resample_nunique(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "nunique", *args, **kwargs)
 
-    def resample_first(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "first", _method=_method, *args, **kwargs
-        )
+    def resample_first(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "first", *args, **kwargs)
 
-    def resample_last(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "last", _method=_method, *args, **kwargs
-        )
+    def resample_last(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "last", *args, **kwargs)
 
-    def resample_max(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "max", _method=_method, *args, **kwargs
-        )
+    def resample_max(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "max", *args, **kwargs)
 
-    def resample_mean(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "median", _method=_method, *args, **kwargs
-        )
+    def resample_mean(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "median", *args, **kwargs)
 
-    def resample_median(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "median", _method=_method, *args, **kwargs
-        )
+    def resample_median(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "median", *args, **kwargs)
 
-    def resample_min(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "min", _method=_method, *args, **kwargs
-        )
+    def resample_min(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "min", *args, **kwargs)
 
-    def resample_ohlc_ser(self, resample_kwargs, _method, *args, **kwargs):
+    def resample_ohlc_ser(self, resample_kwargs, *args, **kwargs):
         return self._resample_func(
             resample_kwargs,
             "ohlc",
             df_op=lambda df: df.squeeze(axis=1),
-            _method=_method,
             *args,
             **kwargs,
         )
 
-    def resample_ohlc_df(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "ohlc", _method=_method, *args, **kwargs
-        )
+    def resample_ohlc_df(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "ohlc", *args, **kwargs)
 
-    def resample_prod(self, resample_kwargs, _method, min_count, *args, **kwargs):
+    def resample_prod(self, resample_kwargs, min_count, *args, **kwargs):
         return self._resample_func(
             resample_kwargs,
             "prod",
-            _method=_method,
             min_count=min_count,
             *args,
             **kwargs,
@@ -1031,19 +1028,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
             resample_kwargs, "size", new_columns=[MODIN_UNNAMED_SERIES_LABEL]
         )
 
-    def resample_sem(self, resample_kwargs, _method, *args, **kwargs):
-        return self._resample_func(
-            resample_kwargs, "sem", _method=_method, *args, **kwargs
-        )
+    def resample_sem(self, resample_kwargs, *args, **kwargs):
+        return self._resample_func(resample_kwargs, "sem", *args, **kwargs)
 
     def resample_std(self, resample_kwargs, ddof, *args, **kwargs):
         return self._resample_func(resample_kwargs, "std", ddof=ddof, *args, **kwargs)
 
-    def resample_sum(self, resample_kwargs, _method, min_count, *args, **kwargs):
+    def resample_sum(self, resample_kwargs, min_count, *args, **kwargs):
         return self._resample_func(
             resample_kwargs,
             "sum",
-            _method=_method,
             min_count=min_count,
             *args,
             **kwargs,
@@ -1057,75 +1051,85 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     window_mean = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).mean(*args, **kwargs)
+            df.rolling(*rolling_args[0], **rolling_args[1]).mean(*args, **kwargs)
         )
     )
     window_sum = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).sum(*args, **kwargs)
+            df.rolling(*rolling_args[0], **rolling_args[1]).sum(*args, **kwargs)
         )
     )
     window_var = Fold.register(
         lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
+            df.rolling(*rolling_args[0], **rolling_args[1]).var(
+                ddof=ddof, *args, **kwargs
+            )
         )
     )
     window_std = Fold.register(
         lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).std(ddof=ddof, *args, **kwargs)
+            df.rolling(*rolling_args[0], **rolling_args[1]).std(
+                ddof=ddof, *args, **kwargs
+            )
         )
     )
     rolling_count = Fold.register(
-        lambda df, rolling_args: pandas.DataFrame(df.rolling(*rolling_args).count())
+        lambda df, rolling_args: pandas.DataFrame(
+            df.rolling(*rolling_args[0], **rolling_args[1]).count()
+        )
     )
     rolling_sum = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).sum(*args, **kwargs)
+            df.rolling(*rolling_args[0], **rolling_args[1]).sum(*args, **kwargs)
         )
     )
     rolling_mean = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).mean(*args, **kwargs)
+            df.rolling(*rolling_args[0], **rolling_args[1]).mean(*args, **kwargs)
         )
     )
     rolling_median = Fold.register(
         lambda df, rolling_args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).median(**kwargs)
+            df.rolling(*rolling_args[0], **rolling_args[1]).median(**kwargs)
         )
     )
     rolling_var = Fold.register(
         lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
+            df.rolling(*rolling_args[0], **rolling_args[1]).var(
+                ddof=ddof, *args, **kwargs
+            )
         )
     )
     rolling_std = Fold.register(
         lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).std(ddof=ddof, *args, **kwargs)
+            df.rolling(*rolling_args[0], **rolling_args[1]).std(
+                ddof=ddof, *args, **kwargs
+            )
         )
     )
     rolling_min = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).min(*args, **kwargs)
+            df.rolling(*rolling_args[0], **rolling_args[1]).min(*args, **kwargs)
         )
     )
     rolling_max = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).max(*args, **kwargs)
+            df.rolling(*rolling_args[0], **rolling_args[1]).max(*args, **kwargs)
         )
     )
     rolling_skew = Fold.register(
         lambda df, rolling_args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).skew(**kwargs)
+            df.rolling(*rolling_args[0], **rolling_args[1]).skew(**kwargs)
         )
     )
     rolling_kurt = Fold.register(
         lambda df, rolling_args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).kurt(**kwargs)
+            df.rolling(*rolling_args[0], **rolling_args[1]).kurt(**kwargs)
         )
     )
     rolling_apply = Fold.register(
         lambda df, rolling_args, func, raw, engine, engine_kwargs, args, kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).apply(
+            df.rolling(*rolling_args[0], **rolling_args[1]).apply(
                 func=func,
                 raw=raw,
                 engine=engine,
@@ -1137,7 +1141,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     )
     rolling_quantile = Fold.register(
         lambda df, rolling_args, quantile, interpolation, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).quantile(
+            df.rolling(*rolling_args[0], **rolling_args[1]).quantile(
                 quantile=quantile, interpolation=interpolation, **kwargs
             )
         )
@@ -1146,14 +1150,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def rolling_corr(self, axis, rolling_args, other, pairwise, *args, **kwargs):
         if len(self.columns) > 1:
             return self.default_to_pandas(
-                lambda df: pandas.DataFrame.rolling(df, *rolling_args).corr(
-                    other=other, pairwise=pairwise, *args, **kwargs
-                )
+                lambda df: pandas.DataFrame.rolling(
+                    df, *rolling_args[0], **rolling_args[1]
+                ).corr(other=other, pairwise=pairwise, *args, **kwargs)
             )
         else:
             return Fold.register(
                 lambda df: pandas.DataFrame(
-                    df.rolling(*rolling_args).corr(
+                    df.rolling(*rolling_args[0], **rolling_args[1]).corr(
                         other=other, pairwise=pairwise, *args, **kwargs
                     )
                 )
@@ -1162,14 +1166,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def rolling_cov(self, axis, rolling_args, other, pairwise, ddof, **kwargs):
         if len(self.columns) > 1:
             return self.default_to_pandas(
-                lambda df: pandas.DataFrame.rolling(df, *rolling_args).cov(
-                    other=other, pairwise=pairwise, ddof=ddof, **kwargs
-                )
+                lambda df: pandas.DataFrame.rolling(
+                    df, *rolling_args[0], **rolling_args[1]
+                ).cov(other=other, pairwise=pairwise, ddof=ddof, **kwargs)
             )
         else:
             return Fold.register(
                 lambda df: pandas.DataFrame(
-                    df.rolling(*rolling_args).cov(
+                    df.rolling(*rolling_args[0], **rolling_args[1]).cov(
                         other=other, pairwise=pairwise, ddof=ddof, **kwargs
                     )
                 )
@@ -1179,7 +1183,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             lambda df: pandas.DataFrame(
-                df.rolling(*rolling_args).aggregate(func=func, *args, **kwargs)
+                df.rolling(*rolling_args[0], **rolling_args[1]).aggregate(
+                    func=func, *args, **kwargs
+                )
             ),
             new_index=self.index,
         )
@@ -1361,7 +1367,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     abs = Map.register(pandas.DataFrame.abs, dtypes="copy")
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
-    convert_dtypes = Map.register(pd_convert_dtypes)
+    convert_dtypes = Map.register(pandas_convert_dtypes)
     invert = Map.register(pandas.DataFrame.__invert__)
     isin = Map.register(pandas.DataFrame.isin, dtypes=np.bool_)
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
@@ -1381,6 +1387,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         lambda df, *args, **kwargs: pandas.DataFrame(
             pandas.to_numeric(df.squeeze(axis=1), *args, **kwargs)
         )
+    )
+    to_timedelta = Map.register(
+        lambda s, *args, **kwargs: pandas.to_timedelta(
+            s.squeeze(axis=1), *args, **kwargs
+        ).to_frame(),
+        dtypes="timedelta64[ns]",
     )
 
     # END Map partitions operations
@@ -1533,9 +1545,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def first_valid_index(self):
         def first_valid_index_builder(df):
             """Get the position of the first valid index in a single partition."""
-            return df.set_axis(
-                pandas.RangeIndex(len(df.index)), axis="index", inplace=False
-            ).apply(lambda df: df.first_valid_index())
+            return df.set_axis(pandas.RangeIndex(len(df.index)), axis="index").apply(
+                lambda df: df.first_valid_index()
+            )
 
         # We get the minimum from each column, then take the min of that to get
         # first_valid_index. The `to_pandas()` here is just for a single value and
@@ -1551,9 +1563,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def last_valid_index(self):
         def last_valid_index_builder(df):
             """Get the position of the last valid index in a single partition."""
-            return df.set_axis(
-                pandas.RangeIndex(len(df.index)), axis="index", inplace=False
-            ).apply(lambda df: df.last_valid_index())
+            return df.set_axis(pandas.RangeIndex(len(df.index)), axis="index").apply(
+                lambda df: df.last_valid_index()
+            )
 
         # We get the maximum from each column, then take the max of that to get
         # last_valid_index. The `to_pandas()` here is just for a single value and
@@ -2046,7 +2058,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             ascending = False
         kwargs["ascending"] = ascending
         if axis:
-            new_columns = pandas.Series(self.columns).sort_values(**kwargs)
+            new_columns = self.columns.to_frame().sort_index(**kwargs).index
             new_index = self.index
             new_modin_frame = self._modin_frame.apply_full_axis(
                 axis,
@@ -2064,7 +2076,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     axis, "__index__", ascending=ascending, **kwargs
                 )
             else:
-                new_index = pandas.Series(self.index).sort_values(**kwargs)
+                new_index = self.index.to_frame().sort_index(**kwargs).index
                 new_columns = self.columns
                 new_modin_frame = self._modin_frame.apply_full_axis(
                     axis,
@@ -2904,7 +2916,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
                     result = partition_agg_func(grouped_df, *agg_args, **agg_kwargs)
-                except (DataError, TypeError):
+                except DataError:
                     # This happens when the partition is filled with non-numeric data and a
                     # numeric operation is done. We need to build the index here to avoid
                     # issues with extracting the index.
@@ -3101,7 +3113,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 Pivot table for this particular partition.
             """
             concated = pandas.concat([df, other], axis=1, copy=False)
-            result = pd_pivot_table(
+            result = pandas_pivot_table(
                 concated,
                 index=index,
                 values=values if len(values) > 0 else None,
@@ -3306,7 +3318,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(
             self._modin_frame.broadcast_apply_full_axis(
                 0,
-                lambda l, r: pandas.DataFrame.compare(l, r, **kwargs),
+                lambda l, r: pandas_compare(l, other=r, **kwargs),
                 other._modin_frame,
             )
         )

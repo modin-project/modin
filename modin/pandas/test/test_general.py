@@ -23,10 +23,12 @@ from modin.config import Engine
 from pandas.testing import assert_frame_equal
 
 from .utils import (
+    create_test_dfs,
     test_data_values,
     test_data_keys,
     df_equals,
     sort_index_for_equal_values,
+    eval_general,
 )
 
 
@@ -810,3 +812,35 @@ def test_empty_dataframe():
 def test_empty_series():
     s = pd.Series([])
     pd.to_numeric(s)
+
+
+@pytest.mark.parametrize(
+    "arg",
+    [[1, 2], ["a"], 1, "a"],
+    ids=["list_of_ints", "list_of_invalid_strings", "scalar", "invalid_scalar"],
+)
+def test_to_timedelta(arg):
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/4966
+    eval_general(pd, pandas, lambda lib: lib.to_timedelta(arg))
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_series_to_timedelta(data):
+    def make_frame(lib):
+        series = lib.Series(
+            next(iter(data.values())) if isinstance(data, dict) else data
+        )
+        return lib.to_timedelta(series).to_frame(name="timedelta")
+
+    eval_general(pd, pandas, make_frame)
+
+
+@pytest.mark.parametrize(
+    "key",
+    [["col0"], "col0", "col1"],
+    ids=["valid_list_of_string", "valid_string", "invalid_string"],
+)
+def test_get(key):
+    modin_df, pandas_df = create_test_dfs({"col0": [0, 1]})
+    eval_general(modin_df, pandas_df, lambda df: df.get(key))

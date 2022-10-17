@@ -19,7 +19,12 @@ import pytest
 import re
 
 from modin.config import StorageFormat
-from modin.pandas.test.utils import io_ops_bad_exc, default_to_pandas_ignore_string
+from modin.pandas.test.utils import (
+    io_ops_bad_exc,
+    default_to_pandas_ignore_string,
+    random_state,
+    test_data,
+)
 from .utils import eval_io, ForceHdkImport, set_execution_mode, run_and_compare
 from pandas.core.dtypes.common import is_list_like
 
@@ -452,7 +457,7 @@ class TestMultiIndex:
                 names=["l1", "l2", "l3"],
             )
             if is_multiindex
-            else pandas.Index(np.arange(len(self.data["a"])), name="index")
+            else pandas.Index(np.arange(1, len(self.data["a"]) + 1), name="index")
         )
         columns = pandas.MultiIndex.from_tuples(
             [("a", "b"), ("b", "c")], names=column_names
@@ -2213,6 +2218,100 @@ class TestStr:
         mds = pd.Series(data[next(iter(data.keys()))])
         pds = pandas.Series(data[next(iter(data.keys()))])
         assert str(mds) == str(pds)
+
+    def test_no_cols(self):
+        def run_cols(df, **kwargs):
+            return df.loc[1]
+
+        run_and_compare(
+            fn=run_cols,
+            data=None,
+            constructor_kwargs={"index": range(5)},
+            force_lazy=False,
+        )
+
+
+class TestCompare:
+    def test_compare_float(self):
+        def run_compare(df1, df2, **kwargs):
+            return df1.compare(df2, align_axis="columns", keep_shape=False)
+
+        data1 = random_state.randn(100, 10)
+        data2 = random_state.randn(100, 10)
+        columns = list("abcdefghij")
+
+        run_and_compare(
+            run_compare,
+            data=data1,
+            data2=data2,
+            constructor_kwargs={"columns": columns},
+            force_lazy=False,
+        )
+
+
+class TestDuplicateColumns:
+    def test_init(self):
+        def init(df, **kwargs):
+            return df
+
+        data = [
+            [1, 2, 3, 4],
+            [5, 6, 7, 8],
+            [9, 10, 11, 12],
+            [13, 14, 15, 16],
+            [17, 18, 19, 20],
+        ]
+        columns = ["c1", "c2", "c1", "c3"]
+        run_and_compare(
+            fn=init,
+            data=data,
+            force_lazy=False,
+            constructor_kwargs={"columns": columns},
+        )
+
+    def test_loc(self):
+        def loc(df, **kwargs):
+            return df.loc[:, ["col1", "col3", "col3"]]
+
+        run_and_compare(
+            fn=loc,
+            data=test_data_values[0],
+            force_lazy=False,
+        )
+
+    def test_set_columns(self):
+        def set_cols(df, **kwargs):
+            df.columns = ["col1", "col3", "col3"]
+            return df
+
+        run_and_compare(
+            fn=set_cols,
+            data=[[1, 2, 3], [4, 5, 6], [7, 8, 9]],
+            force_lazy=False,
+        )
+
+    def test_set_axis(self):
+        def set_axis(df, **kwargs):
+            sort_index = df.axes[1]
+            labels = [
+                np.nan if i % 2 == 0 else sort_index[i] for i in range(len(sort_index))
+            ]
+            inplace = kwargs["set_axis_inplace"]
+            res = df.set_axis(labels, axis=1, inplace=inplace)
+            return df if inplace else res
+
+        run_and_compare(
+            fn=set_axis,
+            data=test_data["float_nan_data"],
+            force_lazy=False,
+            set_axis_inplace=True,
+        )
+        run_and_compare(
+            fn=set_axis,
+            data=test_data["float_nan_data"],
+            force_lazy=False,
+            set_axis_inplace=False,
+        )
 
 
 if __name__ == "__main__":

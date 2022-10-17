@@ -46,14 +46,14 @@ with test_cluster:
 
         # We should move omniscripts trigger in remote conext
         # https://github.com/intel-ai/omniscripts/blob/7d4599bcacf51de876952c658048571d32275ac1/taxi/taxibench_pandas_ibis.py#L482
-        import modin.experimental.core.execution.native.implementations.hdk_on_native.hdk_worker
+        import modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker
 
         DbWorker = (
             get_connection()
-            .modules["modin.experimental.engines.hdk_on_native.frame.db_worker"]
+            .modules["modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker"]
             .DbWorker
         )
-        modin.experimental.core.execution.native.implementations.hdk_on_native.hdk_worker.DbWorker = (
+        modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker.DbWorker = (
             DbWorker
         )
 

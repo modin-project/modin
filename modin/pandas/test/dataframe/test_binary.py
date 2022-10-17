@@ -16,6 +16,9 @@ import pandas
 import matplotlib
 import modin.pandas as pd
 
+from modin.core.dataframe.pandas.partitioning.axis_partition import (
+    PandasDataframeAxisPartition,
+)
 from modin.pandas.test.utils import (
     df_equals,
     test_data_values,
@@ -25,7 +28,7 @@ from modin.pandas.test.utils import (
     create_test_dfs,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import Engine, NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -149,6 +152,32 @@ def test_comparison(data, op, other):
         *create_test_dfs(data),
         lambda df: getattr(df, op)(df if other == "as_left" else other),
     )
+
+
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Dask"),
+    reason="Modin on this engine doesn't create virtual partitions.",
+)
+@pytest.mark.parametrize(
+    "left_virtual,right_virtual", [(True, False), (False, True), (True, True)]
+)
+def test_virtual_partitions(left_virtual: bool, right_virtual: bool):
+    # This test covers https://github.com/modin-project/modin/issues/4691
+    n: int = 1000
+    pd_df = pandas.DataFrame(list(range(n)))
+
+    def modin_df(is_virtual):
+        if not is_virtual:
+            return pd.DataFrame(pd_df)
+        result = pd.concat([pd.DataFrame([i]) for i in range(n)], ignore_index=True)
+        # Modin should rebalance the partitions after the concat, producing virtual partitions.
+        assert isinstance(
+            result._query_compiler._modin_frame._partitions[0][0],
+            PandasDataframeAxisPartition,
+        )
+        return result
+
+    df_equals(modin_df(left_virtual) + modin_df(right_virtual), pd_df + pd_df)
 
 
 @pytest.mark.parametrize("op", ["eq", "ge", "gt", "le", "lt", "ne"])

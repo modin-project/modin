@@ -19,7 +19,7 @@ import numpy as np
 import pandas
 from pandas.util._validators import validate_bool_kwarg
 from pandas._libs.lib import no_default, NoDefault
-from pandas._typing import Axis
+from pandas._typing import Axis, Suffixes
 
 from ..abc.series import BaseCompatibleSeries
 
@@ -36,6 +36,28 @@ class LatestCompatibleSeries(BaseCompatibleSeries):
     def between(self, left, right, inclusive="both"):  # noqa: PR01, RT01, D200
         return self._between(left, right, inclusive=inclusive)
 
+    def compare(
+        self,
+        other,
+        align_axis: Axis = 1,
+        keep_shape: bool = False,
+        keep_equal: bool = False,
+        result_names: Suffixes = ("self", "other"),
+    ):
+        return self._compare(
+            other=other,
+            align_axis=align_axis,
+            keep_shape=keep_shape,
+            keep_equal=keep_equal,
+            result_names=result_names,
+        )
+
+    def idxmax(self, axis=0, skipna=True, *args, **kwargs):
+        return self._idxmax(axis=axis, skipna=skipna)
+
+    def idxmin(self, axis=0, skipna=True, *args, **kwargs):
+        return self._idxmin(axis=axis, skipna=skipna)
+
     def info(
         self,
         verbose: "bool | None" = None,
@@ -51,6 +73,35 @@ class LatestCompatibleSeries(BaseCompatibleSeries):
             max_cols=max_cols,
             memory_usage=memory_usage,
             show_counts=show_counts,
+        )
+
+    def factorize(self, sort=False, na_sentinel=no_default, use_na_sentinel=no_default):
+        return self._factorize(
+            sort=sort, na_sentinel=na_sentinel, use_na_sentinel=use_na_sentinel
+        )
+
+    def groupby(
+        self,
+        by=None,
+        axis=0,
+        level=None,
+        as_index=True,
+        sort=True,
+        group_keys=no_default,
+        squeeze=no_default,
+        observed=False,
+        dropna: bool = True,
+    ):
+        return self._groupby(
+            by=by,
+            axis=axis,
+            level=level,
+            as_index=as_index,
+            sort=sort,
+            group_keys=group_keys,
+            squeeze=squeeze,
+            observed=observed,
+            dropna=dropna,
         )
 
     def kurt(
@@ -127,9 +178,20 @@ class LatestCompatibleSeries(BaseCompatibleSeries):
         )
 
     def reset_index(
-        self, level=None, drop=False, name=no_default, inplace=False
+        self,
+        level=None,
+        drop=False,
+        name=no_default,
+        inplace=False,
+        allow_duplicates=False,
     ):  # noqa: PR01, RT01, D200
-        return self._reset_index(level=level, drop=drop, name=name, inplace=inplace)
+        return self._reset_index(
+            level=level,
+            drop=drop,
+            name=name,
+            inplace=inplace,
+            allow_duplicates=allow_duplicates,
+        )
 
     def sum(
         self,

@@ -246,3 +246,26 @@ def deserialize(obj):
         return dict(zip(obj.keys(), RayWrapper.materialize(list(obj.values()))))
     else:
         return obj
+
+
+def wait(obj_ids):
+    """
+    Wrap ``ray.wait`` to handle duplicate object references.
+
+    ``ray.wait`` assumes a list of unique object references: see
+    https://github.com/modin-project/modin/issues/5045
+
+    Parameters
+    ----------
+    obj_ids : List[ObjectIDType]
+        The object IDs to wait on.
+
+    Returns
+    -------
+    Tuple[List[ObjectIDType], List[ObjectIDType]]
+        A list of object IDs that are ready, and a list of object IDs remaining (this
+        is the same as for ``ray.wait``). Unlike ``ray.wait``, the order of these IDs is not
+        guaranteed.
+    """
+    unique_ids = list(set(obj_ids))
+    return ray.wait(unique_ids, num_returns=len(unique_ids))

@@ -23,11 +23,12 @@ from pandas._typing import (
     CompressionOptions,
     IndexLabel,
     TimedeltaConvertibleTypes,
+    TimestampConvertibleTypes,
     Axis,
 )
 import pickle as pkl
 import numpy as np
-from typing import Sequence, Hashable, Optional, TYPE_CHECKING
+from typing import Sequence, Hashable, Optional, TYPE_CHECKING, Union
 
 from ..abc import BaseCompatibleBasePandasDataset
 from .utils import create_stat_method
@@ -85,6 +86,17 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
             convert_integer=convert_integer,
             convert_boolean=convert_boolean,
             convert_floating=convert_floating,
+        )
+
+    def dropna(
+        self, axis=0, how=no_default, thresh=no_default, subset=None, inplace=False
+    ):
+        return self._dropna(
+            axis=axis,
+            how=how,
+            thresh=thresh,
+            subset=subset,
+            inplace=inplace,
         )
 
     @_inherit_docstrings(
@@ -220,6 +232,60 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
     ):
         return self._reindex(index=index, columns=columns, copy=copy, **kwargs)
 
+    def resample(
+        self,
+        rule,
+        axis=0,
+        closed=None,
+        label=None,
+        convention="start",
+        kind=None,
+        loffset=None,
+        base: Optional[int] = None,
+        on=None,
+        level=None,
+        origin: Union[str, TimestampConvertibleTypes] = "start_day",
+        offset: Optional[TimedeltaConvertibleTypes] = None,
+        group_keys=no_default,
+    ):  # noqa: PR01, RT01, D200
+        return self._resample(
+            rule=rule,
+            axis=axis,
+            closed=closed,
+            label=label,
+            convention=convention,
+            kind=kind,
+            loffset=loffset,
+            base=base,
+            on=on,
+            level=level,
+            origin=origin,
+            offset=offset,
+            group_keys=None if group_keys is no_default else group_keys,
+        )
+
+    def reset_index(
+        self,
+        level=None,
+        drop=False,
+        inplace=False,
+        col_level=0,
+        col_fill="",
+        allow_duplicates=no_default,
+        names=None,
+    ):
+        return self._reset_index(
+            level=level,
+            drop=drop,
+            inplace=inplace,
+            col_level=col_level,
+            col_fill=col_fill,
+            allow_duplicates=None
+            if allow_duplicates is no_default
+            else allow_duplicates,
+            names=names,
+        )
+
     def rolling(
         self,
         window,
@@ -229,6 +295,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
         on=None,
         axis=0,
         closed=None,
+        step=None,
         method="single",
     ):
         return self._rolling(
@@ -239,6 +306,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
             on=on,
             axis=axis,
             closed=closed,
+            step=step,
             method=method,
         )
 
@@ -260,6 +328,20 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
             random_state=random_state,
             axis=axis,
             ignore_index=ignore_index,
+        )
+
+    def set_axis(self, labels, axis=0, inplace=no_default, *, copy=no_default):
+        if inplace is True and copy is True:
+            raise ValueError("Cannot specify both inplace=True and copy=True")
+        if inplace is no_default:
+            inplace = False
+        if copy is no_default:
+            copy = not inplace
+        return self._set_axis(
+            labels=labels,
+            axis=axis,
+            inplace=inplace,
+            copy=copy,
         )
 
     def sem(
@@ -352,7 +434,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
         compression="infer",
         quoting=None,
         quotechar='"',
-        line_terminator=None,
+        lineterminator=None,
         chunksize=None,
         date_format=None,
         doublequote=True,
@@ -380,7 +462,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
             compression=compression,
             quoting=quoting,
             quotechar=quotechar,
-            line_terminator=line_terminator,
+            lineterminator=lineterminator,
             chunksize=chunksize,
             date_format=date_format,
             doublequote=doublequote,
@@ -404,9 +486,9 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
         startcol=0,
         engine=None,
         merge_cells=True,
-        encoding=None,
+        encoding=no_default,
         inf_rep="inf",
-        verbose=True,
+        verbose=no_default,
         freeze_panes=None,
         storage_options: StorageOptions = None,
     ):  # pragma: no cover
@@ -424,9 +506,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
             startcol=startcol,
             engine=engine,
             merge_cells=merge_cells,
-            encoding=encoding,
             inf_rep=inf_rep,
-            verbose=verbose,
             freeze_panes=freeze_panes,
             storage_options=storage_options,
         )

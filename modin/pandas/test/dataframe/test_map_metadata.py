@@ -1089,9 +1089,8 @@ def test_insert_dtypes(data, astype):
 @pytest.mark.parametrize("loc", int_arg_values, ids=arg_keys("loc", int_arg_keys))
 def test_insert_loc(data, loc):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    value = modin_df.iloc[:, 0]
 
-    eval_insert(modin_df, pandas_df, loc=loc, value=value)
+    eval_insert(modin_df, pandas_df, loc=loc, value=lambda df: df.iloc[:, 0])
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1218,12 +1217,15 @@ def test_set_axis(data, axis):
     index = modin_df.columns if x else modin_df.index
     labels = ["{0}_{1}".format(index[i], i) for i in range(modin_df.shape[x])]
 
-    modin_result = modin_df.set_axis(labels, axis=axis, inplace=False)
-    pandas_result = pandas_df.set_axis(labels, axis=axis, inplace=False)
-    df_equals(modin_result, pandas_result)
+    kw = {"copy": True}
+    if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+        kw = {"inplace": False}
+    eval_general(modin_df, pandas_df, lambda df: df.set_axis(labels, axis=axis, **kw))
 
     modin_df_copy = modin_df.copy()
-    modin_df.set_axis(labels, axis=axis, inplace=True)
+    if "copy" in kw:
+        kw["copy"] = False
+    modin_df = modin_df.set_axis(labels, axis=axis, **kw)
 
     # Check that the copy and original are different
     try:
@@ -1233,7 +1235,7 @@ def test_set_axis(data, axis):
     else:
         assert False
 
-    pandas_df.set_axis(labels, axis=axis, inplace=True)
+    pandas_df = pandas_df.set_axis(labels, axis=axis, **kw)
     df_equals(modin_df, pandas_df)
 
 

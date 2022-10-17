@@ -25,6 +25,7 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
     from .py36 import Python36CompatibleSeriesGroupBy as SeriesGroupByCompat
     from .py36 import Python36CompatibleWindow as WindowCompat
     from .py36 import Python36CompatibleRolling as RollingCompat
+    from .py36 import Python36CompatibleResampler as ResamplerCompat
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
     from .latest import (
         LatestCompatibleBasePandasDataset as BasePandasDatasetCompat,
@@ -35,6 +36,7 @@ elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
     from .latest import LatestCompatibleSeriesGroupBy as SeriesGroupByCompat
     from .latest import LatestCompatibleWindow as WindowCompat
     from .latest import LatestCompatibleRolling as RollingCompat
+    from .latest import LatestCompatibleResampler as ResamplerCompat
 
 __all__ = [
     "BasePandasDatasetCompat",
@@ -44,4 +46,5 @@ __all__ = [
     "SeriesGroupByCompat",
     "WindowCompat",
     "RollingCompat",
+    "ResamplerCompat",
 ]

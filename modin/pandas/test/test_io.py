@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import contextlib
 import pytest
 import numpy as np
 from packaging import version
@@ -115,6 +116,12 @@ TEST_DATA = {
     "col4": [12, 13, 14, 15],
     "col5": [0, 0, 0, 0],
 }
+
+
+@contextlib.contextmanager
+def _nullcontext():
+    """Replacement for contextlib.nullcontext missing in older Python."""
+    yield
 
 
 def assert_files_eq(path1, path2):
@@ -490,10 +497,27 @@ class TestCsv:
             pytest.xfail(
                 "processing of duplicated columns in HDK storage format is not supported yet - issue #3080"
             )
-        with ensure_clean() as unique_filename:
+        with ensure_clean() as unique_filename, (
+            pytest.warns(
+                FutureWarning, match="'mangle_dupe_cols' keyword is deprecated"
+            )
+            if PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST
+            else _nullcontext()
+        ):
             str_non_unique_cols = "col,col,col,col\n5, 6, 7, 8\n9, 10, 11, 12\n"
             eval_io_from_str(
                 str_non_unique_cols, unique_filename, mangle_dupe_cols=True
+            )
+
+    # Putting this filterwarnings in setup.cfg doesn't seem to catch the error.
+    @pytest.mark.filterwarnings(
+        "error:.*'mangle_dupe_cols' keyword is deprecated:FutureWarning"
+    )
+    def test_read_csv_does_not_warn_mangle_dupe_cols_kwarg(self):
+        with ensure_clean() as unique_filename:
+            eval_io_from_str(
+                "a,b,c\n1,2,3\n",
+                unique_filename,
             )
 
     # NA and Missing Data Handling tests
@@ -1495,9 +1519,9 @@ class TestParquet:
                 start="1/1/2018", periods=2000
             )
 
-        with ensure_clean(".parquet") as unique_filename:
-            for col in pandas_df.columns:
-                if col.startswith("idx"):
+        for col in pandas_df.columns:
+            if col.startswith("idx"):
+                with ensure_clean(".parquet") as unique_filename:
                     pandas_df.set_index(col).to_parquet(unique_filename)
                     # read the same parquet using modin.pandas
                     eval_io(
@@ -1507,6 +1531,7 @@ class TestParquet:
                         engine=engine,
                     )
 
+        with ensure_clean(".parquet") as unique_filename:
             pandas_df.set_index(["idx", "A"]).to_parquet(unique_filename)
             eval_io(
                 "read_parquet",
@@ -2398,7 +2423,7 @@ class TestFwf:
 
 
 class TestGbq:
-    @pytest.mark.xfail(reason="Need to verify GBQ access")
+    @pytest.mark.skip(reason="Can not pass without GBQ access")
     def test_read_gbq(self):
         # Test API, but do not supply credentials until credits can be secured.
         with pytest.raises(
@@ -2406,7 +2431,7 @@ class TestGbq:
         ):
             pd.read_gbq("SELECT 1")
 
-    @pytest.mark.xfail(reason="Need to verify GBQ access")
+    @pytest.mark.skip(reason="Can not pass without GBQ access")
     def test_to_gbq(self):
         modin_df, _ = create_test_dfs(TEST_DATA)
         # Test API, but do not supply credentials until credits can be secured.

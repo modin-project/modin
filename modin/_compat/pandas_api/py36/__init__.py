@@ -16,6 +16,7 @@ from .dataframe import Python36CompatibleDataFrame
 from .series import Python36CompatibleSeries
 from .groupby import Python36CompatibleDataFrameGroupBy, Python36CompatibleSeriesGroupBy
 from .window import Python36CompatibleWindow, Python36CompatibleRolling
+from .resample import Python36CompatibleResampler
 
 __all__ = [
     "Python36CompatibleBasePandasDataset",
@@ -25,4 +26,5 @@ __all__ = [
     "Python36CompatibleSeriesGroupBy",
     "Python36CompatibleWindow",
     "Python36CompatibleRolling",
+    "Python36CompatibleResampler",
 ]

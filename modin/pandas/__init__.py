@@ -30,7 +30,7 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
             f"Starting Modin in compatibility mode to support legacy pandas version {__pandas_version__}"
         )
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
-    __pandas_version__ = "1.4.4"
+    __pandas_version__ = "1.5.0"
 
     if pandas.__version__ != __pandas_version__:
         warnings.warn(
@@ -55,7 +55,6 @@ with warnings.catch_warnings():
         DatetimeIndex,
         Timedelta,
         Timestamp,
-        to_timedelta,
         set_eng_float_format,
         options,
         set_option,
@@ -251,6 +250,7 @@ from .general import (
     crosstab,
     lreshape,
     wide_to_long,
+    to_timedelta,
 )
 
 from modin._compat.pandas_api.namespace import pivot_table
@@ -368,9 +368,17 @@ __all__ = [  # noqa: F405
 ]
 
 if PandasCompatVersion.CURRENT != PandasCompatVersion.PY36:
-    from modin._compat.pandas_api.namespace import Flags, Float32Dtype, Float64Dtype
+    from modin._compat.pandas_api.namespace import (
+        ArrowDtype,
+        Flags,
+        Float32Dtype,
+        Float64Dtype,
+        from_dummies,
+    )
 
-    __all__.extend(["Flags", "Float32Dtype", "Float64Dtype"])
+    __all__.extend(
+        ["ArrowDtype", "Flags", "Float32Dtype", "Float64Dtype", "from_dummies"]
+    )
 del PandasCompatVersion
 
 del pandas, Engine, Parameter

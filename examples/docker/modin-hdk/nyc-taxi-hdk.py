@@ -12,9 +12,9 @@
 # governing permissions and limitations under the License.
 
 import sys
-import time
+from utils import measure
 import modin.pandas as pd
-from modin.experimental.core.execution.native.implementations.hdk_on_native.hdk_worker import (
+from modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker import (
     DbWorker,
 )
 
@@ -184,14 +184,6 @@ def q4_hdk(df):
     )
     q4_pandas_output.shape  # to trigger real execution
     return q4_pandas_output
-
-
-def measure(name, func, *args, **kw):
-    t0 = time.time()
-    res = func(*args, **kw)
-    t1 = time.time()
-    print(f"{name}: {t1 - t0} sec")
-    return res
 
 
 def main():

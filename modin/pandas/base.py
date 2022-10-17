@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 """Implement DataFrame/Series public API as pandas does."""
-
 import numpy as np
 import pandas
 from pandas.compat import numpy as numpy_compat
@@ -33,14 +32,12 @@ import pandas.core.generic
 from pandas.core.indexing import convert_to_index_sliceable
 from pandas.util._validators import validate_percentile
 from pandas._libs.lib import no_default
-from pandas._typing import (
-    IndexKeyFunc,
-    TimedeltaConvertibleTypes,
-    TimestampConvertibleTypes,
-)
+from pandas._typing import IndexKeyFunc
 import re
 from typing import Optional, Union, Sequence, Hashable
 import warnings
+
+from modin._compat import PandasCompatVersion
 
 from .utils import is_full_grab_slice, _doc_binary_op
 from modin.utils import try_cast_to_pandas, _inherit_docstrings
@@ -1254,9 +1251,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
-    def dropna(
-        self, axis=0, how="any", thresh=None, subset=None, inplace=False
-    ):  # noqa: PR01, RT01, D200
+    def _dropna(self, axis, how, thresh, subset, inplace):  # noqa: PR01, RT01, D200
         """
         Remove missing values.
         """
@@ -1266,7 +1261,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             raise TypeError("supplying multiple axes to axis is no longer supported.")
 
         axis = self._get_axis_number(axis)
-        if how is not None and how not in ["any", "all"]:
+        if how is not None and how not in ["any", "all", no_default]:
             raise ValueError("invalid how option: %s" % how)
         if how is None and thresh is None:
             raise TypeError("must specify how or thresh")
@@ -1527,9 +1522,10 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Get item from object for given key.
         """
-        if key in self.keys():
+        # Match pandas behavior here
+        try:
             return self.__getitem__(key)
-        else:
+        except (KeyError, ValueError, IndexError):
             return default
 
     def gt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
@@ -1553,7 +1549,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
         return _iLocIndexer(self)
 
-    def idxmax(self, axis=0, skipna=True):  # noqa: PR01, RT01, D200
+    def _idxmax(self, axis, skipna, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return index of first occurrence of maximum over requested axis.
         """
@@ -1561,10 +1557,10 @@ class BasePandasDataset(BasePandasDatasetCompat):
             raise TypeError("reduce operation 'argmax' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
-            self._query_compiler.idxmax(axis=axis, skipna=skipna)
+            self._query_compiler.idxmax(axis=axis, skipna=skipna, **kwargs)
         )
 
-    def idxmin(self, axis=0, skipna=True):  # noqa: PR01, RT01, D200
+    def _idxmin(self, axis, skipna, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return index of first occurrence of minimum over requested axis.
         """
@@ -1572,7 +1568,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             raise TypeError("reduce operation 'argmin' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
-            self._query_compiler.idxmin(axis=axis, skipna=skipna)
+            self._query_compiler.idxmin(axis=axis, skipna=skipna, **kwargs)
         )
 
     def infer_objects(self):  # noqa: RT01, D200
@@ -1953,12 +1949,18 @@ class BasePandasDataset(BasePandasDatasetCompat):
             "pow", other, axis=axis, level=level, fill_value=fill_value
         )
 
-    def quantile(
-        self, q=0.5, axis=0, numeric_only=True, interpolation="linear"
+    def _quantile(
+        self, q, axis, numeric_only, interpolation, method
     ):  # noqa: PR01, RT01, D200
         """
         Return values at the given quantile over requested axis.
         """
+        if PandasCompatVersion.CURRENT != PandasCompatVersion.LATEST:
+            assert method == "single", f"Unsupported method={method} for quantile"
+            quantile_kw = {}
+        else:
+            quantile_kw = {"method": method}
+
         axis = self._get_axis_number(axis)
 
         def check_dtype(t):
@@ -1998,6 +2000,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
                     axis=axis,
                     numeric_only=numeric_only,
                     interpolation=interpolation,
+                    **quantile_kw,
                 )
             )
         else:
@@ -2007,6 +2010,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
                     axis=axis,
                     numeric_only=numeric_only,
                     interpolation=interpolation,
+                    **quantile_kw,
                 )
             )
             if isinstance(result, BasePandasDataset):
@@ -2108,7 +2112,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 )
         if final_query_compiler is None:
             final_query_compiler = new_query_compiler
-        return self._create_or_update_from_compiler(final_query_compiler, not copy)
+        return self._create_or_update_from_compiler(
+            final_query_compiler, inplace=False if copy is None else not copy
+        )
 
     def reindex_like(
         self, other, method=None, copy=True, limit=None, tolerance=None
@@ -2136,8 +2142,11 @@ class BasePandasDataset(BasePandasDatasetCompat):
             "columns": columns,
             "axis": axis,
             "copy": copy,
-            "inplace": inplace,
         }
+        if inplace is not None:
+            kwargs["inplace"] = inplace
+        else:
+            inplace = False
         axes, kwargs = getattr(
             pandas, type(self).__name__
         )()._construct_axes_from_arguments((), kwargs, sentinel=sentinel)
@@ -2197,30 +2206,31 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         axis = self._get_axis_number(axis)
         new_labels = self.axes[axis].reorder_levels(order)
-        return self.set_axis(new_labels, axis=axis, inplace=False)
+        return self.set_axis(new_labels, axis=axis)
 
-    def resample(
+    def _resample(
         self,
         rule,
-        axis=0,
-        closed=None,
-        label=None,
-        convention="start",
-        kind=None,
-        loffset=None,
-        base: Optional[int] = None,
-        on=None,
-        level=None,
-        origin: Union[str, TimestampConvertibleTypes] = "start_day",
-        offset: Optional[TimedeltaConvertibleTypes] = None,
+        axis,
+        closed,
+        label,
+        convention,
+        kind,
+        loffset,
+        base,
+        on,
+        level,
+        origin,
+        offset,
+        group_keys,
     ):  # noqa: PR01, RT01, D200
         """
         Resample time-series data.
         """
         from .resample import Resampler
 
-        return Resampler(
-            self,
+        return Resampler._make(
+            dataframe=self,
             rule=rule,
             axis=axis,
             closed=closed,
@@ -2233,10 +2243,11 @@ class BasePandasDataset(BasePandasDatasetCompat):
             level=level,
             origin=origin,
             offset=offset,
+            group_keys=group_keys,
         )
 
-    def reset_index(
-        self, level=None, drop=False, inplace=False, col_level=0, col_fill=""
+    def _reset_index(
+        self, level, drop, inplace, col_level, col_fill, allow_duplicates, names
     ):  # noqa: PR01, RT01, D200
         """
         Reset the index, or a level of it.
@@ -2257,6 +2268,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 level=level,
                 col_level=col_level,
                 col_fill=col_fill,
+                allow_duplicates=allow_duplicates,
+                names=names,
             )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
@@ -2506,7 +2519,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             "sem", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
         )
 
-    def set_axis(self, labels, axis=0, inplace=False):  # noqa: PR01, RT01, D200
+    def _set_axis(self, labels, axis, inplace, copy):  # noqa: PR01, RT01, D200
         """
         Assign desired index to given axis.
         """
@@ -2520,12 +2533,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 stacklevel=2,
             )
             labels, axis = axis, labels
-        if inplace:
-            setattr(self, pandas.DataFrame()._get_axis_name(axis), labels)
-        else:
-            obj = self.copy()
-            obj.set_axis(labels, axis=axis, inplace=True)
-            return obj
+        obj = self.copy() if copy else self
+        setattr(obj, pandas.DataFrame._get_axis_name(axis), labels)
+        return None if inplace else obj
 
     def _shift(self, periods, freq, axis, fill_value):  # noqa: PR01, RT01, D200
         """
@@ -2571,9 +2581,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
         if freq is None:
             if axis == "index" or axis == 0:
                 new_frame = (
-                    filled_df.append(self.iloc[:-periods], ignore_index=True)
+                    pd.concat([filled_df, self.iloc[:-periods]], ignore_index=True)
                     if periods > 0
-                    else self.iloc[-periods:].append(filled_df, ignore_index=True)
+                    else pd.concat([self.iloc[-periods:], filled_df], ignore_index=True)
                 )
                 new_frame.index = self.index.copy()
                 if isinstance(self, DataFrame):
@@ -2731,7 +2741,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         axis = self._get_axis_number(axis)
         idx = self.index if axis == 0 else self.columns
-        return self.set_axis(idx.swaplevel(i, j), axis=axis, inplace=False)
+        return self.set_axis(idx.swaplevel(i, j), axis=axis)
 
     def tail(self, n=5):  # noqa: PR01, RT01, D200
         """
@@ -2926,7 +2936,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         axis = self._get_axis_number(axis)
         new_labels = self.axes[axis].shift(periods, freq=freq)
-        return self.set_axis(new_labels, axis=axis, inplace=False)
+        return self.set_axis(new_labels, axis=axis)
 
     def transform(self, func, axis=0, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
@@ -2958,7 +2968,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         else:
             new_labels = self.axes[axis].tz_convert(tz)
         obj = self.copy() if copy else self
-        return obj.set_axis(new_labels, axis, inplace=not copy)
+        return obj._set_axis(new_labels, axis, inplace=False, copy=copy)
 
     def tz_localize(
         self, tz, axis=0, level=None, copy=True, ambiguous="raise", nonexistent="raise"
@@ -2979,7 +2989,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             )
             .index
         )
-        return self.set_axis(labels=new_labels, axis=axis, inplace=not copy)
+        return self._set_axis(new_labels, axis, inplace=False, copy=copy)
 
     # TODO: uncomment the following lines when #3331 issue will be closed
     # @prepend_to_notes(

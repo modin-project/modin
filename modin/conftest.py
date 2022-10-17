@@ -11,6 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+# We turn off mypy type checks in this file because it's not imported anywhere
+# type: ignore
+
 import os
 import sys
 import pytest
@@ -80,6 +83,7 @@ def pytest_addoption(parser):
         "--extra-test-parameters",
         action="store_true",
         help="activate extra test parameter combinations",
+        default=False,
     )
 
 
@@ -306,10 +310,9 @@ def get_unique_base_execution():
 
 
 def pytest_configure(config):
-    if config.option.extra_test_parameters is not None:
-        import modin.pandas.test.utils as utils
+    import modin.pandas.test.utils as utils
 
-        utils.extra_test_parameters = config.option.extra_test_parameters
+    utils.extra_test_parameters = config.getoption("--extra-test-parameters")
 
     execution = config.option.execution
 
