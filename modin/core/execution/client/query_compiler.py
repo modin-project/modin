@@ -176,6 +176,9 @@ class ClientQueryCompiler(BaseQueryCompiler):
     def notna(self):
         return self.__constructor__(self._service.notna(self._id))
 
+    def astype(self, col_dtypes, **kwargs):
+        return self.__constructor__(self._service.astype(self._id, col_dtypes, **kwargs))
+
     def replace(
         self,
         to_replace=None,
