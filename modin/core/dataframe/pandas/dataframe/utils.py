@@ -53,14 +53,19 @@ def build_sort_functions(
         partitions for sorting.
     """
     sort_kind = kwargs.pop("sort_kind", "original")
+
     def terasort_sample_fn(partition):
-        return pick_samples_for_quantiles(partition, columns, len(modin_frame._partitions), len(modin_frame.index))
+        return pick_samples_for_quantiles(
+            partition, columns, len(modin_frame._partitions), len(modin_frame.index)
+        )
 
     def original_sample_fn(partition, A=100, k=0.05, q=0.1):
         return get_partition_quantiles_for_sort(
             partition, columns, A=A, k=k, q=q, method=method
         )
+
     sample_fn = original_sample_fn if sort_kind == "original" else terasort_sample_fn
+
     def pivot_fn(samples):
         return pick_pivots_from_quantiles_for_sort(
             modin_frame, samples, columns, method
@@ -116,6 +121,7 @@ def _find_quantiles(df: pandas.DataFrame, quantiles: list, method: str) -> np.nd
             # instead.
             return np.quantile(df, quantiles, interpolation="lower")
 
+
 def pick_samples_for_quantiles(
     df: pandas.DataFrame,
     columns: list,
@@ -138,7 +144,7 @@ def pick_samples_for_quantiles(
     num_partitions : int
         The number of partitions.
     length : int
-        The total length
+        The total length.
 
     Returns
     -------
@@ -149,10 +155,10 @@ def pick_samples_for_quantiles(
     -----
     samples are only computed over the first column of the sort.
     """
-
     m = length / num_partitions
     probability = (1 / m) * np.log(num_partitions * length)
     return df[columns[0]].sample(frac=probability).to_numpy()
+
 
 def get_partition_quantiles_for_sort(
     df: pandas.DataFrame,
@@ -261,7 +267,6 @@ def pick_pivots_from_quantiles_for_sort(
     num_quantiles = len(df._partitions) - 1
     quantiles = [i / num_quantiles for i in range(num_quantiles)]
     overall_quantiles = _find_quantiles(all_pivots, quantiles, method)
-    print(overall_quantiles)
     return overall_quantiles
 
 
