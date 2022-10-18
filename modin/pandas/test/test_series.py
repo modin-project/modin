@@ -1733,6 +1733,16 @@ def test_dt(timezone):
     df_equals(modin_series.dt.end_time, pandas_series.dt.end_time)
     df_equals(modin_series.dt.to_timestamp(), pandas_series.dt.to_timestamp())
 
+    data_dt_str = {"A": ["26/10/2020 11:00"], "B": ["30/10/2020 12:00"]}
+
+    def dt_eval(lib):
+        df = lib.DataFrame(data_dt_str)
+        df["A"] = lib.to_datetime(df["A"])
+        df["B"] = lib.to_datetime(df["B"])
+        return df.eval("B-A", engine="python").dt.days
+
+    eval_general(pandas, pd, dt_eval)
+
 
 @pytest.mark.parametrize(
     "data", test_data_with_duplicates_values, ids=test_data_with_duplicates_keys

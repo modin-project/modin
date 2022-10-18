@@ -152,7 +152,10 @@ def _dt_prop_map(property_name):
 
     def dt_op_builder(df, *args, **kwargs):
         """Access specified date-time property of the passed frame."""
-        prop_val = getattr(df.squeeze(axis=1).dt, property_name)
+        squeezed_df = df.squeeze(axis=1)
+        if isinstance(squeezed_df, pandas.DataFrame) and len(squeezed_df.columns) == 0:
+            return pandas.DataFrame([])
+        prop_val = getattr(squeezed_df.dt, property_name)
         if isinstance(prop_val, pandas.Series):
             return prop_val.to_frame()
         elif isinstance(prop_val, pandas.DataFrame):
