@@ -1619,12 +1619,9 @@ class TestParquet:
                     # n.b. conda doesn't seem to have pytest>6.2.5 for python
                     # 3.6, and pytest 6.2.5 doesn't accept "skip" parameter.
                     pytest.skip()
-            # TODO(mvashishtha): DO NOT MERGE until we make
-            # s3://modin-datasets/testing publicly accessible and test reading
-            # that directory instead.
             eval_io(
                 "read_parquet",
-                path="s3://mahesh-vashishtha/part",
+                path="s3://modin-datasets/test_data_dir.parquet",
                 storage_options={"anon": True},
                 engine=engine,
             )
