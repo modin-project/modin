@@ -15,7 +15,7 @@
 
 import numpy as np
 import pandas
-from typing import Callable, Union, TYPE_CHECKING
+from typing import Callable, Union, TYPE_CHECKING, Optional
 
 from modin.config import NPartitions
 
@@ -52,23 +52,23 @@ def build_sort_functions(
         A dictionary containing the functions to pick quantiles, pick overall quantiles, and split
         partitions for sorting.
     """
-    sort_kind = kwargs.pop("sort_kind", "original")
 
     def terasort_sample_fn(partition):
         return pick_samples_for_quantiles(
             partition, columns, len(modin_frame._partitions), len(modin_frame.index)
         )
 
-    def original_sample_fn(partition, A=100, k=0.05, q=0.1):
-        return get_partition_quantiles_for_sort(
-            partition, columns, A=A, k=k, q=q, method=method
-        )
+    # def original_sample_fn(partition, A=100, k=0.05, q=0.1):
+    #     return get_partition_quantiles_for_sort(
+    #         partition, columns, A=A, k=k, q=q, method=method
+    #     )
 
-    sample_fn = original_sample_fn if sort_kind == "original" else terasort_sample_fn
+    sample_fn = terasort_sample_fn
 
     def pivot_fn(samples):
+        key = kwargs.get("key", None)
         return pick_pivots_from_quantiles_for_sort(
-            modin_frame, samples, columns, method
+            modin_frame, samples, columns, method, key
         )
 
     def split_fn(partition, pivots):
@@ -210,7 +210,7 @@ def get_partition_quantiles_for_sort(
     -----
     quantiles are only computed over the first column of the sort.
     """
-    quantiles = [i / (NPartitions.get()) for i in range(NPartitions.get())]
+    quantiles = [i / (NPartitions.get()) for i in range(1, NPartitions.get())]
     # Heuristic for a "small" df we will compute quantiles over entirety of.
     if len(df) <= A:
         return _find_quantiles(df[columns[0]], quantiles, method)
@@ -233,7 +233,11 @@ def get_partition_quantiles_for_sort(
 
 
 def pick_pivots_from_quantiles_for_sort(
-    df: "PandasDataframe", samples: np.ndarray, columns: list, method: str = "linear"
+    df: "PandasDataframe",
+    samples: np.ndarray,
+    columns: list,
+    method: str = "linear",
+    key: Optional[Callable] = None,
 ) -> np.ndarray:
     """
     Determine quantiles from the given samples.
@@ -253,6 +257,8 @@ def pick_pivots_from_quantiles_for_sort(
         The columns to sort by.
     method : str, default: linear
         The method to use when picking quantiles.
+    key : Callable, default: None
+        The key to use on the samples when picking pivots.
 
     Returns
     -------
@@ -263,9 +269,11 @@ def pick_pivots_from_quantiles_for_sort(
     # partition's samples, this is probably an indicator of skew in the dataset, and we
     # want our final partitions to take this into account.
     all_pivots = np.array(samples).flatten()
+    if key is not None:
+        all_pivots = key(all_pivots)
     # We don't want to pick very many quantiles if we have a very small dataframe.
-    num_quantiles = len(df._partitions) - 1
-    quantiles = [i / num_quantiles for i in range(num_quantiles)]
+    num_quantiles = len(df._partitions)
+    quantiles = [i / num_quantiles for i in range(1, num_quantiles)]
     overall_quantiles = _find_quantiles(all_pivots, quantiles, method)
     return overall_quantiles
 
@@ -310,14 +318,16 @@ def split_partitions_using_pivots_for_sort(
         ascending = ascending[0]
     if not ascending and modin_frame.dtypes[columns[0]] != object:
         pivots = pivots[::-1]
+    key = kwargs.pop("key", None)
     na_rows = df[df[columns[0]].isna()]
     non_na_rows = df[~df[columns[0]].isna()]
+    cols_to_digitize = non_na_rows[columns[0]]
+    if key is not None:
+        cols_to_digitize = key(cols_to_digitize)
     if modin_frame.dtypes[columns[0]] != object:
-        groupby_col = np.digitize(non_na_rows[columns[0]].squeeze(), pivots)
+        groupby_col = np.digitize(cols_to_digitize.squeeze(), pivots)
     else:
-        groupby_col = np.searchsorted(
-            pivots, non_na_rows[columns[0]].squeeze(), side="right"
-        )
+        groupby_col = np.searchsorted(pivots, cols_to_digitize.squeeze(), side="right")
         if not ascending:
             groupby_col = (len(pivots) - 1) - groupby_col
     grouped = non_na_rows.groupby(groupby_col)
@@ -330,5 +340,5 @@ def split_partitions_using_pivots_for_sort(
     index_to_insert_na_vals = -1 if kwargs.get("na_position", "last") == "last" else 0
     groups[index_to_insert_na_vals] = pandas.concat(
         [groups[index_to_insert_na_vals], na_rows]
-    )
+    ).astype(df.dtypes)
     return tuple(groups)

@@ -1970,7 +1970,6 @@ class PandasDataframe(ClassLogger):
             # If this df only has one row partition, we don't want to do a shuffle and sort - we can
             # just do a full-axis sort.
             if len(self._partitions) == 1:
-                kwargs.pop("sort_kind", None)
                 return self.apply_full_axis(
                     1,
                     lambda df: df.sort_values(
@@ -1988,7 +1987,6 @@ class PandasDataframe(ClassLogger):
             shuffling_functions = build_sort_functions(
                 self, columns, method, ascending, **kwargs
             )
-            kwargs.pop("sort_kind", None)
             new_partitions = self._partition_mgr_cls.shuffle_partitions(
                 self._partitions,
                 shuffling_functions["sample_function"],
