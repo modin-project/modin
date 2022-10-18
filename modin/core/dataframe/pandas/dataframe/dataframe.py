@@ -1967,6 +1967,11 @@ class PandasDataframe(ClassLogger):
             # If this df is empty, we don't want to try and shuffle or sort.
             if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
                 return self.copy()
+            # If this df only has one row partition, we don't want to do a shuffle and sort - we can
+            # just do a full-axis sort.
+            if len(self._partitions) == 1:
+                kwargs.pop("sort_kind", None)
+                return self.apply_full_axis(1, lambda df: df.sort_values(by=columns, ascending=ascending, **kwargs))
             if self.dtypes[columns[0]] == object:
                 # This means we are not sorting numbers, so we need our quantiles to not try
                 # arithmetic on the values.

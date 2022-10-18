@@ -17,6 +17,8 @@ import numpy as np
 import pandas
 from typing import Callable, Union, TYPE_CHECKING
 
+from sqlalchemy import column
+
 from modin.config import NPartitions
 
 if TYPE_CHECKING:
@@ -311,15 +313,16 @@ def split_partitions_using_pivots_for_sort(
     if not ascending and modin_frame.dtypes[columns[0]] != object:
         pivots = pivots[::-1]
     na_rows = df[df[columns[0]].isna()]
+    non_na_rows = df[~df[columns[0]].isna()]
     if modin_frame.dtypes[columns[0]] != object:
-        groupby_col = np.digitize(df[columns[0]].squeeze(), pivots)
+        groupby_col = np.digitize(non_na_rows[columns[0]].squeeze(), pivots)
     else:
         groupby_col = (
-            np.searchsorted(pivots, df[columns[0]].squeeze(), side="right") - 1
+            np.searchsorted(pivots, non_na_rows[columns[0]].squeeze(), side="right")
         )
         if not ascending:
             groupby_col = (len(pivots) - 1) - groupby_col
-    grouped = df.groupby(groupby_col)
+    grouped = non_na_rows.groupby(groupby_col)
     groups = [
         grouped.get_group(i)
         if i in grouped.keys
