@@ -1971,7 +1971,12 @@ class PandasDataframe(ClassLogger):
             # just do a full-axis sort.
             if len(self._partitions) == 1:
                 kwargs.pop("sort_kind", None)
-                return self.apply_full_axis(1, lambda df: df.sort_values(by=columns, ascending=ascending, **kwargs))
+                return self.apply_full_axis(
+                    1,
+                    lambda df: df.sort_values(
+                        by=columns, ascending=ascending, **kwargs
+                    ),
+                )
             if self.dtypes[columns[0]] == object:
                 # This means we are not sorting numbers, so we need our quantiles to not try
                 # arithmetic on the values.
