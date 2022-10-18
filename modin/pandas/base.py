@@ -2589,6 +2589,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
                     if periods > 0
                     else pd.concat([self.iloc[-periods:], filled_df], ignore_index=True)
                 )
+                print("WHAT TF", filled_df, type(filled_df))
+                print("NANI", self.iloc[:-periods])
+                print("FLKSJDLF", new_frame, type(new_frame))
                 new_frame.index = self.index.copy()
                 if isinstance(self, DataFrame):
                     new_frame.columns = self.columns.copy()

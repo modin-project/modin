@@ -18,6 +18,7 @@ Module contains ``SmallQueryCompiler`` class.
 queries for small data and empty ``PandasDataFrame``.
 """
 
+from re import S
 import numpy as np
 import pandas
 from pandas.core.indexes.api import ensure_index_from_sequences
@@ -168,12 +169,21 @@ def _dt_func_map(func_name):
 
 
 def _rolling_func(func):
-    def rolling_builder(df, rolling_args, *args, **kwargs):
+    def rolling_builder(df, fold_axis, rolling_args, *args, **kwargs):
         rolling_result = df.rolling(*rolling_args)
         rolling_op = getattr(rolling_result, func)
-        return rolling_op(rolling_result, *args, **kwargs)
+        return rolling_op(*args, **kwargs)
 
     return rolling_builder
+
+
+# def _window_func(func):
+#     def window_builder(df, fold_axis, rolling_args, *args, **kwargs):
+#         window_result = df.rolling(*rolling_args)
+#         rolling_op = getattr(rolling_result, func)
+#         return rolling_op(*args, **kwargs)
+
+#     return rolling_builder
 
 
 def _reindex(df, axis, labels, **kwargs):
@@ -183,7 +193,12 @@ def _reindex(df, axis, labels, **kwargs):
 def _concat(df, axis, other, join=None, join_axes=None, **kwargs):
     if not isinstance(other, list):
         other = [other]
-    return pandas.concat([df] + other, axis=axis, **kwargs)
+    if isinstance(df, pandas.DataFrame) and df.columns[0] == MODIN_UNNAMED_SERIES_LABEL:
+        df = df[df.columns[0]]
+    if isinstance(df, (pandas.DataFrame, pandas.Series)):
+        other = [df] + other
+
+    return pandas.concat(other, axis=axis, **kwargs)
 
 
 def _unique(values, **kwargs):
@@ -208,41 +223,91 @@ def _groupby(agg_name):
         "transform": pandas.core.groupby.DataFrameGroupBy.transform,
     }
 
-    def groupby_callable(df, by, axis, groupby_kwargs, agg_args, agg_kwargs, agg_func=None, how="axis_wise", **kwargs):
+    def groupby_callable(
+        df,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        agg_func=None,
+        how="axis_wise",
+        drop=False,
+        **kwargs
+    ):
         print("groupby df", df, type(df))
         print("groupby by", by, type(by))
+        by_names = []
         if isinstance(by, pandas.DataFrame):
             by = by.squeeze()
         print("BEFORE BYYY:", by)
         if isinstance(by, list):
             for i in range(len(by)):
                 if isinstance(by[i], pandas.DataFrame):
+                    # by_names.extend(list(by[i].columns))
                     by[i] = by[i].squeeze()
                     if isinstance(by[i], pandas.Series) and by[i].name in df.columns:
                         by[i] = by[i].name
+                # elif isinstance(by[i], str):
+                # by_names.append(by[i])
+                # assert False
         if isinstance(by, pandas.Series) and by.name in df.columns:
+            # by_names.append(by.name)
             by = by.name
         if isinstance(by, pandas.DataFrame) and all(by.columns.isin(df.columns)):
             by = list(by.columns)
         elif isinstance(by, pandas.DataFrame):
+            # by_names.extend([col for col in by])
             by = [by[col] for col in by]
+            # by = list(by.columns)
+
         print("BYYY:", by)
-        print(groupby_kwargs)
+        print("DROP:", drop)
+        # print(groupby_kwargs)
         # groupby_kwargs.pop("as_index")
+
+        # to_drop = df.columns
+        # if drop:
+        #     by_index = []
+        #     if isinstance(by, pandas.Series):
+        #         by_index = pandas.Index([by.name])
+        #     # elif isinstance(by, list) and isinstance(by[0], str):
+        #     #     by_index = pandas.Index(by)
+        #     elif isinstance(by, list) and isinstance(by[0], pandas.Series):
+        #         by_index = pandas.Index([ser.name for ser in by])
+        #     to_drop = df.columns.difference(by_index)
+        #     print("original df:", df)
+        #     print("I WILL DROP:", to_drop)
+        #     # if len(to_drop) > 0:
+        #     #     df.drop(columns=to_drop, errors="ignore", inplace=True)
+        # by_part = pandas.Index(by_names)
+        # to_keep = df.columns.difference(by_part) if drop else df.columns
+        # if drop:
+
+        #     to_drop = df.columns.intersection(by_part)
+        #     if len(to_drop) > 0:
+        #         df.drop(columns=by_part, errors="ignore", inplace=True)
+
         groupby_obj = df.groupby(by=by, axis=axis, **groupby_kwargs)
         print("whhhattt:", agg_name)
         if agg_name == "agg":
             groupby_agg = __aggregation_methods_dict[how]
-            return groupby_agg(groupby_obj, agg_func, *agg_args, **agg_kwargs)
-        groupby_agg = getattr(groupby_obj, agg_name)
-        if callable(groupby_agg):
-            return groupby_agg(*agg_args, **agg_kwargs)
-        return groupby_agg
+            result = groupby_agg(groupby_obj, agg_func, *agg_args, **agg_kwargs)
+        else:
+            groupby_agg = getattr(groupby_obj, agg_name)
+            if callable(groupby_agg):
+                result = groupby_agg(*agg_args, **agg_kwargs)
+            else:
+                result = groupby_agg
+
+        print("FINAL RESULT:", result)
+        return result
 
     return groupby_callable
 
 
 def _take_2d(df, index=None, columns=None):
+    # assert False
     columns = columns if columns is not None else slice(None)
     index = index if index is not None else slice(None)
     return df.iloc[index, columns]
@@ -288,6 +353,27 @@ def _fillna(df, squeeze_self=True, squeeze_value=False, **kwargs):
     return df.fillna(**kwargs)
 
 
+def _is_monotonic(monotonic_type):
+    def is_monotonic_caller(ser):
+        return pandas.DataFrame([getattr(ser, monotonic_type)])
+
+    return is_monotonic_caller
+
+
+def _combine(df, other, func, fill_value=None, **kwargs):
+    print("COMBINE:", df, type(df))
+    df = pandas.DataFrame(df)
+    return df.combine(other, func, fill_value=fill_value, **kwargs)
+
+
+def _sort_index(df, inplace=False, **kwargs):
+    if inplace:
+        df.sort_index(inplace=inplace, **kwargs)
+    else:
+        df = df.sort_index(inplace=inplace, **kwargs)
+    return df
+
+
 @_inherit_docstrings(BaseQueryCompiler)
 class SmallQueryCompiler(BaseQueryCompiler):
     """
@@ -303,8 +389,12 @@ class SmallQueryCompiler(BaseQueryCompiler):
     """
 
     def __init__(self, modin_frame):
-        if not isinstance(modin_frame, pandas.DataFrame):
+        print("HELP!", modin_frame, type(modin_frame))
+        if is_scalar(modin_frame):
+            modin_frame = pandas.DataFrame([modin_frame])
+        elif not isinstance(modin_frame, pandas.DataFrame):
             modin_frame = pandas.DataFrame(modin_frame)
+
         self._modin_frame = modin_frame
 
     def default_to_pandas(self, pandas_op, *args, **kwargs):
@@ -331,6 +421,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     def _register_default_pandas(
         func,
         is_series=False,
+        squeeze_series=False,
         return_modin=True,
         in_place=False,
         df_copy=False,
@@ -343,10 +434,9 @@ class SmallQueryCompiler(BaseQueryCompiler):
                 df = df.copy()
             if is_series:
                 df = df.squeeze(axis=1)
-            # elif len(df.columns) == 1 and df.columns[0] == MODIN_UNNAMED_SERIES_LABEL:
-            #     print("BEFORE SQUEEZE:", df)
-            #     df = df.squeeze(axis=1)
-            #     print("AFTER SQUEEZE:", df)
+            elif squeeze_series and len(df.columns) == 1 and df.columns[0] == MODIN_UNNAMED_SERIES_LABEL:
+                df = df.squeeze(axis=1)
+            print("AFTER SQUEEZE:", df)
             exclude_names = [
                 "broadcast",
                 "fold_axis",
@@ -375,24 +465,24 @@ class SmallQueryCompiler(BaseQueryCompiler):
 
         return caller
 
-    __and__ = _register_default_pandas(pandas.DataFrame.__and__)
+    __and__ = _register_default_pandas(pandas.DataFrame.__and__, squeeze_series=True)
     # __class__ = _register_default_pandas(pandas.DataFrame.__class__)
     # __delattr__ = _register_default_pandas(pandas.DataFrame.__delattr__)
     __dir__ = _register_default_pandas(pandas.DataFrame.__dir__)
-    __eq__ = _register_default_pandas(pandas.DataFrame.__eq__)
+    __eq__ = _register_default_pandas(pandas.DataFrame.__eq__, squeeze_series=True)
     __format__ = _register_default_pandas(pandas.DataFrame.__format__)
-    __ge__ = _register_default_pandas(pandas.DataFrame.__ge__)
+    __ge__ = _register_default_pandas(pandas.DataFrame.__ge__, squeeze_series=True)
     # __getattribute__ = _register_default_pandas(pandas.DataFrame.__getattribute__)
-    __gt__ = _register_default_pandas(pandas.DataFrame.__gt__)
+    __gt__ = _register_default_pandas(pandas.DataFrame.__gt__, squeeze_series=True)
     # __hash__ = _register_default_pandas(pandas.DataFrame.__hash__)
     # __init__ = _register_default_pandas(pandas.DataFrame.__init__)
     # __init_subclass__ = _register_default_pandas(pandas.DataFrame.__init_subclass__)
-    __le__ = _register_default_pandas(pandas.DataFrame.__le__)
-    __lt__ = _register_default_pandas(pandas.DataFrame.__lt__)
-    __ne__ = _register_default_pandas(pandas.DataFrame.__ne__)
+    __le__ = _register_default_pandas(pandas.DataFrame.__le__, squeeze_series=True)
+    __lt__ = _register_default_pandas(pandas.DataFrame.__lt__, squeeze_series=True)
+    __ne__ = _register_default_pandas(pandas.DataFrame.__ne__, squeeze_series=True)
     # __new__ = _register_default_pandas(pandas.DataFrame.__new__)
-    __or__ = _register_default_pandas(pandas.DataFrame.__or__)
-    __rand__ = _register_default_pandas(pandas.DataFrame.__rand__)
+    __or__ = _register_default_pandas(pandas.DataFrame.__or__, squeeze_series=True)
+    __rand__ = _register_default_pandas(pandas.DataFrame.__rand__, squeeze_series=True)
     __reduce__ = _register_default_pandas(
         pandas.DataFrame.__reduce__, return_modin=False
     )
@@ -400,13 +490,13 @@ class SmallQueryCompiler(BaseQueryCompiler):
         pandas.DataFrame.__reduce_ex__, return_modin=False
     )
     # __repr__ = _register_default_pandas(pandas.DataFrame.__repr__)
-    __ror__ = _register_default_pandas(pandas.DataFrame.__ror__)
-    __rxor__ = _register_default_pandas(pandas.DataFrame.__rxor__)
+    __ror__ = _register_default_pandas(pandas.DataFrame.__ror__, squeeze_series=True)
+    __rxor__ = _register_default_pandas(pandas.DataFrame.__rxor__, squeeze_series=True)
     # __setattr__ = _register_default_pandas(pandas.DataFrame.__setattr__)
     __sizeof__ = _register_default_pandas(pandas.DataFrame.__sizeof__)
     # __str__ = _register_default_pandas(pandas.DataFrame.__str__)
     # __subclasshook__ = _register_default_pandas(pandas.DataFrame.__subclasshook__)
-    __xor__ = _register_default_pandas(pandas.DataFrame.__xor__)
+    __xor__ = _register_default_pandas(pandas.DataFrame.__xor__, squeeze_series=True)
     abs = _register_default_pandas(pandas.DataFrame.abs)
     add = _register_default_pandas(_register_binary("add"))
     all = _register_default_pandas(pandas.DataFrame.all)
@@ -415,7 +505,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     apply_on_series = _register_default_pandas(pandas.Series.apply, is_series=True)
     applymap = _register_default_pandas(pandas.DataFrame.applymap)
     astype = _register_default_pandas(pandas.DataFrame.astype)
-    cat_codes = _register_default_pandas(pandas.Series.cat.codes, is_series=True)
+    cat_codes = _register_default_pandas(lambda ser: ser.cat.codes, is_series=True)
     clip = _register_default_pandas(pandas.DataFrame.clip)
     combine = _register_default_pandas(pandas.DataFrame.combine)
     combine_first = _register_default_pandas(pandas.DataFrame.combine_first)
@@ -533,12 +623,15 @@ class SmallQueryCompiler(BaseQueryCompiler):
     idxmin = _register_default_pandas(pandas.DataFrame.idxmin)
     insert = _register_default_pandas(pandas.DataFrame.insert, in_place=True)
     invert = _register_default_pandas(pandas.DataFrame.__invert__)
-    # is_monotonic_decreasing = _register_default_pandas(
-    #     pandas.DataFrame.is_monotonic_decreasing
-    # )
-    # is_monotonic_increasing = _register_default_pandas(
-    #     pandas.DataFrame.is_monotonic_increasing
-    # )
+    is_monotonic = _register_default_pandas(
+        _is_monotonic("is_monotonic"), is_series=True
+    )
+    is_monotonic_decreasing = _register_default_pandas(
+        _is_monotonic("is_monotonic_decreasing"), is_series=True
+    )
+    is_monotonic_increasing = _register_default_pandas(
+        _is_monotonic("is_monotonic_increasing"), is_series=True
+    )
     isin = _register_default_pandas(pandas.DataFrame.isin)
     isna = _register_default_pandas(pandas.DataFrame.isna)
     # join = _register_default_pandas(pandas.DataFrame.join)
@@ -568,7 +661,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     negative = _register_default_pandas(pandas.DataFrame.__neg__)
     nlargest = _register_default_pandas(pandas.DataFrame.nlargest)
     notna = _register_default_pandas(pandas.DataFrame.notna)
-    nsmallest = _register_default_pandas(pandas.DataFrame.nsmallest)
+    nsmallest = _register_default_pandas(lambda df, **kwargs: df.nsmallest(**kwargs), squeeze_series=True)
     nunique = _register_default_pandas(pandas.DataFrame.nunique)
     pivot = _register_default_pandas(pandas.DataFrame.pivot)
     pivot_table = _register_default_pandas(pandas.DataFrame.pivot_table)
@@ -624,11 +717,11 @@ class SmallQueryCompiler(BaseQueryCompiler):
     reset_index = _register_default_pandas(pandas.DataFrame.reset_index)
     rfloordiv = _register_default_pandas(_register_binary("rfloordiv"))
     rmod = _register_default_pandas(_register_binary("rmod"))
-    # rolling_aggregate
+    rolling_aggregate = _register_default_pandas(_rolling_func("aggregate"))
     rolling_apply = _register_default_pandas(_rolling_func("apply"))
-    # rolling_corr
+    rolling_corr = _register_default_pandas(_rolling_func("corr"))
     rolling_count = _register_default_pandas(_rolling_func("count"))
-    # rolling_cov
+    rolling_cov = _register_default_pandas(_rolling_func("cov"))
     rolling_kurt = _register_default_pandas(_rolling_func("kurt"))
     rolling_max = _register_default_pandas(_rolling_func("max"))
     rolling_mean = _register_default_pandas(_rolling_func("mean"))
@@ -652,7 +745,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     series_view = _register_default_pandas(pandas.Series.view, is_series=True)
     set_index_from_columns = _register_default_pandas(pandas.DataFrame.set_index)
     skew = _register_default_pandas(pandas.DataFrame.skew)
-    sort_index = _register_default_pandas(pandas.DataFrame.sort_index)
+    sort_index = _register_default_pandas(_sort_index)
     sort_columns_by_row_values = _register_default_pandas(
         lambda df, columns, **kwargs: df.sort_values(by=columns, axis=1, **kwargs)
     )
@@ -722,6 +815,10 @@ class SmallQueryCompiler(BaseQueryCompiler):
     unstack = _register_default_pandas(pandas.DataFrame.unstack)
     var = _register_default_pandas(pandas.DataFrame.var)
     where = _register_default_pandas(pandas.DataFrame.where)
+    window_mean = _register_default_pandas(_rolling_func("mean"))
+    window_std = _register_default_pandas(_rolling_func("std"))
+    window_sum = _register_default_pandas(_rolling_func("sum"))
+    window_var = _register_default_pandas(_rolling_func("var"))
 
     T = property(transpose)
 
@@ -763,10 +860,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
             result = pandas.DataFrame([result])
 
         return self.__constructor__(result)
-
-    # def drop(self, index=None, columns=None):
-    #     result = self._modin_frame.drop(index=index, columns=columns)
-    #     return self.__constructor__(result)
 
     def finalize(self):
         pass
@@ -837,15 +930,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
         return self._modin_frame.dtypes
 
     def getitem_column_array(self, key, numeric=False):
-        # Convert to list for type checking
-        # if numeric:
-        #     new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
-        #         col_positions=key
-        #     )
-        # else:
-        #     new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
-        #         col_labels=key
-        #     )
         return self.__constructor__(self._modin_frame[key])
 
     def _getitem_array(df, key):

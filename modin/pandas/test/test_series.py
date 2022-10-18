@@ -851,6 +851,8 @@ def test_append(data):
             modin_result = modin_series.append(
                 [modin_series, modin_series], verify_integrity=verify_integrity
             )
+            print("Append series:", modin_series)
+            print("Append result:", modin_result)
             df_equals(modin_result, pandas_result)
 
         try:
