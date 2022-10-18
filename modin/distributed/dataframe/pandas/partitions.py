@@ -165,7 +165,7 @@ def from_partitions(
     assert factory is not None
     assert factory.io_cls is not None
     assert factory.io_cls.frame_cls is not None
-    assert factory.io_cls.frame_cls._partition_mgr_cls is not None
+    assert factory.io_cls.frame_cls._partition_mgr_cls is not None  # type: ignore[unreachable]
     partition_class = factory.io_cls.frame_cls._partition_mgr_cls._partition_class
     partition_frame_class = factory.io_cls.frame_cls
     partition_mgr_class = factory.io_cls.frame_cls._partition_mgr_cls
