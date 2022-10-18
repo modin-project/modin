@@ -1515,19 +1515,11 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         # Gather together all of the sub-partitions
         split_row_partitions = np.array(
             [
-                partition.split(split_func, len(pivots), pivots)
+                partition.split(split_func, len(pivots) + 1, pivots)
                 for partition in row_partitions
             ]
         ).T
         new_partitions = [
             [cls._partition_class.put_splits(splits)] for splits in split_row_partitions
         ]
-        # We do this since some of the partitions can be empty if we have bad skew. If this is the
-        # case, we do not want to include these in our partitions, since an empty partition
-        # can throw off future operations (which may expect partitions to be nonempty).
-        new_partitions_without_empties = [
-            row_ptn_list
-            for row_ptn_list in new_partitions
-            if row_ptn_list[0].length() != 0
-        ]
-        return np.array(new_partitions_without_empties)
+        return np.array(new_partitions)

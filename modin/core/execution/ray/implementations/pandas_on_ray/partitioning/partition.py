@@ -541,4 +541,5 @@ def _concat_splits(*splits):
     import pandas
 
     df = pandas.concat(splits)
+    print(len(df))
     return (df, len(df), len(df.columns), get_node_ip_address())

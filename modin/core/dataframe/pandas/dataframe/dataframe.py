@@ -1978,6 +1978,7 @@ class PandasDataframe(ClassLogger):
             shuffling_functions = build_sort_functions(
                 self, columns, method, ascending, **kwargs
             )
+            kwargs.pop("sort_kind", None)
             new_partitions = self._partition_mgr_cls.shuffle_partitions(
                 self._partitions,
                 shuffling_functions["sample_function"],
