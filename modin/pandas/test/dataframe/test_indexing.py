@@ -58,11 +58,22 @@ matplotlib.use("Agg")
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
-def eval_setitem(md_df, pd_df, value, col=None, loc=None):
+def eval_setitem(
+    md_df, pd_df, value=None, col=None, loc=None, md_value=None, pd_value=None
+):
+    assert value is not None or (
+        md_value is not None and pd_value is not None
+    ), "You have to either pass generic 'value' or lib-dependent values"
+
     if loc is not None:
         col = pd_df.columns[loc]
 
-    value_getter = value if callable(value) else (lambda *args, **kwargs: value)
+    if value is None:
+        value_getter = lambda src_df, *args, **kwargs: (  # noqa: E731 (do not assign a lambda expression)
+            md_value if isinstance(src_df, (pd.DataFrame, pd.Series)) else pd_value
+        )
+    else:
+        value_getter = value if callable(value) else (lambda *args, **kwargs: value)
 
     eval_general(
         md_df, pd_df, lambda df: df.__setitem__(col, value_getter(df)), __inplace__=True
@@ -2045,6 +2056,44 @@ def test_setitem_unhashable_key():
 
         # test failed case: ValueError('Columns must be same length as key')
         eval_setitem(modin_df, pandas_df, df_value[["value_col1"]], key)
+
+
+def test_setitem_2d_insertion():
+    md_df, pd_df = create_test_dfs(test_data["int_data"])
+
+    # Easy case - key and value.columns are equal
+    md_value, pd_value = create_test_dfs(
+        {"new_value1": np.arange(len(md_df)), "new_value2": np.arange(len(pd_df))}
+    )
+    eval_setitem(
+        md_df,
+        pd_df,
+        md_value=md_value,
+        pd_value=pd_value,
+        col=["new_value1", "new_value2"],
+    )
+
+    # Key and value.columns have equal values but in different order
+    new_columns = ["new_value3", "new_value4"]
+    md_value.columns, pd_value.columns = new_columns, new_columns
+    eval_setitem(
+        md_df,
+        pd_df,
+        md_value=md_value,
+        pd_value=pd_value,
+        col=["new_value4", "new_value3"],
+    )
+
+    # Key and value.columns have different values
+    new_columns = ["new_value5", "new_value6"]
+    md_value.columns, pd_value.columns = new_columns, new_columns
+    eval_setitem(
+        md_df,
+        pd_df,
+        md_value=md_value,
+        pd_value=pd_value,
+        col=["__new_value5", "__new_value6"],
+    )
 
 
 def test___setitem__single_item_in_series():
