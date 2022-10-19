@@ -1579,7 +1579,20 @@ class TestParquet:
             engine=engine,
         )
 
-    @pytest.mark.parametrize("path_type", ["url", "object"])
+    @pytest.mark.parametrize(
+        "path_type",
+        [
+            "object",
+            "directory",
+            pytest.param(
+                "url",
+                marks=pytest.mark.xfail(
+                    PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+                    reason="older pandas.read_parquet does not support storage_options",
+                ),
+            ),
+        ],
+    )
     @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1593,6 +1606,25 @@ class TestParquet:
             fs = s3fs.S3FileSystem(anon=True)
             with fs.open(dataset_url, "rb") as file_obj:
                 eval_io("read_parquet", path=file_obj, engine=engine)
+        elif path_type == "directory":
+            if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+                if engine == "pyarrow":
+                    pytest.xfail(
+                        reason="older pandas.read_parquet does not support storage_options"
+                    )
+                else:
+                    # older pandas.read_parquet does not support
+                    # storage_options, but modin and pandas both happen to
+                    # give different ValueErrors, so we cannot xfail.
+                    # n.b. conda doesn't seem to have pytest>6.2.5 for python
+                    # 3.6, and pytest 6.2.5 doesn't accept "skip" parameter.
+                    pytest.skip()
+            eval_io(
+                "read_parquet",
+                path="s3://modin-datasets/test_data_dir.parquet",
+                storage_options={"anon": True},
+                engine=engine,
+            )
         else:
             if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
                 pytest.xfail(
