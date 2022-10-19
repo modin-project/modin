@@ -223,7 +223,9 @@ class PyArrowDataset(ColumnStoreDataset):
     ):
         from pyarrow.parquet import read_table
 
-        return read_table(self.path, columns=columns, filesystem=self.fs).to_pandas()
+        return read_table(
+            self._fs_path, columns=columns, filesystem=self.fs
+        ).to_pandas()
 
 
 @_inherit_docstrings(ColumnStoreDataset)
