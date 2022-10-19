@@ -20,7 +20,6 @@ for pandas storage format.
 from collections import OrderedDict
 import numpy as np
 import datetime
-import inspect
 import pandas
 from pandas.api.types import is_object_dtype
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
@@ -1953,7 +1952,10 @@ class PandasDataframe(ClassLogger):
         # propagated here before doing our sort.
 
         def sort_function(df):
-            if df.index.names != self.index.name:
+            if (
+                df.index.names != self.index.name
+                and df.index.nlevels == self.index.nlevels
+            ):
                 df.index = df.index.set_names(self.index.names)
             return df.sort_values(by=columns, ascending=ascending, **kwargs)
 
