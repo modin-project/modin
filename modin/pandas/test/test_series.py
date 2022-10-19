@@ -1735,13 +1735,25 @@ def test_dt(timezone):
 
     data_dt_str = {"A": ["26/10/2020 11:00"], "B": ["30/10/2020 12:00"]}
 
-    def dt_eval(lib):
-        df = lib.DataFrame(data_dt_str)
-        df["A"] = lib.to_datetime(df["A"])
-        df["B"] = lib.to_datetime(df["B"])
-        return df.eval("B-A", engine="python").dt.days
+    def dt_with_empty_partition(lib):
+        # For context, see https://github.com/modin-project/modin/issues/5112
+        df_a = lib.DataFrame({"A": [lib.to_datetime("26/10/2020")]})
+        df_b = lib.DataFrame({"B": [lib.to_datetime("27/10/2020")]})
+        df = lib.concat([df_a, df_b], axis=1)
+        # BaseOnPython should have a single partition after the concat
+        # because it uses pandas for the concat.
+        if get_current_execution() == "BaseOnPython":
+            assert eval_result._query_compiler._modin_frame._partitions.shape == (2, 1)
+        eval_result = df.eval("B - A", engine="python")
+        # BaseOnPython had a single partition after the concat, and it
+        # maintains that partition after eval. In other execution modes,
+        # eval() should re-split the result into two column partitions,
+        # one of which is empty.
+        if get_current_execution() == "BaseOnPython":
+            assert eval_result._query_compiler._modin_frame._partitions.shape == (2, 1)
+        return eval_result.dt.days
 
-    eval_general(pandas, pd, dt_eval)
+    eval_general(pd, pandas, dt_with_empty_partition)
 
 
 @pytest.mark.parametrize(

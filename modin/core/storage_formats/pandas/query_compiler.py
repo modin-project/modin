@@ -155,6 +155,7 @@ def _dt_prop_map(property_name):
         squeezed_df = df.squeeze(axis=1)
         if isinstance(squeezed_df, pandas.DataFrame) and len(squeezed_df.columns) == 0:
             return pandas.DataFrame([])
+        assert isinstance(squeezed_df, pandas.Series)
         prop_val = getattr(squeezed_df.dt, property_name)
         if isinstance(prop_val, pandas.Series):
             return prop_val.to_frame()
