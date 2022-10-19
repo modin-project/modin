@@ -59,8 +59,9 @@ def build_sort_functions(
         )
 
     # def original_sample_fn(partition, A=100, k=0.05, q=0.1):
+            # key = kwargs.get("key", None)
     #     return get_partition_quantiles_for_sort(
-    #         partition, columns, A=A, k=k, q=q, method=method
+    #         partition, columns, A=A, k=k, q=q, method=method, key
     #     )
 
     sample_fn = terasort_sample_fn
@@ -83,7 +84,7 @@ def build_sort_functions(
     }
 
 
-def _find_quantiles(df: pandas.DataFrame, quantiles: list, method: str) -> np.ndarray:
+def _find_quantiles(df: Union[pandas.DataFrame, pandas.Series], quantiles: list, method: str) -> np.ndarray:
     """
     Find quantiles of a given dataframe using the specified method.
 
@@ -95,8 +96,8 @@ def _find_quantiles(df: pandas.DataFrame, quantiles: list, method: str) -> np.nd
 
     Parameters
     ----------
-    df : pandas.DataFrame
-        The dataframe to pick quantiles from.
+    df : pandas.DataFrame or pandas.Series
+        The data to pick quantiles from.
     quantiles : list[float]
         The quantiles to compute.
     method : str
@@ -167,6 +168,7 @@ def get_partition_quantiles_for_sort(
     k: float = 0.05,
     q: float = 0.1,
     method: str = "linear",
+    key: Optional[Callable] = None,
 ) -> np.ndarray:
     """
     Pick quantiles over the given partition.
@@ -200,6 +202,8 @@ def get_partition_quantiles_for_sort(
         A hueristic used for sampling.
     method : str, default: linear
         The method to use when picking quantiles.
+    key : Callable, default: None
+        The sort key to use.
 
     Returns
     -------
@@ -213,23 +217,23 @@ def get_partition_quantiles_for_sort(
     quantiles = [i / (NPartitions.get()) for i in range(1, NPartitions.get())]
     # Heuristic for a "small" df we will compute quantiles over entirety of.
     if len(df) <= A:
-        return _find_quantiles(df[columns[0]], quantiles, method)
+        col_to_find_quantiles = df[columns[0]]
     # Heuristic for a "medium" df where we will include first 100 (A) rows, and sample
     # of remaining rows when computing quantiles.
-    if len(df) <= (A * (1 - k)) / (q - k):
-        return _find_quantiles(
-            np.concatenate(
-                (
-                    df[columns[0]].iloc[:100].values,
-                    df[columns[0]].iloc[100:].sample(frac=k),
-                )
-            ),
-            quantiles,
-            method,
+    elif len(df) <= (A * (1 - k)) / (q - k):
+        col_to_find_quantiles = np.concatenate(
+            (
+                df[columns[0]].iloc[:100].values,
+                df[columns[0]].iloc[100:].sample(frac=k),
+            )
         )
     # Heuristic for a "large" df where we will sample 10% (q) of all rows to compute quantiles
     # over.
-    return _find_quantiles(df[columns[0]].sample(frac=q), quantiles, method)
+    else:
+        col_to_find_quantiles = df[columns[0]].sample(frac=q)
+    if key is not None:
+        col_to_find_quantiles = key(col_to_find_quantiles)
+    return _find_quantiles(col_to_find_quantiles, quantiles, method)
 
 
 def pick_pivots_from_quantiles_for_sort(

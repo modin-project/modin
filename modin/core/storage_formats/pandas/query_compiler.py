@@ -2070,7 +2070,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 dtypes="copy" if axis == 0 else None,
             )
         else:
-            if Engine.get() in ["Ray", "Dask"]:
+            if Engine.get() in ["Ray"]:
                 kwargs.pop("ascending", False)
                 new_modin_frame = self._modin_frame.sort_by(
                     axis, "__index__", ascending=ascending, **kwargs
@@ -3243,7 +3243,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
         # Our algebra sort is only implemented for Engines that support virtual partitioning.
-        if Engine.get() in ["Ray", "Dask"]:
+        if Engine.get() in ["Ray"]:
             kwargs.pop("ascending", False)
             new_modin_frame = self._modin_frame.sort_by(
                 0, columns, ascending=ascending, **kwargs
