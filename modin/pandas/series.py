@@ -2093,14 +2093,6 @@ class Series(BasePandasDataset):
             try_cast=try_cast,
         )
 
-    def xs(
-        self, key, axis=0, level=None, drop_level=True
-    ):  # pragma: no cover # noqa: PR01, D200
-        """
-        Return cross-section from the Series/DataFrame.
-        """
-        raise NotImplementedError("Not Yet implemented.")
-
     @property
     def attrs(self):  # noqa: RT01, D200
         """

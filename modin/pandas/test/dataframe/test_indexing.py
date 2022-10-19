@@ -1700,6 +1700,7 @@ def test_tail(data, n):
 
 
 def test_xs():
+    # example is based on the doctest in the upstream pandas docstring
     d = {
         "num_legs": [4, 4, 2, 2],
         "num_wings": [0, 0, 2, 2],
@@ -1709,8 +1710,14 @@ def test_xs():
     }
     df = pd.DataFrame(data=d)
     df = df.set_index(["class", "animal", "locomotion"])
-    with warns_that_defaulting_to_pandas():
-        df.xs("mammal")
+
+    result = df.xs("mammal")
+    expected = df.loc["mammal"]
+    df_equals(result, expected)
+
+    result = df.xs("num_legs", axis=1)
+    expected = df["num_legs"]
+    df_equals(result, expected)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
