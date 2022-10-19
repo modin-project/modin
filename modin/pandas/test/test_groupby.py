@@ -2165,3 +2165,10 @@ def test_groupby_with_frozenlist():
     pandas_df = pandas_df.set_index(["a", "b"])
     modin_df = from_pandas(pandas_df)
     eval_general(modin_df, pandas_df, lambda df: df.groupby(df.index.names).count())
+
+
+def test_mean_with_datetime():
+    data = {'timestamp': [pd.to_datetime(1490195805, unit='s')], 'numeric': [0]}
+    pandas_df = pandas.DataFrame(data)
+    modin_df = pd.DataFrame(data)
+    eval_general(modin_df, pandas_df, lambda df: df.groupby("timestamp").mean())

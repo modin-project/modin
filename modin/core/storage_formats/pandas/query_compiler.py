@@ -2533,12 +2533,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_sum = GroupByReduce.register("sum")
 
     def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
+        by_columns = by
+        if isinstance(by, BaseQueryCompiler):
+            by_columns = by.columns
+        elif isinstance(by, list):
+            if isinstance(by[0], BaseQueryCompiler):
+                by_columns = []
+                for by_qc in by:
+                    by_columns.extend(by_qc.columns)
+            else:
+                by_columns = by
+        elif not is_list_like(by):
+            by_columns = [by]
         numeric_only = agg_kwargs.get("numeric_only", False)
         datetime_cols = (
             {
                 col: dtype
                 for col, dtype in zip(self.dtypes.index, self.dtypes)
-                if is_datetime64_any_dtype(dtype)
+                if is_datetime64_any_dtype(dtype) and col not in by_columns
             }
             if not numeric_only
             else dict()
