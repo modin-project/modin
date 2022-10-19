@@ -639,7 +639,7 @@ def test_value_counts(normalize, bins, dropna):
     values = np.array([3, 1, 2, 3, 4, np.nan])
     with (
         contextlib.nullcontext()
-        if Engine.get() in ["Ray"]
+        if Engine.get() in ["Ray", "Dask"]
         else warns_that_defaulting_to_pandas()
     ):
         modin_result = sort_index_for_equal_values(
@@ -661,7 +661,7 @@ def test_value_counts(normalize, bins, dropna):
 
     with (
         contextlib.nullcontext()
-        if Engine.get() in ["Ray"]
+        if Engine.get() in ["Ray", "Dask"]
         else warns_that_defaulting_to_pandas()
     ):
         modin_result = sort_index_for_equal_values(

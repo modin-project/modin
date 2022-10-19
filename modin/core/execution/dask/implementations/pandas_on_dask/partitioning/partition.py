@@ -320,7 +320,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             A list of partitions.
         """
         outputs = DaskWrapper.deploy(
-            split_func, *([self._data] + list(args)), num_returns=num_splits, pure=True
+            split_func, [self._data] + list(args), num_returns=num_splits, pure=True
         )
         return outputs
 
@@ -341,7 +341,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         """
         futures = DaskWrapper.deploy(
             _concat_splits,
-            *splits,
+            splits,
             num_returns=4,
             pure=True,
         )

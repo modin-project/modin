@@ -272,7 +272,10 @@ def pick_pivots_from_quantiles_for_sort(
     # We don't call `np.unique` on the samples, since if a quantile shows up in multiple
     # partition's samples, this is probably an indicator of skew in the dataset, and we
     # want our final partitions to take this into account.
-    all_pivots = np.array(samples).flatten()
+    if isinstance(samples[0], np.ndarray):
+        all_pivots = np.concatenate(samples).flatten()
+    else:
+        all_pivots = np.array(samples).flatten()
     if key is not None:
         all_pivots = key(all_pivots)
     # We don't want to pick very many quantiles if we have a very small dataframe.
