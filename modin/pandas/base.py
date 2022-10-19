@@ -3668,7 +3668,7 @@ class BasePandasDataset(ClassLogger):
     def xs(
         self,
         key,
-        axis,
+        axis=0,
         level=None,
         drop_level: bool = True,
     ):
