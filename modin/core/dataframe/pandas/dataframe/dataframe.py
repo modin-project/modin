@@ -248,14 +248,7 @@ class PandasDataframe(ClassLogger):
         if self._row_lengths_cache is None:
             if len(self._partitions.T) > 0:
                 row_parts = self._partitions.T[0]
-                if self._index_cache is not None:
-                    # do not do extra work to get an index that is already known
-                    self._row_lengths_cache = [part.length() for part in row_parts]
-                else:
-                    (
-                        self._index_cache,
-                        self._row_lengths_cache,
-                    ) = self._compute_axis_labels_and_lengths(0)
+                self._row_lengths_cache = [part.length() for part in row_parts]
             else:
                 self._row_lengths_cache = []
         return self._row_lengths_cache
@@ -273,14 +266,7 @@ class PandasDataframe(ClassLogger):
         if self._column_widths_cache is None:
             if len(self._partitions) > 0:
                 col_parts = self._partitions[0]
-                if self._columns_cache is not None:
-                    # do not do extra work to get columns that is already known
-                    self._column_widths_cache = [part.width() for part in col_parts]
-                else:
-                    (
-                        self._columns_cache,
-                        self._column_widths_cache,
-                    ) = self._compute_axis_labels_and_lengths(1)
+                self._column_widths_cache = [part.width() for part in col_parts]
             else:
                 self._column_widths_cache = []
         return self._column_widths_cache
