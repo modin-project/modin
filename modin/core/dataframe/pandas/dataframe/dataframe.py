@@ -2036,7 +2036,12 @@ class PandasDataframe(ClassLogger):
                 lambda df: df.sort_index(ascending=ascending, **kwargs),
             )
             new_axes = self.axes
-            new_axes[axis.value] = None
+            new_axes[axis.value] = self._compute_axis_labels_and_lengths(
+                axis.value, new_partitions
+            )[0]
+            new_axes[axis.value] = new_axes[axis.value].set_names(
+                self.axes[axis.value].names
+            )
             new_lengths = [None, None]
             new_modin_frame = self.__constructor__(
                 new_partitions, *new_axes, *new_lengths, self._dtypes
