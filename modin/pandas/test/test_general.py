@@ -638,7 +638,7 @@ def test_value_counts(normalize, bins, dropna):
     # We sort indices for Modin and pandas result because of issue #1650
     values = np.array([3, 1, 2, 3, 4, np.nan])
     with (
-        contextlib.nullcontext()
+        _nullcontext()
         if Engine.get() in ["Ray", "Dask"]
         else warns_that_defaulting_to_pandas()
     ):
@@ -660,7 +660,7 @@ def test_value_counts(normalize, bins, dropna):
     df_equals(modin_result, pandas_result)
 
     with (
-        contextlib.nullcontext()
+        _nullcontext()
         if Engine.get() in ["Ray", "Dask"]
         else warns_that_defaulting_to_pandas()
     ):
