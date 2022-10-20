@@ -1928,21 +1928,14 @@ class PandasDataframe(ClassLogger):
         """
         if not isinstance(columns, list):
             columns = [columns]
-        # Sometimes, when we rename an index, the new name is not propagated to all partitions. This
-        # can lead to an issue where we are trying to sort by an ambiguous label. Say we are doing
-        # a `value_count` on a Series. The index of the `value_count` object should be changed from
-        # the Series' name to None, but this may not be propagated to the partitions, so when we
-        # try and sort the Series, our `by` argument is the name of the Series, which is the name
-        # of the column, and the name of the index, since resetting our index name hasn't been
-        # propagated yet. This causes an error, so we need to ensure that our index names are
-        # propagated here before doing our sort.
+        # When we do a sort on the result of Series.value_counts, we don't rename the index until
+        # after everything is done, which causes an error when sorting the partitions, since the
+        # index and the column share the same name, when in actuality, the index's name should be
+        # None. This fixes the indexes name beforehand in that case, so that the sort works.
 
         def sort_function(df):
-            if (
-                df.index.names != self.index.name
-                and df.index.nlevels == self.index.nlevels
-            ):
-                df.index = df.index.set_names(self.index.names)
+            if df.index.name in df.columns and len(df.columns) == 1:
+                df.index = df.index.set_names(None)
             return df.sort_values(by=columns, ascending=ascending, **kwargs)
 
         axis = Axis(axis)
@@ -1960,9 +1953,7 @@ class PandasDataframe(ClassLogger):
             if len(self._partitions) == 1:
                 return self.apply_full_axis(
                     1,
-                    lambda df: df.sort_values(
-                        by=columns, ascending=ascending, **kwargs
-                    ),
+                    sort_function,
                 )
             if self.dtypes[columns[0]] == object:
                 # This means we are not sorting numbers, so we need our quantiles to not try
