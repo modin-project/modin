@@ -1937,7 +1937,7 @@ class PandasDataframe(ClassLogger):
             index_renaming = None
             if any(name in df.columns for name in df.index.names):
                 index_renaming = df.index.names
-                df.index = df.index.set_names([None]*len(df.index.names))
+                df.index = df.index.set_names([None] * len(df.index.names))
             df = df.sort_values(by=columns, ascending=ascending, **kwargs)
             if index_renaming is not None:
                 df.index = df.index.set_names(index_renaming)
