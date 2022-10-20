@@ -2170,9 +2170,9 @@ def test_groupby_with_frozenlist():
 @pytest.mark.parametrize(
     "by_func",
     [
-        lambda df: df.columns[0],
-        lambda df: list(df.columns[:-1]),
-        lambda df: [df.columns[0], df.iloc[:, 1].copy()],
+        lambda df: "timestamp0",
+        lambda df: ["timestamp0", "timestamp1"],
+        lambda df: ["timestamp0", df["timestamp1"]],
     ],
 )
 def test_mean_with_datetime(by_func):
