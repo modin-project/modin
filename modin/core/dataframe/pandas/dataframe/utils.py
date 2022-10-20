@@ -11,20 +11,18 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Collection of algebra utility functions, mostly for internal use."""
+"""Collection of algebra utility functions, used to shuffle data across partitions."""
 
 import numpy as np
 import pandas
 from typing import Callable, Union, TYPE_CHECKING, Optional
 
 from modin.config import NPartitions
-
-if TYPE_CHECKING:
-    from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
 
 def build_sort_functions(
-    modin_frame: "PandasDataframe",
+    modin_frame: PandasDataframe,
     columns: list,
     method: str,
     ascending: Union[list, bool],
@@ -36,7 +34,7 @@ def build_sort_functions(
     Parameters
     ----------
     modin_frame : PandasDataframe
-        A reference to the frame calling these sort functions.
+        The frame calling these sort functions.
     columns : list[str]
         The list of column names to sort by.
     method : str
@@ -52,6 +50,8 @@ def build_sort_functions(
         A dictionary containing the functions to pick quantiles, pick overall quantiles, and split
         partitions for sorting.
     """
+    if isinstance(ascending, list):
+        ascending = ascending[0]
 
     def terasort_sample_fn(partition):
         return pick_samples_for_quantiles(
@@ -68,9 +68,7 @@ def build_sort_functions(
 
     def pivot_fn(samples):
         key = kwargs.get("key", None)
-        return pick_pivots_from_quantiles_for_sort(
-            modin_frame, samples, columns, method, key
-        )
+        return pick_pivots_from_quantiles_for_sort(modin_frame, samples, method, key)
 
     def split_fn(partition, pivots):
         return split_partitions_using_pivots_for_sort(
@@ -160,7 +158,8 @@ def pick_samples_for_quantiles(
     """
     m = length / num_partitions
     probability = (1 / m) * np.log(num_partitions * length)
-    return df[columns[0]].sample(frac=probability).to_numpy()
+    major_col = columns[0]
+    return df[major_col].sample(frac=probability).to_numpy()
 
 
 def get_partition_quantiles_for_sort(
@@ -216,32 +215,30 @@ def get_partition_quantiles_for_sort(
     -----
     quantiles are only computed over the first column of the sort.
     """
+    major_col = columns[0]
     quantiles = [i / (NPartitions.get()) for i in range(1, NPartitions.get())]
     # Heuristic for a "small" df we will compute quantiles over entirety of.
     if len(df) <= A:
-        col_to_find_quantiles = df[columns[0]]
+        col_to_find_quantiles = df[major_col]
     # Heuristic for a "medium" df where we will include first 100 (A) rows, and sample
     # of remaining rows when computing quantiles.
     elif len(df) <= (A * (1 - k)) / (q - k):
         col_to_find_quantiles = np.concatenate(
             (
-                df[columns[0]].iloc[:100].values,
-                df[columns[0]].iloc[100:].sample(frac=k),
+                df[major_col].iloc[:A].values,
+                df[major_col].iloc[A:].sample(frac=k),
             )
         )
-    # Heuristic for a "large" df where we will sample 10% (q) of all rows to compute quantiles
-    # over.
     else:
-        col_to_find_quantiles = df[columns[0]].sample(frac=q)
+        col_to_find_quantiles = df[major_col].sample(frac=q)
     if key is not None:
         col_to_find_quantiles = key(col_to_find_quantiles)
     return _find_quantiles(col_to_find_quantiles, quantiles, method)
 
 
 def pick_pivots_from_quantiles_for_sort(
-    df: "PandasDataframe",
+    df: PandasDataframe,
     samples: np.ndarray,
-    columns: list,
     method: str = "linear",
     key: Optional[Callable] = None,
 ) -> np.ndarray:
@@ -259,8 +256,6 @@ def pick_pivots_from_quantiles_for_sort(
         The Modin Dataframe calling this function.
     samples : np.ndarray
         The samples computed by ``get_partition_quantiles_for_sort``.
-    columns : list[str]
-        The columns to sort by.
     method : str, default: linear
         The method to use when picking quantiles.
     key : Callable, default: None
@@ -288,11 +283,11 @@ def pick_pivots_from_quantiles_for_sort(
 
 
 def split_partitions_using_pivots_for_sort(
-    modin_frame: "PandasDataframe",
+    modin_frame: PandasDataframe,
     df: pandas.DataFrame,
     columns: list,
     pivots: np.ndarray,
-    ascending: Union[list, bool],
+    ascending: bool,
     **kwargs: dict,
 ) -> "tuple[pandas.DataFrame]":
     """
@@ -313,27 +308,26 @@ def split_partitions_using_pivots_for_sort(
         The columns to sort by.
     pivots : np.ndarray
         The quantiles to use to split the data.
-    ascending : list[bool] or bool
-        The ascending flag (or a list of ascending flags for each column).
+    ascending : bool
+        The ascending flag.
     **kwargs : dict
         Additional keyword arguments.
 
     Returns
     -------
-    list[pandas.DataFrame]
-        A list of the splits from this partition.
+    tuple[pandas.DataFrame]
+        A tuple of the splits from this partition.
     """
-    if isinstance(ascending, list):
-        ascending = ascending[0]
-    if not ascending and modin_frame.dtypes[columns[0]] != object:
+    major_col = columns[0]
+    if not ascending and modin_frame.dtypes[major_col] != object:
         pivots = pivots[::-1]
     key = kwargs.pop("key", None)
-    na_rows = df[df[columns[0]].isna()]
-    non_na_rows = df[~df[columns[0]].isna()]
-    cols_to_digitize = non_na_rows[columns[0]]
+    na_rows = df[df[major_col].isna()]
+    non_na_rows = df[~df[major_col].isna()]
+    cols_to_digitize = non_na_rows[major_col]
     if key is not None:
         cols_to_digitize = key(cols_to_digitize)
-    if modin_frame.dtypes[columns[0]] != object:
+    if modin_frame.dtypes[major_col] != object:
         groupby_col = np.digitize(cols_to_digitize.squeeze(), pivots)
         if not ascending and len(np.unique(pivots)) == 1 and len(pivots) != 1:
             groupby_col = len(pivots) - groupby_col
