@@ -2525,6 +2525,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # after the shuffle, there should be only a local map required.
 
     def _groupby_internal_columns(self, by, drop):
+        """
+        Extract internal columns from by argument of groupby.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler, column or index label, Grouper or list
+        drop : bool
+
+        Returns
+        -------
+        by : list of BaseQueryCompiler, column or index label, or Grouper
+        internal_by : list of str
+            List of internal column name to be dropped during groupby.
+        """
         if isinstance(by, type(self)):
             # `drop` parameter indicates whether or not 'by' data came
             # from the `self` frame:
