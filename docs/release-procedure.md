@@ -10,7 +10,7 @@ patch release (assuming previous release was versioned `X.Y.Z`):
 
 ### Major and Minor releases
 
-A "major" (that would be `0.xx.0` for now until Modin hits `1.0` milestone) release could be done by branching from `master`:
+A major (`xx.0.0`) or minor (`0.xx.0`) release could be done by branching from `master`:
 
         git checkout -b release-X.Y.0 master
 
@@ -78,7 +78,7 @@ or the `release-X.Y.Z` branch (in `upstream`) for a patch release.
     * You can link to merge commits, but try to "explain" what a PR does instead of blindly copying its title
     * Gather and mention the list of all participants in the release, including those mentioned in "Co-Authored-By" part of PRs
   * Include release documentation in the annotation and make sure it is signed.
-  * Push the tag to master: `git push upstream X.Y.Z`
+  * Push the tag to `master` or `release-X.Y.Z` branch: `git push upstream X.Y.Z`
     * If you're re-pushing a tag (beware! you shouldn't be doing that, no, _really_!), you can remove remote tag and push a local one by `git push upstream :refs/tags/X.Y.Z`
 
 ***Note***: We are currently working on automating the release notes procedure - check 
