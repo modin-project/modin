@@ -345,7 +345,7 @@ def split_partitions_using_pivots_for_sort(
     groups = [
         grouped.get_group(i)
         if i in grouped.keys
-        else pandas.DataFrame(columns=df.columns)
+        else pandas.DataFrame(columns=df.columns).astype(df.dtypes)
         for i in range(len(pivots) + 1)
     ]
     index_to_insert_na_vals = -1 if kwargs.get("na_position", "last") == "last" else 0

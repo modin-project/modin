@@ -1934,9 +1934,14 @@ class PandasDataframe(ClassLogger):
         # None. This fixes the indexes name beforehand in that case, so that the sort works.
 
         def sort_function(df):
-            if df.index.name in df.columns and len(df.columns) == 1:
-                df.index = df.index.set_names(None)
-            return df.sort_values(by=columns, ascending=ascending, **kwargs)
+            index_renaming = None
+            if any(name in df.columns for name in df.index.names):
+                index_renaming = df.index.names
+                df.index = df.index.set_names([None]*len(df.index.names))
+            df = df.sort_values(by=columns, ascending=ascending, **kwargs)
+            if index_renaming is not None:
+                df.index = df.index.set_names(index_renaming)
+            return df
 
         axis = Axis(axis)
         # This if selects cases where we are either sorting by a single column that is not
