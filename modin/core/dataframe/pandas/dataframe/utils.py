@@ -28,7 +28,7 @@ def build_sort_functions(
     columns: list,
     method: str,
     ascending: Union[list, bool],
-    **kwargs: dict
+    **kwargs: dict,
 ) -> "dict[str, Callable]":
     """
     Return a dictionary containing the functions necessary to perform a sort.
@@ -293,7 +293,7 @@ def split_partitions_using_pivots_for_sort(
     columns: list,
     pivots: np.ndarray,
     ascending: Union[list, bool],
-    **kwargs: dict
+    **kwargs: dict,
 ) -> "tuple[pandas.DataFrame]":
     """
     Split the given dataframe into the partitions specified by `pivots`.
@@ -335,10 +335,12 @@ def split_partitions_using_pivots_for_sort(
         cols_to_digitize = key(cols_to_digitize)
     if modin_frame.dtypes[columns[0]] != object:
         groupby_col = np.digitize(cols_to_digitize.squeeze(), pivots)
+        if not ascending and len(np.unique(pivots)) == 1 and len(pivots) != 1:
+            groupby_col = len(pivots) - groupby_col
     else:
         groupby_col = np.searchsorted(pivots, cols_to_digitize.squeeze(), side="right")
         if not ascending:
-            groupby_col = (len(pivots) - 1) - groupby_col
+            groupby_col = len(pivots) - groupby_col
     grouped = non_na_rows.groupby(groupby_col)
     groups = [
         grouped.get_group(i)
