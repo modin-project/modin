@@ -179,7 +179,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         """
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
         result = func(dataframe, *f_args, **f_kwargs)
-
+        # breakpoint()
         if num_splits == 1:
             # If we're not going to split the result, we don't need to specify
             # split lengths.
