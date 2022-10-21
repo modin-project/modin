@@ -385,12 +385,14 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         return outputs
 
     @classmethod
-    def put_splits(cls, splits):
+    def put_splits(cls, shuffle_func, splits):
         """
         Create a new partition that wraps the input splits after concatenating them.
 
         Parameters
         ----------
+        shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
+            Function that shuffles the data within the new partition.
         splits : List[ray.ObjectRef]
             List of references to partition splits to concatenate and wrap.
 
@@ -402,7 +404,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         logger = get_logger()
         logger.debug("ENTER::Partition.put_splits")
         logger.debug("SUBMIT::_concat_splits")
-        data, length, width, ip = _concat_splits.remote(*splits)
+        data, length, width, ip = _concat_splits.remote(shuffle_func, *splits)
         logger.debug("EXIT::Partition.put_splits")
         return cls(data, length, width, ip)
 
@@ -518,12 +520,14 @@ def _apply_list_of_funcs(call_queue, partition):  # pragma: no cover
 
 
 @ray.remote(num_returns=4)
-def _concat_splits(*splits):
+def _concat_splits(shuffle_func, *splits):
     """
     Concatenate the splits into one dataframe in a worker process.
 
     Parameters
     ----------
+    shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
+        Function that shuffles the data within the new partition.
     *splits : List[pandas.DataFrame]
         List of dataframes that correspond to splits to concatenate.
 
@@ -540,5 +544,5 @@ def _concat_splits(*splits):
     """
     import pandas
 
-    df = pandas.concat(splits)
+    df = shuffle_func(pandas.concat(splits))
     return (df, len(df), len(df.columns), get_node_ip_address())

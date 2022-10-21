@@ -59,9 +59,9 @@ def build_sort_functions(
         )
 
     # def original_sample_fn(partition, A=100, k=0.05, q=0.1):
-    # key = kwargs.get("key", None)
+    #     key = kwargs.get("key", None)
     #     return get_partition_quantiles_for_sort(
-    #         partition, columns, A=A, k=k, q=q, method=method, key
+    #         partition, columns, A=A, k=k, q=q, method=method, key=key
     #     )
 
     sample_fn = terasort_sample_fn

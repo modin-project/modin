@@ -1479,7 +1479,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         return partitions, None
 
     @classmethod
-    def shuffle_partitions(cls, partitions, sample_func, pivot_func, split_func):
+    def shuffle_partitions(
+        cls, partitions, sample_func, pivot_func, split_func, final_shuffle_func
+    ):
         """
         Return shuffled partitions.
 
@@ -1496,6 +1498,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         split_func : Callable(pandas.DataFrame, Any) -> List[pandas.Dataframe]
             Function that splits a partition based off of the pivots provided. Should return an
             unpacked list of pandas Dataframes.
+        final_shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
+            Function that shuffles the data within each new partition.
 
         Returns
         -------
@@ -1520,6 +1524,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             ]
         ).T
         new_partitions = [
-            [cls._partition_class.put_splits(splits)] for splits in split_row_partitions
+            [cls._partition_class.put_splits(final_shuffle_func, splits)]
+            for splits in split_row_partitions
         ]
         return np.array(new_partitions)

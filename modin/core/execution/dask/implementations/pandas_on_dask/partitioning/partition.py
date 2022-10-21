@@ -325,12 +325,14 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         return outputs
 
     @classmethod
-    def put_splits(cls, splits):
+    def put_splits(cls, shuffle_func, splits):
         """
         Create a new partition that wraps the input splits after concatenating them.
 
         Parameters
         ----------
+        shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
+            Function that shuffles the data within the new partition.
         splits : List[Future]
             List of references to partition splits to concatenate and wrap.
 
@@ -341,7 +343,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         """
         futures = DaskWrapper.deploy(
             _concat_splits,
-            splits,
+            [shuffle_func] + splits,
             num_returns=4,
             pure=True,
         )
@@ -350,12 +352,14 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         return cls(data, length, width, ip)
 
 
-def _concat_splits(*splits):
+def _concat_splits(shuffle_func, *splits):
     """
     Concatenate the splits into one dataframe in a worker process.
 
     Parameters
     ----------
+    shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
+        Function that shuffles the data within the new partition.
     *splits : List[Future]
         List of ObjectIDs that correspond to splits to concatenate.
 
@@ -372,7 +376,7 @@ def _concat_splits(*splits):
     """
     import pandas
 
-    df = pandas.concat(splits)
+    df = shuffle_func(pandas.concat(splits))
     return (df, len(df), len(df.columns), get_ip())
 
 

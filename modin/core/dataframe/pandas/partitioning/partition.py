@@ -335,12 +335,14 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         pass
 
     @classmethod
-    def put_splits(cls, splits):
+    def put_splits(cls, shuffle_func, splits):
         """
         Create a new partition that wraps the input splits after concatenating them.
 
         Parameters
         ----------
+        shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
+            Function that shuffles the data within the new partition.
         splits : list
             List of partition splits to concatenate and wrap.
 

@@ -1976,9 +1976,6 @@ class PandasDataframe(ClassLogger):
                 shuffling_functions["sample_function"],
                 shuffling_functions["pivot_function"],
                 shuffling_functions["split_function"],
-            )
-            new_partitions = self._partition_mgr_cls.lazy_map_partitions(
-                new_partitions,
                 sort_function,
             )
             new_axes = self.axes
