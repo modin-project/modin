@@ -152,14 +152,6 @@ def test_apply_key_error(func):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", ["kurt", "count", "sum", "mean", "all", "any"])
 def test_apply_text_func_with_level(level, data, func, axis):
-    if (
-        func in ("any", "all")
-        and axis == 1
-        and PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST
-    ):
-        pytest.xfail(
-            "df.apply('str', axis=1) is broken in pandas 1.5.0: https://github.com/modin-project/modin/issues/5076"
-        )
     func_kwargs = {"level": level, "axis": axis}
     rows_number = len(next(iter(data.values())))  # length of the first data column
     level_0 = np.random.choice([0, 1, 2], rows_number)
