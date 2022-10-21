@@ -30,7 +30,7 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
             f"Starting Modin in compatibility mode to support legacy pandas version {__pandas_version__}"
         )
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
-    __pandas_version__ = "1.5.0"
+    __pandas_version__ = "1.5.1"
 
     if pandas.__version__ != __pandas_version__:
         warnings.warn(
