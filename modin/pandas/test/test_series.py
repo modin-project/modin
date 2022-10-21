@@ -3135,7 +3135,7 @@ def test_sort_values(data, ascending, na_position):
     # between `pandas.Series.sort_values`. For this reason, we check that the values are
     # identical instead of the index as well.
     if ascending:
-        df_equals(modin_result, pandas_result)
+        df_equals_with_non_stable_indices(modin_result, pandas_result)
     else:
         np.testing.assert_equal(modin_result.values, pandas_result.values)
 
@@ -3149,7 +3149,7 @@ def test_sort_values(data, ascending, na_position):
     )
     # See above about `ascending=False`
     if ascending:
-        df_equals(modin_series_cp, pandas_series_cp)
+        df_equals_with_non_stable_indices(modin_result, pandas_result)
     else:
         np.testing.assert_equal(modin_series_cp.values, pandas_series_cp.values)
 
