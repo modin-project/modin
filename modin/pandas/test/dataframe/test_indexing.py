@@ -412,31 +412,6 @@ def test_loc(data):
     with pytest.raises(KeyError):
         modin_df.loc["NO_EXIST"]
 
-    # From issue #3764
-    pandas_df = pandas.DataFrame([[1, 2, 3], [4, 5, 6]])
-    modin_df = pd.DataFrame([[1, 2, 3], [4, 5, 6]])
-
-    for left, right in [(2, 1), (6, 1), (lambda df: 70, 1), (90, 70)]:
-
-        def _test_loc_rows(df):
-            df.loc[left] = df.loc[right]
-            return df
-
-        eval_general(modin_df, pandas_df, _test_loc_rows)
-
-    for columns in [10, (100, 102), (2, 6), [10, 11, 12], "a", ["b", "c", "d"]]:
-        if isinstance(columns, tuple) and len(columns) == 2:
-
-            def _test_loc_cols(df):
-                df.loc[:, columns[0] : columns[1]] = 1
-
-        else:
-
-            def _test_loc_cols(df):
-                df.loc[:, columns] = 1
-
-        eval_general(modin_df, pandas_df, _test_loc_cols)
-
 
 @pytest.mark.parametrize(
     "key_getter, value_getter",
@@ -656,6 +631,42 @@ def test_loc_assignment(index, columns):
             md_df.loc[ind][col] = value_to_assign
             pd_df.loc[ind][col] = value_to_assign
     df_equals(md_df, pd_df)
+
+
+@pytest.mark.parametrize("left, right", [(2, 1), (6, 1), (lambda df: 70, 1), (90, 70)])
+def test_loc_insert_row(left, right):
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/3764
+    pandas_df = pandas.DataFrame([[1, 2, 3], [4, 5, 6]])
+    modin_df = pd.DataFrame([[1, 2, 3], [4, 5, 6]])
+
+    def _test_loc_rows(df):
+        df.loc[left] = df.loc[right]
+        return df
+
+    eval_general(modin_df, pandas_df, _test_loc_rows)
+
+
+@pytest.mark.parametrize(
+    "columns", [10, (100, 102), (2, 6), [10, 11, 12], "a", ["b", "c", "d"]]
+)
+def test_loc_insert_col(columns):
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/3764
+    pandas_df = pandas.DataFrame([[1, 2, 3], [4, 5, 6]])
+    modin_df = pd.DataFrame([[1, 2, 3], [4, 5, 6]])
+
+    if isinstance(columns, tuple) and len(columns) == 2:
+
+        def _test_loc_cols(df):
+            df.loc[:, columns[0] : columns[1]] = 1
+
+    else:
+
+        def _test_loc_cols(df):
+            df.loc[:, columns] = 1
+
+    eval_general(modin_df, pandas_df, _test_loc_cols)
 
 
 @pytest.fixture
