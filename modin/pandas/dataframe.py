@@ -2527,6 +2527,27 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
                 self._update_inplace(new_qc)
                 # self.loc[:, key] = value
                 return
+            elif (
+                isinstance(key, list)
+                and isinstance(value, type(self))
+                # Mixed case is more complicated, it's defaulting to pandas for now
+                and all((x not in self.columns for x in key))
+            ):
+                if len(key) != len(value.columns):
+                    raise ValueError("Columns must be same length as key")
+
+                # Aligning the value's columns with the key
+                if not np.array_equal(value.columns, key):
+                    value = value.set_axis(key, axis=1)
+
+                new_qc = self._query_compiler.insert_item(
+                    axis=1,
+                    loc=len(self.columns),
+                    value=value._query_compiler,
+                    how="left",
+                )
+                self._update_inplace(new_qc)
+                return
 
             def setitem_unhashable_key(df, value):
                 df[key] = value
