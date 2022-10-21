@@ -58,47 +58,11 @@ matplotlib.use("Agg")
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
-def eval_setitem(md_df, pd_df, value, pandas_value=None, col=None, loc=None):
-    """
-    Test the `.__setitem__` API by assigning the `value` to each of the DFs and comparing the results.
-
-    Parameters
-    ----------
-    md_df : modin.pandas.DataFrame
-        Modin DataFrame to run test against.
-    pd_df : pandas.DataFrame
-        Pandas DataFrame to run test against.
-    value : scalar, list-like or callable(DataFrame) -> [scalar, list-like]
-        Value to assign to `md_df` via ``.__setitem__`` in the test. If callable is passed
-        then it's executed against the source DataFrame to retrieve the actual value.
-    pandas_value : scalar, list-like or callable(DataFrame) -> [scalar, list-like], optional
-        Value to assign to `pd_df` via ``.__setitem__`` in the test. If not specified,
-        considered to be equal to the `value`.
-    col : hashable or list of hashables, optional
-        Label index to assign the value to. If not specified, the `loc` has to be provided.
-    loc : int, optional
-        Positional index to assign the value to. If not specified, the `col` has to be provided.
-    """
-    assert (
-        loc is not None or col is not None
-    ), "You have to specify either positional or label index."
-
+def eval_setitem(md_df, pd_df, value, col=None, loc=None):
     if loc is not None:
         col = pd_df.columns[loc]
 
-    if pandas_value is None:
-        pandas_value = value
-
-    pandas_value_getter = (
-        pandas_value if callable(value) else (lambda *args, **kwargs: pandas_value)
-    )
-    modin_value_getter = value if callable(value) else (lambda *args, **kwargs: value)
-
-    value_getter = lambda src_df, *args, **kwargs: (  # noqa: E731 (do not assign a lambda expression)
-        modin_value_getter(src_df, *args, **kwargs)
-        if isinstance(src_df, (pd.DataFrame, pd.Series))
-        else pandas_value_getter(src_df, *args, **kwargs)
-    )
+    value_getter = value if callable(value) else (lambda *args, **kwargs: value)
 
     eval_general(
         md_df, pd_df, lambda df: df.__setitem__(col, value_getter(df)), __inplace__=True
@@ -2047,43 +2011,51 @@ def test_setitem_unhashable_key():
         # 1d list case
         value = [1, 2]
         modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, value, col=key)
+        eval_setitem(modin_df, pandas_df, value, key)
 
         # 2d list case
         value = [[1, 2]] * row_count
         modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, value, col=key)
+        eval_setitem(modin_df, pandas_df, value, key)
 
         # pandas DataFrame case
         df_value = pandas.DataFrame(value, columns=["value_col1", "value_col2"])
         modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, df_value, col=key)
+        eval_setitem(modin_df, pandas_df, df_value, key)
 
         # numpy array case
         value = df_value.to_numpy()
         modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, value, col=key)
+        eval_setitem(modin_df, pandas_df, value, key)
 
         # pandas Series case
         value = df_value["value_col1"]
         modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, value, col=key[:1])
+        eval_setitem(modin_df, pandas_df, value, key[:1])
 
         # pandas Index case
         value = df_value.index
         modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, value, col=key[:1])
+        eval_setitem(modin_df, pandas_df, value, key[:1])
 
         # scalar case
         value = 3
         modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, value, col=key)
+        eval_setitem(modin_df, pandas_df, value, key)
 
         # test failed case: ValueError('Columns must be same length as key')
-        eval_setitem(modin_df, pandas_df, df_value[["value_col1"]], col=key)
+        eval_setitem(modin_df, pandas_df, df_value[["value_col1"]], key)
 
 
 def test_setitem_2d_insertion():
+    def build_value_picker(modin_value, pandas_value):
+        """Build a function that returns either Modin or pandas DataFrame depending on the passed frame."""
+        return (
+            lambda source_df, *args, **kwargs: modin_value
+            if isinstance(source_df, (pd.DataFrame, pd.Series))
+            else pandas_value
+        )
+
     modin_df, pandas_df = create_test_dfs(test_data["int_data"])
 
     # Easy case - key and value.columns are equal
@@ -2093,8 +2065,7 @@ def test_setitem_2d_insertion():
     eval_setitem(
         modin_df,
         pandas_df,
-        modin_value,
-        pandas_value,
+        build_value_picker(modin_value, pandas_value),
         col=["new_value1", "new_value2"],
     )
 
@@ -2104,8 +2075,7 @@ def test_setitem_2d_insertion():
     eval_setitem(
         modin_df,
         pandas_df,
-        modin_value,
-        pandas_value,
+        build_value_picker(modin_value, pandas_value),
         col=["new_value4", "new_value3"],
     )
 
@@ -2115,8 +2085,7 @@ def test_setitem_2d_insertion():
     eval_setitem(
         modin_df,
         pandas_df,
-        modin_value,
-        pandas_value,
+        build_value_picker(modin_value, pandas_value),
         col=["__new_value5", "__new_value6"],
     )
 
@@ -2124,8 +2093,7 @@ def test_setitem_2d_insertion():
     eval_setitem(
         modin_df,
         pandas_df,
-        modin_value.iloc[:, [0]],
-        pandas_value.iloc[:, [0]],
+        build_value_picker(modin_value.iloc[:, [0]], pandas_value.iloc[:, [0]]),
         col=["new_value7", "new_value8"],
     )
 
