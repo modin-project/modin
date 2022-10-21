@@ -343,7 +343,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         """
         futures = DaskWrapper.deploy(
             _concat_splits,
-            [shuffle_func] + splits,
+            [shuffle_func, *splits],
             num_returns=4,
             pure=True,
         )
