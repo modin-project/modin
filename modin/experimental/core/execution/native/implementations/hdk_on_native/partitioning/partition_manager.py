@@ -163,6 +163,8 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
 
             if obj.empty:
                 unsupported_cols = []
+            elif isinstance(obj.columns, pandas.MultiIndex):
+                unsupported_cols = [str(c) for c in obj.columns]
             else:
                 cols = [name for name, col in obj.dtypes.items() if col == "object"]
                 type_samples = obj.iloc[0][cols]
