@@ -29,7 +29,7 @@ from modin.core.io import (
     SQLDispatcher,
     ExcelDispatcher,
 )
-from modin._compat.core.pd_common import get_handle as pd_get_handle
+from modin._compat.core.pandas_common import get_handle as pd_get_handle
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVParser,
     PandasFWFParser,

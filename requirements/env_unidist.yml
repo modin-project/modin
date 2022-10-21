@@ -2,7 +2,7 @@ name: modin_on_unidist
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.4.4
+  - pandas==1.5.0
   - numpy>=1.18.5
   - pyarrow>=4.0.1
   - fsspec
