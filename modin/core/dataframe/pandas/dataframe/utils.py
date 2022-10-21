@@ -15,7 +15,7 @@
 
 import numpy as np
 import pandas
-from typing import Callable, Union, TYPE_CHECKING, Optional
+from typing import Callable, Union, Optional
 
 from modin.config import NPartitions
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
