@@ -19,8 +19,8 @@ for pandas storage format.
 """
 from collections import OrderedDict
 import numpy as np
-import datetime
 import pandas
+import datetime
 from pandas.api.types import is_object_dtype
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
@@ -1985,10 +1985,6 @@ class PandasDataframe(ClassLogger):
                 new_axes[axis.value] = self._compute_axis_labels_and_lengths(
                     axis.value, new_partitions
                 )[0]
-            if isinstance(self.axes[axis.value], pandas.MultiIndex):
-                new_axes[axis.value] = pandas.MultiIndex.from_tuples(
-                    new_axes[axis.value].values
-                )
             new_axes[axis.value] = new_axes[axis.value].set_names(
                 self.axes[axis.value].names
             )
@@ -2026,6 +2022,10 @@ class PandasDataframe(ClassLogger):
                 new_partitions, *new_axes, *new_lengths, self._dtypes
             )
             return new_modin_frame
+        elif axis == Axis.COL_WISE:
+            raise NotImplementedError("Algebra column-wise sort not implemented yet!")
+        else:
+            raise ValueError("Algebra sort by index + other columns is not supported!")
 
     @lazy_metadata_decorator(apply_axis="both")
     def filter(self, axis: Union[Axis, int], condition: Callable) -> "PandasDataframe":
