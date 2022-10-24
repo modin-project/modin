@@ -1733,8 +1733,6 @@ def test_dt(timezone):
     df_equals(modin_series.dt.end_time, pandas_series.dt.end_time)
     df_equals(modin_series.dt.to_timestamp(), pandas_series.dt.to_timestamp())
 
-    data_dt_str = {"A": ["26/10/2020 11:00"], "B": ["30/10/2020 12:00"]}
-
     def dt_with_empty_partition(lib):
         # For context, see https://github.com/modin-project/modin/issues/5112
         df_a = lib.DataFrame({"A": [lib.to_datetime("26/10/2020")]})
@@ -1742,9 +1740,9 @@ def test_dt(timezone):
         df = lib.concat([df_a, df_b], axis=1)
         # BaseOnPython should have a single partition after the concat
         # because it uses pandas for the concat.
+        eval_result = df.eval("B - A", engine="python")
         if get_current_execution() == "BaseOnPython":
             assert eval_result._query_compiler._modin_frame._partitions.shape == (2, 1)
-        eval_result = df.eval("B - A", engine="python")
         # BaseOnPython had a single partition after the concat, and it
         # maintains that partition after eval. In other execution modes,
         # eval() should re-split the result into two column partitions,
