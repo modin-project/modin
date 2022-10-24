@@ -2532,6 +2532,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         ----------
         by : BaseQueryCompiler, column or index label, Grouper or list
         drop : bool
+            Indicates whether or not by data came from self frame.
+            True, by data came from self. False, external by data.
 
         Returns
         -------
@@ -2540,10 +2542,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             List of internal column name to be dropped during groupby.
         """
         if isinstance(by, type(self)):
-            # `drop` parameter indicates whether or not 'by' data came
-            # from the `self` frame:
-            # True: 'by' data came from the `self`
-            # False: external 'by' data
             if drop:
                 internal_by = by.columns
                 by = [by]
