@@ -18,7 +18,9 @@ Module contains ``SmallQueryCompiler`` class.
 queries for small data and empty ``PandasDataFrame``.
 """
 
+import functools
 from re import S
+from modin.core.dataframe.algebra.default2pandas.groupby import GroupByDefault
 import numpy as np
 import pandas
 from pandas.core.indexes.api import ensure_index_from_sequences
@@ -177,15 +179,6 @@ def _rolling_func(func):
     return rolling_builder
 
 
-# def _window_func(func):
-#     def window_builder(df, fold_axis, rolling_args, *args, **kwargs):
-#         window_result = df.rolling(*rolling_args)
-#         rolling_op = getattr(rolling_result, func)
-#         return rolling_op(*args, **kwargs)
-
-#     return rolling_builder
-
-
 def _reindex(df, axis, labels, **kwargs):
     return df.reindex(labels=labels, axis=axis, **kwargs)
 
@@ -235,61 +228,47 @@ def _groupby(agg_name):
         drop=False,
         **kwargs
     ):
+        as_index = groupby_kwargs.get("as_index", True)
+        print("As index", as_index)
         print("groupby df", df, type(df))
         print("groupby by", by, type(by))
         by_names = []
         if isinstance(by, pandas.DataFrame):
             by = by.squeeze()
-        print("BEFORE BYYY:", by)
         if isinstance(by, list):
             for i in range(len(by)):
                 if isinstance(by[i], pandas.DataFrame):
-                    # by_names.extend(list(by[i].columns))
                     by[i] = by[i].squeeze()
-                    if isinstance(by[i], pandas.Series) and by[i].name in df.columns:
-                        by[i] = by[i].name
-                # elif isinstance(by[i], str):
-                # by_names.append(by[i])
-                # assert False
-        if isinstance(by, pandas.Series) and by.name in df.columns:
-            # by_names.append(by.name)
-            by = by.name
-        if isinstance(by, pandas.DataFrame) and all(by.columns.isin(df.columns)):
-            by = list(by.columns)
-        elif isinstance(by, pandas.DataFrame):
-            # by_names.extend([col for col in by])
-            by = [by[col] for col in by]
-            # by = list(by.columns)
+                if isinstance(by[i], pandas.Series):
+                    if isinstance(df.index, pandas.MultiIndex):
+                        by[i].name = pandas.MultiIndex.from_tuples(by[i].name)
+                    by_names.append(by[i].name)
+                elif isinstance(by[i], str):
+                    by_names.append(by[i])
+        if isinstance(by, pandas.DataFrame):
+            by_names = list(by.columns)  # if as_index else []
+            to_append = by.columns[[name not in df.columns for name in by_names]]
+            if len(to_append) > 0:
+                df = pandas.concat([df, by[to_append]], axis=1)
+            by = by_names
+        if isinstance(by, pandas.Series) and drop:
+            by_names = [by.name]
+
+        if (
+            is_list_like(by)
+            and drop
+            and not any([is_list_like(curr_by) for curr_by in by])
+        ):
+            by = by_names
 
         print("BYYY:", by)
-        print("DROP:", drop)
-        # print(groupby_kwargs)
-        # groupby_kwargs.pop("as_index")
 
-        # to_drop = df.columns
-        # if drop:
-        #     by_index = []
-        #     if isinstance(by, pandas.Series):
-        #         by_index = pandas.Index([by.name])
-        #     # elif isinstance(by, list) and isinstance(by[0], str):
-        #     #     by_index = pandas.Index(by)
-        #     elif isinstance(by, list) and isinstance(by[0], pandas.Series):
-        #         by_index = pandas.Index([ser.name for ser in by])
-        #     to_drop = df.columns.difference(by_index)
-        #     print("original df:", df)
-        #     print("I WILL DROP:", to_drop)
-        #     # if len(to_drop) > 0:
-        #     #     df.drop(columns=to_drop, errors="ignore", inplace=True)
-        # by_part = pandas.Index(by_names)
-        # to_keep = df.columns.difference(by_part) if drop else df.columns
-        # if drop:
-
-        #     to_drop = df.columns.intersection(by_part)
-        #     if len(to_drop) > 0:
-        #         df.drop(columns=by_part, errors="ignore", inplace=True)
+        if isinstance(agg_func, dict):
+            agg_func = functools.partial(
+                GroupByDefault.get_aggregation_method(how), func=agg_func
+            )
 
         groupby_obj = df.groupby(by=by, axis=axis, **groupby_kwargs)
-        print("whhhattt:", agg_name)
         if agg_name == "agg":
             groupby_agg = __aggregation_methods_dict[how]
             result = groupby_agg(groupby_obj, agg_func, *agg_args, **agg_kwargs)
@@ -300,7 +279,6 @@ def _groupby(agg_name):
             else:
                 result = groupby_agg
 
-        print("FINAL RESULT:", result)
         return result
 
     return groupby_callable
@@ -389,7 +367,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     """
 
     def __init__(self, modin_frame):
-        print("HELP!", modin_frame, type(modin_frame))
+        # print("HELP!", modin_frame, type(modin_frame))
         if is_scalar(modin_frame):
             modin_frame = pandas.DataFrame([modin_frame])
         elif not isinstance(modin_frame, pandas.DataFrame):
@@ -428,15 +406,18 @@ class SmallQueryCompiler(BaseQueryCompiler):
         filter_kwargs=[],
     ):
         def caller(query_compiler, *args, **kwargs):
-            print(func.__name__)
+            # print(func.__name__)
             df = query_compiler._modin_frame
             if df_copy:
                 df = df.copy()
             if is_series:
                 df = df.squeeze(axis=1)
-            elif squeeze_series and len(df.columns) == 1 and df.columns[0] == MODIN_UNNAMED_SERIES_LABEL:
+            elif (
+                squeeze_series
+                and len(df.columns) == 1
+                and df.columns[0] == MODIN_UNNAMED_SERIES_LABEL
+            ):
                 df = df.squeeze(axis=1)
-            print("AFTER SQUEEZE:", df)
             exclude_names = [
                 "broadcast",
                 "fold_axis",
@@ -448,11 +429,9 @@ class SmallQueryCompiler(BaseQueryCompiler):
             # print("BEFORE ARGS:", args)
             args = try_cast_to_pandas_sqc(args)
             kwargs = try_cast_to_pandas_sqc(kwargs)
-            print("ARGS:", args)
+            # print("ARGS:", args)
             print("KWARGS:", kwargs)
             result = func(df, *args, **kwargs)
-            if func.__name__ == "fillna":
-                print(result)
             if in_place:
                 result = df
             if not return_modin:
@@ -661,7 +640,9 @@ class SmallQueryCompiler(BaseQueryCompiler):
     negative = _register_default_pandas(pandas.DataFrame.__neg__)
     nlargest = _register_default_pandas(pandas.DataFrame.nlargest)
     notna = _register_default_pandas(pandas.DataFrame.notna)
-    nsmallest = _register_default_pandas(lambda df, **kwargs: df.nsmallest(**kwargs), squeeze_series=True)
+    nsmallest = _register_default_pandas(
+        lambda df, **kwargs: df.nsmallest(**kwargs), squeeze_series=True
+    )
     nunique = _register_default_pandas(pandas.DataFrame.nunique)
     pivot = _register_default_pandas(pandas.DataFrame.pivot)
     pivot_table = _register_default_pandas(pandas.DataFrame.pivot_table)
@@ -930,7 +911,9 @@ class SmallQueryCompiler(BaseQueryCompiler):
         return self._modin_frame.dtypes
 
     def getitem_column_array(self, key, numeric=False):
-        return self.__constructor__(self._modin_frame[key])
+        if numeric:
+            return self.__constructor__(self._modin_frame.iloc[:, key])
+        return self.__constructor__(self._modin_frame.loc[:, key])
 
     def _getitem_array(df, key):
         if isinstance(key, pandas.DataFrame):
