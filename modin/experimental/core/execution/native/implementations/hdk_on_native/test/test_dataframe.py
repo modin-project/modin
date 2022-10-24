@@ -478,6 +478,20 @@ class TestMultiIndex:
 
         df_equals(pandas_df, modin_df)
 
+        pandas_idx = pandas_df.index
+        modin_idx = modin_df.index
+        pandas_idx.name = "new_name2"
+        modin_idx.name = "new_name2"
+        pandas_idx.name = "new_name3"
+        modin_idx.name = "new_name3"
+        assert pandas_df.index is pandas_idx
+        assert modin_df.index is modin_idx
+        pandas_df = pandas_df + 1
+        modin_df = modin_df + 1
+        assert pandas_df.index.name == "new_name3"
+        assert modin_df.index.name == "new_name3"
+        df_equals(pandas_df, modin_df)
+
     def test_set_index_names(self):
         index = pandas.MultiIndex.from_tuples(
             [(i, j, k) for i in range(2) for j in range(3) for k in range(4)]
@@ -490,6 +504,14 @@ class TestMultiIndex:
             ["new_name1", "new_name2", "new_name3"]
         )
 
+        df_equals(pandas_df, modin_df)
+
+        pandas_idx = pandas_df.index
+        modin_idx = modin_df.index
+        pandas_idx.names = ["new_name4", "new_name5", "new_name6"]
+        modin_idx.names = ["new_name4", "new_name5", "new_name6"]
+        pandas_idx.names = ["new_name7", "new_name8", "new_name9"]
+        modin_idx.names = ["new_name7", "new_name8", "new_name9"]
         df_equals(pandas_df, modin_df)
 
     def test_rename(self):

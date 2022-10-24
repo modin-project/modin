@@ -44,6 +44,7 @@ from modin.pandas.test.utils import (
     modin_df_almost_equals_pandas,
     test_data_large_categorical_dataframe,
     default_to_pandas_ignore_string,
+    assert_index_equal,
 )
 from modin.config import NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
@@ -1190,8 +1191,8 @@ def test_setattr_axes():
         df.columns = [9, 10]
 
     # Check that ensure_index was called
-    pandas.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
-    pandas.testing.assert_index_equal(df.columns, pandas.Index([9, 10]))
+    assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
+    assert_index_equal(df.columns, pandas.Index([9, 10]))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

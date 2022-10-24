@@ -14,7 +14,6 @@
 import pytest
 import numpy as np
 import pandas
-from pandas.testing import assert_index_equal
 from pandas._testing import ensure_clean
 import matplotlib
 import modin.pandas as pd
@@ -39,6 +38,7 @@ from modin.pandas.test.utils import (
     generate_multiindex,
     extra_test_parameters,
     default_to_pandas_ignore_string,
+    assert_index_equal,
 )
 from modin.config import NPartitions, MinPartitionSize
 from modin.utils import get_current_execution
@@ -1587,6 +1587,19 @@ def test_reset_index_with_named_index(
         modin_df._query_compiler._modin_frame._propagate_index_objs(axis=0)
         modin_df._query_compiler._modin_frame._index_cache = None
     df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
+
+    modin_idx = modin_df.index
+    pandas_idx = pandas_df.index
+    modin_idx.name = index_name
+    pandas_idx.name = index_name
+    assert modin_df.index.name == index_name
+    assert pandas_df.index.name == index_name
+    index_name = index_name + index_name
+    modin_idx.name = index_name
+    pandas_idx.name = index_name
+    assert modin_df.index.name == index_name
+    assert pandas_df.index.name == index_name
+    df_equals(modin_df, pandas_df)
 
 
 @pytest.mark.parametrize("test_async_reset_index", [False, True])

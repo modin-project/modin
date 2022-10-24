@@ -2294,15 +2294,23 @@ class HdkOnNativeDataframe(PandasDataframe):
         # index columns.
         if len(df.columns) != len(self.columns):
             assert self._index_cols
-            df.set_index([f"F_{col}" for col in self._index_cols], inplace=True)
-            df.index.rename(self._index_names(self._index_cols), inplace=True)
+            idx_col_names = [f"F_{col}" for col in self._index_cols]
+            if self._index_cache is not None:
+                df.drop(columns=idx_col_names, inplace=True)
+                df.index = self._index_cache.copy()
+            else:
+                df.set_index(idx_col_names, inplace=True)
+                df.index.rename(self._index_names(self._index_cols), inplace=True)
             assert len(df.columns) == len(self.columns)
         else:
             assert self._index_cols is None
             assert df.index.name is None, f"index name '{df.index.name}' is not None"
+            if (self._index_cache is not None) and (len(self.columns) == 0):
+                # Preserving index, because it could not be built from an empty frame.
+                df.index = self._index_cache.copy()
 
         # Restore original column labels encoded in HDK to meet its
-        # restirctions on column names.
+        # restrictions on column names.
         df.columns = self.columns
 
         return df

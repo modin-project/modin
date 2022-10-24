@@ -3255,6 +3255,37 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     index = property(_get_axis(0), _set_axis(0))
     columns = property(_get_axis(1), _set_axis(1))
 
+    def wrap_index(self, index):
+        """
+        Create an index wrapper, if required.
+
+        Some properties of the Index could be changed by the user.
+        For such cases, special wrappers are used for intercepting
+        the user modifications and applying corresponding changes
+        to this query compiler. If this functionality is not required,
+        subclasses could override this method and return the index as is.
+
+        Parameters
+        ----------
+        index : Index
+            An index, managed by this query compiler.
+
+        Returns
+        -------
+        Index
+            The same index object, but with changed __class__ attribute
+            and a few additional attributes, used by the wrapper.
+        """
+        if _IDX_WRAP_TYPE in index.__dict__:
+            return index
+
+        idx_cls = type(index)
+        assert idx_cls.__module__.startswith("pandas")
+        index.__dict__[_IDX_WRAP_TYPE] = idx_cls
+        index.__dict__[_IDX_WRAP_QC] = self
+        index.__class__ = _create_idx_wrapper(idx_cls)
+        return index
+
     def get_axis(self, axis):
         """
         Return index labels of the specified axis.
@@ -5124,3 +5155,113 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return new_query_compiler
 
     # End of DataFrame methods
+
+
+_IDX_WRAP_TYPE = "__modin_idx_type__"
+_IDX_WRAP_QC = "__modin_idx_qc__"
+_IDX_WRAP_CACHE = {}
+
+
+def _create_idx_wrapper(idx_cls):
+    """
+    Create index wrapper class.
+
+    Create a new wrapper class or return a cached, previously
+    created class.
+
+    Parameters
+    ----------
+    idx_cls : Index class
+        Index class or a subclass to create wrapper for.
+
+    Returns
+    -------
+    class
+        Index class wrapper.
+    """
+    cached = _IDX_WRAP_CACHE.get(idx_cls, None)
+    if cached is not None:
+        return cached
+
+    def __new__(cls, *args, **kwargs):
+        cls = cls.__bases__[0]
+        return cls.__new__(cls, *args, **kwargs)
+
+    def _simple_new(cls, *args, **kwargs):
+        cls = cls.__bases__[0]
+        return cls._simple_new.__func__(cls, *args, **kwargs)
+
+    def idx_type(idx):
+        return idx.__dict__[_IDX_WRAP_TYPE]
+
+    def get_name_prop(idx, **kwargs):
+        return idx_type(idx).name.fget(idx, **kwargs)
+
+    def set_name_prop(idx, name, **kwargs):
+        idx_type(idx).name.fset(idx, name, **kwargs)
+        _set_names(idx, name)
+
+    def get_names_prop(idx, **kwargs):
+        return idx_type(idx).names.fget(idx, **kwargs)
+
+    def set_names_prop(idx, names, **kwargs):
+        idx_type(idx).names.fset(idx, names, **kwargs)
+        _set_names(idx, names)
+
+    def set_names(idx, names, **kwargs):
+        if not kwargs.get("inplace", False):
+            return idx_type(idx).set_names(idx, names, **kwargs)
+        idx_type(idx).set_names(idx, names, **kwargs)
+        _set_names(idx, names)
+
+    def _set_names(idx, names):
+        qc = idx.__dict__.get(_IDX_WRAP_QC, None)
+        if qc is not None:
+            try:
+                # Removing qc to avoid stack overflow
+                idx.__dict__[_IDX_WRAP_QC] = None
+                if isinstance(idx, pandas.MultiIndex):
+                    qc.set_index_names(names)
+                else:
+                    if isinstance(names, list):
+                        assert len(names) == 1
+                        names = names[0]
+                    qc.set_index_name(names)
+
+                frame = getattr(qc, "_modin_frame", None)
+                if hasattr(frame, "_index_cache"):
+                    frame._index_cache = idx
+            finally:
+                idx.__dict__[_IDX_WRAP_QC] = qc
+
+    def wrap_method(name):
+        # Some methods use type(self) for type check and serialization.
+        # To get around this, the __class__ attribute is substituted
+        # before the method call.
+        def wrapper(idx, *args, **kwargs):
+            pandas_type = idx_type(idx)
+            modin_type = idx.__class__
+            idx.__class__ = pandas_type
+            try:
+                return getattr(pandas_type, name)(idx, *args, **kwargs)
+            finally:
+                idx.__class__ = modin_type
+
+        return wrapper
+
+    new_type = type(
+        idx_cls.__name__,
+        (idx_cls,),
+        {
+            "__new__": __new__,
+            "_simple_new": classmethod(_simple_new),
+            "identical": wrap_method("identical"),
+            "__reduce__": wrap_method("__reduce__"),
+            "_is_compatible_with_other": wrap_method("_is_compatible_with_other"),
+            "name": property(get_name_prop, set_name_prop),
+            "names": property(get_names_prop, set_names_prop),
+            "set_names": set_names,
+        },
+    )
+    _IDX_WRAP_CACHE[idx_cls] = new_type
+    return new_type

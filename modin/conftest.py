@@ -258,6 +258,9 @@ class TestQC(BaseQueryCompiler):
     to_pandas = PandasQueryCompiler.to_pandas
     default_to_pandas = PandasQueryCompiler.default_to_pandas
 
+    def wrap_index(self, index):
+        return index
+
 
 class BaseOnPythonIO(PandasOnPythonIO):
     query_compiler_cls = TestQC

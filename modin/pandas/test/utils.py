@@ -17,10 +17,12 @@ import numpy as np
 import math
 import pandas
 import itertools
+
+from packaging import version
+from pandas.core.indexes.numeric import NumericIndex
 from pandas.testing import (
     assert_series_equal,
     assert_frame_equal,
-    assert_index_equal,
     assert_extension_array_equal,
 )
 from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
@@ -639,7 +641,13 @@ def df_equals(df1, df2):
     elif isinstance(df1, pandas.Index) and isinstance(df2, pandas.Index):
         assert_index_equal(df1, df2)
     elif isinstance(df1, pandas.Series) and isinstance(df2, pandas.Series):
-        assert_series_equal(df1, df2, check_dtype=False, check_series_type=False)
+        assert_index_equal(df1.index, df2.index, check_exact=False)
+        if version.parse(pandas.__version__) < version.parse("1.3.0"):
+            assert_series_equal(df1, df2, check_dtype=False, check_series_type=False)
+        else:
+            assert_series_equal(
+                df1, df2, check_dtype=False, check_series_type=False, check_index=False
+            )
     elif (
         hasattr(df1, "dtype")
         and hasattr(df2, "dtype")
@@ -667,6 +675,22 @@ def df_equals(df1, df2):
     else:
         if df1 != df2:
             np.testing.assert_almost_equal(df1, df2)
+
+
+def assert_index_equal(left, right, **kwargs):
+    kwargs["exact"] = False
+    pandas.testing.assert_index_equal(left, right, **kwargs)
+
+    def get_type(idx):
+        cls = getattr(left, "__modin_idx_type__", type(left))
+        return cls.__bases__[0] if cls.__module__.startswith("modin") else cls
+
+    left_type = get_type(left)
+    right_type = get_type(right)
+    if left_type != right_type:
+        assert issubclass(left_type, NumericIndex) and issubclass(
+            right_type, NumericIndex
+        )
 
 
 def modin_df_almost_equals_pandas(modin_df, pandas_df):

@@ -587,7 +587,8 @@ class BasePandasDataset(ClassLogger):
         pandas.Index
             The union of all indexes across the partitions.
         """
-        return self._query_compiler.index
+        qc = self._query_compiler
+        return qc.wrap_index(qc.index)
 
     index = property(_get_index, _set_index)
 

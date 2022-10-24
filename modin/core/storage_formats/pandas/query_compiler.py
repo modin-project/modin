@@ -295,6 +295,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     index = property(_get_axis(0), _set_axis(0))
     columns = property(_get_axis(1), _set_axis(1))
 
+    def wrap_index(self, index):
+        return index
+
     @property
     def dtypes(self):
         return self._modin_frame.dtypes
