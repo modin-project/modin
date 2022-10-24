@@ -1335,11 +1335,14 @@ class TestCsv:
         eval_to_file(modin_df, pandas_df, "to_csv", "csv")
 
     def test_read_csv_issue_5150(self):
-        pandas_df = pandas.DataFrame(np.random.randint(0, 100, size=(2**6, 2**6)))
-        pandas_df.to_csv("issue5150.csv", index=False)
-        expected_pandas_df = pandas.read_csv("issue5150.csv", index_col=False)
-        modin_df = pd.read_csv("issue5150.csv", index_col=False)
-        actual_pandas_df = modin_df._to_pandas()
+        with ensure_clean(".csv") as unique_filename:
+            pandas_df = pandas.DataFrame(
+                np.random.randint(0, 100, size=(2**6, 2**6))
+            )
+            pandas_df.to_csv(unique_filename, index=False)
+            expected_pandas_df = pandas.read_csv(unique_filename, index_col=False)
+            modin_df = pd.read_csv(unique_filename, index_col=False)
+            actual_pandas_df = modin_df._to_pandas()
         df_equals(expected_pandas_df, actual_pandas_df)
 
 
