@@ -10,6 +10,7 @@ dependencies:
   - pytest>=6.0.1
   - pytest-cov>=2.10.1
   - pytest-xdist>=2.1.0
+  # TODO: remove py from dependencies after pytest-benchmark makes a new release
   - py # See: https://github.com/ionelmc/pytest-benchmark/issues/226
   - coverage<5.0
   - pygithub==1.53
