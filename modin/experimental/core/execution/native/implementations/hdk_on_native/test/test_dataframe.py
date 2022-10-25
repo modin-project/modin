@@ -391,10 +391,20 @@ class TestMasks:
         run_and_compare(projection, data=self.data, cols=cols)
 
     def test_drop(self):
-        def drop(df, **kwargs):
-            return df.drop(columns="a")
+        def drop(df, column_names, **kwargs):
+            return df.drop(columns=column_names)
 
-        run_and_compare(drop, data=self.data)
+        run_and_compare(drop, data=self.data, column_names="a")
+        run_and_compare(drop, data=self.data, column_names=self.data.keys())
+
+    def test_drop_index(self):
+        def drop(df, **kwargs):
+            return df.drop(df.index[0])
+
+        idx = list(map(str, self.data["a"]))
+        run_and_compare(
+            drop, data=self.data, constructor_kwargs={"index": idx}, force_lazy=False
+        )
 
     def test_iloc(self):
         def mask(df, **kwargs):
