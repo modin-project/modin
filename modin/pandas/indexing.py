@@ -764,32 +764,130 @@ class _LocIndexer(_LocationIndexerBase):
                 new_query_compiler=self.df._default_to_pandas(_loc)._query_compiler
             )
             return
-        row_loc, col_loc, _ = self._parse_row_and_column_locators(key)
-        if isinstance(row_loc, list) and len(row_loc) == 1:
-            if row_loc[0] not in self.qc.index:
-                index = self.qc.index.insert(len(self.qc.index), row_loc[0])
-                self.qc = self.qc.reindex(labels=index, axis=0)
-                self.df._update_inplace(new_query_compiler=self.qc)
+        row_loc, col_loc, ndims = self._parse_row_and_column_locators(key)
+        append_axis = self._check_missing_loc(row_loc, col_loc)
+        if ndims >= 1 and append_axis is not None:
+            # We enter this codepath if we're either appending a row or a column
+            if append_axis:
+                # Appending at least one new column
+                if is_scalar(col_loc):
+                    col_loc = [col_loc]
+                self._setitem_with_new_columns(row_loc, col_loc, item)
+            else:
+                # Appending at most one new row
+                if is_scalar(row_loc) or len(row_loc) == 1:
+                    index = self.qc.index.insert(len(self.qc.index), row_loc)
+                    self.qc = self.qc.reindex(labels=index, axis=0, fill_value=0)
+                    self.df._update_inplace(new_query_compiler=self.qc)
+                self._set_item_existing_loc(row_loc, col_loc, item)
+        else:
+            self._set_item_existing_loc(row_loc, col_loc, item)
 
+    def _setitem_with_new_columns(self, row_loc, col_loc, item):
+        """
+        Assign `item` value to dataset located by `row_loc` and `col_loc` with new columns.
+
+        Parameters
+        ----------
+        row_loc : scalar, slice, list, array or tuple
+            Row locator.
+        col_loc : scalar, slice, list, array or tuple
+            Columns locator.
+        item : modin.pandas.DataFrame, modin.pandas.Series or scalar
+            Value that should be assigned to located dataset.
+        """
+        exist_items = item
+        common_label_loc = np.isin(col_loc, self.qc.columns.values)
+        if is_list_like(item) and not isinstance(item, (DataFrame, Series)):
+            item = np.array(item)
+            if len(item.shape) == 1:
+                if item.shape[0] != len(col_loc):
+                    raise ValueError(
+                        "Must have equal len keys and value when setting with an iterable"
+                    )
+            else:
+                if item.shape != (len(self.qc.index, len(col_loc))):
+                    raise ValueError(
+                        "Must have equal len keys and value when setting with an iterable"
+                    )
+            exist_items = (
+                item[:, common_label_loc]
+                if len(item.shape) > 1
+                else item[common_label_loc]
+            )
+        if not all(common_label_loc):
+            # In this case we have some new cols and some old ones
+            columns = self.qc.columns
+            for i in range(len(common_label_loc)):
+                if not common_label_loc[i]:
+                    columns = columns.insert(len(columns), col_loc[i])
+            self.qc = self.qc.reindex(labels=columns, axis=1, fill_value=0)
+            self.df._update_inplace(new_query_compiler=self.qc)
+        self._set_item_existing_loc(row_loc, np.array(col_loc), exist_items)
+
+    def _set_item_existing_loc(self, row_loc, col_loc, item):
+        """
+        Assign `item` value to dataset located by `row_loc` and `col_loc` with existing rows and columns.
+
+        Parameters
+        ----------
+        row_loc : scalar, slice, list, array or tuple
+            Row locator.
+        col_loc : scalar, slice, list, array or tuple
+            Columns locator.
+        item : modin.pandas.DataFrame, modin.pandas.Series or scalar
+            Value that should be assigned to located dataset.
+        """
+        row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
+        self._setitem_positional(
+            row_lookup,
+            col_lookup,
+            item,
+            axis=self._determine_setitem_axis(
+                row_lookup, col_lookup, is_scalar(row_loc), is_scalar(col_loc)
+            ),
+        )
+
+    def _check_missing_loc(self, row_loc, col_loc):
+        """
+        Help `__setitem__` compute whether an axis needs appending.
+
+        Parameters
+        ----------
+        row_loc : scalar, slice, list, array or tuple
+            Row locator.
+        col_loc : scalar, slice, list, array or tuple
+            Columns locator.
+
+        Returns
+        -------
+        int or None :
+            0 if new row, 1 if new column, None if neither.
+        """
+        if is_scalar(row_loc):
+            return 0 if row_loc not in self.qc.index else None
+        elif isinstance(row_loc, list):
+            missing_labels = self._compute_enlarge_labels(
+                pandas.Index(row_loc), self.qc.index
+            )
+            if len(missing_labels) > 1:
+                # We cast to list to copy pandas' error:
+                # In pandas, we get: KeyError: [a, b,...] not in index
+                # If we don't convert to list we get: KeyError: [a b ...] not in index
+                raise KeyError("{} not in index".format(list(missing_labels)))
+        if (
+            not (is_list_like(row_loc) or isinstance(row_loc, slice))
+            and row_loc not in self.qc.index
+        ):
+            return 0
         if (
             isinstance(col_loc, list)
-            and len(col_loc) == 1
-            and col_loc[0] not in self.qc.columns
+            and len(pandas.Index(col_loc).difference(self.qc.columns)) >= 1
         ):
-            new_col = pandas.Series(index=self.df.index)
-            new_col[row_loc] = item
-            self.df.insert(loc=len(self.df.columns), column=col_loc[0], value=new_col)
-            self.qc = self.df._query_compiler
-        else:
-            row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-            self._setitem_positional(
-                row_lookup,
-                col_lookup,
-                item,
-                axis=self._determine_setitem_axis(
-                    row_lookup, col_lookup, is_scalar(row_loc), is_scalar(col_loc)
-                ),
-            )
+            return 1
+        if is_scalar(col_loc) and col_loc not in self.qc.columns:
+            return 1
+        return None
 
     def _compute_enlarge_labels(self, locator, base_index):
         """
@@ -810,16 +908,24 @@ class _LocIndexer(_LocationIndexerBase):
         # base_index_type can be pd.Index or pd.DatetimeIndex
         # depending on user input and pandas behavior
         # See issue #2264
-        base_index_type = type(base_index)
-        locator_as_index = base_index_type(locator)
+        base_as_index = pandas.Index(list(base_index))
+        locator_as_index = pandas.Index(list(locator))
 
-        nan_labels = locator_as_index.difference(base_index)
-        common_labels = locator_as_index.intersection(base_index)
+        if locator_as_index.inferred_type == "boolean":
+            if len(locator_as_index) != len(base_as_index):
+                raise ValueError(
+                    f"Item wrong length {len(locator_as_index)} instead of {len(base_as_index)}!"
+                )
+            common_labels = base_as_index[locator_as_index]
+            nan_labels = pandas.Index([])
+        else:
+            common_labels = locator_as_index.intersection(base_as_index)
+            nan_labels = locator_as_index.difference(base_as_index)
 
         if len(common_labels) == 0:
             raise KeyError(
                 "None of [{labels}] are in the [{base_index_name}]".format(
-                    labels=list(locator_as_index), base_index_name=base_index
+                    labels=list(locator_as_index), base_index_name=base_as_index
                 )
             )
         return nan_labels
