@@ -1091,13 +1091,17 @@ class PandasDataframe(ClassLogger):
             )
             row_idx = self.index[row_positions]
 
-            # The frame was re-partitioned along the 0 axis during reordering using
-            # the "standard" partitioning. Knowing the standard partitioning scheme
-            # we are able to compute new row lengths.
-            breakpoint()
-            new_lengths = get_length_list(
-                axis_len=len(row_idx), num_splits=ordered_rows.shape[0]
-            )
+            if self._partitions.shape[0] != ordered_rows.shape[0]:
+                # The frame was re-partitioned along the 0 axis during reordering using
+                # the "standard" partitioning. Knowing the standard partitioning scheme
+                # we are able to compute new row lengths.
+                new_lengths = get_length_list(
+                    axis_len=len(row_idx), num_splits=ordered_rows.shape[0]
+                )
+            else:
+                # If the frame's partitioning was preserved then
+                # we can use previous row lengths cache
+                new_lengths = self._row_lengths_cache
         else:
             ordered_rows = self._partitions
             row_idx = self.index
@@ -1108,12 +1112,17 @@ class PandasDataframe(ClassLogger):
             )
             col_idx = self.columns[col_positions]
 
-            # The frame was re-partitioned along the 1 axis during reordering using
-            # the "standard" partitioning. Knowing the standard partitioning scheme
-            # we are able to compute new row lengths.
-            # new_widths = get_length_list(
-            #     axis_len=len(col_idx), num_splits=ordered_cols.shape[1]
-            # )
+            if self._partitions.shape[1] != ordered_cols.shape[1]:
+                # The frame was re-partitioned along the 1 axis during reordering using
+                # the "standard" partitioning. Knowing the standard partitioning scheme
+                # we are able to compute new column widths.
+                new_widths = get_length_list(
+                    axis_len=len(col_idx), num_splits=ordered_cols.shape[1]
+                )
+            else:
+                # If the frame's partitioning was preserved then
+                # we can use previous column widths cache
+                new_widths = self._column_widths_cache
         else:
             ordered_cols = ordered_rows
             col_idx = self.columns
