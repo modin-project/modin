@@ -154,7 +154,7 @@ def _dt_prop_map(property_name):
         """Access specified date-time property of the passed frame."""
         squeezed_df = df.squeeze(axis=1)
         if isinstance(squeezed_df, pandas.DataFrame) and len(squeezed_df.columns) == 0:
-            return pandas.DataFrame([])
+            return squeezed_df
         assert isinstance(squeezed_df, pandas.Series)
         prop_val = getattr(squeezed_df.dt, property_name)
         if isinstance(prop_val, pandas.Series):
