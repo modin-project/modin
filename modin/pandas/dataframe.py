@@ -194,8 +194,6 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
         # if len(self.columns) == 0 or len(self.index) == 0:
         if query_compiler is None:
-            # print("Creating empty DataFrame")
-            # print(data, index, columns, dtype, copy)
             small_dataframe = pandas.DataFrame(
                 data=data, index=index, columns=columns, dtype=dtype, copy=copy
             )

@@ -395,10 +395,10 @@ def test_sort_multiindex(sort_remaining):
 
     for kwargs in [{"level": 0}, {"axis": 0}, {"axis": 1}]:
         with warns_that_defaulting_to_pandas():
-            df_equals(
-                modin_df.sort_index(sort_remaining=sort_remaining, **kwargs),
-                pandas_df.sort_index(sort_remaining=sort_remaining, **kwargs),
-            )
+        df_equals(
+            modin_df.sort_index(sort_remaining=sort_remaining, **kwargs),
+            pandas_df.sort_index(sort_remaining=sort_remaining, **kwargs),
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

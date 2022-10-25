@@ -183,15 +183,37 @@ def _reindex(df, axis, labels, **kwargs):
     return df.reindex(labels=labels, axis=axis, **kwargs)
 
 
-def _concat(df, axis, other, join=None, join_axes=None, **kwargs):
+def _concat(df, axis, other, join_axes=None, **kwargs):
     if not isinstance(other, list):
         other = [other]
-    if isinstance(df, pandas.DataFrame) and df.columns[0] == MODIN_UNNAMED_SERIES_LABEL:
+    if (
+        isinstance(df, pandas.DataFrame)
+        and len(df.columns) == 1
+        and df.columns[0] == MODIN_UNNAMED_SERIES_LABEL
+    ):
         df = df[df.columns[0]]
-    if isinstance(df, (pandas.DataFrame, pandas.Series)):
-        other = [df] + other
+    # if isinstance(df, (pandas.DataFrame, pandas.Series)):
+    #     other = [df] + other
 
-    return pandas.concat(other, axis=axis, **kwargs)
+    ignore_index = kwargs.get("ignore_index", False)
+    concat_join = ["outer", "inner"]
+    if kwargs.get("join", "outer") in concat_join:
+        if not isinstance(other, list):
+            other = [other]
+        other = [df] + other
+        result = pandas.concat(other, axis=axis, **kwargs)
+    else:
+        if isinstance(other, (list, np.ndarray)) and len(other) == 1:
+            other = other[0]
+        ignore_index = kwargs.pop("ignore_index", None)
+        kwargs["how"] = kwargs.pop("join", None)
+        result = df.join(other, rsuffix="r_", **kwargs)
+    if ignore_index:
+        if axis == 0:
+            result = result.reset_index(drop=True)
+        else:
+            result.columns = pandas.RangeIndex(len(result.columns))
+    return result
 
 
 def _unique(values, **kwargs):
@@ -338,12 +360,6 @@ def _is_monotonic(monotonic_type):
     return is_monotonic_caller
 
 
-def _combine(df, other, func, fill_value=None, **kwargs):
-    print("COMBINE:", df, type(df))
-    df = pandas.DataFrame(df)
-    return df.combine(other, func, fill_value=fill_value, **kwargs)
-
-
 def _sort_index(df, inplace=False, **kwargs):
     if inplace:
         df.sort_index(inplace=inplace, **kwargs)
@@ -367,7 +383,8 @@ class SmallQueryCompiler(BaseQueryCompiler):
     """
 
     def __init__(self, modin_frame):
-        # print("HELP!", modin_frame, type(modin_frame))
+        if hasattr(modin_frame, "_to_pandas"):
+            modin_frame = modin_frame._to_pandas()
         if is_scalar(modin_frame):
             modin_frame = pandas.DataFrame([modin_frame])
         elif not isinstance(modin_frame, pandas.DataFrame):
@@ -406,7 +423,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
         filter_kwargs=[],
     ):
         def caller(query_compiler, *args, **kwargs):
-            # print(func.__name__)
+            print(func.__name__)
             df = query_compiler._modin_frame
             if df_copy:
                 df = df.copy()
@@ -426,10 +443,8 @@ class SmallQueryCompiler(BaseQueryCompiler):
             ] + filter_kwargs
             for name in exclude_names:
                 kwargs.pop(name, None)
-            # print("BEFORE ARGS:", args)
             args = try_cast_to_pandas_sqc(args)
             kwargs = try_cast_to_pandas_sqc(kwargs)
-            # print("ARGS:", args)
             print("KWARGS:", kwargs)
             result = func(df, *args, **kwargs)
             if in_place:
@@ -454,8 +469,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
     # __getattribute__ = _register_default_pandas(pandas.DataFrame.__getattribute__)
     __gt__ = _register_default_pandas(pandas.DataFrame.__gt__, squeeze_series=True)
     # __hash__ = _register_default_pandas(pandas.DataFrame.__hash__)
-    # __init__ = _register_default_pandas(pandas.DataFrame.__init__)
-    # __init_subclass__ = _register_default_pandas(pandas.DataFrame.__init_subclass__)
     __le__ = _register_default_pandas(pandas.DataFrame.__le__, squeeze_series=True)
     __lt__ = _register_default_pandas(pandas.DataFrame.__lt__, squeeze_series=True)
     __ne__ = _register_default_pandas(pandas.DataFrame.__ne__, squeeze_series=True)
@@ -468,7 +481,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
     __reduce_ex__ = _register_default_pandas(
         pandas.DataFrame.__reduce_ex__, return_modin=False
     )
-    # __repr__ = _register_default_pandas(pandas.DataFrame.__repr__)
     __ror__ = _register_default_pandas(pandas.DataFrame.__ror__, squeeze_series=True)
     __rxor__ = _register_default_pandas(pandas.DataFrame.__rxor__, squeeze_series=True)
     # __setattr__ = _register_default_pandas(pandas.DataFrame.__setattr__)
@@ -486,9 +498,12 @@ class SmallQueryCompiler(BaseQueryCompiler):
     astype = _register_default_pandas(pandas.DataFrame.astype)
     cat_codes = _register_default_pandas(lambda ser: ser.cat.codes, is_series=True)
     clip = _register_default_pandas(pandas.DataFrame.clip)
-    combine = _register_default_pandas(pandas.DataFrame.combine)
-    combine_first = _register_default_pandas(pandas.DataFrame.combine_first)
-    # conj = _register_default_pandas(pandas.DataFrame.conj)
+    combine = _register_default_pandas(
+        lambda df, other, func, **kwargs: df.combine(other, func), squeeze_series=True
+    )
+    combine_first = _register_default_pandas(
+        lambda df, other: df.combine_first(other), squeeze_series=True
+    )
     compare = _register_default_pandas(pandas.DataFrame.compare)
     concat = _register_default_pandas(_concat)
     conj = _register_default_pandas(
@@ -791,7 +806,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
     to_numpy = _register_default_pandas(pandas.DataFrame.to_numpy, return_modin=False)
     transpose = _register_default_pandas(pandas.DataFrame.transpose)
     truediv = _register_default_pandas(_register_binary("truediv"))
-    # unique = _register_default_pandas(_unique, return_modin=False)
     unique = _register_default_pandas(pandas.Series.unique, is_series=True)
     unstack = _register_default_pandas(pandas.DataFrame.unstack)
     var = _register_default_pandas(pandas.DataFrame.var)
