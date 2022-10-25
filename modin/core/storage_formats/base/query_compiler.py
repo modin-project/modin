@@ -529,6 +529,11 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def mul(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.mul)(self, other=other, **kwargs)
 
+    @doc_utils.doc_binary_method(operation="multiplication", sign="*", self_on_right=True)
+    def rmul(self, other, **kwargs):  # noqa: PR02
+        return BinaryDefault.register(pandas.DataFrame.rmul)(self, other=other, **kwargs)
+
+
     @doc_utils.add_refer_to("DataFrame.corr")
     def corr(self, **kwargs):  # noqa: PR02
         """
@@ -2143,7 +2148,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         return DataFrameDefault.register(get_column)(self, key=key)
 
-    def getitem_row_array(self, key):
+    def getitem_row_array(self, key: List[Hashable], numeric: bool = False):
         """
         Get row data for target indices.
 
@@ -2151,6 +2156,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         ----------
         key : list-like
             Numeric indices of the rows to pick.
+        numeric : bool, default: False
 
         Returns
         -------
@@ -2159,7 +2165,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
 
         def get_row(df, key):
-            return df.iloc[key]
+            if numeric:
+                return df.iloc[key]
+            else:
+                return df.loc[key]
 
         return DataFrameDefault.register(get_row)(self, key=key)
 

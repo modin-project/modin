@@ -62,31 +62,6 @@ class ClientQueryCompiler(BaseQueryCompiler):
     def from_pandas(cls, df, data_cls):
         raise NotImplementedError
 
-    def to_sql(
-        self,
-        name,
-        con,
-        schema=None,
-        if_exists="fail",
-        index=True,
-        index_label=None,
-        chunksize=None,
-        dtype=None,
-        method=None,
-    ):
-        return self._service.to_sql(
-            self._id,
-            name,
-            con,
-            schema,
-            if_exists,
-            index,
-            index_label,
-            chunksize,
-            dtype,
-            method,
-        )
-
     def to_pandas(self):
         value = self._service.to_pandas(self._id)
         if isinstance(value, Exception):
@@ -144,13 +119,10 @@ class ClientQueryCompiler(BaseQueryCompiler):
             self._service.getitem_column_array(self._id, key, numeric)
         )
 
-    def getitem_row_labels_array(self, labels):
+    def getitem_row_array(self, key, numeric=False):
         return self.__constructor__(
-            self._service.getitem_row_labels_array(self._id, labels)
+            self._service.getitem_row_array(self._id, key, numeric)
         )
-
-    def getitem_row_array(self, key):
-        return self.__constructor__(self._service.getitem_row_array(self._id, key))
 
     def pivot(self, index, columns, values):
         return self.__constructor__(
@@ -162,10 +134,8 @@ class ClientQueryCompiler(BaseQueryCompiler):
             self._service.get_dummies(self._id, columns, **kwargs)
         )
 
-    def view(self, index=None, columns=None):
+    def take_2d(self, index=None, columns=None):
         return self.__constructor__(self._service.view(self._id, index, columns))
-
-    take_2d = view
 
     def drop(self, index=None, columns=None):
         return self.__constructor__(self._service.drop(self._id, index, columns))
@@ -177,7 +147,9 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._service.notna(self._id))
 
     def astype(self, col_dtypes, **kwargs):
-        return self.__constructor__(self._service.astype(self._id, col_dtypes, **kwargs))
+        return self.__constructor__(
+            self._service.astype(self._id, col_dtypes, **kwargs)
+        )
 
     def replace(
         self,
@@ -506,9 +478,6 @@ class ClientQueryCompiler(BaseQueryCompiler):
     def dt_dayofweek(self):
         return self.__constructor__(self._service.dt_dayofweek(self._id))
 
-    def dt_day_of_week(self):
-        return self.__constructor__(self._service.dt_day_of_week(self._id))
-
     def dt_weekday(self):
         return self.__constructor__(self._service.dt_weekday(self._id))
 
@@ -517,9 +486,6 @@ class ClientQueryCompiler(BaseQueryCompiler):
 
     def dt_dayofyear(self):
         return self.__constructor__(self._service.dt_dayofyear(self._id))
-
-    def dt_day_of_year(self):
-        return self.__constructor__(self._service.dt_day_of_year(self._id))
 
     def dt_week(self):
         return self.__constructor__(self._service.dt_week(self._id))
@@ -834,7 +800,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
                 continue
             else:
                 if v in self.columns:
-                    v = f'`{v}`'
+                    v = f"`{v}`"
                 variable_list.append(v)
         expr = " ".join(variable_list)
         return self.__constructor__(self._service.query(self._id, expr, **kwargs))

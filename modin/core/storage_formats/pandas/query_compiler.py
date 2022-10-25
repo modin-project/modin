@@ -404,6 +404,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     lt = Binary.register(pandas.DataFrame.lt)
     mod = Binary.register(pandas.DataFrame.mod)
     mul = Binary.register(pandas.DataFrame.mul)
+    rmul = Binary.register(pandas.DataFrame.rmul)
     ne = Binary.register(pandas.DataFrame.ne)
     pow = Binary.register(pandas.DataFrame.pow)
     radd = Binary.register(pandas.DataFrame.radd)
@@ -2246,9 +2247,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         return self.__constructor__(new_modin_frame)
 
-    def getitem_row_array(self, key):
+    def getitem_row_array(self, key: List[Hashable], numeric: bool = False):
+        if numeric:
+            kwargs = {"row_positions": key}
+        else:
+            kwargs = {"row_labels": key}
         return self.__constructor__(
-            self._modin_frame.take_2d_labels_or_positional(row_positions=key)
+            self._modin_frame.take_2d_labels_or_positional(**kwargs)
         )
 
     def setitem(self, axis, key, value):

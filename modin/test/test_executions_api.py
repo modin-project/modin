@@ -13,6 +13,7 @@
 
 import pytest
 
+from modin.core.execution.client.query_compiler import ClientQueryCompiler
 from modin.core.storage_formats import (
     BaseQueryCompiler,
     PandasQueryCompiler,
@@ -21,7 +22,7 @@ from modin.experimental.core.storage_formats.pyarrow import PyarrowQueryCompiler
 
 
 BASE_EXECUTION = BaseQueryCompiler
-EXECUTIONS = [PandasQueryCompiler, PyarrowQueryCompiler]
+EXECUTIONS = [PandasQueryCompiler, PyarrowQueryCompiler, ClientQueryCompiler]
 
 
 def test_base_abstract_methods():
@@ -50,15 +51,23 @@ def test_base_abstract_methods():
     ), f"{BASE_EXECUTION} has not implemented abstract methods: {not_implemented_methods}"
 
 
-@pytest.mark.parametrize("execution", EXECUTIONS)
-def test_api_consistent(execution):
+@pytest.mark.parametrize(
+    "execution,expected_extra_methods",
+    [
+        (PandasQueryCompiler, set()),
+        (PyarrowQueryCompiler, set()),
+        # client query compiler exposes set_server_connection,
+        # which the other compilers should not
+        (ClientQueryCompiler, {"set_server_connection"}),
+    ],
+)
+def test_api_consistent(execution, expected_extra_methods):
     base_methods = set(BASE_EXECUTION.__dict__)
     custom_methods = set(
         [key for key in execution.__dict__.keys() if not key.startswith("_")]
     )
 
     extra_methods = custom_methods.difference(base_methods)
-    # checking that custom execution do not implements extra api methods
     assert (
-        len(extra_methods) == 0
+        extra_methods == expected_extra_methods
     ), f"{execution} implement these extra methods: {extra_methods}"
