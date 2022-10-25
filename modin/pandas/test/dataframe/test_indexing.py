@@ -633,6 +633,42 @@ def test_loc_assignment(index, columns):
     df_equals(md_df, pd_df)
 
 
+@pytest.mark.parametrize("left, right", [(2, 1), (6, 1), (lambda df: 70, 1), (90, 70)])
+def test_loc_insert_row(left, right):
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/3764
+    pandas_df = pandas.DataFrame([[1, 2, 3], [4, 5, 6]])
+    modin_df = pd.DataFrame([[1, 2, 3], [4, 5, 6]])
+
+    def _test_loc_rows(df):
+        df.loc[left] = df.loc[right]
+        return df
+
+    eval_general(modin_df, pandas_df, _test_loc_rows)
+
+
+@pytest.mark.parametrize(
+    "columns", [10, (100, 102), (2, 6), [10, 11, 12], "a", ["b", "c", "d"]]
+)
+def test_loc_insert_col(columns):
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/3764
+    pandas_df = pandas.DataFrame([[1, 2, 3], [4, 5, 6]])
+    modin_df = pd.DataFrame([[1, 2, 3], [4, 5, 6]])
+
+    if isinstance(columns, tuple) and len(columns) == 2:
+
+        def _test_loc_cols(df):
+            df.loc[:, columns[0] : columns[1]] = 1
+
+    else:
+
+        def _test_loc_cols(df):
+            df.loc[:, columns] = 1
+
+    eval_general(modin_df, pandas_df, _test_loc_cols)
+
+
 @pytest.fixture
 def loc_iter_dfs():
     columns = ["col1", "col2", "col3"]
