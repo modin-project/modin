@@ -48,3 +48,5 @@ fuzzydata>=0.0.6
 mypy
 pandas-stubs
 fastparquet
+# See: https://github.com/ionelmc/pytest-benchmark/issues/226
+py
