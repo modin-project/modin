@@ -331,9 +331,7 @@ class StringMethods(ClassLogger):
             )
 
     def repeat(self, repeats):
-        return Series(
-            query_compiler=self._query_compiler.str_repeat(repeats)
-        )        
+        return Series(query_compiler=self._query_compiler.str_repeat(repeats))
 
     def rpartition(self, sep=" ", expand=True):
         if sep is not None and len(sep) == 0:

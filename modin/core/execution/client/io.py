@@ -120,15 +120,4 @@ class ClientIO(BaseIO):
 
     @classmethod
     def to_sql(cls, qc, **kwargs):
-        self._server_conn.to_sql(
-            qc._id,
-            name,
-            con,
-            schema,
-            if_exists,
-            index,
-            index_label,
-            chunksize,
-            dtype,
-            method,
-        )
+        cls._server_conn.to_sql(qc._id, **kwargs)
