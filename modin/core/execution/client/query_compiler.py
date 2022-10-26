@@ -20,6 +20,8 @@ from pandas.core.computation.parsing import tokenize_string
 
 
 class ClientQueryCompiler(BaseQueryCompiler):
+    lazy_execution = True
+
     @classmethod
     def set_server_connection(cls, conn):
         cls._service = conn

@@ -21,7 +21,8 @@ import pandas
 from pandas.util._decorators import doc
 import numpy as np
 import shutil
-from typing import Optional
+from typing import Any, NamedTuple, Optional
+from uuid import uuid4, UUID
 
 assert (
     "modin.utils" not in sys.modules
@@ -46,11 +47,15 @@ modin.utils._make_api_url = _saving_make_api_url
 import modin  # noqa: E402
 import modin.config  # noqa: E402
 from modin.config import IsExperimental, TestRayClient  # noqa: E402
-import uuid  # noqa: E402
 
 from modin.core.storage_formats import (  # noqa: E402
     PandasQueryCompiler,
     BaseQueryCompiler,
+)
+from modin.core.execution.client.io import ClientIO  # noqa: E402
+from modin.core.execution.client.query_compiler import ClientQueryCompiler  # noqa: E402
+from modin.core.execution.python.implementations.pandas_on_python.dataframe.dataframe import (  # noqa: E402
+    PandasOnPythonDataframe,
 )
 from modin.core.execution.python.implementations.pandas_on_python.io import (  # noqa: E402
     PandasOnPythonIO,
@@ -223,9 +228,6 @@ def enforce_config():
     os.environ = orig_env
 
 
-BASE_EXECUTION_NAME = "BaseOnPython"
-
-
 class TestQC(BaseQueryCompiler):
     def __init__(self, modin_frame):
         self._modin_frame = modin_frame
@@ -269,16 +271,77 @@ class BaseOnPythonFactory(factories.BaseFactory):
         cls.io_cls = BaseOnPythonIO
 
 
-def set_base_execution(name=BASE_EXECUTION_NAME):
-    setattr(factories, f"{name}Factory", BaseOnPythonFactory)
-    modin.set_execution(engine="python", storage_format=name.split("On")[0])
+def set_base_on_python_execution():
+    factories.BaseOnPythonFactory = BaseOnPythonFactory
+    modin.set_execution(engine="python", storage_format="Base")
+
+
+class BaseExecutionService:
+    class DefaultToPandasResult(NamedTuple):
+        result: Optional[Any]
+        result_is_qc_id: bool
+
+    def __init__(self):
+        self._base_query_compiler_by_id = {}
+
+    def add_query_compiler(self, qc) -> UUID:
+        id = self._generate_id()
+        self._base_query_compiler_by_id[self._generate_id()] = qc
+        return id
+
+    def default_to_pandas(
+        self, id: UUID, pandas_op, *args, **kwargs
+    ) -> DefaultToPandasResult:
+        result = self._base_query_compiler_by_id[id].default_to_pandas(
+            pandas_op, *args, **kwargs
+        )
+        result_is_qc_id = isinstance(result, BaseQueryCompiler)
+        if result_is_qc_id:
+            new_id = self._generate_id()
+            self._base_query_compiler_by_id[new_id] = result
+            result = new_id
+        return self.DefaultToPandasResult(result=result, result_is_qc_id=False)
+
+    def _generate_id(self):
+        id = uuid4()
+        while id in self._base_query_compiler_by_id:
+            id = uuid4()
+        return id
+
+
+class TestClientQueryCompiler(ClientQueryCompiler):
+    @classmethod
+    def from_pandas(cls, df, data_cls):
+        return cls(cls._service.add_query_compiler(TestQC.from_pandas(df, data_cls)))
+
+    def default_to_pandas(self, pandas_op, *args, **kwargs):
+        result = self._service.default_to_pandas(self._id, pandas_op, *args, **kwargs)
+        if result.result_is_qc_id:
+            return self.__constructor__(result.result)
+        return result.result
+
+
+class ClientFactory(factories.BaseFactory):
+    @classmethod
+    def prepare(cls):
+        cls.io_cls = ClientIO
+
+
+def set_client_execution():
+    service = BaseExecutionService()
+    ClientQueryCompiler.set_server_connection(service)
+    ClientIO.query_compiler_cls = TestClientQueryCompiler
+    ClientIO.set_server_connection(service)
+    ClientIO.frame_cls = PandasOnPythonDataframe
+    factories.ClientFactory = ClientFactory
+    modin.set_execution(engine="Client", storage_format="")
 
 
 @pytest.fixture(scope="function")
 def get_unique_base_execution():
     """Setup unique execution for a single function and yield its QueryCompiler that's suitable for inplace modifications."""
     # It's better to use decimal IDs rather than hex ones due to factory names formatting
-    execution_id = int(uuid.uuid4().hex, 16)
+    execution_id = int(uuid4().hex, 16)
     format_name = f"Base{execution_id}"
     engine_name = "Python"
     execution_name = f"{format_name}On{engine_name}"
@@ -319,11 +382,13 @@ def pytest_configure(config):
     if execution is None:
         return
 
-    if execution == BASE_EXECUTION_NAME:
-        set_base_execution(BASE_EXECUTION_NAME)
+    if execution == "BaseOnPython":
+        set_base_on_python_execution()
         config.addinivalue_line(
             "filterwarnings", "default:.*defaulting to pandas.*:UserWarning"
         )
+    elif execution == "Client":
+        set_client_execution()
     else:
         partition, engine = execution.split("On")
         modin.set_execution(engine=engine, storage_format=partition)
