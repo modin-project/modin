@@ -18,6 +18,8 @@ from modin.pandas.test.utils import (
     df_equals,
 )
 from modin.config import NPartitions, Engine
+from modin.distributed.dataframe.pandas import from_partitions
+from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 
 import numpy as np
 import pandas
@@ -58,6 +60,57 @@ elif Engine.get() == "Dask":
     block_partition_class = PandasOnDaskDataframePartition
     virtual_column_partition_class = PandasOnDaskDataframeColumnPartition
     virtual_row_partition_class = PandasOnDaskDataframeRowPartition
+
+
+def split_df_by_scheme(pandas_df, partitioning_scheme):
+    """
+    Build ``modin.pandas.DataFrame`` from ``pandas.DataFrame`` according the `partitioning_scheme`.
+
+    Parameters
+    ----------
+    pandas_df : pandas.DataFrame
+    partitioning_scheme : dict[{"row_lengths", "column_widths"}] -> list of ints
+
+    Returns
+    -------
+    modin.pandas.DataFrame
+    """
+    row_partitions = split_result_of_axis_func_pandas(
+        axis=0,
+        num_splits=len(partitioning_scheme["row_lengths"]),
+        result=pandas_df,
+        length_list=partitioning_scheme["row_lengths"],
+    )
+    partitions = [
+        split_result_of_axis_func_pandas(
+            axis=1,
+            num_splits=len(partitioning_scheme["column_widths"]),
+            result=row_part,
+            length_list=partitioning_scheme["column_widths"],
+        )
+        for row_part in row_partitions
+    ]
+
+    md_df = from_partitions(
+        [[put(part) for part in row_parts] for row_parts in partitions], axis=None
+    )
+    return md_df
+
+
+def validate_partitions_cache(df):
+    """Assert that the ``PandasDataframe`` shape caches correspond to the actual partition's shapes."""
+    row_lengths = df._row_lengths_cache
+    column_widths = df._column_widths_cache
+
+    assert row_lengths is not None
+    assert column_widths is not None
+    assert df._partitions.shape[0] == len(row_lengths)
+    assert df._partitions.shape[1] == len(column_widths)
+
+    for i in range(df._partitions.shape[0]):
+        for j in range(df._partitions.shape[1]):
+            assert df._partitions[i, j].length() == row_lengths[i]
+            assert df._partitions[i, j].width() == column_widths[j]
 
 
 @pytest.fixture
@@ -433,3 +486,94 @@ def test_virtual_partition_dup_object_ref():
     ), "Test setup did not contain duplicate objects"
     # The below call to wait() should not crash
     partition.wait()
+
+
+__test_reorder_labels_cache_axis_positions = [
+    pytest.param(lambda index: None, id="no_reordering"),
+    pytest.param(lambda index: np.arange(len(index) - 1, -1, -1), id="reordering_only"),
+    pytest.param(
+        lambda index: [0, 1, 2, len(index) - 3, len(index) - 2, len(index) - 1],
+        id="projection_only",
+    ),
+    pytest.param(
+        lambda index: np.repeat(np.arange(len(index)), repeats=3), id="size_grow"
+    ),
+]
+
+
+@pytest.mark.parametrize("row_positions", __test_reorder_labels_cache_axis_positions)
+@pytest.mark.parametrize("col_positions", __test_reorder_labels_cache_axis_positions)
+@pytest.mark.parametrize(
+    "partitioning_scheme",
+    [
+        pytest.param(
+            lambda df: {
+                "row_lengths": [df.shape[0]],
+                "column_widths": [df.shape[1]],
+            },
+            id="single_partition",
+        ),
+        pytest.param(
+            lambda df: {
+                "row_lengths": [
+                    min(32, df.shape[0]),
+                    max(0, df.shape[0] - 32),
+                ],
+                "column_widths": [
+                    min(32, df.shape[1]),
+                    max(0, df.shape[1] - 32),
+                ],
+            },
+            id="two_unbalanced_partitions",
+        ),
+        pytest.param(
+            lambda df: {
+                "row_lengths": [
+                    df.shape[0] // NPartitions.get() for _ in range(NPartitions.get())
+                ],
+                "column_widths": [
+                    df.shape[1] // NPartitions.get() for _ in range(NPartitions.get())
+                ],
+            },
+            id="perfect_partitioning",
+        ),
+        pytest.param(
+            lambda df: {
+                "row_lengths": [
+                    2**i
+                    if i != NPartitions.get() - 1
+                    else max(0, df.shape[0] - (2**i - 1))
+                    for i in range(NPartitions.get())
+                ],
+                "column_widths": [
+                    2**i
+                    if i != NPartitions.get() - 1
+                    else max(0, df.shape[1] - (2**i - 1))
+                    for i in range(NPartitions.get())
+                ],
+            },
+            id="unbalanced_partitioning_equals_npartition",
+        ),
+        pytest.param(
+            lambda df: {
+                "row_lengths": [2 for _ in range(df.shape[0] // 2)],
+                "column_widths": [2 for _ in range(df.shape[1] // 2)],
+            },
+            id="unbalanced_partitioning",
+        ),
+    ],
+)
+def test_reorder_labels_cache(
+    row_positions,
+    col_positions,
+    partitioning_scheme,
+):
+    pandas_df = pandas.DataFrame(test_data_values[0])
+
+    md_df = split_df_by_scheme(pandas_df, partitioning_scheme(pandas_df))
+    md_df = md_df._query_compiler._modin_frame
+
+    result = md_df._reorder_labels(
+        row_positions(md_df.index), col_positions(md_df.columns)
+    )
+    validate_partitions_cache(result)

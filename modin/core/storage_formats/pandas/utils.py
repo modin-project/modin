@@ -93,7 +93,7 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
     if length_list is None:
         length_list = get_length_list(result.shape[axis], num_splits)
     # Inserting the first "zero" to properly compute cumsum indexing slices
-    length_list.insert(0, 0)
+    length_list = np.insert(length_list, obj=0, values=[0])
 
     sums = np.cumsum(length_list)
     # We do this to restore block partitioning

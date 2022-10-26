@@ -1091,7 +1091,9 @@ class PandasDataframe(ClassLogger):
             )
             row_idx = self.index[row_positions]
 
-            if self._partitions.shape[0] != ordered_rows.shape[0]:
+            if self._partitions.shape[0] != ordered_rows.shape[0] or len(
+                row_idx
+            ) != len(self.index):
                 # The frame was re-partitioned along the 0 axis during reordering using
                 # the "standard" partitioning. Knowing the standard partitioning scheme
                 # we are able to compute new row lengths.
@@ -1112,7 +1114,9 @@ class PandasDataframe(ClassLogger):
             )
             col_idx = self.columns[col_positions]
 
-            if self._partitions.shape[1] != ordered_cols.shape[1]:
+            if self._partitions.shape[1] != ordered_cols.shape[1] or len(
+                col_idx
+            ) != len(self.columns):
                 # The frame was re-partitioned along the 1 axis during reordering using
                 # the "standard" partitioning. Knowing the standard partitioning scheme
                 # we are able to compute new column widths.
