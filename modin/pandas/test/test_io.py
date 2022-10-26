@@ -1698,7 +1698,7 @@ class TestParquet:
             engine=engine,
         )
 
-    def test_to_parquet_index(self, engine):
+    def test_to_parquet_keep_index(self, engine):
         data = {"c0": [0, 1] * 1000, "c1": [2, 3] * 1000}
         modin_df, pandas_df = create_test_dfs(data)
         modin_df.index.name = "foo"
