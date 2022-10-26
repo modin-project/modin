@@ -21,8 +21,8 @@ import pandas
 from pandas.util._decorators import doc
 import numpy as np
 import shutil
-from typing import Any, NamedTuple, Optional
-from uuid import uuid4, UUID
+from typing import Optional
+from uuid import uuid4
 
 assert (
     "modin.utils" not in sys.modules
@@ -54,6 +54,9 @@ from modin.core.storage_formats import (  # noqa: E402
 )
 from modin.core.execution.client.io import ClientIO  # noqa: E402
 from modin.core.execution.client.query_compiler import ClientQueryCompiler  # noqa: E402
+from modin.core.execution.client.service import (  # noqa: E402
+    ForwardingQueryCompilerService,
+)
 from modin.core.execution.python.implementations.pandas_on_python.dataframe.dataframe import (  # noqa: E402
     PandasOnPythonDataframe,
 )
@@ -68,6 +71,7 @@ from modin.pandas.test.utils import (  # noqa: E402
     make_default_file,
     teardown_test_files,
     NROWS,
+    default_to_pandas_ignore_string,
 )
 
 
@@ -276,39 +280,6 @@ def set_base_on_python_execution():
     modin.set_execution(engine="python", storage_format="Base")
 
 
-class BaseExecutionService:
-    class DefaultToPandasResult(NamedTuple):
-        result: Optional[Any]
-        result_is_qc_id: bool
-
-    def __init__(self):
-        self._base_query_compiler_by_id = {}
-
-    def add_query_compiler(self, qc) -> UUID:
-        id = self._generate_id()
-        self._base_query_compiler_by_id[self._generate_id()] = qc
-        return id
-
-    def default_to_pandas(
-        self, id: UUID, pandas_op, *args, **kwargs
-    ) -> DefaultToPandasResult:
-        result = self._base_query_compiler_by_id[id].default_to_pandas(
-            pandas_op, *args, **kwargs
-        )
-        result_is_qc_id = isinstance(result, BaseQueryCompiler)
-        if result_is_qc_id:
-            new_id = self._generate_id()
-            self._base_query_compiler_by_id[new_id] = result
-            result = new_id
-        return self.DefaultToPandasResult(result=result, result_is_qc_id=False)
-
-    def _generate_id(self):
-        id = uuid4()
-        while id in self._base_query_compiler_by_id:
-            id = uuid4()
-        return id
-
-
 class TestClientQueryCompiler(ClientQueryCompiler):
     @classmethod
     def from_pandas(cls, df, data_cls):
@@ -328,7 +299,7 @@ class ClientFactory(factories.BaseFactory):
 
 
 def set_client_execution():
-    service = BaseExecutionService()
+    service = ForwardingQueryCompilerService(BaseQueryCompiler)
     ClientQueryCompiler.set_server_connection(service)
     ClientIO.query_compiler_cls = TestClientQueryCompiler
     ClientIO.set_server_connection(service)
@@ -384,10 +355,9 @@ def pytest_configure(config):
 
     if execution == "BaseOnPython":
         set_base_on_python_execution()
-        config.addinivalue_line(
-            "filterwarnings", "default:.*defaulting to pandas.*:UserWarning"
-        )
+        config.addinivalue_line("filterwarnings", default_to_pandas_ignore_string)
     elif execution == "Client":
+        config.addinivalue_line("filterwarnings", default_to_pandas_ignore_string)
         set_client_execution()
     else:
         partition, engine = execution.split("On")

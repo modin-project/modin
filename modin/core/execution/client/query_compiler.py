@@ -89,7 +89,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._service.add_suffix(self._id, suffix, axis))
 
     def insert(self, loc, column, value):
-        if isinstance(value, ClientQueryCompiler):
+        if isinstance(value, type(self)):
             value = value._id
             is_qc = True
         else:
@@ -99,7 +99,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def setitem(self, axis, key, value):
-        if isinstance(value, ClientQueryCompiler):
+        if isinstance(value, type(self)):
             value = value._id
             is_qc = True
         else:
@@ -109,7 +109,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def getitem_array(self, key):
-        if isinstance(key, ClientQueryCompiler):
+        if isinstance(key, type(self)):
             key = key._id
             is_qc = True
         else:
@@ -162,11 +162,11 @@ class ClientQueryCompiler(BaseQueryCompiler):
         regex=False,
         method: "str | NoDefault" = no_default,
     ):
-        if isinstance(to_replace, ClientQueryCompiler):
+        if isinstance(to_replace, type(self)):
             is_to_replace_qc = True
         else:
             is_to_replace_qc = False
-        if isinstance(regex, ClientQueryCompiler):
+        if isinstance(regex, type(self)):
             is_regex_qc = True
         else:
             is_regex_qc = False
@@ -195,7 +195,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         limit=None,
         downcast=None,
     ):
-        if isinstance(value, ClientQueryCompiler):
+        if isinstance(value, type(self)):
             is_qc = True
         else:
             is_qc = False
@@ -278,7 +278,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def eq(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -286,7 +286,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._service.eq(self._id, other, is_qc, **kwargs))
 
     def lt(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -294,7 +294,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._service.lt(self._id, other, is_qc, **kwargs))
 
     def le(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -302,7 +302,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._service.le(self._id, other, is_qc, **kwargs))
 
     def gt(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -310,7 +310,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._service.gt(self._id, other, is_qc, **kwargs))
 
     def ge(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -318,7 +318,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._service.ge(self._id, other, is_qc, **kwargs))
 
     def ne(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -326,7 +326,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._service.ne(self._id, other, is_qc, **kwargs))
 
     def __and__(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -336,7 +336,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def __or__(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -346,7 +346,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def add(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -354,7 +354,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._service.add(self._id, other, is_qc, **kwargs))
 
     def radd(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -364,7 +364,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def truediv(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -374,7 +374,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def mod(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -382,7 +382,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._service.mod(self._id, other, is_qc, **kwargs))
 
     def rmod(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -392,7 +392,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def sub(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -402,7 +402,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def rsub(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -412,7 +412,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def mul(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -420,7 +420,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._service.mul(self._id, other, is_qc, **kwargs))
 
     def rmul(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -430,7 +430,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def floordiv(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
@@ -440,7 +440,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def rfloordiv(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
+        if isinstance(other, type(self)):
             other = other._id
             is_qc = True
         else:
