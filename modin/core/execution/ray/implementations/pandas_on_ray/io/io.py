@@ -305,6 +305,8 @@ class PandasOnRayIO(RayIO):
             df.to_parquet(**kwargs)
             return pandas.DataFrame()
 
+        # Ensure that the metadata is synchronized
+        qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
             partitions=qc._modin_frame._partitions,
