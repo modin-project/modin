@@ -2554,6 +2554,40 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
 
+    def _groupby_internal_columns(self, by, drop):
+        """
+        Extract internal columns from by argument of groupby.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler, column or index label, Grouper or list
+        drop : bool
+            Indicates whether or not by data came from self frame.
+            True, by data came from self. False, external by data.
+
+        Returns
+        -------
+        by : list of BaseQueryCompiler, column or index label, or Grouper
+        internal_by : list of str
+            List of internal column name to be dropped during groupby.
+        """
+        if isinstance(by, type(self)):
+            if drop:
+                internal_by = by.columns
+                by = [by]
+            else:
+                internal_by = []
+                by = [by]
+        else:
+            if not isinstance(by, list):
+                by = [by] if by is not None else []
+            internal_by = [o for o in by if hashable(o) and o in self.columns]
+            internal_qc = (
+                [self.getitem_column_array(internal_by)] if len(internal_by) else []
+            )
+            by = internal_qc + by[len(internal_by) :]
+        return by, internal_by
+
     groupby_all = GroupByReduce.register("all")
     groupby_any = GroupByReduce.register("any")
     groupby_count = GroupByReduce.register("count")
@@ -2563,12 +2597,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_sum = GroupByReduce.register("sum")
 
     def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
+        _, internal_by = self._groupby_internal_columns(by, drop)
+
         numeric_only = agg_kwargs.get("numeric_only", False)
         datetime_cols = (
             {
                 col: dtype
                 for col, dtype in zip(self.dtypes.index, self.dtypes)
-                if is_datetime64_any_dtype(dtype)
+                if is_datetime64_any_dtype(dtype) and col not in internal_by
             }
             if not numeric_only
             else dict()
@@ -2806,26 +2842,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         groupby_kwargs = groupby_kwargs.copy()
 
         as_index = groupby_kwargs.get("as_index", True)
-        if isinstance(by, type(self)):
-            # `drop` parameter indicates whether or not 'by' data came
-            # from the `self` frame:
-            # True: 'by' data came from the `self`
-            # False: external 'by' data
-            if drop:
-                internal_by = by.columns
-                by = [by]
-            else:
-                internal_by = []
-                by = [by]
-        else:
-            if not isinstance(by, list):
-                by = [by] if by is not None else []
-            internal_by = [o for o in by if hashable(o) and o in self.columns]
-            internal_qc = (
-                [self.getitem_column_array(internal_by)] if len(internal_by) else []
-            )
-
-            by = internal_qc + by[len(internal_by) :]
+        by, internal_by = self._groupby_internal_columns(by, drop)
 
         broadcastable_by = [o._modin_frame for o in by if isinstance(o, type(self))]
         not_broadcastable_by = [o for o in by if not isinstance(o, type(self))]
