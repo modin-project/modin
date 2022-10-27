@@ -311,9 +311,7 @@ class Series(SeriesCompat, BasePandasDataset):
         try:
             return object.__getattribute__(self, key)
         except AttributeError as err:
-            if not self._query_compiler.lazy_execution and (
-                key not in _ATTRS_NO_LOOKUP and key in self.index
-            ):
+            if key not in _ATTRS_NO_LOOKUP and key in self.index:
                 return self[key]
             raise err
 
@@ -2467,7 +2465,7 @@ class Series(SeriesCompat, BasePandasDataset):
         row_positions = self.index.get_indexer_for(key) if is_indexer else key
         if not all(is_integer(x) for x in row_positions):
             raise KeyError(key[0] if reduce_dimension else key)
-        result = self._query_compiler.getitem_row_array(row_positions)
+        result = self._query_compiler.getitem_row_array(row_positions, numeric=True)
 
         if reduce_dimension:
             return self._reduce_dimension(result)

@@ -196,6 +196,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         downcast=None,
     ):
         if isinstance(value, type(self)):
+            value = value._id
             is_qc = True
         else:
             is_qc = False
@@ -577,7 +578,8 @@ class ClientQueryCompiler(BaseQueryCompiler):
     def str_get(self, i):
         return self.__constructor__(self._service.str_get(self._id, i))
 
-    str_index = str_find
+    def str_index(self, sub, start=0, end=None):
+        return self.__constructor__(self._service.str_index(self._id, sub, start, end))
 
     def str_join(self, sep):
         return self.__constructor__(self._service.str_join(self._id, sep))

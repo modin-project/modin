@@ -1748,20 +1748,22 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # data in the same place.
 
     @doc_utils.doc_cum_agg(method="sum", refer_to="cumsum")
-    def cumsum(self, fold_axis, **kwargs):  # noqa: PR02
-        return DataFrameDefault.register(pandas.DataFrame.cumsum)(self, **kwargs)
+    def cumsum(self, fold_axis, *args, **kwargs):  # noqa: PR02
+        return DataFrameDefault.register(pandas.DataFrame.cumsum)(self, *args, **kwargs)
 
     @doc_utils.doc_cum_agg(method="maximum", refer_to="cummax")
-    def cummax(self, fold_axis, **kwargs):  # noqa: PR02
-        return DataFrameDefault.register(pandas.DataFrame.cummax)(self, **kwargs)
+    def cummax(self, fold_axis, *args, **kwargs):  # noqa: PR02
+        return DataFrameDefault.register(pandas.DataFrame.cummax)(self, *args, **kwargs)
 
     @doc_utils.doc_cum_agg(method="minimum", refer_to="cummin")
-    def cummin(self, fold_axis, **kwargs):  # noqa: PR02
-        return DataFrameDefault.register(pandas.DataFrame.cummin)(self, **kwargs)
+    def cummin(self, fold_axis, *args, **kwargs):  # noqa: PR02
+        return DataFrameDefault.register(pandas.DataFrame.cummin)(self, *args, **kwargs)
 
     @doc_utils.doc_cum_agg(method="product", refer_to="cumprod")
-    def cumprod(self, fold_axis, **kwargs):  # noqa: PR02
-        return DataFrameDefault.register(pandas.DataFrame.cumprod)(self, **kwargs)
+    def cumprod(self, fold_axis, *args, **kwargs):  # noqa: PR02
+        return DataFrameDefault.register(pandas.DataFrame.cumprod)(
+            self, *args, **kwargs
+        )
 
     @doc_utils.add_refer_to("DataFrame.diff")
     def diff(self, fold_axis, **kwargs):  # noqa: PR02

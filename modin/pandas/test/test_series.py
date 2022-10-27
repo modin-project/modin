@@ -519,7 +519,7 @@ def test___repr__(name, dt_index, data):
         )
         pandas_series.index = modin_series.index = index
 
-    if get_current_execution() == "BaseOnPython" and data == "empty":
+    if get_current_execution() in ("BaseOnPython", "Client") and data == "empty":
         # TODO: Remove this when default `dtype` of empty Series will be `object` in pandas (see #3142).
         assert modin_series.dtype == np.object
         assert pandas_series.dtype == np.float64
@@ -1631,7 +1631,7 @@ def test_dropna_inplace(data):
 
 def test_dtype_empty():
     modin_series, pandas_series = pd.Series(), pandas.Series()
-    if get_current_execution() == "BaseOnPython":
+    if get_current_execution() in ("BaseOnPython", "Client"):
         # TODO: Remove this when default `dtype` of empty Series will be `object` in pandas (see #3142).
         assert modin_series.dtype == np.object
         assert pandas_series.dtype == np.float64
