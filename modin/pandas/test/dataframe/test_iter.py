@@ -17,7 +17,7 @@ import numpy as np
 import pandas
 import matplotlib
 import modin.pandas as pd
-import io
+from pandas._testing import ensure_clean
 import warnings
 
 from modin.pandas.test.utils import (
@@ -226,9 +226,12 @@ def test___repr__():
 "2016-08-26 09:00:15.816",1,60.166254,24.700671,3,"WALKING",75,"IN_VEHICLE",5,"ON_BICYCLE",5
 "2016-08-26 09:00:16.413",5,60.193055,24.767427,5,"WALKING",85,"ON_BICYCLE",15,"UNKNOWN",0
 "2016-08-26 09:00:20.578",3,60.152996,24.745216,3.90000009536743,"STILL",69,"IN_VEHICLE",31,"UNKNOWN",0"""
-    pandas_df = pandas.read_csv(io.StringIO(string_data))
-    with warns_that_defaulting_to_pandas():
-        modin_df = pd.read_csv(io.StringIO(string_data))
+    with ensure_clean(".csv") as path:
+        with open(path, "w") as f:
+            f.write(string_data)
+        pandas_df = pandas.read_csv(path)
+        with warns_that_defaulting_to_pandas():
+            modin_df = pd.read_csv(path)
     assert repr(pandas_df) == repr(modin_df)
 
 

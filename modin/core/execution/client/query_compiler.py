@@ -139,8 +139,10 @@ class ClientQueryCompiler(BaseQueryCompiler):
     def take_2d(self, index=None, columns=None):
         return self.__constructor__(self._service.take_2d(self._id, index, columns))
 
-    def drop(self, index=None, columns=None):
-        return self.__constructor__(self._service.drop(self._id, index, columns))
+    def drop(self, index=None, columns=None, errors: str = "raise"):
+        return self.__constructor__(
+            self._service.drop(self._id, index, columns, errors)
+        )
 
     def isna(self):
         return self.__constructor__(self._service.isna(self._id))

@@ -2214,7 +2214,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # END Abstract insert
 
     # Abstract drop
-    def drop(self, index=None, columns=None):
+    def drop(self, index=None, columns=None, errors: str = "raise"):
         """
         Drop specified rows or columns.
 
@@ -2234,7 +2234,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             return self
         else:
             return DataFrameDefault.register(pandas.DataFrame.drop)(
-                self, index=index, columns=columns
+                self, index=index, columns=columns, errors=errors
             )
 
     # END drop

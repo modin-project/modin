@@ -162,17 +162,22 @@ def test_empty_df():
     assert len(df.index) == 0
     assert len(df.columns) == 0
 
-    df = pd.DataFrame()
-    pd_df = pandas.DataFrame()
-    df["a"] = [1, 2, 3, 4, 5]
-    pd_df["a"] = [1, 2, 3, 4, 5]
-    df_equals(df, pd_df)
+    # client query compiler uses lazy execution, so we don't default to pandas
+    # for the empty frame because we don't check whether the frame is empty.
+    # we can't do the insertion correctly right now without defaulting to
+    # pandas.
+    if get_current_execution() != "Client":
+        df = pd.DataFrame()
+        pd_df = pandas.DataFrame()
+        df["a"] = [1, 2, 3, 4, 5]
+        pd_df["a"] = [1, 2, 3, 4, 5]
+        df_equals(df, pd_df)
 
-    df = pd.DataFrame()
-    pd_df = pandas.DataFrame()
-    df["a"] = list("ABCDEF")
-    pd_df["a"] = list("ABCDEF")
-    df_equals(df, pd_df)
+        df = pd.DataFrame()
+        pd_df = pandas.DataFrame()
+        df["a"] = list("ABCDEF")
+        pd_df["a"] = list("ABCDEF")
+        df_equals(df, pd_df)
 
     df = pd.DataFrame()
     pd_df = pandas.DataFrame()
@@ -293,7 +298,7 @@ def test_copy(data):
     new_modin_df = modin_df.copy()
 
     assert new_modin_df is not modin_df
-    if get_current_execution() != "BaseOnPython":
+    if get_current_execution() not in ("BaseOnPython", "Client"):
         assert np.array_equal(
             new_modin_df._query_compiler._modin_frame._partitions,
             modin_df._query_compiler._modin_frame._partitions,
@@ -628,6 +633,10 @@ def test_convert_dtypes_single_partition(
     get_current_execution() == "BaseOnPython",
     reason="BaseOnPython cannot not have multiple partitions.",
 )
+@pytest.mark.skipif(
+    get_current_execution() == "Client",
+    reason="Client query compiler doesn't have partitions at all.",
+)
 def test_convert_dtypes_multiple_row_partitions():
     # Column 0 should have string dtype
     modin_part1 = pd.DataFrame(["a"]).convert_dtypes()
@@ -708,12 +717,36 @@ def test_drop():
     df_equals(modin_simple.drop([0, 1, 3], axis=0), simple.loc[[2], :])
     df_equals(modin_simple.drop([0, 3], axis="index"), simple.loc[[1, 2], :])
 
-    pytest.raises(ValueError, modin_simple.drop, 5)
-    pytest.raises(ValueError, modin_simple.drop, "C", 1)
-    pytest.raises(ValueError, modin_simple.drop, [1, 5])
-    pytest.raises(ValueError, modin_simple.drop, ["A", "C"], 1)
+    # TODO(https://github.com/modin-project/modin/issues/5163): raise a
+    # KeyError like pandas when the label is not found when lazy_execution is
+    # off. Also use df_equals instead of
+    check_exception_type = modin_simple._query_compiler.lazy_execution
+    eval_general(
+        modin_simple,
+        simple,
+        lambda df: df.drop(5),
+        check_exception_type=check_exception_type,
+    )
+    eval_general(
+        modin_simple,
+        simple,
+        lambda df: df.drop("C", axis=1),
+        check_exception_type=check_exception_type,
+    )
+    eval_general(
+        modin_simple,
+        simple,
+        lambda df: df.drop([1, 5], axis=1),
+        check_exception_type=check_exception_type,
+    )
+    eval_general(
+        modin_simple,
+        simple,
+        lambda df: df.drop(["A", "C"], axis=1),
+        check_exception_type=check_exception_type,
+    )
 
-    # errors = 'ignore'
+    # test errors = 'ignore'
     df_equals(modin_simple.drop(5, errors="ignore"), simple)
     df_equals(modin_simple.drop([0, 5], errors="ignore"), simple.loc[[1, 2, 3], :])
     df_equals(modin_simple.drop("C", axis=1, errors="ignore"), simple)

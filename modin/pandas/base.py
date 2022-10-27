@@ -1246,7 +1246,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
                         axes[axis] = None
 
         new_query_compiler = self._query_compiler.drop(
-            index=axes["index"], columns=axes["columns"]
+            index=axes["index"], columns=axes["columns"], errors=errors
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
