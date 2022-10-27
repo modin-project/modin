@@ -661,9 +661,14 @@ class ClientQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         drop=False,
     ):
+        if isinstance(by, type(self)):
+            by = by._id
+            is_qc = True
+        else:
+            is_qc = False
         return self.__constructor__(
             self._service.groupby_count(
-                self._id, by._id, axis, groupby_kwargs, agg_args, agg_kwargs, drop
+                self._id, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop, is_qc
             )
         )
 
