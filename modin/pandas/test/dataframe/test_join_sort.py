@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import contextlib
 import pytest
 import numpy as np
 import pandas
@@ -38,7 +39,7 @@ from modin.pandas.test.utils import (
     extra_test_parameters,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import InitializeWithSmallQueryCompilers, NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -50,6 +51,11 @@ matplotlib.use("Agg")
 # instances of defaulting to pandas, but some test modules, like this one,
 # have too many such instances.
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+
+@contextlib.contextmanager
+def _nullcontext():
+    """Replacement for contextlib.nullcontext missing in older Python."""
+    yield
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -394,11 +400,11 @@ def test_sort_multiindex(sort_remaining):
             setattr(df, index, new_index)
 
     for kwargs in [{"level": 0}, {"axis": 0}, {"axis": 1}]:
-        with warns_that_defaulting_to_pandas():
-        df_equals(
-            modin_df.sort_index(sort_remaining=sort_remaining, **kwargs),
-            pandas_df.sort_index(sort_remaining=sort_remaining, **kwargs),
-        )
+        with warns_that_defaulting_to_pandas() if not InitializeWithSmallQueryCompilers.get() else _nullcontext():
+            df_equals(
+                modin_df.sort_index(sort_remaining=sort_remaining, **kwargs),
+                pandas_df.sort_index(sort_remaining=sort_remaining, **kwargs),
+            )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

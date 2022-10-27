@@ -31,6 +31,7 @@ from modin.config import (
     TestDatasetSize,
     Engine,
     StorageFormat,
+    InitializeWithSmallQueryCompilers,
     IsExperimental,
     TestReadFromPostgres,
     TestReadFromSqlServer,
@@ -226,6 +227,10 @@ def make_parquet_dir():
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 @pytest.mark.skipif(
     IsExperimental.get() and StorageFormat.get() == "Pyarrow",
     reason="Segmentation fault; see PR #2347 ffor details",
@@ -1348,6 +1353,10 @@ class TestCsv:
         df_equals(expected_pandas_df, actual_pandas_df)
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 class TestTable:
     def test_read_table(self, make_csv_file):
         with ensure_clean() as unique_filename:
@@ -1389,6 +1398,10 @@ class TestTable:
 
 
 @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 class TestParquet:
     @pytest.mark.parametrize("columns", [None, ["col1"]])
     @pytest.mark.parametrize("row_group_size", [None, 100, 1000, 10_000])
@@ -1729,6 +1742,10 @@ class TestParquet:
             df_equals(test_df, read_df)
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 class TestJson:
     @pytest.mark.parametrize("lines", [False, True])
     def test_read_json(self, make_json_file, lines):
@@ -1826,6 +1843,10 @@ class TestJson:
         assert parts_width_cached == parts_width_actual
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 class TestExcel:
     @check_file_leaks
     def test_read_excel(self, make_excel_file):
@@ -2019,6 +2040,10 @@ class TestExcel:
         )
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 class TestHdf:
     @pytest.mark.parametrize("format", [None, "table"])
     @pytest.mark.xfail(
@@ -2091,6 +2116,10 @@ class TestHdf:
         df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 class TestSql:
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -2241,6 +2270,10 @@ class TestSql:
             assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 class TestHtml:
     @pytest.mark.xfail(reason="read_html is not yet implemented properly - issue #1296")
     def test_read_html(self, make_html_file):
@@ -2254,6 +2287,10 @@ class TestHtml:
         )
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 class TestFwf:
     def test_fwf_file(self, make_fwf_file):
         fwf_data = (
@@ -2475,6 +2512,10 @@ class TestFwf:
         )
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 class TestGbq:
     @pytest.mark.skip(reason="Can not pass without GBQ access")
     def test_read_gbq(self):
@@ -2494,6 +2535,10 @@ class TestGbq:
             modin_df.to_gbq("modin.table")
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 class TestStata:
     def test_read_stata(self, make_stata_file):
         eval_io(
@@ -2509,6 +2554,10 @@ class TestStata:
         )
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 class TestFeather:
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -2560,6 +2609,10 @@ class TestFeather:
         )
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 class TestClipboard:
     @pytest.mark.skip(reason="No clipboard in CI")
     def test_read_clipboard(self):
@@ -2580,6 +2633,10 @@ class TestClipboard:
         assert modin_as_clip.equals(pandas_as_clip)
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 class TestPickle:
     def test_read_pickle(self, make_pickle_file):
         eval_io(
@@ -2610,6 +2667,10 @@ class TestPickle:
             assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 @pytest.mark.xfail(
     condition="config.getoption('--simulate-cloud').lower() != 'off'",
     reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
@@ -2620,6 +2681,10 @@ def test_from_arrow():
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 @pytest.mark.xfail(
     condition="config.getoption('--simulate-cloud').lower() != 'off'",
     reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",

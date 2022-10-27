@@ -28,7 +28,11 @@ from modin.pandas.test.utils import (
     create_test_dfs,
     default_to_pandas_ignore_string,
 )
+<<<<<<< HEAD
 from modin.config import Engine, NPartitions
+=======
+from modin.config import InitializeWithSmallQueryCompilers, NPartitions
+>>>>>>> 8c0f7f89 (Passing all tests and added config environment variable for SmallQueryCompiler)
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -220,6 +224,10 @@ def test_equals():
     assert modin_df1.equals(modin_df2._query_compiler.to_pandas())
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not contain partitions."
+)
 @pytest.mark.parametrize("is_more_other_partitions", [True, False])
 @pytest.mark.parametrize(
     "op_type", ["df_ser", "df_df", "ser_ser_same_name", "ser_ser_different_name"]

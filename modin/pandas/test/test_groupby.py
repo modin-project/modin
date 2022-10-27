@@ -17,7 +17,6 @@ import pandas
 import numpy as np
 
 from modin._compat import PandasCompatVersion
-from modin.config.envvars import Engine
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -44,7 +43,7 @@ from .utils import (
     value_equals,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import Engine, InitializeWithSmallQueryCompilers, NPartitions
 
 NPartitions.put(4)
 
@@ -2108,6 +2107,10 @@ def test_validate_by():
     compare(reference_by, result_by)
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not contain partitions."
+)
 def test_groupby_with_virtual_partitions():
     # from https://github.com/modin-project/modin/issues/4464
     modin_df, pandas_df = create_test_dfs(test_data["int_data"])

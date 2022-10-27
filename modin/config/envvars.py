@@ -592,6 +592,13 @@ class ReadSqlEngine(EnvironmentVariable, type=str):
     choices = ("Pandas", "Connectorx")
 
 
+class InitializeWithSmallQueryCompilers(EnvironmentVariable, type=str):
+    """Set to true to use implementation of SmallQueryCompiler."""
+
+    varname = "MODIN_SMALL_QUERY_COMPILER"
+    default = True # Should be False
+
+
 def _check_vars() -> None:
     """
     Check validity of environment variables.

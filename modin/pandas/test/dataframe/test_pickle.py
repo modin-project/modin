@@ -16,7 +16,7 @@ import pickle
 import numpy as np
 
 import modin.pandas as pd
-from modin.config import PersistentPickle
+from modin.config import InitializeWithSmallQueryCompilers, PersistentPickle
 
 from modin.pandas.test.utils import df_equals
 
@@ -39,6 +39,10 @@ def persistent(request):
     PersistentPickle.put(old)
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions."
+)
 @pytest.mark.parametrize(
     "modin_df", [pytest.param(modin_df), pytest.param(pd.DataFrame(), id="empty_df")]
 )
@@ -47,6 +51,10 @@ def test_dataframe_pickle(modin_df, persistent):
     df_equals(modin_df, other)
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions."
+)
 def test_column_pickle(modin_column, modin_df, persistent):
     dmp = pickle.dumps(modin_column)
     other = pickle.loads(dmp)

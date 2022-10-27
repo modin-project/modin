@@ -40,7 +40,11 @@ from modin.pandas.test.utils import (
     extra_test_parameters,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions, MinPartitionSize
+from modin.config import (
+    InitializeWithSmallQueryCompilers,
+    NPartitions,
+    MinPartitionSize,
+)
 from modin.utils import get_current_execution
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.pandas.indexing import is_range_like
@@ -491,6 +495,10 @@ def test_loc_setting_single_categorical_column():
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",
+)
 def test_loc_multi_index():
     modin_df = pd.read_csv(
         "modin/pandas/test/data/blah.csv", header=[0, 1, 2, 3], index_col=0
@@ -1909,6 +1917,10 @@ def test___setitem__(data):
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not contain partitions.",
+)
 def test___setitem__partitions_aligning():
     # from issue #2390
     modin_df = pd.DataFrame({"a": [1, 2, 3]})
@@ -1938,6 +1950,10 @@ def test___setitem__partitions_aligning():
     df_equals(md_df, pd_df)
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not contain partitions.",
+)
 def test___setitem__with_mismatched_partitions():
     with ensure_clean(".csv") as fname:
         np.savetxt(fname, np.random.randint(0, 100, size=(200_000, 99)), delimiter=",")

@@ -49,7 +49,7 @@ from modin.pandas.test.utils import (
     create_test_dfs,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import InitializeWithSmallQueryCompilers, NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -283,6 +283,10 @@ def test_axes(data):
         assert np.array_equal(modin_axis, pd_axis)
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not contain partitions."
+)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_copy(data):
     modin_df = pd.DataFrame(data)
@@ -577,6 +581,8 @@ def test_infer_objects_single_partition():
     pandas_df = pandas.DataFrame(data).iloc[1:]
     modin_result = modin_df.infer_objects()
     pandas_result = pandas_df.infer_objects()
+    print(modin_result.dtypes)
+    print(pandas_result.dtypes)
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
@@ -625,7 +631,7 @@ def test_convert_dtypes_single_partition(
 
 
 @pytest.mark.skipif(
-    get_current_execution() == "BaseOnPython",
+    get_current_execution() == "BaseOnPython" or InitializeWithSmallQueryCompilers.get(),
     reason="BaseOnPython cannot not have multiple partitions.",
 )
 def test_convert_dtypes_multiple_row_partitions():

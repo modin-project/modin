@@ -18,17 +18,12 @@ Module contains ``SmallQueryCompiler`` class.
 queries for small data and empty ``PandasDataFrame``.
 """
 
-import functools
-from re import S
-from modin.core.dataframe.algebra.default2pandas.groupby import GroupByDefault
 import numpy as np
 import pandas
-from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.dtypes.common import (
     is_list_like,
     is_scalar,
 )
-from typing import List, Hashable
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
@@ -216,13 +211,6 @@ def _concat(df, axis, other, join_axes=None, **kwargs):
     return result
 
 
-def _unique(values, **kwargs):
-    # print(type(df))
-    if isinstance(values, pandas.DataFrame):
-        values = values.squeeze(axis=1)
-    return pandas.unique(values, **kwargs)
-
-
 def _to_datetime(df, *args, **kwargs):
     return pandas.to_datetime(df.squeeze(axis=1), *args, **kwargs)
 
@@ -250,10 +238,6 @@ def _groupby(agg_name):
         drop=False,
         **kwargs
     ):
-        as_index = groupby_kwargs.get("as_index", True)
-        print("As index", as_index)
-        print("groupby df", df, type(df))
-        print("groupby by", by, type(by))
         by_names = []
         if isinstance(by, pandas.DataFrame):
             by = by.squeeze()
@@ -268,14 +252,13 @@ def _groupby(agg_name):
                 elif isinstance(by[i], str):
                     by_names.append(by[i])
         if isinstance(by, pandas.DataFrame):
-            by_names = list(by.columns)  # if as_index else []
+            by_names = list(by.columns)
             to_append = by.columns[[name not in df.columns for name in by_names]]
             if len(to_append) > 0:
                 df = pandas.concat([df, by[to_append]], axis=1)
             by = by_names
         if isinstance(by, pandas.Series) and drop:
             by_names = [by.name]
-
         if (
             is_list_like(by)
             and drop
@@ -283,15 +266,15 @@ def _groupby(agg_name):
         ):
             by = by_names
 
-        print("BYYY:", by)
-
-        if isinstance(agg_func, dict):
-            agg_func = functools.partial(
-                GroupByDefault.get_aggregation_method(how), func=agg_func
-            )
-
         groupby_obj = df.groupby(by=by, axis=axis, **groupby_kwargs)
         if agg_name == "agg":
+            if isinstance(agg_func, dict):
+                # Related to pandas issue when dict with list of funcs as value is passed in agg_func
+                # https://github.com/pandas-dev/pandas/issues/39103
+                agg_func = {
+                    k: v[0] if isinstance(v, list) and len(v) == 1 else v
+                    for k, v in agg_func.items()
+                }
             groupby_agg = __aggregation_methods_dict[how]
             result = groupby_agg(groupby_obj, agg_func, *agg_args, **agg_kwargs)
         else:
@@ -417,6 +400,8 @@ class SmallQueryCompiler(BaseQueryCompiler):
         func,
         is_series=False,
         squeeze_series=False,
+        squeeze_args=False,
+        squeeze_kwargs=False,
         return_modin=True,
         in_place=False,
         df_copy=False,
@@ -443,13 +428,18 @@ class SmallQueryCompiler(BaseQueryCompiler):
             ] + filter_kwargs
             for name in exclude_names:
                 kwargs.pop(name, None)
-            args = try_cast_to_pandas_sqc(args)
-            kwargs = try_cast_to_pandas_sqc(kwargs)
+            args = try_cast_to_pandas_sqc(args, squeeze=squeeze_args)
+            kwargs = try_cast_to_pandas_sqc(kwargs, squeeze=squeeze_kwargs)
             print("KWARGS:", kwargs)
             result = func(df, *args, **kwargs)
+            if func.__name__ == "astype":
+                print(result)
+                print(result.dtypes)
             if in_place:
                 result = df
-            if not return_modin:
+            if not (
+                return_modin or isinstance(result, (pandas.Series, pandas.DataFrame))
+            ):
                 return result
             if isinstance(result, pandas.Series):
                 if result.name is None:
@@ -498,9 +488,13 @@ class SmallQueryCompiler(BaseQueryCompiler):
     astype = _register_default_pandas(pandas.DataFrame.astype)
     cat_codes = _register_default_pandas(lambda ser: ser.cat.codes, is_series=True)
     clip = _register_default_pandas(pandas.DataFrame.clip)
-    combine = _register_default_pandas(
-        lambda df, other, func, **kwargs: df.combine(other, func), squeeze_series=True
-    )
+
+    def _combine(df, other, func, **kwargs):
+        if isinstance(df, pandas.Series):
+            return func(df, other)
+        return df.combine(other, func)
+
+    combine = _register_default_pandas(_combine, squeeze_series=True)
     combine_first = _register_default_pandas(
         lambda df, other: df.combine_first(other), squeeze_series=True
     )
@@ -615,7 +609,12 @@ class SmallQueryCompiler(BaseQueryCompiler):
     gt = _register_default_pandas(pandas.DataFrame.gt, filter_kwargs=["dtypes"])
     idxmax = _register_default_pandas(pandas.DataFrame.idxmax)
     idxmin = _register_default_pandas(pandas.DataFrame.idxmin)
-    insert = _register_default_pandas(pandas.DataFrame.insert, in_place=True)
+    infer_objects = _register_default_pandas(
+        pandas.DataFrame.infer_objects, return_modin=False
+    )
+    insert = _register_default_pandas(
+        pandas.DataFrame.insert, in_place=True, squeeze_args=True
+    )
     invert = _register_default_pandas(pandas.DataFrame.__invert__)
     is_monotonic = _register_default_pandas(
         _is_monotonic("is_monotonic"), is_series=True
@@ -628,12 +627,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     )
     isin = _register_default_pandas(pandas.DataFrame.isin)
     isna = _register_default_pandas(pandas.DataFrame.isna)
-    # join = _register_default_pandas(pandas.DataFrame.join)
-    def _join(*args, **kwargs):
-        print("ALFJSLKJDF", kwargs)
-        return pandas.DataFrame.join(*args, **kwargs)
-
-    join = _register_default_pandas(_join)
+    join = _register_default_pandas(pandas.DataFrame.join)
     kurt = _register_default_pandas(pandas.DataFrame.kurt)
     last_valid_index = _register_default_pandas(
         pandas.DataFrame.last_valid_index, return_modin=False
@@ -879,9 +873,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
             return isinstance(self._modin_frame.index, pandas.MultiIndex)
         assert axis == 1
         return isinstance(self._modin_frame.columns, pandas.MultiIndex)
-
-    def infer_objects(self):
-        return self
 
     def insert_item(self, *args, **kwargs):
         print("Not implemented")

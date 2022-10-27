@@ -46,7 +46,7 @@ from modin.pandas.test.utils import (
     test_data_large_categorical_dataframe,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import InitializeWithSmallQueryCompilers, NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -129,6 +129,10 @@ def test_to_numpy(data):
     assert_array_equal(modin_df.values, pandas_df.values)
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not contain partitions."
+)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_partition_to_numpy(data):
     frame = pd.DataFrame(data)
