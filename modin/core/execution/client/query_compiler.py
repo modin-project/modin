@@ -13,10 +13,8 @@
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 import numpy as np
-import inspect
 from pandas._libs.lib import no_default, NoDefault
 from pandas.api.types import is_list_like
-from pandas.core.computation.parsing import tokenize_string
 
 
 class ClientQueryCompiler(BaseQueryCompiler):
@@ -786,35 +784,6 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._service.idxmax(self._id, **kwargs))
 
     def query(self, expr, **kwargs):
-        is_variable = False
-        variable_list = []
-        for k, v in tokenize_string(expr):
-            if v == "" or v == " ":
-                continue
-            if is_variable:
-                frame = inspect.currentframe()
-                identified = False
-                while frame:
-                    if v in frame.f_locals:
-                        value = frame.f_locals[v]
-                        if isinstance(value, list):
-                            value = tuple(value)
-                        variable_list.append(str(value))
-                        identified = True
-                        break
-                    frame = frame.f_back
-                if not identified:
-                    # TODO this error does not quite match pandas
-                    raise ValueError(f"{v} not found")
-                is_variable = False
-            elif v == "@":
-                is_variable = True
-                continue
-            else:
-                if v in self.columns:
-                    v = f"`{v}`"
-                variable_list.append(v)
-        expr = " ".join(variable_list)
         return self.__constructor__(self._service.query(self._id, expr, **kwargs))
 
     def finalize(self):

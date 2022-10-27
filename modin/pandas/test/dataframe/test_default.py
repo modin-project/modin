@@ -129,14 +129,15 @@ def test_to_numpy(data):
     assert_array_equal(modin_df.values, pandas_df.values)
 
 
-@pytest.mark.skipif(
-    get_current_execution() == "Client",
-    reason="Client query compiler does not have partitions",
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_partition_to_numpy(data):
     frame = pd.DataFrame(data)
-    for partition in frame._query_compiler._modin_frame._partitions.flatten().tolist():
+    qc = frame._query_compiler
+    if get_current_execution() == "Client":
+        modin_frame = qc._service._qc[qc._id]._modin_frame
+    else:
+        modin_frame = qc._modin_frame
+    for partition in modin_frame._partitions.flatten().tolist():
         assert_array_equal(partition.to_pandas().values, partition.to_numpy())
 
 

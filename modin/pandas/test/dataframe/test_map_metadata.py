@@ -630,12 +630,8 @@ def test_convert_dtypes_single_partition(
 
 
 @pytest.mark.skipif(
-    get_current_execution() == "BaseOnPython",
-    reason="BaseOnPython cannot not have multiple partitions.",
-)
-@pytest.mark.skipif(
-    get_current_execution() == "Client",
-    reason="Client query compiler doesn't have partitions at all.",
+    get_current_execution() in ("BaseOnPython", "Client"),
+    reason="These exeuctions will not have multiple partitions.",
 )
 def test_convert_dtypes_multiple_row_partitions():
     # Column 0 should have string dtype

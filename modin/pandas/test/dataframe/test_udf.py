@@ -360,7 +360,7 @@ def test_pipe(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("funcs", query_func_values, ids=query_func_keys)
 def test_query(data, funcs):
-    if get_current_execution() == "BaseOnPython" and funcs != "col3 > col4":
+    if get_current_execution() in ("BaseOnPython", "Client") and funcs != "col3 > col4":
         pytest.xfail(
             reason="In this case, we are faced with the problem of handling empty data frames - #4934"
         )
@@ -374,8 +374,13 @@ def test_query(data, funcs):
             modin_df.query(funcs)
     else:
         modin_result = modin_df.query(funcs)
+        qc = modin_df._query_compiler
+        if get_current_execution() == "Client":
+            modin_frame = qc._service._qc[qc._id]._modin_frame
+        else:
+            modin_frame = qc._modin_frame
         # `dtypes` must be evaluated after `query` so we need to check cache
-        assert modin_result._query_compiler._modin_frame._dtypes is not None
+        assert modin_frame._dtypes is not None
         df_equals(modin_result, pandas_result)
         df_equals(modin_result.dtypes, pandas_result.dtypes)
 
