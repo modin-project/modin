@@ -62,7 +62,7 @@ class ClientIO(BaseIO):
 
         Returns
         -------
-        ClientQueryCompiler
+        query_compiler_cls
             Query compiler with CSV data read in.
         """
         if isinstance(filepath_or_buffer, str):
@@ -77,7 +77,7 @@ class ClientIO(BaseIO):
             raise ConnectionError(
                 "Missing server connection, did you initialize the connection?"
             )
-        return ClientQueryCompiler(
+        return cls.query_compiler_cls(
             cls._server_conn.read_csv(cls._data_conn, filepath_or_buffer, **kwargs)
         )
 

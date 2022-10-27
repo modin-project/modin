@@ -129,6 +129,10 @@ def test_to_numpy(data):
     assert_array_equal(modin_df.values, pandas_df.values)
 
 
+@pytest.mark.skipif(
+    get_current_execution() == "Client",
+    reason="Client query compiler does not have partitions",
+)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_partition_to_numpy(data):
     frame = pd.DataFrame(data)
@@ -1200,9 +1204,9 @@ def test_setattr_axes():
     # Test that setting .index or .columns does not warn
     df = pd.DataFrame([[1, 2], [3, 4]])
     with warnings.catch_warnings():
-        if get_current_execution() != "BaseOnPython":
-            # In BaseOnPython, setting columns raises a warning because get_axis
-            #  defaults to pandas.
+        if get_current_execution() not in ("BaseOnPython", "Client"):
+            # In BaseOnPython and Client executions, setting columns raises a
+            # warning because get_axis defaults to pandas.
             warnings.simplefilter("error")
         df.index = ["foo", "bar"]
         df.columns = [9, 10]

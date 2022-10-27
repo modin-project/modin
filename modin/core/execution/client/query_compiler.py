@@ -137,7 +137,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         )
 
     def take_2d(self, index=None, columns=None):
-        return self.__constructor__(self._service.view(self._id, index, columns))
+        return self.__constructor__(self._service.take_2d(self._id, index, columns))
 
     def drop(self, index=None, columns=None):
         return self.__constructor__(self._service.drop(self._id, index, columns))
@@ -397,9 +397,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
             is_qc = True
         else:
             is_qc = False
-        return self.__constructor__(
-            self._service.rsub(self._id, other, is_qc, **kwargs)
-        )
+        return self.__constructor__(self._service.sub(self._id, other, is_qc, **kwargs))
 
     def rsub(self, other, **kwargs):
         if isinstance(other, type(self)):
@@ -706,9 +704,14 @@ class ClientQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         drop=False,
     ):
+        if isinstance(by, type(self)):
+            by = by._id
+            is_qc = True
+        else:
+            is_qc = False
         return self.__constructor__(
             self._service.groupby_sum(
-                self._id, by._id, axis, groupby_kwargs, agg_args, agg_kwargs, drop
+                self._id, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop, is_qc
             )
         )
 

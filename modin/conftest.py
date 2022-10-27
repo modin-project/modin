@@ -299,7 +299,7 @@ class ClientFactory(factories.BaseFactory):
 
 
 def set_client_execution():
-    service = ForwardingQueryCompilerService(BaseQueryCompiler)
+    service = ForwardingQueryCompilerService(BaseQueryCompiler, PandasOnPythonIO)
     ClientQueryCompiler.set_server_connection(service)
     ClientIO.query_compiler_cls = TestClientQueryCompiler
     ClientIO.set_server_connection(service)

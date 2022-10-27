@@ -1993,6 +1993,13 @@ def test___setitem__mask():
 )
 @pytest.mark.parametrize("convert_to_series", [False, True])
 @pytest.mark.parametrize("new_col_id", [123, "new_col"], ids=["integer", "string"])
+@pytest.mark.skipif(
+    condition=get_current_execution() == "Client",
+    reason=(
+        "client query compiler uses lazy execution, so we don't default "
+        + "to pandas for the empty frame because we don't check whether the frame is empty. we can't do the insertion correctly right now without defaulting to pandas."
+    ),
+)
 def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
     pandas_df = pandas.DataFrame(data)
     modin_df = pd.DataFrame(data)
