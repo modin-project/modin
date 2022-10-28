@@ -2226,6 +2226,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Labels of rows to drop.
         columns : list of labels, optional
             Labels of columns to drop.
+        errors : str, default: "raise"
+            If 'ignore', suppress error and only existing labels are dropped.
 
         Returns
         -------

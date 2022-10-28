@@ -129,6 +129,7 @@ jobs:
       - run: python scripts/doc_checker.py modin/core/storage_formats/base
       - run: python scripts/doc_checker.py modin/experimental/core/storage_formats/pyarrow
       - run: python scripts/doc_checker.py modin/core/storage_formats/pandas
+      - run: python scripts/doc_checker.py modin/core/execution/client
       - run: |
           python scripts/doc_checker.py \
             modin/experimental/core/execution/native/implementations/hdk_on_native/dataframe \

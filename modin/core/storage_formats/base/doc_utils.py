@@ -288,6 +288,7 @@ doc_cum_agg = partial(
     ----------
     fold_axis : {{0, 1}}
     skipna : bool
+    *args : iterable
     **kwargs : dict
         Serves the compatibility purpose. Does not affect the result.
 

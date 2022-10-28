@@ -11,46 +11,99 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+"""Module contains ``ClientQueryCompiler`` class."""
+
 import numpy as np
+import pandas
 from pandas._libs.lib import no_default, NoDefault
 from pandas.api.types import is_list_like
+from typing import Any
+import uuid
+
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.utils import _inherit_docstrings
 
 
+@_inherit_docstrings(BaseQueryCompiler)
 class ClientQueryCompiler(BaseQueryCompiler):
-    lazy_execution = True
+    """
+    Query compiler for sending queries to a remote server.
 
-    @classmethod
-    def set_server_connection(cls, conn):
-        cls._service = conn
+    This class translates the query compiler API to function calls on a service
+    object, which may be a remote service.
 
-    def __init__(self, id):
-        assert (
-            id is not None
-        ), "Make sure the client is properly connected and returns and ID"
-        if isinstance(id, Exception):
-            raise id
+    Parameters
+    ----------
+    id : uuid.UUID
+        ID of this query compiler.
+    """
+
+    lazy_execution: bool = True
+
+    def __init__(self, id: uuid.UUID):
         self._id = id
 
-    def _set_columns(self, new_columns):
+    @classmethod
+    def set_server_connection(cls, conn: Any):
+        """
+        Set the connection to the service.
+
+        Parameters
+        ----------
+        conn : Any
+            Connection to the service.
+        """
+        cls._service = conn
+
+    def _set_columns(self, new_columns: pandas.Index) -> None:
+        """
+        Set this query compiler's columns.
+
+        Parameters
+        ----------
+        new_columns : pandas.Index
+            New columns to set.
+        """
         self._id = self._service.rename(self._id, new_col_labels=new_columns)
         self._columns_cache = self._service.columns(self._id)
 
-    def _get_columns(self):
+    def _get_columns(self) -> pandas.Index:
+        """
+        Get the columns of this query compiler.
+
+        Returns
+        -------
+        pandas.Index : The columns of this query compiler.
+        """
         if self._columns_cache is None:
             self._columns_cache = self._service.columns(self._id)
         return self._columns_cache
 
-    def _set_index(self, new_index):
+    def _set_index(self, new_index: pandas.Index):
+        """
+        Set this query compiler's index.
+
+        Parameters
+        ----------
+        new_index : pandas.Index
+            New index to set.
+        """
         self._id = self._service.rename(self._id, new_row_labels=new_index)
 
-    def _get_index(self):
+    def _get_index(self) -> pandas.Index:
+        """
+        Get the index of this query compiler.
+
+        Returns
+        -------
+        pandas.Index : The index of this query compiler.
+        """
         return self._service.index(self._id)
 
     columns = property(_get_columns, _set_columns)
-    _columns_cache = None
+    _columns_cache: pandas.Index = None
     index = property(_get_index, _set_index)
-    _dtypes_cache = None
+    _dtypes_cache: pandas.Index = None
 
     @property
     def dtypes(self):

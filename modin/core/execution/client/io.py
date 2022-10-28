@@ -17,8 +17,6 @@ from modin.core.io.io import BaseIO
 import fsspec
 import pandas
 
-from .query_compiler import ClientQueryCompiler
-
 
 class ClientIO(BaseIO):
     """Factory providing methods for performing I/O operations using a given Client as the execution engine."""
@@ -64,7 +62,7 @@ class ClientIO(BaseIO):
 
         Returns
         -------
-        query_compiler_cls
+        self.query_compiler_cls
             Query compiler with CSV data read in.
         """
         if isinstance(filepath_or_buffer, str):
@@ -108,7 +106,7 @@ class ClientIO(BaseIO):
 
         Returns
         -------
-        ClientQueryCompiler
+        self.query_compiler_cls
             Query compiler with data read in from SQL connection.
         """
         if isinstance(con, str) and con.lower() == "auto" and cls._data_conn is None:
@@ -121,10 +119,23 @@ class ClientIO(BaseIO):
             raise ConnectionError(
                 "Missing server connection, did you initialize the connection?"
             )
-        return ClientQueryCompiler(
+        return cls.query_compiler_cls(
             cls._server_conn.read_sql(sql, cls._data_conn, **kwargs)
         )
 
     @classmethod
-    def to_sql(cls, qc, **kwargs):
+    def to_sql(cls, qc, **kwargs) -> None:
+        """
+        Write records stored in a DataFrame to a SQL database.
+
+        Databases supported by SQLAlchemy [1]_ are supported. Tables can be
+        newly created, appended to, or overwritten.
+
+        Parameters
+        ----------
+        qc : self.query_compiler_cls
+            Query compiler with data to write to SQL.
+        **kwargs : dict
+            Parameters of ``read_sql`` function.
+        """
         cls._server_conn.to_sql(qc._id, **kwargs)
