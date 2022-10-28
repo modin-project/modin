@@ -74,7 +74,7 @@ class ForwardingQueryCompilerService:
         self._qc[new_id] = self._qc[id].setitem(axis, key, value)
         return new_id
 
-    def getitem_array(self, key_is_qc: bool, id, key):
+    def getitem_array(self, id, key_is_qc: bool, key):
         if key_is_qc:
             key = self._qc[key]
         new_id = self._generate_id()

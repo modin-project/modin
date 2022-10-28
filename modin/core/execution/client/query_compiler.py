@@ -13,7 +13,6 @@
 
 """Module contains ``ClientQueryCompiler`` class."""
 
-import numpy as np
 import pandas
 from pandas._libs.lib import no_default, NoDefault
 from pandas.api.types import is_list_like
@@ -124,20 +123,8 @@ class ClientQueryCompiler(BaseQueryCompiler):
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         raise NotImplementedError
 
-    def columnarize(self):
-        return self.__constructor__(self._service.columnarize(self._id))
-
-    def transpose(self):
-        return self.__constructor__(self._service.transpose(self._id))
-
     def copy(self):
         return self.__constructor__(self._id)
-
-    def add_prefix(self, prefix, axis=1):
-        return self.__constructor__(self._service.add_prefix(self._id, prefix, axis))
-
-    def add_suffix(self, suffix, axis=1):
-        return self.__constructor__(self._service.add_suffix(self._id, suffix, axis))
 
     def insert(self, loc, column, value):
         value_is_qc = isinstance(value, type(self))
@@ -161,45 +148,6 @@ class ClientQueryCompiler(BaseQueryCompiler):
             key = key._id
         return self.__constructor__(
             self._service.getitem_array(self._id, key_is_qc, key)
-        )
-
-    def getitem_column_array(self, key, numeric=False):
-        return self.__constructor__(
-            self._service.getitem_column_array(self._id, key, numeric)
-        )
-
-    def getitem_row_array(self, key, numeric=False):
-        return self.__constructor__(
-            self._service.getitem_row_array(self._id, key, numeric)
-        )
-
-    def pivot(self, index, columns, values):
-        return self.__constructor__(
-            self._service.pivot(self._id, index, columns, values)
-        )
-
-    def get_dummies(self, columns, **kwargs):
-        return self.__constructor__(
-            self._service.get_dummies(self._id, columns, **kwargs)
-        )
-
-    def take_2d(self, index=None, columns=None):
-        return self.__constructor__(self._service.take_2d(self._id, index, columns))
-
-    def drop(self, index=None, columns=None, errors: str = "raise"):
-        return self.__constructor__(
-            self._service.drop(self._id, index, columns, errors)
-        )
-
-    def isna(self):
-        return self.__constructor__(self._service.isna(self._id))
-
-    def notna(self):
-        return self.__constructor__(self._service.notna(self._id))
-
-    def astype(self, col_dtypes, **kwargs):
-        return self.__constructor__(
-            self._service.astype(self._id, col_dtypes, **kwargs)
         )
 
     def replace(
@@ -260,60 +208,6 @@ class ClientQueryCompiler(BaseQueryCompiler):
             )
         )
 
-    def dropna(self, **kwargs):
-        return self.__constructor__(self._service.dropna(self._id, **kwargs))
-
-    def sum(self, **kwargs):
-        return self.__constructor__(self._service.sum(self._id, **kwargs))
-
-    def prod(self, **kwargs):
-        return self.__constructor__(self._service.prod(self._id, **kwargs))
-
-    def count(self, **kwargs):
-        return self.__constructor__(self._service.count(self._id, **kwargs))
-
-    def mean(self, **kwargs):
-        return self.__constructor__(self._service.mean(self._id, **kwargs))
-
-    def median(self, **kwargs):
-        return self.__constructor__(self._service.median(self._id, **kwargs))
-
-    def std(self, **kwargs):
-        return self.__constructor__(self._service.std(self._id, **kwargs))
-
-    def min(self, **kwargs):
-        return self.__constructor__(self._service.min(self._id, **kwargs))
-
-    def max(self, **kwargs):
-        return self.__constructor__(self._service.max(self._id, **kwargs))
-
-    def any(self, **kwargs):
-        return self.__constructor__(self._service.any(self._id, **kwargs))
-
-    def all(self, **kwargs):
-        return self.__constructor__(self._service.all(self._id, **kwargs))
-
-    def quantile_for_single_value(self, **kwargs):
-        return self.__constructor__(
-            self._service.quantile_for_single_value(self._id, **kwargs)
-        )
-
-    def quantile_for_list_of_values(self, **kwargs):
-        return self.__constructor__(
-            self._service.quantile_for_list_of_values(self._id, **kwargs)
-        )
-
-    def describe(self, **kwargs):
-        return self.__constructor__(self._service.describe(self._id, **kwargs))
-
-    def set_index_from_columns(self, keys, drop: bool = True, append: bool = False):
-        return self.__constructor__(
-            self._service.set_index_from_columns(self._id, keys, drop, append)
-        )
-
-    def reset_index(self, **kwargs):
-        return self.__constructor__(self._service.reset_index(self._id, **kwargs))
-
     def concat(self, axis, other, **kwargs):
         if is_list_like(other):
             other = [o._id for o in other]
@@ -322,192 +216,6 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(
             self._service.concat(self._id, axis, other, **kwargs)
         )
-
-    def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
-        return self.__constructor__(
-            self._service.sort_rows_by_column_values(
-                self._id, columns, ascending=ascending, **kwargs
-            )
-        )
-
-    def sort_index(self, **kwargs):
-        return self.__constructor__(self._service.sort_index(self._id, **kwargs))
-
-    def dt_nanosecond(self):
-        return self.__constructor__(self._service.dt_nanosecond(self._id))
-
-    def dt_microsecond(self):
-        return self.__constructor__(self._service.dt_microsecond(self._id))
-
-    def dt_second(self):
-        return self.__constructor__(self._service.dt_second(self._id))
-
-    def dt_minute(self):
-        return self.__constructor__(self._service.dt_minute(self._id))
-
-    def dt_hour(self):
-        return self.__constructor__(self._service.dt_hour(self._id))
-
-    def dt_day(self):
-        return self.__constructor__(self._service.dt_day(self._id))
-
-    def dt_dayofweek(self):
-        return self.__constructor__(self._service.dt_dayofweek(self._id))
-
-    def dt_weekday(self):
-        return self.__constructor__(self._service.dt_weekday(self._id))
-
-    def dt_day_name(self):
-        return self.__constructor__(self._service.dt_day_name(self._id))
-
-    def dt_dayofyear(self):
-        return self.__constructor__(self._service.dt_dayofyear(self._id))
-
-    def dt_week(self):
-        return self.__constructor__(self._service.dt_week(self._id))
-
-    def dt_weekofyear(self):
-        return self.__constructor__(self._service.dt_weekofyear(self._id))
-
-    def dt_month(self):
-        return self.__constructor__(self._service.dt_month(self._id))
-
-    def dt_month_name(self):
-        return self.__constructor__(self._service.dt_month_name(self._id))
-
-    def dt_quarter(self):
-        return self.__constructor__(self._service.dt_quarter(self._id))
-
-    def dt_year(self):
-        return self.__constructor__(self._service.dt_year(self._id))
-
-    def str_capitalize(self):
-        return self.__constructor__(self._service.str_capitalize(self._id))
-
-    def str_isalnum(self):
-        return self.__constructor__(self._service.str_isalnum(self._id))
-
-    def str_isalpha(self):
-        return self.__constructor__(self._service.str_isalpha(self._id))
-
-    def str_isdecimal(self):
-        return self.__constructor__(self._service.str_isdecimal(self._id))
-
-    def str_isdigit(self):
-        return self.__constructor__(self._service.str_isdigit(self._id))
-
-    def str_islower(self):
-        return self.__constructor__(self._service.str_islower(self._id))
-
-    def str_isnumeric(self):
-        return self.__constructor__(self._service.str_isnumeric(self._id))
-
-    def str_isspace(self):
-        return self.__constructor__(self._service.str_isspace(self._id))
-
-    def str_istitle(self):
-        return self.__constructor__(self._service.str_istitle(self._id))
-
-    def str_isupper(self):
-        return self.__constructor__(self._service.str_isupper(self._id))
-
-    def str_len(self):
-        return self.__constructor__(self._service.str_len(self._id))
-
-    def str_lower(self):
-        return self.__constructor__(self._service.str_lower(self._id))
-
-    def str_title(self):
-        return self.__constructor__(self._service.str_title(self._id))
-
-    def str_upper(self):
-        return self.__constructor__(self._service.str_upper(self._id))
-
-    def str_center(self, width, fillchar=" "):
-        return self.__constructor__(self._service.str_center(self._id, width, fillchar))
-
-    def str_contains(self, pat, case=True, flags=0, na=np.nan, regex=True):
-        return self.__constructor__(
-            self._service.str_contains(self._id, pat, case, flags, na, regex)
-        )
-
-    def str_count(self, pat, flags=0, **kwargs):
-        return self.__constructor__(
-            self._service.str_count(self._id, pat, flags, **kwargs)
-        )
-
-    def str_endswith(self, pat, na=np.nan):
-        return self.__constructor__(self._service.str_endswith(self._id, pat, na))
-
-    def str_find(self, sub, start=0, end=None):
-        return self.__constructor__(self._service.str_find(self._id, sub, start, end))
-
-    def str_rfind(self, sub, start=0, end=None):
-        return self.__constructor__(self._service.str_rfind(self._id, sub, start, end))
-
-    def str_findall(self, pat, flags=0, **kwargs):
-        return self.__constructor__(
-            self._service.str_findall(self._id, pat, flags, **kwargs)
-        )
-
-    def str_get(self, i):
-        return self.__constructor__(self._service.str_get(self._id, i))
-
-    def str_index(self, sub, start=0, end=None):
-        return self.__constructor__(self._service.str_index(self._id, sub, start, end))
-
-    def str_join(self, sep):
-        return self.__constructor__(self._service.str_join(self._id, sep))
-
-    def str_lstrip(self, to_strip=None):
-        return self.__constructor__(self._service.str_lstrip(self._id, to_strip))
-
-    def str_ljust(self, width, fillchar=" "):
-        return self.__constructor__(self._service.str_ljust(self._id, width, fillchar))
-
-    def str_rjust(self, width, fillchar=" "):
-        return self.__constructor__(self._service.str_rjust(self._id, width, fillchar))
-
-    def str_match(self, pat, case=True, flags=0, na=np.nan):
-        return self.__constructor__(
-            self._service.str_match(self._id, pat, case, flags, na)
-        )
-
-    def str_pad(self, width, side="left", fillchar=" "):
-        return self.__constructor__(
-            self._service.str_pad(self._id, width, side, fillchar)
-        )
-
-    def str_repeat(self, repeats):
-        return self.__constructor__(self._service.str_repeat(self._id, repeats))
-
-    def str_split(self, pat=None, n=-1, expand=False):
-        return self.__constructor__(self._service.str_split(self._id, pat, n, expand))
-
-    def str_rsplit(self, pat=None, n=-1, expand=False):
-        return self.__constructor__(self._service.str_rsplit(self._id, pat, n, expand))
-
-    def str_rstrip(self, to_strip=None):
-        return self.__constructor__(self._service.str_rstrip(self._id, to_strip))
-
-    def str_slice(self, start=None, stop=None, step=None):
-        return self.__constructor__(
-            self._service.str_slice(self._id, start, stop, step)
-        )
-
-    def str_slice_replace(self, start=None, stop=None, repl=None):
-        return self.__constructor__(
-            self._service.str_slice_replace(self._id, start, stop, repl)
-        )
-
-    def str_startswith(self, pat, na=np.nan):
-        return self.__constructor__(self._service.str_startswith(self._id, pat, na))
-
-    def str_strip(self, to_strip=None):
-        return self.__constructor__(self._service.str_strip(self._id, to_strip))
-
-    def str_zfill(self, width):
-        return self.__constructor__(self._service.str_zfill(self._id, width))
 
     def merge(self, right, **kwargs):
         return self.__constructor__(self._service.merge(self._id, right._id, **kwargs))
@@ -650,46 +358,11 @@ class ClientQueryCompiler(BaseQueryCompiler):
             )
         )
 
-    def cummax(self, fold_axis, axis, skipna, *args, **kwargs):
-        return self.__constructor__(
-            self._service.cummax(self._id, fold_axis, axis, skipna, *args, **kwargs)
-        )
-
-    def cummin(self, fold_axis, axis, skipna, *args, **kwargs):
-        return self.__constructor__(
-            self._service.cummin(self._id, fold_axis, axis, skipna, *args, **kwargs)
-        )
-
-    def cumsum(self, fold_axis, axis, skipna, *args, **kwargs):
-        return self.__constructor__(
-            self._service.cumsum(self._id, fold_axis, axis, skipna, *args, **kwargs)
-        )
-
-    def cumprod(self, fold_axis, axis, skipna, *args, **kwargs):
-        return self.__constructor__(
-            self._service.cumprod(self._id, fold_axis, axis, skipna, *args, **kwargs)
-        )
-
     def get_index_names(self, axis=0):
         if axis == 0:
             return self.index.names
         else:
             return self.columns.names
-
-    def is_monotonic_increasing(self):
-        return self.__constructor__(self._service.is_monotonic_increasing(self._id))
-
-    def is_monotonic_decreasing(self):
-        return self.__constructor__(self._service.is_monotonic_decreasing(self._id))
-
-    def idxmin(self, **kwargs):
-        return self.__constructor__(self._service.idxmin(self._id, **kwargs))
-
-    def idxmax(self, **kwargs):
-        return self.__constructor__(self._service.idxmax(self._id, **kwargs))
-
-    def query(self, expr, **kwargs):
-        return self.__constructor__(self._service.query(self._id, expr, **kwargs))
 
     def finalize(self):
         raise NotImplementedError
@@ -724,6 +397,18 @@ def _set_forwarding_method_for_binary_function(method_name: str):
 
     setattr(ClientQueryCompiler, method_name, forwarding_method)
 
+def _set_forwarding_method_for_single_id(method_name: str):
+    def forwarding_method(
+        self: ClientQueryCompiler,
+        *args,
+        **kwargs,
+    ):
+        return self.__constructor__(
+            getattr(self._service, method_name)(self._id, *args, **kwargs)
+        )
+
+    setattr(ClientQueryCompiler, method_name, forwarding_method)
+
 
 _BINARY_FORWARDING_METHODS = frozenset(
     {
@@ -752,3 +437,106 @@ _BINARY_FORWARDING_METHODS = frozenset(
 
 for method in _BINARY_FORWARDING_METHODS:
     _set_forwarding_method_for_binary_function(method)
+
+_SINGLE_ID_FORWARDING_METHODS = frozenset(
+    {
+        "columnarize",
+        "transpose",
+        "take_2d",
+        "getitem_column_array",
+        "getitem_row_array",
+        "pivot",
+        "get_dummies",
+        "drop",
+        "isna",
+        "notna",
+        "add_prefix",
+        "add_suffix",
+        "astype",
+        "dropna",
+        "sum",
+        "prod",
+        "count",
+        "mean",
+        "median",
+        "std",
+        "min",
+        "max",
+        "any",
+        "all",
+        "quantile_for_single_value",
+        "quantile_for_list_of_values",
+        "describe",
+        "set_index_from_columns",
+        "reset_index",
+        "sort_rows_by_column_values",
+        "sort_index",
+        "dt_nanosecond",
+        "dt_microsecond",
+        "dt_second",
+        "dt_minute",
+        "dt_hour",
+        "dt_day",
+        "dt_dayofweek",
+        "dt_weekday",
+        "dt_day_name",
+        "dt_dayofyear",
+        "dt_week",
+        "dt_weekofyear",
+        "dt_month",
+        "dt_month_name",
+        "dt_quarter",
+        "dt_year",
+        "str_capitalize",
+        "str_isalnum",
+        "str_isalpha",
+        "str_isdecimal",
+        "str_isdigit",
+        "str_islower",
+        "str_isnumeric",
+        "str_isspace",
+        "str_istitle",
+        "str_isupper",
+        "str_len",
+        "str_lower",
+        "str_title",
+        "str_upper",
+        "str_center",
+        "str_contains",
+        "str_count",
+        "str_endswith",
+        "str_find",
+        "str_index",
+        "str_rfind",
+        "str_findall",
+        "str_get",
+        "str_join",
+        "str_lstrip",
+        "str_ljust",
+        "str_rjust",
+        "str_match",
+        "str_pad",
+        "str_repeat",
+        "str_split",
+        "str_rsplit",
+        "str_rstrip",
+        "str_slice",
+        "str_slice_replace",
+        "str_startswith",
+        "str_strip",
+        "str_zfill",
+        "cummax",
+        "cummin",
+        "cumsum",
+        "cumprod",
+        "is_monotonic_increasing",
+        "is_monotonic_decreasing",
+        "idxmax",
+        "idxmin",
+        "query",
+    }
+)
+
+
+for method in _SINGLE_ID_FORWARDING_METHODS:
+    _set_forwarding_method_for_single_id(method)
