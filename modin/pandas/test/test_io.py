@@ -37,7 +37,7 @@ from modin.config import (
     ReadSqlEngine,
 )
 from modin._compat import PandasCompatVersion
-from modin.utils import to_pandas
+from modin.utils import get_current_execution, to_pandas
 from modin.pandas.utils import from_arrow
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 import pyarrow as pa
@@ -76,7 +76,7 @@ if StorageFormat.get() == "Hdk":
 else:
     from .utils import eval_io
 
-if StorageFormat.get() == "Pandas":
+if StorageFormat.get() in ("Pandas", ""):
     import modin.pandas as pd
 else:
     import modin.experimental.pandas as pd
@@ -1056,6 +1056,9 @@ class TestCsv:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
+    @pytest.mark.xfail_executions(
+        "Client", reason="Client cannot read from buffer", raises=NotImplementedError
+    )
     def test_read_csv_default_to_pandas(self):
         if self._has_pandas_fallback_reason():
             warning_suffix = "buffers"
@@ -1251,6 +1254,9 @@ class TestCsv:
         ],
     )
     @pytest.mark.parametrize("buffer_start_pos", [0, 10])
+    @pytest.mark.xfail_executions(
+        "Client", reason="Client cannot read from buffer", raises=NotImplementedError
+    )
     def test_read_csv_file_handle(self, read_mode, make_csv_file, buffer_start_pos):
         with ensure_clean() as unique_filename:
             make_csv_file(filename=unique_filename)
@@ -1264,7 +1270,10 @@ class TestCsv:
 
     def test_unnamed_index(self):
         def get_internal_df(df):
-            partition = read_df._query_compiler._modin_frame._partitions[0][0]
+            qc = read_df._query_compiler
+            if get_current_execution() == "Client":
+                qc = qc._service._qc[qc._id]
+            partition = qc._modin_frame._partitions[0][0]
             return partition.to_pandas()
 
         path = "modin/pandas/test/data/issue_3119.csv"
@@ -2096,7 +2105,19 @@ class TestSql:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    @pytest.mark.parametrize("read_sql_engine", ["Pandas", "Connectorx"])
+    @pytest.mark.parametrize(
+        "read_sql_engine",
+        [
+            "Pandas",
+            pytest.param(
+                "Connectorx",
+                marks=pytest.mark.skipif(
+                    get_current_execution() == "Client",
+                    reason="Client execution uses pandas.read_sql, which can't read from connectorx connections",
+                ),
+            ),
+        ],
+    )
     def test_read_sql(self, make_sql_connection, read_sql_engine):
         with ensure_clean_dir() as dirname:
             filename = get_unique_filename(".db")

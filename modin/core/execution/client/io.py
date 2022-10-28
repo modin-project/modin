@@ -15,6 +15,8 @@
 
 from modin.core.io.io import BaseIO
 import fsspec
+import pandas
+
 from .query_compiler import ClientQueryCompiler
 
 
@@ -77,9 +79,14 @@ class ClientIO(BaseIO):
             raise ConnectionError(
                 "Missing server connection, did you initialize the connection?"
             )
-        return cls.query_compiler_cls(
-            cls._server_conn.read_csv(cls._data_conn, filepath_or_buffer, **kwargs)
+        server_result = cls._server_conn.read_csv(
+            cls._data_conn, filepath_or_buffer, **kwargs
         )
+        # This happens when `read_csv` returns a TextFileReader object for
+        # iterating through, e.g. because iterator=True
+        if isinstance(server_result, pandas.io.parsers.TextFileReader):
+            return server_result
+        return cls.query_compiler_cls(server_result)
 
     @classmethod
     def read_sql(cls, sql, con, **kwargs):

@@ -139,6 +139,17 @@ class BaseIO(BaseIOCompat):
         return cls._read(filepath_or_buffer=filepath_or_buffer, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(pandas.read_sql, apilink="pandas.read_sql")
+    @doc(
+        _doc_default_io_method,
+        summary="Read SQL query or database table into query compiler",
+        returns=_doc_returns_qc_or_parser,
+    )
+    def _read_sql(cls, sql, con, **kwargs):  # noqa: PR01
+        ErrorMessage.default_to_pandas("`read_sql`")
+        return cls.from_pandas(pandas.read_sql(sql, con, **kwargs))
+
+    @classmethod
     def _read(cls, **kwargs):
         """
         Read csv file into query compiler.
