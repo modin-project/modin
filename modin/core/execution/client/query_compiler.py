@@ -397,6 +397,7 @@ def _set_forwarding_method_for_binary_function(method_name: str):
 
     setattr(ClientQueryCompiler, method_name, forwarding_method)
 
+
 def _set_forwarding_method_for_single_id(method_name: str):
     def forwarding_method(
         self: ClientQueryCompiler,
