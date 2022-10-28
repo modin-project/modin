@@ -18,7 +18,7 @@ import pandas
 from pandas._libs.lib import no_default, NoDefault
 from pandas.api.types import is_list_like
 from typing import Any
-import uuid
+from uuid import UUID
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
@@ -34,13 +34,13 @@ class ClientQueryCompiler(BaseQueryCompiler):
 
     Parameters
     ----------
-    id : uuid.UUID
+    id : UUID
         ID of this query compiler.
     """
 
     lazy_execution: bool = True
 
-    def __init__(self, id: uuid.UUID):
+    def __init__(self, id: UUID):
         self._id = id
 
     @classmethod
@@ -140,32 +140,28 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._service.add_suffix(self._id, suffix, axis))
 
     def insert(self, loc, column, value):
-        if isinstance(value, type(self)):
+        value_is_qc = isinstance(value, type(self))
+        if value_is_qc:
             value = value._id
-            is_qc = True
-        else:
-            is_qc = False
         return self.__constructor__(
-            self._service.insert(self._id, loc, column, value, is_qc)
+            self._service.insert(self._id, value_is_qc, loc, column, value)
         )
 
     def setitem(self, axis, key, value):
-        if isinstance(value, type(self)):
+        value_is_qc = isinstance(value, type(self))
+        if value_is_qc:
             value = value._id
-            is_qc = True
-        else:
-            is_qc = False
         return self.__constructor__(
-            self._service.setitem(self._id, axis, key, value, is_qc)
+            self._service.setitem(self._id, value_is_qc, axis, key, value)
         )
 
     def getitem_array(self, key):
-        if isinstance(key, type(self)):
+        key_is_qc = isinstance(key, type(self))
+        if key_is_qc:
             key = key._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.getitem_array(self._id, key, is_qc))
+        return self.__constructor__(
+            self._service.getitem_array(self._id, key_is_qc, key)
+        )
 
     def getitem_column_array(self, key, numeric=False):
         return self.__constructor__(
@@ -215,25 +211,23 @@ class ClientQueryCompiler(BaseQueryCompiler):
         regex=False,
         method: "str | NoDefault" = no_default,
     ):
-        if isinstance(to_replace, type(self)):
-            is_to_replace_qc = True
-        else:
-            is_to_replace_qc = False
-        if isinstance(regex, type(self)):
-            is_regex_qc = True
-        else:
-            is_regex_qc = False
+        to_replace_is_qc = isinstance(to_replace, type(self))
+        if to_replace_is_qc:
+            to_replace = to_replace._id
+        regex_is_qc = isinstance(regex, type(self))
+        if regex_is_qc:
+            regex = regex._id
         return self.__constructor__(
             self._service.replace(
                 self._id,
+                to_replace_is_qc,
+                regex_is_qc,
                 to_replace,
                 value,
                 inplace,
                 limit,
                 regex,
                 method,
-                is_to_replace_qc,
-                is_regex_qc,
             )
         )
 
@@ -248,14 +242,13 @@ class ClientQueryCompiler(BaseQueryCompiler):
         limit=None,
         downcast=None,
     ):
-        if isinstance(value, type(self)):
+        value_is_qc = isinstance(value, type(self))
+        if value_is_qc:
             value = value._id
-            is_qc = True
-        else:
-            is_qc = False
         return self.__constructor__(
             self._service.fillna(
                 self._id,
+                value_is_qc,
                 squeeze_self,
                 squeeze_value,
                 value,
@@ -264,7 +257,6 @@ class ClientQueryCompiler(BaseQueryCompiler):
                 inplace,
                 limit,
                 downcast,
-                is_qc,
             )
         )
 
@@ -329,176 +321,6 @@ class ClientQueryCompiler(BaseQueryCompiler):
             other = [other._id]
         return self.__constructor__(
             self._service.concat(self._id, axis, other, **kwargs)
-        )
-
-    def eq(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.eq(self._id, other, is_qc, **kwargs))
-
-    def lt(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.lt(self._id, other, is_qc, **kwargs))
-
-    def le(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.le(self._id, other, is_qc, **kwargs))
-
-    def gt(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.gt(self._id, other, is_qc, **kwargs))
-
-    def ge(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.ge(self._id, other, is_qc, **kwargs))
-
-    def ne(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.ne(self._id, other, is_qc, **kwargs))
-
-    def __and__(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.__and__(self._id, other, is_qc, **kwargs)
-        )
-
-    def __or__(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.__or__(self._id, other, is_qc, **kwargs)
-        )
-
-    def add(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.add(self._id, other, is_qc, **kwargs))
-
-    def radd(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.radd(self._id, other, is_qc, **kwargs)
-        )
-
-    def truediv(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.truediv(self._id, other, is_qc, **kwargs)
-        )
-
-    def mod(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.mod(self._id, other, is_qc, **kwargs))
-
-    def rmod(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.rmod(self._id, other, is_qc, **kwargs)
-        )
-
-    def sub(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.sub(self._id, other, is_qc, **kwargs))
-
-    def rsub(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.rsub(self._id, other, is_qc, **kwargs)
-        )
-
-    def mul(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.mul(self._id, other, is_qc, **kwargs))
-
-    def rmul(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.rmul(self._id, other, is_qc, **kwargs)
-        )
-
-    def floordiv(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.floordiv(self._id, other, is_qc, **kwargs)
-        )
-
-    def rfloordiv(self, other, **kwargs):
-        if isinstance(other, type(self)):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.rfloordiv(self._id, other, is_qc, **kwargs)
         )
 
     def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
@@ -885,3 +707,48 @@ class ClientQueryCompiler(BaseQueryCompiler):
 
     def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True):
         raise NotImplementedError
+
+
+def _set_forwarding_method_for_binary_function(method_name: str):
+    def forwarding_method(
+        self: ClientQueryCompiler,
+        other: Any,
+        **kwargs,
+    ):
+        other_is_qc = isinstance(other, type(self))
+        if other_is_qc:
+            other = other._id
+        return self.__constructor__(
+            getattr(self._service, method_name)(self._id, other_is_qc, other, **kwargs)
+        )
+
+    setattr(ClientQueryCompiler, method_name, forwarding_method)
+
+
+_BINARY_FORWARDING_METHODS = frozenset(
+    {
+        "eq",
+        "lt",
+        "le",
+        "gt",
+        "ge",
+        "ne",
+        "__and__",
+        "__or__",
+        "add",
+        "radd",
+        "truediv",
+        "rtruediv",
+        "mod",
+        "rmod",
+        "sub",
+        "rsub",
+        "mul",
+        "rmul",
+        "floordiv",
+        "rfloordiv",
+    }
+)
+
+for method in _BINARY_FORWARDING_METHODS:
+    _set_forwarding_method_for_binary_function(method)

@@ -1,6 +1,4 @@
-import numpy as np
-import pickle
-from typing import Any, NamedTuple, Optional
+from typing import Any, NamedTuple, Optional, Union
 from uuid import UUID, uuid4
 from modin.core.io.io import BaseIO
 
@@ -62,22 +60,22 @@ class ForwardingQueryCompilerService:
     def dtypes(self, id):
         return self._qc[id].dtypes
 
-    def insert(self, id, loc, column, value, is_qc):
-        if is_qc:
+    def insert(self, id, value_is_qc: bool, loc, column, value):
+        if value_is_qc:
             value = self._qc[value]
         new_id = self._generate_id()
         self._qc[new_id] = self._qc[id].insert(loc, column, value)
         return new_id
 
-    def setitem(self, id, axis, key, value, is_qc):
-        if is_qc:
+    def setitem(self, id, value_is_qc: bool, axis, key, value):
+        if value_is_qc:
             value = self._qc[value]
         new_id = self._generate_id()
         self._qc[new_id] = self._qc[id].setitem(axis, key, value)
         return new_id
 
-    def getitem_array(self, id, key, is_qc):
-        if is_qc:
+    def getitem_array(self, key_is_qc: bool, id, key):
+        if key_is_qc:
             key = self._qc[key]
         new_id = self._generate_id()
         self._qc[new_id] = self._qc[id].getitem_array(key)
@@ -86,18 +84,18 @@ class ForwardingQueryCompilerService:
     def replace(
         self,
         id,
+        to_replace_is_qc: bool,
+        regex_is_qc: bool,
         to_replace,
         value,
         inplace,
         limit,
         regex,
         method,
-        is_to_replace_qc,
-        is_regex_qc,
     ):
-        if is_to_replace_qc:
+        if to_replace_is_qc:
             to_replace = self._qc[to_replace]
-        if is_regex_qc:
+        if regex_is_qc:
             regex = self._qc[regex]
         new_id = self._generate_id()
         # TODO(GH#3108): Use positional arguments instead of keyword arguments
@@ -116,6 +114,7 @@ class ForwardingQueryCompilerService:
     def fillna(
         self,
         id,
+        value_is_qc: bool,
         squeeze_self,
         squeeze_value,
         value,
@@ -124,9 +123,8 @@ class ForwardingQueryCompilerService:
         inplace,
         limit,
         downcast,
-        is_qc,
     ):
-        if is_qc:
+        if value_is_qc:
             value = self._qc[value]
         new_id = self._generate_id()
         # TODO(GH#3108): Use positional arguments instead of keyword arguments
@@ -145,94 +143,9 @@ class ForwardingQueryCompilerService:
         return new_id
 
     def concat(self, id, axis, other, **kwargs):
-        # convert id to query compiler
         other = [self._qc[o] for o in other]
         new_id = self._generate_id()
         self._qc[new_id] = self._qc[id].concat(axis, other, **kwargs)
-        return new_id
-
-    def eq(self, id, other, is_qc, **kwargs):
-        if is_qc:
-            other = self._qc[other]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].eq(other, **kwargs)
-        return new_id
-
-    def lt(self, id, other, is_qc, **kwargs):
-        if is_qc:
-            other = self._qc[other]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].lt(other, **kwargs)
-        return new_id
-
-    def le(self, id, other, is_qc, **kwargs):
-        if is_qc:
-            other = self._qc[other]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].le(other, **kwargs)
-        return new_id
-
-    def gt(self, id, other, is_qc, **kwargs):
-        if is_qc:
-            other = self._qc[other]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].gt(other, **kwargs)
-        return new_id
-
-    def ge(self, id, other, is_qc, **kwargs):
-        if is_qc:
-            other = self._qc[other]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].ge(other, **kwargs)
-        return new_id
-
-    def ne(self, id, other, is_qc, **kwargs):
-        if is_qc:
-            other = self._qc[other]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].ne(other, **kwargs)
-        return new_id
-
-    def __and__(self, id, other, is_qc, **kwargs):
-        if is_qc:
-            other = self._qc[other]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].__and__(other, **kwargs)
-        return new_id
-
-    def __or__(self, id, other, is_qc, **kwargs):
-        if is_qc:
-            other = self._qc[other]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].__or__(other, **kwargs)
-        return new_id
-
-    def add(self, id, other, is_qc, **kwargs):
-        if is_qc:
-            other = self._qc[other]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].add(other, **kwargs)
-        return new_id
-
-    def radd(self, id, other, is_qc, **kwargs):
-        if is_qc:
-            other = self._qc[other]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].radd(other, **kwargs)
-        return new_id
-
-    def truediv(self, id, other, is_qc, **kwargs):
-        if is_qc:
-            other = self._qc[other]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].truediv(other, **kwargs)
-        return new_id
-
-    def rtruediv(self, id, other, is_qc, **kwargs):
-        if is_qc:
-            other = self._qc[other]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].rtruediv(other, **kwargs)
         return new_id
 
     def mod(self, id, other, is_qc, **kwargs):
@@ -463,6 +376,48 @@ def _set_forwarding_method_for_single_id(method_name: str):
     setattr(ForwardingQueryCompilerService, method_name, forwarding_method)
 
 
+def _set_forwarding_method_for_binary_function(method_name: str):
+    def forwarding_method(
+        self: ForwardingQueryCompilerService,
+        id: UUID,
+        other_is_qc: bool,
+        other: Union[UUID, Any],
+        **kwargs,
+    ):
+        if other_is_qc:
+            other = self._qc[other]
+        new_id = self._generate_id()
+        self._qc[new_id] = getattr(self._qc[id], method_name)(other, **kwargs)
+        return new_id
+
+    setattr(ForwardingQueryCompilerService, method_name, forwarding_method)
+
+
+_BINARY_FORWARDING_METHODS = frozenset(
+    {
+        "eq",
+        "lt",
+        "le",
+        "gt",
+        "ge",
+        "ne",
+        "__and__",
+        "__or__",
+        "add",
+        "radd",
+        "truediv",
+        "rtruediv",
+        "mod",
+        "rmod",
+        "sub",
+        "rsub",
+        "mul",
+        "rmul",
+        "floordiv",
+        "rfloordiv",
+    }
+)
+
 _SINGLE_ID_FORWARDING_METHODS = frozenset(
     {
         "columnarize",
@@ -564,3 +519,6 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
 
 for method in _SINGLE_ID_FORWARDING_METHODS:
     _set_forwarding_method_for_single_id(method)
+
+for method in _BINARY_FORWARDING_METHODS:
+    _set_forwarding_method_for_binary_function(method)
