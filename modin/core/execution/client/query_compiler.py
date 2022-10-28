@@ -646,9 +646,14 @@ class ClientQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         drop=False,
     ):
+        if isinstance(by, type(self)):
+            by = by._id
+            is_qc = True
+        else:
+            is_qc = False
         return self.__constructor__(
             self._service.groupby_mean(
-                self._id, by._id, axis, groupby_kwargs, agg_args, agg_kwargs, drop
+                self._id, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop, is_qc
             )
         )
 
@@ -681,9 +686,21 @@ class ClientQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         drop=False,
     ):
+        if isinstance(by, type(self)):
+            by = by._id
+            is_qc = True
+        else:
+            is_qc = False
         return self.__constructor__(
             self._service.groupby_max(
-                self._id, by._id, axis, groupby_kwargs, agg_args, agg_kwargs, drop
+                self._id,
+                by,
+                axis,
+                groupby_kwargs,
+                agg_args,
+                agg_kwargs,
+                drop,
+                is_qc,
             )
         )
 
@@ -696,9 +713,14 @@ class ClientQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         drop=False,
     ):
+        if isinstance(by, type(self)):
+            by = by._id
+            is_qc = True
+        else:
+            is_qc = False
         return self.__constructor__(
             self._service.groupby_min(
-                self._id, by._id, axis, groupby_kwargs, agg_args, agg_kwargs, drop
+                self._id, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop, is_qc
             )
         )
 
@@ -733,10 +755,15 @@ class ClientQueryCompiler(BaseQueryCompiler):
         how="axis_wise",
         drop=False,
     ):
+        if isinstance(by, type(self)):
+            by = by._id
+            is_qc = True
+        else:
+            is_qc = False
         return self.__constructor__(
             self._service.groupby_agg(
                 self._id,
-                by._id,
+                by,
                 agg_func,
                 axis,
                 groupby_kwargs,
@@ -744,6 +771,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
                 agg_kwargs,
                 how,
                 drop,
+                is_qc,
             )
         )
 

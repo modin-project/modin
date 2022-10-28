@@ -489,7 +489,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
     )
     eval_fillna(modin_groupby, pandas_groupby)
     eval_count(modin_groupby, pandas_groupby)
-    if get_current_execution() != "BaseOnPython":
+    if get_current_execution() not in ("BaseOnPython", "Client"):
         eval_general(
             modin_groupby,
             pandas_groupby,
@@ -1276,7 +1276,7 @@ def eval_shift(modin_groupby, pandas_groupby):
     # groupby.shift internally masks the source frame with a Series boolean mask,
     # doing so ends up in the `getitem_array` method, that is broken for `BaseOnPython`:
     # https://github.com/modin-project/modin/issues/3701
-    if get_current_execution() != "BaseOnPython":
+    if get_current_execution() not in ("BaseOnPython", "Client"):
         if isinstance(pandas_groupby, pandas.core.groupby.DataFrameGroupBy):
             pandas_res = pandas_groupby.shift(axis=1, fill_value=777)
             modin_res = modin_groupby.shift(axis=1, fill_value=777)
@@ -1441,7 +1441,7 @@ def test_groupby_with_kwarg_dropna(groupby_kwargs, dropna):
     # https://github.com/modin-project/modin/issues/2912
     # "BaseOnPython" tests are disabled because of the bug:
     # https://github.com/modin-project/modin/issues/3827
-    if get_current_execution() != "BaseOnPython" and any(
+    if get_current_execution() not in ("BaseOnPython", "Client") and any(
         col in modin_df.columns for col in by_kwarg
     ):
         df_equals(md_grp.quantile(), pd_grp.quantile())
@@ -1555,7 +1555,7 @@ def test_agg_func_None_rename(by_and_agg_dict, as_index):
         pytest.param(
             False,
             marks=pytest.mark.xfail_executions(
-                ["BaseOnPython"], reason="See Pandas issue #39103"
+                ["BaseOnPython", "Client"], reason="See Pandas issue #39103"
             ),
         ),
     ],
@@ -1910,6 +1910,16 @@ def test_multi_column_groupby_different_partitions(
     eval___getitem__(md_grp, pd_grp, [md_df.columns[1], md_df.columns[2]])
 
 
+# TODO(https://github.com/modin-project/modin/issues/5165): Consider
+# making the dataframe not empty and fixing the resulting bugs.
+@pytest.mark.skipif(
+    get_current_execution() == "Client",
+    reason=(
+        "Dataframe is empty, so other executions default to pandas and "
+        + "behave correctly, but Client execution has lazy_execution=True, so it "
+        + "doesn't default to pandas and it has bugs."
+    ),
+)
 @pytest.mark.parametrize(
     "by",
     [
@@ -2120,8 +2130,11 @@ def test_groupby_with_virtual_partitions():
             PandasDataframeAxisPartition,
         )
     else:
+        qc = big_modin_df._query_compiler
+        if get_current_execution() == "Client":
+            qc = qc._service._qc[qc._id]
         assert not issubclass(
-            type(big_modin_df._query_compiler._modin_frame._partitions[0][0]),
+            type(qc._modin_frame._partitions[0][0]),
             PandasDataframeAxisPartition,
         )
     eval_general(

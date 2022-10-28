@@ -918,7 +918,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                     k,
                     DataFrame(
                         query_compiler=self._query_compiler.getitem_row_array(
-                            indices[k]
+                            indices[k], numeric=True
                         )
                     ),
                 )
@@ -1228,7 +1228,7 @@ class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
                     k,
                     Series(
                         query_compiler=self._query_compiler.getitem_row_array(
-                            indices[k]
+                            indices[k], numeric=True
                         )
                     ),
                 )
