@@ -393,7 +393,8 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
-      - run: |
+      - name: I/O tests
+        run: |
           python -m pytest modin/pandas/test/test_io.py::TestCsv --execution=${{ matrix.execution }}
           python -m pytest modin/pandas/test/test_io.py::TestSql --execution=${{ matrix.execution }}
         # Client has to be able to to CSV and SQL I/O.

@@ -1739,11 +1739,14 @@ def test_dt(timezone):
         df_b = lib.DataFrame({"B": [lib.to_datetime("27/10/2020")]})
         df = lib.concat([df_a, df_b], axis=1)
         eval_result = df.eval("B - A", engine="python")
-        # BaseOnPython had a single partition after the concat, and it
-        # maintains that partition after eval. In other execution modes,
-        # eval() should re-split the result into two column partitions,
+        # BaseOnPython and Client have a single partition after the concat,
+        # and they maintain that partition after eval. In other execution
+        # modes, eval() should re-split the result into two column partitions,
         # one of which is empty.
-        if isinstance(df, pd.DataFrame) and get_current_execution() != "BaseOnPython":
+        if isinstance(df, pd.DataFrame) and get_current_execution() not in (
+            "BaseOnPython",
+            "Client",
+        ):
             assert eval_result._query_compiler._modin_frame._partitions.shape == (1, 2)
         return eval_result.dt.days
 
