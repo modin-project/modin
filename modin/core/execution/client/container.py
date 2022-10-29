@@ -624,6 +624,12 @@ _BINARY_FORWARDING_METHODS = frozenset(
         "rmul",
         "floordiv",
         "rfloordiv",
+        "__rand__",
+        "__ror__",
+        "__xor__",
+        "__rxor__",
+        "pow",
+        "rpow",
     }
 )
 
