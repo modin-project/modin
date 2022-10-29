@@ -472,7 +472,8 @@ def concat(
     list_of_objs = [
         obj._query_compiler
         for obj in list_of_objs
-        if len(obj.index) or len(obj.columns)
+        if (not obj._query_compiler.lazy_execution and len(obj.index))
+        or len(obj.columns)
     ]
     if keys is not None:
         if all_series:

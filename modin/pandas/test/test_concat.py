@@ -170,6 +170,10 @@ def test_concat_series_only():
     )
 
 
+@pytest.mark.xfail_executions(
+    "Client",
+    reason="Client query compiler has lazy_execution=True, so it doesn't detect any frames when looking for query compilers here: https://github.com/modin-project/modin/blob/f492ba9888fc05ff7c224db8a22faac8c0106a4b/modin/pandas/general.py#L472-L477",
+)
 def test_concat_with_empty_frame():
     modin_empty_df = pd.DataFrame()
     pandas_empty_df = pandas.DataFrame()
