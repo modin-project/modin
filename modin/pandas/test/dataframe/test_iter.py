@@ -240,6 +240,7 @@ def test___repr__():
         pandas_df = pandas.read_csv(path)
         with warns_that_defaulting_to_pandas() if get_current_execution() in (
             "BaseOnPython",
+            "PandasOnPython",
             "Client",
         ) else _nullcontext():
             modin_df = pd.read_csv(path)

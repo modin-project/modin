@@ -306,7 +306,7 @@ def set_client_execution():
                 return self.__constructor__(result.result)
             return result.result
 
-    service = ForwardingQueryCompilerContainer(BaseQueryCompiler, PandasOnPythonIO)
+    service = ForwardingQueryCompilerContainer(BaseQueryCompiler, BaseOnPythonIO)
     ClientQueryCompiler.set_server_connection(service)
     ClientIO.query_compiler_cls = TestClientQueryCompiler
     ClientIO.set_server_connection(service)

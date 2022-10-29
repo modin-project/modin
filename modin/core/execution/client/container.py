@@ -28,13 +28,14 @@ class ForwardingQueryCompilerContainer:
 
     Parameters
     ----------
-    query_compiler_class : BaseQueryCompiler
-        Query compiler class to contain.
-    io_class : BaseIO
-        The IO class to use for reading and writing data.
+    query_compiler_class : type
+        Query compiler class to contain. Should be a subclass of BaseQueryCompiler.
+    io_class : type
+        The IO class to use for reading and writing data. Should be a subclass
+        of modin.core.io.io.BaseIO.
     """
 
-    def __init__(self, query_compiler_class: BaseQueryCompiler, io_class: BaseIO):
+    def __init__(self, query_compiler_class: type, io_class: type):
         self._qc = {}
         self._query_compiler_class = query_compiler_class
         self._io_class = io_class
