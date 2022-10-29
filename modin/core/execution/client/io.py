@@ -67,10 +67,11 @@ class ClientIO(BaseIO):
         """
         if isinstance(filepath_or_buffer, str):
             filepath_or_buffer = fsspec.open(filepath_or_buffer).full_name
-            if filepath_or_buffer.startswith("file://"):
+            file_protocol = "file://"
+            if filepath_or_buffer.startswith(file_protocol):
                 # We will do this so that the backend can know whether this
                 # is a path or a URL.
-                filepath_or_buffer = filepath_or_buffer[7:]
+                filepath_or_buffer = filepath_or_buffer[len(file_protocol):]
         else:
             raise NotImplementedError("Only filepaths are supported for read_csv")
         if cls._server_conn is None:
