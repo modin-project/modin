@@ -18,7 +18,6 @@ import pandas
 from typing import Any, NamedTuple, Optional, Union
 from uuid import UUID, uuid4
 
-from modin.core.io.io import BaseIO
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 
 
