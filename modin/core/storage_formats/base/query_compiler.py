@@ -3155,7 +3155,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             return (
                 self.getitem_column_array(idx, numeric=True)
                 if axis
-                else self.getitem_row_array(idx)
+                else self.getitem_row_array(idx, numeric=True)
             )
 
         if 0 <= loc < len(self.get_axis(axis)):

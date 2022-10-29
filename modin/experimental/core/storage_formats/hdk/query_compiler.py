@@ -555,7 +555,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_modin_frame)
 
-    def drop(self, index=None, columns=None):
+    def drop(self, index=None, columns=None, errors: str = "raise"):
+        # `errors` parameter needs to be part of the function signature because
+        # other query compilers may not take care of error handling at the API
+        # layer. This query compiler assumes there won't be any errors due to
+        # invald keys.
         assert index is None, "Only column drop is supported"
         return self.__constructor__(
             self._modin_frame.take_2d_labels_or_positional(

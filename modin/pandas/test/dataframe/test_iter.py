@@ -13,10 +13,12 @@
 
 import pytest
 
+import contextlib
 import numpy as np
 import pandas
 import matplotlib
 import modin.pandas as pd
+from modin.utils import get_current_execution
 from pandas._testing import ensure_clean
 import warnings
 
@@ -37,6 +39,12 @@ NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+
+@contextlib.contextmanager
+def _nullcontext():
+    """Replacement for contextlib.nullcontext missing in older Python."""
+    yield
 
 
 @pytest.mark.parametrize("method", ["items", "iteritems", "iterrows"])
@@ -230,7 +238,10 @@ def test___repr__():
         with open(path, "w") as f:
             f.write(string_data)
         pandas_df = pandas.read_csv(path)
-        with warns_that_defaulting_to_pandas():
+        with warns_that_defaulting_to_pandas() if get_current_execution() in (
+            "BaseOnPython",
+            "Client",
+        ) else _nullcontext():
             modin_df = pd.read_csv(path)
     assert repr(pandas_df) == repr(modin_df)
 

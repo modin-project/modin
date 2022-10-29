@@ -375,8 +375,6 @@ jobs:
         # Client execution doesn't need to work with xgboost
         if: matrix.execution != 'Client'      
       - run: python -m pytest -n 2 modin/test/storage_formats/base/test_internals.py --execution=${{ matrix.execution }}
-        # Client execution has different internals that we dont' test yet
-        if: matrix.execution != 'Client'
       - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --execution=${{ matrix.execution }}

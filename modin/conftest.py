@@ -53,7 +53,6 @@ from modin.core.storage_formats import (  # noqa: E402
     BaseQueryCompiler,
 )
 from modin.core.execution.client.io import ClientIO  # noqa: E402
-from modin.core.execution.client.query_compiler import ClientQueryCompiler  # noqa: E402
 from modin.core.execution.client.container import (  # noqa: E402
     ForwardingQueryCompilerContainer,
 )
@@ -280,18 +279,6 @@ def set_base_on_python_execution():
     modin.set_execution(engine="python", storage_format="Base")
 
 
-class TestClientQueryCompiler(ClientQueryCompiler):
-    @classmethod
-    def from_pandas(cls, df, data_cls):
-        return cls(cls._service.add_query_compiler(TestQC.from_pandas(df, data_cls)))
-
-    def default_to_pandas(self, pandas_op, *args, **kwargs):
-        result = self._service.default_to_pandas(self._id, pandas_op, *args, **kwargs)
-        if result.result_is_qc_id:
-            return self.__constructor__(result.result)
-        return result.result
-
-
 class ClientFactory(factories.BaseFactory):
     @classmethod
     def prepare(cls):
@@ -299,6 +286,26 @@ class ClientFactory(factories.BaseFactory):
 
 
 def set_client_execution():
+    # Can't always import ClientQueryCompiler, because it uses NoDefault, which
+    # is not available on older pandas.
+
+    from modin.core.execution.client.query_compiler import ClientQueryCompiler
+
+    class TestClientQueryCompiler(ClientQueryCompiler):
+        @classmethod
+        def from_pandas(cls, df, data_cls):
+            return cls(
+                cls._service.add_query_compiler(TestQC.from_pandas(df, data_cls))
+            )
+
+        def default_to_pandas(self, pandas_op, *args, **kwargs):
+            result = self._service.default_to_pandas(
+                self._id, pandas_op, *args, **kwargs
+            )
+            if result.result_is_qc_id:
+                return self.__constructor__(result.result)
+            return result.result
+
     service = ForwardingQueryCompilerContainer(BaseQueryCompiler, PandasOnPythonIO)
     ClientQueryCompiler.set_server_connection(service)
     ClientIO.query_compiler_cls = TestClientQueryCompiler
