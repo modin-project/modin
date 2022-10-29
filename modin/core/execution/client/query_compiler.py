@@ -220,144 +220,6 @@ class ClientQueryCompiler(BaseQueryCompiler):
     def merge(self, right, **kwargs):
         return self.__constructor__(self._service.merge(self._id, right._id, **kwargs))
 
-    def groupby_mean(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
-    ):
-        if isinstance(by, type(self)):
-            by = by._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.groupby_mean(
-                self._id, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop, is_qc
-            )
-        )
-
-    def groupby_count(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
-    ):
-        if isinstance(by, type(self)):
-            by = by._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.groupby_count(
-                self._id, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop, is_qc
-            )
-        )
-
-    def groupby_max(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
-    ):
-        if isinstance(by, type(self)):
-            by = by._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.groupby_max(
-                self._id,
-                by,
-                axis,
-                groupby_kwargs,
-                agg_args,
-                agg_kwargs,
-                drop,
-                is_qc,
-            )
-        )
-
-    def groupby_min(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
-    ):
-        if isinstance(by, type(self)):
-            by = by._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.groupby_min(
-                self._id, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop, is_qc
-            )
-        )
-
-    def groupby_sum(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
-    ):
-        if isinstance(by, type(self)):
-            by = by._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.groupby_sum(
-                self._id, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop, is_qc
-            )
-        )
-
-    def groupby_agg(
-        self,
-        by,
-        agg_func,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        how="axis_wise",
-        drop=False,
-    ):
-        if isinstance(by, type(self)):
-            by = by._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.groupby_agg(
-                self._id,
-                by,
-                agg_func,
-                axis,
-                groupby_kwargs,
-                agg_args,
-                agg_kwargs,
-                how,
-                drop,
-                is_qc,
-            )
-        )
-
     def get_index_names(self, axis=0):
         if axis == 0:
             return self.index.names
@@ -380,6 +242,26 @@ class ClientQueryCompiler(BaseQueryCompiler):
 
     def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True):
         raise NotImplementedError
+
+
+def _set_forwarding_groupby_method(method_name: str):
+    """
+    Define a groupby method that forwards arguments to the service.
+
+    Parameters
+    ----------
+    method_name : str
+    """
+
+    def forwading_method(self, by, *args, **kwargs):
+        by_is_qc: bool = isinstance(by, type(self))
+        if by_is_qc:
+            by = by._id
+        return self.__constructor__(
+            getattr(self._service, method_name)(self._id, by_is_qc, by, *args, **kwargs)
+        )
+
+    setattr(ClientQueryCompiler, method_name, forwading_method)
 
 
 def _set_forwarding_method_for_binary_function(method_name: str) -> None:
@@ -427,6 +309,8 @@ def _set_forwarding_method_for_single_id(method_name: str) -> None:
     setattr(ClientQueryCompiler, method_name, forwarding_method)
 
 
+_GROUPBY_FORWARDING_METHODS = frozenset({"mean", "count", "max", "min", "sum", "agg"})
+
 _BINARY_FORWARDING_METHODS = frozenset(
     {
         "eq",
@@ -451,9 +335,6 @@ _BINARY_FORWARDING_METHODS = frozenset(
         "rfloordiv",
     }
 )
-
-for method in _BINARY_FORWARDING_METHODS:
-    _set_forwarding_method_for_binary_function(method)
 
 _SINGLE_ID_FORWARDING_METHODS = frozenset(
     {
@@ -554,6 +435,11 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
     }
 )
 
+for method in _BINARY_FORWARDING_METHODS:
+    _set_forwarding_method_for_binary_function(method)
 
 for method in _SINGLE_ID_FORWARDING_METHODS:
     _set_forwarding_method_for_single_id(method)
+
+for method in _GROUPBY_FORWARDING_METHODS:
+    _set_forwarding_groupby_method("groupby_" + method)

@@ -466,121 +466,7 @@ class ForwardingQueryCompilerContainer:
         self._qc[new_id] = self._qc[id].merge(self._qc[right], **kwargs)
         return new_id
 
-    def groupby_mean(
-        self,
-        id,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
-        is_qc: bool = False,
-    ):
-        if is_qc:
-            by = self._qc[by]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].groupby_mean(
-            by, axis, groupby_kwargs, agg_args, agg_kwargs, drop
-        )
-        return new_id
-
-    def groupby_count(
-        self,
-        id,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
-        is_qc: bool = False,
-    ):
-        if is_qc:
-            by = self._qc[by]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].groupby_count(
-            by, axis, groupby_kwargs, agg_args, agg_kwargs, drop
-        )
-        return new_id
-
-    def groupby_max(
-        self,
-        id,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
-        is_qc: bool = False,
-    ):
-        if is_qc:
-            by = self._qc[by]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].groupby_max(
-            by, axis, groupby_kwargs, agg_args, agg_kwargs, drop
-        )
-        return new_id
-
-    def groupby_min(
-        self,
-        id,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
-        is_qc: bool = False,
-    ):
-        if is_qc:
-            by = self._qc[by]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].groupby_min(
-            by, axis, groupby_kwargs, agg_args, agg_kwargs, drop
-        )
-        return new_id
-
-    def groupby_sum(
-        self,
-        id,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
-        is_qc: bool = False,
-    ):
-        if is_qc:
-            by = self._qc[by]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].groupby_sum(
-            by, axis, groupby_kwargs, agg_args, agg_kwargs, drop
-        )
-        return new_id
-
-    def groupby_agg(
-        self,
-        id,
-        by,
-        agg_func,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        how="axis_wise",
-        drop=False,
-        is_qc: bool = False,
-    ):
-        if is_qc:
-            by = self._qc[by]
-        new_id = self._generate_id()
-        self._qc[new_id] = self._qc[id].groupby_agg(
-            by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
-        )
-        return new_id
+    ### I/O methods go below. ###
 
     def read_csv(self, connection, filepath, **kwargs) -> UUID:
         """
@@ -651,9 +537,28 @@ class ForwardingQueryCompilerContainer:
         self._io_class.to_sql(self._qc[id], **kwargs)
 
 
+def _set_forwarding_groupby_method(method_name: str):
+    """
+    Define a groupby method that forwards arguments to an inner query compiler.
+
+    Parameters
+    ----------
+    method_name : str
+    """
+
+    def forwarding_method(self, id, by_is_qc, by, *args, **kwargs):
+        if by_is_qc:
+            by = self._qc[by]
+        new_id = self._generate_id()
+        self._qc[new_id] = getattr(self._qc[id], method_name)(by, *args, **kwargs)
+        return new_id
+
+    setattr(ForwardingQueryCompilerContainer, method_name, forwarding_method)
+
+
 def _set_forwarding_method_for_single_id(method_name: str):
     """
-    Define a method that forwards arguments to the inner query compiler.
+    Define a method that forwards arguments to an inner query compiler.
 
     Parameters
     ----------
@@ -672,7 +577,7 @@ def _set_forwarding_method_for_single_id(method_name: str):
 
 def _set_forwarding_method_for_binary_function(method_name: str):
     """
-    Define a binary method that forwards arguments to the inner query compiler.
+    Define a binary method that forwards arguments to an inner query compiler.
 
     Parameters
     ----------
@@ -694,6 +599,8 @@ def _set_forwarding_method_for_binary_function(method_name: str):
 
     setattr(ForwardingQueryCompilerContainer, method_name, forwarding_method)
 
+
+_GROUPBY_FORWARDING_METHODS = frozenset({"mean", "count", "max", "min", "sum", "agg"})
 
 _BINARY_FORWARDING_METHODS = frozenset(
     {
@@ -824,3 +731,6 @@ for method in _SINGLE_ID_FORWARDING_METHODS:
 
 for method in _BINARY_FORWARDING_METHODS:
     _set_forwarding_method_for_binary_function(method)
+
+for method in _GROUPBY_FORWARDING_METHODS:
+    _set_forwarding_groupby_method("groupby_" + method)

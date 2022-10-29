@@ -84,6 +84,8 @@ jobs:
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
+        # Client execution doesn't need to work with xgboost
+        if: matrix.execution != 'Client'      
       - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --execution=${{ matrix.execution }}
@@ -94,6 +96,8 @@ jobs:
       - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py --execution=${{ matrix.execution }}
       - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
+        # Client execution dosen't need to pickle modin.pandas objects.
+        if: matrix.execution != 'Client'      
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_concat.py --execution=${{ matrix.execution }}
