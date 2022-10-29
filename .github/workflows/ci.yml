@@ -393,11 +393,13 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
-      - run: python -m pytest modin/pandas/test/test_io.py::TestCsv --execution=${{ matrix.execution }}
-        # Client has to be able to to do CSV I/O.
-        if: matrix.execution == 'Client'
-      - run: python -m pytest modin/pandas/test/test_io.py::TestSql --execution=${{ matrix.execution }}
-        # Client has to be able to to do SQL I/O.
+      - name: Test I/O
+        # note that if test dataset size is small like for the other tests in
+        # this job, the tests fail.
+        run: |
+          MODIN_TEST_DATASET_SIZE=NORMAL python -m pytest modin/pandas/test/test_io.py::TestCsv --execution=${{ matrix.execution }}
+          MODIN_TEST_DATASET_SIZE=NORMAL python -m pytest modin/pandas/test/test_io.py::TestSql --execution=${{ matrix.execution }}
+        # Client has to be able to to do CSV and SQL I/O.
         if: matrix.execution == 'Client'
       - uses: codecov/codecov-action@v2
 
