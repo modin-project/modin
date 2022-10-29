@@ -54,8 +54,8 @@ from modin.core.storage_formats import (  # noqa: E402
 )
 from modin.core.execution.client.io import ClientIO  # noqa: E402
 from modin.core.execution.client.query_compiler import ClientQueryCompiler  # noqa: E402
-from modin.core.execution.client.service import (  # noqa: E402
-    ForwardingQueryCompilerService,
+from modin.core.execution.client.container import (  # noqa: E402
+    ForwardingQueryCompilerContainer,
 )
 from modin.core.execution.python.implementations.pandas_on_python.dataframe.dataframe import (  # noqa: E402
     PandasOnPythonDataframe,
@@ -299,7 +299,7 @@ class ClientFactory(factories.BaseFactory):
 
 
 def set_client_execution():
-    service = ForwardingQueryCompilerService(BaseQueryCompiler, PandasOnPythonIO)
+    service = ForwardingQueryCompilerContainer(BaseQueryCompiler, PandasOnPythonIO)
     ClientQueryCompiler.set_server_connection(service)
     ClientIO.query_compiler_cls = TestClientQueryCompiler
     ClientIO.set_server_connection(service)

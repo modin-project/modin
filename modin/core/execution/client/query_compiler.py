@@ -382,7 +382,15 @@ class ClientQueryCompiler(BaseQueryCompiler):
         raise NotImplementedError
 
 
-def _set_forwarding_method_for_binary_function(method_name: str):
+def _set_forwarding_method_for_binary_function(method_name: str) -> None:
+    """
+    Define a binary method that forwards arguments to the service.
+
+    Parameters
+    ----------
+    method_name : str
+    """
+
     def forwarding_method(
         self: ClientQueryCompiler,
         other: Any,
@@ -398,7 +406,15 @@ def _set_forwarding_method_for_binary_function(method_name: str):
     setattr(ClientQueryCompiler, method_name, forwarding_method)
 
 
-def _set_forwarding_method_for_single_id(method_name: str):
+def _set_forwarding_method_for_single_id(method_name: str) -> None:
+    """
+    Define a method that forwards arguments to the service.
+
+    Parameters
+    ----------
+    method_name : str
+    """
+
     def forwarding_method(
         self: ClientQueryCompiler,
         *args,
