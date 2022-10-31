@@ -2385,6 +2385,14 @@ class HdkOnNativeDataframe(PandasDataframe):
         """
         new_index = df.index
         new_columns = df.columns
+
+        if isinstance(new_columns, MultiIndex):
+            # MultiIndex columns are not supported by the HDK backend.
+            # We just print this warning here and fall back to pandas.
+            index_cols = None
+            ErrorMessage.single_warning(
+                "MultiIndex columns are not currently supported by the HDK backend."
+            )
         # If there is non-trivial index, we put it into columns.
         # If the index is trivial, but there are no columns, we put
         # it into columns either because, otherwise, we don't know
@@ -2392,7 +2400,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         # That's what we usually have for arrow tables and execution
         # result. Unnamed index is renamed to __index__. Also all
         # columns get 'F_' prefix to handle names unsupported in HDK.
-        if len(new_index) == 0 or (
+        elif len(new_index) == 0 or (
             len(new_columns) != 0 and cls._is_trivial_index(new_index)
         ):
             index_cols = None

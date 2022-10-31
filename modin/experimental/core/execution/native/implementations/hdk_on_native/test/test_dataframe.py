@@ -447,10 +447,7 @@ class TestMultiIndex:
         eval_general(pd, pandas, applier)
 
     @pytest.mark.parametrize("is_multiindex", [True, False])
-    @pytest.mark.parametrize(
-        "column_names", [None, ["level1", None], ["level1", "level2"]]
-    )
-    def test_reset_index_multicolumns(self, is_multiindex, column_names):
+    def test_reset_index_multicolumns(self, is_multiindex):
         index = (
             pandas.MultiIndex.from_tuples(
                 [(i, j, k) for i in range(2) for j in range(3) for k in range(4)],
@@ -458,9 +455,6 @@ class TestMultiIndex:
             )
             if is_multiindex
             else pandas.Index(np.arange(1, len(self.data["a"]) + 1), name="index")
-        )
-        columns = pandas.MultiIndex.from_tuples(
-            [("a", "b"), ("b", "c")], names=column_names
         )
         data = np.array(list(self.data.values())).T
 
@@ -471,7 +465,7 @@ class TestMultiIndex:
         run_and_compare(
             fn=applier,
             data=data,
-            constructor_kwargs={"index": index, "columns": columns},
+            constructor_kwargs={"index": index},
         )
 
     def test_set_index_name(self):
@@ -497,6 +491,27 @@ class TestMultiIndex:
         )
 
         df_equals(pandas_df, modin_df)
+
+    def test_rename(self):
+        index = pandas.MultiIndex.from_tuples(
+            [("foo1", "bar1"), ("foo2", "bar2")], names=["foo", "bar"]
+        )
+        columns = pandas.MultiIndex.from_tuples(
+            [("fizz1", "buzz1"), ("fizz2", "buzz2")], names=["fizz", "buzz"]
+        )
+
+        def rename(df, **kwargs):
+            return df.rename(
+                index={"foo1": "foo3", "bar2": "bar3"},
+                columns={"fizz1": "fizz3", "buzz2": "buzz3"},
+            )
+
+        run_and_compare(
+            fn=rename,
+            data=[(0, 0), (1, 1)],
+            constructor_kwargs={"index": index, "columns": columns},
+            force_lazy=False,
+        )
 
 
 class TestFillna:
