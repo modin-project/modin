@@ -62,7 +62,9 @@ from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .groupby import DataFrameGroupBy
 from .accessor import CachedAccessor, SparseFrameAccessor
 from modin._compat.pandas_api.classes import DataFrameCompat
-from modin.core.storage_formats.pandas.small_query_compiler import SmallQueryCompiler
+from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
+    SmallQueryCompiler,
+)
 
 
 @_inherit_docstrings(

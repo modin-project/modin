@@ -17,7 +17,9 @@ from pandas.util._decorators import doc
 import pandas
 from modin.config import InitializeWithSmallQueryCompilers
 import numpy as np
-from modin.experimental.core.storage_formats.pandas.small_query_compiler import SmallQueryCompiler
+from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
+    SmallQueryCompiler,
+)
 
 from modin.utils import hashable
 
