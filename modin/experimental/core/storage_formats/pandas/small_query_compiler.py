@@ -399,7 +399,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
         filter_kwargs=[],
     ):
         def caller(query_compiler, *args, **kwargs):
-            print(func.__name__)
             df = query_compiler._pandas_frame
             if df_copy:
                 df = df.copy()
@@ -859,7 +858,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
         return isinstance(self._pandas_frame.columns, pandas.MultiIndex)
 
     def insert_item(self, *args, **kwargs):
-        print("Not implemented")
         return
 
     def to_pandas(self):

@@ -581,8 +581,6 @@ def test_infer_objects_single_partition():
     pandas_df = pandas.DataFrame(data).iloc[1:]
     modin_result = modin_df.infer_objects()
     pandas_result = pandas_df.infer_objects()
-    print(modin_result.dtypes)
-    print(pandas_result.dtypes)
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
