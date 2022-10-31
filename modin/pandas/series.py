@@ -2034,9 +2034,7 @@ class Series(SeriesCompat, BasePandasDataset):
             dropna=dropna,
         )
         # pandas sets output index names to None because the Series name already contains it
-        # print(counted_values)
         counted_values._query_compiler.set_index_name(None)
-        # print(counted_values)
         return counted_values
 
     def view(self, dtype=None):  # noqa: PR01, RT01, D200

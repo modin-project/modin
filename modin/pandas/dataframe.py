@@ -123,8 +123,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         self._siblings = []
         Engine.subscribe(_update_engine)
         if isinstance(data, (DataFrame, Series)):
-            query_compiler = data._query_compiler.copy()
-            self._query_compiler = data._query_compiler.copy()
+            self._query_compiler, query_compiler = data._query_compiler.copy()
             if index is not None and any(i not in data.index for i in index):
                 raise NotImplementedError(
                     "Passing non-existant columns or index values to constructor not"
@@ -446,7 +445,6 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         # groupby takes place.
         drop = False
 
-        # Single value
         if (
             not isinstance(by, (pandas.Series, Series))
             and is_list_like(by)
@@ -454,14 +452,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         ):
             by = by[0]
 
-        # Map-able: functions called on each value of the index
-        # Returns list-like of column names?
         if callable(by):
             by = self.index.map(by)
-        # hashable --> non iterable objects, ex: string, int
-        # single string, 
-        # if by is in dataframe index, use level instead of by
-        # else get query compiler corresponding to column series
         elif hashable(by) and not isinstance(by, (pandas.Grouper, FrozenList)):
             drop = by in self.columns
             idx_name = by
@@ -471,13 +463,10 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
                 level, by = by, None
             elif level is None:
                 by = self.__getitem__(by)._query_compiler
-        # is series, get query compiler
         elif isinstance(by, Series):
             drop = by._parent is self
-            print("DKLFJSLFJ", drop)
             idx_name = by.name
             by = by._query_compiler
-        # more than one item in a list
         elif is_list_like(by):
             # fastpath for multi column groupby
             if axis == 0 and all(
@@ -2997,7 +2986,6 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         """
         key = apply_if_callable(key, self)
         # Shortcut if key is an actual column
-        print(type(self._query_compiler))
         is_mi_columns = self._query_compiler.has_multiindex(axis=1)
         try:
             if key in self.columns and not is_mi_columns:

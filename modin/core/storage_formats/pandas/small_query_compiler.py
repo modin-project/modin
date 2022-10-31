@@ -239,11 +239,11 @@ def _groupby(agg_name):
     ):
         by_names = []
         if isinstance(by, pandas.DataFrame):
-            by = by.squeeze()
+            by = by.squeeze(axis=1)
         if isinstance(by, list):
             for i in range(len(by)):
                 if isinstance(by[i], pandas.DataFrame):
-                    by[i] = by[i].squeeze()
+                    by[i] = by[i].squeeze(axis=1)
                 if isinstance(by[i], pandas.Series):
                     if isinstance(df.index, pandas.MultiIndex):
                         by[i].name = pandas.MultiIndex.from_tuples(by[i].name)

@@ -135,10 +135,10 @@ def test_mixed_dtypes_groupby(as_index):
     n = 1
 
     by_values = [
-        # ("col1",),
-        # (lambda x: x % 2,),
+        ("col1",),
+        (lambda x: x % 2,),
         (modin_df["col0"].copy(), pandas_df["col0"].copy()),
-        # ("col3",),
+        ("col3",),
     ]
 
     for by in by_values:
@@ -162,7 +162,6 @@ def test_mixed_dtypes_groupby(as_index):
             lambda df: df.sem(),
             modin_df_almost_equals_pandas,
         )
-        # return modin_df, pandas_df, by
         eval_shift(modin_groupby, pandas_groupby)
         eval_mean(modin_groupby, pandas_groupby)
         eval_any(modin_groupby, pandas_groupby)
@@ -351,8 +350,6 @@ def test_simple_row_groupby(by, as_index, col1_category):
     pandas_by = maybe_get_columns(pandas_df, try_cast_to_pandas(by))
     pandas_groupby = pandas_df.groupby(by=pandas_by, as_index=as_index)
 
-    # return modin_df, pandas_df, by
-
     modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
     eval_ngroups(modin_groupby, pandas_groupby)
     eval_shift(modin_groupby, pandas_groupby)
@@ -505,7 +502,6 @@ def test_simple_row_groupby(by, as_index, col1_category):
         isinstance(o, (pd.Series, pandas.Series)) for o in by
     ):
         # Not yet supported for non-original-column-from-dataframe Series in by:
-        # return modin_groupby
         eval___getattr__(modin_groupby, pandas_groupby, "col3")
         eval___getitem__(modin_groupby, pandas_groupby, "col3")
     eval_groups(modin_groupby, pandas_groupby)
@@ -2109,7 +2105,7 @@ def test_validate_by():
 
 @pytest.mark.skipif(
     InitializeWithSmallQueryCompilers.get(),
-    reason="SmallQueryCompiler does not contain partitions."
+    reason="SmallQueryCompiler does not contain partitions.",
 )
 def test_groupby_with_virtual_partitions():
     # from https://github.com/modin-project/modin/issues/4464

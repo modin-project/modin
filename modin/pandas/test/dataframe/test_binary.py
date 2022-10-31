@@ -28,11 +28,7 @@ from modin.pandas.test.utils import (
     create_test_dfs,
     default_to_pandas_ignore_string,
 )
-<<<<<<< HEAD
-from modin.config import Engine, NPartitions
-=======
-from modin.config import InitializeWithSmallQueryCompilers, NPartitions
->>>>>>> 8c0f7f89 (Passing all tests and added config environment variable for SmallQueryCompiler)
+from modin.config import Engine, InitializeWithSmallQueryCompilers, NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -273,8 +269,7 @@ def test_mismatched_row_partitions(is_idx_aligned, op_type, is_more_other_partit
         modin_res = modin_df2.a / modin_df1.a
         pandas_res = pandas_df2.a / pandas_df1.a
     elif op_type == "ser_ser_different_name":
-        # modin_res = modin_df2.a / modin_df1.b
-        modin_res = modin_df2.a
+        modin_res = modin_df2.a / modin_df1.b
         pandas_res = pandas_df2.a / pandas_df1.b
     df_equals(modin_res, pandas_res)
 
