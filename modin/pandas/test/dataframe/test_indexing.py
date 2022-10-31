@@ -633,6 +633,42 @@ def test_loc_assignment(index, columns):
     df_equals(md_df, pd_df)
 
 
+@pytest.mark.parametrize("left, right", [(2, 1), (6, 1), (lambda df: 70, 1), (90, 70)])
+def test_loc_insert_row(left, right):
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/3764
+    pandas_df = pandas.DataFrame([[1, 2, 3], [4, 5, 6]])
+    modin_df = pd.DataFrame([[1, 2, 3], [4, 5, 6]])
+
+    def _test_loc_rows(df):
+        df.loc[left] = df.loc[right]
+        return df
+
+    eval_general(modin_df, pandas_df, _test_loc_rows)
+
+
+@pytest.mark.parametrize(
+    "columns", [10, (100, 102), (2, 6), [10, 11, 12], "a", ["b", "c", "d"]]
+)
+def test_loc_insert_col(columns):
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/3764
+    pandas_df = pandas.DataFrame([[1, 2, 3], [4, 5, 6]])
+    modin_df = pd.DataFrame([[1, 2, 3], [4, 5, 6]])
+
+    if isinstance(columns, tuple) and len(columns) == 2:
+
+        def _test_loc_cols(df):
+            df.loc[:, columns[0] : columns[1]] = 1
+
+    else:
+
+        def _test_loc_cols(df):
+            df.loc[:, columns] = 1
+
+    eval_general(modin_df, pandas_df, _test_loc_cols)
+
+
 @pytest.fixture
 def loc_iter_dfs():
     columns = ["col1", "col2", "col3"]
@@ -2045,6 +2081,57 @@ def test_setitem_unhashable_key():
 
         # test failed case: ValueError('Columns must be same length as key')
         eval_setitem(modin_df, pandas_df, df_value[["value_col1"]], key)
+
+
+def test_setitem_2d_insertion():
+    def build_value_picker(modin_value, pandas_value):
+        """Build a function that returns either Modin or pandas DataFrame depending on the passed frame."""
+        return (
+            lambda source_df, *args, **kwargs: modin_value
+            if isinstance(source_df, (pd.DataFrame, pd.Series))
+            else pandas_value
+        )
+
+    modin_df, pandas_df = create_test_dfs(test_data["int_data"])
+
+    # Easy case - key and value.columns are equal
+    modin_value, pandas_value = create_test_dfs(
+        {"new_value1": np.arange(len(modin_df)), "new_value2": np.arange(len(modin_df))}
+    )
+    eval_setitem(
+        modin_df,
+        pandas_df,
+        build_value_picker(modin_value, pandas_value),
+        col=["new_value1", "new_value2"],
+    )
+
+    # Key and value.columns have equal values but in different order
+    new_columns = ["new_value3", "new_value4"]
+    modin_value.columns, pandas_value.columns = new_columns, new_columns
+    eval_setitem(
+        modin_df,
+        pandas_df,
+        build_value_picker(modin_value, pandas_value),
+        col=["new_value4", "new_value3"],
+    )
+
+    # Key and value.columns have different values
+    new_columns = ["new_value5", "new_value6"]
+    modin_value.columns, pandas_value.columns = new_columns, new_columns
+    eval_setitem(
+        modin_df,
+        pandas_df,
+        build_value_picker(modin_value, pandas_value),
+        col=["__new_value5", "__new_value6"],
+    )
+
+    # Key and value.columns have different lengths, testing that both raise the same exception
+    eval_setitem(
+        modin_df,
+        pandas_df,
+        build_value_picker(modin_value.iloc[:, [0]], pandas_value.iloc[:, [0]]),
+        col=["new_value7", "new_value8"],
+    )
 
 
 def test___setitem__single_item_in_series():
