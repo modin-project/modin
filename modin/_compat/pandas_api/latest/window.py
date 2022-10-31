@@ -36,16 +36,7 @@ class LatestCompatibleWindow(BaseCompatibleWindow):
     ):
         self._init(
             dataframe,
-            [
-                window,
-                min_periods,
-                center,
-                win_type,
-                on,
-                axis,
-                closed,
-                method,
-            ],
+            [window, min_periods, center, win_type, on, axis, closed, method,],
             axis,
         )
 
@@ -67,15 +58,6 @@ class LatestCompatibleRolling(BaseCompatibleRolling):
     ):
         self._init(
             dataframe,
-            [
-                window,
-                min_periods,
-                center,
-                win_type,
-                on,
-                axis,
-                closed,
-                method,
-            ],
+            [window, min_periods, center, win_type, on, axis, closed, method,],
             axis,
         )

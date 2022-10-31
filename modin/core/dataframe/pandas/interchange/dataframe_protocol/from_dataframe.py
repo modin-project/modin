@@ -125,12 +125,7 @@ def unpack_protocol_column(
         which keeps memory referenced by the column alive.
     """
     dtype = col.dtype[0]
-    if dtype in (
-        DTypeKind.INT,
-        DTypeKind.UINT,
-        DTypeKind.FLOAT,
-        DTypeKind.BOOL,
-    ):
+    if dtype in (DTypeKind.INT, DTypeKind.UINT, DTypeKind.FLOAT, DTypeKind.BOOL,):
         return primitive_column_to_ndarray(col)
     elif dtype == DTypeKind.CATEGORICAL:
         return categorical_column_to_series(col)

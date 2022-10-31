@@ -213,11 +213,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         old_query_compiler.free()
 
     def _validate_other(
-        self,
-        other,
-        axis,
-        dtype_check=False,
-        compare_index=False,
+        self, other, axis, dtype_check=False, compare_index=False,
     ):
         """
         Help to check validity of other in inter-df operations.
@@ -849,12 +845,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
                     stacklevel=2,
                 )
         query_compiler = self._query_compiler.apply(
-            func,
-            axis,
-            args=args,
-            raw=raw,
-            result_type=result_type,
-            **kwds,
+            func, axis, args=args, raw=raw, result_type=result_type, **kwds,
         )
         return query_compiler
 
@@ -1809,11 +1800,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             else self
         )
         result_qc = getattr(data._query_compiler, op_name)(
-            axis=axis,
-            skipna=skipna,
-            level=level,
-            numeric_only=numeric_only,
-            **kwargs,
+            axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs,
         )
         return self._reduce_dimension(result_qc)
 
@@ -1826,12 +1813,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         )
 
     def _min(
-        self,
-        axis,
-        skipna,
-        level,
-        numeric_only,
-        **kwargs,
+        self, axis, skipna, level, numeric_only, **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return the minimum of the values over the requested axis.
@@ -2015,13 +1997,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     @_inherit_docstrings(pandas.DataFrame.rank, apilink="pandas.DataFrame.rank")
     def _rank(
-        self,
-        axis,
-        method,
-        numeric_only,
-        na_option,
-        ascending,
-        pct,
+        self, axis, method, numeric_only, na_option, ascending, pct,
     ):
         axis = self._get_axis_number(axis)
         return self.__constructor__(
@@ -2064,11 +2040,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         return ensure_index(index_like)
 
     def _reindex(
-        self,
-        index,
-        columns,
-        copy,
-        **kwargs,
+        self, index, columns, copy, **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Conform `BasePandasDataset` to new index with optional filling logic.
@@ -2253,10 +2225,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             raise ValueError("cannot insert level_0, already exists")
         else:
             new_query_compiler = self._query_compiler.reset_index(
-                drop=drop,
-                level=level,
-                col_level=col_level,
-                col_fill=col_fill,
+                drop=drop, level=level, col_level=col_level, col_fill=col_fill,
             )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
@@ -2365,14 +2334,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
     rdiv = rtruediv
 
     def _sample(
-        self,
-        n,
-        frac,
-        replace,
-        weights,
-        random_state,
-        axis,
-        **kwargs,
+        self, n, frac, replace, weights, random_state, axis, **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return a random sample of items from an axis of object.
@@ -2491,13 +2453,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             return self.__constructor__(query_compiler=query_compiler)
 
     def _sem(
-        self,
-        axis,
-        skipna,
-        level,
-        ddof,
-        numeric_only,
-        **kwargs,
+        self, axis, skipna, level, ddof, numeric_only, **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return unbiased standard error of the mean over requested axis.
@@ -2601,12 +2557,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             return self.tshift(periods, freq)
 
     def _skew(
-        self,
-        axis,
-        skipna,
-        level,
-        numeric_only,
-        **kwargs,
+        self, axis, skipna, level, numeric_only, **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return unbiased skew over requested axis.
@@ -2686,13 +2637,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         return self._create_or_update_from_compiler(result, inplace)
 
     def _std(
-        self,
-        axis,
-        skipna,
-        level,
-        ddof,
-        numeric_only,
-        **kwargs,
+        self, axis, skipna, level, ddof, numeric_only, **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return sample standard deviation over requested axis.
@@ -2772,11 +2717,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         )
 
     def to_numpy(self, dtype=None, copy=False, na_value=no_default):
-        return self._query_compiler.to_numpy(
-            dtype=dtype,
-            copy=copy,
-            na_value=na_value,
-        )
+        return self._query_compiler.to_numpy(dtype=dtype, copy=copy, na_value=na_value,)
 
     # TODO(williamma12): When this gets implemented, have the series one call this.
     def to_period(
@@ -3333,19 +3274,13 @@ class BasePandasDataset(BasePandasDatasetCompat):
     __bool__ = __nonzero__
 
     @_doc_binary_op(
-        operation="disjunction",
-        bin_op="or",
-        right="other",
-        **_doc_binary_op_kwargs,
+        operation="disjunction", bin_op="or", right="other", **_doc_binary_op_kwargs,
     )
     def __or__(self, other):
         return self._binary_op("__or__", other, axis=0)
 
     @_doc_binary_op(
-        operation="disjunction",
-        bin_op="ror",
-        right="other",
-        **_doc_binary_op_kwargs,
+        operation="disjunction", bin_op="ror", right="other", **_doc_binary_op_kwargs,
     )
     def __ror__(self, other):
         return self._binary_op("__ror__", other, axis=0)

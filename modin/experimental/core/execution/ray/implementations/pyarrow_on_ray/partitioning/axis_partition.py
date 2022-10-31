@@ -90,12 +90,7 @@ class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):
         return [
             PyarrowOnRayDataframePartition(obj)
             for obj in deploy_ray_axis_func.options(num_returns=num_splits).remote(
-                self.axis,
-                func,
-                args,
-                kwargs,
-                num_splits,
-                *self.list_of_blocks,
+                self.axis, func, args, kwargs, num_splits, *self.list_of_blocks,
             )
         ]
 
@@ -255,13 +250,7 @@ def deploy_ray_axis_func(axis, func, f_args, f_kwargs, num_splits, *partitions):
 
 @ray.remote
 def deploy_ray_func_between_two_axis_partitions(
-    axis,
-    func,
-    f_args,
-    f_kwargs,
-    num_splits,
-    len_of_left,
-    *partitions,
+    axis, func, f_args, f_kwargs, num_splits, len_of_left, *partitions,
 ):
     """
     Deploy a function along a full axis between two data sets in Ray.

@@ -144,7 +144,5 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
             The new partition.
         """
         return HdkOnNativeDataframePartition(
-            arrow_table=obj,
-            length=len(obj),
-            width=len(obj.columns),
+            arrow_table=obj, length=len(obj), width=len(obj.columns),
         )

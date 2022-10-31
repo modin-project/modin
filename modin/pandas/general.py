@@ -378,11 +378,7 @@ def value_counts(
     Series
     """
     return Series(values).value_counts(
-        sort=sort,
-        ascending=ascending,
-        normalize=normalize,
-        bins=bins,
-        dropna=dropna,
+        sort=sort, ascending=ascending, normalize=normalize, bins=bins, dropna=dropna,
     )
 
 

@@ -162,12 +162,7 @@ class Resampler(ClassLogger):
             query_comp_op = self._query_compiler.resample_app_ser
 
         dataframe = DataFrame(
-            query_compiler=query_comp_op(
-                self.resample_kwargs,
-                func,
-                *args,
-                **kwargs,
-            )
+            query_compiler=query_comp_op(self.resample_kwargs, func, *args, **kwargs,)
         )
         if is_list_like(func) or isinstance(self._dataframe, DataFrame):
             return dataframe
@@ -186,12 +181,7 @@ class Resampler(ClassLogger):
             query_comp_op = self._query_compiler.resample_agg_ser
 
         dataframe = DataFrame(
-            query_compiler=query_comp_op(
-                self.resample_kwargs,
-                func,
-                *args,
-                **kwargs,
-            )
+            query_compiler=query_comp_op(self.resample_kwargs, func, *args, **kwargs,)
         )
         if is_list_like(func) or isinstance(self._dataframe, DataFrame):
             return dataframe
@@ -304,54 +294,42 @@ class Resampler(ClassLogger):
     def first(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_first(
-                self.resample_kwargs,
-                *args,
-                **kwargs,
+                self.resample_kwargs, *args, **kwargs,
             )
         )
 
     def last(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_last(
-                self.resample_kwargs,
-                *args,
-                **kwargs,
+                self.resample_kwargs, *args, **kwargs,
             )
         )
 
     def max(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_max(
-                self.resample_kwargs,
-                *args,
-                **kwargs,
+                self.resample_kwargs, *args, **kwargs,
             )
         )
 
     def mean(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_mean(
-                self.resample_kwargs,
-                *args,
-                **kwargs,
+                self.resample_kwargs, *args, **kwargs,
             )
         )
 
     def median(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_median(
-                self.resample_kwargs,
-                *args,
-                **kwargs,
+                self.resample_kwargs, *args, **kwargs,
             )
         )
 
     def min(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_min(
-                self.resample_kwargs,
-                *args,
-                **kwargs,
+                self.resample_kwargs, *args, **kwargs,
             )
         )
 
@@ -361,17 +339,13 @@ class Resampler(ClassLogger):
         if isinstance(self._dataframe, DataFrame):
             return DataFrame(
                 query_compiler=self._query_compiler.resample_ohlc_df(
-                    self.resample_kwargs,
-                    *args,
-                    **kwargs,
+                    self.resample_kwargs, *args, **kwargs,
                 )
             )
         else:
             return DataFrame(
                 query_compiler=self._query_compiler.resample_ohlc_ser(
-                    self.resample_kwargs,
-                    *args,
-                    **kwargs,
+                    self.resample_kwargs, *args, **kwargs,
                 )
             )
 
@@ -392,9 +366,7 @@ class Resampler(ClassLogger):
     def sem(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_sem(
-                self.resample_kwargs,
-                *args,
-                **kwargs,
+                self.resample_kwargs, *args, **kwargs,
             )
         )
 

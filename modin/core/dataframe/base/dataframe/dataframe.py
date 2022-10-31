@@ -255,10 +255,7 @@ class ModinDataframe(ABC):
 
     @abstractmethod
     def reduce(
-        self,
-        axis: Union[int, Axis],
-        function: Callable,
-        dtypes: Optional[str] = None,
+        self, axis: Union[int, Axis], function: Callable, dtypes: Optional[str] = None,
     ) -> "ModinDataframe":
         """
         Perform a user-defined aggregation on the specified axis, where the axis reduces down to a singleton.

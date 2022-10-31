@@ -1395,14 +1395,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 new_partitions = np.array(
                     [
                         cls.column_partitions(
-                            partitions[i : i + chunk_size],
-                            full_axis=False,
+                            partitions[i : i + chunk_size], full_axis=False,
                         )
-                        for i in range(
-                            0,
-                            num_existing_partitions,
-                            chunk_size,
-                        )
+                        for i in range(0, num_existing_partitions, chunk_size,)
                     ]
                 )
                 return new_partitions, None

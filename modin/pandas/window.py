@@ -192,20 +192,13 @@ class Rolling(RollingCompat):
         )
 
     def aggregate(
-        self,
-        func,
-        *args,
-        **kwargs,
+        self, func, *args, **kwargs,
     ):
         from .dataframe import DataFrame
 
         dataframe = DataFrame(
             query_compiler=self._query_compiler.rolling_aggregate(
-                self.axis,
-                self.rolling_args,
-                func,
-                *args,
-                **kwargs,
+                self.axis, self.rolling_args, func, *args, **kwargs,
             )
         )
         if isinstance(self._dataframe, DataFrame):

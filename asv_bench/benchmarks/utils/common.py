@@ -244,11 +244,7 @@ def gen_true_false_int_data(nrows, ncols, rand_low, rand_high):
 
 
 def gen_data(
-    data_type: str,
-    nrows: int,
-    ncols: int,
-    rand_low: int,
-    rand_high: int,
+    data_type: str, nrows: int, ncols: int, rand_low: int, rand_high: int,
 ) -> dict:
     """
     Generate data with caching.
@@ -501,12 +497,7 @@ def execute(
             return
 
         # compatibility with old Modin versions
-        all(
-            map(
-                lambda partition: partition.drain_call_queue() or True,
-                partitions,
-            )
-        )
+        all(map(lambda partition: partition.drain_call_queue() or True, partitions,))
         if ASV_USE_ENGINE == "ray":
             from ray import wait
 

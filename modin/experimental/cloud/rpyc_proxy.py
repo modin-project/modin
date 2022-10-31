@@ -641,13 +641,16 @@ def make_dataframe_wrapper(DataFrame):
         ):
 
             (data,) = conn.deliver((data,), {})[0]
-            return (), dict(
-                data=data,
-                index=index,
-                columns=columns,
-                dtype=dtype,
-                copy=copy,
-                query_compiler=query_compiler,
+            return (
+                (),
+                dict(
+                    data=data,
+                    index=index,
+                    columns=columns,
+                    dtype=dtype,
+                    copy=copy,
+                    query_compiler=query_compiler,
+                ),
             )
 
         @property
@@ -694,9 +697,7 @@ def make_dataframe_groupby_wrapper(DataFrameGroupBy):
     Look for deatils in make_dataframe_wrapper() and _deliveringWrapper().
     """
     DeliveringDataFrameGroupBy = _deliveringWrapper(
-        DataFrameGroupBy,
-        ["agg", "aggregate", "apply"],
-        target_name="DataFrameGroupBy",
+        DataFrameGroupBy, ["agg", "aggregate", "apply"], target_name="DataFrameGroupBy",
     )
     return DeliveringDataFrameGroupBy
 

@@ -24,8 +24,7 @@ from modin.pandas.test.utils import df_equals
 
 
 @pytest.mark.skipif(
-    Engine.get() != "Ray",
-    reason="Only Ray supports the Batch Pipeline API",
+    Engine.get() != "Ray", reason="Only Ray supports the Batch Pipeline API",
 )
 class TestPipelineRayEngine:
     def test_warnings(self):
@@ -163,8 +162,7 @@ class TestPipelineRayEngine:
         ):
             pipeline.compute_batch(postprocessor=lambda df: df, pass_output_id=True)
         with pytest.raises(
-            ValueError,
-            match="Output ID cannot be specified for non-output node.",
+            ValueError, match="Output ID cannot be specified for non-output node.",
         ):
             pipeline.add_query(lambda df: df, output_id=22)
         assert (
@@ -485,8 +483,7 @@ class TestPipelineRayEngine:
             output_id=20,
         )
         pipeline.add_query(
-            lambda df: pandas.concat([df] * 1000),
-            repartition_after=True,
+            lambda df: pandas.concat([df] * 1000), repartition_after=True,
         )
 
         def to_csv(df, partition_id):
@@ -501,9 +498,7 @@ class TestPipelineRayEngine:
             return df
 
         new_dfs = pipeline.compute_batch(
-            postprocessor=post_proc,
-            pass_partition_id=True,
-            pass_output_id=True,
+            postprocessor=post_proc, pass_partition_id=True, pass_output_id=True,
         )
         correct_df = pd.DataFrame([[0, 1, 2]])
         correct_df["new_col"] = 0
@@ -543,8 +538,7 @@ class TestPipelineRayEngine:
 
 
 @pytest.mark.skipif(
-    Engine.get() == "Ray",
-    reason="Ray supports the Batch Pipeline API",
+    Engine.get() == "Ray", reason="Ray supports the Batch Pipeline API",
 )
 def test_pipeline_unsupported_engine():
     """Ensure that trying to use the Pipeline API with an unsupported Engine raises errors."""

@@ -84,10 +84,8 @@ def test_unwrap_partitions(axis, reverse_index, reverse_columns):
                     get_func(actual_partitions[row_idx][col_idx]),
                 )
     else:
-        expected_axis_partitions = (
-            expected_df._query_compiler._modin_frame._partition_mgr_cls.axis_partition(
-                expected_partitions, axis ^ 1
-            )
+        expected_axis_partitions = expected_df._query_compiler._modin_frame._partition_mgr_cls.axis_partition(
+            expected_partitions, axis ^ 1
         )
         expected_axis_partitions = [
             axis_partition.force_materialization().unwrap(squeeze=True)

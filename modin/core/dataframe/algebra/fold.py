@@ -36,7 +36,12 @@ class Fold(Operator):
             Function that takes query compiler and executes Fold function.
         """
 
-        def caller(query_compiler: Any, fold_axis: int | None = None, *args: Iterable, **kwargs: Any) -> Any:
+        def caller(
+            query_compiler: Any,
+            fold_axis: int | None = None,
+            *args: Iterable,
+            **kwargs: Any
+        ) -> Any:
             """
             Execute Fold function against passed query compiler.
 

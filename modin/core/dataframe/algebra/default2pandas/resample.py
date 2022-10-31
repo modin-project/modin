@@ -41,7 +41,7 @@ class Resampler:
             to resampled time-series data.
         """
 
-        def fn(df: Any, resample_kwargs: Any, *args: Any, **kwargs: Any)-> Any:
+        def fn(df: Any, resample_kwargs: Any, *args: Any, **kwargs: Any) -> Any:
             """Resample time-series data of the passed frame and apply specified aggregation."""
             if squeeze_self:
                 df = df.squeeze(axis=1)
@@ -61,7 +61,9 @@ class ResampleDefault(DefaultMethod):
     OBJECT_TYPE = "Resampler"
 
     @classmethod
-    def register(cls, func: Callable, squeeze_self: bool =False, **kwargs: Any) -> Callable:
+    def register(
+        cls, func: Callable, squeeze_self: bool = False, **kwargs: Any
+    ) -> Callable:
         """
         Build function that do fallback to pandas and aggregate resampled data.
 

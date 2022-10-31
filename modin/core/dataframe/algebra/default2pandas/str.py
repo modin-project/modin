@@ -16,11 +16,14 @@
 from .series import SeriesDefault
 import pandas
 
+
 class StrDefault(SeriesDefault):
     """Builder for default-to-pandas methods which is executed under `str` accessor."""
 
     @classmethod
-    def frame_wrapper(cls, df : pandas.DataFrame) -> pandas.core.strings.accessor.StringMethods:
+    def frame_wrapper(
+        cls, df: pandas.DataFrame
+    ) -> pandas.core.strings.accessor.StringMethods:
         """
         Get `str` accessor of the passed frame.
 

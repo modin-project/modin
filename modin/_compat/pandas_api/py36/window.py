@@ -34,17 +34,7 @@ class Python36CompatibleWindow(BaseCompatibleWindow):
         closed=None,
     ):
         self._init(
-            dataframe,
-            [
-                window,
-                min_periods,
-                center,
-                win_type,
-                on,
-                axis,
-                closed,
-            ],
-            axis,
+            dataframe, [window, min_periods, center, win_type, on, axis, closed,], axis,
         )
 
 
@@ -63,15 +53,5 @@ class Python36CompatibleRolling(BaseCompatibleRolling):
         closed=None,
     ):
         self._init(
-            dataframe,
-            [
-                window,
-                min_periods,
-                center,
-                win_type,
-                on,
-                axis,
-                closed,
-            ],
-            axis,
+            dataframe, [window, min_periods, center, win_type, on, axis, closed,], axis,
         )

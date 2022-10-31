@@ -33,8 +33,7 @@ from modin.pandas.test.utils import parse_dates_values_by_id, time_parsing_csv_p
 
 
 @pytest.mark.skipif(
-    Engine.get() == "Dask",
-    reason="Dask does not have experimental API",
+    Engine.get() == "Dask", reason="Dask does not have experimental API",
 )
 def test_from_sql_distributed(make_sql_connection):  # noqa: F811
     if Engine.get() == "Ray":
@@ -67,8 +66,7 @@ def test_from_sql_distributed(make_sql_connection):  # noqa: F811
 
 
 @pytest.mark.skipif(
-    Engine.get() == "Dask",
-    reason="Dask does not have experimental API",
+    Engine.get() == "Dask", reason="Dask does not have experimental API",
 )
 def test_from_sql_defaults(make_sql_connection):  # noqa: F811
     with ensure_clean_dir() as dirname:
@@ -215,8 +213,7 @@ def test_read_multiple_csv_s3_storage_opts(storage_options):
         pandas_df = pandas.concat(
             [
                 pandas.read_csv(
-                    f"{path}test_data{i}.csv",
-                    storage_options=storage_options,
+                    f"{path}test_data{i}.csv", storage_options=storage_options,
                 )
                 for i in range(2)
             ],
@@ -234,8 +231,7 @@ def test_read_multiple_csv_s3_storage_opts(storage_options):
 
 
 @pytest.mark.skipif(
-    not Engine.get() == "Ray",
-    reason=f"{Engine.get()} does not have experimental API",
+    not Engine.get() == "Ray", reason=f"{Engine.get()} does not have experimental API",
 )
 @pytest.mark.parametrize("compression", [None, "gzip"])
 @pytest.mark.parametrize(
@@ -301,8 +297,7 @@ def test_read_custom_json_text():
 
 
 @pytest.mark.skipif(
-    not Engine.get() == "Ray",
-    reason=f"{Engine.get()} does not have experimental API",
+    not Engine.get() == "Ray", reason=f"{Engine.get()} does not have experimental API",
 )
 def test_read_evaluated_dict():
     def _generate_evaluated_dict(file_name, nrows, ncols):
@@ -338,9 +333,7 @@ def test_read_evaluated_dict():
         _generate_evaluated_dict(filename, 64, 8)
 
         df1 = pd.read_custom_text(
-            filename,
-            columns=["col1", "col2"],
-            custom_parser=_custom_parser,
+            filename, columns=["col1", "col2"], custom_parser=_custom_parser,
         )
         assert df1.shape == (64, 2)
 

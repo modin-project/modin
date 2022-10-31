@@ -16,6 +16,7 @@
 from .default import DefaultMethod
 import pandas
 
+
 class SeriesDefault(DefaultMethod):
     """Builder for default-to-pandas methods which is executed under Series."""
 

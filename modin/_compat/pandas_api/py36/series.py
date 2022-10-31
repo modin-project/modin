@@ -38,12 +38,7 @@ class Python36CompatibleSeries(BaseCompatibleSeries):
         return self._between(left, right, inclusive=inclusive)
 
     def kurt(
-        self,
-        axis=None,
-        skipna=None,
-        level=None,
-        numeric_only=None,
-        **kwargs,
+        self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs,
     ):  # noqa: PR01, RT01, D200
         return self._kurt(
             axis=axis, skipna=skipna, level=level, numeric_only=numeric_only, **kwargs

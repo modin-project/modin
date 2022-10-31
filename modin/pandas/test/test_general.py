@@ -418,11 +418,7 @@ def test_merge_asof_merge_options():
     # left_by + right_by
     with warns_that_defaulting_to_pandas():
         modin_result = pd.merge_asof(
-            modin_quotes,
-            modin_trades,
-            on="time",
-            left_by="ticker",
-            right_by="ticker2",
+            modin_quotes, modin_trades, on="time", left_by="ticker", right_by="ticker2",
         )
     df_equals(
         pandas.merge_asof(
@@ -440,18 +436,10 @@ def test_merge_asof_merge_options():
     modin_trades["ticker"] = modin_trades["ticker2"]
     with warns_that_defaulting_to_pandas():
         modin_result = pd.merge_asof(
-            modin_quotes,
-            modin_trades,
-            on="time",
-            by="ticker",
+            modin_quotes, modin_trades, on="time", by="ticker",
         )
     df_equals(
-        pandas.merge_asof(
-            pandas_quotes,
-            pandas_trades,
-            on="time",
-            by="ticker",
-        ),
+        pandas.merge_asof(pandas_quotes, pandas_trades, on="time", by="ticker",),
         modin_result,
     )
 
@@ -478,19 +466,11 @@ def test_merge_asof_merge_options():
     # Direction
     with warns_that_defaulting_to_pandas():
         modin_result = pd.merge_asof(
-            modin_quotes,
-            modin_trades,
-            on="time",
-            by="ticker",
-            direction="forward",
+            modin_quotes, modin_trades, on="time", by="ticker", direction="forward",
         )
     df_equals(
         pandas.merge_asof(
-            pandas_quotes,
-            pandas_trades,
-            on="time",
-            by="ticker",
-            direction="forward",
+            pandas_quotes, pandas_trades, on="time", by="ticker", direction="forward",
         ),
         modin_result,
     )
@@ -744,11 +724,7 @@ def test_to_pandas_indices(data):
 def test_create_categorical_dataframe_with_duplicate_column_name():
     # This tests for https://github.com/modin-project/modin/issues/4312
     pd_df = pandas.DataFrame(
-        {
-            "a": pandas.Categorical([1, 2]),
-            "b": [4, 5],
-            "c": pandas.Categorical([7, 8]),
-        }
+        {"a": pandas.Categorical([1, 2]), "b": [4, 5], "c": pandas.Categorical([7, 8]),}
     )
     pd_df.columns = ["a", "b", "a"]
     md_df = pd.DataFrame(pd_df)
@@ -777,10 +753,7 @@ def test_create_categorical_dataframe_with_duplicate_column_name():
         (lambda df: df.mean(level=0), r"DataFrame\.mean"),
         (lambda df: df + df, r"DataFrame\.add"),
         (lambda df: df.index, r"DataFrame\.get_axis\(0\)"),
-        (
-            lambda df: df.drop(columns="col1").squeeze().repeat(2),
-            r"Series\.repeat",
-        ),
+        (lambda df: df.drop(columns="col1").squeeze().repeat(2), r"Series\.repeat",),
         (lambda df: df.groupby("col1").prod(), r"GroupBy\.prod"),
         (lambda df: df.rolling(1).count(), r"Rolling\.count"),
     ],

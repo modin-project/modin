@@ -108,13 +108,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
     @append_to_docstring(__doc__)
     def _init(
-        self,
-        data,
-        index,
-        columns,
-        dtype,
-        copy,
-        query_compiler,
+        self, data, index, columns, dtype, copy, query_compiler,
     ):
         # Siblings are other dataframes that share the same query compiler. We
         # use this list to update inplace when there is a shallow copy.
@@ -693,8 +687,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         """
         return self.__constructor__(
             query_compiler=self._query_compiler.corr(
-                method=method,
-                min_periods=min_periods,
+                method=method, min_periods=min_periods,
             )
         )
 
@@ -1637,13 +1630,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         )
 
     def _prod(
-        self,
-        axis,
-        skipna,
-        level,
-        numeric_only,
-        min_count,
-        **kwargs,
+        self, axis, skipna, level, numeric_only, min_count, **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return the product of the values over the requested axis.
@@ -1758,13 +1745,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             return obj
 
     def _replace(
-        self,
-        to_replace,
-        value,
-        inplace,
-        limit,
-        regex,
-        method,
+        self, to_replace, value, inplace, limit, regex, method,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -2031,13 +2012,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
     subtract = sub
 
     def _sum(
-        self,
-        axis,
-        skipna,
-        level,
-        numeric_only,
-        min_count,
-        **kwargs,
+        self, axis, skipna, level, numeric_only, min_count, **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return the sum of the values over the requested axis.
@@ -2475,11 +2450,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
                     if len(key) != value.shape[-1]:
                         raise ValueError("Columns must be same length as key")
                 item = broadcast_item(
-                    self,
-                    slice(None),
-                    key,
-                    value,
-                    need_columns_reindex=False,
+                    self, slice(None), key, value, need_columns_reindex=False,
                 )
                 new_qc = self._query_compiler.write_items(
                     slice(None), self.columns.get_indexer_for(key), item

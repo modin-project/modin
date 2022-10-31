@@ -746,11 +746,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             New QueryCompiler with updated values.
         """
         return BinaryDefault.register(pandas.Series.update, inplace=True)(
-            self,
-            other=other,
-            squeeze_self=True,
-            squeeze_other=True,
-            **kwargs,
+            self, other=other, squeeze_self=True, squeeze_other=True, **kwargs,
         )
 
     @doc_utils.add_refer_to("DataFrame.clip")
@@ -1068,10 +1064,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.prod)(self, **kwargs)
 
     @doc_utils.doc_reduce_agg(
-        method="sum",
-        refer_to="sum",
-        extra_params=["**kwargs"],
-        params="axis : {0, 1}",
+        method="sum", refer_to="sum", extra_params=["**kwargs"], params="axis : {0, 1}",
     )
     def sum(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.sum)(self, **kwargs)
@@ -2295,10 +2288,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         assert self.is_series_like()
 
         return SeriesDefault.register(pandas.Series.apply)(
-            self,
-            func=func,
-            *args,
-            **kwargs,
+            self, func=func, *args, **kwargs,
         )
 
     def explode(self, column):
@@ -2336,13 +2326,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="count",
     )
     def groupby_count(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.count)(
             self,
@@ -2360,13 +2344,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="any",
     )
     def groupby_any(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.any)(
             self,
@@ -2382,13 +2360,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         action="get the minimum value", result="minimum value", refer_to="min"
     )
     def groupby_min(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.min)(
             self,
@@ -2402,13 +2374,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.doc_groupby_method(result="product", refer_to="prod")
     def groupby_prod(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.prod)(
             self,
@@ -2424,13 +2390,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         action="get the maximum value", result="maximum value", refer_to="max"
     )
     def groupby_max(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.max)(
             self,
@@ -2448,13 +2408,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="all",
     )
     def groupby_all(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.all)(
             self,
@@ -2468,13 +2422,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.doc_groupby_method(result="sum", refer_to="sum")
     def groupby_sum(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.sum)(
             self,
@@ -2492,13 +2440,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="size",
     )
     def groupby_size(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.size)(
             self,
@@ -2577,13 +2519,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         action="compute the mean value", result="mean value", refer_to="mean"
     )
     def groupby_mean(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -2599,13 +2535,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         action="compute unbiased skew", result="unbiased skew", refer_to="skew"
     )
     def groupby_skew(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -2623,13 +2553,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="cumsum",
     )
     def groupby_cumsum(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -2647,13 +2571,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="cummax",
     )
     def groupby_cummax(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -2671,13 +2589,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="cummin",
     )
     def groupby_cummin(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -2695,13 +2607,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="cumprod",
     )
     def groupby_cumprod(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -2717,13 +2623,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         action="compute standard deviation", result="standard deviation", refer_to="std"
     )
     def groupby_std(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -2739,13 +2639,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         action="compute numerical rank", result="numerical rank", refer_to="rank"
     )
     def groupby_rank(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -2761,13 +2655,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         action="compute variance", result="variance", refer_to="var"
     )
     def groupby_var(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -2785,13 +2673,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="nunique",
     )
     def groupby_nunique(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -2807,13 +2689,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         action="get the median value", result="median value", refer_to="median"
     )
     def groupby_median(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -2831,13 +2707,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="quantile",
     )
     def groupby_quantile(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -2855,13 +2725,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="fillna",
     )
     def groupby_fillna(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -2877,13 +2741,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         action="get data types", result="data type", refer_to="dtypes"
     )
     def groupby_dtypes(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -2901,13 +2759,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="shift",
     )
     def groupby_shift(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -3970,9 +3822,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_resample_reduce(
-        result="product",
-        params="min_count : int",
-        refer_to="prod",
+        result="product", params="min_count : int", refer_to="prod",
     )
     def resample_prod(self, resample_kwargs, min_count, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.prod)(
@@ -3988,8 +3838,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_resample_reduce(
-        result="standard error of the mean",
-        refer_to="sem",
+        result="standard error of the mean", refer_to="sem",
     )
     def resample_sem(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.sem)(
@@ -4013,9 +3862,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_resample_reduce(
-        result="sum",
-        params="min_count : int",
-        refer_to="sum",
+        result="sum", params="min_count : int", refer_to="sum",
     )
     def resample_sum(self, resample_kwargs, min_count, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.sum)(

@@ -36,7 +36,9 @@ class GroupBy:
     ]
 
     @classmethod
-    def validate_by(cls, by: Union[pandas.DataFrame, pandas.Series, list]) -> (list[pandas.Scalar | pandas.Series] | list[Any | pandas.Series] | Any):
+    def validate_by(
+        cls, by: Union[pandas.DataFrame, pandas.Series, list]
+    ) -> Any:
         """
         Build valid `by` parameter for `pandas.DataFrame.groupby`.
 
@@ -73,7 +75,9 @@ class GroupBy:
         return by
 
     @classmethod
-    def inplace_applyier_builder(cls, key: callable, func: Optional[Union[callable, str]] =None) -> Callable:
+    def inplace_applyier_builder(
+        cls, key: callable, func: Optional[Union[callable, str]] = None
+    ) -> Callable:
         """
         Bind actual aggregation function to the GroupBy aggregation method.
 
@@ -193,11 +197,7 @@ class GroupBy:
                 by = cls.validate_by(by)
                 grp = df.groupby(by, axis=axis, **groupby_kwargs)
                 grp_agg_func = cls.get_func(agg_func, **kwargs)
-                return grp_agg_func(
-                    grp,
-                    *agg_args,
-                    **agg_kwargs,
-                )
+                return grp_agg_func(grp, *agg_args, **agg_kwargs,)
 
             if isinstance(by, pandas.DataFrame):
                 by = by.squeeze(axis=1)
@@ -285,13 +285,13 @@ class GroupBy:
     def handle_as_index_for_dataframe(
         result: pandas.DataFrame,
         internal_by_cols: list,
-        by_cols_dtypes: Optional[list]=None,
-        by_length: Optional[int]=None,
-        selection: Optional[Union[str, list]]=None,
-        partition_idx: int =0,
-        drop: bool =True,
-        method: Optional[str]=None,
-        inplace: bool =False,
+        by_cols_dtypes: Optional[list] = None,
+        by_length: Optional[int] = None,
+        selection: Optional[Union[str, list]] = None,
+        partition_idx: int = 0,
+        drop: bool = True,
+        method: Optional[str] = None,
+        inplace: bool = False,
     ):
         """
         Handle `as_index=False` parameter for the passed GroupBy aggregation result.
@@ -358,12 +358,12 @@ class GroupBy:
         result_cols: pandas.Index,
         result_index_names: list,
         internal_by_cols: list,
-        by_cols_dtypes: Optional[list]=None,
-        by_length: Optional[int]=None,
-        selection: Optional[Union[str, list]]=None,
-        partition_idx: int=0,
-        drop: bool =True,
-        method: Optional[str] =None,
+        by_cols_dtypes: Optional[list] = None,
+        by_length: Optional[int] = None,
+        selection: Optional[Union[str, list]] = None,
+        partition_idx: int = 0,
+        drop: bool = True,
+        method: Optional[str] = None,
     ) -> Union[bool, bool, list(str), list(int)]:
         """
         Compute hints to process ``as_index=False`` parameter for the GroupBy result.

@@ -42,10 +42,7 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
         (np.dtype("float32"), "f"),
         (np.dtype("float64"), "g"),
         (pandas.Series(["a"]).dtype, "u"),
-        (
-            pandas.Series([0]).astype("datetime64[ns]").dtype,
-            "tsn:",
-        ),
+        (pandas.Series([0]).astype("datetime64[ns]").dtype, "tsn:",),
     ],
 )
 def test_dtype_to_arrow_c(pandas_dtype, c_string):  # noqa PR01

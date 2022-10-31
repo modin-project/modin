@@ -21,7 +21,9 @@ class Map(Operator):
     """Builder class for Map operator."""
 
     @classmethod
-    def register(cls, function: Callable, *call_args: Any, **call_kwds: Any) -> Callable:
+    def register(
+        cls, function: Callable, *call_args: Any, **call_kwds: Any
+    ) -> Callable:
         """
         Build Map operator that will be performed across each partition.
 

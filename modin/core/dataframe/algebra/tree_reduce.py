@@ -21,7 +21,12 @@ class TreeReduce(Operator):
     """Builder class for TreeReduce operator."""
 
     @classmethod
-    def register(cls, map_function: Callable, reduce_function: Optional[Callable] =None, axis: Optional[int] =None) -> Callable:
+    def register(
+        cls,
+        map_function: Callable,
+        reduce_function: Optional[Callable] = None,
+        axis: Optional[int] = None,
+    ) -> Callable:
         """
         Build TreeReduce operator.
 

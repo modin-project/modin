@@ -40,7 +40,7 @@ _OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO = 0.6
 # This constant should be in sync with the limit in ray, which is private,
 # not exposed to users, and not documented:
 # https://github.com/ray-project/ray/blob/4692e8d8023e789120d3f22b41ffb136b50f70ea/python/ray/_private/ray_constants.py#L57-L62
-_MAC_OBJECT_STORE_LIMIT_BYTES = 2 * 2**30
+_MAC_OBJECT_STORE_LIMIT_BYTES = 2 * 2 ** 30
 
 ObjectIDType = ray.ObjectRef
 if version.parse(ray.__version__) >= version.parse("1.2.0"):

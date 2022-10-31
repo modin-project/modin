@@ -1194,12 +1194,7 @@ class Series(SeriesCompat, BasePandasDataset):
         return self.index
 
     def _kurt(
-        self,
-        axis,
-        skipna,
-        level,
-        numeric_only,
-        **kwargs,
+        self, axis, skipna, level, numeric_only, **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return unbiased kurtosis over requested axis.
@@ -1245,14 +1240,7 @@ class Series(SeriesCompat, BasePandasDataset):
 
     @_inherit_docstrings(pandas.Series.mask, apilink="pandas.Series.mask")
     def _mask(
-        self,
-        cond,
-        other,
-        inplace,
-        axis,
-        level,
-        errors,
-        try_cast,
+        self, cond, other, inplace, axis, level, errors, try_cast,
     ):
         return self._default_to_pandas(
             pandas.Series.mask,
@@ -1411,13 +1399,7 @@ class Series(SeriesCompat, BasePandasDataset):
 
     @_inherit_docstrings(pandas.Series.prod, apilink="pandas.Series.prod")
     def _prod(
-        self,
-        axis,
-        skipna,
-        level,
-        numeric_only,
-        min_count,
-        **kwargs,
+        self, axis, skipna, level, numeric_only, min_count, **kwargs,
     ):
         axis = self._get_axis_number(axis)
         if level is not None:
@@ -1658,13 +1640,7 @@ class Series(SeriesCompat, BasePandasDataset):
         return super(Series, self).reorder_levels(order)
 
     def _replace(
-        self,
-        to_replace,
-        value,
-        inplace,
-        limit,
-        regex,
-        method,
+        self, to_replace, value, inplace, limit, regex, method,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -1775,13 +1751,7 @@ class Series(SeriesCompat, BasePandasDataset):
     subtract = sub
 
     def _sum(
-        self,
-        axis,
-        skipna,
-        level,
-        numeric_only,
-        min_count,
-        **kwargs,
+        self, axis, skipna, level, numeric_only, min_count, **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return the sum of the values.
@@ -1877,11 +1847,7 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         return (
             super(Series, self)
-            .to_numpy(
-                dtype=dtype,
-                copy=copy,
-                na_value=na_value,
-            )
+            .to_numpy(dtype=dtype, copy=copy, na_value=na_value,)
             .flatten()
         )
 
@@ -2018,14 +1984,7 @@ class Series(SeriesCompat, BasePandasDataset):
         )
 
     def _where(
-        self,
-        cond,
-        other,
-        inplace,
-        axis,
-        level,
-        errors,
-        try_cast,
+        self, cond, other, inplace, axis, level, errors, try_cast,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values where the condition is False.

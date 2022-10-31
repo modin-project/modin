@@ -1019,11 +1019,7 @@ class PandasDataframe(ClassLogger):
             return result
 
         new_parts = self._partition_mgr_cls.apply_func_to_select_indices(
-            0,
-            self._partitions,
-            from_labels_executor,
-            [0],
-            keep_remaining=True,
+            0, self._partitions, from_labels_executor, [0], keep_remaining=True,
         )
         new_column_widths = [
             self.index.nlevels + self.column_widths[0]
@@ -1574,19 +1570,13 @@ class PandasDataframe(ClassLogger):
 
         new_dtypes = None
         result = self.__constructor__(
-            new_parts,
-            *new_axes,
-            *new_axes_lengths,
-            new_dtypes,
+            new_parts, *new_axes, *new_axes_lengths, new_dtypes,
         )
         return result
 
     @lazy_metadata_decorator(apply_axis="both")
     def reduce(
-        self,
-        axis: Union[int, Axis],
-        function: Callable,
-        dtypes: Optional[str] = None,
+        self, axis: Union[int, Axis], function: Callable, dtypes: Optional[str] = None,
     ) -> "PandasDataframe":
         """
         Perform a user-defined aggregation on the specified axis, where the axis reduces down to a singleton. Requires knowledge of the full axis for the reduction.
@@ -2037,12 +2027,7 @@ class PandasDataframe(ClassLogger):
 
     @lazy_metadata_decorator(apply_axis="both")
     def apply_full_axis(
-        self,
-        axis,
-        func,
-        new_index=None,
-        new_columns=None,
-        dtypes=None,
+        self, axis, func, new_index=None, new_columns=None, dtypes=None,
     ):
         """
         Perform a function across an entire axis.
@@ -2128,14 +2113,8 @@ class PandasDataframe(ClassLogger):
         # Get the indices for the axis being applied to (it is the opposite of axis
         # being applied over)
         dict_indices = self._get_dict_of_block_index(axis ^ 1, numeric_indices)
-        new_partitions = (
-            self._partition_mgr_cls.apply_func_to_select_indices_along_full_axis(
-                axis,
-                self._partitions,
-                func,
-                dict_indices,
-                keep_remaining=keep_remaining,
-            )
+        new_partitions = self._partition_mgr_cls.apply_func_to_select_indices_along_full_axis(
+            axis, self._partitions, func, dict_indices, keep_remaining=keep_remaining,
         )
         # TODO Infer columns and index from `keep_remaining` and `apply_indices`
         if new_index is None:
@@ -2714,11 +2693,7 @@ class PandasDataframe(ClassLogger):
         )
 
         return self.__constructor__(
-            new_frame,
-            joined_index,
-            joined_columns,
-            row_lengths,
-            column_widths,
+            new_frame, joined_index, joined_columns, row_lengths, column_widths,
         )
 
     @lazy_metadata_decorator(apply_axis="both")

@@ -21,7 +21,9 @@ class Reduce(Operator):
     """Builder class for Reduce operator."""
 
     @classmethod
-    def register(cls, reduce_function: Callable, axis: Optional[int] =None) -> Callable:
+    def register(
+        cls, reduce_function: Callable, axis: Optional[int] = None
+    ) -> Callable:
         """
         Build Reduce operator that will be performed across rows/columns.
 

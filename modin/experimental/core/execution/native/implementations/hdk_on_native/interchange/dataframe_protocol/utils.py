@@ -27,18 +27,8 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
 
 arrow_types_map = {
     DTypeKind.BOOL: {8: pa.bool_()},
-    DTypeKind.INT: {
-        8: pa.int8(),
-        16: pa.int16(),
-        32: pa.int32(),
-        64: pa.int64(),
-    },
-    DTypeKind.UINT: {
-        8: pa.uint8(),
-        16: pa.uint16(),
-        32: pa.uint32(),
-        64: pa.uint64(),
-    },
+    DTypeKind.INT: {8: pa.int8(), 16: pa.int16(), 32: pa.int32(), 64: pa.int64(),},
+    DTypeKind.UINT: {8: pa.uint8(), 16: pa.uint16(), 32: pa.uint32(), 64: pa.uint64(),},
     DTypeKind.FLOAT: {16: pa.float16(), 32: pa.float32(), 64: pa.float64()},
     DTypeKind.STRING: {8: pa.string()},
 }

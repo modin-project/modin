@@ -23,7 +23,7 @@ class Rolling:
     """Builder for aggregation on a rolling window functions."""
 
     @classmethod
-    def build_rolling (cls , func: Callable) -> Callable:
+    def build_rolling(cls, func: Callable) -> Callable:
         """
         Build function that creates a rolling window and executes `func` on it.
 

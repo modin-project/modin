@@ -116,11 +116,7 @@ class BaseIO(BaseIOCompat):
     )
     def _read_parquet(cls, **kwargs):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_parquet`")
-        return cls.from_pandas(
-            pandas.read_parquet(
-                **kwargs,
-            )
-        )
+        return cls.from_pandas(pandas.read_parquet(**kwargs,))
 
     @classmethod
     @_inherit_docstrings(pandas.read_csv, apilink="pandas.read_csv")
@@ -130,9 +126,7 @@ class BaseIO(BaseIOCompat):
         returns=_doc_returns_qc_or_parser,
     )
     def _read_csv(
-        cls,
-        filepath_or_buffer,
-        **kwargs,
+        cls, filepath_or_buffer, **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_csv`")
         return cls._read(filepath_or_buffer=filepath_or_buffer, **kwargs)
@@ -172,8 +166,7 @@ class BaseIO(BaseIOCompat):
         returns=_doc_returns_qc,
     )
     def _read_json(
-        cls,
-        **kwargs,
+        cls, **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_json`")
         return cls.from_pandas(pandas.read_json(**kwargs))
@@ -408,17 +401,10 @@ class BaseIO(BaseIOCompat):
         returns=_doc_returns_qc,
     )
     def _read_feather(
-        cls,
-        path,
-        **kwargs,
+        cls, path, **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_feather`")
-        return cls.from_pandas(
-            pandas.read_feather(
-                path,
-                **kwargs,
-            )
-        )
+        return cls.from_pandas(pandas.read_feather(path, **kwargs,))
 
     @classmethod
     @_inherit_docstrings(pandas.read_stata, apilink="pandas.read_stata")
@@ -428,9 +414,7 @@ class BaseIO(BaseIOCompat):
         returns=_doc_returns_qc,
     )
     def _read_stata(
-        cls,
-        filepath_or_buffer,
-        **kwargs,
+        cls, filepath_or_buffer, **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_stata`")
         return cls.from_pandas(pandas.read_stata(filepath_or_buffer, **kwargs))
@@ -471,17 +455,10 @@ class BaseIO(BaseIOCompat):
         returns=_doc_returns_qc,
     )
     def _read_pickle(
-        cls,
-        filepath_or_buffer,
-        **kwargs,
+        cls, filepath_or_buffer, **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_pickle`")
-        return cls.from_pandas(
-            pandas.read_pickle(
-                filepath_or_buffer,
-                **kwargs,
-            )
-        )
+        return cls.from_pandas(pandas.read_pickle(filepath_or_buffer, **kwargs,))
 
     @classmethod
     @_inherit_docstrings(pandas.read_sql, apilink="pandas.read_sql")
@@ -586,19 +563,10 @@ class BaseIO(BaseIOCompat):
         returns=_doc_returns_qc,
     )
     def _read_sql_query(
-        cls,
-        sql,
-        con,
-        **kwargs,
+        cls, sql, con, **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_sql_query`")
-        return cls.from_pandas(
-            pandas.read_sql_query(
-                sql,
-                con,
-                **kwargs,
-            )
-        )
+        return cls.from_pandas(pandas.read_sql_query(sql, con, **kwargs,))
 
     @classmethod
     @_inherit_docstrings(pandas.read_spss, apilink="pandas.read_spss")
@@ -650,10 +618,7 @@ class BaseIO(BaseIOCompat):
         pandas.DataFrame.to_pickle, apilink="pandas.DataFrame.to_pickle"
     )
     def _to_pickle(
-        cls,
-        obj: Any,
-        filepath_or_buffer,
-        **kwargs,
+        cls, obj: Any, filepath_or_buffer, **kwargs,
     ):  # noqa: PR01, D200
         """
         Pickle (serialize) object to file.
@@ -662,11 +627,7 @@ class BaseIO(BaseIOCompat):
         if isinstance(obj, BaseQueryCompiler):
             obj = obj.to_pandas()
 
-        return pandas.to_pickle(
-            obj,
-            filepath_or_buffer=filepath_or_buffer,
-            **kwargs,
-        )
+        return pandas.to_pickle(obj, filepath_or_buffer=filepath_or_buffer, **kwargs,)
 
     @classmethod
     @_inherit_docstrings(pandas.DataFrame.to_csv, apilink="pandas.DataFrame.to_csv")

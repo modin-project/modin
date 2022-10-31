@@ -72,9 +72,7 @@ class CSVGlobDispatcher(CSVDispatcher):
             filepath_or_buffer = cls.get_path(filepath_or_buffer)
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return cls.single_worker_read(
-                filepath_or_buffer,
-                reason=cls.BUFFER_UNSUPPORTED_MSG,
-                **kwargs,
+                filepath_or_buffer, reason=cls.BUFFER_UNSUPPORTED_MSG, **kwargs,
             )
 
         # We read multiple csv files when the file path is a list of absolute file paths. We assume that all of the files will be essentially replicas of the
@@ -161,8 +159,7 @@ class CSVGlobDispatcher(CSVDispatcher):
         if usecols is not None and usecols_md[1] != "integer":
             del kwargs["usecols"]
             all_cols = pandas.read_csv(
-                filepath_or_buffer,
-                **dict(kwargs, nrows=0, skipfooter=0),
+                filepath_or_buffer, **dict(kwargs, nrows=0, skipfooter=0),
             ).columns
             usecols = all_cols.get_indexer_for(list(usecols_md[0]))
         parse_dates = kwargs.pop("parse_dates", False)
@@ -237,9 +234,7 @@ class CSVGlobDispatcher(CSVDispatcher):
             for idx, chunks in enumerate(splits):
                 args.update({"chunks": chunks})
                 *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
-                    func=cls.parse,
-                    f_kwargs=args,
-                    num_returns=num_splits + 2,
+                    func=cls.parse, f_kwargs=args, num_returns=num_splits + 2,
                 )
 
         # Compute the index based on a sum of the lengths of each partition (by default)
@@ -477,10 +472,7 @@ class CSVGlobDispatcher(CSVDispatcher):
 
                 # TODO(williamma12): Handle when skiprows > number of rows in file. Currently returns empty df.
                 outside_quotes, read_rows = cls._read_rows(
-                    f,
-                    nrows=skip_amount,
-                    quotechar=quotechar,
-                    is_quoting=is_quoting,
+                    f, nrows=skip_amount, quotechar=quotechar, is_quoting=is_quoting,
                 )
                 if skiprows:
                     skiprows -= read_rows
@@ -513,10 +505,7 @@ class CSVGlobDispatcher(CSVDispatcher):
                         read_size = nrows - read_rows_counter
 
                     outside_quotes, read_rows = cls._read_rows(
-                        f,
-                        nrows=read_size,
-                        quotechar=quotechar,
-                        is_quoting=is_quoting,
+                        f, nrows=read_size, quotechar=quotechar, is_quoting=is_quoting,
                     )
                     split_size += read_rows
                     read_rows_counter += read_rows

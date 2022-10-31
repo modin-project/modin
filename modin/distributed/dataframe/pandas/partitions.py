@@ -199,11 +199,7 @@ def from_partitions(
             column_widths = [len(idx) for idx in internal_indices]
 
     frame = partition_frame_class(
-        parts,
-        index,
-        columns,
-        row_lengths=row_lengths,
-        column_widths=column_widths,
+        parts, index, columns, row_lengths=row_lengths, column_widths=column_widths,
     )
 
     if labels_axis_to_sync != -1:

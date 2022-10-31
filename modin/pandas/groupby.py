@@ -340,8 +340,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
             raise ValueError("Cannot call dtypes on groupby with axis=1")
         return self._check_index(
             self._wrap_aggregation(
-                type(self._query_compiler).groupby_dtypes,
-                numeric_only=False,
+                type(self._query_compiler).groupby_dtypes, numeric_only=False,
             )
         )
 
@@ -439,11 +438,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                 )
             cols_to_grab = internal_by.union(key)
             key = [col for col in self._df.columns if col in cols_to_grab]
-            return DataFrameGroupBy(
-                self._df[key],
-                drop=self._drop,
-                **kwargs,
-            )
+            return DataFrameGroupBy(self._df[key], drop=self._drop, **kwargs,)
         if (
             self._is_multi_by
             and isinstance(self._by, list)
@@ -453,11 +448,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                 "Column lookups on GroupBy with arbitrary Series in by"
                 + " is not yet supported."
             )
-        return SeriesGroupBy(
-            self._df[key],
-            drop=False,
-            **kwargs,
-        )
+        return SeriesGroupBy(self._df[key], drop=False, **kwargs,)
 
     def cummin(self, axis=0, **kwargs):
         return self._check_index_name(
@@ -669,8 +660,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
             **self._kwargs,
         )
         result = work_object._wrap_aggregation(
-            type(work_object._query_compiler).groupby_size,
-            numeric_only=False,
+            type(work_object._query_compiler).groupby_size, numeric_only=False,
         )
         if not isinstance(result, Series):
             result = result.squeeze(axis=1)
@@ -743,8 +733,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
     def median(self, numeric_only=None):
         return self._check_index(
             self._wrap_aggregation(
-                type(self._query_compiler).groupby_median,
-                numeric_only=numeric_only,
+                type(self._query_compiler).groupby_median, numeric_only=numeric_only,
             )
         )
 
@@ -805,8 +794,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
 
     def count(self):
         result = self._wrap_aggregation(
-            type(self._query_compiler).groupby_count,
-            numeric_only=False,
+            type(self._query_compiler).groupby_count, numeric_only=False,
         )
         # pandas do it in case of Series
         if isinstance(result, Series):
@@ -1024,12 +1012,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                 return groupby_obj.indices if numerical else groupby_obj.groups
 
     def _wrap_aggregation(
-        self,
-        qc_method,
-        numeric_only=None,
-        agg_args=None,
-        agg_kwargs=None,
-        **kwargs,
+        self, qc_method, numeric_only=None, agg_args=None, agg_kwargs=None, **kwargs,
     ):
         """
         Perform common metadata transformations and apply groupby functions.

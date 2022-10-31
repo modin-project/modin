@@ -285,10 +285,7 @@ class TestCSV:
     )
     @pytest.mark.parametrize("names", [None, [f"c{x}" for x in range(1, 7)]])
     def test_read_csv_datetime(
-        self,
-        engine,
-        parse_dates,
-        names,
+        self, engine, parse_dates, names,
     ):
 
         parse_dates_unsupported = isinstance(parse_dates, dict) or (
@@ -332,9 +329,7 @@ class TestCSV:
         ],
     )
     def test_read_csv_col_handling(
-        self,
-        engine,
-        usecols,
+        self, engine, usecols,
     ):
         eval_io(
             fn_name="read_csv",
@@ -644,11 +639,7 @@ class TestConcat:
             return lib.concat([df], join=join, sort=sort, ignore_index=ignore_index)
 
         run_and_compare(
-            concat,
-            data=self.data,
-            join=join,
-            sort=sort,
-            ignore_index=ignore_index,
+            concat, data=self.data, join=join, sort=sort, ignore_index=ignore_index,
         )
 
     def test_groupby_concat_single(self):
@@ -657,8 +648,7 @@ class TestConcat:
             return df.groupby("a").agg({"b": "min"})
 
         run_and_compare(
-            concat,
-            data=self.data,
+            concat, data=self.data,
         )
 
     @pytest.mark.parametrize("join", ["inner"])
@@ -1838,9 +1828,7 @@ class TestSort:
             return df.sort_values(["a", "b"], ascending=ascending)
 
         run_and_compare(
-            sort,
-            data=self.data,
-            ascending=ascending,
+            sort, data=self.data, ascending=ascending,
         )
 
     @pytest.mark.parametrize("ascending", ascending_values)
@@ -1849,9 +1837,7 @@ class TestSort:
             return df.sort_values("d", ascending=ascending)
 
         run_and_compare(
-            sort,
-            data=self.data,
-            ascending=ascending,
+            sort, data=self.data, ascending=ascending,
         )
 
     @pytest.mark.parametrize("cols", cols_values)
@@ -1962,15 +1948,15 @@ class TestBadData:
             {
                 "uint8_in_int_bounds": np.array([1, 2, 3], dtype="uint8"),
                 "uint8_out-of_int_bounds": np.array(
-                    [(2**8) - 1, (2**8) - 2, (2**8) - 3], dtype="uint8"
+                    [(2 ** 8) - 1, (2 ** 8) - 2, (2 ** 8) - 3], dtype="uint8"
                 ),
                 "uint16_in_int_bounds": np.array([1, 2, 3], dtype="uint16"),
                 "uint16_out-of_int_bounds": np.array(
-                    [(2**16) - 1, (2**16) - 2, (2**16) - 3], dtype="uint16"
+                    [(2 ** 16) - 1, (2 ** 16) - 2, (2 ** 16) - 3], dtype="uint16"
                 ),
                 "uint32_in_int_bounds": np.array([1, 2, 3], dtype="uint32"),
                 "uint32_out-of_int_bounds": np.array(
-                    [(2**32) - 1, (2**32) - 2, (2**32) - 3], dtype="uint32"
+                    [(2 ** 32) - 1, (2 ** 32) - 2, (2 ** 32) - 3], dtype="uint32"
                 ),
                 "uint64_in_int_bounds": np.array([1, 2, 3], dtype="uint64"),
             }
@@ -2005,7 +1991,7 @@ class TestBadData:
             pandas.DataFrame(
                 {
                     "col": np.array(
-                        [(2**64) - 1, (2**64) - 2, (2**64) - 3], dtype="uint64"
+                        [(2 ** 64) - 1, (2 ** 64) - 2, (2 ** 64) - 3], dtype="uint64"
                     )
                 }
             )

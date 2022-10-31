@@ -442,12 +442,7 @@ class BaseTimeGroupBy:
     def setup(self, shape, ngroups=5, groupby_ncols=1):
         ngroups = translator_groupby_ngroups(ngroups, shape)
         self.df, self.groupby_columns = generate_dataframe(
-            "int",
-            *shape,
-            RAND_LOW,
-            RAND_HIGH,
-            groupby_ncols,
-            count_groups=ngroups,
+            "int", *shape, RAND_LOW, RAND_HIGH, groupby_ncols, count_groups=ngroups,
         )
         # correct while we use 'col*' like name for non-groupby columns
         # and 'groupby_col*' like name for groupby columns

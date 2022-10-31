@@ -218,8 +218,7 @@ class PyArrowDataset(ColumnStoreDataset):
         return self._files
 
     def to_pandas_dataframe(
-        self,
-        columns,
+        self, columns,
     ):
         from pyarrow.parquet import read_table
 
@@ -370,11 +369,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         parquet_files = dataset.files
 
         # step determines how many row groups are going to be in a partition
-        step = compute_chunksize(
-            num_row_groups,
-            NPartitions.get(),
-            min_block_size=1,
-        )
+        step = compute_chunksize(num_row_groups, NPartitions.get(), min_block_size=1,)
         current_partition_size = 0
         file_index = 0
         partition_files = []  # 2D array - each element contains list of chunks to read
@@ -467,9 +462,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             [
                 [
                     cls.frame_partition_cls(
-                        part_id[0],
-                        length=part_id[2],
-                        width=col_width,
+                        part_id[0], length=part_id[2], width=col_width,
                     )
                     for part_id, col_width in zip(part_ids, column_widths)
                 ]
@@ -602,8 +595,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         https://arrow.apache.org/docs/python/parquet.html
         """
         import_optional_dependency(
-            "pyarrow",
-            "pyarrow is required to read parquet files.",
+            "pyarrow", "pyarrow is required to read parquet files.",
         )
         from modin.pandas.io import PQ_INDEX_REGEX
 
