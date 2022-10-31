@@ -592,11 +592,6 @@ def df_equals(df1, df2):
             check_column_type=False,
             check_categorical=False,
         )
-        print(type(df1.columns), type(df2.columns))
-        print("PART 1:", df1.select_dtypes(include="category"))
-        print("PART 2:", df2.select_dtypes(include="category"))
-        print("DTYPES 1:", df1.dtypes)
-        print("DTYPES 2:", df2.dtypes)
         df_categories_equals(df1, df2)
     elif isinstance(df1, pandas.Index) and isinstance(df2, pandas.Index):
         assert_index_equal(df1, df2)

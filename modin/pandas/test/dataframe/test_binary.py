@@ -263,11 +263,6 @@ def test_mismatched_row_partitions(is_idx_aligned, op_type, is_more_other_partit
         )
         return
 
-    print("MODIN")
-    print(modin_df2)
-    print("PANDAS")
-    print(pandas_df2)
-
     if op_type == "df_ser":
         modin_res = modin_df2 / modin_df1.a
         pandas_res = pandas_df2 / pandas_df1.a

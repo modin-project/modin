@@ -810,7 +810,6 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
         )
 
     def count(self):
-        print(self._df)
         result = self._wrap_aggregation(
             type(self._query_compiler).groupby_count,
             numeric_only=False,

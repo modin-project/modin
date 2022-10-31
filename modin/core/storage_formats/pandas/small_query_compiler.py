@@ -188,8 +188,6 @@ def _concat(df, axis, other, join_axes=None, **kwargs):
         and df.columns[0] == MODIN_UNNAMED_SERIES_LABEL
     ):
         df = df[df.columns[0]]
-    # if isinstance(df, (pandas.DataFrame, pandas.Series)):
-    #     other = [df] + other
 
     ignore_index = kwargs.get("ignore_index", False)
     concat_join = ["outer", "inner"]
@@ -378,8 +376,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
         self._pandas_frame = pandas_frame
 
     def default_to_pandas(self, pandas_op, *args, **kwargs):
-        # type(self) might not work
-        # SmallQueryCompiler and PandasQueryCompiler are not the same
         args = (a.to_pandas() if isinstance(a, type(self)) else a for a in args)
         kwargs = {
             k: v.to_pandas if isinstance(v, type(self)) else v
@@ -393,10 +389,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
             result = result.to_frame()
 
         return result
-        # if isinstance(result, pandas.DataFrame):
-        #     return self.from_pandas(result, type(self._pandas_frame))
-        # else:
-        #     return result
 
     def _register_default_pandas(
         func,
@@ -432,11 +424,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
                 kwargs.pop(name, None)
             args = try_cast_to_pandas_sqc(args, squeeze=squeeze_args)
             kwargs = try_cast_to_pandas_sqc(kwargs, squeeze=squeeze_kwargs)
-            print("KWARGS:", kwargs)
             result = func(df, *args, **kwargs)
-            if func.__name__ == "astype":
-                print(result)
-                print(result.dtypes)
             if in_place:
                 result = df
             if not (
