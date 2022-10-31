@@ -27,12 +27,12 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
     @property
     @abstractmethod
     def list_of_blocks(self) -> list:
-        return []
+        pass
 
     @property
     @abstractmethod
     def list_of_ips(self) -> list:
-        return []
+        pass
 
     def apply(
         self,
