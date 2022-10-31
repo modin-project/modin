@@ -2359,7 +2359,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # `errors` parameter needs to be part of the function signature because
         # other query compilers may not take care of error handling at the API
         # layer. This query compiler assumes there won't be any errors due to
-        # invald keys.
+        # invalid keys.
         if index is not None:
             index = np.sort(self.index.get_indexer_for(self.index.difference(index)))
         if columns is not None:

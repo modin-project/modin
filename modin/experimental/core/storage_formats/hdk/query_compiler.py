@@ -559,7 +559,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         # `errors` parameter needs to be part of the function signature because
         # other query compilers may not take care of error handling at the API
         # layer. This query compiler assumes there won't be any errors due to
-        # invald keys.
+        # invalid keys.
         assert index is None, "Only column drop is supported"
         return self.__constructor__(
             self._modin_frame.take_2d_labels_or_positional(
