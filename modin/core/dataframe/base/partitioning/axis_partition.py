@@ -96,7 +96,10 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         list
             List of wrapped remote partition objects.
         """
-        return [self.partition_type(obj) for obj in partitions]  # type: ignore
+        assert self.partition_type is not None
+        assert self.instance_type is not None
+
+        return [self.partition_type(obj) for obj in partitions]
 
     def force_materialization(
         self, get_ip: bool = False
