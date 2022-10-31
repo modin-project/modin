@@ -47,7 +47,9 @@ from modin.pandas.utils import is_scalar
 from modin.config import IsExperimental
 from modin.logging import disable_logging
 from modin._compat.pandas_api.classes import BasePandasDatasetCompat
-from modin.core.storage_formats.pandas.small_query_compiler import SmallQueryCompiler
+from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
+    SmallQueryCompiler,
+)
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.

@@ -285,7 +285,7 @@ def test_axes(data):
 
 @pytest.mark.skipif(
     InitializeWithSmallQueryCompilers.get(),
-    reason="SmallQueryCompiler does not contain partitions."
+    reason="SmallQueryCompiler does not contain partitions.",
 )
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_copy(data):
@@ -631,7 +631,8 @@ def test_convert_dtypes_single_partition(
 
 
 @pytest.mark.skipif(
-    get_current_execution() == "BaseOnPython" or InitializeWithSmallQueryCompilers.get(),
+    get_current_execution() == "BaseOnPython"
+    or InitializeWithSmallQueryCompilers.get(),
     reason="BaseOnPython cannot not have multiple partitions.",
 )
 def test_convert_dtypes_multiple_row_partitions():

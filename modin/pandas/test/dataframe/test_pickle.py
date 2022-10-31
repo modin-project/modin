@@ -41,7 +41,7 @@ def persistent(request):
 
 @pytest.mark.skipif(
     InitializeWithSmallQueryCompilers.get(),
-    reason="SmallQueryCompiler does not currently support IO functions."
+    reason="SmallQueryCompiler does not currently support IO functions.",
 )
 @pytest.mark.parametrize(
     "modin_df", [pytest.param(modin_df), pytest.param(pd.DataFrame(), id="empty_df")]
@@ -53,7 +53,7 @@ def test_dataframe_pickle(modin_df, persistent):
 
 @pytest.mark.skipif(
     InitializeWithSmallQueryCompilers.get(),
-    reason="SmallQueryCompiler does not currently support IO functions."
+    reason="SmallQueryCompiler does not currently support IO functions.",
 )
 def test_column_pickle(modin_column, modin_df, persistent):
     dmp = pickle.dumps(modin_column)

@@ -349,7 +349,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def concat(self, axis, other, **kwargs):
         if not isinstance(other, list):
             other = [other]
-        assert all(isinstance(o, BaseQueryCompiler) for o in other), "Different Manager objects are being used. This is not allowed"
+        assert all(
+            isinstance(o, BaseQueryCompiler) for o in other
+        ), "Different Manager objects are being used. This is not allowed"
         sort = kwargs.get("sort", None)
         if sort is None:
             sort = False

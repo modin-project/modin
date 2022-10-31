@@ -34,9 +34,6 @@ from modin.utils import (
 )
 
 
-MODIN_UNNAMED_SERIES_LABEL = "__reduced__"
-
-
 def _get_axis(axis):
     """
     Build index labels getter of the specified axis.
@@ -840,9 +837,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
 
         return self.__constructor__(result)
 
-    def finalize(self):
-        pass
-
     def get_axis(self, axis):
         return self._pandas_frame.index if axis == 0 else self._pandas_frame.columns
 
@@ -929,7 +923,9 @@ class SmallQueryCompiler(BaseQueryCompiler):
         return self
 
     def is_series_like(self):
-        return len(self._pandas_frame.columns) == 1 or len(self._pandas_frame.index) == 1
+        return (
+            len(self._pandas_frame.columns) == 1 or len(self._pandas_frame.index) == 1
+        )
 
     def _write_items(df, row_numeric_index, col_numeric_index, broadcasted_items):
         if not isinstance(row_numeric_index, slice):

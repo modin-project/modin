@@ -131,7 +131,7 @@ def test_to_numpy(data):
 
 @pytest.mark.skipif(
     InitializeWithSmallQueryCompilers.get(),
-    reason="SmallQueryCompiler does not contain partitions."
+    reason="SmallQueryCompiler does not contain partitions.",
 )
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_partition_to_numpy(data):

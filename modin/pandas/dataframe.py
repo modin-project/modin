@@ -44,7 +44,12 @@ from modin.utils import (
     append_to_docstring,
     MODIN_UNNAMED_SERIES_LABEL,
 )
-from modin.config import Engine, IsExperimental, InitializeWithSmallQueryCompilers, PersistentPickle
+from modin.config import (
+    Engine,
+    IsExperimental,
+    InitializeWithSmallQueryCompilers,
+    PersistentPickle,
+)
 from .utils import (
     from_pandas,
     from_non_pandas,

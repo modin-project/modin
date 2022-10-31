@@ -222,7 +222,7 @@ def test_equals():
 
 @pytest.mark.skipif(
     InitializeWithSmallQueryCompilers.get(),
-    reason="SmallQueryCompiler does not contain partitions."
+    reason="SmallQueryCompiler does not contain partitions.",
 )
 @pytest.mark.parametrize("is_more_other_partitions", [True, False])
 @pytest.mark.parametrize(

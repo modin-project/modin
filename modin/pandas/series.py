@@ -13,7 +13,7 @@
 
 """Module houses `Series` class, that is distributed version of `pandas.Series`."""
 
-from modin.core.storage_formats.pandas.small_query_compiler import (
+from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
     SmallQueryCompiler,
 )
 import numpy as np
@@ -36,7 +36,11 @@ from modin.utils import (
     Engine,
     MODIN_UNNAMED_SERIES_LABEL,
 )
-from modin.config import InitializeWithSmallQueryCompilers, IsExperimental, PersistentPickle
+from modin.config import (
+    InitializeWithSmallQueryCompilers,
+    IsExperimental,
+    PersistentPickle,
+)
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar, _doc_binary_op

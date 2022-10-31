@@ -548,14 +548,22 @@ def try_cast_to_pandas_sqc(obj, squeeze=False):
         result = obj._to_pandas()
         if squeeze:
             result = result.squeeze(axis=1)
-        if isinstance(result, pandas.DataFrame) and len(result.columns) == 1 and result.columns[0] == MODIN_UNNAMED_SERIES_LABEL:
+        if (
+            isinstance(result, pandas.DataFrame)
+            and len(result.columns) == 1
+            and result.columns[0] == MODIN_UNNAMED_SERIES_LABEL
+        ):
             result = result.squeeze(axis=1)
         return result
     if hasattr(obj, "to_pandas"):
         result = obj.to_pandas()
         if squeeze:
             result = result.squeeze(axis=1)
-        if isinstance(result, pandas.DataFrame) and len(result.columns) == 1 and result.columns[0] == MODIN_UNNAMED_SERIES_LABEL:
+        if (
+            isinstance(result, pandas.DataFrame)
+            and len(result.columns) == 1
+            and result.columns[0] == MODIN_UNNAMED_SERIES_LABEL
+        ):
             result = result.squeeze(axis=1)
         # Query compiler case, it doesn't have logic about convertion to Series
         if (

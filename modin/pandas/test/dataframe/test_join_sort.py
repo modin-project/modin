@@ -52,6 +52,7 @@ matplotlib.use("Agg")
 # have too many such instances.
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
+
 @contextlib.contextmanager
 def _nullcontext():
     """Replacement for contextlib.nullcontext missing in older Python."""
