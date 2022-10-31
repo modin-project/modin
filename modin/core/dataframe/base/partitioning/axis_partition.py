@@ -119,7 +119,9 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         )
         return type(self)(materialized, get_ip=get_ip)  # type: ignore[call-arg]
 
-    def unwrap(self, squeeze: bool = False, get_ip: bool = False) -> Union[list,Tuple[Any, Any]]:
+    def unwrap(
+        self, squeeze: bool = False, get_ip: bool = False
+    ) -> Union[list, Tuple[list, list]]:
         """
         Unwrap partitions from this axis partition.
 
@@ -137,7 +139,7 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
 
         Notes
         -----
-        If `get_ip=True`, a list of tuples of Ray.ObjectRef/Dask.Future to node ip addresses and
+        If `get_ip=True`, a tuple of lists of Ray.ObjectRef/Dask.Future to node ip addresses and
         unwrapped partitions, respectively, is returned if Ray/Dask is used as an engine
         (i.e. [(Ray.ObjectRef/Dask.Future, Ray.ObjectRef/Dask.Future), ...]).
         """
