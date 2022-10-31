@@ -810,7 +810,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
         return self._add_suffix_series(suffix=suffix)
 
     def dot(self, other, squeeze_self=None, squeeze_other=None):
-        other = try_cast_to_pandas_sqc(other)
+        other = try_cast_to_pandas(other)
         if squeeze_other:
             other = other.squeeze()
         if squeeze_self:

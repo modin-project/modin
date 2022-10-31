@@ -476,7 +476,9 @@ def hashable(obj: bool) -> bool:
     return True
 
 
-def try_cast_to_pandas(obj: Any, squeeze: bool = False, squeeze_df: bool = False) -> Any:
+def try_cast_to_pandas(
+    obj: Any, squeeze: bool = False, squeeze_df: bool = False
+) -> Any:
     """
     Convert `obj` and all nested objects from Modin to pandas if it is possible.
 
