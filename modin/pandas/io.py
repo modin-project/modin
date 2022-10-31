@@ -36,7 +36,9 @@ from modin._compat.pandas_api.namespace import (
     read_parquet,
     read_json,
     read_excel,
+    read_html,
     read_feather,
+    read_sas,
     read_stata,
     read_pickle,
     read_gbq,
@@ -47,36 +49,6 @@ from modin._compat.pandas_api.namespace import (
 )
 
 PQ_INDEX_REGEX = re.compile(r"__index_level_\d+__")
-
-
-@_inherit_docstrings(pandas.read_html, apilink="pandas.read_html")
-@enable_logging
-def read_html(
-    io,
-    match=".+",
-    flavor=None,
-    header=None,
-    index_col=None,
-    skiprows=None,
-    attrs=None,
-    parse_dates=False,
-    thousands=",",
-    encoding=None,
-    decimal=".",
-    converters=None,
-    na_values=None,
-    keep_default_na=True,
-    displayed_only=True,
-):  # noqa: PR01, RT01, D200
-    """
-    Read HTML tables into a ``DataFrame`` object.
-    """
-    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-
-    Engine.subscribe(_update_engine)
-    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-
-    return DataFrame(query_compiler=FactoryDispatcher.read_html(**kwargs))
 
 
 @_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")
@@ -119,27 +91,6 @@ def read_hdf(
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(query_compiler=FactoryDispatcher.read_hdf(**kwargs))
-
-
-@_inherit_docstrings(pandas.read_sas, apilink="pandas.read_sas")
-@enable_logging
-def read_sas(
-    filepath_or_buffer,
-    format=None,
-    index=None,
-    encoding=None,
-    chunksize=None,
-    iterator=False,
-):  # pragma: no cover  # noqa: PR01, RT01, D200
-    """
-    Read SAS files stored as either XPORT or SAS7BDAT format files.
-    """
-    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-
-    Engine.subscribe(_update_engine)
-    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-
-    return DataFrame(query_compiler=FactoryDispatcher.read_sas(**kwargs))
 
 
 @_inherit_docstrings(pandas.read_sql, apilink="pandas.read_sql")

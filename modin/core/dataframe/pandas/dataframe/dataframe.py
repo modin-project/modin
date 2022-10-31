@@ -248,14 +248,7 @@ class PandasDataframe(ClassLogger):
         if self._row_lengths_cache is None:
             if len(self._partitions.T) > 0:
                 row_parts = self._partitions.T[0]
-                if self._index_cache is not None:
-                    # do not do extra work to get an index that is already known
-                    self._row_lengths_cache = [part.length() for part in row_parts]
-                else:
-                    (
-                        self._index_cache,
-                        self._row_lengths_cache,
-                    ) = self._compute_axis_labels_and_lengths(0)
+                self._row_lengths_cache = [part.length() for part in row_parts]
             else:
                 self._row_lengths_cache = []
         return self._row_lengths_cache
@@ -273,14 +266,7 @@ class PandasDataframe(ClassLogger):
         if self._column_widths_cache is None:
             if len(self._partitions) > 0:
                 col_parts = self._partitions[0]
-                if self._columns_cache is not None:
-                    # do not do extra work to get columns that is already known
-                    self._column_widths_cache = [part.width() for part in col_parts]
-                else:
-                    (
-                        self._columns_cache,
-                        self._column_widths_cache,
-                    ) = self._compute_axis_labels_and_lengths(1)
+                self._column_widths_cache = [part.width() for part in col_parts]
             else:
                 self._column_widths_cache = []
         return self._column_widths_cache
@@ -548,9 +534,7 @@ class PandasDataframe(ClassLogger):
         if axis is None:
 
             def apply_idx_objs(df, idx, cols):
-                return df.set_axis(idx, axis="index", inplace=False).set_axis(
-                    cols, axis="columns", inplace=False
-                )
+                return df.set_axis(idx, axis="index").set_axis(cols, axis="columns")
 
             self._partitions = np.array(
                 [
@@ -576,7 +560,7 @@ class PandasDataframe(ClassLogger):
         elif axis == 0:
 
             def apply_idx_objs(df, idx):
-                return df.set_axis(idx, axis="index", inplace=False)
+                return df.set_axis(idx, axis="index")
 
             self._partitions = np.array(
                 [
@@ -598,7 +582,7 @@ class PandasDataframe(ClassLogger):
         elif axis == 1:
 
             def apply_idx_objs(df, cols):
-                return df.set_axis(cols, axis="columns", inplace=False)
+                return df.set_axis(cols, axis="columns")
 
             self._partitions = np.array(
                 [
@@ -1168,10 +1152,10 @@ class PandasDataframe(ClassLogger):
         )
         return self.__constructor__(
             new_frame,
-            self.index,
-            self.columns,
-            self.row_lengths,
-            self.column_widths,
+            self._index_cache,
+            self._columns_cache,
+            self._row_lengths_cache,
+            self._column_widths_cache,
             new_dtypes,
         )
 
@@ -1679,8 +1663,8 @@ class PandasDataframe(ClassLogger):
             )
         return self.__constructor__(
             new_partitions,
-            self.axes[0],
-            self.axes[1],
+            self._index_cache,
+            self._columns_cache,
             self._row_lengths_cache,
             self._column_widths_cache,
             dtypes=dtypes,
@@ -1747,10 +1731,10 @@ class PandasDataframe(ClassLogger):
         )
         return self.__constructor__(
             new_partitions,
-            self.index,
-            self.columns,
-            self.row_lengths,
-            self.column_widths,
+            self._index_cache,
+            self._columns_cache,
+            self._row_lengths_cache,
+            self._column_widths_cache,
         )
 
     def infer_objects(self) -> "PandasDataframe":
@@ -1792,10 +1776,10 @@ class PandasDataframe(ClassLogger):
         new_dtypes[col_labels] = new_cols_dtypes
         return self.__constructor__(
             self._partitions,
-            self.index,
-            self.columns,
-            self.row_lengths,
-            self.column_widths,
+            self._index_cache,
+            self._columns_cache,
+            self._row_lengths_cache,
+            self._column_widths_cache,
             new_dtypes,
         )
 
@@ -1900,8 +1884,8 @@ class PandasDataframe(ClassLogger):
             new_parts,
             new_index,
             new_cols,
-            self.row_lengths,
-            self.column_widths,
+            self._row_lengths_cache,
+            self._column_widths_cache,
             new_dtypes,
         )
 
@@ -2808,7 +2792,7 @@ class PandasDataframe(ClassLogger):
             new_columns = self.columns.append([other.columns for other in others])
             new_index = joined_index
             if self._dtypes is not None and all(o._dtypes is not None for o in others):
-                new_dtypes = self.dtypes.append([o.dtypes for o in others])
+                new_dtypes = pandas.concat([self.dtypes] + [o.dtypes for o in others])
             # If we have already cached the width of each column in at least one
             # of the column's partitions, we can build new_widths for the new
             # frame. Typically, if we know the width for any partition in a
@@ -3080,10 +3064,10 @@ class PandasDataframe(ClassLogger):
             new_dtypes = None
         return self.__constructor__(
             new_partitions,
-            self.columns,
-            self.index,
-            self.column_widths,
-            self.row_lengths,
+            self._columns_cache,
+            self._index_cache,
+            self._column_widths_cache,
+            self._row_lengths_cache,
             dtypes=new_dtypes,
         )
 

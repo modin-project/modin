@@ -1448,7 +1448,8 @@ def test_groupby_with_kwarg_dropna(groupby_kwargs, dropna):
 
 @pytest.mark.parametrize("groupby_axis", [0, 1])
 @pytest.mark.parametrize("shift_axis", [0, 1])
-def test_shift_freq(groupby_axis, shift_axis):
+@pytest.mark.parametrize("groupby_sort", [True, False])
+def test_shift_freq(groupby_axis, shift_axis, groupby_sort):
     pandas_df = pandas.DataFrame(
         {
             "col1": [1, 0, 2, 3],
@@ -1468,9 +1469,14 @@ def test_shift_freq(groupby_axis, shift_axis):
         pandas_df.columns = modin_df.columns = new_index
         by = [[0, 1, 0, 2]]
 
+    if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36 and not groupby_sort:
+        # df.groupby(sort=False) yields different results compared to pandas 1.1
+        # we don't want to spend too much effort on compat mode, so just skip that piece of test
+        return
+
     for _by in by:
-        pandas_groupby = pandas_df.groupby(by=_by, axis=groupby_axis)
-        modin_groupby = modin_df.groupby(by=_by, axis=groupby_axis)
+        pandas_groupby = pandas_df.groupby(by=_by, axis=groupby_axis, sort=groupby_sort)
+        modin_groupby = modin_df.groupby(by=_by, axis=groupby_axis, sort=groupby_sort)
         eval_general(
             modin_groupby,
             pandas_groupby,
@@ -2158,3 +2164,22 @@ def test_groupby_with_frozenlist():
     pandas_df = pandas_df.set_index(["a", "b"])
     modin_df = from_pandas(pandas_df)
     eval_general(modin_df, pandas_df, lambda df: df.groupby(df.index.names).count())
+
+
+@pytest.mark.parametrize(
+    "by_func",
+    [
+        lambda df: "timestamp0",
+        lambda df: ["timestamp0", "timestamp1"],
+        lambda df: ["timestamp0", df["timestamp1"]],
+    ],
+)
+def test_mean_with_datetime(by_func):
+    data = {
+        "timestamp0": [pd.to_datetime(1490195805, unit="s")],
+        "timestamp1": [pd.to_datetime(1490195805, unit="s")],
+        "numeric": [0],
+    }
+
+    modin_df, pandas_df = create_test_dfs(data)
+    eval_general(modin_df, pandas_df, lambda df: df.groupby(by=by_func(df)).mean())

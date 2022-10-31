@@ -935,7 +935,7 @@ class TextFileDispatcher(FileDispatcher):
                 new_query_compiler = new_query_compiler.take_2d(
                     pandas.RangeIndex(len(new_query_compiler.index))[:nrows]
                 )
-        if index_col is None:
+        if index_col is None or index_col is False:
             new_query_compiler._modin_frame.synchronize_labels(axis=0)
 
         return new_query_compiler

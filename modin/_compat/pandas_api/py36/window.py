@@ -34,9 +34,10 @@ class Python36CompatibleWindow(BaseCompatibleWindow):
         closed=None,
     ):
         self._init(
-            dataframe, [window, min_periods, center, win_type, on, axis, closed,], axis,
+            dataframe,
+            [(window, min_periods, center, win_type, on, axis, closed), {}],
+            axis,
         )
-
 
 @append_to_docstring("Compatibility layer for 'Python 3.6 pandas' for Rolling.")
 @_inherit_docstrings(pandas.core.window.rolling.Rolling)
@@ -53,5 +54,7 @@ class Python36CompatibleRolling(BaseCompatibleRolling):
         closed=None,
     ):
         self._init(
-            dataframe, [window, min_periods, center, win_type, on, axis, closed,], axis,
+            dataframe,
+            [(window, min_periods, center, win_type, on, axis, closed), {}],
+            axis,
         )

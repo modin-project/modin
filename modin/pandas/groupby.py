@@ -37,7 +37,7 @@ from modin.config import IsExperimental
 from .series import Series
 from .utils import is_label
 from modin._compat import PandasCompatVersion
-from modin._compat.core.pd_common import reconstruct_func
+from modin._compat.core.pandas_common import reconstruct_func
 from modin._compat.pandas_api.classes import DataFrameGroupByCompat, SeriesGroupByCompat
 
 
@@ -255,15 +255,21 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
             result = _shift(
                 self._df, periods, freq, axis, fill_value, is_set_nan_rows=False
             )
-            new_idx_lvl_arrays = np.concatenate(
-                [self._df[self._by.columns].values.T, [list(result.index)]]
-            )
-            result.index = pandas.MultiIndex.from_arrays(
-                new_idx_lvl_arrays,
-                names=[col_name for col_name in self._by.columns]
-                + [result._query_compiler.get_index_name()],
-            )
-            result = result.dropna(subset=self._by.columns).sort_index()
+            if PandasCompatVersion.CURRENT != PandasCompatVersion.LATEST:
+                # pandas>=1.5 no longer make multi-index in groupby().shift()
+                new_idx_lvl_arrays = np.concatenate(
+                    [self._df[self._by.columns].values.T, [list(result.index)]]
+                )
+                result.index = pandas.MultiIndex.from_arrays(
+                    new_idx_lvl_arrays,
+                    names=[col_name for col_name in self._by.columns]
+                    + [result._query_compiler.get_index_name()],
+                )
+            result = result.dropna(subset=self._by.columns)
+            if self._sort:
+                result = result.sort_values(list(self._by.columns), axis=axis)
+            else:
+                result = result.sort_index()
         else:
             result = self._check_index_name(
                 self._wrap_aggregation(
@@ -529,7 +535,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                 )
 
             if any(i not in self._df.columns for i in func_dict.keys()):
-                from pandas.core.base import SpecificationError
+                from modin._compat.core.pandas_common import SpecificationError
 
                 raise SpecificationError("nested renamer is not supported")
             if func is None:

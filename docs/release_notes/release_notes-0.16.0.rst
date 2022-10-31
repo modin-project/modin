@@ -92,10 +92,12 @@ Key Features and Updates
   * PERF-#4940: Optimize categorical dtype check in `concatenate` (#4953)
 * Benchmarking enhancements
   * TEST-#5066: Add outer join case for `TimeConcat` benchmark (#5067)
+  * TEST-#5083: Add `merge` op with categorical data (#5084)
   * FEAT-#4706: Add Modin ClassLogger to PandasDataframePartitionManager (#4707)
   * TEST-#5014: Simplify adding new ASV benchmarks (#5015)
   * TEST-#5064: Update `TimeConcat` benchmark with new parameter `ignore_index` (#5065)
   * PERF-#4944: Avoid default_to_pandas in ``Series.cat.codes``, ``Series.dt.tz``, and ``Series.dt.to_pytimedelta`` (#4833)
+  * TEST-#5068: Add binary op benchmark for Series (#5069)
 * Refactor Codebase
   * REFACTOR-#4530: Standardize access to physical data in partitions (#4563)
   * REFACTOR-#4534: Replace logging meta class with class decorator (#4535)
@@ -126,6 +128,7 @@ Key Features and Updates
   * REFACTOR-#4755: Rewrite Pandas version mismatch warning (#4965)
   * REFACTOR-#5012: Add mypy checks for singleton files in base modin directory (#5013)
   * REFACTOR-#5038: Remove unnecessary _method argument from resamplers (#5039)
+  * REFACTOR-#5081: Remove `c323f7fe385011ed849300155de07645.db` file (#5082)
 * Pandas API implementations and improvements
   * FEAT-#4670: Implement convert_dtypes by mapping across partitions (#4671)
 * OmniSci enhancements
@@ -171,6 +174,7 @@ Key Features and Updates
   * FEAT-#4733: Support fastparquet as engine for `read_parquet` (#4807)
   * FEAT-#4766: Support fsspec URLs in `read_csv` and `read_csv_glob` (#4898)
   * FEAT-#4827: Implement `infer_types` dataframe algebra operator (#4871)
+  * FEAT-#4989: Switch pandas version to 1.5 (#5037)
 
 Contributors
 ------------

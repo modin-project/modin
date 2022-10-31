@@ -744,23 +744,25 @@ class Series(SeriesCompat, BasePandasDataset):
             other, lambda s1, s2: s1.combine(s2, func, fill_value=fill_value)
         )
 
-    def compare(
+    def _compare(
         self,
         other: "Series",
-        align_axis: Union[str, int] = 1,
-        keep_shape: bool = False,
-        keep_equal: bool = False,
-    ):  # noqa: PR01, RT01, D200
+        align_axis: Union[str, int],
+        keep_shape: bool,
+        keep_equal: bool,
+        result_names: tuple,
+    ) -> "Series":  # noqa: PR01, RT01, D200
         """
         Compare to another Series and show the differences.
         """
         if not isinstance(other, Series):
             raise TypeError(f"Cannot compare Series to {type(other)}")
-        result = self.to_frame().compare(
+        result = self.to_frame()._compare(
             other.to_frame(),
             align_axis=align_axis,
             keep_shape=keep_shape,
             keep_equal=keep_equal,
+            result_names=result_names,
         )
         if align_axis == "columns" or align_axis == 1:
             # Pandas.DataFrame.Compare returns a dataframe with a multidimensional index object as the
@@ -977,12 +979,12 @@ class Series(SeriesCompat, BasePandasDataset):
             ignore_index=ignore_index,
         )
 
-    def factorize(self, sort=False, na_sentinel=-1):  # noqa: PR01, RT01, D200
+    def _factorize(self, sort, na_sentinel, **kwargs):  # noqa: PR01, RT01, D200
         """
         Encode the object as an enumerated type or categorical variable.
         """
         return self._default_to_pandas(
-            pandas.Series.factorize, sort=sort, na_sentinel=na_sentinel
+            pandas.Series.factorize, sort=sort, na_sentinel=na_sentinel, **kwargs
         )
 
     def fillna(
@@ -1031,17 +1033,17 @@ class Series(SeriesCompat, BasePandasDataset):
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).ge(new_other, level=level, axis=axis)
 
-    def groupby(
+    def _groupby(
         self,
-        by=None,
-        axis=0,
-        level=None,
-        as_index=True,
-        sort=True,
-        group_keys=True,
-        squeeze: bool = no_default,
-        observed=False,
-        dropna: bool = True,
+        by,
+        axis,
+        level,
+        as_index,
+        sort,
+        group_keys,
+        squeeze,
+        observed,
+        dropna,
     ):  # noqa: PR01, RT01, D200
         """
         Group Series using a mapper or by a Series of columns.
@@ -1121,21 +1123,21 @@ class Series(SeriesCompat, BasePandasDataset):
             **kwds,
         )
 
-    def idxmax(self, axis=0, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
+    def _idxmax(self, axis=0, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return the row label of the maximum value.
         """
         if skipna is None:
             skipna = True
-        return super(Series, self).idxmax(axis=axis, skipna=skipna, *args, **kwargs)
+        return super(Series, self)._idxmax(axis=axis, skipna=skipna, *args, **kwargs)
 
-    def idxmin(self, axis=0, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
+    def _idxmin(self, axis=0, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return the row label of the minimum value.
         """
         if skipna is None:
             skipna = True
-        return super(Series, self).idxmin(axis=axis, skipna=skipna, *args, **kwargs)
+        return super(Series, self)._idxmin(axis=axis, skipna=skipna, *args, **kwargs)
 
     def interpolate(
         self,
@@ -1200,8 +1202,6 @@ class Series(SeriesCompat, BasePandasDataset):
         Return unbiased kurtosis over requested axis.
         """
         axis = self._get_axis_number(axis)
-        if numeric_only is True:
-            raise NotImplementedError("Series.kurt does not implement numeric_only.")
         return super(Series, self)._kurt(axis, skipna, level, numeric_only, **kwargs)
 
     kurtosis = SeriesCompat.kurt
@@ -1413,10 +1413,6 @@ class Series(SeriesCompat, BasePandasDataset):
             return self.groupby(level=level, axis=axis, sort=False).prod(
                 numeric_only=numeric_only, min_count=min_count, **kwargs
             )
-        if numeric_only:
-            raise NotImplementedError(
-                f"Series.{self.name} does not implement numeric_only."
-            )
         new_index = self.columns if axis else self.index
         if min_count > len(new_index):
             return np.nan
@@ -1530,7 +1526,9 @@ class Series(SeriesCompat, BasePandasDataset):
 
         return self.__constructor__(query_compiler=self._query_compiler.repeat(repeats))
 
-    def _reset_index(self, level, drop, name, inplace):  # noqa: PR01, RT01, D200
+    def _reset_index(
+        self, level, drop, name, inplace, allow_duplicates
+    ):  # noqa: PR01, RT01, D200
         """
         Generate a new Series with the index reset.
         """
@@ -1556,7 +1554,15 @@ class Series(SeriesCompat, BasePandasDataset):
             obj.name = name
             from .dataframe import DataFrame
 
-            return DataFrame(obj).reset_index(level=level, drop=drop, inplace=inplace)
+            return DataFrame(obj)._reset_index(
+                level=level,
+                drop=drop,
+                inplace=inplace,
+                col_level=0,
+                col_fill="",
+                allow_duplicates=allow_duplicates,
+                names=None,
+            )
 
     def rdivmod(
         self, other, level=None, fill_value=None, axis=0
@@ -1629,8 +1635,16 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         Return value at the given quantile.
         """
-        return super(Series, self).quantile(
-            q=q, numeric_only=False, interpolation=interpolation
+        # We cannot use super().quantile() here as it's failing into infinite recursion
+        # because SeriesCompat is selected as super-class in this case due to how MRO works.
+        # We cannot change the order because it would break in other places by picking methods
+        # from BasePandasDataset instead of special-crafted SeriesCompat.
+        return self._quantile(
+            q=q,
+            axis=0,
+            numeric_only=False,
+            interpolation=interpolation,
+            method="single",
         )
 
     def reorder_levels(self, order):  # noqa: PR01, RT01, D200
@@ -1757,8 +1771,6 @@ class Series(SeriesCompat, BasePandasDataset):
         Return the sum of the values.
         """
         axis = self._get_axis_number(axis)
-        if numeric_only is True:
-            raise NotImplementedError("Series.sum does not implement numeric_only")
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)

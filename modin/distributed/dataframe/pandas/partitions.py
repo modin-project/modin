@@ -13,13 +13,33 @@
 
 """Module houses API to operate on Modin DataFrame partitions that are pandas DataFrame(s)."""
 
+from typing import Optional, Union, TYPE_CHECKING
 import numpy as np
+from pandas._typing import Axes
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
-from modin.pandas.dataframe import DataFrame
+from modin.pandas.dataframe import DataFrame, Series
+
+if TYPE_CHECKING:
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
+        PandasOnRayDataframePartition,
+    )
+    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition import (
+        PandasOnDaskDataframePartition,
+    )
+
+    PartitionUnionType = Union[
+        PandasOnRayDataframePartition, PandasOnDaskDataframePartition
+    ]
+else:
+    from typing import Any
+
+    PartitionUnionType = Any
 
 
-def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
+def unwrap_partitions(
+    api_layer_object: Union[DataFrame, Series], axis: int = None, get_ip: bool = False
+) -> list:
     """
     Unwrap partitions of the ``api_layer_object``.
 
@@ -54,10 +74,10 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
     modin_frame._propagate_index_objs(None)
     if axis is None:
 
-        def _unwrap_partitions():
+        def _unwrap_partitions() -> list:
             [p.drain_call_queue() for p in modin_frame._partitions.flatten()]
 
-            def get_block(partition):
+            def get_block(partition: PartitionUnionType) -> np.ndarray:
                 blocks = partition.list_of_blocks
                 assert (
                     len(blocks) == 1
@@ -99,8 +119,13 @@ def unwrap_partitions(api_layer_object, axis=None, get_ip=False):
 
 
 def from_partitions(
-    partitions, axis, index=None, columns=None, row_lengths=None, column_widths=None
-):
+    partitions: list,
+    axis: Optional[int],
+    index: Optional[Axes] = None,
+    columns: Optional[Axes] = None,
+    row_lengths: Optional[list] = None,
+    column_widths: Optional[list] = None,
+) -> DataFrame:
     """
     Create DataFrame from remote partitions.
 
@@ -141,7 +166,12 @@ def from_partitions(
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     factory = FactoryDispatcher.get_factory()
-
+    # TODO(https://github.com/modin-project/modin/issues/5127):
+    # Remove these assertions once the dependencies of this function all have types.
+    assert factory is not None
+    assert factory.io_cls is not None
+    assert factory.io_cls.frame_cls is not None
+    assert factory.io_cls.frame_cls._partition_mgr_cls is not None  # type: ignore[unreachable]
     partition_class = factory.io_cls.frame_cls._partition_mgr_cls._partition_class
     partition_frame_class = factory.io_cls.frame_cls
     partition_mgr_class = factory.io_cls.frame_cls._partition_mgr_cls

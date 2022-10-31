@@ -17,6 +17,7 @@ import io
 import os
 
 import pandas
+from modin._compat.core.pandas_common import pandas_to_csv
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.ray.generic.io import RayIO
@@ -29,7 +30,7 @@ from modin.core.io import (
     SQLDispatcher,
     ExcelDispatcher,
 )
-from modin._compat.core.pd_common import get_handle as pd_get_handle
+from modin._compat.core.pandas_common import get_handle as pd_get_handle
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVParser,
     PandasFWFParser,
@@ -197,7 +198,7 @@ class PandasOnRayIO(RayIO):
             path_or_buf = csv_kwargs["path_or_buf"]
             is_binary = "b" in csv_kwargs["mode"]
             csv_kwargs["path_or_buf"] = io.BytesIO() if is_binary else io.StringIO()
-            df.to_csv(**csv_kwargs)
+            pandas_to_csv(df, **csv_kwargs)
             content = csv_kwargs["path_or_buf"].getvalue()
             csv_kwargs["path_or_buf"].close()
 
@@ -304,6 +305,8 @@ class PandasOnRayIO(RayIO):
             df.to_parquet(**kwargs)
             return pandas.DataFrame()
 
+        # Ensure that the metadata is synchronized
+        qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
             partitions=qc._modin_frame._partitions,

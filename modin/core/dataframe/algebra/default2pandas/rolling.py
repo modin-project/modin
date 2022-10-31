@@ -40,7 +40,8 @@ class Rolling:
 
         def fn(df: Any, rolling_args: Any, *args: Any, **kwargs: Any) -> Any:
             """Create rolling window for the passed frame and execute specified `func` on it."""
-            roller = df.rolling(*rolling_args)
+            rolling_args, rolling_kw = rolling_args
+            roller = df.rolling(*rolling_args, **rolling_kw)
 
             if type(func) == property:
                 return func.fget(roller)
