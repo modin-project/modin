@@ -2162,6 +2162,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         key : list-like
             Numeric indices of the rows to pick.
         numeric : bool, default: False
+            Whether the key passed in represents the numeric row positions or
+            or the possibly non-numeric row labels.
 
         Returns
         -------

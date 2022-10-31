@@ -14,7 +14,7 @@
 """The module holds the factory which performs I/O using pandas on a Client."""
 
 from modin.core.io.io import BaseIO
-import fsspec
+import os
 import pandas
 
 
@@ -65,19 +65,17 @@ class ClientIO(BaseIO):
         self.query_compiler_cls
             Query compiler with CSV data read in.
         """
-        if isinstance(filepath_or_buffer, str):
-            filepath_or_buffer = fsspec.open(filepath_or_buffer).full_name
-            file_protocol = "file://"
-            if filepath_or_buffer.startswith(file_protocol):
-                # We will do this so that the backend can know whether this
-                # is a path or a URL.
-                filepath_or_buffer = filepath_or_buffer[len(file_protocol) :]
-        else:
-            raise NotImplementedError("Only filepaths are supported for read_csv")
         if cls._server_conn is None:
             raise ConnectionError(
                 "Missing server connection, did you initialize the connection?"
             )
+        if not isinstance(filepath_or_buffer, str):
+            raise NotImplementedError("Only filepaths are supported for read_csv")
+        if os.path.exists(filepath_or_buffer):
+            # In case this is a local path, we should use the absolute path
+            # because the service might be running in a different directory
+            # on the same machine.
+            filepath_or_buffer = os.path.abspath(filepath_or_buffer)
         server_result = cls._server_conn.read_csv(
             cls._data_conn, filepath_or_buffer, **kwargs
         )
