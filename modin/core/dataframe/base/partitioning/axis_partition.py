@@ -13,7 +13,7 @@
 
 """Base class of an axis partition for a Modin Dataframe."""
 
-from abc import ABC
+from abc import ABC, abstractproperty
 from typing import Any, Callable, Iterable, Optional, Tuple, Union
 
 
@@ -23,6 +23,14 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
 
     This class is intended to simplify the way that operations are performed.
     """
+
+    @abstractproperty
+    def list_of_blocks(self) -> list:
+        return []
+
+    @abstractproperty
+    def list_of_ips(self) -> list:
+        return []
 
     def apply(
         self,
@@ -97,7 +105,7 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
             List of wrapped remote partition objects.
         """
         assert self.partition_type is not None
-        assert self.instance_type is not None
+        assert self.instance_type is not None  # type: ignore
 
         return [self.partition_type(obj) for obj in partitions]
 
@@ -146,13 +154,13 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         unwrapped partitions, respectively, is returned if Ray/Dask is used as an engine
         (i.e. [(Ray.ObjectRef/Dask.Future, Ray.ObjectRef/Dask.Future), ...]).
         """
-        if squeeze and len(self.list_of_blocks) == 1:  # type: ignore[attr-defined]
+        if squeeze and len(self.list_of_blocks) == 1:
             if get_ip:
-                return self.list_of_ips[0], self.list_of_blocks[0]  # type: ignore[attr-defined]
+                return self.list_of_ips[0], self.list_of_blocks[0]
             else:
-                return self.list_of_blocks[0]  # type: ignore[attr-defined]
+                return self.list_of_blocks[0]
         else:
             if get_ip:
-                return list(zip(self.list_of_ips, self.list_of_blocks))  # type: ignore[attr-defined]
+                return list(zip(self.list_of_ips, self.list_of_blocks))
             else:
-                return self.list_of_blocks  # type: ignore[attr-defined]
+                return self.list_of_blocks
