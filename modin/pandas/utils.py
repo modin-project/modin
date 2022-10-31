@@ -15,6 +15,7 @@
 
 from pandas.util._decorators import doc
 import pandas
+from modin.config import InitializeWithSmallQueryCompilers
 import numpy as np
 from modin.core.storage_formats.pandas.small_query_compiler import SmallQueryCompiler
 
@@ -81,8 +82,9 @@ def from_pandas(df):
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
     from .dataframe import DataFrame
 
-    # return DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
-    return DataFrame(query_compiler=SmallQueryCompiler(df))
+    if InitializeWithSmallQueryCompilers.get():
+        return DataFrame(query_compiler=SmallQueryCompiler(df))
+    return DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
 
 
 def from_arrow(at):

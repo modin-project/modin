@@ -36,7 +36,7 @@ from modin.utils import (
     Engine,
     MODIN_UNNAMED_SERIES_LABEL,
 )
-from modin.config import IsExperimental, PersistentPickle
+from modin.config import InitializeWithSmallQueryCompilers, IsExperimental, PersistentPickle
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar, _doc_binary_op
@@ -118,7 +118,7 @@ class Series(SeriesCompat, BasePandasDataset):
                 if isinstance(data, pandas.Series) and data.name is not None:
                     name = data.name
             # Not sure about checking, want to check if empty without constructing series
-            if True:
+            if InitializeWithSmallQueryCompilers.get():
                 query_compiler = SmallQueryCompiler(
                     pandas.DataFrame(
                         pandas.Series(

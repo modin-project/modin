@@ -110,7 +110,7 @@ def small_query_compiler(func, name):
     return wrapper
 
 
-@decorate_all_functions(small_query_compiler)
+# @decorate_all_functions(small_query_compiler)
 # FIXME: many of the BaseQueryCompiler methods are hiding actual arguments
 # by using *args and **kwargs. They should be spread into actual parameters.
 # Currently actual arguments are placed in the methods docstrings, but since they're

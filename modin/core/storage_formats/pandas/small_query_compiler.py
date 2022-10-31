@@ -18,6 +18,7 @@ Module contains ``SmallQueryCompiler`` class.
 queries for small data and empty ``PandasDataFrame``.
 """
 
+from modin.config.envvars import InitializeWithSmallQueryCompilers
 import numpy as np
 import pandas
 from pandas.core.dtypes.common import (
@@ -50,9 +51,9 @@ def _get_axis(axis):
     callable(PandasQueryCompiler) -> pandas.Index
     """
     if axis == 0:
-        return lambda self: self._modin_frame.index
+        return lambda self: self._pandas_frame.index
     else:
-        return lambda self: self._modin_frame.columns
+        return lambda self: self._pandas_frame.columns
 
 
 def _set_axis(axis):
@@ -71,12 +72,12 @@ def _set_axis(axis):
     if axis == 0:
 
         def set_axis(self, idx):
-            self._modin_frame.index = idx
+            self._pandas_frame.index = idx
 
     else:
 
         def set_axis(self, cols):
-            self._modin_frame.columns = cols
+            self._pandas_frame.columns = cols
 
     return set_axis
 
@@ -361,19 +362,20 @@ class SmallQueryCompiler(BaseQueryCompiler):
 
     Parameters
     ----------
-    modin_frame : pandas.DataFrame
+    pandas_frame : pandas.DataFrame
         Modin Frame to query with the compiled queries.
     """
 
-    def __init__(self, modin_frame):
-        if hasattr(modin_frame, "_to_pandas"):
-            modin_frame = modin_frame._to_pandas()
-        if is_scalar(modin_frame):
-            modin_frame = pandas.DataFrame([modin_frame])
-        elif not isinstance(modin_frame, pandas.DataFrame):
-            modin_frame = pandas.DataFrame(modin_frame)
+    def __init__(self, pandas_frame):
+        assert InitializeWithSmallQueryCompilers.get()
+        if hasattr(pandas_frame, "_to_pandas"):
+            pandas_frame = pandas_frame._to_pandas()
+        if is_scalar(pandas_frame):
+            pandas_frame = pandas.DataFrame([pandas_frame])
+        elif not isinstance(pandas_frame, pandas.DataFrame):
+            pandas_frame = pandas.DataFrame(pandas_frame)
 
-        self._modin_frame = modin_frame
+        self._pandas_frame = pandas_frame
 
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         # type(self) might not work
@@ -384,7 +386,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
             for k, v in kwargs.items()
         }
 
-        result = pandas_op(self._modin_frame, *args, **kwargs)
+        result = pandas_op(self._pandas_frame, *args, **kwargs)
         if isinstance(result, pandas.Series):
             if result.name is None:
                 result.name = MODIN_UNNAMED_SERIES_LABEL
@@ -392,7 +394,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
 
         return result
         # if isinstance(result, pandas.DataFrame):
-        #     return self.from_pandas(result, type(self._modin_frame))
+        #     return self.from_pandas(result, type(self._pandas_frame))
         # else:
         #     return result
 
@@ -409,7 +411,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     ):
         def caller(query_compiler, *args, **kwargs):
             print(func.__name__)
-            df = query_compiler._modin_frame
+            df = query_compiler._pandas_frame
             if df_copy:
                 df = df.copy()
             if is_series:
@@ -836,9 +838,9 @@ class SmallQueryCompiler(BaseQueryCompiler):
         if squeeze_other:
             other = other.squeeze()
         if squeeze_self:
-            result = self._modin_frame.squeeze(axis=1).dot(other)
+            result = self._pandas_frame.squeeze(axis=1).dot(other)
         else:
-            result = self._modin_frame.dot(other)
+            result = self._pandas_frame.dot(other)
         if isinstance(result, pandas.Series):
             if result.name is None:
                 result.name = "__reduced__"
@@ -854,7 +856,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
         pass
 
     def get_axis(self, axis):
-        return self._modin_frame.index if axis == 0 else self._modin_frame.columns
+        return self._pandas_frame.index if axis == 0 else self._pandas_frame.columns
 
     def _get_dummies(df, columns, **kwargs):
         return pandas.get_dummies(df, columns=columns, **kwargs)
@@ -870,16 +872,16 @@ class SmallQueryCompiler(BaseQueryCompiler):
 
     def has_multiindex(self, axis=0):
         if axis == 0:
-            return isinstance(self._modin_frame.index, pandas.MultiIndex)
+            return isinstance(self._pandas_frame.index, pandas.MultiIndex)
         assert axis == 1
-        return isinstance(self._modin_frame.columns, pandas.MultiIndex)
+        return isinstance(self._pandas_frame.columns, pandas.MultiIndex)
 
     def insert_item(self, *args, **kwargs):
         print("Not implemented")
         return
 
     def to_pandas(self):
-        return self._modin_frame
+        return self._pandas_frame
 
     @classmethod
     def from_pandas(cls, df, data_cls):
@@ -898,7 +900,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     # Dataframe exchange protocol
 
     def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True):
-        return self._modin_frame.__dataframe__(
+        return self._pandas_frame.__dataframe__(
             nan_as_null=nan_as_null, allow_copy=allow_copy
         )
 
@@ -913,12 +915,12 @@ class SmallQueryCompiler(BaseQueryCompiler):
 
     @property
     def dtypes(self):
-        return self._modin_frame.dtypes
+        return self._pandas_frame.dtypes
 
     def getitem_column_array(self, key, numeric=False):
         if numeric:
-            return self.__constructor__(self._modin_frame.iloc[:, key])
-        return self.__constructor__(self._modin_frame.loc[:, key])
+            return self.__constructor__(self._pandas_frame.iloc[:, key])
+        return self.__constructor__(self._pandas_frame.loc[:, key])
 
     def _getitem_array(df, key):
         if isinstance(key, pandas.DataFrame):
@@ -931,15 +933,15 @@ class SmallQueryCompiler(BaseQueryCompiler):
         return df.iloc[key]
 
     def columnarize(self):
-        if len(self._modin_frame.columns) != 1 or (
-            len(self._modin_frame.index) == 1
-            and self._modin_frame.index[0] == MODIN_UNNAMED_SERIES_LABEL
+        if len(self._pandas_frame.columns) != 1 or (
+            len(self._pandas_frame.index) == 1
+            and self._pandas_frame.index[0] == MODIN_UNNAMED_SERIES_LABEL
         ):
-            return SmallQueryCompiler(self._modin_frame.transpose())
+            return SmallQueryCompiler(self._pandas_frame.transpose())
         return self
 
     def is_series_like(self):
-        return len(self._modin_frame.columns) == 1 or len(self._modin_frame.index) == 1
+        return len(self._pandas_frame.columns) == 1 or len(self._pandas_frame.index) == 1
 
     def _write_items(df, row_numeric_index, col_numeric_index, broadcasted_items):
         if not isinstance(row_numeric_index, slice):

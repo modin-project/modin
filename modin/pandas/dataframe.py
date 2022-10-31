@@ -44,7 +44,7 @@ from modin.utils import (
     append_to_docstring,
     MODIN_UNNAMED_SERIES_LABEL,
 )
-from modin.config import Engine, IsExperimental, PersistentPickle
+from modin.config import Engine, IsExperimental, InitializeWithSmallQueryCompilers, PersistentPickle
 from .utils import (
     from_pandas,
     from_non_pandas,
@@ -157,7 +157,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
                 self._query_compiler = data.loc[index, columns]._query_compiler
 
         # Check type of data and use appropriate constructor
-        elif query_compiler is None and data is not None:
+        elif query_compiler is None:
             distributed_frame = from_non_pandas(data, index, columns, dtype)
             if distributed_frame is not None:
                 self._query_compiler = distributed_frame._query_compiler
@@ -192,8 +192,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         else:
             self._query_compiler = query_compiler
 
-        # if len(self.columns) == 0 or len(self.index) == 0:
-        if query_compiler is None:
+        if query_compiler is None and InitializeWithSmallQueryCompilers.get():
             small_dataframe = pandas.DataFrame(
                 data=data, index=index, columns=columns, dtype=dtype, copy=copy
             )
