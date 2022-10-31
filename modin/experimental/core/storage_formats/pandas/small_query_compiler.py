@@ -177,6 +177,7 @@ def _rolling_func(func):
     callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
         Function to be applied to the frame.
     """
+
     def rolling_builder(df, fold_axis, rolling_args, *args, **kwargs):
         rolling_result = df.rolling(*rolling_args)
         rolling_op = getattr(rolling_result, func)
@@ -185,11 +186,11 @@ def _rolling_func(func):
     return rolling_builder
 
 
-def _reindex(df, axis, labels, **kwargs): # noqa: GL08
+def _reindex(df, axis, labels, **kwargs):  # noqa: GL08
     return df.reindex(labels=labels, axis=axis, **kwargs)
 
 
-def _concat(df, axis, other, join_axes=None, **kwargs): # noqa: GL08
+def _concat(df, axis, other, join_axes=None, **kwargs):  # noqa: GL08
     if not isinstance(other, list):
         other = [other]
     if (
@@ -220,11 +221,11 @@ def _concat(df, axis, other, join_axes=None, **kwargs): # noqa: GL08
     return result
 
 
-def _to_datetime(df, *args, **kwargs): # noqa: GL08
+def _to_datetime(df, *args, **kwargs):  # noqa: GL08
     return pandas.to_datetime(df.squeeze(axis=1), *args, **kwargs)
 
 
-def _to_numeric(df, *args, **kwargs): # noqa: GL08
+def _to_numeric(df, *args, **kwargs):  # noqa: GL08
     return pandas.to_numeric(df.squeeze(axis=1), *args, **kwargs)
 
 
@@ -311,7 +312,7 @@ def _groupby(agg_name):
     return groupby_callable
 
 
-def _take_2d(df, index=None, columns=None): # noqa: GL08
+def _take_2d(df, index=None, columns=None):  # noqa: GL08
     columns = columns if columns is not None else slice(None)
     index = index if index is not None else slice(None)
     return df.iloc[index, columns]
@@ -331,6 +332,7 @@ def _register_binary(op):
     callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
         Function to be applied to the frame.
     """
+
     def binary_operator(df, other, **kwargs):
         if isinstance(other, pandas.DataFrame) and (
             not df.empty
@@ -359,6 +361,7 @@ def _register_resample(op):
     callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
         Function to be applied to the frame.
     """
+
     def resample_operator(df, resample_kwargs, *args, **kwargs):
         resampler = df.resample(**resample_kwargs)
         result = getattr(resampler, op)(*args, **kwargs)
@@ -367,7 +370,7 @@ def _register_resample(op):
     return resample_operator
 
 
-def _drop(df, **kwargs): # noqa: GL08
+def _drop(df, **kwargs):  # noqa: GL08
     if (
         kwargs.get("labels", None) is not None
         or kwargs.get("index", None) is not None
@@ -377,20 +380,20 @@ def _drop(df, **kwargs): # noqa: GL08
     return df
 
 
-def _fillna(df, squeeze_self=True, squeeze_value=False, **kwargs): # noqa: GL08
+def _fillna(df, squeeze_self=True, squeeze_value=False, **kwargs):  # noqa: GL08
     if len(df.columns) == 1 and df.columns[0] == "__reduced__":
         df = df["__reduced__"]
     return df.fillna(**kwargs)
 
 
-def _is_monotonic(monotonic_type): # noqa: GL08
+def _is_monotonic(monotonic_type):  # noqa: GL08
     def is_monotonic_caller(ser):
         return pandas.DataFrame([getattr(ser, monotonic_type)])
 
     return is_monotonic_caller
 
 
-def _sort_index(df, inplace=False, **kwargs): # noqa: GL08
+def _sort_index(df, inplace=False, **kwargs):  # noqa: GL08
     if inplace:
         df.sort_index(inplace=inplace, **kwargs)
     else:
@@ -398,10 +401,10 @@ def _sort_index(df, inplace=False, **kwargs): # noqa: GL08
     return df
 
 
-def _combine(df, other, func, **kwargs): # noqa: GL08
-        if isinstance(df, pandas.Series):
-            return func(df, other)
-        return df.combine(other, func)
+def _combine(df, other, func, **kwargs):  # noqa: GL08
+    if isinstance(df, pandas.Series):
+        return func(df, other)
+    return df.combine(other, func)
 
 
 @_inherit_docstrings(BaseQueryCompiler)
@@ -484,6 +487,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
         callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
             Function to be applied to the frame.
         """
+
         def caller(query_compiler, *args, **kwargs):
             df = query_compiler._pandas_frame
             if df_copy:
@@ -912,7 +916,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     def get_axis(self, axis):
         return self._pandas_frame.index if axis == 0 else self._pandas_frame.columns
 
-    def _get_dummies(df, columns, **kwargs): # noqa: GL08
+    def _get_dummies(df, columns, **kwargs):  # noqa: GL08
         return pandas.get_dummies(df, columns=columns, **kwargs)
 
     def get_index_name(self, axis=0):
@@ -975,12 +979,12 @@ class SmallQueryCompiler(BaseQueryCompiler):
             return self.__constructor__(self._pandas_frame.iloc[:, key])
         return self.__constructor__(self._pandas_frame.loc[:, key])
 
-    def _getitem_array(df, key): # noqa: GL08
+    def _getitem_array(df, key):  # noqa: GL08
         if isinstance(key, pandas.DataFrame):
             key = key.squeeze(axis=1)
         return df[key]
 
-    def _getitem_row_array(df, key): # noqa: GL08
+    def _getitem_row_array(df, key):  # noqa: GL08
         if isinstance(key, pandas.DataFrame):
             key = key.squeeze(axis=1)
         return df.iloc[key]
@@ -998,7 +1002,9 @@ class SmallQueryCompiler(BaseQueryCompiler):
             len(self._pandas_frame.columns) == 1 or len(self._pandas_frame.index) == 1
         )
 
-    def _write_items(df, row_numeric_index, col_numeric_index, broadcasted_items): # noqa: GL08
+    def _write_items(
+        df, row_numeric_index, col_numeric_index, broadcasted_items
+    ):  # noqa: GL08
         if not isinstance(row_numeric_index, slice):
             row_numeric_index = list(row_numeric_index)
         if not isinstance(col_numeric_index, slice):
@@ -1009,7 +1015,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
         df.iloc[row_numeric_index, col_numeric_index] = broadcasted_items
         return df
 
-    def _setitem(df, axis, key, value): # noqa: GL08
+    def _setitem(df, axis, key, value):  # noqa: GL08
         if is_scalar(key) and isinstance(value, pandas.DataFrame):
             value = value.squeeze()
         if not axis:
@@ -1018,7 +1024,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
             df.loc[key] = value
         return df
 
-    def _delitem(df, key): # noqa: GL08
+    def _delitem(df, key):  # noqa: GL08
         return df.drop(columns=[key])
 
     get_dummies = _register_default_pandas(_get_dummies)
