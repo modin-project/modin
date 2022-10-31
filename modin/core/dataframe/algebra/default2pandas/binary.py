@@ -13,6 +13,7 @@
 
 """Module houses default binary functions builder class."""
 
+from typing import Any, Callable
 from .default import DefaultMethod
 
 import pandas
@@ -23,7 +24,7 @@ class BinaryDefault(DefaultMethod):
     """Build default-to-pandas methods which executes binary functions."""
 
     @classmethod
-    def build_default_to_pandas(cls, fn, fn_name):
+    def build_default_to_pandas(cls, fn: Callable, fn_name: str) -> Callable:
         """
         Build function that do fallback to pandas for passed binary `fn`.
 
@@ -41,7 +42,7 @@ class BinaryDefault(DefaultMethod):
             to the casted to pandas frame.
         """
 
-        def bin_ops_wrapper(df, other, *args, **kwargs):
+        def bin_ops_wrapper(df: Any, other: Any, *args: Any, **kwargs: Any) -> None:
             """Apply specified binary function to the passed operands."""
             squeeze_other = kwargs.pop("broadcast", False) or kwargs.pop(
                 "squeeze_other", False

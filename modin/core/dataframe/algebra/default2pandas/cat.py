@@ -14,13 +14,14 @@
 """Module houses default applied-on-category functions builder class."""
 
 from .series import SeriesDefault
+import pandas
 
 
 class CatDefault(SeriesDefault):
     """Builder for default-to-pandas methods which is executed under category accessor."""
 
     @classmethod
-    def frame_wrapper(cls, df):
+    def frame_wrapper(cls, df: pandas.DataFrame) -> pandas.core.arrays.categorical.CategoricalAccessor:
         """
         Get category accessor of the passed frame.
 

@@ -13,6 +13,7 @@
 
 """Module houses builder class for Fold operator."""
 
+from typing import Any, Callable, Iterable
 from .operator import Operator
 
 
@@ -20,7 +21,7 @@ class Fold(Operator):
     """Builder class for Fold functions."""
 
     @classmethod
-    def register(cls, fold_function):
+    def register(cls, fold_function: Callable) -> Callable:
         """
         Build Fold operator that will be performed across rows/columns.
 
@@ -35,7 +36,7 @@ class Fold(Operator):
             Function that takes query compiler and executes Fold function.
         """
 
-        def caller(query_compiler, fold_axis=None, *args, **kwargs):
+        def caller(query_compiler: Any, fold_axis: int | None = None, *args: Iterable, **kwargs: Any) -> Any:
             """
             Execute Fold function against passed query compiler.
 

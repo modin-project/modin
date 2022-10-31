@@ -13,6 +13,7 @@
 
 """Module houses builder class for Binary operator."""
 
+from typing import Any, Callable
 import numpy as np
 import pandas
 
@@ -23,7 +24,7 @@ class Binary(Operator):
     """Builder class for Binary operator."""
 
     @classmethod
-    def register(cls, func, join_type="outer", labels="replace"):
+    def register(cls, func: Callable, join_type : str ="outer", labels : str ="replace") -> Callable:
         """
         Build template binary operator.
 
@@ -44,8 +45,7 @@ class Binary(Operator):
         """
 
         def caller(
-            query_compiler, other, broadcast=False, *args, dtypes=None, **kwargs
-        ):
+            query_compiler: Any, other: Any, broadcast: bool = False, *args: Any, dtypes: Any | None = None, **kwargs: Any) -> Any :
             """
             Apply binary `func` to passed operands.
 

@@ -13,6 +13,7 @@
 
 """Module houses default Rolling functions builder class."""
 
+from typing import Any, Callable
 from .default import DefaultMethod
 
 
@@ -22,7 +23,7 @@ class Rolling:
     """Builder for aggregation on a rolling window functions."""
 
     @classmethod
-    def build_rolling(cls, func):
+    def build_rolling (cls , func: Callable) -> Callable:
         """
         Build function that creates a rolling window and executes `func` on it.
 
@@ -37,7 +38,7 @@ class Rolling:
             Function that takes pandas DataFrame and applies `func` on a rolling window.
         """
 
-        def fn(df, rolling_args, *args, **kwargs):
+        def fn(df: Any, rolling_args: Any, *args: Any, **kwargs: Any) -> Any:
             """Create rolling window for the passed frame and execute specified `func` on it."""
             roller = df.rolling(*rolling_args)
 
@@ -55,7 +56,7 @@ class RollingDefault(DefaultMethod):
     OBJECT_TYPE = "Rolling"
 
     @classmethod
-    def register(cls, func, **kwargs):
+    def register(cls, func: Callable, **kwargs: Any) -> Callable:
         """
         Build function that do fallback to pandas to apply `func` on a rolling window.
 

@@ -13,6 +13,7 @@
 
 """Module houses builder class for TreeReduce operator."""
 
+from typing import Any, Callable, Optional
 from .operator import Operator
 
 
@@ -20,7 +21,7 @@ class TreeReduce(Operator):
     """Builder class for TreeReduce operator."""
 
     @classmethod
-    def register(cls, map_function, reduce_function=None, axis=None):
+    def register(cls, map_function: Callable, reduce_function: Optional[Callable] =None, axis: Optional[int] =None) -> Callable:
         """
         Build TreeReduce operator.
 
@@ -42,7 +43,7 @@ class TreeReduce(Operator):
         if reduce_function is None:
             reduce_function = map_function
 
-        def caller(query_compiler, *args, **kwargs):
+        def caller(query_compiler: Any, *args: Any, **kwargs: Any) -> Any:
             """Execute TreeReduce function against passed query compiler."""
             _axis = kwargs.get("axis") if axis is None else axis
             return query_compiler.__constructor__(

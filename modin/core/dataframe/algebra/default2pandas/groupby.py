@@ -13,6 +13,8 @@
 
 """Module houses default GroupBy functions builder class."""
 
+from gc import callbacks
+from typing import Any, Callable, Optional, Union
 from .default import DefaultMethod
 
 import pandas
@@ -34,7 +36,7 @@ class GroupBy:
     ]
 
     @classmethod
-    def validate_by(cls, by):
+    def validate_by(cls, by: Union[pandas.DataFrame, pandas.Series, list]) -> (list[pandas.Scalar | pandas.Series] | list[Any | pandas.Series] | Any):
         """
         Build valid `by` parameter for `pandas.DataFrame.groupby`.
 
@@ -52,7 +54,7 @@ class GroupBy:
             By parameter with all DataFrames casted to Series.
         """
 
-        def try_cast_series(df):
+        def try_cast_series(df: pandas.DataFrame):
             """Cast one-column frame to Series."""
             if isinstance(df, pandas.DataFrame):
                 df = df.squeeze(axis=1)
@@ -71,7 +73,7 @@ class GroupBy:
         return by
 
     @classmethod
-    def inplace_applyier_builder(cls, key, func=None):
+    def inplace_applyier_builder(cls, key: callable, func: Optional[Union[callable, str]] =None) -> Callable:
         """
         Bind actual aggregation function to the GroupBy aggregation method.
 
@@ -96,7 +98,7 @@ class GroupBy:
         return inplace_applyier
 
     @classmethod
-    def get_func(cls, key, **kwargs):
+    def get_func(cls, key: Union[str, callable], **kwargs: Any) -> Callable:
         """
         Extract aggregation function from groupby arguments.
 
@@ -129,7 +131,7 @@ class GroupBy:
             return cls.inplace_applyier_builder(key)
 
     @classmethod
-    def build_aggregate_method(cls, key):
+    def build_aggregate_method(cls, key: Union[str, callable]) -> Callable:
         """
         Build function for `QueryCompiler.groupby_agg` that can be executed as default-to-pandas.
 
@@ -146,7 +148,7 @@ class GroupBy:
         """
 
         def fn(
-            df,
+            df: pandas.DataFrame,
             by,
             axis,
             groupby_kwargs,
@@ -167,7 +169,7 @@ class GroupBy:
         return fn
 
     @classmethod
-    def build_groupby_reduce_method(cls, agg_func):
+    def build_groupby_reduce_method(cls, agg_func: Union[callable, str]):
         """
         Build function for `QueryCompiler.groupby_*` that can be executed as default-to-pandas.
 
@@ -260,7 +262,7 @@ class GroupBy:
         return key in cls.agg_aliases
 
     @classmethod
-    def build_groupby(cls, func):
+    def build_groupby(cls, func: Union[callable, str]) -> Callable:
         """
         Build function that groups DataFrame and applies aggregation function to the every group.
 
@@ -281,15 +283,15 @@ class GroupBy:
 
     @staticmethod
     def handle_as_index_for_dataframe(
-        result,
-        internal_by_cols,
-        by_cols_dtypes=None,
-        by_length=None,
-        selection=None,
-        partition_idx=0,
-        drop=True,
-        method=None,
-        inplace=False,
+        result: pandas.DataFrame,
+        internal_by_cols: list,
+        by_cols_dtypes: Optional[list]=None,
+        by_length: Optional[int]=None,
+        selection: Optional[Union[str, list]]=None,
+        partition_idx: int =0,
+        drop: bool =True,
+        method: Optional[str]=None,
+        inplace: bool =False,
     ):
         """
         Handle `as_index=False` parameter for the passed GroupBy aggregation result.
@@ -353,16 +355,16 @@ class GroupBy:
 
     @staticmethod
     def handle_as_index(
-        result_cols,
-        result_index_names,
-        internal_by_cols,
-        by_cols_dtypes=None,
-        by_length=None,
-        selection=None,
-        partition_idx=0,
-        drop=True,
-        method=None,
-    ):
+        result_cols: pandas.Index,
+        result_index_names: list,
+        internal_by_cols: list,
+        by_cols_dtypes: Optional[list]=None,
+        by_length: Optional[int]=None,
+        selection: Optional[Union[str, list]]=None,
+        partition_idx: int=0,
+        drop: bool =True,
+        method: Optional[str] =None,
+    ) -> Union[bool, bool, list(str), list(int)]:
         """
         Compute hints to process ``as_index=False`` parameter for the GroupBy result.
 
@@ -523,7 +525,7 @@ class GroupByDefault(DefaultMethod):
     OBJECT_TYPE = "GroupBy"
 
     @classmethod
-    def register(cls, func, **kwargs):
+    def register(cls, func: Union[Callable, str], **kwargs: Any) -> Callable:
         """
         Build default-to-pandas GroupBy aggregation function.
 
@@ -558,7 +560,7 @@ class GroupByDefault(DefaultMethod):
     }
 
     @classmethod
-    def get_aggregation_method(cls, how):
+    def get_aggregation_method(cls, how: Any) -> Callable:
         """
         Return `pandas.DataFrameGroupBy` method that implements the passed `how` UDF applying strategy.
 

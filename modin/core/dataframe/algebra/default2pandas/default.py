@@ -13,6 +13,8 @@
 
 """Module houses default functions builder class."""
 
+from typing import Any, Callable, Optional, Union
+from xmlrpc.client import boolean
 from modin.core.dataframe.algebra import Operator
 from modin.utils import try_cast_to_pandas, MODIN_UNNAMED_SERIES_LABEL
 
@@ -28,7 +30,7 @@ class ObjTypeDeterminer:
     to an object under which `key` function is applied.
     """
 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str) -> Callable:
         """
         Build function that executes `key` function over passed frame.
 
@@ -42,7 +44,7 @@ class ObjTypeDeterminer:
             Function that takes DataFrame and executes `key` function on it.
         """
 
-        def func(df, *args, **kwargs):
+        def func(df, *args: Any, **kwargs : Any) -> Any:
             """Access specified attribute of the passed object and call it if it's callable."""
             prop = getattr(df, key)
             if callable(prop):
@@ -69,7 +71,7 @@ class DefaultMethod(Operator):
     DEFAULT_OBJECT_TYPE = ObjTypeDeterminer
 
     @classmethod
-    def register(cls, func, obj_type=None, inplace=None, fn_name=None):
+    def register(cls, func: Union[Callable, str], obj_type: Optional[object] =None, inplace: Optional[boolean]=None, fn_name: Optional[str]=None) -> Callable:
         """
         Build function that do fallback to default pandas implementation for passed `func`.
 
@@ -106,7 +108,7 @@ class DefaultMethod(Operator):
         if type(fn) == property:
             fn = cls.build_property_wrapper(fn)
 
-        def applyier(df, *args, **kwargs):
+        def applyier(df: pandas.DataFrame, *args: Any, **kwargs: Any) -> (pandas.DataFrame | Any) :
             """
             Apply target function to the casted to pandas frame.
 
@@ -159,7 +161,7 @@ class DefaultMethod(Operator):
     @classmethod
     # FIXME: this method is almost a duplicate of `cls.build_default_to_pandas`.
     # Those two methods should be merged into a single one.
-    def build_wrapper(cls, fn, fn_name):
+    def build_wrapper(cls, fn: Callable, fn_name: str) -> Callable:
         """
         Build function that do fallback to pandas for passed `fn`.
 
@@ -180,7 +182,7 @@ class DefaultMethod(Operator):
         """
         wrapper = cls.build_default_to_pandas(fn, fn_name)
 
-        def args_cast(self, *args, **kwargs):
+        def args_cast(self, *args: Any, **kwargs: Any) -> Any:
             """
             Preprocess `default_to_pandas` function arguments and apply default function.
 
@@ -193,7 +195,7 @@ class DefaultMethod(Operator):
         return args_cast
 
     @classmethod
-    def build_property_wrapper(cls, prop):
+    def build_property_wrapper(cls, prop: str) -> Callable:
         """
         Build function that accesses specified property of the frame.
 
@@ -208,14 +210,14 @@ class DefaultMethod(Operator):
             Function that takes DataFrame and returns its value of `prop` property.
         """
 
-        def property_wrapper(df):
+        def property_wrapper(df: pandas.DataFrame) -> Any:
             """Get specified property of the passed object."""
             return prop.fget(df)
 
         return property_wrapper
 
     @classmethod
-    def build_default_to_pandas(cls, fn, fn_name):
+    def build_default_to_pandas(cls, fn: Callable, fn_name: str) -> Callable:
         """
         Build function that do fallback to pandas for passed `fn`.
 
@@ -233,14 +235,14 @@ class DefaultMethod(Operator):
         """
         fn.__name__ = f"<function {cls.OBJECT_TYPE}.{fn_name}>"
 
-        def wrapper(self, *args, **kwargs):
+        def wrapper(self, *args: Any, **kwargs: Any):
             """Do fallback to pandas for the specified function."""
             return self.default_to_pandas(fn, *args, **kwargs)
 
         return wrapper
 
     @classmethod
-    def frame_wrapper(cls, df):
+    def frame_wrapper(cls, df: pandas.DataFrame) -> pandas.DataFrame :
         """
         Extract frame property to apply function on.
 
