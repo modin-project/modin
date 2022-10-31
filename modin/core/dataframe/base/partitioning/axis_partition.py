@@ -13,7 +13,7 @@
 
 """Base class of an axis partition for a Modin Dataframe."""
 
-from abc import ABC, abstractproperty
+from abc import ABC, abstractmethod
 from typing import Any, Callable, Iterable, Optional, Tuple, Union
 
 
@@ -24,11 +24,13 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
     This class is intended to simplify the way that operations are performed.
     """
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def list_of_blocks(self) -> list:
         return []
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def list_of_ips(self) -> list:
         return []
 
