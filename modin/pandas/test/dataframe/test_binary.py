@@ -158,6 +158,10 @@ def test_comparison(data, op, other):
     Engine.get() not in ("Ray", "Dask"),
     reason="Modin on this engine doesn't create virtual partitions.",
 )
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not contain partitions.",
+)
 @pytest.mark.parametrize(
     "left_virtual,right_virtual", [(True, False), (False, True), (True, True)]
 )

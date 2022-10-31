@@ -130,7 +130,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         self._siblings = []
         Engine.subscribe(_update_engine)
         if isinstance(data, (DataFrame, Series)):
-            self._query_compiler, query_compiler = data._query_compiler.copy()
+            query_compiler = data._query_compiler.copy()
+            self._query_compiler = query_compiler
             if index is not None and any(i not in data.index for i in index):
                 raise NotImplementedError(
                     "Passing non-existant columns or index values to constructor not"

@@ -30,7 +30,7 @@ from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 from modin.utils import (
     _inherit_docstrings,
-    try_cast_to_pandas_sqc,
+    try_cast_to_pandas,
 )
 
 
@@ -418,8 +418,8 @@ class SmallQueryCompiler(BaseQueryCompiler):
             ] + filter_kwargs
             for name in exclude_names:
                 kwargs.pop(name, None)
-            args = try_cast_to_pandas_sqc(args, squeeze=squeeze_args)
-            kwargs = try_cast_to_pandas_sqc(kwargs, squeeze=squeeze_kwargs)
+            args = try_cast_to_pandas(args, squeeze=squeeze_args, squeeze_df=True)
+            kwargs = try_cast_to_pandas(kwargs, squeeze=squeeze_kwargs, squeeze_df=True)
             result = func(df, *args, **kwargs)
             if in_place:
                 result = df
@@ -436,19 +436,14 @@ class SmallQueryCompiler(BaseQueryCompiler):
         return caller
 
     __and__ = _register_default_pandas(pandas.DataFrame.__and__, squeeze_series=True)
-    # __class__ = _register_default_pandas(pandas.DataFrame.__class__)
-    # __delattr__ = _register_default_pandas(pandas.DataFrame.__delattr__)
     __dir__ = _register_default_pandas(pandas.DataFrame.__dir__)
     __eq__ = _register_default_pandas(pandas.DataFrame.__eq__, squeeze_series=True)
     __format__ = _register_default_pandas(pandas.DataFrame.__format__)
     __ge__ = _register_default_pandas(pandas.DataFrame.__ge__, squeeze_series=True)
-    # __getattribute__ = _register_default_pandas(pandas.DataFrame.__getattribute__)
     __gt__ = _register_default_pandas(pandas.DataFrame.__gt__, squeeze_series=True)
-    # __hash__ = _register_default_pandas(pandas.DataFrame.__hash__)
     __le__ = _register_default_pandas(pandas.DataFrame.__le__, squeeze_series=True)
     __lt__ = _register_default_pandas(pandas.DataFrame.__lt__, squeeze_series=True)
     __ne__ = _register_default_pandas(pandas.DataFrame.__ne__, squeeze_series=True)
-    # __new__ = _register_default_pandas(pandas.DataFrame.__new__)
     __or__ = _register_default_pandas(pandas.DataFrame.__or__, squeeze_series=True)
     __rand__ = _register_default_pandas(pandas.DataFrame.__rand__, squeeze_series=True)
     __reduce__ = _register_default_pandas(
@@ -459,10 +454,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     )
     __ror__ = _register_default_pandas(pandas.DataFrame.__ror__, squeeze_series=True)
     __rxor__ = _register_default_pandas(pandas.DataFrame.__rxor__, squeeze_series=True)
-    # __setattr__ = _register_default_pandas(pandas.DataFrame.__setattr__)
     __sizeof__ = _register_default_pandas(pandas.DataFrame.__sizeof__)
-    # __str__ = _register_default_pandas(pandas.DataFrame.__str__)
-    # __subclasshook__ = _register_default_pandas(pandas.DataFrame.__subclasshook__)
     __xor__ = _register_default_pandas(pandas.DataFrame.__xor__, squeeze_series=True)
     abs = _register_default_pandas(pandas.DataFrame.abs)
     add = _register_default_pandas(_register_binary("add"))

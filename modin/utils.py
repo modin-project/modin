@@ -476,7 +476,7 @@ def hashable(obj: bool) -> bool:
     return True
 
 
-def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
+def try_cast_to_pandas(obj: Any, squeeze: bool = False, squeeze_df: bool = False) -> Any:
     """
     Convert `obj` and all nested objects from Modin to pandas if it is possible.
 
@@ -498,10 +498,24 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
         result = obj._to_pandas()
         if squeeze:
             result = result.squeeze(axis=1)
+        if (
+            squeeze_df
+            and isinstance(result, pandas.DataFrame)
+            and len(result.columns) == 1
+            and result.columns[0] == MODIN_UNNAMED_SERIES_LABEL
+        ):
+            result = result.squeeze(axis=1)
         return result
     if isinstance(obj, SupportsPublicToPandas):
         result = obj.to_pandas()
         if squeeze:
+            result = result.squeeze(axis=1)
+        if (
+            squeeze_df
+            and isinstance(result, pandas.DataFrame)
+            and len(result.columns) == 1
+            and result.columns[0] == MODIN_UNNAMED_SERIES_LABEL
+        ):
             result = result.squeeze(axis=1)
         # Query compiler case, it doesn't have logic about convertion to Series
         if (
@@ -514,68 +528,6 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
         return type(obj)([try_cast_to_pandas(o, squeeze=squeeze) for o in obj])
     if isinstance(obj, dict):
         return {k: try_cast_to_pandas(v, squeeze=squeeze) for k, v in obj.items()}
-    if callable(obj):
-        module_hierarchy = getattr(obj, "__module__", "").split(".")
-        fn_name = getattr(obj, "__name__", None)
-        if fn_name and module_hierarchy[0] == "modin":
-            return (
-                getattr(pandas.DataFrame, fn_name, obj)
-                if module_hierarchy[-1] == "dataframe"
-                else getattr(pandas.Series, fn_name, obj)
-            )
-    return obj
-
-
-def try_cast_to_pandas_sqc(obj, squeeze=False):
-    """
-    Convert `obj` and all nested objects from Modin to pandas if it is possible.
-
-    If no convertion possible return `obj`.
-
-    Parameters
-    ----------
-    obj : object
-        Object to convert from Modin to pandas.
-    squeeze : bool, default: False
-        Squeeze the converted object(s) before returning them.
-
-    Returns
-    -------
-    object
-        Converted object.
-    """
-    if hasattr(obj, "_to_pandas"):
-        result = obj._to_pandas()
-        if squeeze:
-            result = result.squeeze(axis=1)
-        if (
-            isinstance(result, pandas.DataFrame)
-            and len(result.columns) == 1
-            and result.columns[0] == MODIN_UNNAMED_SERIES_LABEL
-        ):
-            result = result.squeeze(axis=1)
-        return result
-    if hasattr(obj, "to_pandas"):
-        result = obj.to_pandas()
-        if squeeze:
-            result = result.squeeze(axis=1)
-        if (
-            isinstance(result, pandas.DataFrame)
-            and len(result.columns) == 1
-            and result.columns[0] == MODIN_UNNAMED_SERIES_LABEL
-        ):
-            result = result.squeeze(axis=1)
-        # Query compiler case, it doesn't have logic about convertion to Series
-        if (
-            isinstance(getattr(result, "name", None), str)
-            and result.name == MODIN_UNNAMED_SERIES_LABEL
-        ):
-            result.name = None
-        return result
-    if isinstance(obj, (list, tuple)):
-        return type(obj)([try_cast_to_pandas_sqc(o, squeeze=squeeze) for o in obj])
-    if isinstance(obj, dict):
-        return {k: try_cast_to_pandas_sqc(v, squeeze=squeeze) for k, v in obj.items()}
     if callable(obj):
         module_hierarchy = getattr(obj, "__module__", "").split(".")
         fn_name = getattr(obj, "__name__", None)
