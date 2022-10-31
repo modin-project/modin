@@ -596,7 +596,7 @@ class InitializeWithSmallQueryCompilers(EnvironmentVariable, type=str):
     """Set to true to use implementation of SmallQueryCompiler."""
 
     varname = "MODIN_SMALL_QUERY_COMPILER"
-    default = True
+    default = False
 
 
 def _check_vars() -> None:
