@@ -40,7 +40,9 @@ dependencies:
   - pandas-stubs
   - fastparquet
   - pip:
-      - xgboost>=1.6.0
+      # TODO(https://github.com/modin-project/modin/issues/5171): uncap xgboost
+      # when we can run tests on 1.7.0 without getting stuck.
+      - xgboost>=1.6.0,<1.7.0
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - tqdm
