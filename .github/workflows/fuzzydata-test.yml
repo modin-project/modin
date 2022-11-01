@@ -51,7 +51,7 @@ jobs:
           conda info
           conda list
       - name: test-fuzzydata (engine ${{matrix.engine}}, python ${{matrix.python-version}})
-        run: python -m pytest modin/experimental/fuzzydata/test/test_fuzzydata.py -Wignore::UserWarning
+        run: python -m pytest modin/experimental/fuzzydata/test/test_fuzzydata.py -Wignore::UserWarning --log-file=/tmp/fuzzydata-test-wf-${{matrix.engine}}/run.log --log-file-level=DEBUG
         env:
           MODIN_ENGINE: ${{matrix.engine}}
       - uses: actions/upload-artifact@v3
