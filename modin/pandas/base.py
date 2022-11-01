@@ -2499,7 +2499,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
             query_compiler = self._query_compiler.getitem_column_array(samples)
             return self.__constructor__(query_compiler=query_compiler)
         else:
-            query_compiler = self._query_compiler.getitem_row_array(samples)
+            query_compiler = self._query_compiler.getitem_row_array(
+                samples, numeric=True
+            )
             return self.__constructor__(query_compiler=query_compiler)
 
     def _sem(

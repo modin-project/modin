@@ -2153,7 +2153,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         return DataFrameDefault.register(get_column)(self, key=key)
 
-    def getitem_row_array(self, key: List[Hashable], numeric: bool = False):
+    def getitem_row_array(self, key: List[Hashable], numeric: bool):
         """
         Get row data for target indices.
 

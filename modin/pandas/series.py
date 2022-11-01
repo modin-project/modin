@@ -2443,7 +2443,7 @@ class Series(SeriesCompat, BasePandasDataset):
         if is_bool_indexer(key):
             return self.__constructor__(
                 query_compiler=self._query_compiler.getitem_row_array(
-                    pandas.RangeIndex(len(self.index))[key]
+                    pandas.RangeIndex(len(self.index))[key], numeric=True
                 )
             )
         # TODO: More efficiently handle `tuple` case for `Series.__getitem__`

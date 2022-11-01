@@ -91,7 +91,7 @@ class PandasOnRayIO(RayIO):
         # since the mapping operation is non-blocking, each partition will return an empty DF
         # so at the end, the blocking operation will be this empty DF to_pandas
 
-        empty_df = qc.getitem_row_array([0]).to_pandas().head(0)
+        empty_df = qc.getitem_row_array([0], numeric=True).to_pandas().head(0)
         empty_df.to_sql(**kwargs)
         # so each partition will append its respective DF
         kwargs["if_exists"] = "append"
