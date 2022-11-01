@@ -923,7 +923,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             # Assume that the dtype is a scalar.
             col_dtypes = {column: dtype for column in self._query_compiler.columns}
 
-        new_query_compiler = self._query_compiler.astype(col_dtypes)
+        new_query_compiler = self._query_compiler.astype(col_dtypes, errors=errors)
         return self._create_or_update_from_compiler(new_query_compiler, not copy)
 
     @property

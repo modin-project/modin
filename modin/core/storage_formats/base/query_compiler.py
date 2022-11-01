@@ -1416,7 +1416,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     # Abstract map partitions across select indices
-    def astype(self, col_dtypes, **kwargs):  # noqa: PR02
+    def astype(self, col_dtypes, errors: str):
         """
         Convert columns dtypes to given dtypes.
 
@@ -1424,6 +1424,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         ----------
         col_dtypes : dict
             Map for column names and new dtypes.
+        error : {"raise", "ignore"}
+            Control raising of exceptions on invalid data for provided dtype.
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
 
@@ -1433,7 +1435,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             New QueryCompiler with updated dtypes.
         """
         return DataFrameDefault.register(pandas.DataFrame.astype)(
-            self, dtype=col_dtypes, **kwargs
+            self, dtype=col_dtypes, errors=errors
         )
 
     def infer_objects(self):

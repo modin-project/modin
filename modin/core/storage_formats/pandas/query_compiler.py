@@ -1539,8 +1539,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Dt map partitions operations
 
-    def astype(self, col_dtypes, **kwargs):
-        return self.__constructor__(self._modin_frame.astype(col_dtypes))
+    def astype(self, col_dtypes, errors: str):
+        return self.__constructor__(self._modin_frame.astype(col_dtypes, errors=errors))
 
     def infer_objects(self):
         return self.__constructor__(self._modin_frame.infer_objects())
