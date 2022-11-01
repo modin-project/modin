@@ -364,8 +364,8 @@ def pytest_configure(config):
         set_base_on_python_execution()
         config.addinivalue_line("filterwarnings", default_to_pandas_ignore_string)
     elif execution == "Client":
-        config.addinivalue_line("filterwarnings", default_to_pandas_ignore_string)
         set_client_execution()
+        config.addinivalue_line("filterwarnings", default_to_pandas_ignore_string)
     else:
         partition, engine = execution.split("On")
         modin.set_execution(engine=engine, storage_format=partition)

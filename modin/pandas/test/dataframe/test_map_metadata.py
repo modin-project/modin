@@ -715,7 +715,7 @@ def test_drop():
 
     # TODO(https://github.com/modin-project/modin/issues/5163): raise a
     # KeyError like pandas when the label is not found when lazy_execution is
-    # off. Also use df_equals instead of
+    # off.
     check_exception_type = modin_simple._query_compiler.lazy_execution
     eval_general(
         modin_simple,
