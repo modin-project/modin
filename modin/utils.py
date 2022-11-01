@@ -542,7 +542,7 @@ def try_cast_to_pandas(
     return obj
 
 
-def wrap_into_list(*args, skipna=True):
+def wrap_into_list(*args: Any, skipna: bool = True) -> List[Any]:
     """
     Wrap a sequence of passed values in a flattened list.
 

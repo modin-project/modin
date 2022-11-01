@@ -2279,7 +2279,9 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         return query_compiler.to_pandas().squeeze()
 
-    def _validate_dtypes_sum_prod_mean(self, axis, numeric_only, ignore_axis=False):
+    def _validate_dtypes_sum_prod_mean(
+        self, axis, numeric_only, ignore_axis=False
+    ):  # noqa: PR01
         """
         Validate data dtype for `sum`, `prod` and `mean` methods.
 

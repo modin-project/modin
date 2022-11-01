@@ -407,6 +407,50 @@ def _combine(df, other, func, **kwargs):  # noqa: GL08
     return df.combine(other, func)
 
 
+def _getitem_array(df, key):  # noqa: GL08
+    if isinstance(key, pandas.DataFrame):
+        key = key.squeeze(axis=1)
+    return df[key]
+
+
+def _getitem_row_array(df, key):  # noqa: GL08
+    if isinstance(key, pandas.DataFrame):
+        key = key.squeeze(axis=1)
+    return df.iloc[key]
+
+
+def _write_items(
+    df, row_numeric_index, col_numeric_index, broadcasted_items
+):  # noqa: GL08
+    if not isinstance(row_numeric_index, slice):
+        row_numeric_index = list(row_numeric_index)
+    if not isinstance(col_numeric_index, slice):
+        col_numeric_index = list(col_numeric_index)
+
+    if isinstance(df.iloc[row_numeric_index, col_numeric_index], pandas.Series):
+        broadcasted_items = broadcasted_items.squeeze()
+    df.iloc[row_numeric_index, col_numeric_index] = broadcasted_items
+    return df
+
+
+def _setitem(df, axis, key, value):  # noqa: GL08
+    if is_scalar(key) and isinstance(value, pandas.DataFrame):
+        value = value.squeeze()
+    if not axis:
+        df[key] = value
+    else:
+        df.loc[key] = value
+    return df
+
+
+def _delitem(df, key):  # noqa: GL08
+    return df.drop(columns=[key])
+
+
+def _get_dummies(df, columns, **kwargs):  # noqa: GL08
+    return pandas.get_dummies(df, columns=columns, **kwargs)
+
+
 @_inherit_docstrings(BaseQueryCompiler)
 class SmallQueryCompiler(BaseQueryCompiler):
     """
@@ -575,6 +619,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     cummin = _register_default_pandas(pandas.DataFrame.cummin)
     cumprod = _register_default_pandas(pandas.DataFrame.cumprod)
     cumsum = _register_default_pandas(pandas.DataFrame.cumsum)
+    delitem = _register_default_pandas(_delitem)
     describe = _register_default_pandas(pandas.DataFrame.describe)
     df_update = _register_default_pandas(
         pandas.DataFrame.update, in_place=True, df_copy=True
@@ -645,6 +690,9 @@ class SmallQueryCompiler(BaseQueryCompiler):
     )
     floordiv = _register_default_pandas(_register_binary("floordiv"))
     ge = _register_default_pandas(pandas.DataFrame.ge, filter_kwargs=["dtypes"])
+    get_dummies = _register_default_pandas(_get_dummies)
+    getitem_array = _register_default_pandas(_getitem_array)
+    getitem_row_array = _register_default_pandas(_getitem_row_array)
     groupby_agg = _register_default_pandas(_groupby("agg"))
     groupby_all = _register_default_pandas(_groupby("all"))
     groupby_any = _register_default_pandas(_groupby("any"))
@@ -797,6 +845,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     )
     series_view = _register_default_pandas(pandas.Series.view, is_series=True)
     set_index_from_columns = _register_default_pandas(pandas.DataFrame.set_index)
+    setitem = _register_default_pandas(_setitem)
     skew = _register_default_pandas(pandas.DataFrame.skew)
     sort_index = _register_default_pandas(_sort_index)
     sort_columns_by_row_values = _register_default_pandas(
@@ -871,6 +920,7 @@ class SmallQueryCompiler(BaseQueryCompiler):
     window_std = _register_default_pandas(_rolling_func("std"))
     window_sum = _register_default_pandas(_rolling_func("sum"))
     window_var = _register_default_pandas(_rolling_func("var"))
+    write_items = _register_default_pandas(_write_items)
 
     T = property(transpose)
 
@@ -915,9 +965,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
 
     def get_axis(self, axis):
         return self._pandas_frame.index if axis == 0 else self._pandas_frame.columns
-
-    def _get_dummies(df, columns, **kwargs):  # noqa: GL08
-        return pandas.get_dummies(df, columns=columns, **kwargs)
 
     def get_index_name(self, axis=0):
         return self.get_axis(axis).name
@@ -979,16 +1026,6 @@ class SmallQueryCompiler(BaseQueryCompiler):
             return self.__constructor__(self._pandas_frame.iloc[:, key])
         return self.__constructor__(self._pandas_frame.loc[:, key])
 
-    def _getitem_array(df, key):  # noqa: GL08
-        if isinstance(key, pandas.DataFrame):
-            key = key.squeeze(axis=1)
-        return df[key]
-
-    def _getitem_row_array(df, key):  # noqa: GL08
-        if isinstance(key, pandas.DataFrame):
-            key = key.squeeze(axis=1)
-        return df.iloc[key]
-
     def columnarize(self):
         if len(self._pandas_frame.columns) != 1 or (
             len(self._pandas_frame.index) == 1
@@ -1001,35 +1038,3 @@ class SmallQueryCompiler(BaseQueryCompiler):
         return (
             len(self._pandas_frame.columns) == 1 or len(self._pandas_frame.index) == 1
         )
-
-    def _write_items(
-        df, row_numeric_index, col_numeric_index, broadcasted_items
-    ):  # noqa: GL08
-        if not isinstance(row_numeric_index, slice):
-            row_numeric_index = list(row_numeric_index)
-        if not isinstance(col_numeric_index, slice):
-            col_numeric_index = list(col_numeric_index)
-
-        if isinstance(df.iloc[row_numeric_index, col_numeric_index], pandas.Series):
-            broadcasted_items = broadcasted_items.squeeze()
-        df.iloc[row_numeric_index, col_numeric_index] = broadcasted_items
-        return df
-
-    def _setitem(df, axis, key, value):  # noqa: GL08
-        if is_scalar(key) and isinstance(value, pandas.DataFrame):
-            value = value.squeeze()
-        if not axis:
-            df[key] = value
-        else:
-            df.loc[key] = value
-        return df
-
-    def _delitem(df, key):  # noqa: GL08
-        return df.drop(columns=[key])
-
-    get_dummies = _register_default_pandas(_get_dummies)
-    getitem_array = _register_default_pandas(_getitem_array)
-    getitem_row_array = _register_default_pandas(_getitem_row_array)
-    delitem = _register_default_pandas(_delitem)
-    write_items = _register_default_pandas(_write_items)
-    setitem = _register_default_pandas(_setitem)
