@@ -490,6 +490,8 @@ def try_cast_to_pandas(
         Object to convert from Modin to pandas.
     squeeze : bool, default: False
         Squeeze the converted object(s) before returning them.
+    squeeze_df : bool, default: False
+        Squeeze the converted DataFrame(s) if Series-like.
 
     Returns
     -------
@@ -527,9 +529,14 @@ def try_cast_to_pandas(
             result.name = None
         return result
     if isinstance(obj, (list, tuple)):
-        return type(obj)([try_cast_to_pandas(o, squeeze=squeeze) for o in obj])
+        return type(obj)(
+            [try_cast_to_pandas(o, squeeze=squeeze, squeeze_df=squeeze_df) for o in obj]
+        )
     if isinstance(obj, dict):
-        return {k: try_cast_to_pandas(v, squeeze=squeeze) for k, v in obj.items()}
+        return {
+            k: try_cast_to_pandas(v, squeeze=squeeze, squeeze_df=squeeze_df)
+            for k, v in obj.items()
+        }
     if callable(obj):
         module_hierarchy = getattr(obj, "__module__", "").split(".")
         fn_name = getattr(obj, "__name__", None)
