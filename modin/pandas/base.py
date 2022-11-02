@@ -25,7 +25,6 @@ from pandas.core.dtypes.common import (
     is_dtype_equal,
     is_object_dtype,
     pandas_dtype,
-    is_scalar,
     is_integer,
 )
 from pandas.core.indexes.api import ensure_index
@@ -3777,7 +3776,7 @@ class BasePandasDataset(ClassLogger):
             # deprecated in pandas, to be removed in 2.0
             warnings.warn(
                 "Passing lists as key for xs is deprecated and will be removed in a "
-                "future version. Pass key as a tuple instead.",
+                + "future version. Pass key as a tuple instead.",
                 FutureWarning,
             )
 
