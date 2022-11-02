@@ -350,7 +350,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not isinstance(other, list):
             other = [other]
         assert all(
-            isinstance(o, BaseQueryCompiler) for o in other
+            isinstance(o, type(self)) for o in other
         ), "Different Manager objects are being used. This is not allowed"
         sort = kwargs.get("sort", None)
         if sort is None:

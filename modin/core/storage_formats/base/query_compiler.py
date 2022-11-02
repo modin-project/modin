@@ -87,7 +87,6 @@ def _set_axis(axis):
     return axis_setter
 
 
-# @decorate_all_functions(small_query_compiler)
 # FIXME: many of the BaseQueryCompiler methods are hiding actual arguments
 # by using *args and **kwargs. They should be spread into actual parameters.
 # Currently actual arguments are placed in the methods docstrings, but since they're

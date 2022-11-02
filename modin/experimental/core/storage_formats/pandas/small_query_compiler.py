@@ -212,7 +212,10 @@ def _concat(df, axis, other, join_axes=None, **kwargs):  # noqa: GL08
             other = other[0]
         ignore_index = kwargs.pop("ignore_index", None)
         kwargs["how"] = kwargs.pop("join", None)
-        result = df.join(other, rsuffix="r_", **kwargs)
+        if isinstance(other, (pandas.DataFrame, pandas.Series)):
+            result = df.join(other, rsuffix="r_", **kwargs)
+        else:
+            result = df.join(other, **kwargs)
     if ignore_index:
         if axis == 0:
             result = result.reset_index(drop=True)
@@ -910,6 +913,10 @@ class SmallQueryCompiler(BaseQueryCompiler):
     to_datetime = _register_default_pandas(_to_datetime)
     to_numeric = _register_default_pandas(_to_numeric)
     to_numpy = _register_default_pandas(pandas.DataFrame.to_numpy, return_modin=False)
+    to_timedelta = _register_default_pandas(
+        lambda ser, *args, **kwargs: pandas.to_timedelta(ser, *args, **kwargs),
+        is_series=True,
+    )
     transpose = _register_default_pandas(pandas.DataFrame.transpose)
     truediv = _register_default_pandas(_register_binary("truediv"))
     unique = _register_default_pandas(pandas.Series.unique, is_series=True)
