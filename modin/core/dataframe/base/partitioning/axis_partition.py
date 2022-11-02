@@ -29,11 +29,6 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
     def list_of_blocks(self) -> list:
         pass
 
-    @property
-    @abstractmethod
-    def list_of_ips(self) -> list:
-        pass
-
     def apply(
         self,
         func: Callable,
@@ -158,11 +153,13 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         """
         if squeeze and len(self.list_of_blocks) == 1:
             if get_ip:
-                return self.list_of_ips[0], self.list_of_blocks[0]
+                # TODO(https://github.com/modin-project/modin/issues/5176): Stop ignoring the list_of_ips
+                # check once we know that we're not calling list_of_ips on python axis partitions
+                return self.list_of_ips[0], self.list_of_blocks[0] # type: ignore[attr-defined]
             else:
                 return self.list_of_blocks[0]
         else:
             if get_ip:
-                return list(zip(self.list_of_ips, self.list_of_blocks))
+                return list(zip(self.list_of_ips, self.list_of_blocks)) # type: ignore[attr-defined]
             else:
                 return self.list_of_blocks
