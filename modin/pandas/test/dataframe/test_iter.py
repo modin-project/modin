@@ -277,7 +277,7 @@ def test___setattr__mutating_column():
     # Check that the col0 attribute reflects the value update.
     df_equals(modin_df.col0, pandas_df.col0)
 
-    pandas_df.col0 = pd.Series([5])
+    pandas_df.col0 = pandas.Series([5])
     modin_df.col0 = pd.Series([5])
 
     # Check that the col0 attribute reflects this update

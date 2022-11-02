@@ -15,10 +15,13 @@ import pytest
 import numpy as np
 import pandas
 import matplotlib
+
+from modin._compat import PandasCompatVersion
 import modin.pandas as pd
 from modin.utils import to_pandas
 
 from modin.pandas.test.utils import (
+    create_test_dfs,
     random_state,
     df_equals,
     arg_keys,
@@ -333,6 +336,9 @@ def test_merge(test_data, test_data2):
 )
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 def test_sort_index(axis, ascending, na_position):
+    if ascending is None and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+        pytest.skip("pandas 1.1 did not raise on ascending=None but Modin does")
+
     data = test_data["float_nan_data"]
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
@@ -342,14 +348,19 @@ def test_sort_index(axis, ascending, na_position):
         for df in [modin_df, pandas_df]:
             df.index = [(i - length / 2) % length for i in range(length)]
 
+    dfs = [modin_df, pandas_df]
+    kw = {"copy": False}
+    if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+        kw = {"inplace": False}
     # Add NaNs to sorted index
-    for df in [modin_df, pandas_df]:
-        sort_index = df.axes[axis]
-        df.set_axis(
+    for idx in range(len(dfs)):
+        sort_index = dfs[idx].axes[axis]
+        dfs[idx] = dfs[idx].set_axis(
             [np.nan if i % 2 == 0 else sort_index[i] for i in range(len(sort_index))],
             axis=axis,
-            inplace=True,
+            **kw,
         )
+    modin_df, pandas_df = dfs
 
     eval_general(
         modin_df,
@@ -403,27 +414,6 @@ def test_sort_multiindex(sort_remaining):
             marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
         ),
         "first,last,middle",
-        pytest.param(
-            "multiindex_level0",
-            marks=pytest.mark.xfail_executions(
-                ["PandasOnPython", "PandasOnRay", "PandasOnDask"],
-                reason="multiindex levels do not work",
-            ),
-        ),
-        pytest.param(
-            "multiindex_level1,multiindex_level0",
-            marks=pytest.mark.xfail_executions(
-                ["PandasOnPython", "PandasOnRay", "PandasOnDask"],
-                reason="multiindex levels do not work",
-            ),
-        ),
-        pytest.param(
-            "multiindex_level0,last,first,multiindex_level1",
-            marks=pytest.mark.xfail_executions(
-                ["PandasOnPython", "PandasOnRay", "PandasOnDask"],
-                reason="multiindex levels do not work",
-            ),
-        ),
     ],
 )
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
@@ -545,15 +535,24 @@ def test_sort_values_with_string_index():
 
 
 def test_where():
+    columns = list("abcdefghij")
+
     frame_data = random_state.randn(100, 10)
-    pandas_df = pandas.DataFrame(frame_data, columns=list("abcdefghij"))
-    modin_df = pd.DataFrame(frame_data, columns=list("abcdefghij"))
+    modin_df, pandas_df = create_test_dfs(frame_data, columns=columns)
     pandas_cond_df = pandas_df % 5 < 2
     modin_cond_df = modin_df % 5 < 2
 
     pandas_result = pandas_df.where(pandas_cond_df, -pandas_df)
     modin_result = modin_df.where(modin_cond_df, -modin_df)
     assert all((to_pandas(modin_result) == pandas_result).all())
+
+    # Test that we choose the right values to replace when `other` == `True`
+    # everywhere.
+    other_data = np.full(shape=pandas_df.shape, fill_value=True)
+    modin_other, pandas_other = create_test_dfs(other_data, columns=columns)
+    pandas_result = pandas_df.where(pandas_cond_df, pandas_other)
+    modin_result = modin_df.where(modin_cond_df, modin_other)
+    df_equals(modin_result, pandas_result)
 
     other = pandas_df.loc[3]
     pandas_result = pandas_df.where(pandas_cond_df, other, axis=1)
@@ -568,6 +567,30 @@ def test_where():
     pandas_result = pandas_df.where(pandas_df < 2, True)
     modin_result = modin_df.where(modin_df < 2, True)
     assert all((to_pandas(modin_result) == pandas_result).all())
+
+
+def test_where_different_axis_order():
+    # Test `where` when `cond`, `df`, and `other` each have columns and index
+    # in different orders.
+    data = test_data["float_nan_data"]
+    pandas_df = pandas.DataFrame(data)
+    pandas_cond_df = pandas_df % 5 < 2
+    pandas_cond_df = pandas_cond_df.reindex(
+        columns=pandas_df.columns[::-1], index=pandas_df.index[::-1]
+    )
+    pandas_other_df = -pandas_df
+    pandas_other_df = pandas_other_df.reindex(
+        columns=pandas_df.columns[-1:].append(pandas_df.columns[:-1]),
+        index=pandas_df.index[-1:].append(pandas_df.index[:-1]),
+    )
+
+    modin_df = pd.DataFrame(pandas_df)
+    modin_cond_df = pd.DataFrame(pandas_cond_df)
+    modin_other_df = pd.DataFrame(pandas_other_df)
+
+    pandas_result = pandas_df.where(pandas_cond_df, pandas_other_df)
+    modin_result = modin_df.where(modin_cond_df, modin_other_df)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("align_axis", ["index", "columns"])

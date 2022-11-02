@@ -17,7 +17,6 @@ import numpy as np
 import pandas
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
-from pandas.core.apply import reconstruct_func
 from pandas._libs.lib import no_default
 import pandas.core.common as com
 from types import BuiltinFunctionType
@@ -30,17 +29,20 @@ from modin.utils import (
     wrap_udf_function,
     hashable,
     wrap_into_list,
+    MODIN_UNNAMED_SERIES_LABEL,
 )
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.config import IsExperimental
-from modin.logging import ClassLogger
 from .series import Series
 from .utils import is_label
+from modin._compat import PandasCompatVersion
+from modin._compat.core.pandas_common import reconstruct_func
+from modin._compat.pandas_api.classes import DataFrameGroupByCompat, SeriesGroupByCompat
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
-class DataFrameGroupBy(ClassLogger):
+class DataFrameGroupBy(DataFrameGroupByCompat):
     def __init__(
         self,
         df,
@@ -108,10 +110,10 @@ class DataFrameGroupBy(ClassLogger):
         """
         try:
             return object.__getattribute__(self, key)
-        except AttributeError as e:
+        except AttributeError as err:
             if key in self._columns:
                 return self.__getitem__(key)
-            raise e
+            raise err
 
     @property
     def ngroups(self):
@@ -234,8 +236,12 @@ class DataFrameGroupBy(ClassLogger):
                 and DataFrame(query_compiler=self._by.isna()).any(axis=None)
             ):
                 mask_nan_rows = data[self._by.columns].isna().any(axis=1)
-                # drop NaN groups
-                result = result.loc[~mask_nan_rows]
+                if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+                    # older pandas filled invalid rows with NaN-s
+                    result.loc[mask_nan_rows] = np.nan
+                else:
+                    # drop NaN groups
+                    result = result.loc[~mask_nan_rows]
             return result
 
         if freq is None and axis == 1 and self._axis == 0:
@@ -249,15 +255,21 @@ class DataFrameGroupBy(ClassLogger):
             result = _shift(
                 self._df, periods, freq, axis, fill_value, is_set_nan_rows=False
             )
-            new_idx_lvl_arrays = np.concatenate(
-                [self._df[self._by.columns].values.T, [list(result.index)]]
-            )
-            result.index = pandas.MultiIndex.from_arrays(
-                new_idx_lvl_arrays,
-                names=[col_name for col_name in self._by.columns]
-                + [result._query_compiler.get_index_name()],
-            )
-            result = result.dropna(subset=self._by.columns).sort_index()
+            if PandasCompatVersion.CURRENT != PandasCompatVersion.LATEST:
+                # pandas>=1.5 no longer make multi-index in groupby().shift()
+                new_idx_lvl_arrays = np.concatenate(
+                    [self._df[self._by.columns].values.T, [list(result.index)]]
+                )
+                result.index = pandas.MultiIndex.from_arrays(
+                    new_idx_lvl_arrays,
+                    names=[col_name for col_name in self._by.columns]
+                    + [result._query_compiler.get_index_name()],
+                )
+            result = result.dropna(subset=self._by.columns)
+            if self._sort:
+                result = result.sort_values(list(self._by.columns), axis=axis)
+            else:
+                result = result.sort_index()
         else:
             result = self._check_index_name(
                 self._wrap_aggregation(
@@ -295,16 +307,9 @@ class DataFrameGroupBy(ClassLogger):
         self._indices_cache = self._compute_index_grouped(numerical=True)
         return self._indices_cache
 
-    def pct_change(self, periods=1, fill_method="ffill", limit=None, freq=None, axis=0):
-        return self._default_to_pandas(
-            lambda df: df.pct_change(
-                periods=periods,
-                fill_method=fill_method,
-                limit=limit,
-                freq=freq,
-                axis=axis,
-            )
-        )
+    @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy.pct_change)
+    def _pct_change(self, *args, **kwargs):
+        return self._default_to_pandas(lambda df: df.pct_change(*args, **kwargs))
 
     def filter(self, func, dropna=True, *args, **kwargs):
         return self._default_to_pandas(
@@ -539,7 +544,7 @@ class DataFrameGroupBy(ClassLogger):
                 )
 
             if any(i not in self._df.columns for i in func_dict.keys()):
-                from pandas.core.base import SpecificationError
+                from modin._compat.core.pandas_common import SpecificationError
 
                 raise SpecificationError("nested renamer is not supported")
             if func is None:
@@ -678,8 +683,8 @@ class DataFrameGroupBy(ClassLogger):
         if not self._kwargs.get("as_index") and not isinstance(result, Series):
             result = result.rename(columns={0: "size"})
             result = (
-                result.rename(columns={"__reduced__": "index"})
-                if "__reduced__" in result.columns
+                result.rename(columns={MODIN_UNNAMED_SERIES_LABEL: "index"})
+                if MODIN_UNNAMED_SERIES_LABEL in result.columns
                 else result
             )
         elif isinstance(self._df, Series):
@@ -1188,7 +1193,7 @@ class DataFrameGroupBy(ClassLogger):
 
 
 @_inherit_docstrings(pandas.core.groupby.SeriesGroupBy)
-class SeriesGroupBy(DataFrameGroupBy):
+class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
     @property
     def ndim(self):
         """

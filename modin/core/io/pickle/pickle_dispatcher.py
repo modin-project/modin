@@ -47,10 +47,10 @@ class PickleExperimentalDispatcher(FileDispatcher):
         The number of partitions is equal to the number of input files.
         """
         if not (isinstance(filepath_or_buffer, str) and "*" in filepath_or_buffer):
-            warnings.warn("Defaulting to Modin core implementation")
             return cls.single_worker_read(
                 filepath_or_buffer,
                 single_worker_read=True,
+                reason="Buffers and single files are not supported",
                 **kwargs,
             )
         filepath_or_buffer = sorted(glob.glob(filepath_or_buffer))
@@ -70,10 +70,12 @@ class PickleExperimentalDispatcher(FileDispatcher):
 
         for idx, file_name in enumerate(filepath_or_buffer):
             *partition_ids[idx], lengths_ids[idx], widths_ids[idx] = cls.deploy(
-                cls.parse,
+                func=cls.parse,
+                f_kwargs={
+                    "fname": file_name,
+                    **kwargs,
+                },
                 num_returns=3,
-                fname=file_name,
-                **kwargs,
             )
         lengths = cls.materialize(lengths_ids)
         widths = cls.materialize(widths_ids)
@@ -81,12 +83,8 @@ class PickleExperimentalDispatcher(FileDispatcher):
         # while num_splits is 1, need only one value
         partition_ids = cls.build_partition(partition_ids, lengths, [widths[0]])
 
-        new_index = cls.frame_cls._partition_mgr_cls.get_indices(
-            0, partition_ids, lambda df: df.axes[0]
-        )
-        new_columns = cls.frame_cls._partition_mgr_cls.get_indices(
-            1, partition_ids, lambda df: df.axes[1]
-        )
+        new_index, _ = cls.frame_cls._partition_mgr_cls.get_indices(0, partition_ids)
+        new_columns, _ = cls.frame_cls._partition_mgr_cls.get_indices(1, partition_ids)
 
         return cls.query_compiler_cls(
             cls.frame_cls(partition_ids, new_index, new_columns)

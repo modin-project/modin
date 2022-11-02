@@ -20,7 +20,7 @@ class Reduce(Operator):
     """Builder class for Reduce operator."""
 
     @classmethod
-    def call(cls, reduce_function, axis=None):
+    def register(cls, reduce_function, axis=None):
         """
         Build Reduce operator that will be performed across rows/columns.
 

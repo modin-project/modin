@@ -1,7 +1,7 @@
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.4.3
+  - pandas==1.5.1
   - numpy>=1.18.5
   - pyarrow>=4.0.1
   - fsspec
@@ -30,14 +30,20 @@ dependencies:
   - cloudpickle
   - boto3
   - pip:
-      - xgboost>=1.6.0
-      - modin-spreadsheet>=0.1.1
+      # TODO(https://github.com/modin-project/modin/issues/5171): uncap xgboost
+      # when we can run tests on 1.7.0 without getting stuck.
+      - xgboost>=1.6.0,<1.7.0
+      # Fixes breaking ipywidgets changes, but didn't release yet.
+      - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - tqdm
       - git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
       - connectorx>=0.2.6a4
       # TODO: remove when resolving GH#4398
       - redis>=3.5.0,<4.0.0
       - black
-      - flake8
+      # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
+      - flake8<5
+      - flake8-no-implicit-concat
+      - flake8-print
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
       - numpydoc==1.1.0

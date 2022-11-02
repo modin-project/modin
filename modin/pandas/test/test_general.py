@@ -22,11 +22,19 @@ from modin.test.test_utils import warns_that_defaulting_to_pandas
 from pandas.testing import assert_frame_equal
 
 from .utils import (
+    create_test_dfs,
     test_data_values,
     test_data_keys,
     df_equals,
     sort_index_for_equal_values,
+    eval_general,
 )
+
+
+@contextlib.contextmanager
+def _nullcontext():
+    """Replacement for contextlib.nullcontext missing in older Python."""
+    yield
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -110,7 +118,7 @@ def test_merge():
 
     join_types = ["outer", "inner"]
     for how in join_types:
-        with warns_that_defaulting_to_pandas() if how == "outer" else contextlib.nullcontext():
+        with warns_that_defaulting_to_pandas() if how == "outer" else _nullcontext():
             modin_result = pd.merge(modin_df, modin_df2, how=how)
         pandas_result = pandas.merge(pandas_df, pandas_df2, how=how)
         df_equals(modin_result, pandas_result)
@@ -139,7 +147,7 @@ def test_merge():
         if how == "outer":
             warning_catcher = warns_that_defaulting_to_pandas()
         else:
-            warning_catcher = contextlib.nullcontext()
+            warning_catcher = _nullcontext()
         with warning_catcher:
             modin_result = pd.merge(
                 modin_df, modin_df2, how=how, left_on="col1", right_on="col1"
@@ -153,7 +161,7 @@ def test_merge():
         if how == "outer":
             warning_catcher = warns_that_defaulting_to_pandas()
         else:
-            warning_catcher = contextlib.nullcontext()
+            warning_catcher = _nullcontext()
         with warning_catcher:
             modin_result = pd.merge(
                 modin_df, modin_df2, how=how, left_on="col2", right_on="col2"
@@ -795,3 +803,35 @@ def test_empty_dataframe():
 def test_empty_series():
     s = pd.Series([])
     pd.to_numeric(s)
+
+
+@pytest.mark.parametrize(
+    "arg",
+    [[1, 2], ["a"], 1, "a"],
+    ids=["list_of_ints", "list_of_invalid_strings", "scalar", "invalid_scalar"],
+)
+def test_to_timedelta(arg):
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/4966
+    eval_general(pd, pandas, lambda lib: lib.to_timedelta(arg))
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_series_to_timedelta(data):
+    def make_frame(lib):
+        series = lib.Series(
+            next(iter(data.values())) if isinstance(data, dict) else data
+        )
+        return lib.to_timedelta(series).to_frame(name="timedelta")
+
+    eval_general(pd, pandas, make_frame)
+
+
+@pytest.mark.parametrize(
+    "key",
+    [["col0"], "col0", "col1"],
+    ids=["valid_list_of_string", "valid_string", "invalid_string"],
+)
+def test_get(key):
+    modin_df, pandas_df = create_test_dfs({"col0": [0, 1]})
+    eval_general(modin_df, pandas_df, lambda df: df.get(key))

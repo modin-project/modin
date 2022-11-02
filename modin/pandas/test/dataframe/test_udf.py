@@ -15,6 +15,7 @@ import pytest
 import numpy as np
 import pandas
 import matplotlib
+from modin._compat import PandasCompatVersion
 from modin.config import MinPartitionSize
 import modin.pandas as pd
 
@@ -42,6 +43,7 @@ from modin.pandas.test.utils import (
 )
 from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
 
@@ -79,6 +81,9 @@ def test_agg_apply(axis, func, op):
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: getattr(df, op)(func, axis),
+        # older pandas gives different exception type compared to Modin and current pandas,
+        # so we do not compare exception type in compat mode
+        check_exception_type=PandasCompatVersion.CURRENT != PandasCompatVersion.PY36,
     )
 
 
@@ -93,6 +98,9 @@ def test_agg_apply_axis_names(axis, func, op):
     eval_general(
         *create_test_dfs(test_data["int_data"]),
         lambda df: getattr(df, op)(func, axis),
+        # older pandas gives different exception type compared to Modin and current pandas,
+        # so we do not compare exception type in compat mode
+        check_exception_type=PandasCompatVersion.CURRENT != PandasCompatVersion.PY36,
     )
 
 
@@ -352,17 +360,24 @@ def test_pipe(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("funcs", query_func_values, ids=query_func_keys)
 def test_query(data, funcs):
+    if get_current_execution() == "BaseOnPython" and funcs != "col3 > col4":
+        pytest.xfail(
+            reason="In this case, we are faced with the problem of handling empty data frames - #4934"
+        )
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
     try:
         pandas_result = pandas_df.query(funcs)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.query(funcs)
     else:
         modin_result = modin_df.query(funcs)
+        # `dtypes` must be evaluated after `query` so we need to check cache
+        assert modin_result._query_compiler._modin_frame._dtypes is not None
         df_equals(modin_result, pandas_result)
+        df_equals(modin_result.dtypes, pandas_result.dtypes)
 
 
 def test_empty_query():
@@ -399,4 +414,7 @@ def test_transform(data, func):
     eval_general(
         *create_test_dfs(data),
         lambda df: df.transform(func),
+        # older pandas gives different exception type compared to Modin and current pandas,
+        # so we do not compare exception type in compat mode
+        check_exception_type=PandasCompatVersion.CURRENT != PandasCompatVersion.PY36,
     )

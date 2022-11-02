@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        execution: [pandas_on_ray, pandas_on_dask, omnisci_on_native]
+        execution: [pandas_on_ray, pandas_on_dask, hdk_on_native]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -25,14 +25,27 @@ jobs:
         with:
           python-version: "3.8.x"
           architecture: "x64"
-        if: matrix.execution != 'omnisci_on_native'
+        if: matrix.execution != 'hdk_on_native'
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('requirements/env_hdk.yml') }}
+        if: matrix.execution == 'hdk_on_native'
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: modin_on_omnisci
-          environment-file: requirements/env_omnisci.yml
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
+          activate-environment: modin_on_hdk
+          environment-file: requirements/env_hdk.yml
           python-version: 3.8
           channel-priority: strict
-        if: matrix.execution == 'omnisci_on_native'
+          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+        if: matrix.execution == 'hdk_on_native'
       - name: Cache datasets
         uses: actions/cache@v2
         with:
@@ -42,24 +55,30 @@ jobs:
       # replace modin with . in the tutorial requirements file for `pandas_on_ray` and
       # `pandas_on_dask` since we need Modin built from sources
       - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
-        if: matrix.execution != 'omnisci_on_native'
+        if: matrix.execution != 'hdk_on_native'
       # install dependencies required for notebooks execution for `pandas_on_ray` and `pandas_on_dask`
-      - run: pip install -r examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
-        if: matrix.execution != 'omnisci_on_native'
-      # Build Modin from sources for `omnisci_on_native`
+      # Override modin-spreadsheet install for now
+      - run: |
+          pip install -r examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
+          pip install git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
+        if: matrix.execution != 'hdk_on_native'
+      # Build Modin from sources for `hdk_on_native`
       - run: pip install .
-        if: matrix.execution == 'omnisci_on_native'
+        if: matrix.execution == 'hdk_on_native'
       # install test dependencies
-      - run: pip install pytest pytest-cov black flake8 flake8-print flake8-no-implicit-concat
-        if: matrix.execution != 'omnisci_on_native'
-      - run: conda install flake8-print jupyter nbformat nbconvert -c conda-forge
-        if: matrix.execution == 'omnisci_on_native'
+      # NOTE: If you are changing the set of packages installed here, make sure that
+      # the dev requirements match them.
+      # TODO: remove pin when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
+      - run: pip install pytest pytest-cov black "flake8<5" flake8-print flake8-no-implicit-concat
+        if: matrix.execution != 'hdk_on_native'
+      - run: pip install flake8-print jupyter nbformat nbconvert
+        if: matrix.execution == 'hdk_on_native'
       - run: pip list
-        if: matrix.execution != 'omnisci_on_native'
+        if: matrix.execution != 'hdk_on_native'
       - run: |
           conda info
           conda list
-        if: matrix.execution == 'omnisci_on_native'
+        if: matrix.execution == 'hdk_on_native'
       - run: |
           black --check --diff examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
           black --check --diff examples/tutorial/jupyter/execution/test/utils.py

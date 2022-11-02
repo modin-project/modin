@@ -27,7 +27,7 @@ import pandas
 import argparse
 
 
-def print_config_help():
+def print_config_help() -> None:
     """Print configs help messages."""
     for objname in sorted(globals()):
         obj = globals()[objname]
@@ -35,7 +35,7 @@ def print_config_help():
             print(f"{obj.get_help()}\n\tCurrent value: {obj.get()}")  # noqa: T201
 
 
-def export_config_help(filename: str):
+def export_config_help(filename: str) -> None:
     """
     Export all configs help messages to the CSV file.
 
@@ -57,7 +57,9 @@ def export_config_help(filename: str):
                 if obj.__name__ != "RayRedisPassword"
                 else "random string",
                 # `Notes` `-` underlining can't be correctly parsed inside csv table by sphinx
-                "Description": dedent(obj.__doc__).replace("Notes\n-----", "Notes:\n"),
+                "Description": dedent(obj.__doc__ or "").replace(
+                    "Notes\n-----", "Notes:\n"
+                ),
                 "Options": obj.choices,
             }
             configs_data.append(data)

@@ -20,7 +20,7 @@ class Fold(Operator):
     """Builder class for Fold functions."""
 
     @classmethod
-    def call(cls, fold_function):
+    def register(cls, fold_function):
         """
         Build Fold operator that will be performed across rows/columns.
 

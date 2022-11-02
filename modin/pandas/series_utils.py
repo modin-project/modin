@@ -16,7 +16,7 @@ Implement Series's accessors public API as pandas does.
 
 Accessors: `Series.cat`, `Series.str`, `Series.dt`
 """
-
+from typing import TYPE_CHECKING
 import sys
 import numpy as np
 import pandas
@@ -31,6 +31,10 @@ else:
     # Python <= 3.6
     from re import _pattern_type
 
+if TYPE_CHECKING:
+    from datetime import tzinfo
+    from pandas._typing import npt
+
 
 @_inherit_docstrings(pandas.core.arrays.categorical.CategoricalAccessor)
 class CategoryMethods(ClassLogger):
@@ -40,7 +44,7 @@ class CategoryMethods(ClassLogger):
 
     @property
     def categories(self):
-        return self._series._default_to_pandas(pandas.Series.cat).categories
+        return self._series.dtype.categories
 
     @categories.setter
     def categories(self, categories):
@@ -51,7 +55,7 @@ class CategoryMethods(ClassLogger):
 
     @property
     def ordered(self):
-        return self._series._default_to_pandas(pandas.Series.cat).ordered
+        return self._series.dtype.ordered
 
     @property
     def codes(self):
@@ -565,8 +569,11 @@ class DatetimeProperties(ClassLogger):
         return Series(query_compiler=self._query_compiler.dt_days_in_month())
 
     @property
-    def tz(self):
-        return self._query_compiler.dt_tz().to_pandas().squeeze()
+    def tz(self) -> "tzinfo | None":
+        dtype = self._series.dtype
+        if isinstance(dtype, np.dtype):
+            return None
+        return dtype.tz
 
     @property
     def freq(self):
@@ -616,10 +623,9 @@ class DatetimeProperties(ClassLogger):
             query_compiler=self._query_compiler.dt_total_seconds(*args, **kwargs)
         )
 
-    def to_pytimedelta(self):
-        return self._query_compiler.default_to_pandas(
-            lambda df: pandas.Series.dt.to_pytimedelta(df.squeeze(axis=1).dt)
-        )
+    def to_pytimedelta(self) -> "npt.NDArray[np.object_]":
+        res = self._query_compiler.dt_to_pytimedelta()
+        return res.to_numpy()[:, 0]
 
     @property
     def seconds(self):

@@ -1,5 +1,4 @@
 fsspec
-s3fs
 jupyterlab
 ipywidgets
 tqdm

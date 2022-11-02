@@ -18,7 +18,7 @@ import pandas
 
 from .tree_reduce import TreeReduce
 from .default2pandas.groupby import GroupBy
-from modin.utils import try_cast_to_pandas, hashable
+from modin.utils import try_cast_to_pandas, hashable, MODIN_UNNAMED_SERIES_LABEL
 from modin.error_message import ErrorMessage
 
 
@@ -26,7 +26,7 @@ class GroupByReduce(TreeReduce):
     """Builder class for GroupBy aggregation functions."""
 
     @classmethod
-    def call(cls, map_func, reduce_func=None, **call_kwds):
+    def register(cls, map_func, reduce_func=None, **call_kwds):
         """
         Build template GroupBy aggregation function.
 
@@ -215,13 +215,14 @@ class GroupByReduce(TreeReduce):
         )
 
         if not as_index:
+            idx = df.index
             GroupBy.handle_as_index_for_dataframe(
                 result,
                 by_part,
                 by_cols_dtypes=(
-                    df.index.dtypes.values
-                    if isinstance(df.index, pandas.MultiIndex)
-                    else (df.index.dtype,)
+                    idx.dtypes.values
+                    if isinstance(idx, pandas.MultiIndex) and hasattr(idx, "dtypes")
+                    else (idx.dtype,)
                 ),
                 by_length=len(by_part),
                 selection=reduce_func.keys() if isinstance(reduce_func, dict) else None,
@@ -349,7 +350,7 @@ class GroupByReduce(TreeReduce):
         )
 
         result = query_compiler.__constructor__(new_modin_frame)
-        if result.index.name == "__reduced__":
+        if result.index.name == MODIN_UNNAMED_SERIES_LABEL:
             result.index.name = None
         return result
 

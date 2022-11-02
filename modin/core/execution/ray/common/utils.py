@@ -17,6 +17,7 @@ import os
 import sys
 import psutil
 from packaging import version
+from typing import Optional
 import warnings
 
 import ray
@@ -32,66 +33,20 @@ from modin.config import (
     NPartitions,
     ValueSource,
 )
+from modin.error_message import ErrorMessage
+from .engine_wrapper import RayWrapper
+
+_OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO = 0.6
+# This constant should be in sync with the limit in ray, which is private,
+# not exposed to users, and not documented:
+# https://github.com/ray-project/ray/blob/4692e8d8023e789120d3f22b41ffb136b50f70ea/python/ray/_private/ray_constants.py#L57-L62
+_MAC_OBJECT_STORE_LIMIT_BYTES = 2 * 2**30
 
 ObjectIDType = ray.ObjectRef
 if version.parse(ray.__version__) >= version.parse("1.2.0"):
     from ray.util.client.common import ClientObjectRef
 
     ObjectIDType = (ray.ObjectRef, ClientObjectRef)
-
-
-def _move_stdlib_ahead_of_site_packages(*args):
-    """
-    Ensure packages from stdlib have higher import priority than from site-packages.
-
-    Parameters
-    ----------
-    *args : tuple
-        Ignored, added for compatibility with Ray.
-
-    Notes
-    -----
-    This function is expected to be run on all workers including the driver.
-    This is a hack solution to fix GH-#647, GH-#746.
-    """
-    site_packages_path = None
-    site_packages_path_index = -1
-    for i, path in enumerate(sys.path):
-        if sys.exec_prefix in path and path.endswith("site-packages"):
-            site_packages_path = path
-            site_packages_path_index = i
-            # break on first found
-            break
-
-    if site_packages_path is not None:
-        # stdlib packages layout as follows:
-        # - python3.x
-        #   - typing.py
-        #   - site-packages/
-        #     - pandas
-        # So extracting the dirname of the site_packages can point us
-        # to the directory containing standard libraries.
-        sys.path.insert(site_packages_path_index, os.path.dirname(site_packages_path))
-
-
-def _import_pandas(*args):
-    """
-    Import pandas to make sure all its machinery is ready.
-
-    This prevents a race condition between two threads deserializing functions
-    and trying to import pandas at the same time.
-
-    Parameters
-    ----------
-    *args : tuple
-        Ignored, added for compatibility with Ray.
-
-    Notes
-    -----
-    This function is expected to be run on all workers before any
-    serialization or deserialization starts.
-    """
-    import pandas  # noqa F401
 
 
 def initialize_ray(
@@ -117,6 +72,7 @@ def initialize_ray(
         What password to use when connecting to Redis.
         If not specified, ``modin.config.RayRedisPassword`` is used.
     """
+    extra_init_kw = {"runtime_env": {"env_vars": {"__MODIN_AUTOIMPORT_PANDAS__": "1"}}}
     if not ray.is_initialized() or override_is_cluster:
         cluster = override_is_cluster or IsRayCluster.get()
         redis_address = override_redis_address or RayRedisAddress.get()
@@ -138,66 +94,19 @@ def initialize_ray(
                 include_dashboard=False,
                 ignore_reinit_error=True,
                 _redis_password=redis_password,
+                **extra_init_kw,
             )
         else:
-            from modin.error_message import ErrorMessage
-
             # This string is intentionally formatted this way. We want it indented in
             # the warning message.
             ErrorMessage.not_initialized(
                 "Ray",
-                """
+                f"""
     import ray
-    ray.init()
+    ray.init({', '.join([f'{k}={v}' for k,v in extra_init_kw.items()])})
 """,
             )
-            object_store_memory = Memory.get()
-            # In case anything failed above, we can still improve the memory for Modin.
-            if object_store_memory is None:
-                virtual_memory = psutil.virtual_memory().total
-                if sys.platform.startswith("linux"):
-                    shm_fd = os.open("/dev/shm", os.O_RDONLY)
-                    try:
-                        shm_stats = os.fstatvfs(shm_fd)
-                        system_memory = shm_stats.f_bsize * shm_stats.f_bavail
-                        if system_memory / (virtual_memory / 2) < 0.99:
-                            warnings.warn(
-                                f"The size of /dev/shm is too small ({system_memory} bytes). The required size "
-                                + f"at least half of RAM ({virtual_memory // 2} bytes). Please, delete files in /dev/shm or "
-                                + "increase size of /dev/shm with --shm-size in Docker. Also, you can set "
-                                + "the required memory size for each Ray worker in bytes to MODIN_MEMORY environment variable."
-                            )
-                    finally:
-                        os.close(shm_fd)
-                else:
-                    system_memory = virtual_memory
-                object_store_memory = int(0.6 * system_memory // 1e9 * 1e9)
-                # If the memory pool is smaller than 2GB, just use the default in ray.
-                if object_store_memory == 0:
-                    object_store_memory = None
-            else:
-                object_store_memory = int(object_store_memory)
-
-            mac_size_limit = getattr(
-                ray.ray_constants, "MAC_DEGRADED_PERF_MMAP_SIZE_LIMIT", None
-            )
-            if (
-                sys.platform == "darwin"
-                and mac_size_limit is not None
-                and object_store_memory > mac_size_limit
-            ):
-                warnings.warn(
-                    "On Macs, Ray's performance is known to degrade with "
-                    + "object store size greater than "
-                    + f"{mac_size_limit / 2 ** 30:.4} GiB. Ray by default does "
-                    + "not allow setting an object store size greater than "
-                    + "that. Modin is overriding that default limit because "
-                    + "it would rather have a larger, slower object store "
-                    + "than spill to disk more often. To override Modin's "
-                    + "behavior, you can initialize Ray yourself."
-                )
-                os.environ["RAY_ENABLE_MAC_LARGE_OBJECT_STORE"] = "1"
-
+            object_store_memory = _get_object_store_memory()
             ray_init_kwargs = {
                 "num_cpus": CpuCount.get(),
                 "num_gpus": GpuCount.get(),
@@ -206,6 +115,7 @@ def initialize_ray(
                 "object_store_memory": object_store_memory,
                 "_redis_password": redis_password,
                 "_memory": object_store_memory,
+                **extra_init_kw,
             }
             ray.init(**ray_init_kwargs)
 
@@ -219,17 +129,83 @@ def initialize_ray(
             if not GPU_MANAGERS:
                 for i in range(GpuCount.get()):
                     GPU_MANAGERS.append(GPUManager.remote(i))
-    _move_stdlib_ahead_of_site_packages()
-    ray.worker.global_worker.run_function_on_all_workers(
-        _move_stdlib_ahead_of_site_packages
-    )
-    ray.worker.global_worker.run_function_on_all_workers(_import_pandas)
+
+    # Now ray is initialized, check runtime env config - especially useful if we join
+    # an externally pre-configured cluster
+    env_vars = ray.get_runtime_context().runtime_env.get("env_vars", {})
+    for varname, varvalue in extra_init_kw["runtime_env"]["env_vars"].items():
+        if str(env_vars.get(varname, "")) != str(varvalue):
+            ErrorMessage.single_warning(
+                "When using a pre-initialized Ray cluster, please ensure that the runtime env "
+                + f"sets environment variable {varname} to {varvalue}"
+            )
+
     num_cpus = int(ray.cluster_resources()["CPU"])
     num_gpus = int(ray.cluster_resources().get("GPU", 0))
     if StorageFormat.get() == "Cudf":
         NPartitions._put(num_gpus)
     else:
         NPartitions._put(num_cpus)
+
+
+def _get_object_store_memory() -> Optional[int]:
+    """
+    Get the object store memory we should start Ray with, in bytes.
+
+    - If the ``Memory`` config variable is set, return that.
+    - On Linux, take system memory from /dev/shm. On other systems use total
+      virtual memory.
+    - On Mac, never return more than Ray-specified upper limit.
+
+    Returns
+    -------
+    Optional[int]
+        The object store memory size in bytes, or None if we should use the Ray
+        default.
+    """
+    object_store_memory = Memory.get()
+    if object_store_memory is not None:
+        return object_store_memory
+    virtual_memory = psutil.virtual_memory().total
+    if sys.platform.startswith("linux"):
+        shm_fd = os.open("/dev/shm", os.O_RDONLY)
+        try:
+            shm_stats = os.fstatvfs(shm_fd)
+            system_memory = shm_stats.f_bsize * shm_stats.f_bavail
+            if system_memory / (virtual_memory / 2) < 0.99:
+                warnings.warn(
+                    f"The size of /dev/shm is too small ({system_memory} bytes). The required size "
+                    + f"at least half of RAM ({virtual_memory // 2} bytes). Please, delete files in /dev/shm or "
+                    + "increase size of /dev/shm with --shm-size in Docker. Also, you can can override the memory "
+                    + "size for each Ray worker (in bytes) to the MODIN_MEMORY environment variable."
+                )
+        finally:
+            os.close(shm_fd)
+    else:
+        system_memory = virtual_memory
+    bytes_per_gb = 1e9
+    object_store_memory = int(
+        _OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO
+        * system_memory
+        // bytes_per_gb
+        * bytes_per_gb
+    )
+    if object_store_memory == 0:
+        return None
+    # Newer versions of ray don't allow us to initialize ray with object store
+    # size larger than that _MAC_OBJECT_STORE_LIMIT_BYTES. It seems that
+    # object store > the limit is too slow even on ray 1.0.0. However, limiting
+    # the object store to _MAC_OBJECT_STORE_LIMIT_BYTES only seems to start
+    # helping at ray version 1.3.0. So if ray version is at least 1.3.0, cap
+    # the object store at _MAC_OBJECT_STORE_LIMIT_BYTES.
+    # For background on the ray bug see:
+    # - https://github.com/ray-project/ray/issues/20388
+    # - https://github.com/modin-project/modin/issues/4872
+    if sys.platform == "darwin" and version.parse(ray.__version__) >= version.parse(
+        "1.3.0"
+    ):
+        object_store_memory = min(object_store_memory, _MAC_OBJECT_STORE_LIMIT_BYTES)
+    return object_store_memory
 
 
 def deserialize(obj):
@@ -247,14 +223,49 @@ def deserialize(obj):
         The deserialized object.
     """
     if isinstance(obj, ObjectIDType):
-        return ray.get(obj)
-    elif isinstance(obj, (tuple, list)) and any(
-        isinstance(o, ObjectIDType) for o in obj
-    ):
-        return ray.get(list(obj))
+        return RayWrapper.materialize(obj)
+    elif isinstance(obj, (tuple, list)):
+        # Ray will error if any elements are not ObjectIDType, but we still want ray to
+        # perform batch deserialization for us -- thus, we must submit only the list elements
+        # that are ObjectIDType, deserialize them, and restore them to their correct list index
+        oid_indices, oids = [], []
+        for i, ray_id in enumerate(obj):
+            if isinstance(ray_id, ObjectIDType):
+                oid_indices.append(i)
+                oids.append(ray_id)
+        ray_result = RayWrapper.materialize(oids)
+        new_lst = list(obj[:])
+        for i, deser_item in zip(oid_indices, ray_result):
+            new_lst[i] = deser_item
+        # Check that all objects have been deserialized
+        assert not any([isinstance(o, ObjectIDType) for o in new_lst])
+        return new_lst
     elif isinstance(obj, dict) and any(
         isinstance(val, ObjectIDType) for val in obj.values()
     ):
-        return dict(zip(obj.keys(), ray.get(list(obj.values()))))
+        return dict(zip(obj.keys(), RayWrapper.materialize(list(obj.values()))))
     else:
         return obj
+
+
+def wait(obj_ids):
+    """
+    Wrap ``ray.wait`` to handle duplicate object references.
+
+    ``ray.wait`` assumes a list of unique object references: see
+    https://github.com/modin-project/modin/issues/5045
+
+    Parameters
+    ----------
+    obj_ids : List[ObjectIDType]
+        The object IDs to wait on.
+
+    Returns
+    -------
+    Tuple[List[ObjectIDType], List[ObjectIDType]]
+        A list of object IDs that are ready, and a list of object IDs remaining (this
+        is the same as for ``ray.wait``). Unlike ``ray.wait``, the order of these IDs is not
+        guaranteed.
+    """
+    unique_ids = list(set(obj_ids))
+    return ray.wait(unique_ids, num_returns=len(unique_ids))

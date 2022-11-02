@@ -21,12 +21,13 @@ from packaging import version
 import secrets
 
 from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
+from typing import Optional
 
 
 class EnvironmentVariable(Parameter, type=str, abstract=True):
     """Base class for environment variables-based configuration."""
 
-    varname: str = None
+    varname: Optional[str] = None
 
     @classmethod
     def _get_raw_from_config(cls) -> str:
@@ -40,9 +41,13 @@ class EnvironmentVariable(Parameter, type=str, abstract=True):
 
         Raises
         ------
+        TypeError
+            If `varname` is None.
         KeyError
             If value is absent.
         """
+        if cls.varname is None:
+            raise TypeError("varname should not be None")
         return os.environ[cls.varname]
 
     @classmethod
@@ -73,7 +78,7 @@ class Engine(EnvironmentVariable, type=str):
     choices = ("Ray", "Dask", "Python", "Native")
 
     @classmethod
-    def _get_default(cls):
+    def _get_default(cls) -> str:
         """
         Get default value of the config.
 
@@ -83,7 +88,6 @@ class Engine(EnvironmentVariable, type=str):
         """
         from modin.utils import (
             MIN_RAY_VERSION,
-            MAX_RAY_VERSION_EXCLUSIVE,
             MIN_DASK_VERSION,
         )
 
@@ -95,14 +99,11 @@ class Engine(EnvironmentVariable, type=str):
         except ImportError:
             pass
         else:
-            if (
-                version.parse(ray.__version__) < MIN_RAY_VERSION
-                or version.parse(ray.__version__) >= MAX_RAY_VERSION_EXCLUSIVE
-            ):
+            if version.parse(ray.__version__) < MIN_RAY_VERSION:
                 raise ImportError(
                     "Please `pip install modin[ray]` to install compatible Ray "
                     + "version "
-                    + f"(>={MIN_RAY_VERSION},<{MAX_RAY_VERSION_EXCLUSIVE})."
+                    + f"(>={MIN_RAY_VERSION})."
                 )
             return "Ray"
         try:
@@ -121,10 +122,10 @@ class Engine(EnvironmentVariable, type=str):
                 )
             return "Dask"
         try:
-            # We import ``PyDbEngine`` from this module since correct import of ``PyDbEngine`` itself
-            # from Omnisci is located in it with all the necessary options for dlopen.
-            from modin.experimental.core.execution.native.implementations.omnisci_on_native.utils import (  # noqa
-                PyDbEngine,
+            # We import ``DbWorker`` from this module since correct import of ``DbWorker`` itself
+            # from HDK is located in it with all the necessary options for dlopen.
+            from modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker import (  # noqa
+                DbWorker,
             )
         except ImportError:
             pass
@@ -140,7 +141,7 @@ class StorageFormat(EnvironmentVariable, type=str):
 
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
-    choices = ("Pandas", "OmniSci", "Pyarrow", "Cudf")
+    choices = ("Pandas", "Hdk", "Pyarrow", "Cudf")
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
@@ -174,7 +175,7 @@ class CpuCount(EnvironmentVariable, type=int):
     varname = "MODIN_CPUS"
 
     @classmethod
-    def _get_default(cls):
+    def _get_default(cls) -> int:
         """
         Get default value of the config.
 
@@ -212,7 +213,7 @@ class NPartitions(EnvironmentVariable, type=int):
     varname = "MODIN_NPARTITIONS"
 
     @classmethod
-    def _put(cls, value):
+    def _put(cls, value: int) -> None:
         """
         Put specific value if NPartitions wasn't set by a user yet.
 
@@ -230,7 +231,7 @@ class NPartitions(EnvironmentVariable, type=int):
             cls.put(value)
 
     @classmethod
-    def _get_default(cls):
+    def _get_default(cls) -> int:
         """
         Get default value of the config.
 
@@ -260,6 +261,12 @@ class DoTraceRpyc(EnvironmentVariable, type=bool):
     """Whether to trace RPyC calls (applicable for remote context)."""
 
     varname = "MODIN_TRACE_RPYC"
+
+
+class HdkFragmentSize(EnvironmentVariable, type=int):
+    """How big a fragment in HDK should be when creating a table (in rows)."""
+
+    varname = "MODIN_HDK_FRAGMENT_SIZE"
 
 
 class OmnisciFragmentSize(EnvironmentVariable, type=int):
@@ -322,17 +329,17 @@ class ProgressBar(EnvironmentVariable, type=bool):
     default = False
 
     @classmethod
-    def enable(cls):
+    def enable(cls) -> None:
         """Enable ``ProgressBar`` feature."""
         cls.put(True)
 
     @classmethod
-    def disable(cls):
+    def disable(cls) -> None:
         """Disable ``ProgressBar`` feature."""
         cls.put(False)
 
     @classmethod
-    def put(cls, value):
+    def put(cls, value: bool) -> None:
         """
         Set ``ProgressBar`` value only if synchronous benchmarking is disabled.
 
@@ -353,7 +360,7 @@ class BenchmarkMode(EnvironmentVariable, type=bool):
     default = False
 
     @classmethod
-    def put(cls, value):
+    def put(cls, value: bool) -> None:
         """
         Set ``BenchmarkMode`` value only if progress bar feature is disabled.
 
@@ -375,17 +382,17 @@ class LogMode(EnvironmentVariable, type=ExactStr):
     default = "disable"
 
     @classmethod
-    def enable(cls):
+    def enable(cls) -> None:
         """Enable all logging levels."""
         cls.put("enable")
 
     @classmethod
-    def disable(cls):
+    def disable(cls) -> None:
         """Disable logging feature."""
         cls.put("disable")
 
     @classmethod
-    def enable_api_only(cls):
+    def enable_api_only(cls) -> None:
         """Enable API level logging."""
         cls.put("enable_api_only")
 
@@ -397,7 +404,7 @@ class LogMemoryInterval(EnvironmentVariable, type=int):
     default = 5
 
     @classmethod
-    def put(cls, value):
+    def put(cls, value: int) -> None:
         """
         Set ``LogMemoryInterval`` with extra checks.
 
@@ -431,7 +438,7 @@ class LogFileSize(EnvironmentVariable, type=int):
     default = 10
 
     @classmethod
-    def put(cls, value):
+    def put(cls, value: int) -> None:
         """
         Set ``LogFileSize`` with extra checks.
 
@@ -469,7 +476,7 @@ class PersistentPickle(EnvironmentVariable, type=bool):
     default = False
 
 
-class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
+class HdkLaunchParameters(EnvironmentVariable, type=dict):
     """
     Additional command line options for the OmniSci engine.
 
@@ -477,7 +484,7 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
     https://docs.omnisci.com/installation-and-configuration/config-parameters#configuration-parameters-for-omniscidb
     """
 
-    varname = "MODIN_OMNISCI_LAUNCH_PARAMETERS"
+    varname = "MODIN_HDK_LAUNCH_PARAMETERS"
     default = {
         "enable_union": 1,
         "enable_columnar_output": 1,
@@ -488,7 +495,7 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
     }
 
     @classmethod
-    def get(self):
+    def get(cls) -> dict:
         """
         Get the resulted command-line options.
 
@@ -499,12 +506,29 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
         dict
             Decoded and verified config value.
         """
+        if cls == OmnisciLaunchParameters or (
+            OmnisciLaunchParameters.varname in os.environ
+            and HdkLaunchParameters.varname not in os.environ
+        ):
+            return OmnisciLaunchParameters.get()
+
         custom_parameters = super().get()
-        result = self.default.copy()
+        result = cls.default.copy()
         result.update(
             {key.replace("-", "_"): value for key, value in custom_parameters.items()}
         )
         return result
+
+
+class OmnisciLaunchParameters(HdkLaunchParameters, type=dict):
+    """
+    Additional command line options for the OmniSci engine.
+
+    Please visit OmniSci documentation for the description of available parameters:
+    https://docs.omnisci.com/installation-and-configuration/config-parameters#configuration-parameters-for-omniscidb
+    """
+
+    varname = "MODIN_OMNISCI_LAUNCH_PARAMETERS"
 
 
 class MinPartitionSize(EnvironmentVariable, type=int):
@@ -519,7 +543,7 @@ class MinPartitionSize(EnvironmentVariable, type=int):
     default = 32
 
     @classmethod
-    def put(cls, value):
+    def put(cls, value: int) -> None:
         """
         Set ``MinPartitionSize`` with extra checks.
 
@@ -533,7 +557,7 @@ class MinPartitionSize(EnvironmentVariable, type=int):
         super().put(value)
 
     @classmethod
-    def get(cls):
+    def get(cls) -> int:
         """
         Get ``MinPartitionSize`` with extra checks.
 
@@ -568,7 +592,7 @@ class ReadSqlEngine(EnvironmentVariable, type=str):
     choices = ("Pandas", "Connectorx")
 
 
-def _check_vars():
+def _check_vars() -> None:
     """
     Check validity of environment variables.
 

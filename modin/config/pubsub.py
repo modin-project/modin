@@ -13,11 +13,12 @@
 
 """Module houses ``Parameter`` class - base class for all configs."""
 
-import collections
-import typing
+from collections import defaultdict
+from enum import IntEnum
+from typing import Any, Callable, DefaultDict, NamedTuple, Optional, Sequence
 
 
-class TypeDescriptor(typing.NamedTuple):
+class TypeDescriptor(NamedTuple):
     """
     Class for config data manipulating of exact type.
 
@@ -35,9 +36,9 @@ class TypeDescriptor(typing.NamedTuple):
         Class description string.
     """
 
-    decode: typing.Callable[[str], object]
-    normalize: typing.Callable[[object], object]
-    verify: typing.Callable[[object], bool]
+    decode: Callable[[str], object]
+    normalize: Callable[[object], object]
+    verify: Callable[[object], bool]
     help: str
 
 
@@ -48,7 +49,7 @@ class ExactStr(str):
 _TYPE_PARAMS = {
     str: TypeDescriptor(
         decode=lambda value: value.strip().title(),
-        normalize=lambda value: value.strip().title(),
+        normalize=lambda value: str(value).strip().title(),
         verify=lambda value: True,
         help="a case-insensitive string",
     ),
@@ -70,7 +71,7 @@ _TYPE_PARAMS = {
     ),
     int: TypeDescriptor(
         decode=lambda value: int(value.strip()),
-        normalize=int,
+        normalize=int,  # type: ignore
         verify=lambda value: isinstance(value, int)
         or (isinstance(value, str) and value.strip().isdigit()),
         help="an integer value",
@@ -85,7 +86,7 @@ _TYPE_PARAMS = {
         if isinstance(value, dict)
         else {
             key: int(val) if val.isdigit() else val
-            for key_value in value.split(",")
+            for key_value in str(value).split(",")
             for key, val in [[v.strip() for v in key_value.split("=", maxsplit=1)]]
         },
         verify=lambda value: isinstance(value, dict)
@@ -105,7 +106,7 @@ _TYPE_PARAMS = {
 _UNSET = object()
 
 
-class ValueSource:
+class ValueSource(IntEnum):  # noqa: PR01
     """Class that describes the method of getting the value for a parameter."""
 
     # got from default, i.e. neither user nor configuration source had the value
@@ -122,24 +123,27 @@ class Parameter(object):
 
     Attributes
     ----------
-    choices : sequence of str
+    choices : Optional[Sequence[str]]
         Array with possible options of ``Parameter`` values.
     type : str
         String that denotes ``Parameter`` type.
-    default : Any
+    default : Optional[Any]
         ``Parameter`` default value.
     is_abstract : bool, default: True
         Whether or not ``Parameter`` is abstract.
-    _value_source : int
+    _value_source : Optional[ValueSource]
         Source of the ``Parameter`` value, should be set by
         ``ValueSource``.
     """
 
-    choices: typing.Sequence[str] = None
+    choices: Optional[Sequence[str]] = None
     type = str
-    default = None
+    default: Optional[Any] = None
     is_abstract = True
-    _value_source = None
+    _value_source: Optional[ValueSource] = None
+    _value: Any = _UNSET
+    _subs: list = []
+    _once: DefaultDict[Any, list] = defaultdict(list)
 
     @classmethod
     def _get_raw_from_config(cls) -> str:
@@ -178,7 +182,7 @@ class Parameter(object):
         """
         raise NotImplementedError()
 
-    def __init_subclass__(cls, type, abstract=False, **kw):
+    def __init_subclass__(cls, type: Any, abstract: bool = False, **kw: dict):
         """
         Initialize subclass.
 
@@ -196,11 +200,11 @@ class Parameter(object):
         cls.is_abstract = abstract
         cls._value = _UNSET
         cls._subs = []
-        cls._once = collections.defaultdict(list)
+        cls._once = defaultdict(list)
         super().__init_subclass__(**kw)
 
     @classmethod
-    def subscribe(cls, callback):
+    def subscribe(cls, callback: Callable) -> None:
         """
         Add `callback` to the `_subs` list and then execute it.
 
@@ -213,7 +217,7 @@ class Parameter(object):
         callback(cls)
 
     @classmethod
-    def _get_default(cls):
+    def _get_default(cls) -> Any:
         """
         Get default value of the config.
 
@@ -224,21 +228,24 @@ class Parameter(object):
         return cls.default
 
     @classmethod
-    def get_value_source(cls):
+    def get_value_source(cls) -> ValueSource:
         """
         Get value source of the config.
 
         Returns
         -------
-        int
+        ValueSource
         """
         if cls._value_source is None:
             # dummy call to .get() to initialize the value
             cls.get()
+        assert (
+            cls._value_source is not None
+        ), "_value_source must be initialized by now in get()"
         return cls._value_source
 
     @classmethod
-    def get(cls) -> typing.Any:
+    def get(cls) -> Any:
         """
         Get config value.
 
@@ -262,7 +269,7 @@ class Parameter(object):
         return cls._value
 
     @classmethod
-    def put(cls, value):
+    def put(cls, value: Any) -> None:
         """
         Set config value.
 
@@ -275,7 +282,7 @@ class Parameter(object):
         cls._value_source = ValueSource.SET_BY_USER
 
     @classmethod
-    def once(cls, onvalue, callback):
+    def once(cls, onvalue: Any, callback: Callable) -> None:
         """
         Execute `callback` if config value matches `onvalue` value.
 
@@ -296,7 +303,7 @@ class Parameter(object):
             cls._once[onvalue].append(callback)
 
     @classmethod
-    def _put_nocallback(cls, value):
+    def _put_nocallback(cls, value: Any) -> Any:
         """
         Set config value without executing callbacks.
 
@@ -317,7 +324,7 @@ class Parameter(object):
         return oldvalue
 
     @classmethod
-    def _check_callbacks(cls, oldvalue):
+    def _check_callbacks(cls, oldvalue: Any) -> None:
         """
         Execute all needed callbacks if config value was changed.
 

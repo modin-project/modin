@@ -45,12 +45,18 @@ class JSONDispatcher(TextFileDispatcher):
         path_or_buf = cls.get_path_or_buffer(path_or_buf)
         if isinstance(path_or_buf, str):
             if not cls.file_exists(path_or_buf):
-                return cls.single_worker_read(path_or_buf, **kwargs)
+                return cls.single_worker_read(
+                    path_or_buf, reason=cls._file_not_found_msg(path_or_buf), **kwargs
+                )
             path_or_buf = cls.get_path(path_or_buf)
         elif not cls.pathlib_or_pypath(path_or_buf):
-            return cls.single_worker_read(path_or_buf, **kwargs)
+            return cls.single_worker_read(
+                path_or_buf, reason=cls.BUFFER_UNSUPPORTED_MSG, **kwargs
+            )
         if not kwargs.get("lines", False):
-            return cls.single_worker_read(path_or_buf, **kwargs)
+            return cls.single_worker_read(
+                path_or_buf, reason="`lines` argument not supported", **kwargs
+            )
         with OpenFile(path_or_buf, "rb") as f:
             columns = pandas.read_json(BytesIO(b"" + f.readline()), lines=True).columns
         kwargs["columns"] = columns
@@ -69,7 +75,9 @@ class JSONDispatcher(TextFileDispatcher):
             for idx, (start, end) in enumerate(splits):
                 args.update({"start": start, "end": end})
                 *partition_ids[idx], index_ids[idx], dtypes_ids[idx], _ = cls.deploy(
-                    cls.parse, num_returns=num_splits + 3, **args
+                    func=cls.parse,
+                    f_kwargs=args,
+                    num_returns=num_splits + 3,
                 )
         # partition_id[-1] contains the columns for each partition, which will be useful
         # for implementing when `lines=False`.

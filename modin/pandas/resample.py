@@ -16,52 +16,20 @@
 import numpy as np
 import pandas
 import pandas.core.resample
-from pandas._typing import (
-    TimedeltaConvertibleTypes,
-    TimestampConvertibleTypes,
-)
 from pandas.core.dtypes.common import is_list_like
-from typing import Optional, Union
+from typing import Optional
+from modin._compat.pandas_api.classes import ResamplerCompat
 from modin.utils import _inherit_docstrings
-from modin.logging import ClassLogger
 
 
 @_inherit_docstrings(pandas.core.resample.Resampler)
-class Resampler(ClassLogger):
-    def __init__(
-        self,
-        dataframe,
-        rule,
-        axis=0,
-        closed=None,
-        label=None,
-        convention="start",
-        kind=None,
-        loffset=None,
-        base=0,
-        on=None,
-        level=None,
-        origin: Union[str, TimestampConvertibleTypes] = "start_day",
-        offset: Optional[TimedeltaConvertibleTypes] = None,
-    ):
+class Resampler(ResamplerCompat):
+    def _init(self, dataframe, axis, **resample_kwargs):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
-        axis = self._dataframe._get_axis_number(axis)
-        self.resample_kwargs = {
-            "rule": rule,
-            "axis": axis,
-            "closed": closed,
-            "label": label,
-            "convention": convention,
-            "kind": kind,
-            "loffset": loffset,
-            "base": base,
-            "on": on,
-            "level": level,
-            "origin": origin,
-            "offset": offset,
-        }
-        self.__groups = self.__get_groups(**self.resample_kwargs)
+        self.axis = self._dataframe._get_axis_number(axis)
+        self.resample_kwargs = dict(resample_kwargs, axis=self.axis)
+        self.__groups = self._get_groups()
 
     def __getitem__(self, key):
         """
@@ -99,41 +67,6 @@ class Resampler(ClassLogger):
 
         return _get_new_resampler(key)
 
-    def __get_groups(
-        self,
-        rule,
-        axis,
-        closed,
-        label,
-        convention,
-        kind,
-        loffset,
-        base,
-        on,
-        level,
-        origin,
-        offset,
-    ):
-        if axis == 0:
-            df = self._dataframe
-        else:
-            df = self._dataframe.T
-        groups = df.groupby(
-            pandas.Grouper(
-                key=on,
-                freq=rule,
-                closed=closed,
-                label=label,
-                convention=convention,
-                loffset=loffset,
-                base=base,
-                level=level,
-                origin=origin,
-                offset=offset,
-            )
-        )
-        return groups
-
     @property
     def groups(self):
         return self._query_compiler.default_to_pandas(
@@ -147,11 +80,8 @@ class Resampler(ClassLogger):
         )
 
     def get_group(self, name, obj=None):
-        if self.resample_kwargs["axis"] == 0:
-            result = self.__groups.get_group(name)
-        else:
-            result = self.__groups.get_group(name).T
-        return result
+        group = self.__groups.get_group(name)
+        return group if self.axis == 0 else group.T
 
     def apply(self, func, *args, **kwargs):
         from .dataframe import DataFrame
@@ -294,81 +224,74 @@ class Resampler(ClassLogger):
             query_compiler=self._query_compiler.resample_count(self.resample_kwargs)
         )
 
-    def nunique(self, _method="nunique", *args, **kwargs):
+    def nunique(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_nunique(
-                self.resample_kwargs, _method, *args, **kwargs
+                self.resample_kwargs, *args, **kwargs
             )
         )
 
-    def first(self, _method="first", *args, **kwargs):
+    def first(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_first(
                 self.resample_kwargs,
-                _method,
                 *args,
                 **kwargs,
             )
         )
 
-    def last(self, _method="last", *args, **kwargs):
+    def last(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_last(
                 self.resample_kwargs,
-                _method,
                 *args,
                 **kwargs,
             )
         )
 
-    def max(self, _method="max", *args, **kwargs):
+    def max(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_max(
                 self.resample_kwargs,
-                _method,
                 *args,
                 **kwargs,
             )
         )
 
-    def mean(self, _method="mean", *args, **kwargs):
+    def mean(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_mean(
                 self.resample_kwargs,
-                _method,
                 *args,
                 **kwargs,
             )
         )
 
-    def median(self, _method="median", *args, **kwargs):
+    def median(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_median(
                 self.resample_kwargs,
-                _method,
                 *args,
                 **kwargs,
             )
         )
 
-    def min(self, _method="min", *args, **kwargs):
+    def min(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_min(
                 self.resample_kwargs,
-                _method,
                 *args,
                 **kwargs,
             )
         )
 
-    def ohlc(self, _method="ohlc", *args, **kwargs):
+    def ohlc(self, *args, **kwargs):
         from .dataframe import DataFrame
 
         if isinstance(self._dataframe, DataFrame):
             return DataFrame(
                 query_compiler=self._query_compiler.resample_ohlc_df(
                     self.resample_kwargs,
-                    _method,
                     *args,
                     **kwargs,
                 )
@@ -377,18 +300,14 @@ class Resampler(ClassLogger):
             return DataFrame(
                 query_compiler=self._query_compiler.resample_ohlc_ser(
                     self.resample_kwargs,
-                    _method,
                     *args,
                     **kwargs,
                 )
             )
 
-    def prod(self, _method="prod", min_count=0, *args, **kwargs):
-        if self.resample_kwargs["axis"] == 0:
-            result = self.__groups.prod(min_count=min_count, *args, **kwargs)
-        else:
-            result = self.__groups.prod(min_count=min_count, *args, **kwargs).T
-        return result
+    def prod(self, min_count=0, *args, **kwargs):
+        prod = self.__groups.prod(min_count=min_count, *args, **kwargs)
+        return prod if self.axis == 0 else prod.T
 
     def size(self):
         from .series import Series
@@ -397,11 +316,10 @@ class Resampler(ClassLogger):
             query_compiler=self._query_compiler.resample_size(self.resample_kwargs)
         )
 
-    def sem(self, _method="sem", *args, **kwargs):
+    def sem(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_sem(
                 self.resample_kwargs,
-                _method,
                 *args,
                 **kwargs,
             )
@@ -414,12 +332,9 @@ class Resampler(ClassLogger):
             )
         )
 
-    def sum(self, _method="sum", min_count=0, *args, **kwargs):
-        if self.resample_kwargs["axis"] == 0:
-            result = self.__groups.sum(min_count=min_count, *args, **kwargs)
-        else:
-            result = self.__groups.sum(min_count=min_count, *args, **kwargs).T
-        return result
+    def sum(self, min_count=0, *args, **kwargs):
+        _sum = self.__groups.sum(min_count=min_count, *args, **kwargs)
+        return _sum if self.axis == 0 else _sum.T
 
     def var(self, ddof=1, *args, **kwargs):
         return self._dataframe.__constructor__(

@@ -18,6 +18,7 @@ Module contains class ``BaseQueryCompiler``.
 """
 
 import abc
+from modin._compat.core.pandas_common import pandas_reset_index, pandas_compare
 
 from modin.core.dataframe.algebra.default2pandas import (
     DataFrameDefault,
@@ -31,8 +32,9 @@ from modin.core.dataframe.algebra.default2pandas import (
     GroupByDefault,
 )
 from modin.error_message import ErrorMessage
-import modin.core.storage_formats.base.doc_utils as doc_utils
+from . import doc_utils
 from modin.logging import ClassLogger
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 from pandas.core.dtypes.common import is_scalar
 import pandas.core.resample
@@ -253,7 +255,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                     other = other[0]
                 ignore_index = kwargs.pop("ignore_index", None)
                 kwargs["how"] = kwargs.pop("join", None)
-                result = df.join(other, rsuffix="r_", **kwargs)
+                if (
+                    isinstance(other, (pandas.DataFrame, pandas.Series))
+                    or len(other) <= 1
+                ):
+                    kwargs["rsuffix"] = "r_"
+                result = df.join(other, **kwargs)
             if ignore_index:
                 if axis == 0:
                     result = result.reset_index(drop=True)
@@ -599,6 +606,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def pow(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.pow)(self, other=other, **kwargs)
 
+    @doc_utils.doc_binary_method(operation="addition", sign="+", self_on_right=True)
+    def radd(self, other, **kwargs):  # noqa: PR02
+        return BinaryDefault.register(pandas.DataFrame.radd)(
+            self, other=other, **kwargs
+        )
+
     @doc_utils.doc_binary_method(
         operation="integer division", sign="//", self_on_right=True
     )
@@ -898,7 +911,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Transposed new QueryCompiler or self.
         """
         if len(self.columns) != 1 or (
-            len(self.index) == 1 and self.index[0] == "__reduced__"
+            len(self.index) == 1 and self.index[0] == MODIN_UNNAMED_SERIES_LABEL
         ):
             return self.transpose()
         return self
@@ -971,7 +984,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             QueryCompiler with reset index.
         """
-        return DataFrameDefault.register(pandas.DataFrame.reset_index)(self, **kwargs)
+        return DataFrameDefault.register(pandas_reset_index)(self, **kwargs)
 
     def set_index_from_columns(
         self, keys: List[Hashable], drop: bool = True, append: bool = False
@@ -1313,6 +1326,27 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return SeriesDefault.register(pandas.to_numeric)(self, *args, **kwargs)
 
+    @doc_utils.add_one_column_warning
+    @doc_utils.add_refer_to("to_timedelta")
+    def to_timedelta(self, unit="ns", errors="raise"):  # noqa: PR02
+        """
+        Convert argument to timedelta.
+
+        Parameters
+        ----------
+        unit : str, default: "ns"
+            Denotes the unit of the arg for numeric arg. Defaults to "ns".
+        errors : {"ignore", "raise", "coerce"}, default: "raise"
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler with converted to timedelta values.
+        """
+        return SeriesDefault.register(pandas.to_timedelta)(
+            self, unit=unit, errors=errors
+        )
+
     # FIXME: get rid of `**kwargs` parameter (Modin issue #3108).
     @doc_utils.add_one_column_warning
     @doc_utils.add_refer_to("Series.unique")
@@ -1392,6 +1426,61 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return DataFrameDefault.register(pandas.DataFrame.astype)(
             self, dtype=col_dtypes, **kwargs
+        )
+
+    def infer_objects(self):
+        """
+        Attempt to infer better dtypes for object columns.
+
+        Attempts soft conversion of object-dtyped columns, leaving non-object
+        and unconvertible columns unchanged. The inference rules are the same
+        as during normal Series/DataFrame construction.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New query compiler with udpated dtypes.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.infer_objects)(self)
+
+    def convert_dtypes(
+        self,
+        infer_objects: bool = True,
+        convert_string: bool = True,
+        convert_integer: bool = True,
+        convert_boolean: bool = True,
+        convert_floating: bool = True,
+    ):
+        """
+        Convert columns to best possible dtypes using dtypes supporting ``pd.NA``.
+
+        Parameters
+        ----------
+        infer_objects : bool, default: True
+            Whether object dtypes should be converted to the best possible types.
+        convert_string : bool, default: True
+            Whether object dtypes should be converted to ``pd.StringDtype()``.
+        convert_integer : bool, default: True
+            Whether, if possbile, conversion should be done to integer extension types.
+        convert_boolean : bool, default: True
+            Whether object dtypes should be converted to ``pd.BooleanDtype()``.
+        convert_floating : bool, default: True
+            Whether, if possible, conversion can be done to floating extension types.
+            If `convert_integer` is also True, preference will be give to integer dtypes
+            if the floats can be faithfully casted to integers.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler with updated dtypes.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.convert_dtypes)(
+            self,
+            infer_objects=infer_objects,
+            convert_string=convert_string,
+            convert_integer=convert_integer,
+            convert_boolean=convert_boolean,
+            convert_floating=convert_floating,
         )
 
     @property
@@ -2177,7 +2266,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             - Index of the specified axis contains: the names of the passed functions if multiple
               functions are passed, otherwise: indices of the `func` result if "expand" strategy
               is used, indices of the original frame if "broadcast" strategy is used, a single
-              label "__reduced__" if "reduce" strategy is used.
+              label `MODIN_UNNAMED_SERIES_LABEL` if "reduce" strategy is used.
             - Labels of the opposite axis are preserved.
             - Each element is the result of execution of `func` against
               corresponding row/column.
@@ -2188,6 +2277,32 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             axis=axis,
             raw=raw,
             result_type=result_type,
+            *args,
+            **kwargs,
+        )
+
+    def apply_on_series(self, func, *args, **kwargs):
+        """
+        Apply passed function on underlying Series.
+
+        Parameters
+        ----------
+        func : callable(pandas.Series) -> scalar, str, list or dict of such
+            The function to apply to each row.
+        *args : iterable
+            Positional arguments to pass to `func`.
+        **kwargs : dict
+            Keyword arguments to pass to `func`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        assert self.is_series_like()
+
+        return SeriesDefault.register(pandas.Series.apply)(
+            self,
+            func=func,
             *args,
             **kwargs,
         )
@@ -2967,9 +3082,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return self.index if axis == 0 else self.columns
 
-    def view(self, index=None, columns=None):
+    def take_2d(self, index=None, columns=None):
         """
-        Mask QueryCompiler with passed keys.
+        Index QueryCompiler with passed keys.
 
         Parameters
         ----------
@@ -2986,10 +3101,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         index = slice(None) if index is None else index
         columns = slice(None) if columns is None else columns
 
-        def applyier(df):
+        def applyer(df):
             return df.iloc[index, columns]
 
-        return DataFrameDefault.register(applyier)(self)
+        return DataFrameDefault.register(applyer)(self)
 
     def insert_item(self, axis, loc, value, how="inner", replace=False):
         """
@@ -3086,13 +3201,15 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             New QueryCompiler with updated values.
         """
+        if not isinstance(row_numeric_index, slice):
+            row_numeric_index = list(row_numeric_index)
+        if not isinstance(col_numeric_index, slice):
+            col_numeric_index = list(col_numeric_index)
 
         def write_items(df, broadcasted_items):
             if isinstance(df.iloc[row_numeric_index, col_numeric_index], pandas.Series):
                 broadcasted_items = broadcasted_items.squeeze()
-            df.iloc[
-                list(row_numeric_index), list(col_numeric_index)
-            ] = broadcasted_items
+            df.iloc[row_numeric_index, col_numeric_index] = broadcasted_items
             return df
 
         return DataFrameDefault.register(write_items)(
@@ -3684,12 +3801,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, resample_kwargs, method, limit
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="first element", refer_to="first", params="_method : str"
-    )
-    def resample_first(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="first element", refer_to="first")
+    def resample_first(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.first)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
     # FIXME: This function takes Modin DataFrame via `obj` parameter,
@@ -3759,44 +3874,34 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             **kwargs,
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="last element", params="_method : str", refer_to="last"
-    )
-    def resample_last(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="last element", refer_to="last")
+    def resample_last(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.last)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="maximum value", params="_method : str", refer_to="max"
-    )
-    def resample_max(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="maximum value", refer_to="max")
+    def resample_max(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.max)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="mean value", params="_method : str", refer_to="mean"
-    )
-    def resample_mean(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="mean value", refer_to="mean")
+    def resample_mean(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.mean)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="median value", params="_method : str", refer_to="median"
-    )
-    def resample_median(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="median value", refer_to="median")
+    def resample_median(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.median)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="minimum value", params="_method : str", refer_to="min"
-    )
-    def resample_min(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="minimum value", refer_to="min")
+    def resample_min(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.min)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
     @doc_utils.doc_resample_fillna(method="'nearest'", refer_to="nearest")
@@ -3805,37 +3910,33 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, resample_kwargs, limit
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="number of unique values", params="_method : str", refer_to="nunique"
-    )
-    def resample_nunique(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="number of unique values", refer_to="nunique")
+    def resample_nunique(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.nunique)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
     # FIXME: Query Compiler shouldn't care about differences between Series and DataFrame
     # so `resample_ohlc_df` and `resample_ohlc_ser` should be combined (Modin issue #3104).
     @doc_utils.doc_resample_agg(
         action="compute open, high, low and close values",
-        params="_method : str",
         output="labels of columns containing computed values",
         refer_to="ohlc",
     )
-    def resample_ohlc_df(self, resample_kwargs, _method, *args, **kwargs):
+    def resample_ohlc_df(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.ohlc)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
     @doc_utils.doc_resample_agg(
         action="compute open, high, low and close values",
-        params="_method : str",
         output="labels of columns containing computed values",
         refer_to="ohlc",
     )
-    def resample_ohlc_ser(self, resample_kwargs, _method, *args, **kwargs):
+    def resample_ohlc_ser(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(
             pandas.core.resample.Resampler.ohlc, squeeze_self=True
-        )(self, resample_kwargs, _method, *args, **kwargs)
+        )(self, resample_kwargs, *args, **kwargs)
 
     @doc_utils.doc_resample_fillna(method="'pad'", refer_to="pad")
     def resample_pad(self, resample_kwargs, limit):
@@ -3876,14 +3977,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.doc_resample_reduce(
         result="product",
-        params="""
-        _method : str
-        min_count : int""",
+        params="min_count : int",
         refer_to="prod",
     )
-    def resample_prod(self, resample_kwargs, _method, min_count, *args, **kwargs):
+    def resample_prod(self, resample_kwargs, min_count, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.prod)(
-            self, resample_kwargs, _method, min_count, *args, **kwargs
+            self, resample_kwargs, min_count, *args, **kwargs
         )
 
     @doc_utils.doc_resample_reduce(
@@ -3896,12 +3995,11 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.doc_resample_reduce(
         result="standard error of the mean",
-        params="ddof : int, default: 1",
         refer_to="sem",
     )
-    def resample_sem(self, resample_kwargs, ddof=1, *args, **kwargs):
+    def resample_sem(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.sem)(
-            self, resample_kwargs, ddof, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
     @doc_utils.doc_resample_reduce(
@@ -3922,14 +4020,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.doc_resample_reduce(
         result="sum",
-        params="""
-        _method : str
-        min_count : int""",
+        params="min_count : int",
         refer_to="sum",
     )
-    def resample_sum(self, resample_kwargs, _method, min_count, *args, **kwargs):
+    def resample_sum(self, resample_kwargs, min_count, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.sum)(
-            self, resample_kwargs, _method, min_count, *args, **kwargs
+            self, resample_kwargs, min_count, *args, **kwargs
         )
 
     def resample_transform(self, resample_kwargs, arg, *args, **kwargs):
@@ -4624,7 +4720,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     prod_min_count = prod
 
     @doc_utils.add_refer_to("DataFrame.compare")
-    def compare(self, other, align_axis, keep_shape, keep_equal):
+    def compare(self, other, align_axis, keep_shape, keep_equal, result_names):
         """
         Compare data of two QueryCompilers and highlight the difference.
 
@@ -4636,6 +4732,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         align_axis : {0, 1}
         keep_shape : bool
         keep_equal : bool
+        result_names : tuple
 
         Returns
         -------
@@ -4643,12 +4740,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             New QueryCompiler containing the differences between `self` and passed
             query compiler.
         """
-        return DataFrameDefault.register(pandas.DataFrame.compare)(
+        return DataFrameDefault.register(pandas_compare)(
             self,
             other=other,
             align_axis=align_axis,
             keep_shape=keep_shape,
             keep_equal=keep_equal,
+            result_names=result_names,
         )
 
     # End of DataFrame methods

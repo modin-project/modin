@@ -318,42 +318,6 @@ def merge_asof(
     return result
 
 
-@_inherit_docstrings(pandas.pivot_table, apilink="pandas.pivot_table")
-@enable_logging
-def pivot_table(
-    data,
-    values=None,
-    index=None,
-    columns=None,
-    aggfunc="mean",
-    fill_value=None,
-    margins=False,
-    dropna=True,
-    margins_name="All",
-    observed=False,
-    sort=True,
-):  # noqa: PR01, RT01, D200
-    """
-    Create a spreadsheet-style pivot table as a DataFrame.
-    """
-    if not isinstance(data, DataFrame):
-        raise ValueError(
-            "can not create pivot table with instance of type {}".format(type(data))
-        )
-
-    return data.pivot_table(
-        values=values,
-        index=index,
-        columns=columns,
-        aggfunc=aggfunc,
-        fill_value=fill_value,
-        margins=margins,
-        dropna=dropna,
-        margins_name=margins_name,
-        sort=sort,
-    )
-
-
 @_inherit_docstrings(pandas.pivot, apilink="pandas.pivot")
 @enable_logging
 def pivot(data, index=None, columns=None, values=None):  # noqa: PR01, RT01, D200
@@ -795,3 +759,18 @@ def _determine_name(objs: Iterable[BaseQueryCompiler], axis: Union[int, str]):
         return list(names[0]) if is_list_like(names[0]) else [names[0]]
     else:
         return None
+
+
+@_inherit_docstrings(pandas.to_datetime, apilink="pandas.to_timedelta")
+@enable_logging
+def to_timedelta(arg, unit=None, errors="raise"):  # noqa: PR01, RT01, D200
+    """
+    Convert argument to timedelta.
+
+    Accepts str, timedelta, list-like or Series for arg parameter.
+    Returns a Series if and only if arg is provided as a Series.
+    """
+    if isinstance(arg, Series):
+        query_compiler = arg._query_compiler.to_timedelta(unit=unit, errors=errors)
+        return Series(query_compiler=query_compiler)
+    return pandas.to_timedelta(arg, unit=unit, errors=errors)

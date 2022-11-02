@@ -15,10 +15,16 @@ import pytest
 import numpy as np
 import pandas
 import matplotlib
-import modin.pandas as pd
-from modin.utils import to_pandas
 from numpy.testing import assert_array_equal
 import io
+import warnings
+
+from modin._compat import PandasCompatVersion
+import modin.pandas as pd
+from modin.utils import (
+    to_pandas,
+    get_current_execution,
+)
 
 from modin.pandas.test.utils import (
     df_equals,
@@ -64,14 +70,25 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
         ("from_dict", lambda df: {"data": None}),
         ("from_records", lambda df: {"data": to_pandas(df)}),
         ("hist", lambda df: {"column": "int_col"}),
-        ("infer_objects", None),
         ("interpolate", None),
         ("lookup", lambda df: {"row_labels": [0], "col_labels": ["int_col"]}),
         ("mask", lambda df: {"cond": df != 0}),
         ("pct_change", None),
         ("to_xarray", None),
-        ("flags", None),
-        ("set_flags", lambda df: {"allows_duplicate_labels": False}),
+        pytest.param(
+            *("flags", None),
+            marks=pytest.mark.skipif(
+                condition=PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+                reason="pandas 1.1 does not support .flags",
+            ),
+        ),
+        pytest.param(
+            *("set_flags", lambda df: {"allows_duplicate_labels": False}),
+            marks=pytest.mark.skipif(
+                condition=PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+                reason="pandas 1.1 does not support .set_flags()",
+            ),
+        ),
     ],
 )
 def test_ops_defaulting_to_pandas(op, make_args):
@@ -784,7 +801,13 @@ def test_resample_specific(rule, closed, label, on, level):
         ("volume",),
         pandas.Series(["volume"]),
         pandas.Index(["volume"]),
-        ["volume", "volume", "volume"],
+        pytest.param(
+            ["volume", "volume", "volume"],
+            marks=pytest.mark.skipif(
+                condition=PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+                reason="pandas 1.1 does not support duplicate columns in resample",
+            ),
+        ),
         ["volume", "price", "date"],
     ],
     ids=[
@@ -1014,8 +1037,8 @@ def test_truncate(data):
     after = modin_df.columns[-3]
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
@@ -1025,8 +1048,8 @@ def test_truncate(data):
     after = modin_df.columns[3]
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
@@ -1037,8 +1060,8 @@ def test_truncate(data):
     df_equals(modin_df.truncate(before, after), pandas_df.truncate(before, after))
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
@@ -1171,3 +1194,25 @@ def test_hasattr_sparse(is_sparse_data):
         else create_test_dfs(test_data["float_nan_data"])
     )
     eval_general(modin_df, pandas_df, lambda df: hasattr(df, "sparse"))
+
+
+def test_setattr_axes():
+    # Test that setting .index or .columns does not warn
+    df = pd.DataFrame([[1, 2], [3, 4]])
+    with warnings.catch_warnings():
+        if get_current_execution() != "BaseOnPython":
+            # In BaseOnPython, setting columns raises a warning because get_axis
+            #  defaults to pandas.
+            warnings.simplefilter("error")
+        df.index = ["foo", "bar"]
+        df.columns = [9, 10]
+
+    # Check that ensure_index was called
+    pandas.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
+    pandas.testing.assert_index_equal(df.columns, pandas.Index([9, 10]))
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_attrs(data):
+    modin_df, pandas_df = create_test_dfs(data)
+    eval_general(modin_df, pandas_df, lambda df: df.attrs)

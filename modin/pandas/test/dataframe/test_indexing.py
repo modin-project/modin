@@ -15,6 +15,7 @@ import pytest
 import numpy as np
 import pandas
 from pandas.testing import assert_index_equal
+from pandas._testing import ensure_clean
 import matplotlib
 import modin.pandas as pd
 import sys
@@ -562,6 +563,42 @@ def test_loc_multi_index():
     df_equals(modin_df.loc[modin_df.index[:7]], pandas_df.loc[pandas_df.index[:7]])
 
 
+def test_loc_multi_index_with_tuples():
+    arrays = [
+        ["bar", "bar", "baz", "baz"],
+        ["one", "two", "one", "two"],
+    ]
+    nrows = 5
+    columns = pd.MultiIndex.from_tuples(zip(*arrays), names=["a", "b"])
+    data = np.arange(0, nrows * len(columns)).reshape(nrows, len(columns))
+    modin_df, pandas_df = create_test_dfs(data, columns=columns)
+    eval_general(modin_df, pandas_df, lambda df: df.loc[:, ("bar", "two")])
+
+
+def test_loc_multi_index_duplicate_keys():
+    modin_df, pandas_df = create_test_dfs([1, 2], index=[["a", "a"], ["b", "b"]])
+    eval_general(modin_df, pandas_df, lambda df: df.loc[("a", "b"), 0])
+    eval_general(modin_df, pandas_df, lambda df: df.loc[("a", "b"), :])
+
+
+def test_loc_multi_index_both_axes():
+    multi_index = pd.MultiIndex.from_tuples(
+        [("r0", "rA"), ("r1", "rB")], names=["Courses", "Fee"]
+    )
+    cols = pd.MultiIndex.from_tuples(
+        [
+            ("Gasoline", "Toyota"),
+            ("Gasoline", "Ford"),
+            ("Electric", "Tesla"),
+            ("Electric", "Nio"),
+        ]
+    )
+    data = [[100, 300, 900, 400], [200, 500, 300, 600]]
+    modin_df, pandas_df = create_test_dfs(data, columns=cols, index=multi_index)
+    eval_general(modin_df, pandas_df, lambda df: df.loc[("r0", "rA"), :])
+    eval_general(modin_df, pandas_df, lambda df: df.loc[:, ("Gasoline", "Toyota")])
+
+
 def test_loc_empty():
     pandas_df = pandas.DataFrame(index=range(5))
     modin_df = pd.DataFrame(index=range(5))
@@ -570,6 +607,18 @@ def test_loc_empty():
     pandas_df.loc[1] = 3
     modin_df.loc[1] = 3
     df_equals(pandas_df, modin_df)
+
+
+@pytest.mark.parametrize("locator_name", ["iloc", "loc"])
+def test_loc_iloc_2064(locator_name):
+    modin_df, pandas_df = create_test_dfs(columns=["col1", "col2"])
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: getattr(df, locator_name).__setitem__([1], [11, 22]),
+        __inplace__=True,
+    )
 
 
 @pytest.mark.parametrize("index", [["row1", "row2", "row3"]])
@@ -582,6 +631,42 @@ def test_loc_assignment(index, columns):
             md_df.loc[ind][col] = value_to_assign
             pd_df.loc[ind][col] = value_to_assign
     df_equals(md_df, pd_df)
+
+
+@pytest.mark.parametrize("left, right", [(2, 1), (6, 1), (lambda df: 70, 1), (90, 70)])
+def test_loc_insert_row(left, right):
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/3764
+    pandas_df = pandas.DataFrame([[1, 2, 3], [4, 5, 6]])
+    modin_df = pd.DataFrame([[1, 2, 3], [4, 5, 6]])
+
+    def _test_loc_rows(df):
+        df.loc[left] = df.loc[right]
+        return df
+
+    eval_general(modin_df, pandas_df, _test_loc_rows)
+
+
+@pytest.mark.parametrize(
+    "columns", [10, (100, 102), (2, 6), [10, 11, 12], "a", ["b", "c", "d"]]
+)
+def test_loc_insert_col(columns):
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/3764
+    pandas_df = pandas.DataFrame([[1, 2, 3], [4, 5, 6]])
+    modin_df = pd.DataFrame([[1, 2, 3], [4, 5, 6]])
+
+    if isinstance(columns, tuple) and len(columns) == 2:
+
+        def _test_loc_cols(df):
+            df.loc[:, columns[0] : columns[1]] = 1
+
+    else:
+
+        def _test_loc_cols(df):
+            df.loc[:, columns] = 1
+
+    eval_general(modin_df, pandas_df, _test_loc_cols)
 
 
 @pytest.fixture
@@ -1554,6 +1639,14 @@ def test_sample(data, axis):
     df_equals(modin_result, pandas_result)
 
 
+def test_empty_sample():
+    modin_df, pandas_df = create_test_dfs([1])
+    # issue #4983
+    # If we have a fraction of the dataset that results in n=0, we should
+    # make sure that we don't pass in both n and frac to sample internally.
+    eval_general(modin_df, pandas_df, lambda df: df.sample(frac=0.12))
+
+
 def test_select_dtypes():
     frame_data = {
         "test1": list("abc"),
@@ -1846,13 +1939,13 @@ def test___setitem__partitions_aligning():
 
 
 def test___setitem__with_mismatched_partitions():
-    fname = "200kx99.csv"
-    np.savetxt(fname, np.random.randint(0, 100, size=(200_000, 99)), delimiter=",")
-    modin_df = pd.read_csv(fname)
-    pandas_df = pandas.read_csv(fname)
-    modin_df["new"] = pd.Series(list(range(len(modin_df))))
-    pandas_df["new"] = pandas.Series(list(range(len(pandas_df))))
-    df_equals(modin_df, pandas_df)
+    with ensure_clean(".csv") as fname:
+        np.savetxt(fname, np.random.randint(0, 100, size=(200_000, 99)), delimiter=",")
+        modin_df = pd.read_csv(fname)
+        pandas_df = pandas.read_csv(fname)
+        modin_df["new"] = pd.Series(list(range(len(modin_df))))
+        pandas_df["new"] = pandas.Series(list(range(len(pandas_df))))
+        df_equals(modin_df, pandas_df)
 
 
 def test___setitem__mask():
@@ -1943,6 +2036,104 @@ def test___setitem__unhashable_list():
     df_equals(modin_df, pandas_df)
 
 
+def test_setitem_unhashable_key():
+    source_modin_df, source_pandas_df = create_test_dfs(test_data["float_nan_data"])
+    row_count = source_modin_df.shape[0]
+
+    def _make_copy(df1, df2):
+        return df1.copy(deep=True), df2.copy(deep=True)
+
+    for key in (["col1", "col2"], ["new_col1", "new_col2"]):
+        # 1d list case
+        value = [1, 2]
+        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
+        eval_setitem(modin_df, pandas_df, value, key)
+
+        # 2d list case
+        value = [[1, 2]] * row_count
+        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
+        eval_setitem(modin_df, pandas_df, value, key)
+
+        # pandas DataFrame case
+        df_value = pandas.DataFrame(value, columns=["value_col1", "value_col2"])
+        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
+        eval_setitem(modin_df, pandas_df, df_value, key)
+
+        # numpy array case
+        value = df_value.to_numpy()
+        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
+        eval_setitem(modin_df, pandas_df, value, key)
+
+        # pandas Series case
+        value = df_value["value_col1"]
+        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
+        eval_setitem(modin_df, pandas_df, value, key[:1])
+
+        # pandas Index case
+        value = df_value.index
+        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
+        eval_setitem(modin_df, pandas_df, value, key[:1])
+
+        # scalar case
+        value = 3
+        modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
+        eval_setitem(modin_df, pandas_df, value, key)
+
+        # test failed case: ValueError('Columns must be same length as key')
+        eval_setitem(modin_df, pandas_df, df_value[["value_col1"]], key)
+
+
+def test_setitem_2d_insertion():
+    def build_value_picker(modin_value, pandas_value):
+        """Build a function that returns either Modin or pandas DataFrame depending on the passed frame."""
+        return (
+            lambda source_df, *args, **kwargs: modin_value
+            if isinstance(source_df, (pd.DataFrame, pd.Series))
+            else pandas_value
+        )
+
+    modin_df, pandas_df = create_test_dfs(test_data["int_data"])
+
+    # Easy case - key and value.columns are equal
+    modin_value, pandas_value = create_test_dfs(
+        {"new_value1": np.arange(len(modin_df)), "new_value2": np.arange(len(modin_df))}
+    )
+    eval_setitem(
+        modin_df,
+        pandas_df,
+        build_value_picker(modin_value, pandas_value),
+        col=["new_value1", "new_value2"],
+    )
+
+    # Key and value.columns have equal values but in different order
+    new_columns = ["new_value3", "new_value4"]
+    modin_value.columns, pandas_value.columns = new_columns, new_columns
+    eval_setitem(
+        modin_df,
+        pandas_df,
+        build_value_picker(modin_value, pandas_value),
+        col=["new_value4", "new_value3"],
+    )
+
+    # Key and value.columns have different values
+    new_columns = ["new_value5", "new_value6"]
+    modin_value.columns, pandas_value.columns = new_columns, new_columns
+    eval_setitem(
+        modin_df,
+        pandas_df,
+        build_value_picker(modin_value, pandas_value),
+        col=["__new_value5", "__new_value6"],
+    )
+
+    # Key and value.columns have different lengths, testing that both raise the same exception
+    eval_setitem(
+        modin_df,
+        pandas_df,
+        build_value_picker(modin_value.iloc[:, [0]], pandas_value.iloc[:, [0]]),
+        col=["new_value7", "new_value8"],
+    )
+
+
 def test___setitem__single_item_in_series():
     # Test assigning a single item in a Series for issue
     # https://github.com/modin-project/modin/issues/3860
@@ -2015,3 +2206,28 @@ def test_multiindex_from_frame(data, sortorder):
             return pd.MultiIndex.from_frame(df, sortorder)
 
     eval_general(modin_df, pandas_df, call_from_frame, comparator=assert_index_equal)
+
+
+def test__getitem_bool_single_row_dataframe():
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/4845
+    eval_general(pd, pandas, lambda lib: lib.DataFrame([1])[lib.Series([True])])
+
+
+# This is a very subtle bug that comes from:
+# https://github.com/modin-project/modin/issues/4945
+def test_lazy_eval_index():
+    modin_df, pandas_df = create_test_dfs({"col0": [0, 1]})
+
+    def func(df):
+        df_copy = df[df["col0"] < 6].copy()
+        # The problem here is that the index is not copied over so it needs
+        # to get recomputed at some point. Our implementation of __setitem__
+        # requires us to build a mask and insert the value from the right
+        # handside into the new DataFrame. However, it's possible that we
+        # won't have any new partitions, so we will end up computing an empty
+        # index.
+        df_copy["col0"] = df_copy["col0"].apply(lambda x: x + 1)
+        return df_copy
+
+    eval_general(modin_df, pandas_df, func)

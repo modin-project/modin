@@ -19,8 +19,8 @@
 # define `MODIN_ASV_USE_IMPL` env var to choose library for using in performance
 # measurements
 
-import modin.pandas as pd
 import numpy as np
+import pandas._testing as tm
 
 from .utils import (
     generate_dataframe,
@@ -30,7 +30,6 @@ from .utils import (
     random_string,
     random_columns,
     random_booleans,
-    ASV_USE_IMPL,
     GROUPBY_NGROUPS,
     IMPL,
     execute,
@@ -44,7 +43,6 @@ class BaseTimeGroupBy:
     def setup(self, shape, ngroups=5, groupby_ncols=1):
         ngroups = translator_groupby_ngroups(ngroups, shape)
         self.df, self.groupby_columns = generate_dataframe(
-            ASV_USE_IMPL,
             "int",
             *shape,
             RAND_LOW,
@@ -122,16 +120,56 @@ class TimeJoin:
     ]
 
     def setup(self, shapes, how, sort):
-        self.df1 = generate_dataframe(
-            ASV_USE_IMPL, "int", *shapes[0], RAND_LOW, RAND_HIGH
-        )
-        self.df2 = generate_dataframe(
-            ASV_USE_IMPL, "int", *shapes[1], RAND_LOW, RAND_HIGH
-        )
+        self.df1 = generate_dataframe("int", *shapes[0], RAND_LOW, RAND_HIGH)
+        self.df2 = generate_dataframe("int", *shapes[1], RAND_LOW, RAND_HIGH)
 
     def time_join(self, shapes, how, sort):
         # join dataframes on index to get the predictable shape
         execute(self.df1.join(self.df2, how=how, lsuffix="left_", sort=sort))
+
+
+class TimeJoinStringIndex:
+    param_names = ["shapes", "sort"]
+    params = [
+        get_benchmark_shapes("TimeJoinStringIndex"),
+        [True, False],
+    ]
+
+    def setup(self, shapes, sort):
+        assert shapes[0] % 100 == 0, "implementation restriction"
+        level1 = tm.makeStringIndex(10).values
+        level2 = tm.makeStringIndex(shapes[0] // 100).values
+        codes1 = np.arange(10).repeat(shapes[0] // 100)
+        codes2 = np.tile(np.arange(shapes[0] // 100), 10)
+        index2 = IMPL.MultiIndex(levels=[level1, level2], codes=[codes1, codes2])
+        self.df_multi = IMPL.DataFrame(
+            np.random.randn(len(index2), 4), index=index2, columns=["A", "B", "C", "D"]
+        )
+
+        self.key1 = np.tile(level1.take(codes1), 10)
+        self.key2 = np.tile(level2.take(codes2), 10)
+        self.df = generate_dataframe("int", *shapes, RAND_LOW, RAND_HIGH)
+        # just to keep source shape
+        self.df = self.df.drop(columns=self.df.columns[-2:])
+        self.df["key1"] = self.key1
+        self.df["key2"] = self.key2
+        execute(self.df)
+
+        self.df_key1 = IMPL.DataFrame(
+            np.random.randn(len(level1), 4), index=level1, columns=["A", "B", "C", "D"]
+        )
+        self.df_key2 = IMPL.DataFrame(
+            np.random.randn(len(level2), 4), index=level2, columns=["A", "B", "C", "D"]
+        )
+
+    def time_join_dataframe_index_multi(self, shapes, sort):
+        execute(self.df.join(self.df_multi, on=["key1", "key2"], sort=sort))
+
+    def time_join_dataframe_index_single_key_bigger(self, shapes, sort):
+        execute(self.df.join(self.df_key2, on="key2", sort=sort))
+
+    def time_join_dataframe_index_single_key_small(self, shapes, sort):
+        execute(self.df.join(self.df_key1, on="key1", sort=sort))
 
 
 class TimeMerge:
@@ -139,16 +177,12 @@ class TimeMerge:
     params = [
         get_benchmark_shapes("TimeMerge"),
         ["left", "inner"],
-        [False],
+        [True, False],
     ]
 
     def setup(self, shapes, how, sort):
-        self.df1 = generate_dataframe(
-            ASV_USE_IMPL, "int", *shapes[0], RAND_LOW, RAND_HIGH
-        )
-        self.df2 = generate_dataframe(
-            ASV_USE_IMPL, "int", *shapes[1], RAND_LOW, RAND_HIGH
-        )
+        self.df1 = generate_dataframe("int", *shapes[0], RAND_LOW, RAND_HIGH)
+        self.df2 = generate_dataframe("int", *shapes[1], RAND_LOW, RAND_HIGH)
 
     def time_merge(self, shapes, how, sort):
         # merge dataframes by index to get the predictable shape
@@ -158,25 +192,74 @@ class TimeMerge:
             )
         )
 
+    def time_merge_default(self, shapes, how, sort):
+        execute(IMPL.merge(self.df1, self.df2, how=how, sort=sort))
 
-class TimeConcat:
-    param_names = ["shapes", "how", "axis"]
+    def time_merge_dataframe_empty_right(self, shapes, how, sort):
+        # Getting an empty dataframe using `iloc` should be very fast,
+        # so the impact on the time of the merge operation should be negligible.
+        execute(IMPL.merge(self.df1, self.df2.iloc[:0], how=how, sort=sort))
+
+    def time_merge_dataframe_empty_left(self, shapes, how, sort):
+        # Getting an empty dataframe using `iloc` should be very fast,
+        # so the impact on the time of the merge operation should be negligible.
+        execute(IMPL.merge(self.df1.iloc[:0], self.df2, how=how, sort=sort))
+
+
+class TimeMergeCategoricals:
+    param_names = ["shapes", "data_type"]
     params = [
-        get_benchmark_shapes("TimeConcat"),
-        ["inner"],
-        [0, 1],
+        get_benchmark_shapes("MergeCategoricals"),
+        ["object", "category"],
     ]
 
-    def setup(self, shapes, how, axis):
-        self.df1 = generate_dataframe(
-            ASV_USE_IMPL, "int", *shapes[0], RAND_LOW, RAND_HIGH
-        )
-        self.df2 = generate_dataframe(
-            ASV_USE_IMPL, "int", *shapes[1], RAND_LOW, RAND_HIGH
+    def setup(self, shapes, data_type):
+        assert len(shapes) == 2
+        assert shapes[1] == 2
+        size = (shapes[0],)
+        self.left = IMPL.DataFrame(
+            {
+                "X": np.random.choice(range(0, 10), size=size),
+                "Y": np.random.choice(["one", "two", "three"], size=size),
+            }
         )
 
-    def time_concat(self, shapes, how, axis):
-        execute(IMPL[ASV_USE_IMPL].concat([self.df1, self.df2], axis=axis, join=how))
+        self.right = IMPL.DataFrame(
+            {
+                "X": np.random.choice(range(0, 10), size=size),
+                "Z": np.random.choice(["jjj", "kkk", "sss"], size=size),
+            }
+        )
+
+        if data_type == "category":
+            self.left = self.left.assign(Y=self.left["Y"].astype("category"))
+            execute(self.left)
+            self.right = self.right.assign(Z=self.right["Z"].astype("category"))
+            execute(self.right)
+
+    def time_merge_categoricals(self, shapes, data_type):
+        execute(IMPL.merge(self.left, self.right, on="X"))
+
+
+class TimeConcat:
+    param_names = ["shapes", "how", "axis", "ignore_index"]
+    params = [
+        get_benchmark_shapes("TimeConcat"),
+        ["inner", "outer"],
+        [0, 1],
+        [True, False],
+    ]
+
+    def setup(self, shapes, how, axis, ignore_index):
+        self.df1 = generate_dataframe("int", *shapes[0], RAND_LOW, RAND_HIGH)
+        self.df2 = generate_dataframe("int", *shapes[1], RAND_LOW, RAND_HIGH)
+
+    def time_concat(self, shapes, how, axis, ignore_index):
+        execute(
+            IMPL.concat(
+                [self.df1, self.df2], axis=axis, join=how, ignore_index=ignore_index
+            )
+        )
 
 
 class TimeAppend:
@@ -187,12 +270,8 @@ class TimeAppend:
     ]
 
     def setup(self, shapes, sort):
-        self.df1 = generate_dataframe(
-            ASV_USE_IMPL, "int", *shapes[0], RAND_LOW, RAND_HIGH
-        )
-        self.df2 = generate_dataframe(
-            ASV_USE_IMPL, "int", *shapes[1], RAND_LOW, RAND_HIGH
-        )
+        self.df1 = generate_dataframe("int", *shapes[0], RAND_LOW, RAND_HIGH)
+        self.df2 = generate_dataframe("int", *shapes[1], RAND_LOW, RAND_HIGH)
         if sort:
             self.df1.columns = self.df1.columns[::-1]
 
@@ -209,16 +288,32 @@ class TimeBinaryOp:
     ]
 
     def setup(self, shapes, binary_op, axis):
-        self.df1 = generate_dataframe(
-            ASV_USE_IMPL, "int", *shapes[0], RAND_LOW, RAND_HIGH
-        )
-        self.df2 = generate_dataframe(
-            ASV_USE_IMPL, "int", *shapes[1], RAND_LOW, RAND_HIGH
-        )
+        self.df1 = generate_dataframe("int", *shapes[0], RAND_LOW, RAND_HIGH)
+        self.df2 = generate_dataframe("int", *shapes[1], RAND_LOW, RAND_HIGH)
         self.op = getattr(self.df1, binary_op)
 
     def time_binary_op(self, shapes, binary_op, axis):
         execute(self.op(self.df2, axis=axis))
+
+
+class TimeBinaryOpSeries:
+    param_names = ["shapes", "binary_op"]
+    params = [
+        get_benchmark_shapes("TimeBinaryOpSeries"),
+        ["mul"],
+    ]
+
+    def setup(self, shapes, binary_op):
+        df1 = generate_dataframe("int", *shapes[0], RAND_LOW, RAND_HIGH)
+        df2 = generate_dataframe("int", *shapes[1], RAND_LOW, RAND_HIGH)
+        self.series1 = df1[df1.columns[0]]
+        self.series2 = df2[df2.columns[0]]
+        self.op = getattr(self.series1, binary_op)
+        execute(self.series1)
+        execute(self.series2)
+
+    def time_binary_op_series(self, shapes, binary_op):
+        execute(self.op(self.series2))
 
 
 class BaseTimeSetItem:
@@ -242,9 +337,7 @@ class BaseTimeSetItem:
         )
 
     def setup(self, shape, item_length, loc, is_equal_indices):
-        self.df = generate_dataframe(
-            ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH
-        ).copy()
+        self.df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH).copy()
         self.loc, self.iloc = self.get_loc(
             self.df, loc, item_length=item_length, axis=1
         )
@@ -297,7 +390,7 @@ class TimeArithmetic:
     ]
 
     def setup(self, shape, axis):
-        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        self.df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
 
     def time_sum(self, shape, axis):
         execute(self.df.sum(axis=axis))
@@ -351,7 +444,7 @@ class TimeSortValues:
     ]
 
     def setup(self, shape, columns_number, ascending_list):
-        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        self.df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
         self.columns = random_columns(self.df.columns, columns_number)
         self.ascending = (
             random_booleans(columns_number)
@@ -372,7 +465,7 @@ class TimeDrop:
     ]
 
     def setup(self, shape, axis, drop_ncols):
-        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        self.df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
         drop_count = (
             int(len(self.df.axes[axis]) * drop_ncols)
             if isinstance(drop_ncols, float)
@@ -392,7 +485,7 @@ class TimeHead:
     ]
 
     def setup(self, shape, head_count):
-        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        self.df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
         self.head_count = (
             int(head_count * len(self.df.index))
             if isinstance(head_count, float)
@@ -411,7 +504,7 @@ class TimeTail:
     ]
 
     def setup(self, shape, tail_count):
-        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        self.df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
         self.tail_count = (
             int(tail_count * len(self.df.index))
             if isinstance(tail_count, float)
@@ -430,7 +523,7 @@ class TimeExplode:
 
     def setup(self, shape):
         self.df = generate_dataframe(
-            ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH, gen_unique_key=True
+            "int", *shape, RAND_LOW, RAND_HIGH, gen_unique_key=True
         )
 
     def time_explode(self, shape):
@@ -446,16 +539,15 @@ class TimeFillnaSeries:
     ]
 
     def setup(self, value_type, shape, limit):
-        pd = IMPL[ASV_USE_IMPL]
-        self.series = gen_nan_data(ASV_USE_IMPL, *shape)
+        self.series = gen_nan_data(*shape)
 
         if value_type == "scalar":
             self.value = 18.19
         elif value_type == "dict":
             self.value = {k: k * 1.23 for k in range(shape[0])}
         elif value_type == "Series":
-            self.value = pd.Series(
-                [k * 1.23 for k in range(shape[0])], index=pd.RangeIndex(shape[0])
+            self.value = IMPL.Series(
+                [k * 1.23 for k in range(shape[0])], index=IMPL.RangeIndex(shape[0])
             )
         else:
             assert False
@@ -479,8 +571,7 @@ class TimeFillnaDataFrame:
     ]
 
     def setup(self, value_type, shape, limit):
-        pd = IMPL[ASV_USE_IMPL]
-        self.df = gen_nan_data(ASV_USE_IMPL, *shape)
+        self.df = gen_nan_data(*shape)
         columns = self.df.columns
 
         if value_type == "scalar":
@@ -488,16 +579,16 @@ class TimeFillnaDataFrame:
         elif value_type == "dict":
             self.value = {k: i * 1.23 for i, k in enumerate(columns)}
         elif value_type == "Series":
-            self.value = pd.Series(
+            self.value = IMPL.Series(
                 [i * 1.23 for i in range(len(columns))], index=columns
             )
         elif value_type == "DataFrame":
-            self.value = pd.DataFrame(
+            self.value = IMPL.DataFrame(
                 {
                     k: [i + j * 1.23 for j in range(shape[0])]
                     for i, k in enumerate(columns)
                 },
-                index=pd.RangeIndex(shape[0]),
+                index=IMPL.RangeIndex(shape[0]),
                 columns=columns,
             )
         else:
@@ -517,7 +608,6 @@ class BaseTimeValueCounts:
     def setup(self, shape, ngroups=5, subset=1):
         ngroups = translator_groupby_ngroups(ngroups, shape)
         self.df, self.subset = generate_dataframe(
-            ASV_USE_IMPL,
             "int",
             *shape,
             RAND_LOW,
@@ -585,11 +675,11 @@ class TimeIndexing:
     }
 
     def setup(self, shape, indexer_type):
-        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        self.df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
         trigger_import(self.df)
 
         self.indexer = self.indexer_getters[indexer_type](self.df)
-        if isinstance(self.indexer, (pd.Series, pd.DataFrame)):
+        if isinstance(self.indexer, (IMPL.Series, IMPL.DataFrame)):
             # HACK: Triggering `dtypes` meta-data computation in advance,
             # so it won't affect the `loc/iloc` time:
             self.indexer.dtypes
@@ -611,7 +701,7 @@ class TimeIndexingColumns:
     params = [get_benchmark_shapes("TimeIndexing")]
 
     def setup(self, shape):
-        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        self.df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
         trigger_import(self.df)
         self.numeric_indexer = [0, 1]
         self.labels_indexer = self.df.columns[self.numeric_indexer].tolist()
@@ -631,10 +721,12 @@ class TimeMultiIndexing:
     params = [get_benchmark_shapes("TimeMultiIndexing")]
 
     def setup(self, shape):
-        df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
 
-        index = pd.MultiIndex.from_product([df.index[: shape[0] // 2], ["bar", "foo"]])
-        columns = pd.MultiIndex.from_product(
+        index = IMPL.MultiIndex.from_product(
+            [df.index[: shape[0] // 2], ["bar", "foo"]]
+        )
+        columns = IMPL.MultiIndex.from_product(
             [df.columns[: shape[1] // 2], ["buz", "fuz"]]
         )
 
@@ -661,10 +753,10 @@ class TimeResetIndex:
     ]
 
     def setup(self, shape, drop, level):
-        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        self.df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
 
         if level:
-            index = pd.MultiIndex.from_product(
+            index = IMPL.MultiIndex.from_product(
                 [self.df.index[: shape[0] // 2], ["bar", "foo"]],
                 names=["level_1", "level_2"],
             )
@@ -683,7 +775,7 @@ class TimeAstype:
     ]
 
     def setup(self, shape, dtype, astype_ncolumns):
-        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        self.df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
         if astype_ncolumns == "all":
             self.astype_arg = dtype
         elif astype_ncolumns == "one":
@@ -702,7 +794,7 @@ class TimeDescribe:
     ]
 
     def setup(self, shape):
-        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        self.df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
 
     def time_describe(self, shape):
         execute(self.df.describe())
@@ -715,7 +807,7 @@ class TimeProperties:
     ]
 
     def setup(self, shape):
-        self.df = generate_dataframe(ASV_USE_IMPL, "int", *shape, RAND_LOW, RAND_HIGH)
+        self.df = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH)
 
     def time_shape(self, shape):
         return self.df.shape
@@ -725,3 +817,6 @@ class TimeProperties:
 
     def time_index(self, shape):
         return self.df.index
+
+
+from .utils import setup  # noqa: E402, F401

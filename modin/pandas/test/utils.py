@@ -55,9 +55,6 @@ NGROUPS = 10
 RAND_LOW = 0
 RAND_HIGH = 100
 
-# Directory for storing I/O operations test data
-IO_OPS_DATA_DIR = os.path.join(os.path.dirname(__file__), "io_tests_data")
-
 # Input data and functions for the tests
 # The test data that we will test our code against
 test_data = {
@@ -779,6 +776,7 @@ def eval_io(
     raising_exceptions=io_ops_bad_exc,
     check_kwargs_callable=True,
     modin_warning=None,
+    modin_warning_str_match=None,
     md_extra_kwargs=None,
     *args,
     **kwargs,
@@ -804,6 +802,8 @@ def eval_io(
         `check_exception_type` passed as `True`).
     modin_warning: obj
         Warning that should be raised by Modin.
+    modin_warning_str_match: str
+        If `modin_warning` is set, checks that the raised warning matches this string.
     md_extra_kwargs: dict
         Modin operation specific kwargs.
     """
@@ -828,8 +828,9 @@ def eval_io(
             **kwargs,
         )
 
+    warn_match = modin_warning_str_match if modin_warning is not None else None
     if modin_warning:
-        with pytest.warns(modin_warning):
+        with pytest.warns(modin_warning, match=warn_match):
             call_eval_general()
     else:
         call_eval_general()
@@ -974,7 +975,7 @@ def get_unique_filename(
     test_name: str = "test",
     kwargs: dict = {},
     extension: str = "csv",
-    data_dir: str = IO_OPS_DATA_DIR,
+    data_dir: str = "",
     suffix: str = "",
     debug_mode=False,
 ):

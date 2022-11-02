@@ -57,12 +57,14 @@ class ColumnStoreDispatcher(FileDispatcher):
         return np.array(
             [
                 cls.deploy(
-                    cls.parse,
+                    func=cls.parse,
+                    f_kwargs={
+                        "fname": fname,
+                        "columns": cols,
+                        "num_splits": NPartitions.get(),
+                        **kwargs,
+                    },
                     num_returns=NPartitions.get() + 2,
-                    fname=fname,
-                    columns=cols,
-                    num_splits=NPartitions.get(),
-                    **kwargs,
                 )
                 for cols in col_partitions
             ]
@@ -143,7 +145,7 @@ class ColumnStoreDispatcher(FileDispatcher):
     @classmethod
     def build_columns(cls, columns):
         """
-        Split columns into chunks, that should be read be workers.
+        Split columns into chunks that should be read by workers.
 
         Parameters
         ----------

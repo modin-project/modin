@@ -1,3 +1,6 @@
+# install current modin checkout to bring all required dependencies
+.[all]
+# now install some more optional dependencies
 colorama
 click
 flatbuffers
@@ -9,13 +12,9 @@ pyyaml
 recommonmark
 sphinx
 sphinx-click
-# Pin ray to < 1.13.0 to work around GH#4564
-# TODO(https://github.com/modin-project/modin/issues/4564): let ray go past 1.13.0.
-ray[default]>=1.4.0,<1.13.0
-# Following https://github.com/ray-project/ray/pull/25648, pin protobuf < 4,
-# because versions >= 4.0.0 are incompatible with ray<1.13.0.
-protobuf<4.0.0
-git+https://github.com/modin-project/modin.git@master#egg=modin[all]
+ray[default]>=1.4.0
+# Override to latest version of modin-spreadsheet
+git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
 sphinxcontrib_plantuml
 sphinx-issues
 xgboost

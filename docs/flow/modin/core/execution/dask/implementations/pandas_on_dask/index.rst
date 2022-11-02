@@ -34,7 +34,7 @@ specifically for the `PandasOnDask` execution.
 
 * :doc:`PandasOnDaskDataframe <dataframe>`
 * :doc:`PandasOnDaskDataframePartition <partitioning/partition>`
-* :doc:`PandasOnDaskDataframeAxisPartition <partitioning/axis_partition>`
+* :doc:`PandasOnDaskDataframeVirtualPartition <partitioning/virtual_partition>`
 * :doc:`PandasOnDaskDataframePartitionManager <partitioning/partition_manager>`
 
 .. toctree::
@@ -42,7 +42,7 @@ specifically for the `PandasOnDask` execution.
 
     dataframe
     partitioning/partition
-    partitioning/axis_partition
+    partitioning/virtual_partition
     partitioning/partition_manager
 
 

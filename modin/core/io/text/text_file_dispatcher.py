@@ -34,7 +34,7 @@ from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.utils import _inherit_docstrings
 from modin.core.io.text.utils import CustomNewlineIterator
 from modin.config import NPartitions
-from modin.error_message import ErrorMessage
+from modin._compat.core.base_io import _validate_usecols_arg
 
 ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
 IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
@@ -68,7 +68,12 @@ class TextFileDispatcher(FileDispatcher):
         use it without having to fall back to pandas and share file objects between
         workers. Given a filepath, return it immediately.
         """
-        if hasattr(filepath_or_buffer, "name"):
+        if (
+            hasattr(filepath_or_buffer, "name")
+            and hasattr(filepath_or_buffer, "seekable")
+            and filepath_or_buffer.seekable()
+            and filepath_or_buffer.tell() == 0
+        ):
             buffer_filepath = filepath_or_buffer.name
             if cls.file_exists(buffer_filepath):
                 warnings.warn(
@@ -603,9 +608,9 @@ class TextFileDispatcher(FileDispatcher):
         for idx, (start, end) in enumerate(splits):
             partition_kwargs.update({"start": start, "end": end})
             *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
-                cls.parse,
+                func=cls.parse,
+                f_kwargs=partition_kwargs,
                 num_returns=partition_kwargs.get("num_splits") + 2,
-                **partition_kwargs,
             )
         return partition_ids, index_ids, dtypes_ids
 
@@ -616,7 +621,7 @@ class TextFileDispatcher(FileDispatcher):
         read_kwargs: dict,
         skiprows_md: Union[Sequence, callable, int],
         header_size: int,
-    ) -> bool:
+    ) -> Tuple[bool, Optional[str]]:
         """
         Check support of only general parameters of `read_*` function.
 
@@ -635,18 +640,21 @@ class TextFileDispatcher(FileDispatcher):
         -------
         bool
             Whether passed parameters are supported or not.
+        Optional[str]
+            `None` if parameters are supported, otherwise an error
+            message describing why parameters are not supported.
         """
         skiprows = read_kwargs.get("skiprows")
         if isinstance(filepath_or_buffer, str):
             if not cls.file_exists(
                 filepath_or_buffer, read_kwargs.get("storage_options")
             ):
-                return False
+                return (False, cls._file_not_found_msg(filepath_or_buffer))
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
-            return False
+            return (False, cls.BUFFER_UNSUPPORTED_MSG)
 
         if read_kwargs["chunksize"] is not None:
-            return False
+            return (False, "`chunksize` parameter is not supported")
 
         skiprows_supported = True
         if is_list_like(skiprows_md) and skiprows_md[0] < header_size:
@@ -660,16 +668,16 @@ class TextFileDispatcher(FileDispatcher):
                 skiprows_supported = False
 
         if not skiprows_supported:
-            ErrorMessage.single_warning(
-                "Values of `header` and `skiprows` parameters have intersections. "
-                + "This case is unsupported by Modin, so pandas implementation will be used"
+            return (
+                False,
+                "Values of `header` and `skiprows` parameters have intersections; "
+                + "this case is unsupported by Modin",
             )
-            return False
 
-        return True
+        return (True, None)
 
     @classmethod
-    @_inherit_docstrings(pandas.io.parsers.base_parser.ParserBase._validate_usecols_arg)
+    @_inherit_docstrings(_validate_usecols_arg)
     def _validate_usecols_arg(cls, usecols):
         msg = (
             "'usecols' must either be list-like of all strings, all unicode, "
@@ -910,7 +918,7 @@ class TextFileDispatcher(FileDispatcher):
             nrows = kwargs.get("nrows", None)
             index_range = pandas.RangeIndex(len(new_query_compiler.index))
             if is_list_like(skiprows_md):
-                new_query_compiler = new_query_compiler.view(
+                new_query_compiler = new_query_compiler.take_2d(
                     index=index_range.delete(skiprows_md)
                 )
             elif callable(skiprows_md):
@@ -918,7 +926,7 @@ class TextFileDispatcher(FileDispatcher):
                 if not isinstance(skip_mask, np.ndarray):
                     skip_mask = skip_mask.to_numpy("bool")
                 view_idx = index_range[~skip_mask]
-                new_query_compiler = new_query_compiler.view(index=view_idx)
+                new_query_compiler = new_query_compiler.take_2d(index=view_idx)
             else:
                 raise TypeError(
                     f"Not acceptable type of `skiprows` parameter: {type(skiprows_md)}"
@@ -928,10 +936,10 @@ class TextFileDispatcher(FileDispatcher):
                 new_query_compiler = new_query_compiler.reset_index(drop=True)
 
             if nrows:
-                new_query_compiler = new_query_compiler.view(
+                new_query_compiler = new_query_compiler.take_2d(
                     pandas.RangeIndex(len(new_query_compiler.index))[:nrows]
                 )
-        if index_col is None:
+        if index_col is None or index_col is False:
             new_query_compiler._modin_frame.synchronize_labels(axis=0)
 
         return new_query_compiler
@@ -986,15 +994,18 @@ class TextFileDispatcher(FileDispatcher):
             skiprows_md, int
         )
 
-        use_modin_impl = cls.check_parameters_support(
-            filepath_or_buffer,
+        (use_modin_impl, fallback_reason) = cls.check_parameters_support(
+            filepath_or_buffer_md,
             kwargs,
             skiprows_md,
             header_size,
         )
         if not use_modin_impl:
             return cls.single_worker_read(
-                filepath_or_buffer, callback=cls.read_callback, **kwargs
+                filepath_or_buffer,
+                callback=cls.read_callback,
+                reason=fallback_reason,
+                **kwargs,
             )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE
@@ -1003,7 +1014,7 @@ class TextFileDispatcher(FileDispatcher):
         )
 
         pd_df_metadata = cls.read_callback(
-            filepath_or_buffer,
+            filepath_or_buffer_md,
             **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
         )
         column_names = pd_df_metadata.columns

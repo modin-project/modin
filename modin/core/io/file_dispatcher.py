@@ -20,13 +20,11 @@ for direct files processing.
 
 import fsspec
 import os
-import re
 from modin.config import StorageFormat
-from modin.utils import import_optional_dependency
 from modin.logging import ClassLogger
 import numpy as np
+from pandas.io.common import is_url, is_fsspec_url
 
-S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
 
 
@@ -122,6 +120,10 @@ class FileDispatcher(ClassLogger):
     classes).
     """
 
+    BUFFER_UNSUPPORTED_MSG = (
+        "Reading from buffers or other non-path-like objects is not supported"
+    )
+
     frame_cls = None
     frame_partition_cls = None
     query_compiler_cls = None
@@ -206,10 +208,10 @@ class FileDispatcher(ClassLogger):
 
         Notes
         -----
-        if `file_path` is an S3 bucket, parameter will be returned as is, otherwise
+        if `file_path` is a URL, parameter will be returned as is, otherwise
         absolute path will be returned.
         """
-        if isinstance(file_path, str) and S3_ADDRESS_REGEX.search(file_path):
+        if is_fsspec_url(file_path) or is_url(file_path):
             return file_path
         else:
             return os.path.abspath(file_path)
@@ -253,38 +255,42 @@ class FileDispatcher(ClassLogger):
         bool
             Whether file exists or not.
         """
-        if isinstance(file_path, str):
-            match = S3_ADDRESS_REGEX.search(file_path)
-            if match is not None:
-                if file_path[0] == "S":
-                    file_path = "{}{}".format("s", file_path[1:])
-                S3FS = import_optional_dependency(
-                    "s3fs", "Module s3fs is required to read S3FS files."
-                )
-                from botocore.exceptions import NoCredentialsError
+        if not is_fsspec_url(file_path) and not is_url(file_path):
+            return os.path.exists(file_path)
 
-                if storage_options is not None:
-                    new_storage_options = dict(storage_options)
-                    new_storage_options.pop("anon", None)
-                else:
-                    new_storage_options = {}
+        from botocore.exceptions import (
+            NoCredentialsError,
+            EndpointConnectionError,
+            ConnectTimeoutError,
+        )
 
-                s3fs = S3FS.S3FileSystem(anon=False, **new_storage_options)
-                exists = False
-                try:
-                    exists = s3fs.exists(file_path) or exists
-                except (NoCredentialsError, PermissionError):
-                    pass
-                s3fs = S3FS.S3FileSystem(anon=True, **new_storage_options)
-                return exists or s3fs.exists(file_path)
-        return os.path.exists(file_path)
+        if storage_options is not None:
+            new_storage_options = dict(storage_options)
+            new_storage_options.pop("anon", None)
+        else:
+            new_storage_options = {}
+
+        fs, _ = fsspec.core.url_to_fs(file_path, **new_storage_options)
+        exists = False
+        try:
+            exists = fs.exists(file_path)
+        except (
+            NoCredentialsError,
+            PermissionError,
+            EndpointConnectionError,
+            ConnectTimeoutError,
+        ):
+            fs, _ = fsspec.core.url_to_fs(file_path, anon=True, **new_storage_options)
+            exists = fs.exists(file_path)
+
+        return exists
 
     @classmethod
     def deploy(cls, func, *args, num_returns=1, **kwargs):  # noqa: PR01
         """
         Deploy remote task.
 
-        Should be implemented in the task class (for example in the `RayTask`).
+        Should be implemented in the task class (for example in the `RayWrapper`).
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
@@ -301,7 +307,7 @@ class FileDispatcher(ClassLogger):
         """
         Get results from worker.
 
-        Should be implemented in the task class (for example in the `RayTask`).
+        Should be implemented in the task class (for example in the `RayWrapper`).
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
@@ -338,3 +344,7 @@ class FileDispatcher(ClassLogger):
                 for i in range(len(partition_ids))
             ]
         )
+
+    @classmethod
+    def _file_not_found_msg(cls, filename: str):  # noqa: GL08
+        return f"No such file: '{filename}'"

@@ -11,15 +11,17 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+# We turn off mypy type checks in this file because it's not imported anywhere
+# type: ignore
+
 import os
 import sys
 import pytest
 import pandas
 from pandas.util._decorators import doc
 import numpy as np
-import pyarrow as pa
-import pyarrow.parquet as pq
 import shutil
+from typing import Optional
 
 assert (
     "modin.utils" not in sys.modules
@@ -61,12 +63,7 @@ from modin.pandas.test.utils import (  # noqa: E402
     make_default_file,
     teardown_test_files,
     NROWS,
-    IO_OPS_DATA_DIR,
 )
-
-# create test data dir if it is not exists yet
-if not os.path.exists(IO_OPS_DATA_DIR):
-    os.mkdir(IO_OPS_DATA_DIR)
 
 
 def pytest_addoption(parser):
@@ -86,6 +83,7 @@ def pytest_addoption(parser):
         "--extra-test-parameters",
         action="store_true",
         help="activate extra test parameter combinations",
+        default=False,
     )
 
 
@@ -129,6 +127,18 @@ def simulate_cloud(request):
     if mode == "off":
         yield
         return
+    if (
+        request.config.getoption("usepdb")
+        and request.config.getoption("capture") != "no"
+    ):
+        with request.config.pluginmanager.getplugin(
+            "capturemanager"
+        ).global_and_fixture_disabled():
+            sys.stderr.write(
+                "WARNING! You're running tests in simulate-cloud mode. "
+                + "To enable pdb in remote side please disable output capturing "
+                + "by passing '-s' or '--capture=no' to pytest command line\n"
+            )
 
     if mode not in ("normal", "experimental"):
         raise ValueError(f"Unsupported --simulate-cloud mode: {mode}")
@@ -300,10 +310,9 @@ def get_unique_base_execution():
 
 
 def pytest_configure(config):
-    if config.option.extra_test_parameters is not None:
-        import modin.pandas.test.utils as utils
+    import modin.pandas.test.utils as utils
 
-        utils.extra_test_parameters = config.option.extra_test_parameters
+    utils.extra_test_parameters = config.getoption("--extra-test-parameters")
 
     execution = config.option.execution
 
@@ -435,8 +444,8 @@ def make_parquet_file():
         nrows=NROWS,
         ncols=2,
         force=True,
-        directory=False,
         partitioned_columns=[],
+        row_group_size: Optional[int] = None,
     ):
         """Helper function to generate parquet files/directories.
 
@@ -445,25 +454,21 @@ def make_parquet_file():
             nrows: Number of rows for the dataframe.
             ncols: Number of cols for the dataframe.
             force: Create a new file/directory even if one already exists.
-            directory: Create a partitioned directory using pyarrow.
             partitioned_columns: Create a partitioned directory using pandas.
-            Will be ignored if directory=True.
+            row_group_size: Maximum size of each row group.
         """
         if force or not os.path.exists(filename):
             df = pandas.DataFrame(
                 {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
             )
-            if directory:
-                if os.path.exists(filename):
-                    shutil.rmtree(filename)
-                else:
-                    os.makedirs(filename)
-                table = pa.Table.from_pandas(df)
-                pq.write_to_dataset(table, root_path=filename)
-            elif len(partitioned_columns) > 0:
-                df.to_parquet(filename, partition_cols=partitioned_columns)
+            if len(partitioned_columns) > 0:
+                df.to_parquet(
+                    filename,
+                    partition_cols=partitioned_columns,
+                    row_group_size=row_group_size,
+                )
             else:
-                df.to_parquet(filename)
+                df.to_parquet(filename, row_group_size=row_group_size)
             filenames.append(filename)
 
     # Return function that generates parquet files
@@ -508,9 +513,6 @@ def make_sql_connection():
         return conn
 
     yield _sql_connection
-
-    # Teardown the fixture
-    teardown_test_files(filenames)
 
 
 @pytest.fixture(scope="class")

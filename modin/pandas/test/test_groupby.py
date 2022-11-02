@@ -15,12 +15,19 @@ import pytest
 import itertools
 import pandas
 import numpy as np
+
+from modin._compat import PandasCompatVersion
 from modin.config.envvars import Engine
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
 import modin.pandas as pd
-from modin.utils import try_cast_to_pandas, get_current_execution, hashable
+from modin.utils import (
+    try_cast_to_pandas,
+    get_current_execution,
+    hashable,
+    MODIN_UNNAMED_SERIES_LABEL,
+)
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.pandas.utils import from_pandas, is_scalar
 from .utils import (
@@ -49,6 +56,34 @@ NPartitions.put(4)
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
+if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+    # some aggregations mutate internal state of groupby object on older pandas,
+    # so perform evals for those on pandas_groupby copy to make sure other checks aren't affected
+    import pandas.core.groupby.generic
+    import copy
+    import functools
+
+    def _copy_pandas_groupby_if_needed(func):
+        @functools.wraps(func)
+        def wrapped(*args, **kwargs):
+            args = [
+                copy.deepcopy(arg)
+                if isinstance(arg, pandas.core.groupby.generic.DataFrameGroupBy)
+                else arg
+                for arg in args
+            ]
+            return func(*args, **kwargs)
+
+        return wrapped
+
+    eval_general = _copy_pandas_groupby_if_needed(eval_general)
+else:
+
+    def _copy_pandas_groupby_if_needed(func):
+        return func
+
+
+@_copy_pandas_groupby_if_needed
 def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):
     eval_general(
         modin_groupby, pandas_groupby, lambda grp: grp.indices, comparator=dict_equals
@@ -382,6 +417,12 @@ def test_simple_row_groupby(by, as_index, col1_category):
         # because of this bug: https://github.com/pandas-dev/pandas/issues/36698
         # Modin correctly processes the result, that's why `check_exception_type=None` in some cases
         is_pandas_bug_case = not as_index and col1_category and isinstance(func, dict)
+        if isinstance(func, dict) and func["col1"] == "count":
+            # older pandas will coerce missing counts to 0 while new ones return NaN-s
+            # just skip the check in compat mode
+            if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+                continue
+
         eval_general(
             modin_groupby,
             pandas_groupby,
@@ -869,8 +910,8 @@ def test_series_groupby(by, as_index_series_or_dataframe):
         pandas_groupby = pandas_series.groupby(by, as_index=as_index)
         if as_index_series_or_dataframe == 2:
             pandas_groupby = pandas_groupby["col1"]
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.groupby(by, as_index=as_index)
     else:
         modin_groupby = modin_series.groupby(by, as_index=as_index)
@@ -981,135 +1022,166 @@ def test_multi_column_groupby():
         modin_df.groupby(by, axis=1).count()
 
 
+@_copy_pandas_groupby_if_needed
 def eval_ngroups(modin_groupby, pandas_groupby):
     assert modin_groupby.ngroups == pandas_groupby.ngroups
 
 
+@_copy_pandas_groupby_if_needed
 def eval_skew(modin_groupby, pandas_groupby):
     modin_df_almost_equals_pandas(modin_groupby.skew(), pandas_groupby.skew())
 
 
+@_copy_pandas_groupby_if_needed
 def eval_mean(modin_groupby, pandas_groupby):
     modin_df_almost_equals_pandas(modin_groupby.mean(), pandas_groupby.mean())
 
 
+@_copy_pandas_groupby_if_needed
 def eval_any(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.any(), pandas_groupby.any())
 
 
+@_copy_pandas_groupby_if_needed
 def eval_min(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.min(), pandas_groupby.min())
 
 
+@_copy_pandas_groupby_if_needed
 def eval_ndim(modin_groupby, pandas_groupby):
     assert modin_groupby.ndim == pandas_groupby.ndim
 
 
+@_copy_pandas_groupby_if_needed
 def eval_cumsum(modin_groupby, pandas_groupby, axis=0):
     df_equals(modin_groupby.cumsum(axis=axis), pandas_groupby.cumsum(axis=axis))
 
 
+@_copy_pandas_groupby_if_needed
 def eval_cummax(modin_groupby, pandas_groupby, axis=0):
     df_equals(modin_groupby.cummax(axis=axis), pandas_groupby.cummax(axis=axis))
 
 
+@_copy_pandas_groupby_if_needed
 def eval_apply(modin_groupby, pandas_groupby, func):
     df_equals(modin_groupby.apply(func), pandas_groupby.apply(func))
 
 
+@_copy_pandas_groupby_if_needed
 def eval_dtypes(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.dtypes, pandas_groupby.dtypes)
 
 
+@_copy_pandas_groupby_if_needed
 def eval_cummin(modin_groupby, pandas_groupby, axis=0):
     df_equals(modin_groupby.cummin(axis=axis), pandas_groupby.cummin(axis=axis))
 
 
+@_copy_pandas_groupby_if_needed
 def eval_prod(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.prod(), pandas_groupby.prod())
 
 
+@_copy_pandas_groupby_if_needed
 def eval_std(modin_groupby, pandas_groupby):
     modin_df_almost_equals_pandas(modin_groupby.std(), pandas_groupby.std())
 
 
+@_copy_pandas_groupby_if_needed
 def eval_aggregate(modin_groupby, pandas_groupby, func):
     df_equals(modin_groupby.aggregate(func), pandas_groupby.aggregate(func))
 
 
+@_copy_pandas_groupby_if_needed
 def eval_agg(modin_groupby, pandas_groupby, func):
     df_equals(modin_groupby.agg(func), pandas_groupby.agg(func))
 
 
+@_copy_pandas_groupby_if_needed
 def eval_rank(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.rank(), pandas_groupby.rank())
 
 
+@_copy_pandas_groupby_if_needed
 def eval_max(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.max(), pandas_groupby.max())
 
 
+@_copy_pandas_groupby_if_needed
 def eval_var(modin_groupby, pandas_groupby):
     modin_df_almost_equals_pandas(modin_groupby.var(), pandas_groupby.var())
 
 
+@_copy_pandas_groupby_if_needed
 def eval_len(modin_groupby, pandas_groupby):
     assert len(modin_groupby) == len(pandas_groupby)
 
 
+@_copy_pandas_groupby_if_needed
 def eval_sum(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.sum(), pandas_groupby.sum())
 
 
+@_copy_pandas_groupby_if_needed
 def eval_ngroup(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.ngroup(), pandas_groupby.ngroup())
 
 
+@_copy_pandas_groupby_if_needed
 def eval_nunique(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.nunique(), pandas_groupby.nunique())
 
 
+@_copy_pandas_groupby_if_needed
 def eval_median(modin_groupby, pandas_groupby):
     modin_df_almost_equals_pandas(modin_groupby.median(), pandas_groupby.median())
 
 
+@_copy_pandas_groupby_if_needed
 def eval_cumprod(modin_groupby, pandas_groupby, axis=0):
     df_equals(modin_groupby.cumprod(), pandas_groupby.cumprod())
     df_equals(modin_groupby.cumprod(axis=axis), pandas_groupby.cumprod(axis=axis))
 
 
+@_copy_pandas_groupby_if_needed
 def eval_transform(modin_groupby, pandas_groupby, func):
     df_equals(modin_groupby.transform(func), pandas_groupby.transform(func))
 
 
+@_copy_pandas_groupby_if_needed
 def eval_fillna(modin_groupby, pandas_groupby):
     df_equals(
         modin_groupby.fillna(method="ffill"), pandas_groupby.fillna(method="ffill")
     )
 
 
+@_copy_pandas_groupby_if_needed
 def eval_count(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.count(), pandas_groupby.count())
 
 
+@_copy_pandas_groupby_if_needed
 def eval_size(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.size(), pandas_groupby.size())
 
 
+@_copy_pandas_groupby_if_needed
 def eval_pipe(modin_groupby, pandas_groupby, func):
     df_equals(modin_groupby.pipe(func), pandas_groupby.pipe(func))
 
 
+@_copy_pandas_groupby_if_needed
 def eval_quantile(modin_groupby, pandas_groupby):
     try:
         pandas_result = pandas_groupby.quantile(q=0.4)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_groupby.quantile(q=0.4)
     else:
         df_equals(modin_groupby.quantile(q=0.4), pandas_result)
 
 
+@_copy_pandas_groupby_if_needed
 def eval___getattr__(modin_groupby, pandas_groupby, item):
     eval_general(
         modin_groupby,
@@ -1125,6 +1197,7 @@ def eval___getattr__(modin_groupby, pandas_groupby, item):
     )
 
 
+@_copy_pandas_groupby_if_needed
 def eval___getitem__(md_grp, pd_grp, item):
     eval_general(
         md_grp,
@@ -1175,11 +1248,13 @@ def eval___getitem__(md_grp, pd_grp, item):
     )
 
 
+@_copy_pandas_groupby_if_needed
 def eval_groups(modin_groupby, pandas_groupby):
     for k, v in modin_groupby.groups.items():
         assert v.equals(pandas_groupby.groups[k])
 
 
+@_copy_pandas_groupby_if_needed
 def eval_shift(modin_groupby, pandas_groupby):
     eval_general(
         modin_groupby,
@@ -1305,11 +1380,26 @@ def test_groupby_multiindex(groupby_kwargs):
         pytest.param(
             {"by": ["item0", "one", "two"]},
             id="col_name+level_name",
+            marks=pytest.mark.skipif(
+                PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+                reason="Weird exception in Modin internals",
+            ),
         ),
-        pytest.param({"by": ["item0"]}, id="col_name"),
+        pytest.param(
+            {"by": ["item0"]},
+            id="col_name",
+            marks=pytest.mark.skipif(
+                PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+                reason="Weird exception in Modin internals",
+            ),
+        ),
         pytest.param(
             {"by": ["item0", "item1"]},
             id="col_name_multi_by",
+            marks=pytest.mark.skipif(
+                PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+                reason="Weird exception in Modin internals",
+            ),
         ),
     ],
 )
@@ -1364,7 +1454,8 @@ def test_groupby_with_kwarg_dropna(groupby_kwargs, dropna):
 
 @pytest.mark.parametrize("groupby_axis", [0, 1])
 @pytest.mark.parametrize("shift_axis", [0, 1])
-def test_shift_freq(groupby_axis, shift_axis):
+@pytest.mark.parametrize("groupby_sort", [True, False])
+def test_shift_freq(groupby_axis, shift_axis, groupby_sort):
     pandas_df = pandas.DataFrame(
         {
             "col1": [1, 0, 2, 3],
@@ -1384,9 +1475,14 @@ def test_shift_freq(groupby_axis, shift_axis):
         pandas_df.columns = modin_df.columns = new_index
         by = [[0, 1, 0, 2]]
 
+    if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36 and not groupby_sort:
+        # df.groupby(sort=False) yields different results compared to pandas 1.1
+        # we don't want to spend too much effort on compat mode, so just skip that piece of test
+        return
+
     for _by in by:
-        pandas_groupby = pandas_df.groupby(by=_by, axis=groupby_axis)
-        modin_groupby = modin_df.groupby(by=_by, axis=groupby_axis)
+        pandas_groupby = pandas_df.groupby(by=_by, axis=groupby_axis, sort=groupby_sort)
+        modin_groupby = modin_df.groupby(by=_by, axis=groupby_axis, sort=groupby_sort)
         eval_general(
             modin_groupby,
             pandas_groupby,
@@ -1522,7 +1618,13 @@ def test_agg_4604():
     "operation",
     [
         "quantile",
-        "mean",
+        pytest.param(
+            "mean",
+            marks=pytest.mark.skipif(
+                PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+                reason="df.groupby().agg('mean') fails on older pandas when there are no numeric columns",
+            ),
+        ),
         pytest.param(
             "sum", marks=pytest.mark.skip("See Modin issue #2255 for details")
         ),
@@ -1572,7 +1674,6 @@ def test_agg_exceptions(operation):
     }
 
     data = {**data1, **data2}
-
     eval_aggregation(*create_test_dfs(data), operation=operation)
 
 
@@ -1980,9 +2081,9 @@ def test_validate_by():
             df_equals(obj1, obj2)
 
     # This emulates situation when the Series's query compiler being passed as a 'by':
-    #   1. The Series at the QC level is represented as a single-column frame with the "__reduced__" columns.
+    #   1. The Series at the QC level is represented as a single-column frame with the `MODIN_UNNAMED_SERIES_LABEL` columns.
     #   2. The valid representation of such QC is an unnamed Series.
-    reduced_frame = pandas.DataFrame({"__reduced__": [1, 2, 3]})
+    reduced_frame = pandas.DataFrame({MODIN_UNNAMED_SERIES_LABEL: [1, 2, 3]})
     series_result = GroupBy.validate_by(reduced_frame)
     series_reference = [pandas.Series([1, 2, 3], name=None)]
     compare(series_reference, series_result)
@@ -1997,7 +2098,7 @@ def test_validate_by():
     compare(splited_df, splited_df_result)
 
     # This emulates situation of mixed by (two column names and an external Series):
-    by = ["col1", "col2", pandas.DataFrame({"__reduced__": [1, 2, 3]})]
+    by = ["col1", "col2", pandas.DataFrame({MODIN_UNNAMED_SERIES_LABEL: [1, 2, 3]})]
     result_by = GroupBy.validate_by(by)
     reference_by = ["col1", "col2", pandas.Series([1, 2, 3], name=None)]
     compare(reference_by, result_by)
@@ -2012,8 +2113,8 @@ def test_groupby_with_virtual_partitions():
     big_pandas_df = pandas.concat([pandas_df for _ in range(5)])
 
     # Check that the constructed Modin DataFrame has virtual partitions when
-    # using Ray, and doesn't when using another execution engines.
-    if Engine.get() == "Ray":
+    # using Ray or Dask, and doesn't when using another execution engines.
+    if Engine.get() in ["Ray", "Dask"]:
         assert issubclass(
             type(big_modin_df._query_compiler._modin_frame._partitions[0][0]),
             PandasDataframeAxisPartition,
@@ -2063,3 +2164,29 @@ def test_sum_with_level():
     }
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
     eval_general(modin_df, pandas_df, lambda df: df.set_index("C").groupby("C").sum())
+
+
+def test_groupby_with_frozenlist():
+    pandas_df = pandas.DataFrame(data={"a": [1, 2, 3], "b": [1, 2, 3], "c": [1, 2, 3]})
+    pandas_df = pandas_df.set_index(["a", "b"])
+    modin_df = from_pandas(pandas_df)
+    eval_general(modin_df, pandas_df, lambda df: df.groupby(df.index.names).count())
+
+
+@pytest.mark.parametrize(
+    "by_func",
+    [
+        lambda df: "timestamp0",
+        lambda df: ["timestamp0", "timestamp1"],
+        lambda df: ["timestamp0", df["timestamp1"]],
+    ],
+)
+def test_mean_with_datetime(by_func):
+    data = {
+        "timestamp0": [pd.to_datetime(1490195805, unit="s")],
+        "timestamp1": [pd.to_datetime(1490195805, unit="s")],
+        "numeric": [0],
+    }
+
+    modin_df, pandas_df = create_test_dfs(data)
+    eval_general(modin_df, pandas_df, lambda df: df.groupby(by=by_func(df)).mean())

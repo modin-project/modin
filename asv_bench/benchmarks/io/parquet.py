@@ -11,8 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import modin.pandas as pd
-
 from ..utils import (
     ASV_USE_IMPL,
     IMPL,
@@ -42,12 +40,12 @@ class TimeReadParquet:
     def setup(self, test_filenames, shape):
         # ray init
         if ASV_USE_IMPL == "modin":
-            pd.DataFrame([])
+            IMPL.DataFrame([])
         self.shape_id = get_shape_id(shape)
 
     def time_read_parquet(self, test_filenames, shape):
         execute(
-            IMPL[ASV_USE_IMPL].read_parquet(
+            IMPL.read_parquet(
                 test_filenames[self.shape_id],
             )
         )

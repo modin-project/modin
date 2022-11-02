@@ -18,7 +18,9 @@ import pandas
 import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
-from pandas.core.base import SpecificationError
+
+from modin._compat import PandasCompatVersion
+from modin._compat.core.pandas_common import SpecificationError
 from modin.utils import get_current_execution
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 import sys
@@ -105,16 +107,16 @@ def inter_df_math_helper(modin_series, pandas_series, op):
 def inter_df_math_helper_one_side(modin_series, pandas_series, op):
     try:
         pandas_attr = getattr(pandas_series, op)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             _ = getattr(modin_series, op)
         return
     modin_attr = getattr(modin_series, op)
 
     try:
         pandas_result = pandas_attr(4)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_attr(4))  # repr to force materialization
     else:
         modin_result = modin_attr(4)
@@ -122,8 +124,8 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
 
     try:
         pandas_result = pandas_attr(4.0)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_attr(4.0))  # repr to force materialization
     else:
         modin_result = modin_attr(4.0)
@@ -148,8 +150,8 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
 
     try:
         pandas_result = pandas_attr(pandas_series)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_attr(modin_series))  # repr to force materialization
     else:
         modin_result = modin_attr(modin_series)
@@ -158,8 +160,8 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
     list_test = random_state.randint(RAND_LOW, RAND_HIGH, size=(modin_series.shape[0]))
     try:
         pandas_result = pandas_attr(list_test)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_attr(list_test))  # repr to force materialization
     else:
         modin_result = modin_attr(list_test)
@@ -169,8 +171,8 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
     series_test_pandas = pandas.Series(list_test, index=pandas_series.index)
     try:
         pandas_result = pandas_attr(series_test_pandas)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_attr(series_test_modin))  # repr to force materialization
     else:
         modin_result = modin_attr(series_test_modin)
@@ -264,8 +266,8 @@ def test___bool__(data):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.__bool__()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.__bool__()
     else:
         modin_result = modin_series.__bool__()
@@ -362,6 +364,9 @@ def test___getitem__(data):
     df_equals(modin_series[:30], pandas_series[:30])
     df_equals(modin_series[modin_series > 500], pandas_series[pandas_series > 500])
     df_equals(modin_series[::2], pandas_series[::2])
+    # Test getting an invalid string key
+    eval_general(modin_series, pandas_series, lambda s: s["a"])
+    eval_general(modin_series, pandas_series, lambda s: s[["a"]])
 
     # Test empty series
     df_equals(pd.Series([])[:30], pandas.Series([])[:30])
@@ -395,8 +400,8 @@ def test___int__(data):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = int(pandas_series[0])
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             int(modin_series[0])
     else:
         assert int(modin_series[0]) == pandas_result
@@ -407,8 +412,8 @@ def test___invert__(data):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.__invert__()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_series.__invert__())
     else:
         df_equals(modin_series.__invert__(), pandas_result)
@@ -438,8 +443,8 @@ def test___long__(data):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series[0].__long__()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series[0].__long__()
     else:
         assert modin_series[0].__long__() == pandas_result
@@ -474,8 +479,8 @@ def test___neg__(request, data):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.__neg__()
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_series.__neg__())
     else:
         df_equals(modin_series.__neg__(), pandas_result)
@@ -633,6 +638,13 @@ def test_add_suffix(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_agg(data, func):
+    if (
+        isinstance(func, int)
+        and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36
+    ):
+        pytest.xfail(
+            "Older pandas raises TypeError but Modin conforms to AssertionError"
+        )
     eval_general(
         *create_test_series(data),
         lambda df: df.agg(func),
@@ -683,6 +695,13 @@ def test_agg_numeric_except(request, data, func):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_aggregate(data, func):
+    if (
+        isinstance(func, int)
+        and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36
+    ):
+        pytest.xfail(
+            "Older pandas raises TypeError but Modin conforms to AssertionError"
+        )
     axis = 0
     eval_general(
         *create_test_series(data),
@@ -791,8 +810,8 @@ def test_append(data):
     for ignore in ignore_idx_values:
         try:
             pandas_result = pandas_series.append(data_to_append, ignore_index=ignore)
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_series.append(data_to_append, ignore_index=ignore)
         else:
             modin_result = modin_series.append(data_to_append, ignore_index=ignore)
@@ -800,8 +819,8 @@ def test_append(data):
 
     try:
         pandas_result = pandas_series.append(pandas_series.iloc[-1])
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.append(modin_series.iloc[-1])
     else:
         modin_result = modin_series.append(modin_series.iloc[-1])
@@ -809,8 +828,8 @@ def test_append(data):
 
     try:
         pandas_result = pandas_series.append([pandas_series.iloc[-1]])
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.append([modin_series.iloc[-1]])
     else:
         modin_result = modin_series.append([modin_series.iloc[-1]])
@@ -823,8 +842,8 @@ def test_append(data):
             pandas_result = pandas_series.append(
                 [pandas_series, pandas_series], verify_integrity=verify_integrity
             )
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_series.append(
                     [modin_series, modin_series], verify_integrity=verify_integrity
                 )
@@ -838,8 +857,8 @@ def test_append(data):
             pandas_result = pandas_series.append(
                 pandas_series, verify_integrity=verify_integrity
             )
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_series.append(modin_series, verify_integrity=verify_integrity)
         else:
             modin_result = modin_series.append(
@@ -1020,24 +1039,24 @@ def test_astype(data):
     modin_series.name = pandas_series.name = series_name
     try:
         pandas_result = pandas_series.astype(str)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_series.astype(str))  # repr to force materialization
     else:
         df_equals(modin_series.astype(str), pandas_result)
 
     try:
         pandas_result = pandas_series.astype(np.int64)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_series.astype(np.int64))  # repr to force materialization
     else:
         df_equals(modin_series.astype(np.int64), pandas_result)
 
     try:
         pandas_result = pandas_series.astype(np.float64)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             repr(modin_series.astype(np.float64))  # repr to force materialization
     else:
         df_equals(modin_series.astype(np.float64), pandas_result)
@@ -1246,8 +1265,8 @@ def test_compress(data):
     modin_series, pandas_series = create_test_series(data)  # noqa: F841
     try:
         pandas_series.compress(pandas_series > 30)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.compress(modin_series > 30)
     else:
         modin_series.compress(modin_series > 30)
@@ -1319,8 +1338,8 @@ def test_cummax(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.cummax(skipna=skipna)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.cummax(skipna=skipna)
     else:
         df_equals(modin_series.cummax(skipna=skipna), pandas_result)
@@ -1334,8 +1353,8 @@ def test_cummin(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.cummin(skipna=skipna)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.cummin(skipna=skipna)
     else:
         df_equals(modin_series.cummin(skipna=skipna), pandas_result)
@@ -1349,8 +1368,8 @@ def test_cumprod(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.cumprod(skipna=skipna)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.cumprod(skipna=skipna)
     else:
         df_equals(modin_series.cumprod(skipna=skipna), pandas_result)
@@ -1364,8 +1383,8 @@ def test_cumsum(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.cumsum(skipna=skipna)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.cumsum(skipna=skipna)
     else:
         df_equals(modin_series.cumsum(skipna=skipna), pandas_result)
@@ -1383,8 +1402,8 @@ def test_describe(data):
 
     try:
         pandas_result = pandas_series.describe(exclude=[np.float64])
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.describe(exclude=[np.float64])
     else:
         modin_result = modin_series.describe(exclude=[np.float64])
@@ -1392,8 +1411,8 @@ def test_describe(data):
 
     try:
         pandas_result = pandas_series.describe(exclude=np.float64)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.describe(exclude=np.float64)
     else:
         modin_result = modin_series.describe(exclude=np.float64)
@@ -1403,8 +1422,8 @@ def test_describe(data):
         pandas_result = pandas_series.describe(
             include=[np.timedelta64, np.datetime64, np.object, np.bool_]
         )
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.describe(
                 include=[np.timedelta64, np.datetime64, np.object, np.bool_]
             )
@@ -1436,8 +1455,8 @@ def test_diff(data, periods):
 
     try:
         pandas_result = pandas_series.diff(periods=periods)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.diff(periods=periods)
     else:
         modin_result = modin_series.diff(periods=periods)
@@ -1445,8 +1464,8 @@ def test_diff(data, periods):
 
     try:
         pandas_result = pandas_series.T.diff(periods=periods)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.T.diff(periods=periods)
     else:
         modin_result = modin_series.T.diff(periods=periods)
@@ -1713,6 +1732,22 @@ def test_dt(timezone):
     df_equals(modin_series.dt.start_time, pandas_series.dt.start_time)
     df_equals(modin_series.dt.end_time, pandas_series.dt.end_time)
     df_equals(modin_series.dt.to_timestamp(), pandas_series.dt.to_timestamp())
+
+    def dt_with_empty_partition(lib):
+        # For context, see https://github.com/modin-project/modin/issues/5112
+        df_a = lib.DataFrame({"A": [lib.to_datetime("26/10/2020")]})
+        df_b = lib.DataFrame({"B": [lib.to_datetime("27/10/2020")]})
+        df = lib.concat([df_a, df_b], axis=1)
+        eval_result = df.eval("B - A", engine="python")
+        # BaseOnPython had a single partition after the concat, and it
+        # maintains that partition after eval. In other execution modes,
+        # eval() should re-split the result into two column partitions,
+        # one of which is empty.
+        if isinstance(df, pd.DataFrame) and get_current_execution() != "BaseOnPython":
+            assert eval_result._query_compiler._modin_frame._partitions.shape == (1, 2)
+        return eval_result.dt.days
+
+    eval_general(pd, pandas, dt_with_empty_partition)
 
 
 @pytest.mark.parametrize(
@@ -2524,8 +2559,8 @@ def test_rank(data, na_option):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.rank(na_option=na_option)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.rank(na_option=na_option)
     else:
         modin_result = modin_series.rank(na_option=na_option)
@@ -2827,6 +2862,10 @@ def test_resample(closed, label, level):
 @pytest.mark.parametrize("name", [None, "Custom name"])
 @pytest.mark.parametrize("inplace", [True, False])
 def test_reset_index(data, drop, name, inplace):
+    if name is not None and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+        pytest.xfail(
+            "pandas.Series.reset_index() should ignore `name` when `drop=True` but it does not"
+        )
     eval_general(
         *create_test_series(data),
         lambda df, *args, **kwargs: df.reset_index(*args, **kwargs),
@@ -2892,8 +2931,8 @@ def test_sample(data):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.sample(frac=0.5, random_state=21019)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.sample(frac=0.5, random_state=21019)
     else:
         modin_result = modin_series.sample(frac=0.5, random_state=21019)
@@ -2901,8 +2940,8 @@ def test_sample(data):
 
     try:
         pandas_result = pandas_series.sample(n=12, random_state=21019)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.sample(n=12, random_state=21019)
     else:
         modin_result = modin_series.sample(n=12, random_state=21019)
@@ -3066,6 +3105,10 @@ def test_shift_slice_shift(data, index, periods):
 )
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 def test_sort_index(data, ascending, sort_remaining, na_position):
+    if ascending is None and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
+        pytest.xfail(
+            "Modin expects pandas to raise ValueError on ascending=None which older pandas does not"
+        )
     modin_series, pandas_series = create_test_series(data)
     eval_general(
         modin_series,
@@ -3145,8 +3188,8 @@ def test_std(request, data, skipna, ddof):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.std(skipna=skipna, ddof=ddof)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.std(skipna=skipna, ddof=ddof)
     else:
         modin_result = modin_series.std(skipna=skipna, ddof=ddof)
@@ -3198,8 +3241,8 @@ def test_swapaxes(data, axis1, axis2):
     modin_series, pandas_series = create_test_series(data)
     try:
         pandas_result = pandas_series.swapaxes(axis1, axis2)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.swapaxes(axis1, axis2)
     else:
         modin_result = modin_series.swapaxes(axis1, axis2)
@@ -3256,8 +3299,8 @@ def test_take():
     df_equals(a, pandas_s.take([0, 3]))
     try:
         pandas_s.take([2], axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_s.take([2], axis=1)
 
 
@@ -3587,8 +3630,8 @@ def test_var(data, skipna, ddof):
 
     try:
         pandas_result = pandas_series.var(skipna=skipna, ddof=ddof)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_series.var(skipna=skipna, ddof=ddof)
     else:
         modin_result = modin_series.var(skipna=skipna, ddof=ddof)
@@ -3684,14 +3727,11 @@ def test_str_split(data, pat, n, expand):
                 # the warning
                 modin_series.str.split(pat, n=n, expand=expand)
         elif not expand:
-            try:
-                pandas_result = pandas_series.str.split(pat, n=n, expand=expand)
-            except Exception as e:
-                with pytest.raises(type(e)):
-                    modin_series.str.split(pat, n=n, expand=expand)
-            else:
-                modin_result = modin_series.str.split(pat, n=n, expand=expand)
-                df_equals(modin_result, pandas_result)
+            eval_general(
+                modin_series,
+                pandas_series,
+                lambda series: series.str.split(pat, n=n, expand=expand),
+            )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -3708,29 +3748,18 @@ def test_str_rsplit(data, pat, n, expand):
                 # the warning
                 modin_series.str.rsplit(pat, n=n, expand=expand)
         elif not expand:
-            try:
-                pandas_result = pandas_series.str.rsplit(pat, n=n, expand=expand)
-            except Exception as e:
-                with pytest.raises(type(e)):
-                    modin_series.str.rsplit(pat, n=n, expand=expand)
-            else:
-                modin_result = modin_series.str.rsplit(pat, n=n, expand=expand)
-                df_equals(modin_result, pandas_result)
+            eval_general(
+                modin_series,
+                pandas_series,
+                lambda series: series.str.rsplit(pat, n=n, expand=expand),
+            )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("i", int_arg_values, ids=int_arg_keys)
 def test_str_get(data, i):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.get(i)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.get(i)
-    else:
-        modin_result = modin_series.str.get(i)
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.get(i))
 
 
 @pytest.mark.parametrize(
@@ -3739,15 +3768,7 @@ def test_str_get(data, i):
 @pytest.mark.parametrize("sep", string_sep_values, ids=string_sep_keys)
 def test_str_join(data, sep):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.join(sep)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.join(sep)
-    else:
-        modin_result = modin_series.str.join(sep)
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.join(sep))
 
 
 @pytest.mark.parametrize(
@@ -3770,26 +3791,19 @@ def test_str_get_dummies(data, sep):
 @pytest.mark.parametrize("na", string_na_rep_values, ids=string_na_rep_keys)
 def test_str_contains(data, pat, case, na):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.contains(pat, case=case, na=na, regex=False)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.contains(pat, case=case, na=na, regex=False)
-    else:
-        modin_result = modin_series.str.contains(pat, case=case, na=na, regex=False)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.contains(pat, case=case, na=na, regex=False),
+    )
 
     # Test regex
     pat = ",|b"
-    try:
-        pandas_result = pandas_series.str.contains(pat, case=case, na=na, regex=True)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.contains(pat, case=case, na=na, regex=True)
-    else:
-        modin_result = modin_series.str.contains(pat, case=case, na=na, regex=True)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.contains(pat, case=case, na=na, regex=True),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -3815,15 +3829,7 @@ def test_str_replace(data, pat, repl, n, case):
 @pytest.mark.parametrize("repeats", int_arg_values, ids=int_arg_keys)
 def test_str_repeat(data, repeats):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.repeat(repeats)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.repeat(repeats)
-    else:
-        modin_result = modin_series.str.repeat(repeats)
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.repeat(repeats))
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -3834,15 +3840,11 @@ def test_str_repeat(data, repeats):
 @pytest.mark.parametrize("fillchar", string_sep_values, ids=string_sep_keys)
 def test_str_pad(data, width, side, fillchar):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.pad(width, side=side, fillchar=fillchar)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.pad(width, side=side, fillchar=fillchar)
-    else:
-        modin_result = modin_series.str.pad(width, side=side, fillchar=fillchar)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.pad(width, side=side, fillchar=fillchar),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -3850,15 +3852,11 @@ def test_str_pad(data, width, side, fillchar):
 @pytest.mark.parametrize("fillchar", string_sep_values, ids=string_sep_keys)
 def test_str_center(data, width, fillchar):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.center(width, fillchar=fillchar)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.center(width, fillchar=fillchar)
-    else:
-        modin_result = modin_series.str.center(width, fillchar=fillchar)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.center(width, fillchar=fillchar),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -3866,15 +3864,11 @@ def test_str_center(data, width, fillchar):
 @pytest.mark.parametrize("fillchar", string_sep_values, ids=string_sep_keys)
 def test_str_ljust(data, width, fillchar):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.ljust(width, fillchar=fillchar)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.ljust(width, fillchar=fillchar)
-    else:
-        modin_result = modin_series.str.ljust(width, fillchar=fillchar)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.ljust(width, fillchar=fillchar),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -3882,45 +3876,25 @@ def test_str_ljust(data, width, fillchar):
 @pytest.mark.parametrize("fillchar", string_sep_values, ids=string_sep_keys)
 def test_str_rjust(data, width, fillchar):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.rjust(width, fillchar=fillchar)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.rjust(width, fillchar=fillchar)
-    else:
-        modin_result = modin_series.str.rjust(width, fillchar=fillchar)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.rjust(width, fillchar=fillchar),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
 def test_str_zfill(data, width):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.zfill(width)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.zfill(width)
-    else:
-        modin_result = modin_series.str.zfill(width)
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.zfill(width))
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
 def test_str_wrap(data, width):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.wrap(width)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.wrap(width)
-    else:
-        modin_result = modin_series.str.wrap(width)
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.wrap(width))
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -3929,15 +3903,11 @@ def test_str_wrap(data, width):
 @pytest.mark.parametrize("step", int_arg_values, ids=int_arg_keys)
 def test_str_slice(data, start, stop, step):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.slice(start=start, stop=stop, step=step)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.slice(start=start, stop=stop, step=step)
-    else:
-        modin_result = modin_series.str.slice(start=start, stop=stop, step=step)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.slice(start=start, stop=stop, step=step),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -3946,32 +3916,18 @@ def test_str_slice(data, start, stop, step):
 @pytest.mark.parametrize("repl", string_sep_values, ids=string_sep_keys)
 def test_str_slice_replace(data, start, stop, repl):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.slice_replace(
-            start=start, stop=stop, repl=repl
-        )
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.slice_replace(start=start, stop=stop, repl=repl)
-    else:
-        modin_result = modin_series.str.slice_replace(start=start, stop=stop, repl=repl)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.slice_replace(start=start, stop=stop, repl=repl),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
 def test_str_count(data, pat):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.count(pat)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.count(pat)
-    else:
-        modin_result = modin_series.str.count(pat)
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.count(pat))
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -3979,15 +3935,9 @@ def test_str_count(data, pat):
 @pytest.mark.parametrize("na", string_na_rep_values, ids=string_na_rep_keys)
 def test_str_startswith(data, pat, na):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.startswith(pat, na=na)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.startswith(pat, na=na)
-    else:
-        modin_result = modin_series.str.startswith(pat, na=na)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series, pandas_series, lambda series: series.str.startswith(pat, na=na)
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -3995,30 +3945,16 @@ def test_str_startswith(data, pat, na):
 @pytest.mark.parametrize("na", string_na_rep_values, ids=string_na_rep_keys)
 def test_str_endswith(data, pat, na):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.endswith(pat, na=na)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.endswith(pat, na=na)
-    else:
-        modin_result = modin_series.str.endswith(pat, na=na)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series, pandas_series, lambda series: series.str.endswith(pat, na=na)
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
 def test_str_findall(data, pat):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.findall(pat)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.findall(pat)
-    else:
-        modin_result = modin_series.str.findall(pat)
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.findall(pat))
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -4027,15 +3963,11 @@ def test_str_findall(data, pat):
 @pytest.mark.parametrize("na", string_na_rep_values, ids=string_na_rep_keys)
 def test_str_match(data, pat, case, na):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.match(pat, case=case, na=na)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.match(pat, case=case, na=na)
-    else:
-        modin_result = modin_series.str.match(pat, case=case, na=na)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.match(pat, case=case, na=na),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -4063,60 +3995,34 @@ def test_str_extractall(data):
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_len(data):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.len()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.len()
-    else:
-        modin_result = modin_series.str.len()
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.len())
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("to_strip", string_sep_values, ids=string_sep_keys)
 def test_str_strip(data, to_strip):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.strip(to_strip=to_strip)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.strip(to_strip=to_strip)
-    else:
-        modin_result = modin_series.str.strip(to_strip=to_strip)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series, pandas_series, lambda series: series.str.strip(to_strip=to_strip)
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("to_strip", string_sep_values, ids=string_sep_keys)
 def test_str_rstrip(data, to_strip):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.rstrip(to_strip=to_strip)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.rstrip(to_strip=to_strip)
-    else:
-        modin_result = modin_series.str.rstrip(to_strip=to_strip)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series, pandas_series, lambda series: series.str.rstrip(to_strip=to_strip)
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("to_strip", string_sep_values, ids=string_sep_keys)
 def test_str_lstrip(data, to_strip):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.lstrip(to_strip=to_strip)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.lstrip(to_strip=to_strip)
-    else:
-        modin_result = modin_series.str.lstrip(to_strip=to_strip)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series, pandas_series, lambda series: series.str.lstrip(to_strip=to_strip)
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -4124,15 +4030,11 @@ def test_str_lstrip(data, to_strip):
 @pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
 def test_str_partition(data, sep, expand):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.partition(sep, expand=expand)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.partition(sep, expand=expand)
-    else:
-        modin_result = modin_series.str.partition(sep, expand=expand)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.partition(sep, expand=expand),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -4140,57 +4042,29 @@ def test_str_partition(data, sep, expand):
 @pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
 def test_str_rpartition(data, sep, expand):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.rpartition(sep, expand=expand)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.rpartition(sep, expand=expand)
-    else:
-        modin_result = modin_series.str.rpartition(sep, expand=expand)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.rpartition(sep, expand=expand),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_lower(data):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.lower()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.lower()
-    else:
-        modin_result = modin_series.str.lower()
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.lower())
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_upper(data):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.upper()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.upper()
-    else:
-        modin_result = modin_series.str.upper()
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.upper())
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_title(data):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.title()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.title()
-    else:
-        modin_result = modin_series.str.title()
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.title())
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -4199,15 +4073,11 @@ def test_str_title(data):
 @pytest.mark.parametrize("end", int_arg_values, ids=int_arg_keys)
 def test_str_find(data, sub, start, end):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.find(sub, start=start, end=end)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.find(sub, start=start, end=end)
-    else:
-        modin_result = modin_series.str.find(sub, start=start, end=end)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.find(sub, start=start, end=end),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -4216,15 +4086,11 @@ def test_str_find(data, sub, start, end):
 @pytest.mark.parametrize("end", int_arg_values, ids=int_arg_keys)
 def test_str_rfind(data, sub, start, end):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.rfind(sub, start=start, end=end)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.rfind(sub, start=start, end=end)
-    else:
-        modin_result = modin_series.str.rfind(sub, start=start, end=end)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.rfind(sub, start=start, end=end),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -4233,18 +4099,11 @@ def test_str_rfind(data, sub, start, end):
 @pytest.mark.parametrize("end", int_arg_values, ids=int_arg_keys)
 def test_str_index(data, sub, start, end):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.index(sub, start=start, end=end)
-    except ValueError:
-        # pytest does not get the RayGetErrors
-        assert True
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.index(sub, start=start, end=end)
-    else:
-        modin_result = modin_series.str.index(sub, start=start, end=end)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.index(sub, start=start, end=end),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -4253,46 +4112,23 @@ def test_str_index(data, sub, start, end):
 @pytest.mark.parametrize("end", int_arg_values, ids=int_arg_keys)
 def test_str_rindex(data, sub, start, end):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.rindex(sub, start=start, end=end)
-    except ValueError:
-        # pytest does not get the RayGetErrors
-        assert True
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.rindex(sub, start=start, end=end)
-    else:
-        modin_result = modin_series.str.rindex(sub, start=start, end=end)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.rindex(sub, start=start, end=end),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_capitalize(data):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.capitalize()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.capitalize()
-    else:
-        modin_result = modin_series.str.capitalize()
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.capitalize())
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_swapcase(data):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.swapcase()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.swapcase()
-    else:
-        modin_result = modin_series.str.swapcase()
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.swapcase())
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -4301,15 +4137,7 @@ def test_str_swapcase(data):
 )
 def test_str_normalize(data, form):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.normalize(form)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.normalize(form)
-    else:
-        modin_result = modin_series.str.normalize(form)
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.normalize(form))
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -4318,203 +4146,105 @@ def test_str_translate(data, pat):
     modin_series, pandas_series = create_test_series(data)
 
     # Test none table
-    try:
-        pandas_result = pandas_series.str.translate(None)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.translate(None)
-    else:
-        modin_result = modin_series.str.translate(None)
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.translate(None))
 
     # Translation dictionary
     table = {pat: "DDD"}
-    try:
-        pandas_result = pandas_series.str.translate(table)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.translate(table)
-    else:
-        modin_result = modin_series.str.translate(table)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series, pandas_series, lambda series: series.str.translate(table)
+    )
 
     # Translation table with maketrans (python3 only)
     if pat is not None:
         table = str.maketrans(pat, "d" * len(pat))
-        try:
-            pandas_result = pandas_series.str.translate(table)
-        except Exception as e:
-            with pytest.raises(type(e)):
-                modin_series.str.translate(table)
-        else:
-            modin_result = modin_series.str.translate(table)
-            df_equals(modin_result, pandas_result)
+        eval_general(
+            modin_series, pandas_series, lambda series: series.str.translate(table)
+        )
 
     # Test delete chars
     deletechars = "|"
-    try:
-        pandas_result = pandas_series.str.translate(table, deletechars)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.translate(table, deletechars)
-    else:
-        modin_result = modin_series.str.translate(table, deletechars)
-        df_equals(modin_result, pandas_result)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.translate(table, deletechars),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isalnum(data):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.isalnum()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.isalnum()
-    else:
-        modin_result = modin_series.str.isalnum()
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.isalnum())
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isalpha(data):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.isalpha()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.isalpha()
-    else:
-        modin_result = modin_series.str.isalpha()
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.isalpha())
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isdigit(data):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.isdigit()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.isdigit()
-    else:
-        modin_result = modin_series.str.isdigit()
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.isdigit())
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isspace(data):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.isspace()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.isspace()
-    else:
-        modin_result = modin_series.str.isspace()
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.isspace())
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_islower(data):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.islower()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.islower()
-    else:
-        modin_result = modin_series.str.islower()
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.islower())
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isupper(data):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.isupper()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.isupper()
-    else:
-        modin_result = modin_series.str.isupper()
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.isupper())
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_istitle(data):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.istitle()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.istitle()
-    else:
-        modin_result = modin_series.str.istitle()
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.istitle())
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isnumeric(data):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.isnumeric()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.isnumeric()
-    else:
-        modin_result = modin_series.str.isnumeric()
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.isnumeric())
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isdecimal(data):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.isdecimal()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.isdecimal()
-    else:
-        modin_result = modin_series.str.isdecimal()
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.isdecimal())
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_casefold(data):
     modin_series, pandas_series = create_test_series(data)
-
-    try:
-        pandas_result = pandas_series.str.casefold()
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.casefold()
-    else:
-        modin_result = modin_series.str.casefold()
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_series, pandas_series, lambda series: series.str.casefold())
 
 
 @pytest.mark.parametrize("encoding_type", encoding_types)
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_encode(data, encoding_type):
     modin_series, pandas_series = create_test_series(data)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.encode(encoding=encoding_type),
+    )
 
-    try:
-        pandas_result = pandas_series.str.encode(encoding=encoding_type)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_series.str.encode(encoding=encoding_type)
-    else:
-        modin_result = modin_series.str.encode(encoding=encoding_type)
-        df_equals(modin_result, pandas_result)
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_add_string_to_series(data):
+    eval_general(*create_test_series(data), lambda s: "string" + s)
+    eval_general(*create_test_series(data), lambda s: s + "string")
 
 
 @pytest.mark.parametrize(
@@ -4682,3 +4412,15 @@ def test_peculiar_callback():
     modin_series = modin_df["col"].apply(func)
 
     df_equals(modin_series, pandas_series)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_apply_return_df(data):
+    modin_series, pandas_series = create_test_series(data)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.apply(
+            lambda x: pandas.Series([x + i for i in range(100)])
+        ),
+    )
