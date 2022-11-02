@@ -1540,7 +1540,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Dt map partitions operations
 
     def astype(self, col_dtypes, errors: str):
-        return self.__constructor__(self._modin_frame.astype(col_dtypes, errors=errors))
+        return self.__constructor__(self._modin_frame.astype(col_dtypes))
 
     def infer_objects(self):
         return self.__constructor__(self._modin_frame.infer_objects())
@@ -2638,7 +2638,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
 
         qc_with_converted_datetime_cols = (
-            self.astype({col: "int64" for col in datetime_cols.keys()})
+            self.astype({col: "int64" for col in datetime_cols.keys()}, errors="raise")
             if len(datetime_cols) > 0
             else self
         )

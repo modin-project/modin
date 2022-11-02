@@ -691,9 +691,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             self._modin_frame.reset_index(drop), shape_hint=shape_hint
         )
 
-    def astype(self, col_dtypes, **kwargs):
+    def astype(self, col_dtypes, errors: str):
         return self.__constructor__(
-            self._modin_frame.astype(col_dtypes), self._shape_hint
+            self._modin_frame.astype(col_dtypes, errors), self._shape_hint
         )
 
     def setitem(self, axis, key, value):
