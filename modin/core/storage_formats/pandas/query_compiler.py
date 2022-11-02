@@ -2182,7 +2182,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # __getitem__ methods
     __getitem_bool = Binary.register(
         # r is usually a list, but when r.size == 1, the array is squeezed to a scalar
-        lambda df, r: df[r] if r.size > 1 else df[[r]],
+        lambda df, r: df[r]
+        if r.size > 1 or isinstance(r, (pandas.Series, pandas.DataFrame)) and r.empty
+        else df[[r]],
         join_type="left",
         labels="drop",
     )

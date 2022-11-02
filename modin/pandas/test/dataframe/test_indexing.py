@@ -40,7 +40,7 @@ from modin.pandas.test.utils import (
     extra_test_parameters,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import NPartitions, MinPartitionSize
 from modin.utils import get_current_execution
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.pandas.indexing import is_range_like
@@ -2212,6 +2212,31 @@ def test__getitem_bool_single_row_dataframe():
     # This test case comes from
     # https://github.com/modin-project/modin/issues/4845
     eval_general(pd, pandas, lambda lib: lib.DataFrame([1])[lib.Series([True])])
+
+
+def test__getitem_bool_with_empty_partition():
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/5188
+
+    size = MinPartitionSize.get()
+
+    pandas_series = pandas.Series([True if i % 2 else False for i in range(size)])
+    modin_series = pd.Series(pandas_series)
+
+    pandas_df = pandas.DataFrame([i for i in range(size + 1)])
+    pandas_df.iloc[size] = np.nan
+    modin_df = pd.DataFrame(pandas_df)
+
+    pandas_tmp_result = pandas_df.dropna()
+    modin_tmp_result = modin_df.dropna()
+
+    eval_general(
+        modin_tmp_result,
+        pandas_tmp_result,
+        lambda df: df[modin_series]
+        if isinstance(df, pd.DataFrame)
+        else df[pandas_series],
+    )
 
 
 # This is a very subtle bug that comes from:
