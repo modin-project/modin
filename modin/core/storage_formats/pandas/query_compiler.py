@@ -3173,20 +3173,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
         elif not is_list_like(columns):
             columns = [columns]
 
+        def map_fn(df):
+            cols_to_encode = df.columns.intersection(columns)
+            return pandas.get_dummies(df, columns=cols_to_encode, **kwargs)
+
         # In some cases, we are mapping across all of the data. It is more
         # efficient if we are mapping over all of the data to do it this way
         # than it would be to reuse the code for specific columns.
         if len(columns) == len(self.columns):
             new_modin_frame = self._modin_frame.apply_full_axis(
-                0, lambda df: pandas.get_dummies(df, **kwargs), new_index=self.index
+                0, map_fn, new_index=self.index
             )
             untouched_frame = None
         else:
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_labels=columns
-            ).apply_full_axis(
-                0, lambda df: pandas.get_dummies(df, **kwargs), new_index=self.index
-            )
+            ).apply_full_axis(0, map_fn, new_index=self.index)
             untouched_frame = self.drop(columns=columns)
         # If we mapped over all the data we are done. If not, we need to
         # prepend the `new_modin_frame` with the raw data from the columns that were
