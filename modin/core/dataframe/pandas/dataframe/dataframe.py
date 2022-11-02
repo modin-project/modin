@@ -2522,9 +2522,7 @@ class PandasDataframe(ClassLogger):
             result.synchronize_labels(axis=1)
         return result
 
-    def _copartition(
-        self, axis, other, how, sort, force_repartition=False, perform_reindex=True
-    ):
+    def _copartition(self, axis, other, how, sort, force_repartition=False):
         """
         Copartition two Modin DataFrames.
 
@@ -2545,8 +2543,6 @@ class PandasDataframe(ClassLogger):
             this method will skip repartitioning if it is possible. This is because
             reindexing is extremely inefficient. Because this method is used to
             `join` or `append`, it is vital that the internal indices match.
-        perform_reindex : bool, default: True
-            For some ops, for example `fillna`, column reindexing of right operand isn't needed.
 
         Returns
         -------
@@ -2592,7 +2588,7 @@ class PandasDataframe(ClassLogger):
         base_index = base_frame.axes[axis]
 
         # define conditions for reindexing and repartitioning `self` frame
-        do_reindex_base = perform_reindex and not base_index.equals(joined_index)
+        do_reindex_base = not base_index.equals(joined_index)
         do_repartition_base = force_repartition or do_reindex_base
 
         # Perform repartitioning and reindexing for `base_frame` if needed.
@@ -2602,9 +2598,7 @@ class PandasDataframe(ClassLogger):
             reindexed_base = base_frame._partition_mgr_cls.map_axis_partitions(
                 axis,
                 base_frame._partitions,
-                make_reindexer(do_reindex_base, base_frame_idx)
-                if perform_reindex
-                else lambda df: df,
+                make_reindexer(do_reindex_base, base_frame_idx),
             )
             if axis:
                 base_lengths = [obj.width() for obj in reindexed_base[0]]
@@ -2617,11 +2611,9 @@ class PandasDataframe(ClassLogger):
         others_lengths = [o._axes_lengths[axis] for o in other_frames]
 
         # define conditions for reindexing and repartitioning `other` frames
-        do_reindex_others = [False] * len(other_frames)
-        if perform_reindex:
-            do_reindex_others = [
-                not o.axes[axis].equals(joined_index) for o in other_frames
-            ]
+        do_reindex_others = [
+            not o.axes[axis].equals(joined_index) for o in other_frames
+        ]
 
         do_repartition_others = [None] * len(other_frames)
         for i in range(len(other_frames)):
@@ -2641,9 +2633,7 @@ class PandasDataframe(ClassLogger):
                 ]._partition_mgr_cls.map_axis_partitions(
                     axis,
                     other_frames[i]._partitions,
-                    make_reindexer(do_repartition_others[i], base_frame_idx + 1 + i)
-                    if perform_reindex
-                    else lambda df: df,
+                    make_reindexer(do_repartition_others[i], base_frame_idx + 1 + i),
                     lengths=base_lengths,
                 )
             else:
@@ -2681,32 +2671,35 @@ class PandasDataframe(ClassLogger):
         left_parts, list_of_right_parts, joined_index, row_lengths = self._copartition(
             0, right_frames, join_type, sort=True
         )
-        new_left_frame = self.__constructor__(
-            left_parts, joined_index, self.columns, row_lengths, self.column_widths
-        )
-        new_right_frames = [
-            self.__constructor__(
-                right_parts,
-                joined_index,
-                right_frame.columns,
-                row_lengths,
-                right_frame.column_widths,
+        if perform_column_reindex:
+            new_left_frame = self.__constructor__(
+                left_parts, joined_index, self.columns, row_lengths, self.column_widths
             )
-            for right_parts, right_frame in zip(list_of_right_parts, right_frames)
-        ]
+            new_right_frames = [
+                self.__constructor__(
+                    right_parts,
+                    joined_index,
+                    right_frame.columns,
+                    row_lengths,
+                    right_frame.column_widths,
+                )
+                for right_parts, right_frame in zip(list_of_right_parts, right_frames)
+            ]
 
-        (
-            left_parts,
-            list_of_right_parts,
-            joined_columns,
-            column_widths,
-        ) = new_left_frame._copartition(
-            1,
-            new_right_frames,
-            join_type,
-            sort=True,
-            perform_reindex=perform_column_reindex,
-        )
+            (
+                left_parts,
+                list_of_right_parts,
+                joined_columns,
+                column_widths,
+            ) = new_left_frame._copartition(
+                1,
+                new_right_frames,
+                join_type,
+                sort=True,
+            )
+        else:
+            joined_columns = self._columns_cache
+            column_widths = self._column_widths_cache
 
         new_frame = (
             np.array([])
