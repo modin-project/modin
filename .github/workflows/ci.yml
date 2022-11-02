@@ -425,6 +425,7 @@ jobs:
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: pytest modin/test/storage_formats/hdk/test_internals.py
+      - run: pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_init.py
       - run: pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv --verbose
       - run: pytest modin/test/interchange/dataframe_protocol/test_general.py
