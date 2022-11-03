@@ -2660,8 +2660,9 @@ class PandasDataframe(ClassLogger):
             Modin DataFrames to join with.
         join_type : str, default: "outer"
             Type of join to apply.
-        perform_column_reindex : bool, default: True
-            For some ops, for example `fillna`, column reindexing of right operand isn't needed.
+        copartition_along_columns : bool, default: True
+            Whether to perform copartitioning along columns or not.
+            For some ops this isn't needed (e.g., `fillna`).
 
         Returns
         -------
@@ -2671,7 +2672,7 @@ class PandasDataframe(ClassLogger):
         left_parts, list_of_right_parts, joined_index, row_lengths = self._copartition(
             0, right_frames, join_type, sort=True
         )
-        if perform_column_reindex:
+        if copartition_along_columns:
             new_left_frame = self.__constructor__(
                 left_parts, joined_index, self.columns, row_lengths, self.column_widths
             )
