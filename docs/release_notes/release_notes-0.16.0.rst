@@ -15,7 +15,6 @@ Key Features and Updates
   * FIX-#4604: Fix `groupby` + `agg` in case when multicolumn can arise (#4642)
   * FIX-#4582: Inherit custom log layer (#4583)
   * FIX-#4639: Fix `storage_options` usage for `read_csv` and `read_csv_glob` (#4644)
-  * FIX-#4660: Fix `fillna` when Modin series object is an argument (#4674)
   * FIX-#4593: Ensure Modin warns when setting columns via attributes (#4621)
   * FIX-#4584: Enable pdb debug when running cloud tests (#4585)
   * FIX-#4564: Workaround import issues in Ray: auto-import pandas on python start if env var is set (#4603)
