@@ -1921,7 +1921,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         fillna_builder,
                         [value._modin_frame],
                         join_type="left",
-                        perform_column_reindex=False,
+                        copartition_along_columns=False,
                     )
 
                 return self.__constructor__(new_modin_frame)
