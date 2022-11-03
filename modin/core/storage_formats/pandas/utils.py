@@ -103,7 +103,7 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
         return [result.iloc[:, sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
 
 
-def get_length_list(axis_len, num_splits):
+def get_length_list(axis_len: int, num_splits: int) -> list:
     """
     Compute partitions lengths along the axis with the specified number of splits.
 

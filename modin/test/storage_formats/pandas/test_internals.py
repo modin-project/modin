@@ -62,7 +62,7 @@ elif Engine.get() == "Dask":
     virtual_row_partition_class = PandasOnDaskDataframeRowPartition
 
 
-def split_df_by_scheme(pandas_df, partitioning_scheme):
+def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
     """
     Build ``modin.pandas.DataFrame`` from ``pandas.DataFrame`` according the `partitioning_scheme`.
 
@@ -515,49 +515,29 @@ __test_reorder_labels_cache_axis_positions = [
         ),
         pytest.param(
             lambda df: {
-                "row_lengths": [
-                    min(32, df.shape[0]),
-                    max(0, df.shape[0] - 32),
-                ],
-                "column_widths": [
-                    min(32, df.shape[1]),
-                    max(0, df.shape[1] - 32),
-                ],
+                "row_lengths": [32, max(0, df.shape[0] - 32)],
+                "column_widths": [32, max(0, df.shape[1] - 32)],
             },
             id="two_unbalanced_partitions",
         ),
         pytest.param(
             lambda df: {
-                "row_lengths": [
-                    df.shape[0] // NPartitions.get() for _ in range(NPartitions.get())
-                ],
-                "column_widths": [
-                    df.shape[1] // NPartitions.get() for _ in range(NPartitions.get())
-                ],
+                "row_lengths": [df.shape[0] // NPartitions.get()] * NPartitions.get(),
+                "column_widths": [df.shape[1] // NPartitions.get()] * NPartitions.get(),
             },
             id="perfect_partitioning",
         ),
         pytest.param(
             lambda df: {
-                "row_lengths": [
-                    2**i
-                    if i != NPartitions.get() - 1
-                    else max(0, df.shape[0] - (2**i - 1))
-                    for i in range(NPartitions.get())
-                ],
-                "column_widths": [
-                    2**i
-                    if i != NPartitions.get() - 1
-                    else max(0, df.shape[1] - (2**i - 1))
-                    for i in range(NPartitions.get())
-                ],
+                "row_lengths": [2**i for i in range(NPartitions.get())],
+                "column_widths": [2**i for i in range(NPartitions.get())],
             },
             id="unbalanced_partitioning_equals_npartition",
         ),
         pytest.param(
             lambda df: {
-                "row_lengths": [2 for _ in range(df.shape[0] // 2)],
-                "column_widths": [2 for _ in range(df.shape[1] // 2)],
+                "row_lengths": [2] * (df.shape[0] // 2),
+                "column_widths": [2] * (df.shape[1] // 2),
             },
             id="unbalanced_partitioning",
         ),
@@ -570,10 +550,38 @@ def test_reorder_labels_cache(
 ):
     pandas_df = pandas.DataFrame(test_data_values[0])
 
-    md_df = split_df_by_scheme(pandas_df, partitioning_scheme(pandas_df))
+    md_df = construct_modin_df_by_scheme(pandas_df, partitioning_scheme(pandas_df))
     md_df = md_df._query_compiler._modin_frame
 
     result = md_df._reorder_labels(
         row_positions(md_df.index), col_positions(md_df.columns)
     )
     validate_partitions_cache(result)
+
+
+def test_reorder_labels_dtypes():
+    pandas_df = pandas.DataFrame(
+        {
+            "a": [1, 2, 3, 4],
+            "b": [1.0, 2.4, 3.4, 4.5],
+            "c": ["a", "b", "c", "d"],
+            "d": pd.to_datetime([1, 2, 3, 4], unit="D"),
+        }
+    )
+
+    md_df = construct_modin_df_by_scheme(
+        pandas_df,
+        partitioning_scheme={
+            "row_lengths": [len(pandas_df)],
+            "column_widths": [
+                len(pandas_df) // 2,
+                len(pandas_df) // 2 + len(pandas_df) % 2,
+            ],
+        },
+    )
+    md_df = md_df._query_compiler._modin_frame
+
+    result = md_df._reorder_labels(
+        row_positions=None, col_positions=np.arange(len(md_df.columns) - 1, -1, -1)
+    )
+    df_equals(result.dtypes, result.to_pandas().dtypes)

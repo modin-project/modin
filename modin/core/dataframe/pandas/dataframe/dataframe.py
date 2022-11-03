@@ -1085,6 +1085,7 @@ class PandasDataframe(ClassLogger):
             A new PandasDataframe with reordered columns and/or rows.
         """
         new_lengths, new_widths = None, None
+        new_dtypes = self._dtypes
         if row_positions is not None:
             ordered_rows = self._partition_mgr_cls.map_axis_partitions(
                 0, self._partitions, lambda df: df.iloc[row_positions]
@@ -1113,6 +1114,8 @@ class PandasDataframe(ClassLogger):
                 1, ordered_rows, lambda df: df.iloc[:, col_positions]
             )
             col_idx = self.columns[col_positions]
+            if new_dtypes is not None:
+                new_dtypes = self._dtypes.iloc[col_positions]
 
             if self._partitions.shape[1] != ordered_cols.shape[1] or len(
                 col_idx
@@ -1132,7 +1135,7 @@ class PandasDataframe(ClassLogger):
             col_idx = self.columns
             new_widths = self._column_widths_cache
         return self.__constructor__(
-            ordered_cols, row_idx, col_idx, new_lengths, new_widths, self._dtypes
+            ordered_cols, row_idx, col_idx, new_lengths, new_widths, new_dtypes
         )
 
     @lazy_metadata_decorator(apply_axis=None)
