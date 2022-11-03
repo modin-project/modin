@@ -1911,15 +1911,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
                 else:
 
-                    def fillna_builder(series, value_arg):
-                        # Both arguments for this function are 1-column `DataFrames` which denote `Series` type.
-                        # Because they are both of the same type, it is not necessary to convert either of them into
-                        # `Series` by squeezing since `fillna` works perfectly in the same way on 1-column `DataFrame`
-                        # objects (when `limit` parameter is absent) as it works on two `Series`.
-                        return series.fillna(value=value_arg, **kwargs)
+                    def fillna_builder(df, value_arg):
+                        if isinstance(value_arg, pandas.DataFrame):
+                            value_arg = value_arg.squeeze(axis=1)
+                        res = df.squeeze(axis=1).fillna(value=value_arg, **kwargs)
+                        return pandas.DataFrame(res)
 
                     new_modin_frame = self._modin_frame.n_ary_op(
-                        fillna_builder, [value._modin_frame], join_type="left"
+                        fillna_builder,
+                        [value._modin_frame],
+                        join_type="left",
+                        copartition_along_columns=False,
                     )
 
                 return self.__constructor__(new_modin_frame)
