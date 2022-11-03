@@ -657,6 +657,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def set_index_from_columns(
         self, keys: List[Hashable], drop: bool = True, append: bool = False
     ):
+        # import pdb;pdb.set_trace()
         new_modin_frame = self._modin_frame.to_labels(keys)
         if append:
             arrays = []

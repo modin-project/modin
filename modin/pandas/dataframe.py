@@ -1964,7 +1964,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         inplace = validate_bool_kwarg(inplace, "inplace")
         if not isinstance(keys, list):
             keys = [keys]
-
+        # import pdb;pdb.set_trace()
         if any(
             isinstance(col, (pandas.Index, Series, np.ndarray, list, Iterator))
             for col in keys
