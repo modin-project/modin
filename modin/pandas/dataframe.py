@@ -179,6 +179,13 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             elif is_dict_like(data) and not isinstance(
                 data, (pandas.Series, Series, pandas.DataFrame, DataFrame)
             ):
+                if all(isinstance(v, Series) for v in data.values()):
+                    from .general import concat
+
+                    self._query_compiler = concat(
+                        data.values(), axis=1, keys=data.keys()
+                    )._query_compiler
+                    return
                 data = {
                     k: v._to_pandas() if isinstance(v, Series) else v
                     for k, v in data.items()
