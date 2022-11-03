@@ -90,18 +90,42 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
     if num_splits == 1:
         return [result]
 
-    if length_list is not None:
-        length_list.insert(0, 0)
-    else:
-        chunksize = compute_chunksize(result.shape[axis], num_splits)
-        length_list = np.full(num_splits + 1, chunksize)
-        length_list[0] = 0
+    if length_list is None:
+        length_list = get_length_list(result.shape[axis], num_splits)
+    # Inserting the first "zero" to properly compute cumsum indexing slices
+    length_list = np.insert(length_list, obj=0, values=[0])
+
     sums = np.cumsum(length_list)
     # We do this to restore block partitioning
     if axis == 0 or isinstance(result, pandas.Series):
         return [result.iloc[sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
     else:
         return [result.iloc[:, sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
+
+
+def get_length_list(axis_len: int, num_splits: int) -> list:
+    """
+    Compute partitions lengths along the axis with the specified number of splits.
+
+    Parameters
+    ----------
+    axis_len : int
+        Element count in an axis.
+    num_splits : int
+        Number of splits along the axis.
+
+    Returns
+    -------
+    list of ints
+        List of integer lengths of partitions.
+    """
+    chunksize = compute_chunksize(axis_len, num_splits)
+    return [
+        chunksize
+        if (i + 1) * chunksize <= axis_len
+        else max(0, axis_len - i * chunksize)
+        for i in range(num_splits)
+    ]
 
 
 def length_fn_pandas(df):
