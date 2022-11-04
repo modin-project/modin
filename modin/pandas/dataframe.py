@@ -179,7 +179,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             elif is_dict_like(data) and not isinstance(
                 data, (pandas.Series, Series, pandas.DataFrame, DataFrame)
             ):
-                if all(isinstance(v, Series) for v in data.values()):
+                if len(data) and all(isinstance(v, Series) for v in data.values()):
                     from .general import concat
 
                     self._query_compiler = concat(
