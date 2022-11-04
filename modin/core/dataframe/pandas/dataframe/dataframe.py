@@ -21,7 +21,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas
 import datetime
-from pandas.api.types import is_object_dtype
+from pandas.api.types import is_object_dtype, is_scalar
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 from pandas._libs.lib import no_default
@@ -655,23 +655,7 @@ class PandasDataframe(ClassLogger):
             row_positions = self.index.get_indexer_for(row_labels)
 
         if col_labels is not None:
-            # problem here
-            # we need to handle cases when labels are missed
             # Get numpy array of positions of values from `col_labels`
-            # import pdb;pdb.set_trace()
-            if isinstance(self.columns, pandas.MultiIndex):
-                if any(
-                    len(col_label) != self.columns.nlevels for col_label in col_labels
-                ):
-                    new_col_labels = [[""] * self.columns.nlevels] * len(col_labels)
-                    for idx, col_label in enumerate(col_labels):
-                        if np.isscalar(col_label):
-                            new_col_labels[idx][0] = col_label
-                        else:
-                            for idx2, lbl in enumerate(col_label):
-                                new_col_labels[idx][idx2] = col_label
-                    col_labels = [tuple(label) for label in new_col_labels]
-
             col_positions = self.columns.get_indexer_for(col_labels)
 
         return self._take_2d_positional(row_positions, col_positions)
@@ -1054,31 +1038,39 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             A new PandasDataframe that has the updated labels.
         """
-        # import pdb;pdb.set_trace()
+        new_col_labels = column_list
+        if isinstance(self.columns, pandas.MultiIndex):
+            # all column names must have the same number of levels as the multiindex
+            new_col_labels = [[""] * self.columns.nlevels] * len(column_list)
+            for idx, col_label in enumerate(column_list):
+                if (
+                    is_scalar(col_label)
+                    and self.columns.nlevels != 1
+                    or len(col_label) != self.columns.nlevels
+                ):
+                    if is_scalar(col_label):
+                        new_col_labels[idx][0] = col_label
+                    else:
+                        for idx2, lbl in enumerate(col_label):
+                            new_col_labels[idx][idx2] = col_label
+                else:
+                    new_col_labels[idx] = col_label
+            new_col_labels = [tuple(label) for label in new_col_labels]
         extracted_columns = self.take_2d_labels_or_positional(
-            col_labels=column_list
+            col_labels=new_col_labels
         ).to_pandas()
-        # extracted_columns = self._take_2d_positional(None, [0]).to_pandas()
+
         if len(column_list) == 1:
             new_labels = pandas.Index(extracted_columns.squeeze(axis=1))
-            if isinstance(new_labels.name, tuple):
-                name = [x for x in new_labels.name if x != ""]
-                if len(name) == 1:
-                    name = name[0]
-                else:
-                    name = tuple(name)
-                new_labels.name = name
+            # return initial name
+            new_labels.name = column_list[0]
         else:
             new_labels = pandas.MultiIndex.from_frame(extracted_columns)
-        # second problem - wrong drop labels in case of the multiindex
-        if isinstance(self.columns, pandas.MultiIndex):
-            col_labels = []
-            for tup in self.columns:
-                if not any(lbl in column_list for lbl in tup):
-                    col_labels.append(tup)
-        else:
-            col_labels = [i for i in self.columns if i not in column_list]
-        result = self.take_2d_labels_or_positional(col_labels=col_labels)
+            # return initial name
+            new_labels.names = column_list
+
+        rest_col_labels = [i for i in self.columns if i not in new_col_labels]
+        result = self.take_2d_labels_or_positional(col_labels=rest_col_labels)
         result.index = new_labels
         return result
 
