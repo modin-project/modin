@@ -1728,6 +1728,17 @@ class TestParquet:
 
             df_equals(test_df, read_df)
 
+    def test_read_parquet_s3_with_column_partitioning(self, engine):
+        # This test case comes from
+        # https://github.com/modin-project/modin/issues/4636
+        dataset_url = "s3://modin-datasets/modin-bugs/modin_bug_5159_parquet/df.parquet"
+        eval_io(
+            fn_name="read_parquet",
+            path=dataset_url,
+            engine=engine,
+            storage_options={"anon": True},
+        )
+
 
 class TestJson:
     @pytest.mark.parametrize("lines", [False, True])

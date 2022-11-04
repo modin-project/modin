@@ -609,18 +609,24 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         )
         from modin.pandas.io import PQ_INDEX_REGEX
 
-        if isinstance(path, str) and os.path.isdir(path):
+        if isinstance(path, str):
+            if os.path.isdir(path):
+                path_generator = os.walk(path)
+            else:
+                storage_options = kwargs.get("storage_options")
+                fs, fs_path = url_to_fs(path, **storage_options)
+                path_generator = fs.walk(fs_path)
             partitioned_columns = set()
             # We do a tree walk of the path directory because partitioned
             # parquet directories have a unique column at each directory level.
             # Thus, we can use os.walk(), which does a dfs search, to walk
             # through the different columns that the data is partitioned on
-            for (_, dir_names, files) in os.walk(path):
+            for (_, dir_names, files) in path_generator:
                 if dir_names:
                     partitioned_columns.add(dir_names[0].split("=")[0])
                 if files:
                     # Metadata files, git files, .DSStore
-                    if files[0][0] == ".":
+                    if len(files[0]) > 0 and files[0][0] == ".":
                         continue
                     break
             partitioned_columns = list(partitioned_columns)
