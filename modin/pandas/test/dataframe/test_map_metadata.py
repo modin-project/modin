@@ -1478,3 +1478,31 @@ def test___round__():
     data = test_data_values[0]
     with warns_that_defaulting_to_pandas():
         pd.DataFrame(data).__round__()
+
+
+def test_constructor_from_modin_series():
+    modin_df, pandas_df = create_test_dfs(test_data_values[0])
+
+    # Construct from Modin series only
+    new_modin = pd.DataFrame(
+        {f"new_col{i}": modin_df.iloc[:, i] for i in range(modin_df.shape[1])}
+    )
+    pandas_df.columns = [f"new_col{i}" for i in range(pandas_df.shape[1])]
+    df_equals(new_modin, pandas_df)
+
+    # Construct from mixed data
+    new_modin = pd.DataFrame(
+        {
+            "new_col1": modin_df.iloc[:, 0],
+            "new_col2": np.arange(len(modin_df)),
+            "new_col3": modin_df.iloc[:, 1],
+        }
+    )
+    new_pandas = pandas.DataFrame(
+        {
+            "new_col1": pandas_df.iloc[:, 0],
+            "new_col2": np.arange(len(pandas_df)),
+            "new_col3": pandas_df.iloc[:, 1],
+        }
+    )
+    df_equals(new_modin, new_pandas)
