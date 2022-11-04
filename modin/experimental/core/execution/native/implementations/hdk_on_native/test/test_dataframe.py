@@ -2139,6 +2139,43 @@ class TestConstructor:
         df = pd.utils.from_arrow(at)
         assert df._query_compiler._shape_hint == "column"
 
+    def test_constructor_from_modin_series(self):
+        def construct_has_common_projection(lib, df, **kwargs):
+            return lib.DataFrame({"col1": df.iloc[:, 0], "col2": df.iloc[:, 1]})
+
+        def construct_no_common_projection(lib, df1, df2, **kwargs):
+            return lib.DataFrame(
+                {"col1": df1.iloc[:, 0], "col2": df2.iloc[:, 0], "col3": df1.iloc[:, 1]}
+            )
+
+        def construct_mixed_data(lib, df1, df2, **kwargs):
+            return lib.DataFrame(
+                {
+                    "col1": df1.iloc[:, 0],
+                    "col2": df2.iloc[:, 0],
+                    "col3": df1.iloc[:, 1],
+                    "col4": np.arange(len(df1)),
+                }
+            )
+
+        run_and_compare(
+            construct_has_common_projection, data={"a": [1, 2, 3, 4], "b": [3, 4, 5, 6]}
+        )
+        run_and_compare(
+            construct_no_common_projection,
+            data={"a": [1, 2, 3, 4], "b": [3, 4, 5, 6]},
+            data2={"a": [10, 20, 30, 40]},
+            # HDK doesn't support concatenation of frames that has no common projection
+            force_lazy=False,
+        )
+        run_and_compare(
+            construct_mixed_data,
+            data={"a": [1, 2, 3, 4], "b": [3, 4, 5, 6]},
+            data2={"a": [10, 20, 30, 40]},
+            # HDK doesn't support concatenation of frames that has no common projection
+            force_lazy=False,
+        )
+
 
 class TestArrowExecution:
     data1 = {"a": [1, 2, 3], "b": [3, 4, 5], "c": [6, 7, 8]}
