@@ -21,6 +21,7 @@ queries for the ``PandasDataframe``.
 import numpy as np
 import pandas
 import functools
+from pandas.api.types import is_scalar
 from pandas.core.common import is_bool_indexer
 from pandas.core.indexing import check_bool_indexer
 from pandas.core.indexes.api import ensure_index_from_sequences
@@ -2183,8 +2184,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # __getitem__ methods
     __getitem_bool = Binary.register(
-        # r is usually a list, but when r.size == 1, the array is squeezed to a scalar
-        lambda df, r: df[r] if r.size > 1 else df[[r]],
+        lambda df, r: df[[r]] if is_scalar(r) else df[r],
         join_type="left",
         labels="drop",
     )
