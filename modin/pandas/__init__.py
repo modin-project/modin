@@ -96,6 +96,8 @@ with warnings.catch_warnings():
         NamedAgg,
         NA,
         api,
+        tseries,
+        offsets,
     )
 import os
 
@@ -365,6 +367,8 @@ __all__ = [  # noqa: F405
     "NamedAgg",
     "api",
     "read_xml",
+    "tseries",
+    "offsets",
 ]
 
 if PandasCompatVersion.CURRENT != PandasCompatVersion.PY36:
