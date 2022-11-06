@@ -27,6 +27,7 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
     @property
     @abstractmethod
     def list_of_blocks(self) -> list:
+        """Get the list of physical partition objects that compose this partition."""
         pass
 
     def apply(
@@ -155,11 +156,11 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
             if get_ip:
                 # TODO(https://github.com/modin-project/modin/issues/5176): Stop ignoring the list_of_ips
                 # check once we know that we're not calling list_of_ips on python axis partitions
-                return self.list_of_ips[0], self.list_of_blocks[0] # type: ignore[attr-defined]
+                return self.list_of_ips[0], self.list_of_blocks[0]  # type: ignore[attr-defined]
             else:
                 return self.list_of_blocks[0]
         else:
             if get_ip:
-                return list(zip(self.list_of_ips, self.list_of_blocks)) # type: ignore[attr-defined]
+                return list(zip(self.list_of_ips, self.list_of_blocks))  # type: ignore[attr-defined]
             else:
                 return self.list_of_blocks

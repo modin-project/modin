@@ -165,7 +165,7 @@ def configure_logging() -> None:
             "modin_memory.logger", job_id, "memory", logging.DEBUG
         )
 
-        svmem = psutil.virtual_memory() #type: ignore
+        svmem = psutil.virtual_memory()
         mem_logger.info(f"Memory Total: {bytes_int_to_str(svmem.total)}")
         mem_logger.info(f"Memory Available: {bytes_int_to_str(svmem.available)}")
         mem_logger.info(f"Memory Used: {bytes_int_to_str(svmem.used)}")
@@ -192,7 +192,7 @@ def memory_thread(logger: logging.Logger, sleep_time: int) -> None:
     """
     while True:
         rss_mem = bytes_int_to_str(psutil.Process().memory_info().rss)
-        svmem = psutil.virtual_memory() #type: ignore
+        svmem = psutil.virtual_memory()
         logger.info(f"Memory Percentage: {svmem.percent}%")
         logger.info(f"RSS Memory: {rss_mem}")
         time.sleep(sleep_time)
