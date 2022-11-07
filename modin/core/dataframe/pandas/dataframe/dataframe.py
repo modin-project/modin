@@ -1053,19 +1053,16 @@ class PandasDataframe(ClassLogger):
         extracted_columns = self.take_2d_labels_or_positional(
             col_labels=column_list
         ).to_pandas()
+        new_names = extracted_columns.columns
+        # return initial names
+        extracted_columns.columns = column_list
 
-        old_labels = extracted_columns.columns
         if len(column_list) == 1:
             new_labels = pandas.Index(extracted_columns.squeeze(axis=1))
-            # return initial name
-            new_labels.name = column_list[0]
         else:
             new_labels = pandas.MultiIndex.from_frame(extracted_columns)
-            # return initial name
-            new_labels.names = column_list
-
         result = self.take_2d_labels_or_positional(
-            col_labels=[i for i in self.columns if i not in old_labels]
+            col_labels=[i for i in self.columns if i not in new_names]
         )
         result.index = new_labels
         return result
