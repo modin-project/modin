@@ -267,6 +267,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
                     )
             if hasattr(other, "dtype"):
                 other_dtypes = [other.dtype] * len(other)
+            elif is_dict_like(other):
+                other_dtypes = [type(x) for x in other.values()]
             else:
                 other_dtypes = [type(x) for x in other]
         else:
