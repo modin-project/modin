@@ -3126,6 +3126,42 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         return DataFrameDefault.register(applyer)(self)
 
+    def take_2d_labels(
+        self,
+        index,
+        columns,
+        index_is_series,
+        column_is_series,
+    ):
+        """
+        Take the given labels.
+
+        Parameters
+        ----------
+        index : slice, scalar, or list-like
+            Labels of rows to grab.
+        columns : slice, scalar, or list-like
+            Labels of columns to grab.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Subset of this QueryCompiler.
+        """
+        if isinstance(index, type(self)):
+            index = index.to_pandas()
+            if index_is_series:
+                index = index.iloc[:, 0]
+        if isinstance(columns, type(self)):
+            columns = columns.to_pandas()
+            if column_is_series:
+                columns = columns.iloc[:, 0]
+
+        def applyer(df):
+            return df.loc[index, columns]
+
+        return DataFrameDefault.register(applyer)(self)
+
     def insert_item(self, axis, loc, value, how="inner", replace=False):
         """
         Insert rows/columns defined by `value` at the specified position.
