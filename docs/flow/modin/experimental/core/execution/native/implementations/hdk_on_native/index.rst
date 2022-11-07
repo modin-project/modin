@@ -2,14 +2,6 @@
 
 HdkOnNative execution
 =====================
-.. raw:: html
-
-    <style>.red {color:red; font-weight:bold;}</style>
-
-.. role:: red
-
-:red:`Note\: After migration to HDK, this documentation is temporarily
-out-of-date and will be fixed in the next release!`
 
 HDK is a low-level execution library for data analytics processing.
 HDK is used as a fast execution backend in Modin. The HDK library provides
@@ -20,8 +12,8 @@ OmniSciDB is an open-source SQL-based relational database designed for the
 massive parallelism of modern CPU and GPU hardware. Its execution engine
 is built on LLVM JIT compiler.
 
-OmniSciDB can be embedded into an application as a dynamic library that
-provides both C++ and Python APIs. A specialized in-memory storage layer
+HDK can be embedded into an application as a python module - ``pyhdk``. This module
+provides Python APIs to the HDK library. A specialized in-memory storage layer
 provides an efficient way to import data in Arrow table format.
 
 `HdkOnNative` execution uses HDK for both as a storage format and for
@@ -58,7 +50,7 @@ A partition holds data in either ``pandas.DataFrame`` or ``pyarrow.Table``
 format. ``pandas.DataFrame`` is preferred only when we detect unsupported
 data type and therefore have to use ``pandas`` framework for processing.
 In other cases ``pyarrow.Table`` format is preferred. Arrow tables can be
-zero-copy imported into OmniSciDB. A query execution result is also
+zero-copy imported into HDK. A query execution result is also
 returned as an Arrow table.
 
 Data Ingress
@@ -90,16 +82,16 @@ wrapped into a high-level Modin DataFrame, which is returned to the user.
 .. figure:: /img/hdk/hdk_ingress.svg
    :align: center
 
-Note that during this ingress flow, no data is actually imported to the OmniSciDB. The need for
-importing to OmniSci is decided later at the execution stage by the Modin Core Dataframe layer.
-If the query requires for the data to be placed in OmniSciDB, the import is triggered.
+Note that during this ingress flow, no data is actually imported to HDK. The need for
+importing to HDK is decided later at the execution stage by the Modin Core Dataframe layer.
+If the query requires for the data to be placed in HDK, the import is triggered.
 :py:class:`~modin.experimental.core.execution.native.implementations.hdk_on_native.dataframe.dataframe.HdkOnNativeDataframe`
 passes partition to import to the
 :py:class:`~modin.experimental.core.execution.native.implementations.hdk_on_native.partitioning.partition_manager.HdkOnNativeDataframePartitionManager`
-that extracts a partition's underlying object and sends a request to import it to the OmniSci
-Server. The response for the request is a unique identifier for the just imported table
-at OmniSciDB, this identifier is placed in the partition. After that, the partition has
-a reference to the concrete table in OmniSciDB to query, and the data is considered to be
+that extracts a partition's underlying object and sends a request to import it to HDK.
+The response for the request is a unique identifier for the just imported table
+at HDK, this identifier is placed in the partition. After that, the partition has
+a reference to the concrete table in HDK to query, and the data is considered to be
 fully imported.
 
 .. figure:: /img/hdk/hdk_import.svg
@@ -133,7 +125,7 @@ lazy computation tree or executed immediately.
 Lazy execution
 """"""""""""""
 
-OmniSciDB has a powerful query optimizer and an execution engine that
+HDK has a powerful query optimizer and an execution engine that
 combines multiple operations into a single execution module. E.g. join,
 filter and aggregation can be executed in a single data scan.
 
@@ -142,7 +134,7 @@ overheads, all of the operations that don't require data materialization
 are performed lazily.
 
 Lazy operations on a frame build a tree which is later translated into
-a query executed by OmniSci. Each of the tree nodes has its input node(s)
+a query executed by HDK. Each of the tree nodes has its input node(s)
 - a frame argument(s) of the operation. When a new node is appended to the
 tree, it becomes its root. The leaves of the tree are always a special node
 type, whose input is an actual materialized frame to execute operations 
@@ -174,7 +166,7 @@ Execution of a computation tree
 
 Frames are materialized (executed) when their data is accessed. E.g. it
 happens when we try to access the frame's index or shape. There are two ways
-to execute required operations: through Arrow or through OmniSciDB.
+to execute required operations: through Arrow or through HDK.
 
 Arrow execution
 '''''''''''''''
@@ -182,22 +174,21 @@ Arrow execution
 For simple operations which don't include actual computations, execution can use
 Arrow API. We can use it to rename columns, drop columns and concatenate
 frames. Arrow execution is preferable since it doesn't require actual data import/export
-to the OmniSciDB.
+from/to HDK.
 
-OmniSciDB execution
-'''''''''''''''''''
+HDK execution
+'''''''''''''
 
-To execute query in OmniSciDB engine we need to import data first. We should
+To execute a query in the HDK engine we need to import data first. We should
 find all leaves of an operation tree and import their Arrow tables. Partitions
 with imported tables hold corresponding table names used to refer to them in
 queries.
 
-OmniSciDB is SQL-based. SQL query parsing is done in a separate process using
-the Apache Calcite framework. A parsed query is serialized into JSON format
-and is transferred back to OmniSciDB. In Modin, we don't generate SQL queries
-for OmniSciDB but use this JSON format instead. Such queries can be directly
-executed by OmniSciDB and also they can be transferred to Calcite server for
-optimizations.
+HDK executes queries expressed in HDK-specific intermediate representation (IR) format.
+It also provides components to translate SQL queries to relational algebra JSON format
+which can be later optimized and translated to HDK IR. Modin generates queries in relational
+algebra JSON format. These queries are optionally optimized with Apache Calcite
+based optimizer provided by HDK (:py:class:`~pyhdk.sql.Calcite`) and then executed.
 
 Operations used by Calcite in its intermediate representation are implemented
 in classes derived from
@@ -235,7 +226,7 @@ Rowid column and sub-queries
 A special case of an index is the default index - 0-based numeric sequence.
 In our representation, such an index is represented by the absence of index columns.
 If we need to access the index value we can use the virtual ``rowid`` column provided
-by OmniSciDB. Unfortunately, this special column is available for physical
+by HDK. Unfortunately, this special column is available for physical
 tables only. That means we cannot access it for a node that is not a tree leaf.
 That makes us execute trees with such nodes in several steps. First, we
 materialize all frames that require ``rowid`` column and only after that we can
@@ -257,7 +248,7 @@ by ``DFAlgNode`` based trees. Scalar computations are described by ``BaseExpr`` 
 * :doc:`Frame nodes <df_algebra>`
 * :doc:`Expression nodes <expr>`
 
-Interactions with OmniSci engine are done using ``OmnisciWorker`` class. Queries use serialized
+Interactions with HDK engine are done using ``HdkWorker`` class. Queries use serialized
 Calcite relational algebra format. Calcite algebra nodes are based on ``CalciteBaseNode`` class.
 Translation is done by ``CalciteBuilder`` class. Serialization is performed by ``CalciteSerializer``
 class.

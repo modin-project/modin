@@ -594,3 +594,10 @@ def prepare_io_data_parquet(test_filename: str, data_type: str, shapes: list):
         df.to_parquet(test_filenames[shape_id], index=False)
 
     return test_filenames
+
+
+def setup(*args, **kwargs):  # noqa: GL08
+    # This function just needs to be imported into each benchmark file to
+    # set up the random seed before each function. ASV run it automatically.
+    # https://asv.readthedocs.io/en/latest/writing_benchmarks.html
+    np.random.seed(42)

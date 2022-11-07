@@ -127,7 +127,7 @@ class PandasProtocolDataframe(ProtocolDataframe):
             )
 
     def select_columns(self, indices: Sequence[int]) -> "PandasProtocolDataframe":
-        if not isinstance(indices, collections.Sequence):
+        if not isinstance(indices, collections.abc.Sequence):
             raise ValueError("`indices` is not a sequence")
 
         return PandasProtocolDataframe(
@@ -138,7 +138,7 @@ class PandasProtocolDataframe(ProtocolDataframe):
         )
 
     def select_columns_by_name(self, names: Sequence[str]) -> "PandasProtocolDataframe":
-        if not isinstance(names, collections.Sequence):
+        if not isinstance(names, collections.abc.Sequence):
             raise ValueError("`names` is not a sequence")
 
         return PandasProtocolDataframe(

@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 import sys
-import time
+from utils import measure
 import modin.pandas as pd
 from modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker import (
     DbWorker,
@@ -242,18 +242,12 @@ def ml(X, y, random_state, n_runs, test_size):
     return ml_scores
 
 
-def measure(name, func, *args, **kw):
-    t0 = time.time()
-    res = func(*args, **kw)
-    t1 = time.time()
-    print(f"{name}: {t1 - t0} sec")
-    return res
-
-
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         print(
-            f"USAGE: docker run --rm -v /path/to/dataset:/dataset python census-hdk.py <data file name starting with /dataset>"
+            "USAGE: docker run --rm -v /path/to/dataset:/dataset python census-hdk.py"
+            + " <data file name starting with /dataset>"
+            + " [-no-ml]"
         )
         return
     # ML specific
@@ -263,9 +257,17 @@ def main():
 
     df = measure("Reading", read, sys.argv[1])
     _, X, y = measure("ETL", etl, df)
-    measure(
-        "ML", ml, X, y, random_state=RANDOM_STATE, n_runs=N_RUNS, test_size=TEST_SIZE
-    )
+
+    if "-no-ml" not in sys.argv[2:]:
+        measure(
+            "ML",
+            ml,
+            X,
+            y,
+            random_state=RANDOM_STATE,
+            n_runs=N_RUNS,
+            test_size=TEST_SIZE,
+        )
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-pandas==1.5.0
+pandas==1.5.1
 numpy>=1.18.5
 pyarrow>=4.0.1
 dask[complete]>=2.22.0
@@ -29,7 +29,9 @@ cloudpickle
 rpyc==4.1.5
 scikit-learn
 git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
-xgboost>=1.6.0
+# TODO(https://github.com/modin-project/modin/issues/5171): uncap xgboost
+# when we can run tests on 1.7.0 without getting stuck.
+xgboost>=1.6.0,<1.7.0
 tqdm
 # Latest modin-spreadsheet with widget fix
 git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5

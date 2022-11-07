@@ -329,7 +329,8 @@ def run_and_compare(
             new_schema = {}
             for col in exp_res.columns:
                 if (
-                    internal_dtypes[col] == "category"
+                    not isinstance(internal_dtypes[col], pandas.Series)
+                    and internal_dtypes[col] == "category"
                     and external_dtypes[col] != "category"
                 ):
                     new_schema[col] = external_dtypes[col]

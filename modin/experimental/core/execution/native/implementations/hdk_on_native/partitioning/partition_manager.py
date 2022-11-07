@@ -163,6 +163,8 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
 
             if obj.empty:
                 unsupported_cols = []
+            elif isinstance(obj.columns, pandas.MultiIndex):
+                unsupported_cols = [str(c) for c in obj.columns]
             else:
                 cols = [name for name, col in obj.dtypes.items() if col == "object"]
                 type_samples = obj.iloc[0][cols]
@@ -178,7 +180,17 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
 
             try:
                 at = pyarrow.Table.from_pandas(obj, preserve_index=False)
-            except (pyarrow.lib.ArrowTypeError, pyarrow.lib.ArrowInvalid) as err:
+            except (
+                pyarrow.lib.ArrowTypeError,
+                pyarrow.lib.ArrowInvalid,
+                ValueError,
+            ) as err:
+                # The ValueError is raised by pyarrow in case of duplicate columns.
+                # We catch and handle this error here. If there are no duplicates
+                # (is_unique is True), then the error is caused by something different
+                # and we just rethrow it.
+                if (type(err) == ValueError) and obj.columns.is_unique:
+                    raise err
                 regex = r"Conversion failed for column ([^\W]*)"
                 unsupported_cols = []
                 for msg in err.args:
