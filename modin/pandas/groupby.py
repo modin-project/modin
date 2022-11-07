@@ -425,13 +425,15 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
         if is_list_like(key):
             make_dataframe = True
         else:
+            key = [key]
             if self._as_index:
                 make_dataframe = False
             else:
                 make_dataframe = True
-                key = [key]
+        internal_by = frozenset(self._internal_by)
+        cols_to_grab = internal_by.union(key)
+        key = [col for col in self._df.columns if col in cols_to_grab]
         if make_dataframe:
-            internal_by = frozenset(self._internal_by)
             if len(internal_by.intersection(key)) != 0:
                 ErrorMessage.missmatch_with_pandas(
                     operation="GroupBy.__getitem__",
@@ -443,8 +445,6 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                         + "df.groupby(df['by_column'].copy())['by_column']"
                     ),
                 )
-            cols_to_grab = internal_by.union(key)
-            key = [col for col in self._df.columns if col in cols_to_grab]
             return DataFrameGroupBy(
                 self._df[key],
                 drop=self._drop,
@@ -459,7 +459,8 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                 "Column lookups on GroupBy with arbitrary Series in by"
                 + " is not yet supported."
             )
-        return SeriesGroupBy(
+        kwargs["squeeze"] = True
+        return DataFrameGroupBy(
             self._df[key],
             drop=False,
             **kwargs,
