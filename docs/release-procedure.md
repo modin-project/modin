@@ -1,15 +1,16 @@
 ## Versioning
 
-### Point release
+### Patch release
 
-Modin uses semantic versioning. So when doing a point release, please make a separate branch
-off the previous release tag, and `git cherry-pick` **only** bugfixes there (assuming previous release was versioned `X.Y.Z`):
+Modin uses semantic versioning. So when doing a patch release, please make a separate branch
+off the previous release tag, and `git cherry-pick` **only** the commits we would like to have in our
+patch release (assuming previous release was versioned `X.Y.Z`):
 
         git checkout -b release-X.Y.Z+1 X.Y.Z
 
-### Major release
+### Major and Minor releases
 
-A "major" (that would be `0.xx.0` for now until Modin hits `1.0` milestone) release could be done by branching from `master`:
+A major (`xx.0.0`) or minor (`0.xx.0`) release could be done by branching from `master`:
 
         git checkout -b release-X.Y.0 master
 
@@ -23,29 +24,50 @@ as reviewing them again would not add a lot of value but would add lots of exces
 Hence non-cherry-pick commits should happen in a separate branch in your own fork, and
 be delivered to the release branch by using a PR.
 
-Note that Modin uses fully signed commits at least for releases, so you have to have GPG keys set up. See [onboarding instructions](https://github.com/modin-project/modin/blob/master/onboarding/onboarding.md) on where to get started.
+Note that Modin uses fully signed commits, so you have to have GPG keys set up. See [onboarding instructions](https://github.com/modin-project/modin/blob/master/contributing/contributing.md) on where to get started.
 
 To update Modin version, follow the instructions below.
 
-### Update the link to release in readme
+### Preparing the repo for a Major or Minor Version
 
-**Note**: from now on you work in a branch in your fork (in `origin`).
+**Note**: this should be done in your fork of Modin.
 
-Change the `README.md` in the repo root so release badge points to new (would be created) release.
+First, update your fork of Modin's master with the main repo's master. From your master, create a new
+branch called `release-X.Y.0` off of master. Create an empty commit in your new branch with the message
+`Release version X.Y.0`. Make sure to sign this commit with both your GPG key
+and with the conventional `git commit -s` (so `git commit -s -S`). Open a PR against modin-project/modin with just this commit.
 
-### Commit
+### Preparing the repo for a Patch Version
 
-        git commit -a -S -m "Release version X.Y.Z"
+**Note**: this should be done in the original Modin repository (in `upstream`) .
 
-Pay attention to that `-S` switch if you haven't enabled signing all the commits!
-Modin requires release commits to be signed (do not mix this with "signing off" commits, this
-is a whole different story - signed commits are cryptographically signed).
+First, you must create a new branch in the upstream (main modin-project/modin) repo for the new release.
+This branch must be named `release-X.Y.Z`, and should be made off of the tag for the last release. To
+do this, use `git checkout -b release-X.Y.Z+1 X.Y.Z` to create the branch for the new release. Once
+this branch has been created, cherry-pick the commits that will go into this release, and push this
+branch to `upstream`.
 
-Push the commit, make a PR _against `release-X.Y.Z`_ branch and, when it's merged, pull that branch from `upstream` before proceeding.
+**Note**: now you must switch to your fork of Modin.
+
+From your fork of Modin, fetch the upstream repo, and checkout the release branch you made above.
+From this release branch, create a new branch.
+
+From your new branch, edit the `README.md` so that the PyPi badge will
+point to the badge for this specific version (instead of latest) and so that the docs link will point
+to the docs for this specific version (rather than latest).
+
+Once the badges have been edited, create a commit, the same as for a major or minor version,
+with the message `Release version X.Y.Z`, and make sure to sign it with both your GPG key, and the
+traditional git sign-off. Create a PR using your branch against the `release-X.Y.Z` branch in the
+original Modin repo.
 
 ### Tag commit
 
-**Note**: from now on you work in the release branch (in `upstream`).
+After the PR has been merged, clone a clean copy of the Modin repo from the modin-project organization.
+You now need to tag the commit that corresponds to the above PR with the appropriate tag for this release.
+
+**Note**: from now on you work on the `master` branch (in `upstream`) for a major or minor release,
+or the `release-X.Y.Z` branch (in `upstream`) for a patch release.
 
         git tag -as X.Y.Z
 
@@ -56,17 +78,20 @@ Push the commit, make a PR _against `release-X.Y.Z`_ branch and, when it's merge
     * You can link to merge commits, but try to "explain" what a PR does instead of blindly copying its title
     * Gather and mention the list of all participants in the release, including those mentioned in "Co-Authored-By" part of PRs
   * Include release documentation in the annotation and make sure it is signed.
-  * Push the tag to master: `git push upstream X.Y.Z`
+  * Push the tag to `master` or `release-X.Y.Z` branch: `git push upstream X.Y.Z`
     * If you're re-pushing a tag (beware! you shouldn't be doing that, no, _really_!), you can remove remote tag and push a local one by `git push upstream :refs/tags/X.Y.Z`
 
+***Note***: We are currently working on automating the release notes procedure - check 
+[#4747](https://github.com/modin-project/modin/issues/4747) for updates!
+
 ### Build wheel:
+
+**Note**: This should be done from your clean clone of the `upstream` Modin
+repository from the modin-project organization, where you made the release tag.
 
 ```bash
 # Install/update tools
 pip install --upgrade build twine
-# Fresh clone Modin
-git clone git@github.com:modin-project/modin.git
-cd modin
 # Build a pure Python wheel.
 python3 setup.py sdist bdist_wheel
 ```
@@ -95,7 +120,14 @@ to test that the wheels were uploaded correctly.
 
 ### Github
 
-After all is said and done and pushed to PyPI, open Github Releases page and create a new release. It should be enough to just specify "release from tag" and point it to newly created `X.Y.Z` tag (ensure the release title reads `Modin X.Y.Z`) - Github should pull everything including release text from your tag annotations.
+Once the tag has been published, we need to make the release on GitHub. Go to the
+[Release page](https://github.com/modin-project/modin/releases), and click on `Draft a new release`.
+Choose the tag you made above from the dropdown menu, and copy paste the name of the release 
+in the `Release title` box. Next, copy paste the release notes from above into the box labelled
+`Describe this release`. This will ensure that the release notes on GitHub are Markdown formatted.
+
+Double check that everything looks good by clicking `Preview`, and then hit the green `Publish release`
+button!
 
 ### Conda-forge
 
@@ -105,3 +137,8 @@ a new automatic PR with version increment.
 
 You should watch for that PR and, fixing any issues if there are some, merge it
 to make new Modin release appear in `conda-forge` channel.
+
+## Publicize Release
+Once the release has been finalized, make sure to post an announcement in the #general channel of
+the public Modin Slack, as well as in the discourse (discuss.modin.org)! Make sure to unpin the
+previous announcement on discourse, and globally pin the new announcement!

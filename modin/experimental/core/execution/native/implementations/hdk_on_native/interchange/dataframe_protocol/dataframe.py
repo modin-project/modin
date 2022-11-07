@@ -246,7 +246,7 @@ class HdkProtocolDataframe(ProtocolDataframe):
             )
 
     def select_columns(self, indices: Sequence[int]) -> "HdkProtocolDataframe":
-        if not isinstance(indices, collections.Sequence):
+        if not isinstance(indices, collections.abc.Sequence):
             raise ValueError("`indices` is not a sequence")
 
         return HdkProtocolDataframe(
@@ -256,7 +256,7 @@ class HdkProtocolDataframe(ProtocolDataframe):
         )
 
     def select_columns_by_name(self, names: Sequence[str]) -> "HdkProtocolDataframe":
-        if not isinstance(names, collections.Sequence):
+        if not isinstance(names, collections.abc.Sequence):
             raise ValueError("`names` is not a sequence")
 
         return HdkProtocolDataframe(

@@ -21,6 +21,7 @@ queries for the ``PandasDataframe``.
 import numpy as np
 import pandas
 import functools
+from pandas.api.types import is_scalar
 from pandas.core.common import is_bool_indexer
 from pandas.core.indexing import check_bool_indexer
 from pandas.core.indexes.api import ensure_index_from_sequences
@@ -152,7 +153,11 @@ def _dt_prop_map(property_name):
 
     def dt_op_builder(df, *args, **kwargs):
         """Access specified date-time property of the passed frame."""
-        prop_val = getattr(df.squeeze(axis=1).dt, property_name)
+        squeezed_df = df.squeeze(axis=1)
+        if isinstance(squeezed_df, pandas.DataFrame) and len(squeezed_df.columns) == 0:
+            return squeezed_df
+        assert isinstance(squeezed_df, pandas.Series)
+        prop_val = getattr(squeezed_df.dt, property_name)
         if isinstance(prop_val, pandas.Series):
             return prop_val.to_frame()
         elif isinstance(prop_val, pandas.DataFrame):
@@ -1544,9 +1549,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def first_valid_index(self):
         def first_valid_index_builder(df):
             """Get the position of the first valid index in a single partition."""
-            return df.set_axis(
-                pandas.RangeIndex(len(df.index)), axis="index", inplace=False
-            ).apply(lambda df: df.first_valid_index())
+            return df.set_axis(pandas.RangeIndex(len(df.index)), axis="index").apply(
+                lambda df: df.first_valid_index()
+            )
 
         # We get the minimum from each column, then take the min of that to get
         # first_valid_index. The `to_pandas()` here is just for a single value and
@@ -1562,9 +1567,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def last_valid_index(self):
         def last_valid_index_builder(df):
             """Get the position of the last valid index in a single partition."""
-            return df.set_axis(
-                pandas.RangeIndex(len(df.index)), axis="index", inplace=False
-            ).apply(lambda df: df.last_valid_index())
+            return df.set_axis(pandas.RangeIndex(len(df.index)), axis="index").apply(
+                lambda df: df.last_valid_index()
+            )
 
         # We get the maximum from each column, then take the max of that to get
         # last_valid_index. The `to_pandas()` here is just for a single value and
@@ -1907,15 +1912,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
                 else:
 
-                    def fillna_builder(series, value_arg):
-                        # Both arguments for this function are 1-column `DataFrames` which denote `Series` type.
-                        # Because they are both of the same type, it is not necessary to convert either of them into
-                        # `Series` by squeezing since `fillna` works perfectly in the same way on 1-column `DataFrame`
-                        # objects (when `limit` parameter is absent) as it works on two `Series`.
-                        return series.fillna(value=value_arg, **kwargs)
+                    def fillna_builder(df, value_arg):
+                        if isinstance(value_arg, pandas.DataFrame):
+                            value_arg = value_arg.squeeze(axis=1)
+                        res = df.squeeze(axis=1).fillna(value=value_arg, **kwargs)
+                        return pandas.DataFrame(res)
 
                     new_modin_frame = self._modin_frame.n_ary_op(
-                        fillna_builder, [value._modin_frame], join_type="left"
+                        fillna_builder,
+                        [value._modin_frame],
+                        join_type="left",
+                        copartition_along_columns=False,
                     )
 
                 return self.__constructor__(new_modin_frame)
@@ -2177,8 +2184,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # __getitem__ methods
     __getitem_bool = Binary.register(
-        # r is usually a list, but when r.size == 1, the array is squeezed to a scalar
-        lambda df, r: df[r] if r.size > 1 else df[[r]],
+        lambda df, r: df[[r]] if is_scalar(r) else df[r],
         join_type="left",
         labels="drop",
     )
@@ -2554,6 +2560,40 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
 
+    def _groupby_internal_columns(self, by, drop):
+        """
+        Extract internal columns from by argument of groupby.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler, column or index label, Grouper or list
+        drop : bool
+            Indicates whether or not by data came from self frame.
+            True, by data came from self. False, external by data.
+
+        Returns
+        -------
+        by : list of BaseQueryCompiler, column or index label, or Grouper
+        internal_by : list of str
+            List of internal column name to be dropped during groupby.
+        """
+        if isinstance(by, type(self)):
+            if drop:
+                internal_by = by.columns
+                by = [by]
+            else:
+                internal_by = []
+                by = [by]
+        else:
+            if not isinstance(by, list):
+                by = [by] if by is not None else []
+            internal_by = [o for o in by if hashable(o) and o in self.columns]
+            internal_qc = (
+                [self.getitem_column_array(internal_by)] if len(internal_by) else []
+            )
+            by = internal_qc + by[len(internal_by) :]
+        return by, internal_by
+
     groupby_all = GroupByReduce.register("all")
     groupby_any = GroupByReduce.register("any")
     groupby_count = GroupByReduce.register("count")
@@ -2563,12 +2603,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_sum = GroupByReduce.register("sum")
 
     def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
+        _, internal_by = self._groupby_internal_columns(by, drop)
+
         numeric_only = agg_kwargs.get("numeric_only", False)
         datetime_cols = (
             {
                 col: dtype
                 for col, dtype in zip(self.dtypes.index, self.dtypes)
-                if is_datetime64_any_dtype(dtype)
+                if is_datetime64_any_dtype(dtype) and col not in internal_by
             }
             if not numeric_only
             else dict()
@@ -2806,26 +2848,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         groupby_kwargs = groupby_kwargs.copy()
 
         as_index = groupby_kwargs.get("as_index", True)
-        if isinstance(by, type(self)):
-            # `drop` parameter indicates whether or not 'by' data came
-            # from the `self` frame:
-            # True: 'by' data came from the `self`
-            # False: external 'by' data
-            if drop:
-                internal_by = by.columns
-                by = [by]
-            else:
-                internal_by = []
-                by = [by]
-        else:
-            if not isinstance(by, list):
-                by = [by] if by is not None else []
-            internal_by = [o for o in by if hashable(o) and o in self.columns]
-            internal_qc = (
-                [self.getitem_column_array(internal_by)] if len(internal_by) else []
-            )
-
-            by = internal_qc + by[len(internal_by) :]
+        by, internal_by = self._groupby_internal_columns(by, drop)
 
         broadcastable_by = [o._modin_frame for o in by if isinstance(o, type(self))]
         not_broadcastable_by = [o for o in by if not isinstance(o, type(self))]
@@ -3152,20 +3175,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
         elif not is_list_like(columns):
             columns = [columns]
 
+        def map_fn(df):
+            cols_to_encode = df.columns.intersection(columns)
+            return pandas.get_dummies(df, columns=cols_to_encode, **kwargs)
+
         # In some cases, we are mapping across all of the data. It is more
         # efficient if we are mapping over all of the data to do it this way
         # than it would be to reuse the code for specific columns.
         if len(columns) == len(self.columns):
             new_modin_frame = self._modin_frame.apply_full_axis(
-                0, lambda df: pandas.get_dummies(df, **kwargs), new_index=self.index
+                0, map_fn, new_index=self.index
             )
             untouched_frame = None
         else:
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_labels=columns
-            ).apply_full_axis(
-                0, lambda df: pandas.get_dummies(df, **kwargs), new_index=self.index
-            )
+            ).apply_full_axis(0, map_fn, new_index=self.index)
             untouched_frame = self.drop(columns=columns)
         # If we mapped over all the data we are done. If not, we need to
         # prepend the `new_modin_frame` with the raw data from the columns that were

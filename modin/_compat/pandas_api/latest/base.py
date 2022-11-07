@@ -331,11 +331,17 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
         )
 
     def set_axis(self, labels, axis=0, inplace=no_default, *, copy=no_default):
+        if inplace is True and copy is True:
+            raise ValueError("Cannot specify both inplace=True and copy=True")
+        if inplace is no_default:
+            inplace = False
+        if copy is no_default:
+            copy = not inplace
         return self._set_axis(
             labels=labels,
             axis=axis,
-            inplace=False if inplace is no_default else inplace,
-            copy=True if copy is no_default else copy,
+            inplace=inplace,
+            copy=copy,
         )
 
     def sem(

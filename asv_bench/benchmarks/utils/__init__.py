@@ -32,6 +32,7 @@ from .common import (
     random_booleans,
     translator_groupby_ngroups,
     trigger_import,
+    setup,
 )
 
 __all__ = [
@@ -54,4 +55,5 @@ __all__ = [
     "random_booleans",
     "translator_groupby_ngroups",
     "trigger_import",
+    "setup",
 ]

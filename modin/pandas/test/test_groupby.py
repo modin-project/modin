@@ -874,9 +874,7 @@ def test_simple_col_groupby():
     )
     eval_fillna(modin_groupby, pandas_groupby)
     eval_count(modin_groupby, pandas_groupby)
-    if PandasCompatVersion.CURRENT != PandasCompatVersion.LATEST:
-        # due to https://github.com/modin-project/modin/issues/5078, that would fail on pandas 1.5.0
-        eval_size(modin_groupby, pandas_groupby)
+    eval_size(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take())
     eval_groups(modin_groupby, pandas_groupby)
 
@@ -1363,9 +1361,7 @@ def test_groupby_multiindex(groupby_kwargs):
     )
     modin_groupby_equals_pandas(md_grp, pd_grp)
     df_equals(md_grp.sum(), pd_grp.sum())
-    if PandasCompatVersion.CURRENT != PandasCompatVersion.LATEST:
-        # due to https://github.com/modin-project/modin/issues/5078, that would fail on pandas 1.5.0
-        df_equals(md_grp.size(), pd_grp.size())
+    df_equals(md_grp.size(), pd_grp.size())
     # Grouping on level works incorrect in case of aggregation:
     # https://github.com/modin-project/modin/issues/2912
     # df_equals(md_grp.quantile(), pd_grp.quantile())
@@ -1440,13 +1436,7 @@ def test_groupby_with_kwarg_dropna(groupby_kwargs, dropna):
         and any(col in modin_df.columns for col in by_kwarg)
     ):
         df_equals(md_grp.sum(), pd_grp.sum())
-        if not (
-            groupby_kwargs == {"level": 1, "axis": 1}
-            and PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST
-        ):
-            # skip the check for df.groupby().size() on pandas 1.5.0
-            # as it's failing due to pandas bug: https://github.com/modin-project/modin/issues/5078
-            df_equals(md_grp.size(), pd_grp.size())
+        df_equals(md_grp.size(), pd_grp.size())
     # Grouping on level works incorrect in case of aggregation:
     # https://github.com/modin-project/modin/issues/2912
     # "BaseOnPython" tests are disabled because of the bug:
@@ -2181,3 +2171,22 @@ def test_groupby_with_frozenlist():
     pandas_df = pandas_df.set_index(["a", "b"])
     modin_df = from_pandas(pandas_df)
     eval_general(modin_df, pandas_df, lambda df: df.groupby(df.index.names).count())
+
+
+@pytest.mark.parametrize(
+    "by_func",
+    [
+        lambda df: "timestamp0",
+        lambda df: ["timestamp0", "timestamp1"],
+        lambda df: ["timestamp0", df["timestamp1"]],
+    ],
+)
+def test_mean_with_datetime(by_func):
+    data = {
+        "timestamp0": [pd.to_datetime(1490195805, unit="s")],
+        "timestamp1": [pd.to_datetime(1490195805, unit="s")],
+        "numeric": [0],
+    }
+
+    modin_df, pandas_df = create_test_dfs(data)
+    eval_general(modin_df, pandas_df, lambda df: df.groupby(by=by_func(df)).mean())

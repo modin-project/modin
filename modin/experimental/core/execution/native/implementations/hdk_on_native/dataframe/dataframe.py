@@ -323,7 +323,11 @@ class HdkOnNativeDataframe(PandasDataframe):
                 new_columns = base.columns[col_positions]
             exprs = self._index_exprs()
             for col in new_columns:
-                exprs[col] = base.ref(col)
+                expr = base.ref(col)
+                if exprs.setdefault(col, expr) is not expr:
+                    raise NotImplementedError(
+                        "duplicate column names are not supported"
+                    )
             dtypes = self._dtypes_for_exprs(exprs)
             base = self.__constructor__(
                 columns=new_columns,
@@ -2030,7 +2034,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         """
         exprs = self._index_exprs()
         for old, new in zip(self.columns, new_columns):
-            exprs[new] = self.ref(old)
+            expr = self.ref(old)
+            if exprs.setdefault(new, expr) is not expr:
+                raise NotImplementedError("duplicate column names are not supported")
         return self.__constructor__(
             columns=new_columns,
             dtypes=self._dtypes.tolist(),
@@ -2379,6 +2385,14 @@ class HdkOnNativeDataframe(PandasDataframe):
         """
         new_index = df.index
         new_columns = df.columns
+
+        if isinstance(new_columns, MultiIndex):
+            # MultiIndex columns are not supported by the HDK backend.
+            # We just print this warning here and fall back to pandas.
+            index_cols = None
+            ErrorMessage.single_warning(
+                "MultiIndex columns are not currently supported by the HDK backend."
+            )
         # If there is non-trivial index, we put it into columns.
         # If the index is trivial, but there are no columns, we put
         # it into columns either because, otherwise, we don't know
@@ -2386,7 +2400,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         # That's what we usually have for arrow tables and execution
         # result. Unnamed index is renamed to __index__. Also all
         # columns get 'F_' prefix to handle names unsupported in HDK.
-        if len(new_index) == 0 or (
+        elif len(new_index) == 0 or (
             len(new_columns) != 0 and cls._is_trivial_index(new_index)
         ):
             index_cols = None

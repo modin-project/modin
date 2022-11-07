@@ -20,6 +20,7 @@
 # measurements
 
 import numpy as np
+import pandas._testing as tm
 
 from .utils import (
     generate_dataframe,
@@ -127,12 +128,56 @@ class TimeJoin:
         execute(self.df1.join(self.df2, how=how, lsuffix="left_", sort=sort))
 
 
+class TimeJoinStringIndex:
+    param_names = ["shapes", "sort"]
+    params = [
+        get_benchmark_shapes("TimeJoinStringIndex"),
+        [True, False],
+    ]
+
+    def setup(self, shapes, sort):
+        assert shapes[0] % 100 == 0, "implementation restriction"
+        level1 = tm.makeStringIndex(10).values
+        level2 = tm.makeStringIndex(shapes[0] // 100).values
+        codes1 = np.arange(10).repeat(shapes[0] // 100)
+        codes2 = np.tile(np.arange(shapes[0] // 100), 10)
+        index2 = IMPL.MultiIndex(levels=[level1, level2], codes=[codes1, codes2])
+        self.df_multi = IMPL.DataFrame(
+            np.random.randn(len(index2), 4), index=index2, columns=["A", "B", "C", "D"]
+        )
+
+        self.key1 = np.tile(level1.take(codes1), 10)
+        self.key2 = np.tile(level2.take(codes2), 10)
+        self.df = generate_dataframe("int", *shapes, RAND_LOW, RAND_HIGH)
+        # just to keep source shape
+        self.df = self.df.drop(columns=self.df.columns[-2:])
+        self.df["key1"] = self.key1
+        self.df["key2"] = self.key2
+        execute(self.df)
+
+        self.df_key1 = IMPL.DataFrame(
+            np.random.randn(len(level1), 4), index=level1, columns=["A", "B", "C", "D"]
+        )
+        self.df_key2 = IMPL.DataFrame(
+            np.random.randn(len(level2), 4), index=level2, columns=["A", "B", "C", "D"]
+        )
+
+    def time_join_dataframe_index_multi(self, shapes, sort):
+        execute(self.df.join(self.df_multi, on=["key1", "key2"], sort=sort))
+
+    def time_join_dataframe_index_single_key_bigger(self, shapes, sort):
+        execute(self.df.join(self.df_key2, on="key2", sort=sort))
+
+    def time_join_dataframe_index_single_key_small(self, shapes, sort):
+        execute(self.df.join(self.df_key1, on="key1", sort=sort))
+
+
 class TimeMerge:
     param_names = ["shapes", "how", "sort"]
     params = [
         get_benchmark_shapes("TimeMerge"),
         ["left", "inner"],
-        [False],
+        [True, False],
     ]
 
     def setup(self, shapes, how, sort):
@@ -146,6 +191,19 @@ class TimeMerge:
                 self.df2, left_index=True, right_index=True, how=how, sort=sort
             )
         )
+
+    def time_merge_default(self, shapes, how, sort):
+        execute(IMPL.merge(self.df1, self.df2, how=how, sort=sort))
+
+    def time_merge_dataframe_empty_right(self, shapes, how, sort):
+        # Getting an empty dataframe using `iloc` should be very fast,
+        # so the impact on the time of the merge operation should be negligible.
+        execute(IMPL.merge(self.df1, self.df2.iloc[:0], how=how, sort=sort))
+
+    def time_merge_dataframe_empty_left(self, shapes, how, sort):
+        # Getting an empty dataframe using `iloc` should be very fast,
+        # so the impact on the time of the merge operation should be negligible.
+        execute(IMPL.merge(self.df1.iloc[:0], self.df2, how=how, sort=sort))
 
 
 class TimeMergeCategoricals:
@@ -759,3 +817,6 @@ class TimeProperties:
 
     def time_index(self, shape):
         return self.df.index
+
+
+from .utils import setup  # noqa: E402, F401

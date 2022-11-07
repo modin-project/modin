@@ -30,7 +30,7 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
             f"Starting Modin in compatibility mode to support legacy pandas version {__pandas_version__}"
         )
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
-    __pandas_version__ = "1.5.0"
+    __pandas_version__ = "1.5.1"
 
     if pandas.__version__ != __pandas_version__:
         warnings.warn(
@@ -101,9 +101,6 @@ import os
 
 from modin.config import Engine, Parameter
 
-# Set this so that Pandas doesn't try to multithread by itself
-os.environ["OMP_NUM_THREADS"] = "1"
-
 _is_first_update = {}
 _NOINIT_ENGINES = {
     "Python",
@@ -114,6 +111,9 @@ def _update_engine(publisher: Parameter):
     from modin.config import StorageFormat, CpuCount
     from modin.config.envvars import IsExperimental
     from modin.config.pubsub import ValueSource
+
+    # Set this so that Pandas doesn't try to multithread by itself
+    os.environ["OMP_NUM_THREADS"] = "1"
 
     sfmt = StorageFormat.get()
 
