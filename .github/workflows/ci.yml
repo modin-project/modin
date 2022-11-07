@@ -995,7 +995,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.9"]
     env:
       MODIN_SMALL_QUERY_COMPILER: "True"
     name: test-small-query-compiler python ${{matrix.python-version}})
@@ -1018,7 +1018,7 @@ jobs:
           use-mamba: true
           activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.8
+          python-version: 3.9
           channel-priority: strict
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
       - name: Conda environment
