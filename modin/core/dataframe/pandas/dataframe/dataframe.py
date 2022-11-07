@@ -21,7 +21,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas
 import datetime
-from pandas.api.types import is_object_dtype, is_scalar
+from pandas.api.types import is_object_dtype
 from pandas.core.indexes.api import ensure_index, Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 from pandas._libs.lib import no_default
@@ -652,11 +652,23 @@ class PandasDataframe(ClassLogger):
 
         if row_labels is not None:
             # Get numpy array of positions of values from `row_labels`
-            row_positions = self.index.get_indexer_for(row_labels)
+            if isinstance(self.index, pandas.MultiIndex):
+                row_positions = np.zeros(len(row_labels), dtype="int64")
+                for idx, label in enumerate(row_labels):
+                    # get_loc can return slice that _take_2d_positional can't handle
+                    row_positions[idx] = self.index.get_locs(label)[0]
+            else:
+                row_positions = self.index.get_indexer_for(row_labels)
 
         if col_labels is not None:
             # Get numpy array of positions of values from `col_labels`
-            col_positions = self.columns.get_indexer_for(col_labels)
+            if isinstance(self.columns, pandas.MultiIndex):
+                col_positions = np.zeros(len(col_labels), dtype="int64")
+                for idx, label in enumerate(col_labels):
+                    # get_loc can return slice that _take_2d_positional can't handle
+                    col_positions[idx] = self.columns.get_locs(label)[0]
+            else:
+                col_positions = self.columns.get_indexer_for(col_labels)
 
         return self._take_2d_positional(row_positions, col_positions)
 
@@ -1038,28 +1050,11 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             A new PandasDataframe that has the updated labels.
         """
-        new_col_labels = column_list
-        if isinstance(self.columns, pandas.MultiIndex):
-            # all column names must have the same number of levels as the multiindex
-            new_col_labels = [[""] * self.columns.nlevels] * len(column_list)
-            for idx, col_label in enumerate(column_list):
-                if (
-                    is_scalar(col_label)
-                    and self.columns.nlevels != 1
-                    or len(col_label) != self.columns.nlevels
-                ):
-                    if is_scalar(col_label):
-                        new_col_labels[idx][0] = col_label
-                    else:
-                        for idx2, lbl in enumerate(col_label):
-                            new_col_labels[idx][idx2] = col_label
-                else:
-                    new_col_labels[idx] = col_label
-            new_col_labels = [tuple(label) for label in new_col_labels]
         extracted_columns = self.take_2d_labels_or_positional(
-            col_labels=new_col_labels
+            col_labels=column_list
         ).to_pandas()
 
+        old_labels = extracted_columns.columns
         if len(column_list) == 1:
             new_labels = pandas.Index(extracted_columns.squeeze(axis=1))
             # return initial name
@@ -1069,8 +1064,9 @@ class PandasDataframe(ClassLogger):
             # return initial name
             new_labels.names = column_list
 
-        rest_col_labels = [i for i in self.columns if i not in new_col_labels]
-        result = self.take_2d_labels_or_positional(col_labels=rest_col_labels)
+        result = self.take_2d_labels_or_positional(
+            col_labels=[i for i in self.columns if i not in old_labels]
+        )
         result.index = new_labels
         return result
 
