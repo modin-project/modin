@@ -1480,29 +1480,38 @@ def test___round__():
         pd.DataFrame(data).__round__()
 
 
-def test_constructor_from_modin_series():
+@pytest.mark.parametrize(
+    "get_index",
+    [
+        pytest.param(lambda idx: None, id="None_idx"),
+        pytest.param(lambda idx: ["a", "b", "c"], id="No_intersection_idx"),
+        pytest.param(lambda idx: idx, id="Equal_idx"),
+        pytest.param(lambda idx: idx[::-1], id="Reversed_idx"),
+    ],
+)
+@pytest.mark.parametrize(
+    "get_columns",
+    [
+        pytest.param(lambda idx: None, id="None_idx"),
+        pytest.param(lambda idx: ["a", "b", "c"], id="No_intersection_idx"),
+        pytest.param(lambda idx: idx, id="Equal_idx"),
+        pytest.param(lambda idx: idx[::-1], id="Reversed_idx"),
+    ],
+)
+@pytest.mark.parametrize("dtype", [None, "str"])
+def test_constructor_from_modin_series(get_index, get_columns, dtype):
     modin_df, pandas_df = create_test_dfs(test_data_values[0])
 
-    # Construct from Modin series only
-    new_modin = pd.DataFrame(
-        {f"new_col{i}": modin_df.iloc[:, i] for i in range(modin_df.shape[1])}
-    )
-    pandas_df.columns = [f"new_col{i}" for i in range(pandas_df.shape[1])]
-    df_equals(new_modin, pandas_df)
+    modin_data = {f"new_col{i}": modin_df.iloc[:, i] for i in range(modin_df.shape[1])}
+    pandas_data = {
+        f"new_col{i}": pandas_df.iloc[:, i] for i in range(pandas_df.shape[1])
+    }
 
-    # Construct from mixed data
-    new_modin = pd.DataFrame(
-        {
-            "new_col1": modin_df.iloc[:, 0],
-            "new_col2": np.arange(len(modin_df)),
-            "new_col3": modin_df.iloc[:, 1],
-        }
-    )
+    index = get_index(modin_df.index)
+    columns = get_columns(list(modin_data.keys()))
+
+    new_modin = pd.DataFrame(modin_data, index=index, columns=columns, dtype=dtype)
     new_pandas = pandas.DataFrame(
-        {
-            "new_col1": pandas_df.iloc[:, 0],
-            "new_col2": np.arange(len(pandas_df)),
-            "new_col3": pandas_df.iloc[:, 1],
-        }
+        pandas_data, index=index, columns=columns, dtype=dtype
     )
     df_equals(new_modin, new_pandas)
