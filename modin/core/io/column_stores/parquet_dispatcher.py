@@ -614,7 +614,10 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                 path_generator = os.walk(path)
             else:
                 storage_options = kwargs.get("storage_options")
-                fs, fs_path = url_to_fs(path, **storage_options)
+                if storage_options is not None:
+                    fs, fs_path = url_to_fs(path, **storage_options)
+                else:
+                    fs, fs_path = url_to_fs(path)
                 path_generator = fs.walk(fs_path)
             partitioned_columns = set()
             # We do a tree walk of the path directory because partitioned
