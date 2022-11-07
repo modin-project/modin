@@ -53,7 +53,7 @@ from pandas._typing import (
 )
 import pickle as pkl
 import re
-from typing import Optional, Union, Sequence, Hashable, final
+from typing import Optional, Union, Sequence, Hashable
 import warnings
 
 
@@ -3663,7 +3663,6 @@ class BasePandasDataset(ClassLogger):
         else:
             return self._getitem(key)
 
-    @final
     def xs(
         self,
         key,
