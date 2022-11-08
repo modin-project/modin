@@ -47,7 +47,7 @@ dependencies:
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - tqdm
       - git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
-      - ray[default]>=1.4.0
+      - ray[default]>=1.4.0,<2.1.0
       - connectorx>=0.2.6a4
       # TODO: remove when resolving GH#4398
       - redis>=3.5.0,<4.0.0
