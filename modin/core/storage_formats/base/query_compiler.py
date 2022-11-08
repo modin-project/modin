@@ -3148,16 +3148,20 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             Subset of this QueryCompiler.
         """
-        if isinstance(index, type(self)):
+        print(
+            f"call take_2d_labels with index {index} and columns {columns} and {isinstance(index, type(self))=} and {isinstance(columns, type(self))=}"
+        )
+        if isinstance(index, BaseQueryCompiler):
             index = index.to_pandas()
             if index_is_series:
                 index = index.iloc[:, 0]
-        if isinstance(columns, type(self)):
+        if isinstance(columns, BaseQueryCompiler):
             columns = columns.to_pandas()
             if column_is_series:
                 columns = columns.iloc[:, 0]
 
         def applyer(df):
+            print(f"getting loc with index {index} and columns {columns}")
             return df.loc[index, columns]
 
         return DataFrameDefault.register(applyer)(self)
