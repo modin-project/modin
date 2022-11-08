@@ -40,6 +40,12 @@ class ClientQueryCompiler(BaseQueryCompiler):
     lazy_execution: bool = True
 
     def __init__(self, id: UUID):
+        # The service can return an exception instead of the ID of a new query
+        # compiler.
+        if isinstance(id, Exception):
+            raise id
+        if not isinstance(id, UUID):
+            raise TypeError(f"Expected UUID, got {type(id)}")
         self._id = id
 
     @classmethod
