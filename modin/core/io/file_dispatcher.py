@@ -170,7 +170,8 @@ class FileDispatcher(ClassLogger):
                     t: dtypes[t]
                     for t in dtypes.index
                     if isinstance(dtypes[t], kernel_lib.CategoricalDtype)
-                }
+                },
+                kwargs.get("errors", "raise"),
             )
         return query_compiler
 
