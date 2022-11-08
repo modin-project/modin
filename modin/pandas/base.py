@@ -2500,7 +2500,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             return self.__constructor__(query_compiler=query_compiler)
         else:
             query_compiler = self._query_compiler.getitem_row_array(
-                samples, numeric=True
+                samples
             )
             return self.__constructor__(query_compiler=query_compiler)
 

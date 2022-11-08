@@ -2153,7 +2153,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         return DataFrameDefault.register(get_column)(self, key=key)
 
-    def getitem_row_array(self, key: List[Hashable], numeric: bool):
+    def getitem_row_array(self, key: List[Hashable]):
         """
         Get row data for target indices.
 
@@ -2161,9 +2161,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         ----------
         key : list-like
             Numeric indices of the rows to pick.
-        numeric : bool, default: False
-            Whether the key passed in represents the numeric row positions or
-            or the possibly non-numeric row labels.
 
         Returns
         -------
@@ -2172,10 +2169,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
 
         def get_row(df, key):
-            if numeric:
-                return df.iloc[key]
-            else:
-                return df.loc[key]
+            return df.loc[key]
 
         return DataFrameDefault.register(get_row)(self, key=key)
 
@@ -3191,7 +3185,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             return (
                 self.getitem_column_array(idx, numeric=True)
                 if axis
-                else self.getitem_row_array(idx, numeric=True)
+                else self.getitem_row_array(idx)
             )
 
         if 0 <= loc < len(self.get_axis(axis)):

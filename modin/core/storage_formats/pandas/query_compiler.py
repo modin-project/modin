@@ -2221,7 +2221,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # requested.
             key = pandas.RangeIndex(len(self.index))[key]
             if len(key):
-                return self.getitem_row_array(key, numeric=True)
+                return self.getitem_row_array(key)
             else:
                 return self.from_pandas(
                     pandas.DataFrame(columns=self.columns), type(self._modin_frame)
@@ -2247,13 +2247,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         return self.__constructor__(new_modin_frame)
 
-    def getitem_row_array(self, key: List[Hashable], numeric: bool):
-        if numeric:
-            kwargs = {"row_positions": key}
-        else:
-            kwargs = {"row_labels": key}
+    def getitem_row_array(self, key: List[Hashable]):
         return self.__constructor__(
-            self._modin_frame.take_2d_labels_or_positional(**kwargs)
+            self._modin_frame.take_2d_labels_or_positional(row_labels=key)
         )
 
     def setitem(self, axis, key, value):
@@ -3302,7 +3298,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             rows = [rows]
         ErrorMessage.default_to_pandas("sort_values")
         broadcast_value_list = [
-            self.getitem_row_array([row], numeric=True).to_pandas() for row in rows
+            self.getitem_row_array([row]).to_pandas() for row in rows
         ]
         index_builder = list(zip(broadcast_value_list, rows))
         broadcast_values = pandas.concat(
