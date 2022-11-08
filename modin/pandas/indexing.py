@@ -322,7 +322,13 @@ class _LocationIndexerBase(ClassLogger):
         """
         raise NotImplementedError("Implemented by subclasses")
 
-    def _take_2d_labels(self, row_lookup, col_lookup):
+    def _take_2d_labels(
+        self,
+        row_lookup,
+        col_lookup,
+        row_multiindex_full_lookup,
+        col_multiindex_full_lookup,
+    ):
         """
         Take 2D labels from the DataFrame.
 
@@ -332,32 +338,46 @@ class _LocationIndexerBase(ClassLogger):
             List of row labels to take.
         col_lookup : list-like
             List of column labels to take.
+        row_multiindex_full_lookup : bool
+            See _multiindex_possibly_contains_key.__doc__.
+        col_multiindex_full_lookup : bool
+            See _multiindex_possibly_contains_key.__doc__.
 
         Returns
         -------
         modin.pandas.DataFrame
             DataFrame with taken labels.
         """
-        row_is_series = isinstance(row_lookup, Series)
-        col_is_series = isinstance(col_lookup, Series)
-        if is_scalar(row_lookup):
+        if is_scalar(row_lookup) or row_multiindex_full_lookup:
             row_lookup = [row_lookup]
         elif isinstance(row_lookup, (Series, DataFrame)):
             row_lookup = row_lookup._query_compiler
-        if is_scalar(col_lookup):
+        if is_scalar(col_lookup) or col_multiindex_full_lookup:
             col_lookup = [col_lookup]
         elif isinstance(col_lookup, (Series, DataFrame)):
             col_lookup = col_lookup._query_compiler
-        return self.qc.take_2d_labels(
-            row_lookup, col_lookup, row_is_series, col_is_series
-        )
+        return self.qc.take_2d_labels(row_lookup, col_lookup)
 
     def _take_2d_positional(
         self,
         row_lookup: Union[slice, range, np.ndarray],
         col_lookup: Union[slice, range, np.ndarray],
     ):
-        """ """
+        """
+        Take 2D positional data from the DataFrame.
+
+        Parameters
+        ----------
+        row_lookup : slice, range, or np.ndarray
+            Row positions to take.
+        col_lookup : slice, range, or np.ndarray
+            Column positions to take.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Query compiler with given positions.
+        """
         if isinstance(row_lookup, slice):
             ErrorMessage.catch_bugs_and_request_email(
                 failure_condition=row_lookup != slice(None),
@@ -383,27 +403,27 @@ class _LocationIndexerBase(ClassLogger):
         ndim: int,
     ):
         """
-        Retrieve dataset according to `row_lookup` and `col_lookup`.
+        Convert the query compiler view to the appropriate pandas object.
 
         Parameters
         ----------
         qc_view : BaseQueryCompiler
-            Query compiler to operate on.
+            Query compiler to convert.
         row_multiindex_full_lookup : bool
             See _multiindex_possibly_contains_key.__doc__.
         col_multiindex_full_lookup : bool
             See _multiindex_possibly_contains_key.__doc__.
         row_scalar : bool
-            Whether indexer for rows is scalar or not.
+            Whether indexer for rows is scalar.
         col_scalar : bool
-            Whether indexer for columns is scalar or not.
+            Whether indexer for columns is scalar.
         ndim : {0, 1, 2}
             Number of dimensions in dataset to be retrieved.
 
         Returns
         -------
         modin.pandas.DataFrame or modin.pandas.Series
-            Located dataset.
+            The pandas object with the data from the query compiler view.
 
         Notes
         -----
@@ -412,7 +432,6 @@ class _LocationIndexerBase(ClassLogger):
         Ideally, this API should get rid of using slices as indexers and either use a
         common ``Indexer`` object or range and ``np.ndarray`` only.
         """
-
         if ndim == 2:
             return self.df.__constructor__(query_compiler=qc_view)
         if isinstance(self.df, Series) and not row_scalar:
@@ -716,7 +735,9 @@ class _LocIndexer(_LocationIndexerBase):
             return self._handle_boolean_masking(row_loc, col_loc)
 
         if isinstance(self.qc, ClientQueryCompiler):
-            qc_view = self._take_2d_labels(row_loc, col_loc)
+            qc_view = self._take_2d_labels(
+                row_loc, col_loc, row_multiindex_full_lookup, col_multiindex_full_lookup
+            )
         else:
             qc_view = self._take_2d_positional(*self._compute_lookup(row_loc, col_loc))
         result = self._get_pandas_object_from_qc_view(

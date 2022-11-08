@@ -1424,10 +1424,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         ----------
         col_dtypes : dict
             Map for column names and new dtypes.
-        error : {"raise", "ignore"}
+        errors : {"raise", "ignore"}
             Control raising of exceptions on invalid data for provided dtype.
-        **kwargs : dict
-            Serves the compatibility purpose. Does not affect the result.
 
         Returns
         -------
@@ -3130,17 +3128,15 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         self,
         index,
         columns,
-        index_is_series,
-        column_is_series,
     ):
         """
         Take the given labels.
 
         Parameters
         ----------
-        index : slice, scalar, or list-like
+        index : slice, scalar, list-like, or BaseQueryCompiler
             Labels of rows to grab.
-        columns : slice, scalar, or list-like
+        columns : slice, scalar, list-like, or BaseQueryCompiler
             Labels of columns to grab.
 
         Returns
@@ -3148,20 +3144,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             Subset of this QueryCompiler.
         """
-        print(
-            f"call take_2d_labels with index {index} and columns {columns} and {isinstance(index, type(self))=} and {isinstance(columns, type(self))=}"
-        )
         if isinstance(index, BaseQueryCompiler):
             index = index.to_pandas()
-            if index_is_series:
-                index = index.iloc[:, 0]
+            assert len(index.columns) == 1
+            index = index.iloc[:, 0]
         if isinstance(columns, BaseQueryCompiler):
             columns = columns.to_pandas()
-            if column_is_series:
-                columns = columns.iloc[:, 0]
+            assert len(columns.columns) == 1
+            columns = columns.iloc[:, 0]
 
         def applyer(df):
-            print(f"getting loc with index {index} and columns {columns}")
             return df.loc[index, columns]
 
         return DataFrameDefault.register(applyer)(self)
