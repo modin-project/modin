@@ -13,6 +13,7 @@
 
 """The module holds the factory which performs I/O using pandas on a Client."""
 
+from .query_compiler import ClientQueryCompiler
 from modin.core.io.io import BaseIO
 import os
 import pandas
@@ -23,6 +24,7 @@ class ClientIO(BaseIO):
 
     _server_conn = None
     _data_conn = None
+    query_compiler_cls = ClientQueryCompiler
 
     @classmethod
     def set_server_connection(cls, conn):
