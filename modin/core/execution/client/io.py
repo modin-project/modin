@@ -110,7 +110,6 @@ class ClientIO(BaseIO):
         self.query_compiler_cls
             Query compiler with data read in from SQL connection.
         """
-        print(f'called client io read_sql with {sql=} and {con=} and {kwargs=}')
         if isinstance(con, str) and con.lower() == "auto" and cls._data_conn is None:
             raise ConnectionError(
                 "Cannot connect with parameter 'auto' because connection is not set. Did you initialize it?"

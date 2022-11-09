@@ -735,6 +735,12 @@ class _LocIndexer(_LocationIndexerBase):
             return self._handle_boolean_masking(row_loc, col_loc)
 
         if isinstance(self.qc, ClientQueryCompiler):
+            # TODO(https://github.com/modin-project/modin/issues/5202):
+            # currently only the client query compiler implements
+            # take_2d_labels without defaulting to pandas. Eventually we want
+            # the query compilers to use take_2d_labels to do loc indexing
+            # instead of always converting row and column labels to positions
+            # here and passing positions to the query compilers.
             qc_view = self._take_2d_labels(
                 row_loc, col_loc, row_multiindex_full_lookup, col_multiindex_full_lookup
             )
