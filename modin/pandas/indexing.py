@@ -678,7 +678,14 @@ class _LocationIndexerBase(ClassLogger):
             return False
 
         multiindex = self.df.index if axis == 0 else self.df.columns
-        return isinstance(key, tuple) and len(key) == len(multiindex.levels)
+        # If not every element of the key is a scalar, e.g. the key is
+        # (slice(None), 0), then the key isn't a full key-lookup, and the
+        # entire key behaves more like a slice than like a scalar.
+        return (
+            isinstance(key, tuple)
+            and len(key) == len(multiindex.levels)
+            and all(is_scalar(k) for k in key)
+        )
 
 
 class _LocIndexer(_LocationIndexerBase):
