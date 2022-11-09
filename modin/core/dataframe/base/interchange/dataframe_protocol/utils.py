@@ -19,9 +19,10 @@ See more in https://data-apis.org/dataframe-protocol/latest/index.html.
 
 import enum
 import re
-import pandas
-import numpy as np
+from typing import Optional, Union
 
+import numpy as np
+import pandas
 from pandas.api.types import is_datetime64_dtype
 
 
@@ -134,7 +135,7 @@ class Endianness:
     NA = "|"
 
 
-def pandas_dtype_to_arrow_c(dtype) -> str:
+def pandas_dtype_to_arrow_c(dtype: Union[np.dtype, pandas.CategoricalDtype]) -> str:
     """
     Represent pandas `dtype` as a format string in Apache Arrow C notation.
 
@@ -168,7 +169,7 @@ def pandas_dtype_to_arrow_c(dtype) -> str:
     )
 
 
-def raise_copy_alert(copy_reason=None):
+def raise_copy_alert(copy_reason: Optional[str] = None) -> None:
     """
     Raise a ``RuntimeError`` mentioning that there's a copy required.
 
