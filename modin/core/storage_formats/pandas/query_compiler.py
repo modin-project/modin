@@ -2247,9 +2247,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         return self.__constructor__(new_modin_frame)
 
-    def getitem_row_array(self, key: List[Hashable]):
+    def getitem_row_array(self, key):
         return self.__constructor__(
-            self._modin_frame.take_2d_labels_or_positional(row_labels=key)
+            self._modin_frame.take_2d_labels_or_positional(row_positions=key)
         )
 
     def setitem(self, axis, key, value):
