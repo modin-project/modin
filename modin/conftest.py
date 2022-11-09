@@ -52,7 +52,6 @@ from modin.core.storage_formats import (  # noqa: E402
     PandasQueryCompiler,
     BaseQueryCompiler,
 )
-from modin.core.execution.client.io import ClientIO  # noqa: E402
 from modin.core.execution.client.container import (  # noqa: E402
     ForwardingQueryCompilerContainer,
 )
@@ -282,14 +281,19 @@ def set_base_on_python_execution():
 class ClientFactory(factories.BaseFactory):
     @classmethod
     def prepare(cls):
+        # Can't always import ClientIO, because it uses NoDefault, which
+        # is not available on older pandas.
+        from modin.core.execution.client.io import ClientIO
+
         cls.io_cls = ClientIO
 
 
 def set_client_execution():
     # Can't always import ClientQueryCompiler, because it uses NoDefault, which
-    # is not available on older pandas.
+    # is not available on older pandas. ClientIO also uses ClientQueryCompiler.
 
     from modin.core.execution.client.query_compiler import ClientQueryCompiler
+    from modin.core.execution.client.io import ClientIO
 
     class TestClientQueryCompiler(ClientQueryCompiler):
         @classmethod

@@ -37,7 +37,7 @@ from pandas.core.dtypes.common import is_integer, is_bool_dtype, is_integer_dtyp
 from pandas.core.indexing import IndexingError
 from typing import Union
 
-from modin.core.execution.client.query_compiler import ClientQueryCompiler
+from modin._compat import PandasCompatVersion
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
 
@@ -734,13 +734,21 @@ class _LocIndexer(_LocationIndexerBase):
         if isinstance(row_loc, Series) and is_boolean_array(row_loc):
             return self._handle_boolean_masking(row_loc, col_loc)
 
-        if isinstance(self.qc, ClientQueryCompiler):
+        is_client_qc = False
+        if PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
+            # Can't always import ClientQueryCompiler, because it uses NoDefault, which
+            # is not available on older pandas.
+
+            from modin.core.execution.client.query_compiler import ClientQueryCompiler
+
+            is_client_qc = isinstance(self.qc, ClientQueryCompiler)
             # TODO(https://github.com/modin-project/modin/issues/5202):
             # currently only the client query compiler implements
             # take_2d_labels without defaulting to pandas. Eventually we want
             # the query compilers to use take_2d_labels to do loc indexing
             # instead of always converting row and column labels to positions
             # here and passing positions to the query compilers.
+        if is_client_qc:
             qc_view = self._take_2d_labels(
                 row_loc, col_loc, row_multiindex_full_lookup, col_multiindex_full_lookup
             )
