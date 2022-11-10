@@ -158,6 +158,27 @@ def test_aligning_partitions():
     repr(modin_df2)
 
 
+@pytest.mark.parametrize("row_labels", [None, [("a", "")], ["a"]])
+@pytest.mark.parametrize("col_labels", [None, ["a1"], [("c1", "z")]])
+def test_take_2d_labels_or_positional(row_labels, col_labels):
+    kwargs = {
+        "index": [["a", "b", "c", "d"], ["", "", "x", "y"]],
+        "columns": [["a1", "b1", "c1", "d1"], ["", "", "z", "x"]],
+    }
+    md_df, pd_df = create_test_dfs(np.random.rand(4, 4), **kwargs)
+
+    _row_labels = slice(None) if row_labels is None else row_labels
+    _col_labels = slice(None) if col_labels is None else col_labels
+    pd_df = pd_df.loc[_row_labels, _col_labels]
+    modin_frame = md_df._query_compiler._modin_frame
+    new_modin_frame = modin_frame.take_2d_labels_or_positional(
+        row_labels=row_labels, col_labels=col_labels
+    )
+    md_df._query_compiler._modin_frame = new_modin_frame
+
+    df_equals(md_df, pd_df)
+
+
 @pytest.mark.parametrize("has_partitions_shape_cache", [True, False])
 @pytest.mark.parametrize("has_frame_shape_cache", [True, False])
 def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cache):

@@ -656,7 +656,7 @@ class PandasDataframe(ClassLogger):
                 row_positions = np.zeros(len(row_labels), dtype="int64")
                 for idx, label in enumerate(row_labels):
                     # get_loc can return slice that _take_2d_positional can't handle
-                    row_positions[idx] = self.index.get_locs(label)[0]
+                    row_positions[idx] = self.index.get_locs([label])[0]
             else:
                 row_positions = self.index.get_indexer_for(row_labels)
 
@@ -666,7 +666,7 @@ class PandasDataframe(ClassLogger):
                 col_positions = np.zeros(len(col_labels), dtype="int64")
                 for idx, label in enumerate(col_labels):
                     # get_loc can return slice that _take_2d_positional can't handle
-                    col_positions[idx] = self.columns.get_locs(label)[0]
+                    col_positions[idx] = self.columns.get_locs([label])[0]
             else:
                 col_positions = self.columns.get_indexer_for(col_labels)
 
