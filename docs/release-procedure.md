@@ -71,18 +71,15 @@ or the `release-X.Y.Z` branch (in `upstream`) for a patch release.
 
         git tag -as X.Y.Z
 
-  * Look for [other releases](https://github.com/modin-project/modin/releases) on examples of how to compose the release documentation
-    * Start with a `Modin X.Y.Z` line followed by an empty line
-    * Always try to make a one-line summary
-    * The annotation should contain features and changes compared to previous release
-    * You can link to merge commits, but try to "explain" what a PR does instead of blindly copying its title
-    * Gather and mention the list of all participants in the release, including those mentioned in "Co-Authored-By" part of PRs
+  * Use `scripts/release.py` to draft the release notes (might be as simple as `python scripts/release.py notes > draft.txt`)
+    * If you're experiencing [rate limiting by GitHub](https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting) during username resolving, pass a token via `--token` option to the script
+    * Fill in the placeholder for summary of the release
+    * Please look into PR sections and split them if necessary into smaller but better fitting ones, as the script only categorizes by prefix (`FIX-`, `TEST-`, etc.)
+    * Make sure to correctly resolve contributors whom script failed to transform to GitHub usernames if there are any!
   * Include release documentation in the annotation and make sure it is signed.
   * Push the tag to `master` or `release-X.Y.Z` branch: `git push upstream X.Y.Z`
     * If you're re-pushing a tag (beware! you shouldn't be doing that, no, _really_!), you can remove remote tag and push a local one by `git push upstream :refs/tags/X.Y.Z`
 
-***Note***: We are currently working on automating the release notes procedure - check 
-[#4747](https://github.com/modin-project/modin/issues/4747) for updates!
 
 ### Build wheel:
 
