@@ -116,6 +116,11 @@ def _update_engine(publisher: Parameter):
     # Set this so that Pandas doesn't try to multithread by itself
     os.environ["OMP_NUM_THREADS"] = "1"
 
+    if Engine.get() == "Client":
+        if publisher.get_value_source() == ValueSource.DEFAULT:
+            StorageFormat.put("")
+        return
+
     sfmt = StorageFormat.get()
 
     if sfmt == "Hdk":
@@ -129,11 +134,6 @@ def _update_engine(publisher: Parameter):
         )
     else:
         is_hdk = False
-
-    if Engine.get() == "Client":
-        if publisher.get_value_source() == ValueSource.DEFAULT:
-            StorageFormat.put("")
-        return
 
     if is_hdk and publisher.get_value_source() == ValueSource.DEFAULT:
         publisher.put("Native")
