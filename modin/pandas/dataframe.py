@@ -25,6 +25,7 @@ from pandas.core.indexes.frozen import FrozenList
 from pandas.util._validators import validate_bool_kwarg
 from pandas.io.formats.printing import pprint_thing
 from pandas._libs.lib import no_default
+from pandas._typing import StorageOptions
 
 import re
 import itertools
@@ -106,15 +107,14 @@ class DataFrame(BasePandasDataset):
 
     _pandas_class = pandas.DataFrame
 
-    @append_to_docstring(__doc__)
-    def _init(
+    def __init__(
         self,
-        data,
-        index,
-        columns,
-        dtype,
-        copy,
-        query_compiler,
+        data=None,
+        index=None,
+        columns=None,
+        dtype=None,
+        copy=None,
+        query_compiler=None,
     ):
         # Siblings are other dataframes that share the same query compiler. We
         # use this list to update inplace when there is a shallow copy.
@@ -1875,8 +1875,12 @@ class DataFrame(BasePandasDataset):
         limit=None,
         tolerance=None,
     ):  # noqa: PR01, RT01, D200
-        index, columns = self._disambiguate_axes_labels(axis, index, columns, labels)
-        return super(self).reindex(
+        axis = self._get_axis_number(axis)
+        if axis == 0 and labels is not None:
+            index = labels
+        elif labels is not None:
+            columns = labels
+        return super().reindex(
             index=index,
             columns=columns,
             method=method,
@@ -1887,14 +1891,14 @@ class DataFrame(BasePandasDataset):
             tolerance=tolerance,
         )
 
-    def _replace(
+    def replace(
         self,
-        to_replace,
-        value,
-        inplace,
-        limit,
-        regex,
-        method,
+        to_replace=None,
+        value=no_default,
+        inplace: "bool" = False,
+        limit=None,
+        regex: "bool" = False,
+        method: "str | NoDefault" = no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -2160,15 +2164,16 @@ class DataFrame(BasePandasDataset):
 
     subtract = sub
 
-    def _sum(
+    def sum(
         self,
-        axis,
-        skipna,
-        level,
-        numeric_only,
-        min_count,
+        axis=None,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        min_count=0,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         """
         Return the sum of the values over the requested axis.
         """
@@ -2226,18 +2231,18 @@ class DataFrame(BasePandasDataset):
         """
         return self._default_to_pandas(pandas.DataFrame.to_feather, path, **kwargs)
 
-    def _to_gbq(
+    def to_gbq(
         self,
         destination_table,
-        project_id,
-        chunksize,
-        reauth,
-        if_exists,
-        auth_local_webserver,
-        table_schema,
-        location,
-        progress_bar,
-        credentials,
+        project_id=None,
+        chunksize=None,
+        reauth=False,
+        if_exists="fail",
+        auth_local_webserver=True,
+        table_schema=None,
+        location=None,
+        progress_bar=True,
+        credentials=None,
     ):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Write a ``DataFrame`` to a Google BigQuery table.
@@ -2254,6 +2259,15 @@ class DataFrame(BasePandasDataset):
             location=location,
             progress_bar=progress_bar,
             credentials=credentials,
+        )
+
+    def to_orc(self, path=None, *, engine="pyarrow", index=None, engine_kwargs=None):
+        return self._default_to_pandas(
+            pandas.DataFrame.to_orc,
+            path=path,
+            engine=engine,
+            index=index,
+            engine_kwargs=engine_kwargs,
         )
 
     def to_html(
@@ -2312,6 +2326,32 @@ class DataFrame(BasePandasDataset):
             encoding=None,
         )
 
+    def to_parquet(
+        self,
+        path=None,
+        engine="auto",
+        compression="snappy",
+        index=None,
+        partition_cols=None,
+        storage_options: StorageOptions = None,
+        **kwargs,
+    ):
+        config = {
+            "path": path,
+            "engine": engine,
+            "compression": compression,
+            "index": index,
+            "partition_cols": partition_cols,
+            "storage_options": storage_options,
+        }
+        new_query_compiler = self._query_compiler
+
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
+        )
+
+        return FactoryDispatcher.to_parquet(new_query_compiler, **config, **kwargs)
+
     def to_period(
         self, freq=None, axis=0, copy=True
     ):  # pragma: no cover # noqa: PR01, RT01, D200
@@ -2331,6 +2371,79 @@ class DataFrame(BasePandasDataset):
             index=index,
             column_dtypes=column_dtypes,
             index_dtypes=index_dtypes,
+        )
+
+    def to_stata(
+        self,
+        path: "FilePath | WriteBuffer[bytes]",
+        convert_dates: "dict[Hashable, str] | None" = None,
+        write_index: "bool" = True,
+        byteorder: "str | None" = None,
+        time_stamp: "datetime.datetime | None" = None,
+        data_label: "str | None" = None,
+        variable_labels: "dict[Hashable, str] | None" = None,
+        version: "int | None" = 114,
+        convert_strl: "Sequence[Hashable] | None" = None,
+        compression: "CompressionOptions" = "infer",
+        storage_options: "StorageOptions" = None,
+        *,
+        value_labels: "dict[Hashable, dict[float | int, str]] | None" = None,
+    ):  # pragma: no cover # noqa: PR01, RT01, D200
+        return self._default_to_pandas(
+            pandas.DataFrame.to_stata,
+            path,
+            convert_dates=convert_dates,
+            write_index=write_index,
+            byteorder=byteorder,
+            time_stamp=time_stamp,
+            data_label=data_label,
+            variable_labels=variable_labels,
+            version=version,
+            convert_strl=convert_strl,
+            compression=compression,
+            storage_options=storage_options,
+            value_labels=value_labels,
+        )
+
+    def to_xml(
+        self,
+        path_or_buffer=None,
+        index=True,
+        root_name="data",
+        row_name="row",
+        na_rep=None,
+        attr_cols=None,
+        elem_cols=None,
+        namespaces=None,
+        prefix=None,
+        encoding="utf-8",
+        xml_declaration=True,
+        pretty_print=True,
+        parser="lxml",
+        stylesheet=None,
+        compression="infer",
+        storage_options=None,
+    ):
+        return self.__constructor__(
+            query_compiler=self._query_compiler.default_to_pandas(
+                pandas.DataFrame.to_xml,
+                path_or_buffer=path_or_buffer,
+                index=index,
+                root_name=root_name,
+                row_name=row_name,
+                na_rep=na_rep,
+                attr_cols=attr_cols,
+                elem_cols=elem_cols,
+                namespaces=namespaces,
+                prefix=prefix,
+                encoding=encoding,
+                xml_declaration=xml_declaration,
+                pretty_print=pretty_print,
+                parser=parser,
+                stylesheet=stylesheet,
+                compression=compression,
+                storage_options=storage_options,
+            )
         )
 
     def to_timestamp(
@@ -2377,7 +2490,7 @@ class DataFrame(BasePandasDataset):
         )
         self._update_inplace(new_query_compiler=query_compiler)
 
-    def _where(
+    def where(
         self,
         cond,
         other=no_default,

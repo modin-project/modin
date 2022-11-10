@@ -2049,7 +2049,7 @@ class Series(BasePandasDataset):
                 bins=bins,
                 dropna=dropna,
             )
-        counted_values = super(Series, self)._value_counts(
+        counted_values = super(Series, self).value_counts(
             subset=self,
             normalize=normalize,
             sort=sort,

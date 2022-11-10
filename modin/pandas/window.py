@@ -89,9 +89,20 @@ class Rolling:
         method="single",
         **kwargs,
     ):
+        if step is not None:
+            raise NotImplementedError("step parameter is not implemented yet.")
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
-        self.rolling_args = rolling_args
+        self.rolling_args = [
+            window,
+            min_periods,
+            center,
+            win_type,
+            on,
+            axis,
+            closed,
+            method,
+        ]
         self.axis = axis
 
     def count(self):
