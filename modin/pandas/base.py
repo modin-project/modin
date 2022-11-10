@@ -3663,9 +3663,7 @@ class BasePandasDataset(ClassLogger):
         else:
             return self._getitem(key)
 
-    @_inherit_docstrings(
-        pandas.DataFrame.xs, apilink="pandas.DataFrame.xs"
-    )
+    @_inherit_docstrings(pandas.DataFrame.xs, apilink="pandas.DataFrame.xs")
     def xs(
         self,
         key,
