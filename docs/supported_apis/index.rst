@@ -26,7 +26,6 @@ about an API or method in Modin, please contact the Modin `developer mailing lis
    series_supported
    utilities_supported
    io_supported
-   older_pandas_compat
 
 .. meta::
     :description lang=en:

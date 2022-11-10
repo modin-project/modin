@@ -28,16 +28,22 @@ from modin.error_message import ErrorMessage
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
 
-from modin._compat.core.base_io import (
-    BaseIOCompat,
-    _doc_default_io_method,
-    _doc_returns_qc,
-    _doc_returns_qc_or_parser,
-)
-from modin._compat.core.pandas_common import pandas_to_csv
+_doc_default_io_method = """
+{summary} using pandas.
+For parameters description please refer to pandas API.
+Returns
+-------
+{returns}
+"""
+
+_doc_returns_qc = """BaseQueryCompiler
+    QueryCompiler with read data."""
+
+_doc_returns_qc_or_parser = """BaseQueryCompiler or TextParser
+    QueryCompiler or TextParser with read data."""
 
 
-class BaseIO(BaseIOCompat):
+class BaseIO:
     """Class for basic utils and default implementation of IO functions."""
 
     query_compiler_cls: BaseQueryCompiler = None
@@ -686,7 +692,7 @@ class BaseIO(BaseIOCompat):
         if isinstance(obj, BaseQueryCompiler):
             obj = obj.to_pandas()
 
-        return pandas_to_csv(obj, **kwargs)
+        return obj.to_csv(**kwargs)
 
     @classmethod
     @_inherit_docstrings(

@@ -18,12 +18,11 @@ import pandas
 import pandas.core.resample
 from pandas.core.dtypes.common import is_list_like
 from typing import Optional
-from modin._compat.pandas_api.classes import ResamplerCompat
 from modin.utils import _inherit_docstrings
 
 
 @_inherit_docstrings(pandas.core.resample.Resampler)
-class Resampler(ResamplerCompat):
+class Resampler:
     def _init(self, dataframe, axis, **resample_kwargs):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler

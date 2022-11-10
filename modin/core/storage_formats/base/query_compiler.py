@@ -18,7 +18,6 @@ Module contains class ``BaseQueryCompiler``.
 """
 
 import abc
-from modin._compat.core.pandas_common import pandas_reset_index, pandas_compare
 
 from modin.core.dataframe.algebra.default2pandas import (
     DataFrameDefault,
@@ -992,7 +991,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             QueryCompiler with reset index.
         """
-        return DataFrameDefault.register(pandas_reset_index)(self, **kwargs)
+        return DataFrameDefault.register(pandas.DataFrame.reset_index)(self, **kwargs)
 
     def set_index_from_columns(
         self, keys: List[Hashable], drop: bool = True, append: bool = False
@@ -4748,7 +4747,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             New QueryCompiler containing the differences between `self` and passed
             query compiler.
         """
-        return DataFrameDefault.register(pandas_compare)(
+        return DataFrameDefault.register(pandas.DataFrame.compare)(
             self,
             other=other,
             align_axis=align_axis,

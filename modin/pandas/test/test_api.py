@@ -15,7 +15,6 @@ import pandas
 import inspect
 import numpy as np
 
-from modin._compat import PandasCompatVersion
 import modin.pandas as pd
 
 
@@ -64,10 +63,7 @@ def test_top_level_api_equality():
         "warnings",
         "os",
     ]
-    if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-        # pandas 1.1 does not have read_xml but we define a stub
-        ignore_modin += ["read_xml"]
-
+    
     assert not len(
         missing_from_modin - set(ignore_pandas)
     ), "Differences found in API: {}".format(missing_from_modin - set(ignore_pandas))

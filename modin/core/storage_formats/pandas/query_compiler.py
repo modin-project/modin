@@ -56,14 +56,6 @@ from modin.core.dataframe.algebra import (
     is_reduce_function,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
-from modin._compat.core.pandas_common import (
-    pandas_pivot_table,
-    pandas_convert_dtypes,
-    pandas_compare,
-    pandas_dataframe_join,
-    DataError,
-)
-
 
 def _get_axis(axis):
     """
@@ -520,14 +512,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             right = right.to_pandas()
 
             def map_func(left, right=right, kwargs=kwargs):
-                return pandas_dataframe_join(left, right, **kwargs)
+                return pandas.DataFrame.join(left, right, **kwargs)
 
             new_self = self.__constructor__(
                 self._modin_frame.apply_full_axis(1, map_func)
             )
             return new_self.sort_rows_by_column_values(on) if sort else new_self
         else:
-            return self.default_to_pandas(pandas_dataframe_join, right, **kwargs)
+            return self.default_to_pandas(pandas.DataFrame.join, right, **kwargs)
 
     # END Inter-Data operations
 
@@ -1372,7 +1364,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     abs = Map.register(pandas.DataFrame.abs, dtypes="copy")
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
-    convert_dtypes = Map.register(pandas_convert_dtypes)
+    convert_dtypes = Map.register(pandas.DataFrame.convert_dtypes)
     invert = Map.register(pandas.DataFrame.__invert__)
     isin = Map.register(pandas.DataFrame.isin, dtypes=np.bool_)
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
@@ -2924,7 +2916,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
                     result = partition_agg_func(grouped_df, *agg_args, **agg_kwargs)
-                except DataError:
+                except TypeError:
                     # This happens when the partition is filled with non-numeric data and a
                     # numeric operation is done. We need to build the index here to avoid
                     # issues with extracting the index.
@@ -3121,7 +3113,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 Pivot table for this particular partition.
             """
             concated = pandas.concat([df, other], axis=1, copy=False)
-            result = pandas_pivot_table(
+            result = pandas.pivot_table(
                 concated,
                 index=index,
                 values=values if len(values) > 0 else None,
@@ -3321,7 +3313,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(
             self._modin_frame.broadcast_apply_full_axis(
                 0,
-                lambda l, r: pandas_compare(l, other=r, **kwargs),
+                lambda l, r: pandas.DataFrame.compare(l, r, **kwargs),
                 other._modin_frame,
             )
         )

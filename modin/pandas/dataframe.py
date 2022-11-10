@@ -56,13 +56,12 @@ from .series import Series
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .groupby import DataFrameGroupBy
 from .accessor import CachedAccessor, SparseFrameAccessor
-from modin._compat.pandas_api.classes import DataFrameCompat
 
 
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame.__init__], apilink="pandas.DataFrame"
 )
-class DataFrame(DataFrameCompat, BasePandasDataset):
+class DataFrame(BasePandasDataset):
     """
     Modin distributed representation of ``pandas.DataFrame``.
 
@@ -375,7 +374,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         """
         return DataFrame(query_compiler=self._query_compiler.add_suffix(suffix))
 
-    def _applymap(self, func, **kwargs):  # noqa: PR01, RT01, D200
+    def applymap(self, func, na_action: Optional[str] = None, **kwargs):
         """
         Apply a function to a ``DataFrame`` elementwise.
         """
@@ -383,8 +382,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             raise ValueError("'{0}' object is not callable".format(type(func)))
         return DataFrame(query_compiler=self._query_compiler.applymap(func, **kwargs))
 
-    def _apply(
-        self, func, axis, raw, result_type, args, **kwargs
+    def apply(
+        self, func, axis=0, raw=False, result_type=None, args=(), **kwargs
     ):  # noqa: PR01, RT01, D200
         """
         Apply a function along an axis of the ``DataFrame``.
@@ -422,18 +421,18 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
         return output_type(query_compiler=query_compiler)
 
-    def _groupby(
+    def groupby(
         self,
-        by,
-        axis,
-        level,
-        as_index,
-        sort,
-        group_keys,
-        squeeze,
-        observed,
-        dropna,
-    ):  # noqa: PR01, RT01, D200
+        by=None,
+        axis=0,
+        level=None,
+        as_index=True,
+        sort=True,
+        group_keys=no_default,
+        squeeze: bool = no_default,
+        observed=False,
+        dropna: bool = True,
+    ):
         """
         Group ``DataFrame`` using a mapper or by a ``Series`` of columns.
         """
@@ -686,14 +685,14 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             other, func, fill_value=fill_value, overwrite=overwrite
         )
 
-    def _compare(
+    def compare(
         self,
-        other: "DataFrame",
-        align_axis: Union[str, int],
-        keep_shape: bool,
-        keep_equal: bool,
-        result_names: tuple,
-    ) -> "DataFrame":  # noqa: PR01, RT01, D200
+        other,
+        align_axis=1,
+        keep_shape: bool = False,
+        keep_equal: bool = False,
+        result_names=("self", "other"),
+    ):
         """
         Compare to another ``DataFrame`` and show the differences.
         """
@@ -710,7 +709,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             )
         )
 
-    def _corr(self, method, min_periods, numeric_only):  # noqa: PR01, RT01, D200
+    def corr(self, method="pearson", min_periods=1, numeric_only=no_default):
         """
         Compute pairwise correlation of columns, excluding NA/null values.
         """
@@ -728,7 +727,9 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             )
         )
 
-    def _corrwith(self, other, axis, drop, method, **kwargs):  # noqa: PR01, RT01, D200
+    def corrwith(
+        self, other, axis=0, drop=False, method="pearson", numeric_only=no_default
+    ):
         """
         Compute pairwise correlation.
         """
@@ -743,7 +744,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             **kwargs,
         )
 
-    def _cov(self, min_periods, ddof, numeric_only):  # noqa: PR01, RT01, D200
+    def cov(self, min_periods=None, ddof: Optional[int] = 1, numeric_only=no_default):
         """
         Compute pairwise covariance of columns, excluding NA/null values.
         """
@@ -1037,14 +1038,20 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             **kwds,
         )
 
-    def _info(
+    def idxmax(self, axis=0, skipna=True, numeric_only=False):
+        return self._idxmax(axis=axis, skipna=skipna, numeric_only=numeric_only)
+
+    def idxmin(self, axis=0, skipna=True, numeric_only=False):
+        return self._idxmin(axis=axis, skipna=skipna, numeric_only=numeric_only)
+
+    def info(
         self,
-        verbose: bool,
-        buf: IO[str],
-        max_cols: int,
-        memory_usage: Union[bool, str],
-        show_counts: bool,
-        null_counts: bool,
+        verbose: Optional[bool] = None,
+        buf: Optional[IO[str]] = None,
+        max_cols: Optional[int] = None,
+        memory_usage: Optional[Union[bool, str]] = None,
+        show_counts: Optional[bool] = None,
+        null_counts: Optional[bool] = None,
     ):  # noqa: PR01, D200
         """
         Print a concise summary of the ``DataFrame``.
@@ -1177,7 +1184,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         output.append("")
         buf.write("\n".join(output))
 
-    def _insert(self, loc, column, value, allow_duplicates):  # noqa: PR01, D200
+    def insert(self, loc, column, value, allow_duplicates=no_default):
         """
         Insert column into ``DataFrame`` at specified location.
         """
@@ -1306,16 +1313,16 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         for v in partition_iterator:
             yield v
 
-    def _join(
+    def join(
         self,
         other,
-        on,
-        how,
-        lsuffix,
-        rsuffix,
-        sort,
-        validate,
-    ):  # noqa: PR01, RT01, D200
+        on=None,
+        how="left",
+        lsuffix="",
+        rsuffix="",
+        sort=False,
+        validate=None,
+    ):
         """
         Join columns of another ``DataFrame``.
         """
@@ -1378,6 +1385,13 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         )
         new_frame.columns = new_columns
         return new_frame
+
+    def isetitem(self, loc, value):
+        return self._default_to_pandas(
+            pandas.DataFrame.isetitem,
+            loc=loc,
+            value=value,
+        )
 
     def le(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
@@ -1621,18 +1635,18 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             )
         )
 
-    def _pivot_table(
+    def pivot_table(
         self,
-        values,
-        index,
-        columns,
-        aggfunc,
-        fill_value,
-        margins,
-        dropna,
-        margins_name,
-        observed,
-        **kwargs,
+        values=None,
+        index=None,
+        columns=None,
+        aggfunc="mean",
+        fill_value=None,
+        margins=False,
+        dropna=True,
+        margins_name="All",
+        observed=False,
+        sort=True,
     ):  # noqa: PR01, RT01, D200
         """
         Create a spreadsheet-style pivot table as a ``DataFrame``.
@@ -1648,7 +1662,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
                 dropna=dropna,
                 margins_name=margins_name,
                 observed=observed,
-                **kwargs,
+                sort=sort,
             )
         )
         return result
@@ -1711,13 +1725,13 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             broadcast=isinstance(other, Series),
         )
 
-    def _prod(
+    def prod(
         self,
-        axis,
-        skipna,
-        level,
-        numeric_only,
-        min_count,
+        axis=None,
+        skipna=True,
+        level=None,
+        numeric_only=None,
+        min_count=0,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
@@ -1771,7 +1785,23 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             )
         )
 
-    product = DataFrameCompat.prod
+    product = prod
+
+    def quantile(
+        self,
+        q=0.5,
+        axis=0,
+        numeric_only=no_default,
+        interpolation="linear",
+        method="single",
+    ):
+        return self._quantile(
+            q=q,
+            axis=axis,
+            numeric_only=True if numeric_only is no_default else numeric_only,
+            interpolation=interpolation,
+            method=method,
+        )
 
     def query(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
         """
@@ -1783,17 +1813,17 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         new_query_compiler = self._query_compiler.query(expr, **kwargs)
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
-    def _rename(
+    def rename(
         self,
-        mapper,
-        index,
-        columns,
-        axis,
-        copy,
-        inplace,
-        level,
-        errors,
-    ):  # noqa: PR01, RT01, D200
+        mapper=None,
+        index=None,
+        columns=None,
+        axis=None,
+        copy=None,
+        inplace=False,
+        level=None,
+        errors="ignore",
+    ):
         """
         Alter axes labels.
         """
@@ -1831,6 +1861,31 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
         if not inplace:
             return obj
+
+    def reindex(
+        self,
+        labels=None,
+        index=None,
+        columns=None,
+        axis=None,
+        method=None,
+        copy=None,
+        level=None,
+        fill_value=np.nan,
+        limit=None,
+        tolerance=None,
+    ):  # noqa: PR01, RT01, D200
+        index, columns = self._disambiguate_axes_labels(axis, index, columns, labels)
+        return super(self).reindex(
+            index=index,
+            columns=columns,
+            method=method,
+            copy=copy,
+            level=level,
+            fill_value=fill_value,
+            limit=limit,
+            tolerance=tolerance,
+        )
 
     def _replace(
         self,

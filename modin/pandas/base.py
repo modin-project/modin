@@ -37,7 +37,6 @@ import re
 from typing import Optional, Union, Sequence, Hashable
 import warnings
 
-from modin._compat import PandasCompatVersion
 
 from .utils import is_full_grab_slice, _doc_binary_op
 from modin.utils import try_cast_to_pandas, _inherit_docstrings
@@ -46,7 +45,6 @@ from modin import pandas as pd
 from modin.pandas.utils import is_scalar
 from modin.config import IsExperimental
 from modin.logging import disable_logging
-from modin._compat.pandas_api.classes import BasePandasDatasetCompat
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -93,7 +91,7 @@ _doc_binary_op_kwargs = {"returns": "BasePandasDataset", "left": "BasePandasData
 
 
 @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
-class BasePandasDataset(BasePandasDatasetCompat):
+class BasePandasDataset:
     """
     Implement most of the common code that exists in DataFrame/Series.
 
@@ -823,7 +821,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 )
             return result
 
-    def _apply(
+    def apply(
         self,
         func,
         axis,
@@ -971,7 +969,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
     @_inherit_docstrings(
         pandas.DataFrame.between_time, apilink="pandas.DataFrame.between_time"
     )
-    def _between_time(self, **kwargs):
+    def between_time(self, **kwargs):
         axis = self._get_axis_number(kwargs.pop("axis", None))
         idx = self.index if axis == 0 else self.columns
         indexer = pandas.Series(index=idx).between_time(**kwargs).index
@@ -1270,7 +1268,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
-    def _dropna(self, axis, how, thresh, subset, inplace):  # noqa: PR01, RT01, D200
+    def dropna(self, axis, how, thresh, subset, inplace):  # noqa: PR01, RT01, D200
         """
         Remove missing values.
         """
@@ -1357,13 +1355,13 @@ class BasePandasDataset(BasePandasDatasetCompat):
         return exploded
 
     @_inherit_docstrings(pandas.DataFrame.ewm, apilink="pandas.DataFrame.ewm")
-    def _ewm(self, **kwargs):
+    def ewm(self, **kwargs):
         return self._default_to_pandas("ewm", **kwargs)
 
     @_inherit_docstrings(
         pandas.DataFrame.expanding, apilink="pandas.DataFrame.expanding"
     )
-    def _expanding(self, **kwargs):
+    def expanding(self, **kwargs):
         return self._default_to_pandas("expanding", **kwargs)
 
     def ffill(
@@ -1568,7 +1566,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
         return _iLocIndexer(self)
 
-    def _idxmax(self, axis, skipna, **kwargs):  # noqa: PR01, RT01, D200
+    def idxmax(self, axis, skipna, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return index of first occurrence of maximum over requested axis.
         """
@@ -1579,7 +1577,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             self._query_compiler.idxmax(axis=axis, skipna=skipna, **kwargs)
         )
 
-    def _idxmin(self, axis, skipna, **kwargs):  # noqa: PR01, RT01, D200
+    def idxmin(self, axis, skipna, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return index of first occurrence of minimum over requested axis.
         """
@@ -1596,7 +1594,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         return self._query_compiler.infer_objects()
 
-    def _convert_dtypes(
+    def convert_dtypes(
         self,
         infer_objects: bool,
         convert_string: bool,
@@ -1643,7 +1641,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
         return _iLocIndexer(self)
 
     @_inherit_docstrings(pandas.DataFrame.kurt, apilink="pandas.DataFrame.kurt")
-    def _kurt(self, axis, skipna, level, numeric_only, **kwargs):
+    def kurt(
+        self, axis=no_default, skipna=True, level=None, numeric_only=None, **kwargs
+    ):
         self._validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis = self._get_axis_number(axis)
         if level is not None:
@@ -1676,7 +1676,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             )
         )
 
-    kurtosis = BasePandasDatasetCompat.kurt
+    kurtosis = kurt
 
     def last(self, offset):  # noqa: PR01, RT01, D200
         """
@@ -1712,7 +1712,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         return _LocIndexer(self)
 
     @_inherit_docstrings(pandas.DataFrame.mad, apilink="pandas.DataFrame.mad")
-    def _mad(self, axis, skipna, level):
+    def mad(self, axis, skipna, level):
         self._validate_bool_kwarg(skipna, "skipna", none_allowed=True)
         axis = self._get_axis_number(axis)
         if level is not None:
@@ -1730,11 +1730,11 @@ class BasePandasDataset(BasePandasDatasetCompat):
         )
 
     @_inherit_docstrings(pandas.DataFrame.mask, apilink="pandas.DataFrame.mask")
-    def _compat_mask(self, *args, **kwargs):
+    def mask(self, *args, **kwargs):
         return self._default_to_pandas("mask", *args, **kwargs)
 
     @_inherit_docstrings(pandas.DataFrame.max, apilink="pandas.DataFrame.max")
-    def _max(self, axis, skipna, level, numeric_only, **kwargs):
+    def max(self, axis, skipna, level, numeric_only, **kwargs):
         self._validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             return self._default_to_pandas(
@@ -1840,7 +1840,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             self._query_compiler.memory_usage(index=index, deep=deep)
         )
 
-    def _min(
+    def min(
         self,
         axis,
         skipna,
@@ -1968,18 +1968,12 @@ class BasePandasDataset(BasePandasDatasetCompat):
             "pow", other, axis=axis, level=level, fill_value=fill_value
         )
 
-    def _quantile(
+    def quantile(
         self, q, axis, numeric_only, interpolation, method
     ):  # noqa: PR01, RT01, D200
         """
         Return values at the given quantile over requested axis.
         """
-        if PandasCompatVersion.CURRENT != PandasCompatVersion.LATEST:
-            assert method == "single", f"Unsupported method={method} for quantile"
-            quantile_kw = {}
-        else:
-            quantile_kw = {"method": method}
-
         axis = self._get_axis_number(axis)
 
         def check_dtype(t):
@@ -2019,7 +2013,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
                     axis=axis,
                     numeric_only=numeric_only,
                     interpolation=interpolation,
-                    **quantile_kw,
+                    method=method,
                 )
             )
         else:
@@ -2029,7 +2023,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
                     axis=axis,
                     numeric_only=numeric_only,
                     interpolation=interpolation,
-                    **quantile_kw,
+                    method=method,
                 )
             )
             if isinstance(result, BasePandasDataset):
@@ -2037,7 +2031,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             return result
 
     @_inherit_docstrings(pandas.DataFrame.rank, apilink="pandas.DataFrame.rank")
-    def _rank(
+    def rank(
         self,
         axis,
         method,
@@ -2086,7 +2080,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 pass
         return ensure_index(index_like)
 
-    def _reindex(
+    def reindex(
         self,
         index,
         columns,
@@ -2227,7 +2221,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         new_labels = self.axes[axis].reorder_levels(order)
         return self.set_axis(new_labels, axis=axis)
 
-    def _resample(
+    def resample(
         self,
         rule,
         axis,
@@ -2265,7 +2259,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             group_keys=group_keys,
         )
 
-    def _reset_index(
+    def reset_index(
         self, level, drop, inplace, col_level, col_fill, allow_duplicates, names
     ):  # noqa: PR01, RT01, D200
         """
@@ -2332,7 +2326,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             "rmul", other, axis=axis, level=level, fill_value=fill_value
         )
 
-    def _rolling(
+    def rolling(
         self, window, min_periods, center, win_type, *args, **kwargs
     ):  # noqa: PR01, RT01, D200
         """
@@ -2404,7 +2398,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     rdiv = rtruediv
 
-    def _sample(
+    def sample(
         self,
         n,
         frac,
@@ -2530,7 +2524,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             query_compiler = self._query_compiler.getitem_row_array(samples)
             return self.__constructor__(query_compiler=query_compiler)
 
-    def _sem(
+    def sem(
         self,
         axis,
         skipna,
@@ -2564,7 +2558,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         setattr(obj, pandas.DataFrame._get_axis_name(axis), labels)
         return None if inplace else obj
 
-    def _shift(self, periods, freq, axis, fill_value):  # noqa: PR01, RT01, D200
+    def shift(self, periods, freq, axis, fill_value):  # noqa: PR01, RT01, D200
         """
         Shift index by desired number of periods with an optional time `freq`.
         """
@@ -2637,7 +2631,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         else:
             return self.tshift(periods, freq)
 
-    def _skew(
+    def skew(
         self,
         axis,
         skipna,
@@ -2722,7 +2716,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             )
         return self._create_or_update_from_compiler(result, inplace)
 
-    def _std(
+    def std(
         self,
         axis,
         skipna,
@@ -3029,7 +3023,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
     @_inherit_docstrings(
         pandas.DataFrame.value_counts, apilink="pandas.DataFrame.value_counts"
     )
-    def _value_counts(
+    def value_counts(
         self,
         subset: Sequence[Hashable],
         normalize: bool,
@@ -3052,7 +3046,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         #     )
         return counted_values
 
-    def _var(
+    def var(
         self, axis, skipna, level, ddof, numeric_only, **kwargs
     ):  # noqa: PR01, RT01, D200
         """
