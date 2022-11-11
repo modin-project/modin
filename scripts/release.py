@@ -151,8 +151,8 @@ def make_notes(args):
     release_type = "minor" if wrapper.is_on_master() else "patch"
     sys.stderr.write(f"Detected release type: {release_type}\n")
 
-    pref_ref, prev_commit, prev_ver = wrapper.get_previous_release(release_type)
-    sys.stderr.write(f"Previous {release_type} release: {pref_ref}\n")
+    prev_ref, prev_commit, prev_ver = wrapper.get_previous_release(release_type)
+    sys.stderr.write(f"Previous {release_type} release: {prev_ref}\n")
 
     next_major, next_minor, next_patch = prev_ver.release
     if release_type == "minor":
@@ -191,7 +191,7 @@ def make_notes(args):
             email2pr[email] = obj.id
         people |= new_people
         email2commit[obj.author.email] = obj.id
-    sys.stderr.write(f"Found {len(history)} commit(s) since {pref_ref}\n")
+    sys.stderr.write(f"Found {len(history)} commit(s) since {prev_ref}\n")
 
     sys.stderr.write("Resolving contributors...\n")
     user_resolver = GithubUserResolver(email2commit, args.token)
