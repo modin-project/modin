@@ -39,6 +39,9 @@ dependencies:
   - mypy<0.990
   - pandas-stubs
   - fastparquet
+  # for release script
+  - pygithub
+  - pygit2
   - pip:
       # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
       # when we use collective instead of rabit.

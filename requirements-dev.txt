@@ -50,3 +50,6 @@ fuzzydata>=0.0.6
 mypy<0.990
 pandas-stubs
 fastparquet
+# for release script
+PyGithub
+pygit2
