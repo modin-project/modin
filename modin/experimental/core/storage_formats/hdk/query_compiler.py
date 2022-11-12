@@ -133,9 +133,7 @@ def bind_wrappers(cls):
 
         if callable(method):
             setattr(
-                cls,
-                name,
-                build_method_wrapper(name, method),
+                cls, name, build_method_wrapper(name, method),
             )
 
     return cls
@@ -293,13 +291,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
 
     def groupby_size(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         # Grouping on empty frame or on index level.
         if len(self.columns) == 0:
@@ -529,11 +521,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     ):
         assert not inplace, "inplace=True should be handled on upper level"
         new_frame = self._modin_frame.fillna(
-            value=value,
-            method=method,
-            axis=axis,
-            limit=limit,
-            downcast=downcast,
+            value=value, method=method, axis=axis, limit=limit, downcast=downcast,
         )
         return self.__constructor__(new_frame, self._shape_hint)
 

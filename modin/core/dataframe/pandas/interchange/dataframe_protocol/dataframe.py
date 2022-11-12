@@ -70,10 +70,7 @@ class PandasProtocolDataframe(ProtocolDataframe):
     """
 
     def __init__(
-        self,
-        df: PandasDataframe,
-        nan_as_null: bool = False,
-        allow_copy: bool = True,
+        self, df: PandasDataframe, nan_as_null: bool = False, allow_copy: bool = True,
     ) -> None:
         self._df = df
         self._nan_as_null = nan_as_null

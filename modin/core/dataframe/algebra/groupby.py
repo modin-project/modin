@@ -14,6 +14,7 @@
 """Module houses builder class for GroupByReduce operator."""
 
 from collections.abc import Container
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import pandas
 
 from .tree_reduce import TreeReduce
@@ -26,7 +27,12 @@ class GroupByReduce(TreeReduce):
     """Builder class for GroupBy aggregation functions."""
 
     @classmethod
-    def register(cls, map_func, reduce_func=None, **call_kwds):
+    def register(
+        cls,
+        map_func: Union[str, dict, Callable],
+        reduce_func: Union[str, dict, Callable] = None,
+        **call_kwds: Any,
+    ) -> Callable:
         """
         Build template GroupBy aggregation function.
 
@@ -72,15 +78,15 @@ class GroupByReduce(TreeReduce):
     @classmethod
     def map(
         cls,
-        df,
-        map_func,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        other=None,
-        by=None,
-    ):
+        df: pandas.DataFrame,
+        map_func: Union[dict, Callable[pandas.DataFrameGroupBy]],
+        axis: int,
+        groupby_kwargs: Dict,
+        agg_args: List,
+        agg_kwargs: dict,
+        other: Optional[pandas.DataFrame] = None,
+        by: Optional[Union[list, str]] = None,
+    ) -> pandas.DataFrame:
         """
         Execute Map phase of GroupByReduce.
 
@@ -129,8 +135,7 @@ class GroupByReduce(TreeReduce):
             other = other.squeeze(axis=axis ^ 1)
             if isinstance(other, pandas.DataFrame):
                 df = pandas.concat(
-                    [df] + [other[[o for o in other if o not in df]]],
-                    axis=1,
+                    [df] + [other[[o for o in other if o not in df]]], axis=1,
                 )
                 other = list(other.columns)
             by_part = other
@@ -146,15 +151,15 @@ class GroupByReduce(TreeReduce):
     @classmethod
     def reduce(
         cls,
-        df,
-        reduce_func,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        partition_idx=0,
-        drop=False,
-        method=None,
+        df: pandas.DataFrame,
+        reduce_func: Callable,
+        axis: int,
+        groupby_kwargs: dict,
+        agg_args: list,
+        agg_kwargs: dict,
+        partition_idx: int = 0,
+        drop: bool = False,
+        method: Optional[str] = None,
     ):
         """
         Execute Reduce phase of GroupByReduce.
@@ -237,18 +242,18 @@ class GroupByReduce(TreeReduce):
     @classmethod
     def caller(
         cls,
-        query_compiler,
-        by,
-        map_func,
-        reduce_func,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
-        method=None,
-        default_to_pandas_func=None,
-    ):
+        query_compiler: Any,
+        by: Any,
+        map_func: Union[dict, Callable],
+        reduce_func: Union[dict, Callable],
+        axis: int,
+        groupby_kwargs: dict,
+        agg_args: list,
+        agg_kwargs: dict,
+        drop: bool = False,
+        method: Optional[str] = None,
+        default_to_pandas_func: Callable = None,
+    ) -> Any:
         """
         Execute GroupBy aggregation with TreeReduce approach.
 
@@ -355,7 +360,9 @@ class GroupByReduce(TreeReduce):
         return result
 
     @staticmethod
-    def try_filter_dict(agg_func, df):
+    def try_filter_dict(
+        agg_func: Union[dict, Callable], df: pandas.DataFrame
+    ) -> Callable:
         """
         Build aggregation function to apply to each group at this particular partition.
 
@@ -382,16 +389,16 @@ class GroupByReduce(TreeReduce):
     @classmethod
     def build_map_reduce_functions(
         cls,
-        by,
-        axis,
-        groupby_kwargs,
-        map_func,
-        reduce_func,
-        agg_args,
-        agg_kwargs,
-        drop=False,
-        method=None,
-    ):
+        by: Any,
+        axis: int,
+        groupby_kwargs: dict,
+        map_func: pandas.DataFrame,
+        reduce_func: pandas.DataFrame,
+        agg_args: list,
+        agg_kwargs: dict,
+        drop: bool = False,
+        method: Optional[str] = None,
+    ) -> Tuple(Callable):
         """
         Bind appropriate arguments to map and reduce functions.
 
@@ -428,8 +435,8 @@ class GroupByReduce(TreeReduce):
         if hasattr(by, "_modin_frame"):
             by = None
 
-        def _map(df, other=None, **kwargs):
-            def wrapper(df, other=None):
+        def _map(df: pandas.DataFrame, other=None, **kwargs) -> pandas.DataFrame:
+            def wrapper(df: pandas.DataFrame, other=None) -> pandas.DataFrame:
                 return cls.map(
                     df,
                     other=other,
@@ -450,8 +457,8 @@ class GroupByReduce(TreeReduce):
                 result = wrapper(df.copy(), other if other is None else other.copy())
             return result
 
-        def _reduce(df, **call_kwargs):
-            def wrapper(df):
+        def _reduce(df: pandas.DataFrame, **call_kwargs: Any) -> pandas.DataFrame:
+            def wrapper(df: pandas.DataFrame) -> pandas.DataFrame:
                 return cls.reduce(
                     df,
                     axis=axis,
@@ -488,7 +495,7 @@ groupby_reduce_functions = {
 }
 
 
-def _is_reduce_function_with_depth(fn, depth: int = 0):
+def _is_reduce_function_with_depth(fn: Any, depth: int = 0) -> bool:
     """
     Check whether all functions defined by `fn` are groupby reductions.
 
@@ -526,7 +533,7 @@ def _is_reduce_function_with_depth(fn, depth: int = 0):
     return isinstance(fn, str) and fn in groupby_reduce_functions
 
 
-def is_reduce_function(fn):
+def is_reduce_function(fn: Any) -> bool:
     """
     Check whether all functions defined by `fn` are groupby reductions.
 

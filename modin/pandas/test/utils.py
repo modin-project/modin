@@ -42,9 +42,9 @@ extra_test_parameters = False
 random_state = np.random.RandomState(seed=42)
 
 DATASET_SIZE_DICT = {
-    "Small": (2**2, 2**3),
-    "Normal": (2**6, 2**8),
-    "Big": (2**7, 2**12),
+    "Small": (2 ** 2, 2 ** 3),
+    "Normal": (2 ** 6, 2 ** 8),
+    "Big": (2 ** 7, 2 ** 12),
 }
 
 # Size of test dataframes
@@ -852,9 +852,7 @@ def eval_io_from_str(csv_str: str, unique_filename: str, **kwargs):
             f.write(csv_str)
 
         eval_io(
-            filepath_or_buffer=unique_filename,
-            fn_name="read_csv",
-            **kwargs,
+            filepath_or_buffer=unique_filename, fn_name="read_csv", **kwargs,
         )
 
     finally:

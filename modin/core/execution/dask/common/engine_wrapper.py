@@ -21,12 +21,7 @@ class DaskWrapper:
 
     @classmethod
     def deploy(
-        cls,
-        func,
-        f_args=None,
-        f_kwargs=None,
-        num_returns=1,
-        pure=True,
+        cls, func, f_args=None, f_kwargs=None, num_returns=1, pure=True,
     ):
         """
         Deploy a function in a worker process.

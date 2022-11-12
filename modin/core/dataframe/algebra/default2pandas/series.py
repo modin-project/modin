@@ -14,6 +14,7 @@
 """Module houses default Series functions builder class."""
 
 from .default import DefaultMethod
+import pandas
 
 
 class SeriesDefault(DefaultMethod):
@@ -22,7 +23,7 @@ class SeriesDefault(DefaultMethod):
     OBJECT_TYPE = "Series"
 
     @classmethod
-    def frame_wrapper(cls, df):
+    def frame_wrapper(cls, df: pandas.DataFrame) -> pandas.Series:
         """
         Squeeze passed DataFrame to be able to process Series-specific functions on it.
 

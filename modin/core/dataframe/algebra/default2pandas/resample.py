@@ -13,6 +13,7 @@
 
 """Module houses default Resamle functions builder class."""
 
+from typing import Any, Callable
 from .default import DefaultMethod
 
 
@@ -22,7 +23,7 @@ class Resampler:
     """Builder class for resampled aggregation functions."""
 
     @classmethod
-    def build_resample(cls, func, squeeze_self):
+    def build_resample(cls, func: Callable, squeeze_self: bool) -> Callable:
         """
         Build function that resamples time-series data and does aggregation.
 
@@ -40,7 +41,7 @@ class Resampler:
             to resampled time-series data.
         """
 
-        def fn(df, resample_kwargs, *args, **kwargs):
+        def fn(df: Any, resample_kwargs: Any, *args: Any, **kwargs: Any) -> Any:
             """Resample time-series data of the passed frame and apply specified aggregation."""
             if squeeze_self:
                 df = df.squeeze(axis=1)
@@ -60,7 +61,9 @@ class ResampleDefault(DefaultMethod):
     OBJECT_TYPE = "Resampler"
 
     @classmethod
-    def register(cls, func, squeeze_self=False, **kwargs):
+    def register(
+        cls, func: Callable, squeeze_self: bool = False, **kwargs: Any
+    ) -> Callable:
         """
         Build function that do fallback to pandas and aggregate resampled data.
 

@@ -13,6 +13,7 @@
 
 """Module houses builder class for Map operator."""
 
+from typing import Any, Callable
 from .operator import Operator
 
 
@@ -20,7 +21,9 @@ class Map(Operator):
     """Builder class for Map operator."""
 
     @classmethod
-    def register(cls, function, *call_args, **call_kwds):
+    def register(
+        cls, function: Callable, *call_args: Any, **call_kwds: Any
+    ) -> Callable:
         """
         Build Map operator that will be performed across each partition.
 
@@ -41,7 +44,7 @@ class Map(Operator):
             Function that takes query compiler and executes map function.
         """
 
-        def caller(query_compiler, *args, **kwargs):
+        def caller(query_compiler: Any, *args: Any, **kwargs: Any) -> Any:
             """Execute Map function against passed query compiler."""
             return query_compiler.__constructor__(
                 query_compiler._modin_frame.map(

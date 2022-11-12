@@ -44,8 +44,4 @@ class TimeReadParquet:
         self.shape_id = get_shape_id(shape)
 
     def time_read_parquet(self, test_filenames, shape):
-        execute(
-            IMPL.read_parquet(
-                test_filenames[self.shape_id],
-            )
-        )
+        execute(IMPL.read_parquet(test_filenames[self.shape_id],))

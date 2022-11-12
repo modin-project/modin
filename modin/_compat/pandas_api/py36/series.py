@@ -61,12 +61,7 @@ class Python36CompatibleSeries(BaseCompatibleSeries):
         return self._idxmin(axis=axis, skipna=skipna)
 
     def kurt(
-        self,
-        axis=None,
-        skipna=None,
-        level=None,
-        numeric_only=None,
-        **kwargs,
+        self, axis=None, skipna=None, level=None, numeric_only=None, **kwargs,
     ):  # noqa: PR01, RT01, D200
         if axis not in (None, 0, "index", "rows"):
             raise ValueError(f"No axis named {axis} for object type Series")

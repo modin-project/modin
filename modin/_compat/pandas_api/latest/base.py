@@ -224,11 +224,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
         )
 
     def reindex(
-        self,
-        index=None,
-        columns=None,
-        copy=True,
-        **kwargs,
+        self, index=None, columns=None, copy=True, **kwargs,
     ):
         return self._reindex(index=index, columns=columns, copy=copy, **kwargs)
 
@@ -345,13 +341,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
         )
 
     def sem(
-        self,
-        axis=None,
-        skipna=True,
-        level=None,
-        ddof=1,
-        numeric_only=None,
-        **kwargs,
+        self, axis=None, skipna=True, level=None, ddof=1, numeric_only=None, **kwargs,
     ):
         return self._sem(
             axis=axis,
@@ -402,13 +392,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
         )
 
     def std(
-        self,
-        axis=None,
-        skipna=True,
-        level=None,
-        ddof=1,
-        numeric_only=None,
-        **kwargs,
+        self, axis=None, skipna=True, level=None, ddof=1, numeric_only=None, **kwargs,
     ):
         return self._std(
             axis=axis,

@@ -130,10 +130,7 @@ def find_common_type_cat(types):
     if all(isinstance(t, pandas.CategoricalDtype) for t in types):
         if all(t.ordered for t in types):
             categories = np.sort(np.unique([c for t in types for c in t.categories]))
-            return pandas.CategoricalDtype(
-                categories,
-                ordered=True,
-            )
+            return pandas.CategoricalDtype(categories, ordered=True,)
         return union_categoricals(
             [pandas.Categorical([], dtype=t) for t in types],
             sort_categories=all(t.ordered for t in types),
@@ -247,8 +244,7 @@ class PandasParser(ClassLogger):
             # concat all elements of `partitions_dtypes` and find common dtype
             # for each of the column among all partitions
             frame_dtypes = combined_part_dtypes.apply(
-                lambda row: find_common_type_cat(row.values),
-                axis=1,
+                lambda row: find_common_type_cat(row.values), axis=1,
             ).squeeze(axis=0)
 
         return frame_dtypes
@@ -281,10 +277,8 @@ class PandasParser(ClassLogger):
         pandas_frame = cls.parse(fname, **kwargs)
         if isinstance(pandas_frame, pandas.io.parsers.TextFileReader):
             pd_read = pandas_frame.read
-            pandas_frame.read = (
-                lambda *args, **kwargs: cls.query_compiler_cls.from_pandas(
-                    pd_read(*args, **kwargs), cls.frame_cls
-                )
+            pandas_frame.read = lambda *args, **kwargs: cls.query_compiler_cls.from_pandas(
+                pd_read(*args, **kwargs), cls.frame_cls
             )
             return pandas_frame
         elif isinstance(pandas_frame, (OrderedDict, dict)):
@@ -673,10 +667,7 @@ class PandasParquetParser(PandasParser):
             return (
                 ParquetFile(f)
                 .read_row_groups(
-                    range(
-                        row_group_start,
-                        row_group_end,
-                    ),
+                    range(row_group_start, row_group_end,),
                     columns=columns,
                     use_pandas_metadata=True,
                 )
@@ -762,10 +753,7 @@ class PandasFeatherParser(PandasParser):
         if num_splits is None:
             return pandas.read_feather(fname, **kwargs)
 
-        with OpenFile(
-            fname,
-            **(kwargs.pop("storage_options", None) or {}),
-        ) as file:
+        with OpenFile(fname, **(kwargs.pop("storage_options", None) or {}),) as file:
             df = feather.read_feather(file, **kwargs)
         # Append the length of the index here to build it externally
         return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]

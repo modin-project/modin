@@ -149,7 +149,7 @@ def test_ignore_index_concat():
 
 
 def test_concat_non_subscriptable_keys():
-    frame_data = np.random.randint(0, 100, size=(2**10, 2**6))
+    frame_data = np.random.randint(0, 100, size=(2 ** 10, 2 ** 6))
     df = pd.DataFrame(frame_data).add_prefix("col")
     pdf = pandas.DataFrame(frame_data).add_prefix("col")
 
@@ -232,7 +232,6 @@ def test_sort_order(sort, join, axis):
     pandas_concat = pandas.concat([pandas_df, pandas_df2], join=join, sort=sort)
     modin_concat = pd.concat([modin_df, modin_df2], join=join, sort=sort)
     df_equals(
-        pandas_concat,
-        modin_concat,
+        pandas_concat, modin_concat,
     )
     assert list(pandas_concat.columns) == list(modin_concat.columns)

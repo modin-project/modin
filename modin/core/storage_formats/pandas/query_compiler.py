@@ -441,10 +441,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # the same row and column labels as `self`.
             new_modin_frame = self._modin_frame.n_ary_op(
                 lambda df, cond, other: df.where(cond, other, **kwargs),
-                [
-                    cond._modin_frame,
-                    other._modin_frame,
-                ],
+                [cond._modin_frame, other._modin_frame,],
                 join_type=None,
             )
         # This will be a Series of scalars to be applied based on the condition
@@ -806,10 +803,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 count_cols = count_cols.sum(axis=axis, skipna=False)
             return sum_cols / count_cols
 
-        return TreeReduce.register(
-            map_fn,
-            reduce_fn,
-        )(self, axis=axis, **kwargs)
+        return TreeReduce.register(map_fn, reduce_fn,)(self, axis=axis, **kwargs)
 
     # END TreeReduce operations
 
@@ -1020,11 +1014,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def resample_prod(self, resample_kwargs, min_count, *args, **kwargs):
         return self._resample_func(
-            resample_kwargs,
-            "prod",
-            min_count=min_count,
-            *args,
-            **kwargs,
+            resample_kwargs, "prod", min_count=min_count, *args, **kwargs,
         )
 
     def resample_size(self, resample_kwargs):
@@ -1040,11 +1030,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def resample_sum(self, resample_kwargs, min_count, *args, **kwargs):
         return self._resample_func(
-            resample_kwargs,
-            "sum",
-            min_count=min_count,
-            *args,
-            **kwargs,
+            resample_kwargs, "sum", min_count=min_count, *args, **kwargs,
         )
 
     def resample_var(self, resample_kwargs, ddof, *args, **kwargs):
@@ -1455,9 +1441,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def unique(self):
         new_modin_frame = self._modin_frame.apply_full_axis(
-            0,
-            lambda x: x.squeeze(axis=1).unique(),
-            new_columns=self.columns,
+            0, lambda x: x.squeeze(axis=1).unique(), new_columns=self.columns,
         )
         return self.__constructor__(new_modin_frame)
 
@@ -2171,9 +2155,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         new_index = pandas.RangeIndex(len(self.index) * len(value_vars))
         new_modin_frame = self._modin_frame.__constructor__(
-            new_parts,
-            index=new_index,
-            columns=id_vars + [var_name, value_name],
+            new_parts, index=new_index, columns=id_vars + [var_name, value_name],
         )
         result = self.__constructor__(new_modin_frame)
         # this assigment needs to propagate correct indices into partitions
@@ -2657,9 +2639,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         result = GroupByReduce.register(
             lambda dfgb, **kwargs: pandas.concat(
-                [dfgb.sum(**kwargs), dfgb.count()],
-                axis=1,
-                copy=False,
+                [dfgb.sum(**kwargs), dfgb.count()], axis=1, copy=False,
             ),
             _groupby_mean_reduce,
             default_to_pandas_func=lambda dfgb, **kwargs: dfgb.mean(**kwargs),
@@ -2678,13 +2658,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return result
 
     def groupby_size(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         result = self._groupby_dict_reduce(
             by=by,
@@ -2794,13 +2768,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
     def groupby_dtypes(
-        self,
-        by,
-        axis,
-        groupby_kwargs,
-        agg_args,
-        agg_kwargs,
-        drop=False,
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -2896,9 +2864,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 missed_by_cols = internal_by_df.columns.difference(df.columns)
                 if len(missed_by_cols) > 0:
                     df = pandas.concat(
-                        [df, internal_by_df[missed_by_cols]],
-                        axis=1,
-                        copy=False,
+                        [df, internal_by_df[missed_by_cols]], axis=1, copy=False,
                     )
 
                 internal_by_cols = internal_by_df.columns

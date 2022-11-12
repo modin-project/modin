@@ -873,13 +873,7 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         condition = self._build_equi_join_condition(other, left_on, right_on)
 
-        op = JoinNode(
-            self,
-            other,
-            how=how.value,
-            exprs=exprs,
-            condition=condition,
-        )
+        op = JoinNode(self, other, how=how.value, exprs=exprs, condition=condition,)
 
         new_columns = Index.__new__(Index, data=new_columns)
         res = self.__constructor__(
@@ -1100,13 +1094,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 exprs[new_col_name] = rhs.ref(col)
                 new_columns.append(new_col_name)
 
-            op = JoinNode(
-                lhs,
-                rhs,
-                how=how,
-                exprs=exprs,
-                condition=condition,
-            )
+            op = JoinNode(lhs, rhs, how=how, exprs=exprs, condition=condition,)
 
             new_columns = Index.__new__(
                 Index, data=new_columns, dtype=self.columns.dtype
@@ -1121,10 +1109,7 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         if sort:
             lhs = lhs.sort_rows(
-                lhs._index_cols,
-                ascending=True,
-                ignore_index=False,
-                na_position="last",
+                lhs._index_cols, ascending=True, ignore_index=False, na_position="last",
             )
 
         if reset_index_names:

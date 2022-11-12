@@ -40,18 +40,7 @@ import pandas._libs.lib as lib
 from pandas.io.common import is_url
 
 ReadCsvKwargsType = Dict[
-    str,
-    Union[
-        str,
-        int,
-        bool,
-        dict,
-        object,
-        Sequence,
-        Callable,
-        Dialect,
-        None,
-    ],
+    str, Union[str, int, bool, dict, object, Sequence, Callable, Dialect, None,],
 ]
 
 
@@ -235,9 +224,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                 return cls._read(**mykwargs)
 
             cls._validate_read_csv_kwargs(mykwargs)
-            use_modin_impl, error_message = cls._read_csv_check_support(
-                mykwargs,
-            )
+            use_modin_impl, error_message = cls._read_csv_check_support(mykwargs,)
             if not use_modin_impl:
                 raise ArrowEngineException(error_message)
             if isinstance(dtype, dict):
@@ -401,8 +388,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
 
     @classmethod
     def _read_csv_check_support(
-        cls,
-        read_csv_kwargs: ReadCsvKwargsType,
+        cls, read_csv_kwargs: ReadCsvKwargsType,
     ) -> Tuple[bool, str]:
         """
         Check if passed parameters are supported by current ``modin.pandas.read_csv`` implementation.
@@ -548,8 +534,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
 
     @classmethod
     def _validate_read_csv_kwargs(
-        cls,
-        read_csv_kwargs: ReadCsvKwargsType,
+        cls, read_csv_kwargs: ReadCsvKwargsType,
     ):
         """
         Validate `read_csv` keyword arguments.

@@ -156,10 +156,7 @@ _DEFAULT_HDK_CONFIG_T = [
             "hdk.TimeReadCsvNames",
         ],
     ),
-    (
-        HDK_BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-        ["hdk.TimeMerge", "hdk.TimeAppend"],
-    ),
+    (HDK_BINARY_OP_DATA_SIZE[ASV_DATASET_SIZE], ["hdk.TimeMerge", "hdk.TimeAppend"],),
     (
         HDK_SERIES_DATA_SIZE[ASV_DATASET_SIZE],
         ["hdk.TimeBinaryOpSeries", "hdk.TimeValueCountsSeries"],

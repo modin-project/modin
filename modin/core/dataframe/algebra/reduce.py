@@ -13,6 +13,7 @@
 
 """Module houses builder class for Reduce operator."""
 
+from typing import Any, Callable, Optional
 from .operator import Operator
 
 
@@ -20,7 +21,9 @@ class Reduce(Operator):
     """Builder class for Reduce operator."""
 
     @classmethod
-    def register(cls, reduce_function, axis=None):
+    def register(
+        cls, reduce_function: Callable, axis: Optional[int] = None
+    ) -> Callable:
         """
         Build Reduce operator that will be performed across rows/columns.
 
@@ -39,7 +42,7 @@ class Reduce(Operator):
             Function that takes query compiler and executes Reduce function.
         """
 
-        def caller(query_compiler, *args, **kwargs):
+        def caller(query_compiler: Any, *args: Any, **kwargs: Any) -> Any:
             """Execute Reduce function against passed query compiler."""
             _axis = kwargs.get("axis") if axis is None else axis
             return query_compiler.__constructor__(

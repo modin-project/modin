@@ -657,12 +657,7 @@ class JoinNode(DFAlgNode):
     """
 
     def __init__(
-        self,
-        left,
-        right,
-        how="inner",
-        exprs=None,
-        condition=None,
+        self, left, right, how="inner", exprs=None, condition=None,
     ):
         self.input = [left, right]
         self.how = how
@@ -678,11 +673,7 @@ class JoinNode(DFAlgNode):
         JoinNode
         """
         return JoinNode(
-            self.input[0],
-            self.input[1],
-            self.how,
-            self.exprs,
-            self.condition,
+            self.input[0], self.input[1], self.how, self.exprs, self.condition,
         )
 
     def _prints(self, prefix):

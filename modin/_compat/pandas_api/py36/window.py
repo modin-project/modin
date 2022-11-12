@@ -39,7 +39,6 @@ class Python36CompatibleWindow(BaseCompatibleWindow):
             axis,
         )
 
-
 @append_to_docstring("Compatibility layer for 'Python 3.6 pandas' for Rolling.")
 @_inherit_docstrings(pandas.core.window.rolling.Rolling)
 class Python36CompatibleRolling(BaseCompatibleRolling):

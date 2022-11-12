@@ -235,8 +235,7 @@ class PandasQueryPipeline(object):
                 for i in range(1, self.num_partitions):
                     new_dfs.append(
                         type(partitions[0])(
-                            partition_list,
-                            full_axis=partitions[0].full_axis,
+                            partition_list, full_axis=partitions[0].full_axis,
                         ).add_to_apply_calls(node.func, i)
                     )
                     new_dfs[-1].drain_call_queue(num_splits=1)

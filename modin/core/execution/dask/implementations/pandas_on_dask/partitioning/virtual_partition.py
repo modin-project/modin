@@ -201,10 +201,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
                 maintain_partitioning,
                 *partitions,
             ),
-            f_kwargs={
-                "lengths": lengths,
-                "manual_partition": manual_partition,
-            },
+            f_kwargs={"lengths": lengths, "manual_partition": manual_partition,},
             num_returns=result_num_splits * 4,
             pure=False,
         )

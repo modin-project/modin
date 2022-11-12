@@ -16,9 +16,7 @@
 from modin._compat import PandasCompatVersion
 
 if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-    from .py36 import (
-        Python36CompatibleBasePandasDataset as BasePandasDatasetCompat,
-    )
+    from .py36 import Python36CompatibleBasePandasDataset as BasePandasDatasetCompat
     from .py36 import Python36CompatibleDataFrame as DataFrameCompat
     from .py36 import Python36CompatibleSeries as SeriesCompat
     from .py36 import Python36CompatibleDataFrameGroupBy as DataFrameGroupByCompat
@@ -27,9 +25,7 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
     from .py36 import Python36CompatibleRolling as RollingCompat
     from .py36 import Python36CompatibleResampler as ResamplerCompat
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
-    from .latest import (
-        LatestCompatibleBasePandasDataset as BasePandasDatasetCompat,
-    )
+    from .latest import LatestCompatibleBasePandasDataset as BasePandasDatasetCompat
     from .latest import LatestCompatibleDataFrame as DataFrameCompat
     from .latest import LatestCompatibleSeries as SeriesCompat
     from .latest import LatestCompatibleDataFrameGroupBy as DataFrameGroupByCompat

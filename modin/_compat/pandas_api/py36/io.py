@@ -155,10 +155,7 @@ def read_parquet(path, engine: str = "auto", columns=None, **kwargs):
 
     return DataFrame(
         query_compiler=FactoryDispatcher.read_parquet(
-            path=path,
-            engine=engine,
-            columns=columns,
-            **kwargs,
+            path=path, engine=engine, columns=columns, **kwargs,
         )
     )
 

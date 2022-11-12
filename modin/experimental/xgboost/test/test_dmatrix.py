@@ -69,8 +69,7 @@ def check_dmatrix(data, label=None, **kwargs):
     ],
 )
 @pytest.mark.parametrize(
-    "feature_types",
-    [None, "q", list("qiqiq")],
+    "feature_types", [None, "q", list("qiqiq")],
 )
 def test_dmatrix_feature_names_and_feature_types(data, feature_names, feature_types):
     check_dmatrix(data, feature_names=feature_names, feature_types=feature_types)
@@ -83,9 +82,7 @@ def test_feature_names():
     feature_names = [f"feat{i}" for i in range(X.shape[1])]
 
     check_dmatrix(
-        X,
-        y,
-        feature_names=feature_names,
+        X, y, feature_names=feature_names,
     )
 
     dmatrix = xgb.DMatrix(X, label=y, feature_names=feature_names)

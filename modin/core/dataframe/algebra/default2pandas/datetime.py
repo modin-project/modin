@@ -14,13 +14,16 @@
 """Module houses default applied-on-datetime functions builder class."""
 
 from .series import SeriesDefault
+import pandas
 
 
 class DateTimeDefault(SeriesDefault):
     """Builder for default-to-pandas methods which is executed under datetime accessor."""
 
     @classmethod
-    def frame_wrapper(cls, df):
+    def frame_wrapper(
+        cls, df: pandas.DataFrame
+    ) -> pandas.core.indexes.accessors.DatetimeProperties:
         """
         Get datetime accessor of the passed frame.
 

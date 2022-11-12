@@ -178,12 +178,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             # this dramatically improves performance.
             func, f_args, f_kwargs = call_queue[0]
             logger.debug(f"SUBMIT::_apply_func::{self._identity}")
-            (
-                self._data,
-                new_length,
-                new_width,
-                self._ip_cache,
-            ) = _apply_func.remote(data, func, *f_args, **f_kwargs)
+            (self._data, new_length, new_width, self._ip_cache,) = _apply_func.remote(
+                data, func, *f_args, **f_kwargs
+            )
         logger.debug(f"EXIT::Partition.drain_call_queue::{self._identity}")
         self.call_queue = []
 

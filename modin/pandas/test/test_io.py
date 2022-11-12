@@ -269,13 +269,7 @@ class TestCsv:
     )
     @pytest.mark.parametrize("skip_blank_lines", [True, False])
     def test_read_csv_col_handling(
-        self,
-        header,
-        index_col,
-        prefix,
-        names,
-        usecols,
-        skip_blank_lines,
+        self, header, index_col, prefix, names, usecols, skip_blank_lines,
     ):
         if names is lib.no_default:
             pytest.skip("some parameters combiantions fails: issue #2312")
@@ -318,11 +312,7 @@ class TestCsv:
     )
     @pytest.mark.parametrize("skipfooter", [0, 10])
     def test_read_csv_parsing_1(
-        self,
-        dtype,
-        engine,
-        converters,
-        skipfooter,
+        self, dtype, engine, converters, skipfooter,
     ):
 
         if dtype:
@@ -369,14 +359,7 @@ class TestCsv:
     )
     @pytest.mark.parametrize("encoding", ["latin1", "windows-1251", None])
     def test_read_csv_parsing_2(
-        self,
-        make_csv_file,
-        request,
-        header,
-        skiprows,
-        nrows,
-        names,
-        encoding,
+        self, make_csv_file, request, header, skiprows, nrows, names, encoding,
     ):
         xfail_case = (
             StorageFormat.get() == "Hdk"
@@ -398,8 +381,7 @@ class TestCsv:
         with ensure_clean(".csv") as unique_filename:
             if encoding:
                 make_csv_file(
-                    filename=unique_filename,
-                    encoding=encoding,
+                    filename=unique_filename, encoding=encoding,
                 )
             kwargs = {
                 "filepath_or_buffer": unique_filename
@@ -433,11 +415,7 @@ class TestCsv:
     @pytest.mark.parametrize("skipfooter", [0, 10])
     @pytest.mark.parametrize("nrows", [35, None])
     def test_read_csv_parsing_3(
-        self,
-        true_values,
-        false_values,
-        skipfooter,
-        nrows,
+        self, true_values, false_values, skipfooter, nrows,
     ):
         xfail_case = (
             (false_values or true_values)
@@ -471,8 +449,7 @@ class TestCsv:
             eval_io_from_str(str_initial_spaces, unique_filename, skipinitialspace=True)
 
     @pytest.mark.parametrize(
-        "test_case",
-        ["single_element", "single_column", "multiple_columns"],
+        "test_case", ["single_element", "single_column", "multiple_columns"],
     )
     def test_read_csv_squeeze(self, request, test_case):
         if request.config.getoption("--simulate-cloud").lower() != "off":
@@ -529,12 +506,7 @@ class TestCsv:
     @pytest.mark.parametrize("verbose", [True, False])
     @pytest.mark.parametrize("skip_blank_lines", [True, False])
     def test_read_csv_nans_handling(
-        self,
-        na_values,
-        keep_default_na,
-        na_filter,
-        verbose,
-        skip_blank_lines,
+        self, na_values, keep_default_na, na_filter, verbose, skip_blank_lines,
     ):
         eval_io(
             fn_name="read_csv",
@@ -718,13 +690,7 @@ class TestCsv:
     @pytest.mark.parametrize("escapechar", [None, "d", "x"])
     @pytest.mark.parametrize("dialect", ["test_csv_dialect", None])
     def test_read_csv_file_format(
-        self,
-        make_csv_file,
-        thousands,
-        decimal,
-        lineterminator,
-        escapechar,
-        dialect,
+        self, make_csv_file, thousands, decimal, lineterminator, escapechar, dialect,
     ):
         if Engine.get() != "Python" and lineterminator == "x":
             pytest.xfail("read_csv with Ray engine outputs empty frame - issue #2493")
@@ -779,12 +745,7 @@ class TestCsv:
     @pytest.mark.parametrize("doublequote", [True, False])
     @pytest.mark.parametrize("comment", [None, "#", "x"])
     def test_read_csv_quoting(
-        self,
-        make_csv_file,
-        quoting,
-        quotechar,
-        doublequote,
-        comment,
+        self, make_csv_file, quoting, quotechar, doublequote, comment,
     ):
         # in these cases escapechar should be set, otherwise error occures
         # _csv.Error: need to escape, but no escapechar set"
@@ -822,10 +783,7 @@ class TestCsv:
         reason="In compat mode, some error handling tests are failing due to https://github.com/modin-project/modin/issues/2845",
     )
     def test_read_csv_error_handling(
-        self,
-        warn_bad_lines,
-        error_bad_lines,
-        on_bad_lines,
+        self, warn_bad_lines, error_bad_lines, on_bad_lines,
     ):
         # in that case exceptions are raised both by Modin and pandas
         # and tests pass
@@ -909,8 +867,7 @@ class TestCsv:
                 )
             else:
                 make_csv_file(
-                    filename=unique_filename,
-                    delimiter=delimiter,
+                    filename=unique_filename, delimiter=delimiter,
                 )
 
                 eval_io(
@@ -1327,12 +1284,10 @@ class TestCsv:
             ]
         ).transpose()
         modin_df = pd.DataFrame(
-            values,
-            columns=["key"] + ["avalue" + str(i) for i in range(1, 1 + cols)],
+            values, columns=["key"] + ["avalue" + str(i) for i in range(1, 1 + cols)],
         ).set_index("key")
         pandas_df = pandas.DataFrame(
-            values,
-            columns=["key"] + ["avalue" + str(i) for i in range(1, 1 + cols)],
+            values, columns=["key"] + ["avalue" + str(i) for i in range(1, 1 + cols)],
         ).set_index("key")
         eval_to_file(modin_df, pandas_df, "to_csv", "csv")
 
@@ -1915,24 +1870,21 @@ class TestExcel:
     def test_read_excel_empty_rows(self):
         # Test parsing empty rows in middle of excel dataframe as NaN values
         eval_io(
-            fn_name="read_excel",
-            io="modin/pandas/test/data/test_empty_rows.xlsx",
+            fn_name="read_excel", io="modin/pandas/test/data/test_empty_rows.xlsx",
         )
 
     @check_file_leaks
     def test_read_excel_border_rows(self):
         # Test parsing border rows as NaN values in excel dataframe
         eval_io(
-            fn_name="read_excel",
-            io="modin/pandas/test/data/test_border_rows.xlsx",
+            fn_name="read_excel", io="modin/pandas/test/data/test_border_rows.xlsx",
         )
 
     @check_file_leaks
     def test_read_excel_every_other_nan(self):
         # Test for reading excel dataframe with every other row as a NaN value
         eval_io(
-            fn_name="read_excel",
-            io="modin/pandas/test/data/every_other_row_nan.xlsx",
+            fn_name="read_excel", io="modin/pandas/test/data/every_other_row_nan.xlsx",
         )
 
     @pytest.mark.parametrize(
@@ -2164,16 +2116,13 @@ class TestSql:
             "mssql+pymssql://sa:Strong.Pwd-123@0.0.0.0:1433/master"
         )
         pandas_df_to_read = pandas.DataFrame(
-            np.arange(
-                1000 * 256,
-            ).reshape(1000, 256)
+            np.arange(1000 * 256,).reshape(1000, 256)
         ).add_prefix("col")
         pandas_df_to_read.to_sql(
             table_name, sqlalchemy_connection_string, if_exists="replace"
         )
         modin_df = pd.read_sql(
-            query,
-            ModinDatabaseConnection("sqlalchemy", sqlalchemy_connection_string),
+            query, ModinDatabaseConnection("sqlalchemy", sqlalchemy_connection_string),
         )
         pandas_df = pandas.read_sql(query, sqlalchemy_connection_string)
         df_equals(modin_df, pandas_df)
@@ -2187,15 +2136,10 @@ class TestSql:
         query = f"SELECT * FROM {table_name}"
         connection = "postgresql://sa:Strong.Pwd-123@localhost:2345/postgres"
         pandas_df_to_read = pandas.DataFrame(
-            np.arange(
-                1000 * 256,
-            ).reshape(1000, 256)
+            np.arange(1000 * 256,).reshape(1000, 256)
         ).add_prefix("col")
         pandas_df_to_read.to_sql(table_name, connection, if_exists="replace")
-        modin_df = pd.read_sql(
-            query,
-            ModinDatabaseConnection("psycopg2", connection),
-        )
+        modin_df = pd.read_sql(query, ModinDatabaseConnection("psycopg2", connection),)
         pandas_df = pandas.read_sql(query, connection)
         df_equals(modin_df, pandas_df)
 
@@ -2542,8 +2486,7 @@ class TestFeather:
 
     def test_read_feather_path_object(self, make_feather_file):
         eval_io(
-            fn_name="read_feather",
-            path=Path(make_feather_file()),
+            fn_name="read_feather", path=Path(make_feather_file()),
         )
 
     @pytest.mark.xfail(

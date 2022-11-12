@@ -255,11 +255,7 @@ def check_both_not_none(option1, option2):
 
 
 def broadcast_item(
-    obj,
-    row_lookup,
-    col_lookup,
-    item,
-    need_columns_reindex=True,
+    obj, row_lookup, col_lookup, item, need_columns_reindex=True,
 ):
     """
     Use NumPy to broadcast or reshape item with reindexing.

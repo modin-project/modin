@@ -219,16 +219,10 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
 )
 @pytest.mark.parametrize(
     "test_type",
-    [
-        "many_small_dfs",
-        "concatted_df_with_small_dfs",
-        "large_df_plus_small_dfs",
-    ],
+    ["many_small_dfs", "concatted_df_with_small_dfs", "large_df_plus_small_dfs",],
 )
 @pytest.mark.parametrize(
-    "set_num_partitions",
-    [1, 4],
-    indirect=True,
+    "set_num_partitions", [1, 4], indirect=True,
 )
 def test_rebalance_partitions(test_type, set_num_partitions):
     num_partitions = NPartitions.get()
@@ -353,9 +347,7 @@ class TestDrainVirtualPartitionCallQueue:
     """
 
     def test_from_virtual_partitions_with_call_queues(
-        self,
-        axis,
-        virtual_partition_class,
+        self, axis, virtual_partition_class,
     ):
         # reverse the dataframe along the virtual partition axis.
         def reverse(df):
@@ -386,8 +378,7 @@ class TestDrainVirtualPartitionCallQueue:
         else:
             expected_df = pandas.DataFrame([[1, 0, 3, 2]], columns=[0, 0, 0, 0])
         df_equals(
-            level_two_virtual.to_pandas(),
-            expected_df,
+            level_two_virtual.to_pandas(), expected_df,
         )
 
     def test_from_block_and_virtual_partition_with_call_queues(

@@ -206,16 +206,9 @@ class Py36BaseIOCompat(object):
         returns=_doc_returns_qc,
     )
     def read_feather(
-        cls,
-        path,
-        columns=None,
-        use_threads=True,
+        cls, path, columns=None, use_threads=True,
     ):  # noqa: PR01
-        return cls._read_feather(
-            path=path,
-            columns=columns,
-            use_threads=use_threads,
-        )
+        return cls._read_feather(path=path, columns=columns, use_threads=use_threads,)
 
     @classmethod
     @_inherit_docstrings(pandas.read_stata, apilink="pandas.read_stata")
@@ -258,13 +251,10 @@ class Py36BaseIOCompat(object):
         returns=_doc_returns_qc,
     )
     def read_pickle(
-        cls,
-        filepath_or_buffer,
-        compression="infer",
+        cls, filepath_or_buffer, compression="infer",
     ):  # noqa: PR01
         return cls._read_pickle(
-            filepath_or_buffer=filepath_or_buffer,
-            compression=compression,
+            filepath_or_buffer=filepath_or_buffer, compression=compression,
         )
 
     @classmethod
@@ -306,8 +296,5 @@ class Py36BaseIOCompat(object):
         protocol: int = 4,  # older pandas only supports protocol <= 4
     ):  # noqa: PR01, D200
         return cls._to_pickle(
-            obj,
-            filepath_or_buffer,
-            compression=compression,
-            protocol=protocol,
+            obj, filepath_or_buffer, compression=compression, protocol=protocol,
         )

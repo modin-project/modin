@@ -199,9 +199,7 @@ class ExcelDispatcher(TextFileDispatcher):
                 if b"</row>" not in chunk and b"</sheetData>" in chunk:
                     break
                 remote_results_list = cls.deploy(
-                    func=cls.parse,
-                    f_kwargs=args,
-                    num_returns=num_splits + 2,
+                    func=cls.parse, f_kwargs=args, num_returns=num_splits + 2,
                 )
                 data_ids.append(remote_results_list[:-2])
                 index_ids.append(remote_results_list[-2])

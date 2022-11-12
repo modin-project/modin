@@ -160,18 +160,9 @@ class Python36CompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
         )
 
     def reindex(
-        self,
-        index=None,
-        columns=None,
-        copy=True,
-        **kwargs,
+        self, index=None, columns=None, copy=True, **kwargs,
     ):
-        return self._reindex(
-            index=index,
-            columns=columns,
-            copy=copy,
-            **kwargs,
-        )
+        return self._reindex(index=index, columns=columns, copy=copy, **kwargs,)
 
     def resample(
         self,
