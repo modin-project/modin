@@ -10,20 +10,49 @@ class array(object):
             pass
 
     def _absolute(self, out=None, where=True, casting='same_kind', order='K', dtype=None, subok=True):
-        result = self._query_compiler.abs().to_numpy()
-        return result
+        result = self._query_compiler.abs()
+        return array(query_compiler=result)
 
     def _add(self, x2, out=None, where=True, casting='same_kind', order='K', dtype=None, subok=True):
-        result = self._query_compiler.add(x2._query_compiler).to_numpy()
-        return result
+        result = self._query_compiler.add(x2._query_compiler)
+        return array(query_compiler=result)
 
-    def _all(self, axis=None, out=None, keepdims=None, where=None):
-        result = self._query_compiler.all(axis=axis).to_numpy()
-        return result
+    def _divide(self, x2, out=None, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+        result = self._query_compiler.truediv(x2._query_compiler)
+        return array(query_compiler=result)
+
+    def _float_power(self, x2, out=None, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+        result = self._query_compiler.add(x2._query_compiler)
+        return array(query_compiler=result)
+
+    def _floor_divide(self, x2, out=None, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+        result = self._query_compiler.floordiv(x2._query_compiler)
+        return array(query_compiler=result)
+
+    def _power(self, x2, out=None, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+        result = self._query_compiler.pow(x2._query_compiler)
+        return array(query_compiler=result)
+
+    def _prod(self, axis=None, out=None, keepdims=None, where=None):
+        print("Series?", self._query_compiler.is_series_like())
+        if axis is None:
+            result = self._query_compiler.prod(axis=0).prod(axis=1)
+            return array(query_compiler=result)
+        else:
+            result = self._query_compiler.prod(axis=axis)
+            return array(query_compiler=result)
+
+    def _multiply(self, x2, out=None, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+        result = self._query_compiler.mul(x2._query_compiler)
+        return array(query_compiler=result)
+
+    def _remainder(self, x2, out=None, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+        result = self._query_compiler.mod(x2._query_compiler)
+        return array(query_compiler=result)
 
     def _subtract(self, x2, out=None, where=True, casting='same_kind', order='K', dtype=None, subok=True):
-        result = self._query_compiler.sub(x2._query_compiler).to_numpy()
-        return result
+        result = self._query_compiler.sub(x2._query_compiler)
+        return array(query_compiler=result)
 
     def _sum(self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None):
         result = self._query_compiler.sum(axis=axis)
