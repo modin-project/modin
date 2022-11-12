@@ -1244,7 +1244,7 @@ class Series(SeriesCompat, BasePandasDataset):
         )
 
     @_inherit_docstrings(pandas.Series.mask, apilink="pandas.Series.mask")
-    def _mask(
+    def _compat_mask(
         self,
         cond,
         other,
