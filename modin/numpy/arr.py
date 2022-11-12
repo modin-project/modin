@@ -34,5 +34,30 @@ class array(object):
             return
         return array(query_compiler=result)
 
+    def _get_shape(self):
+        return (len(self._query_compiler.index), len(self._query_compiler.columns))   
+    
+    def _set_shape(self, new_shape):
+        if not (isinstance(new_shape, int)) and not isinstance(new_shape, tuple):
+            raise TypeError(f"expected a sequence of integers or a single integer, got '{new_shape}'")
+        elif isinstance(new_shape, tuple):
+            for dim in new_shape:
+                if not isinstance(dim, int):
+                    raise TypeError(f"'{type(dim)}' object cannot be interpreted as an integer")
+        from math import prod
+        new_dimensions = new_shape if isinstance(new_shape, int) else prod(new_shape)
+        if new_dimensions != prod(self._get_shape()):
+            raise ValueError(f"cannot reshape array of size {prod(self._get_shape)} into {new_shape if isinstance(new_shape, tuple) else (new_shape,)}")
+        if isinstance(new_shape, int):
+            qcs = []
+            for index_val in self._query_compiler.index[1:]:
+                qcs.append(self._query_compiler.getitem_row_array([index_val]).reset_index(drop=True))
+            self._query_compiler = self._query_compiler.getitem_row_array([self._query_compiler.index[0]]).reset_index(drop=True).concat(1, qcs, ignore_index=True)
+        else:
+            raise NotImplementedError("Reshaping from a 2D object to a 2D object is not currently supported!")
+    
+    shape = property(_get_shape, _set_shape)
+            
+
     def __repr__(self):
         return repr(self._query_compiler.to_numpy())
