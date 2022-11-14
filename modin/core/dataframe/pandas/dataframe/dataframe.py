@@ -654,6 +654,8 @@ class PandasDataframe(ClassLogger):
             # Get numpy array of positions of values from `row_labels`
             if isinstance(self.index, pandas.MultiIndex):
                 row_positions = np.zeros(len(row_labels), dtype="int64")
+                # we can't use .get_locs(row_labels) because the function
+                # requires a different format for row_labels
                 for idx, label in enumerate(row_labels):
                     if isinstance(label, str):
                         label = [label]
@@ -666,6 +668,8 @@ class PandasDataframe(ClassLogger):
             # Get numpy array of positions of values from `col_labels`
             if isinstance(self.columns, pandas.MultiIndex):
                 col_positions = np.zeros(len(col_labels), dtype="int64")
+                # we can't use .get_locs(col_labels) because the function
+                # requires a different format for row_labels
                 for idx, label in enumerate(col_labels):
                     if isinstance(label, str):
                         label = [label]
@@ -1057,16 +1061,17 @@ class PandasDataframe(ClassLogger):
         extracted_columns = self.take_2d_labels_or_positional(
             col_labels=column_list
         ).to_pandas()
-        new_names = extracted_columns.columns
-        # return initial names
-        extracted_columns.columns = column_list
 
         if len(column_list) == 1:
-            new_labels = pandas.Index(extracted_columns.squeeze(axis=1))
+            new_labels = pandas.Index(
+                extracted_columns.squeeze(axis=1), name=column_list[0]
+            )
         else:
-            new_labels = pandas.MultiIndex.from_frame(extracted_columns)
+            new_labels = pandas.MultiIndex.from_frame(
+                extracted_columns, names=column_list
+            )
         result = self.take_2d_labels_or_positional(
-            col_labels=[i for i in self.columns if i not in new_names]
+            col_labels=[i for i in self.columns if i not in extracted_columns.columns]
         )
         result.index = new_labels
         return result
