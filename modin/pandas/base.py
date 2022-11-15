@@ -1732,7 +1732,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         )
 
     @_inherit_docstrings(pandas.DataFrame.mask, apilink="pandas.DataFrame.mask")
-    def _mask(self, *args, **kwargs):
+    def _compat_mask(self, *args, **kwargs):
         return self._default_to_pandas("mask", *args, **kwargs)
 
     @_inherit_docstrings(pandas.DataFrame.max, apilink="pandas.DataFrame.max")
