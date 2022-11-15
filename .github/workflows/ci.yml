@@ -440,6 +440,7 @@ jobs:
       - run: pytest modin/pandas/test/test_io.py::TestCsv --verbose
       - run: pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: pytest modin/test/interchange/dataframe_protocol/hdk
+      - run: pytest modin/experimental/sql/test/test_sql.py
       - run: python examples/docker/modin-hdk/census-hdk.py examples/data/census_1k.csv -no-ml
       - run: python examples/docker/modin-hdk/nyc-taxi-hdk.py examples/data/nyc-taxi_1k.csv
       - run: |
