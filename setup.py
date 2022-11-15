@@ -2,18 +2,23 @@ from setuptools import setup, find_packages
 import versioneer
 import sys
 
-PANDAS_VERSION_FOR_MERGE_CONFLICT = "1.5.1" if sys.version_info >= (3, 8) else "1.1.5"
+PANDAS_VERSION = "1.5.1" if sys.version_info >= (3, 8) else "1.1.5"
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-dask_deps = []
-sys.version_info < (3, 8) and dask_deps.append("pickle5")
+dask_deps = ["dask>=2.22.0", "distributed>=2.22.0"]
+if sys.version_info < (3, 8):
+    dask_deps.append("pickle5")
 
-ray_deps = []
-remote_deps = []
-spreadsheet_deps = []
-sql_deps = []
+ray_deps = [
+    "ray[default]>=1.4.0,<2.1.0",
+    "pyarrow>=4.0.1",
+    "redis>=3.5.0,<4.0.0",
+]
+remote_deps = ["rpyc==4.1.5", "cloudpickle", "boto3"]
+spreadsheet_deps = ["modin-spreadsheet>=0.1.0"]
+sql_deps = ["dfsql>=0.4.2", "pyparsing<=2.4.7"]
 all_deps = dask_deps + ray_deps + remote_deps + spreadsheet_deps
 
 # Distribute 'modin-autoimport-pandas.pth' along with binary and source distributions.
@@ -50,7 +55,7 @@ setup(
     url="https://github.com/modin-project/modin",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    install_requires=[]
+    install_requires=[f"pandas=={PANDAS_VERSION}", "packaging", "numpy>=1.18.5", "fsspec", "psutil"],
     extras_require={
         # can be installed by pip install modin[dask]
         "dask": dask_deps,
