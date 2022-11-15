@@ -11,7 +11,7 @@ dependencies:
   - pytest-cov>=2.10.1
   - pytest-xdist>=2.1.0
   - coverage
-  - pygithub==1.53
+  - pygithub
   - pyhdk==0.2
   - s3fs>=2021.8
   - psutil
