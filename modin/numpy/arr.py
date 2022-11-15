@@ -5,6 +5,10 @@ class array(object):
     def __init__(self, object=None, dtype=None, *, copy=True, order='K', subok=False, ndmin=0, like=None, query_compiler=None):
         if query_compiler is not None:
             self._query_compiler = query_compiler
+        elif isinstance(object, list):
+            import modin.pandas as pd
+            qc = pd.DataFrame(object)._query_compiler
+            self._query_compiler = qc
         else:
             arr = numpy.array(object, dtype=dtype, copy=copy, order=order, subok=subok, ndmin=ndmin, like=like)
             pass
