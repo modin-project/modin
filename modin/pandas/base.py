@@ -267,6 +267,14 @@ class BasePandasDataset(BasePandasDatasetCompat):
                     )
             if hasattr(other, "dtype"):
                 other_dtypes = [other.dtype] * len(other)
+            elif is_dict_like(other):
+                other_dtypes = [
+                    type(other[label])
+                    for label in self._query_compiler.get_axis(axis)
+                    # The binary operation is applied for intersection of axis labels
+                    # and dictionary keys. So filtering out extra keys.
+                    if label in other
+                ]
             else:
                 other_dtypes = [type(x) for x in other]
         else:
@@ -283,6 +291,19 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 raise TypeError("Cannot perform operation with non-equal index")
         # Do dtype checking.
         if dtype_check:
+            self_dtypes = self._get_dtypes()
+            if is_dict_like(other):
+                # The binary operation is applied for the intersection of axis labels
+                # and dictionary keys. So filtering `self_dtypes` to match the `other`
+                # dictionary.
+                self_dtypes = [
+                    dtype
+                    for label, dtype in zip(
+                        self._query_compiler.get_axis(axis), self._get_dtypes()
+                    )
+                    if label in other
+                ]
+
             if not all(
                 (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
                 or (is_object_dtype(self_dtype) and is_object_dtype(other_dtype))
@@ -291,7 +312,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
                     and is_datetime_or_timedelta_dtype(other_dtype)
                 )
                 or is_dtype_equal(self_dtype, other_dtype)
-                for self_dtype, other_dtype in zip(self._get_dtypes(), other_dtypes)
+                for self_dtype, other_dtype in zip(self_dtypes, other_dtypes)
             ):
                 raise TypeError("Cannot do operation with improper dtypes")
         return result
