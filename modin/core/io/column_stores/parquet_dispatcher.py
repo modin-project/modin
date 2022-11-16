@@ -629,6 +629,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     partitioned_columns.add(dir_names[0].split("=")[0])
                 if files:
                     # Metadata files, git files, .DSStore
+                    # TODO: fix conditional for column partitioning, see issue #4637
                     if len(files[0]) > 0 and files[0][0] == ".":
                         continue
                     break

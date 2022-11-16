@@ -705,7 +705,7 @@ engine : str
     )
     def parse(files_for_parser, engine, **kwargs):
         columns = kwargs.get("columns", None)
-        storage_options = kwargs.pop("storage_options", {}) or {}
+        storage_options = kwargs.get("storage_options", {})
         chunks = []
         # `single_worker_read` just passes in a string path
         if isinstance(files_for_parser, str):
