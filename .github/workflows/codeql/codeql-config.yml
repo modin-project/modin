@@ -1,0 +1,9 @@
+name: "Modin CodeQL config"
+
+languages: ${{ matrix.language }}
+queries: +security-and-quality
+
+paths:
+  - modin/** 
+paths-ignore: 
+  - modin/experimental/cloud/**
