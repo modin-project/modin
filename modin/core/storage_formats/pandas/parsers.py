@@ -790,7 +790,7 @@ read_sql_engine : str
         enable_cx = False
         if read_sql_engine == "Connectorx":
             try:
-                import connectorx
+                import connectorx as cx
 
                 enable_cx = True
             except ImportError:
@@ -804,11 +804,11 @@ read_sql_engine : str
 
         if num_splits is None:
             if enable_cx:
-                return connectorx.read_sql(con, sql, index_col=index_col)
+                return cx.read_sql(con, sql, index_col=index_col)
             return pandas.read_sql(sql, con, index_col=index_col, **kwargs)
 
         if enable_cx:
-            df = connectorx.read_sql(con, sql, index_col=index_col)
+            df = cx.read_sql(con, sql, index_col=index_col)
         else:
             df = pandas.read_sql(sql, con, index_col=index_col, **kwargs)
         if index_col is None:

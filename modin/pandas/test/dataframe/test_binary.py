@@ -267,6 +267,8 @@ def test_mismatched_row_partitions(is_idx_aligned, op_type, is_more_other_partit
     elif op_type == "ser_ser_different_name":
         modin_res = modin_df2.a / modin_df1.b
         pandas_res = pandas_df2.a / pandas_df1.b
+    else:
+        raise Exception(f"op_type: {op_type} not supported in test")
     df_equals(modin_res, pandas_res)
 
 
