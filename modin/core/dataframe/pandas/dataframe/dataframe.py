@@ -1895,13 +1895,15 @@ class PandasDataframe(ClassLogger):
             return window_result
 
         def window_function_partition(virtual_partition):
+            
             virtual_partition_copy = virtual_partition.copy()
+            #print(virtual_partition_copy.to_pandas())
             window_result = reduce_fn(virtual_partition_copy)
+            #breakpoint()
             return window_result.iloc[:, window_size - 1 : ] if axis == Axis.COL_WISE else window_result.iloc[window_size - 1: , :]
 
         num_parts = len(self._partitions[0]) if axis == Axis.COL_WISE else len(self._partitions)
         results = []
-
 
         for i in range(num_parts):
             # get the ith partition 
@@ -1909,6 +1911,9 @@ class PandasDataframe(ClassLogger):
 
             # partitions to join in virtual partition
             parts_to_join = [starting_part] if (axis == Axis.ROW_WISE) else [[partition[0]] for partition in starting_part] 
+
+            #for part in parts_to_join:
+                #print(part.to_pandas())
 
             last_window_span = window_size - 1
 
@@ -1924,9 +1929,12 @@ class PandasDataframe(ClassLogger):
                         masked_new_parts = [[part[0].mask(row_labels = slice(None), col_labels = slice(0, last_window_span))] for part in new_parts]
                         for x, r in enumerate(parts_to_join):
                             r.append(masked_new_parts[x][0])
+                            #print(masked_new_parts[x][0].to_pandas())
                     else:
                         masked_new_parts = np.array([part.mask(row_labels = slice(0, last_window_span), col_labels=slice(None)) for part in new_parts])
                         parts_to_join.append(masked_new_parts)
+                        #for part in masked_new_parts:
+                            #print(part.to_pandas())
                     break
                 else:
                     # window continues into next part, so just add this part to parts_to_join
@@ -1937,6 +1945,9 @@ class PandasDataframe(ClassLogger):
                         parts_to_join.append(new_parts)
                     last_window_span -= part_len
                     k += 1
+
+            #for part in parts_to_join:
+                #print(part.to_pandas())        
 
             # create virtual partition and perform window operation
             virtual_partitions = self._partition_mgr_cls.row_partitions(np.array(parts_to_join), full_axis = False) if axis == Axis.COL_WISE else self._partition_mgr_cls.column_partitions(np.array(parts_to_join), full_axis=False)

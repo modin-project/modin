@@ -110,7 +110,7 @@ class Window(ClassLogger):
         )
     """
 
-    def var(self, ddof=1, *args, **kwargs):
+    def std(self, ddof=1, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.window_std(
                 axis=self.axis, window=self.window, window_args=self.window_args, ddof=ddof, *args, **kwargs
@@ -154,10 +154,10 @@ class Rolling(ClassLogger):
         self.axis = axis
         self.window = window
 
-    def count(self):
+    def count(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_count(
-                axis=self.axis, window=self.window, rolling_args=self.rolling_args
+                axis=self.axis, window=self.window, rolling_args=self.rolling_args, *args, **kwargs
             )
         )
 

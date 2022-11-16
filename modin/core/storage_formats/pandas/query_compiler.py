@@ -1161,82 +1161,93 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self._resample_func(resample_kwargs, "quantile", q=q, **kwargs)
 
 
-    """
-    window_mean = Fold.register(
+    old_window_mean = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).mean(*args, **kwargs)
         )
     )
-    """
-    def window_mean(self, axis, window, window_args, *args, **kwargs):
-        return self.__constructor__(
-            self._modin_frame.window(
-                axis=axis, window_size=window,
-                reduce_fn=lambda df : df.rolling(*window_args).mean(*args, **kwargs)
-            )
-        )
 
-    """
-    window_sum = Fold.register(
+    def window_mean(self, axis, window, window_args, *args, **kwargs):
+        center = window_args[2]
+        if not center:
+            return self.__constructor__(
+                self._modin_frame.window(
+                    axis=axis, window_size=window,
+                    reduce_fn=lambda df : df.rolling(*window_args).mean(*args, **kwargs)
+                )
+            )
+        else:
+            return self.old_window_mean(axis, window_args, *args, **kwargs)    
+
+    old_window_sum = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).sum(*args, **kwargs)
         )
     )
-    """
 
     def window_sum(self, axis, window, window_args, *args, **kwargs):
-        return self.__constructor__(
-            self._modin_frame.window(
-                axis=axis, window_size=window,
-                reduce_fn=lambda df : df.rolling(*window_args).sum(*args, **kwargs)
+        center = window_args[2]
+        if not center:
+            return self.__constructor__(
+                self._modin_frame.window(
+                    axis=axis, window_size=window,
+                    reduce_fn=lambda df : df.rolling(*window_args).sum(*args, **kwargs)
+                )
             )
-        )
+        else:
+            return self.old_window_sum(axis, window_args, *args, **kwargs)    
 
-    """
-    window_var = Fold.register(
+    old_window_var = Fold.register(
         lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
         )
     )
-    """
 
     def window_var(self, axis, window, window_args, ddof, *args, **kwargs):
-        return self.__constructor__(
-            self._modin_frame.window(
-                axis=axis, window_size=window,
-                reduce_fn=lambda df : df.rolling(*window_args).var(ddof=ddof, *args, **kwargs)
+        center = window_args[2]
+        if not center:
+            return self.__constructor__(
+                self._modin_frame.window(
+                    axis=axis, window_size=window,
+                    reduce_fn=lambda df : df.rolling(*window_args).var(ddof=ddof, *args, **kwargs)
+                )
             )
-        )
+        else:
+            return self.old_window_var(axis, window_args, ddof, *args, **kwargs)    
 
-    """
-    window_std = Fold.register(
+    old_window_std = Fold.register(
         lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).std(ddof=ddof, *args, **kwargs)
         )
     )
-    """
 
     def window_std(self, axis, window, window_args, ddof, *args, **kwargs):
-        return self.__constructor__(
-            self._modin_frame.window(
-                axis=axis, window_size=window,
-                reduce_fn=lambda df : df.rolling(*window_args).std(ddof=ddof, *args, **kwargs)
+        center = window_args[2]
+        if not center:
+            return self.__constructor__(
+                self._modin_frame.window(
+                    axis=axis, window_size=window,
+                    reduce_fn=lambda df : df.rolling(*window_args).std(ddof=ddof, *args, **kwargs)
+                )
             )
-        )
+        else:
+            return self.old_window_std(axis, window_args, ddof, *args, **kwargs)    
 
-    """
-    rolling_count = Fold.register(
+    old_rolling_count = Fold.register(
         lambda df, rolling_args: pandas.DataFrame(df.rolling(*rolling_args).count())
     )
-    """
 
     def rolling_count(self, axis, window, rolling_args):
-        return self.__constructor__(
-            self._modin_frame.window(
-                axis=axis, window_size=window,
-                reduce_fn=lambda df : df.rolling(*rolling_args).count()
+        center = rolling_args[2]
+        if not center:
+            return self.__constructor__(
+                self._modin_frame.window(
+                    axis=axis, window_size=window,
+                    reduce_fn=lambda df : df.rolling(*rolling_args).count()
+                )
             )
-        )
+        else:
+            return self.old_rolling_count(axis, rolling_args)    
 
     """
     def rolling_sum(self, axis, window, rolling_args, *args, **kwargs):
@@ -1256,7 +1267,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
     ) 
 
     def rolling_sum(self, axis, window, rolling_args, *args, **kwargs):
-        if isinstance(window, int):
+        center = rolling_args[2]
+        if not center:
             return self.__constructor__(
                 self._modin_frame.window(
                     axis=axis, window_size=window, 
@@ -1264,23 +1276,26 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             )
         else:
-            return old_rolling_sum(self, axis, window, rolling_args, *args, **kwargs)
+            return self.old_rolling_sum(axis, rolling_args, *args, **kwargs)
 
-    """
-    rolling_mean = Fold.register(
+    
+    old_rolling_mean = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).mean(*args, **kwargs)
         )
     )
-    """
 
     def rolling_mean(self, axis, window, rolling_args, *args, **kwargs):
-        return self.__constructor__(
-            self._modin_frame.window(
-                axis=axis, window_size=window,
-                reduce_fn=lambda df : df.rolling(*rolling_args).mean(*args, **kwargs)
+        center = rolling_args[2]
+        if not center:
+            return self.__constructor__(
+                self._modin_frame.window(
+                    axis=axis, window_size=window,
+                    reduce_fn=lambda df : df.rolling(*rolling_args).mean(*args, **kwargs)
+                )
             )
-        )
+        else:
+            return self.old_rolling_mean(axis, rolling_args, *args, **kwargs)    
 
     """
     rolling_median = Fold.register(
