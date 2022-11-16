@@ -787,18 +787,14 @@ read_sql_engine : str
     )
     def parse(sql, con, index_col, read_sql_engine, **kwargs):
 
-        enable_cx = False
-        cx = None  # Defining var to appease CodeQL
         if read_sql_engine == "Connectorx":
             try:
                 import connectorx as cx
-
-                enable_cx = True
             except ImportError:
                 warnings.warn(
                     "Switch to 'pandas.read_sql' since 'connectorx' is not installed, please run 'pip install connectorx'."
                 )
-
+        enable_cx = "cx" in locals()
         num_splits = kwargs.pop("num_splits", None)
         if isinstance(con, ModinDatabaseConnection):
             con = con.get_string() if enable_cx else con.get_connection()
