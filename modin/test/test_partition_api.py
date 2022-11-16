@@ -130,7 +130,7 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
         if axis == 0
         else [num_cols, num_cols]
     )
-
+    futures = []
     if Engine.get() == "Ray":
         if axis is None:
             futures = [[put_func(df1), put_func(df2)]]

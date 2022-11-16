@@ -472,12 +472,12 @@ def make_proxy_cls(
             if name == "__dict__":
                 return dct
             cls_dct = object.__getattribute__(type(self), "__dict__")
+            cls_attr, oget = None, None
             try:
                 cls_attr, has_cls_attr = cls_dct[name], True
             except KeyError:
                 has_cls_attr = False
             else:
-                oget = None
                 try:
                     oget = object.__getattribute__(cls_attr, "__get__")
                     object.__getattribute__(cls_attr, "__set__")

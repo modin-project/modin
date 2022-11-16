@@ -201,7 +201,8 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
                 last_exception = err
                 continue
             break
-        else:
+        # If we do have an exception that's valid let's raise it
+        if last_exception:
             raise last_exception
 
         getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
