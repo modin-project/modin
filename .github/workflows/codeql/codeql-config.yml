@@ -4,4 +4,4 @@ paths:
   - modin/** 
 paths-ignore: 
   - modin/experimental/cloud/** # TODO: fix module-level cyclic error
-  - modin/experimental/core/execution/native/implementations/hdk_on_native/test/utils.py # TODO: fix unhashable list error
+  - modin/experimental/core/execution/native/implementations/hdk_on_native/test/** # TODO: fix unhashable list error

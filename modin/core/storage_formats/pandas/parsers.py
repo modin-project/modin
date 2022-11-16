@@ -788,6 +788,7 @@ read_sql_engine : str
     def parse(sql, con, index_col, read_sql_engine, **kwargs):
 
         enable_cx = False
+        cx = None
         if read_sql_engine == "Connectorx":
             try:
                 import connectorx as cx
