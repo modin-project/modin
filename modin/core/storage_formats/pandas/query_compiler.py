@@ -1249,17 +1249,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             return self.old_rolling_count(axis, rolling_args)    
 
-    """
-    def rolling_sum(self, axis, window, rolling_args, *args, **kwargs):
-        return self.__constructor__(
-            self._modin_frame.window(
-                axis=axis, window_size=window, 
-                reduce_fn=lambda df : df.rolling(*rolling_args).sum(*args, **kwargs)
-            )
-        )
-
-    """
-
     old_rolling_sum = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
                 df.rolling(*rolling_args).sum(*args, **kwargs)
@@ -1297,85 +1286,95 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             return self.old_rolling_mean(axis, rolling_args, *args, **kwargs)    
 
-    """
-    rolling_median = Fold.register(
+    old_rolling_median = Fold.register(
         lambda df, rolling_args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).median(**kwargs)
         )
     )
-    """
 
     def rolling_median(self, axis, window, rolling_args, **kwargs):
-        return self.__constructor__(
-            self._modin_frame.window(
-                axis=axis, window_size=window,
-                reduce_fn=lambda df : df.rolling(*rolling_args).median(**kwargs)
+        center = rolling_args[2]
+        if not center:
+            return self.__constructor__(
+                self._modin_frame.window(
+                    axis=axis, window_size=window,
+                    reduce_fn=lambda df : df.rolling(*rolling_args).median(**kwargs)
+                )
             )
-        )
+        else:
+            return self.old_rolling_median(axis, rolling_args, **kwargs)    
 
-    """
-    rolling_var = Fold.register(
+    old_rolling_var = Fold.register(
         lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
         )
     )
-    """
 
     def rolling_var(self, axis, window, rolling_args, ddof, *args, **kwargs):
-        return self.__constructor__(
-            self._modin_frame.window(
-                axis=axis, window_size=window,
-                reduce_fn=lambda df : df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
+        center = rolling_args[2]
+        if not center:
+            return self.__constructor__(
+                self._modin_frame.window(
+                    axis=axis, window_size=window,
+                    reduce_fn=lambda df : df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
+                )
             )
-        )
+        else:
+            return self.old_rolling_var(axis, rolling_args, ddof, *args, **kwargs)    
 
-    """
-    rolling_std = Fold.register(
+    old_rolling_std = Fold.register(
         lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).std(ddof=ddof, *args, **kwargs)
         )
-    )
-    """    
+    ) 
 
     def rolling_std(self, axis, window, rolling_args, ddof, *args, **kwargs):
-        return self.__constructor__(
-            self._modin_frame.window(
-                axis=axis, window_size=window, 
-                reduce_fn=lambda df : df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
+        center = rolling_args[2]
+        if not center:
+            return self.__constructor__(
+                self._modin_frame.window(
+                    axis=axis, window_size=window, 
+                    reduce_fn=lambda df : df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
+                )
             )
-        )
+        else:
+            return self.old_rolling_std(axis, rolling_args, ddof, *args, **kwargs)    
 
-    """
-    rolling_min = Fold.register(
+    old_rolling_min = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).min(*args, **kwargs)
         )
     )
-    """
 
     def rolling_min(self, axis, window, rolling_args, *args, **kwargs):
-        return self.__constructor__(
-            self._modin_frame.window(
-                axis=axis, window_size=window,
-                reduce_fn=lambda df : df.rolling(*rolling_args).min(*args, **kwargs)
+        center = rolling_args[2]
+        if not center:
+            return self.__constructor__(
+                self._modin_frame.window(
+                    axis=axis, window_size=window,
+                    reduce_fn=lambda df : df.rolling(*rolling_args).min(*args, **kwargs)
+                )
             )
-        )  
+        else:
+            return self.old_rolling_min(axis, rolling_args, *args, **kwargs)      
 
-    """
-    rolling_max = Fold.register(
+    old_rolling_max = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).max(*args, **kwargs)
         )
     )
-    """
 
     def rolling_max(self, axis, window, rolling_args, *args, **kwargs):
-        return self.__constructor__(
-            self._modin_frame.window(
-                axis=axis, window_size=window,
-                reduce_fn=lambda df : df.rolling(*rolling_args).max(*args, **kwargs)
+        center = rolling_args[2]
+        if not center:
+            return self.__constructor__(
+                self._modin_frame.window(
+                    axis=axis, window_size=window,
+                    reduce_fn=lambda df : df.rolling(*rolling_args).max(*args, **kwargs)
+                )
             )
-        )
+        else:
+            return self.old_rolling_max(axis, rolling_args, *args, **kwargs)    
 
     """
     rolling_skew = Fold.register(
