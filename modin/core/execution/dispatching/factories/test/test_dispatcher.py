@@ -12,8 +12,9 @@
 # governing permissions and limitations under the License.
 
 import pytest
+from contextlib import contextmanager
 
-from modin.config import Engine, StorageFormat
+from modin.config import Parameter, Engine, StorageFormat
 from modin import set_execution
 
 from modin.core.execution.dispatching.factories.dispatcher import (
@@ -27,6 +28,24 @@ from modin.core.execution.python.implementations.pandas_on_python.io import (
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 import modin.pandas as pd
+
+
+@contextmanager
+def _switch_execution(engine: str, execution: str):
+    old_engine, old_execution = set_execution(engine, execution)
+    try:
+        yield
+    finally:
+        set_execution(old_engine, old_execution)
+
+
+@contextmanager
+def _switch_value(config: Parameter, value: str):
+    old_value = config.get()
+    try:
+        yield config.put(value)
+    finally:
+        config.put(old_value)
 
 
 class PandasOnTestFactory(factories.BaseFactory):
@@ -83,39 +102,36 @@ def test_default_factory():
 
 
 def test_factory_switch():
-    Engine.put("Test")
-    assert FactoryDispatcher.get_factory() == PandasOnTestFactory
-    assert FactoryDispatcher.get_factory().io_cls == "Foo"
-    Engine.put("Python")  # revert engine to default
+    with _switch_value(Engine, "Test"):
+        assert FactoryDispatcher.get_factory() == PandasOnTestFactory
+        assert FactoryDispatcher.get_factory().io_cls == "Foo"
 
-    StorageFormat.put("Test")
-    assert FactoryDispatcher.get_factory() == TestOnPythonFactory
-    assert FactoryDispatcher.get_factory().io_cls == "Bar"
-    StorageFormat.put("Pandas")  # revert engine to default
+    with _switch_value(StorageFormat, "Test"):
+        assert FactoryDispatcher.get_factory() == TestOnPythonFactory
+        assert FactoryDispatcher.get_factory().io_cls == "Bar"
 
 
 def test_engine_wrong_factory():
     with pytest.raises(FactoryNotFoundError):
-        Engine.put("BadEngine")
-    Engine.put("Python")  # revert engine to default
+        with _switch_value(Engine, "BadEngine"):
+            pass
 
 
 def test_set_execution():
-    set_execution("Bar", "Foo")
-    assert FactoryDispatcher.get_factory() == FooOnBarFactory
+    with _switch_execution("Bar", "Foo"):
+        assert FactoryDispatcher.get_factory() == FooOnBarFactory
 
 
 def test_add_option():
-    StorageFormat.add_option("Storage")
-    Engine.add_option("Exec")
-
     class DifferentlyNamedFactory(factories.BaseFactory):
         @classmethod
         def prepare(cls):
             cls.io_cls = PandasOnPythonIO
 
     factories.StorageOnExecFactory = DifferentlyNamedFactory
-    set_execution("Exec", "Storage")
+    StorageFormat.add_option("sToragE")
+    Engine.add_option("Exec")
 
-    df = pd.DataFrame([[1, 2, 3], [3, 4, 5], [5, 6, 7]])
-    assert isinstance(df._query_compiler, PandasQueryCompiler)
+    with _switch_execution("Exec", "Storage"):
+        df = pd.DataFrame([[1, 2, 3], [3, 4, 5], [5, 6, 7]])
+        assert isinstance(df._query_compiler, PandasQueryCompiler)

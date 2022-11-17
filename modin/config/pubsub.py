@@ -341,17 +341,19 @@ class Parameter(object):
             callback(cls)
 
     @classmethod
-    def add_option(cls, choice: Any) -> None:
+    def add_option(cls, choice: Any) -> Any:
         """
         Add a new choice for the parameter.
 
 
         """
         if cls.choices is not None:
-            if isinstance(cls.choices, tuple) and choice not in cls.choices:
-                if isinstance(choice, str):
-                    cls.choices += (choice,)
-            return
+            if not _TYPE_PARAMS[cls.type].verify(choice):
+                raise ValueError(f"Unsupported choice value: {choice}")
+            choice = _TYPE_PARAMS[cls.type].normalize(choice)
+            if choice not in cls.choices:
+                cls.choices += type(cls.choices)([choice])
+            return choice
         raise TypeError("Cannot add a choice to a parameter where choices is None")
 
 

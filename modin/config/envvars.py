@@ -140,11 +140,10 @@ class Engine(EnvironmentVariable, type=str):
         )
 
     @classmethod
-    def add_option(cls, choice: Any) -> None:
-        if isinstance(choice, str):
-            choice = choice.title()
-        super().add_option(choice)
+    def add_option(cls, choice: Any) -> Any:
+        choice = super().add_option(choice)
         cls.NOINIT_ENGINES.add(choice)
+        return choice
 
 
 class StorageFormat(EnvironmentVariable, type=str):
@@ -153,12 +152,6 @@ class StorageFormat(EnvironmentVariable, type=str):
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
     choices = ("Pandas", "Hdk", "Pyarrow", "Cudf")
-
-    @classmethod
-    def add_option(cls, choice: Any) -> None:
-        if isinstance(choice, str):
-            choice = choice.title()
-        super().add_option(choice)
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
