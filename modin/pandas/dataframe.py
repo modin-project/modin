@@ -401,7 +401,7 @@ class DataFrame(BasePandasDataset):
         Apply a function along an axis of the ``DataFrame``.
         """
         axis = self._get_axis_number(axis)
-        query_compiler = super().apply(
+        query_compiler = super(DataFrame, self).apply(
             func,
             axis=axis,
             broadcast=None,
@@ -935,7 +935,7 @@ class DataFrame(BasePandasDataset):
         """
         Fill NA/NaN values using the specified method.
         """
-        return super().fillna(
+        return super(DataFrame, self).fillna(
             squeeze_self=False,
             squeeze_value=isinstance(value, Series),
             value=value,
@@ -1807,7 +1807,7 @@ class DataFrame(BasePandasDataset):
         interpolation="linear",
         method="single",
     ):
-        return super().quantile(
+        return super(DataFrame, self).quantile(
             q=q,
             axis=axis,
             numeric_only=True if numeric_only is no_default else numeric_only,
@@ -1892,7 +1892,7 @@ class DataFrame(BasePandasDataset):
             index = labels
         elif labels is not None:
             columns = labels
-        return super().reindex(
+        return super(DataFrame, self).reindex(
             index=index,
             columns=columns,
             method=method,

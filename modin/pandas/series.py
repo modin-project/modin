@@ -650,7 +650,7 @@ class Series(BasePandasDataset):
             or return_type not in ["DataFrame", "Series"]
         ):
             # use the explicit non-Compat parent to avoid infinite recursion
-            result = super().apply(
+            result = super(Series, self).apply(
                 func,
                 axis=0,
                 broadcast=None,
@@ -1527,7 +1527,7 @@ class Series(BasePandasDataset):
                 "reindex() got an unexpected keyword "
                 + f'argument "{list(kwargs.keys())[0]}"'
             )
-        return super().reindex(
+        return super(Series, self).reindex(
             index=index,
             columns=None,
             method=method,
@@ -1693,7 +1693,7 @@ class Series(BasePandasDataset):
         """
         Return value at the given quantile.
         """
-        return super().quantile(
+        return super(Series, self).quantile(
             q=q,
             axis=0,
             numeric_only=False,
