@@ -31,12 +31,12 @@ import modin.pandas as pd
 
 
 @contextmanager
-def _switch_execution(engine: str, execution: str):
-    old_engine, old_execution = set_execution(engine, execution)
+def _switch_execution(engine: str, storage_format: str):
+    old_engine, old_storage = set_execution(engine, storage_format)
     try:
         yield
     finally:
-        set_execution(old_engine, old_execution)
+        set_execution(old_engine, old_storage)
 
 
 @contextmanager
@@ -102,13 +102,14 @@ def test_default_factory():
 
 
 def test_factory_switch():
-    with _switch_value(Engine, "Test"):
-        assert FactoryDispatcher.get_factory() == PandasOnTestFactory
-        assert FactoryDispatcher.get_factory().io_cls == "Foo"
+    with _switch_execution("Python", "Pandas"):
+        with _switch_value(Engine, "Test"):
+            assert FactoryDispatcher.get_factory() == PandasOnTestFactory
+            assert FactoryDispatcher.get_factory().io_cls == "Foo"
 
-    with _switch_value(StorageFormat, "Test"):
-        assert FactoryDispatcher.get_factory() == TestOnPythonFactory
-        assert FactoryDispatcher.get_factory().io_cls == "Bar"
+        with _switch_value(StorageFormat, "Test"):
+            assert FactoryDispatcher.get_factory() == TestOnPythonFactory
+            assert FactoryDispatcher.get_factory().io_cls == "Bar"
 
 
 def test_engine_wrong_factory():
