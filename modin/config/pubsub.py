@@ -345,7 +345,15 @@ class Parameter(object):
         """
         Add a new choice for the parameter.
 
+        Parameters
+        ----------
+        choice : Any
+            New choice to add to the available choices.
 
+        Returns
+        -------
+        Any
+            Added choice normalized according to the parameter type.
         """
         if cls.choices is not None:
             if not _TYPE_PARAMS[cls.type].verify(choice):

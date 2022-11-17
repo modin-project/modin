@@ -20,6 +20,8 @@ import warnings
 from packaging import version
 import secrets
 
+from pandas.util._decorators import doc
+
 from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
 from typing import Any, Optional
 
@@ -140,6 +142,7 @@ class Engine(EnvironmentVariable, type=str):
         )
 
     @classmethod
+    @doc(Parameter.add_option.__doc__)
     def add_option(cls, choice: Any) -> Any:
         choice = super().add_option(choice)
         cls.NOINIT_ENGINES.add(choice)
