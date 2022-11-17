@@ -3155,7 +3155,10 @@ class BasePandasDataset(ClassLogger):
         caption=None,
         label=None,
         position=None,
-    ):  # pragma: no cover
+    ):  # pragma: no cover  # noqa: PR01, RT01, D200
+        """
+        Render object to a LaTeX tabular, longtable, or nested table.
+        """
         return self._default_to_pandas(
             "to_latex",
             buf=buf,
@@ -3177,8 +3180,9 @@ class BasePandasDataset(ClassLogger):
             multicolumn=multicolumn,
             multicolumn_format=multicolumn_format,
             multirow=multirow,
-            caption=None,
-            label=None,
+            caption=caption,
+            label=label,
+            position=position,
         )
 
     def to_markdown(
@@ -3188,7 +3192,7 @@ class BasePandasDataset(ClassLogger):
         index: bool = True,
         storage_options: StorageOptions = None,
         **kwargs,
-    ):
+    ):  # noqa: PR01, RT01, D200
         return self._default_to_pandas(
             "to_markdown",
             buf=buf,
