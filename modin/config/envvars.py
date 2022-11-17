@@ -20,7 +20,7 @@ import warnings
 from packaging import version
 import secrets
 
-from pandas.util._decorators import doc
+from pandas.util._decorators import doc  # type: ignore[attr-defined]
 
 from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
 from typing import Any, Optional
