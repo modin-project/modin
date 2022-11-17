@@ -459,8 +459,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                 "Column lookups on GroupBy with arbitrary Series in by"
                 + " is not yet supported."
             )
-        kwargs["squeeze"] = True
-        return DataFrameGroupBy(
+        return SeriesGroupBy(
             self._df[key],
             drop=False,
             **kwargs,
@@ -1195,6 +1194,24 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
 
 @_inherit_docstrings(pandas.core.groupby.SeriesGroupBy)
 class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
+
+    def __init__(
+            self,
+            df,
+            by,
+            axis,
+            level,
+            as_index,
+            sort,
+            group_keys,
+            squeeze,
+            idx_name,
+            drop,
+            **kwargs,
+    ):
+        super(SeriesGroupBy, self).__init__(df, by, axis, level, as_index, sort, group_keys, squeeze, idx_name, drop, **kwargs)
+        self._squeeze = True
+
     @property
     def ndim(self):
         """
