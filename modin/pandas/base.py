@@ -2406,7 +2406,9 @@ class BasePandasDataset(ClassLogger):
                 level=level,
                 col_level=col_level,
                 col_fill=col_fill,
-                allow_duplicates=allow_duplicates,
+                allow_duplicates=None
+                if allow_duplicates is no_default
+                else allow_duplicates,
                 names=names,
             )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
