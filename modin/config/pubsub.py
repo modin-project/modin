@@ -340,5 +340,19 @@ class Parameter(object):
         for callback in cls._once.pop(cls.get(), ()):
             callback(cls)
 
+    @classmethod
+    def add_option(cls, choice: Any) -> None:
+        """
+        Add a new choice for the parameter.
+
+
+        """
+        if cls.choices is not None:
+            if isinstance(cls.choices, tuple) and choice not in cls.choices:
+                if isinstance(choice, str):
+                    cls.choices += (choice,)
+            return
+        raise TypeError("Cannot add a choice to a parameter where choices is None")
+
 
 __all__ = ["Parameter"]

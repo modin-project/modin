@@ -21,6 +21,10 @@ from modin.core.execution.dispatching.factories.dispatcher import (
     FactoryNotFoundError,
 )
 from modin.core.execution.dispatching.factories import factories
+from modin.core.execution.python.implementations.pandas_on_python.io import (
+    PandasOnPythonIO,
+)
+from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 import modin.pandas as pd
 
@@ -70,7 +74,7 @@ factories.TestOnPythonFactory = TestOnPythonFactory
 factories.FooOnBarFactory = FooOnBarFactory
 
 # register them as known "no init" engines for modin.pandas
-pd._NOINIT_ENGINES |= {"Test", "Bar"}
+Engine.NOINIT_ENGINES |= {"Test", "Bar"}
 
 
 def test_default_factory():
@@ -99,3 +103,19 @@ def test_engine_wrong_factory():
 def test_set_execution():
     set_execution("Bar", "Foo")
     assert FactoryDispatcher.get_factory() == FooOnBarFactory
+
+
+def test_add_option():
+    StorageFormat.add_option("Storage")
+    Engine.add_option("Exec")
+
+    class DifferentlyNamedFactory(factories.BaseFactory):
+        @classmethod
+        def prepare(cls):
+            cls.io_cls = PandasOnPythonIO
+
+    factories.StorageOnExecFactory = DifferentlyNamedFactory
+    set_execution("Exec", "Storage")
+
+    df = pd.DataFrame([[1, 2, 3], [3, 4, 5], [5, 6, 7]])
+    assert isinstance(df._query_compiler, PandasQueryCompiler)

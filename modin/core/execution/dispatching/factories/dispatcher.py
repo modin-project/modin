@@ -143,13 +143,11 @@ class FactoryDispatcher(object):
                     )
                 else:
                     msg = (
-                        "Cannot find a factory for partition '{}' and execution engine '{}'. "
+                        "Cannot find factory {}. "
                         + "Potential reason might be incorrect environment variable value for "
                         + f"{StorageFormat.varname} or {Engine.varname}"
                     )
-                raise FactoryNotFoundError(
-                    msg.format(StorageFormat.get(), Engine.get())
-                )
+                raise FactoryNotFoundError(msg.format(factory_name))
             cls.__factory = StubFactory.set_failing_name(factory_name)
         else:
             cls.__factory.prepare()

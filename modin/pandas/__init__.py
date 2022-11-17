@@ -99,16 +99,13 @@ with warnings.catch_warnings():
     )
 import os
 
-from modin.config import Engine, Parameter
+from modin.config import Parameter
 
 _is_first_update = {}
-_NOINIT_ENGINES = {
-    "Python",
-}  # engines that don't require initialization, useful for unit tests
 
 
 def _update_engine(publisher: Parameter):
-    from modin.config import StorageFormat, CpuCount
+    from modin.config import Engine, StorageFormat, CpuCount
     from modin.config.envvars import IsExperimental
     from modin.config.pubsub import ValueSource
 
@@ -196,7 +193,7 @@ def _update_engine(publisher: Parameter):
         ), f"Storage format should be 'Hdk' with 'Cloudnative' engine, but provided {sfmt}."
         get_connection().modules["modin"].set_execution("Native", "Hdk")
 
-    elif publisher.get() not in _NOINIT_ENGINES:
+    elif publisher.get() not in Engine.NOINIT_ENGINES:
         raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
 
     _is_first_update[publisher.get()] = False
@@ -381,4 +378,4 @@ if PandasCompatVersion.CURRENT != PandasCompatVersion.PY36:
     )
 del PandasCompatVersion
 
-del pandas, Engine, Parameter
+del pandas, Parameter

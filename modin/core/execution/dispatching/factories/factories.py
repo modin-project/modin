@@ -126,7 +126,7 @@ class NotRealFactory(Exception):
 
 @doc(_doc_abstract_factory_class, role="")
 class BaseFactory(object):
-    io_cls: BaseIO = None  # The module where the I/O functionality exists.
+    io_cls: typing.Type[BaseIO] = None  # The module where the I/O functionality exists.
 
     @classmethod
     def get_info(cls) -> FactoryInfo:

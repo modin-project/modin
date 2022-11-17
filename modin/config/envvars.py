@@ -21,7 +21,7 @@ from packaging import version
 import secrets
 
 from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
-from typing import Optional
+from typing import Any, Optional
 
 
 class EnvironmentVariable(Parameter, type=str, abstract=True):
@@ -76,6 +76,10 @@ class Engine(EnvironmentVariable, type=str):
 
     varname = "MODIN_ENGINE"
     choices = ("Ray", "Dask", "Python", "Native")
+
+    NOINIT_ENGINES = {
+        "Python",
+    }  # engines that don't require initialization, useful for unit tests
 
     @classmethod
     def _get_default(cls) -> str:
@@ -135,6 +139,13 @@ class Engine(EnvironmentVariable, type=str):
             "Please refer to installation documentation page to install an engine"
         )
 
+    @classmethod
+    def add_option(cls, choice: Any) -> None:
+        if isinstance(choice, str):
+            choice = choice.title()
+        super().add_option(choice)
+        cls.NOINIT_ENGINES.add(choice)
+
 
 class StorageFormat(EnvironmentVariable, type=str):
     """Engine to run on a single node of distribution."""
@@ -142,6 +153,12 @@ class StorageFormat(EnvironmentVariable, type=str):
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
     choices = ("Pandas", "Hdk", "Pyarrow", "Cudf")
+
+    @classmethod
+    def add_option(cls, choice: Any) -> None:
+        if isinstance(choice, str):
+            choice = choice.title()
+        super().add_option(choice)
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
