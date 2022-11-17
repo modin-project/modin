@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 """Implement DataFrame/Series public API as pandas does."""
+from __future__ import annotations
 import numpy as np
 import pandas
 from pandas.compat import numpy as numpy_compat

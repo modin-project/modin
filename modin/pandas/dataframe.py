@@ -13,6 +13,7 @@
 
 """Module houses ``DataFrame`` class, that is distributed version of ``pandas.DataFrame``."""
 
+from __future__ import annotations
 import pandas
 from pandas.core.common import apply_if_callable
 from pandas.core.dtypes.common import (
@@ -1906,10 +1907,10 @@ class DataFrame(BasePandasDataset):
         self,
         to_replace=None,
         value=no_default,
-        inplace: "bool" = False,
+        inplace: bool = False,
         limit=None,
-        regex: "bool" = False,
-        method: "str | NoDefault" = no_default,
+        regex: bool = False,
+        method: str | NoDefault = no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -2386,19 +2387,19 @@ class DataFrame(BasePandasDataset):
 
     def to_stata(
         self,
-        path: "FilePath | WriteBuffer[bytes]",
-        convert_dates: "dict[Hashable, str] | None" = None,
-        write_index: "bool" = True,
-        byteorder: "str | None" = None,
-        time_stamp: "datetime.datetime | None" = None,
-        data_label: "str | None" = None,
-        variable_labels: "dict[Hashable, str] | None" = None,
-        version: "int | None" = 114,
-        convert_strl: "Sequence[Hashable] | None" = None,
-        compression: "CompressionOptions" = "infer",
-        storage_options: "StorageOptions" = None,
+        path: FilePath | WriteBuffer[bytes],
+        convert_dates: dict[Hashable, str] | None = None,
+        write_index: bool = True,
+        byteorder: str | None = None,
+        time_stamp: datetime.datetime | None = None,
+        data_label: str | None = None,
+        variable_labels: dict[Hashable, str] | None = None,
+        version: int | None = 114,
+        convert_strl: Sequence[Hashable] | None = None,
+        compression: CompressionOptions = "infer",
+        storage_options: StorageOptions = None,
         *,
-        value_labels: "dict[Hashable, dict[float | int, str]] | None" = None,
+        value_labels: dict[Hashable, dict[float | int, str]] | None = None,
     ):  # pragma: no cover # noqa: PR01, RT01, D200
         return self._default_to_pandas(
             pandas.DataFrame.to_stata,

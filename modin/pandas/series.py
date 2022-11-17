@@ -13,6 +13,7 @@
 
 """Module houses `Series` class, that is distributed version of `pandas.Series`."""
 
+from __future__ import annotations
 import numpy as np
 import pandas
 from pandas.api.types import is_integer
@@ -746,7 +747,7 @@ class Series(BasePandasDataset):
 
     def compare(
         self,
-        other: "Series",
+        other: Series,
         align_axis: Union[str, int] = 1,
         keep_shape: bool = False,
         keep_equal: bool = False,
@@ -1146,11 +1147,11 @@ class Series(BasePandasDataset):
 
     def info(
         self,
-        verbose: "bool | None" = None,
-        buf: "IO[str] | None" = None,
-        max_cols: "int | None" = None,
-        memory_usage: "bool | str | None" = None,
-        show_counts: "bool" = True,
+        verbose: bool | None = None,
+        buf: IO[str] | None = None,
+        max_cols: int | None = None,
+        memory_usage: bool | str | None = None,
+        show_counts: bool = True,
     ):
         return self._default_to_pandas(
             pandas.Series.info,
@@ -1219,7 +1220,7 @@ class Series(BasePandasDataset):
 
     def kurt(
         self,
-        axis: "Axis | None | NoDefault" = no_default,
+        axis: Axis | None | NoDefault = no_default,
         skipna=True,
         level=None,
         numeric_only=None,
@@ -1713,7 +1714,7 @@ class Series(BasePandasDataset):
         inplace=False,
         limit=None,
         regex=False,
-        method: "str | NoDefault" = no_default,
+        method: str | NoDefault = no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -1897,7 +1898,7 @@ class Series(BasePandasDataset):
         return self._default_to_pandas("to_dict", into=into)
 
     def to_frame(
-        self, name: "Hashable" = no_default
+        self, name: Hashable = no_default
     ) -> "DataFrame":  # noqa: PR01, RT01, D200
         """
         Convert Series to {label -> value} dict or dict-like object.
