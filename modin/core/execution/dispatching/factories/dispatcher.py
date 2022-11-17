@@ -138,8 +138,8 @@ class FactoryDispatcher(object):
                 # allow missing factories in experimenal mode only
                 if hasattr(factories, "Experimental" + factory_name):
                     msg = (
-                        "{0} on {1} is only accessible through the experimental API.\nRun "
-                        + "`import modin.experimental.pandas as pd` to use {0} on {1}."
+                        "{0} is only accessible through the experimental API.\nRun "
+                        + "`import modin.experimental.pandas as pd` to use {0}."
                     )
                 else:
                     msg = (
