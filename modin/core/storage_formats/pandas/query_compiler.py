@@ -32,6 +32,7 @@ from pandas.core.dtypes.common import (
     is_datetime64_any_dtype,
     is_bool_dtype,
 )
+from pandas.errors import DataError
 from collections.abc import Iterable
 from typing import List, Hashable
 import warnings
@@ -2905,7 +2906,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
                     result = partition_agg_func(grouped_df, *agg_args, **agg_kwargs)
-                except TypeError:
+                except DataError:
                     # This happens when the partition is filled with non-numeric data and a
                     # numeric operation is done. We need to build the index here to avoid
                     # issues with extracting the index.
