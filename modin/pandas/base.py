@@ -990,8 +990,8 @@ class BasePandasDataset(ClassLogger):
         self: "BasePandasDataset",
         start_time,
         end_time,
-        include_start: "bool_t | NoDefault" = no_default,
-        include_end: "bool_t | NoDefault" = no_default,
+        include_start: "bool | NoDefault" = no_default,
+        include_end: "bool | NoDefault" = no_default,
         inclusive: "str | None" = None,
         axis=None,
     ):  # noqa: PR01, RT01, D200
@@ -1404,12 +1404,12 @@ class BasePandasDataset(ClassLogger):
         halflife: "float | TimedeltaConvertibleTypes | None" = None,
         alpha: "float | None" = None,
         min_periods: "int | None" = 0,
-        adjust: "bool_t" = True,
-        ignore_na: "bool_t" = False,
+        adjust: bool = True,
+        ignore_na: bool = False,
         axis: "Axis" = 0,
         times: "str | np.ndarray | BasePandasDataset | None" = None,
         method: "str" = "single",
-    ) -> "ExponentialMovingWindow":  # noqa: PR01, RT01, D200
+    ) -> pandas.core.window.ewm.ExponentialMovingWindow:  # noqa: PR01, RT01, D200
         return self._default_to_pandas(
             "ewm",
             com=com,
@@ -1640,7 +1640,7 @@ class BasePandasDataset(ClassLogger):
 
         return _iLocIndexer(self)
 
-    def idxmax(self, axis, skipna, numeric_only=False):  # noqa: PR01, RT01, D200
+    def idxmax(self, axis=0, skipna=True, numeric_only=False):  # noqa: PR01, RT01, D200
         """
         Return index of first occurrence of maximum over requested axis.
         """
@@ -1653,7 +1653,7 @@ class BasePandasDataset(ClassLogger):
             )
         )
 
-    def idxmin(self, axis, skipna, **kwargs):  # noqa: PR01, RT01, D200
+    def idxmin(self, axis=0, skipna=True, numeric_only=False):  # noqa: PR01, RT01, D200
         """
         Return index of first occurrence of minimum over requested axis.
         """
@@ -1661,7 +1661,9 @@ class BasePandasDataset(ClassLogger):
             raise TypeError("reduce operation 'argmin' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
-            self._query_compiler.idxmin(axis=axis, skipna=skipna, **kwargs)
+            self._query_compiler.idxmin(
+                axis=axis, skipna=skipna, numeric_only=numeric_only
+            )
         )
 
     def infer_objects(self):  # noqa: RT01, D200
@@ -2705,8 +2707,8 @@ class BasePandasDataset(ClassLogger):
         if inplace is not no_default:
             warnings.warn(
                 f"{type(self).__name__}.set_axis 'inplace' keyword is deprecated "
-                "and will be removed in a future version. Use "
-                "`obj = obj.set_axis(..., copy=False)` instead",
+                + "and will be removed in a future version. Use "
+                + "`obj = obj.set_axis(..., copy=False)` instead",
                 FutureWarning,
                 stacklevel=2,
             )
@@ -2731,7 +2733,7 @@ class BasePandasDataset(ClassLogger):
             labels, axis = axis, labels
         obj = self.copy() if copy else self
         setattr(obj, pandas.DataFrame._get_axis_name(axis), labels)
-        return None if inplace == True else obj
+        return None if inplace is True else obj
 
     def set_flags(
         self, *, copy: bool = False, allows_duplicate_labels: Optional[bool] = None

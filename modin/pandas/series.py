@@ -22,9 +22,9 @@ from pandas.core.dtypes.common import (
     is_dict_like,
     is_list_like,
 )
-from pandas._libs.lib import no_default
-from pandas._typing import IndexKeyFunc
-from typing import Union, Optional, Hashable, TYPE_CHECKING
+from pandas._libs.lib import no_default, NoDefault
+from pandas._typing import IndexKeyFunc, Axis
+from typing import Union, Optional, Hashable, TYPE_CHECKING, IO
 import warnings
 
 from modin.utils import (

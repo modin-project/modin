@@ -23,10 +23,32 @@ from collections import OrderedDict
 import inspect
 import pandas
 from pandas._libs.lib import no_default
+from pandas._typing import (
+    CompressionOptions,
+    CSVEngine,
+    DtypeArg,
+    ReadCsvBuffer,
+    FilePath,
+    StorageOptions,
+    IntStrT,
+)
 import pathlib
 import pickle
 import re
-from typing import Union, IO, AnyStr, Sequence, Dict, List, Optional, Any
+from typing import (
+    Union,
+    IO,
+    AnyStr,
+    Sequence,
+    Dict,
+    List,
+    Optional,
+    Any,
+    Literal,
+    Hashable,
+    Callable,
+    Iterable,
+)
 
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, enable_logging
