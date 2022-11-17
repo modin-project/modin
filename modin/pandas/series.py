@@ -649,8 +649,7 @@ class Series(BasePandasDataset):
             or return_type not in ["DataFrame", "Series"]
         ):
             # use the explicit non-Compat parent to avoid infinite recursion
-            result = BasePandasDataset._apply(
-                self,
+            result = super().apply(
                 func,
                 axis=0,
                 broadcast=None,
@@ -758,7 +757,7 @@ class Series(BasePandasDataset):
         """
         if not isinstance(other, Series):
             raise TypeError(f"Cannot compare Series to {type(other)}")
-        result = self.to_frame()._compare(
+        result = self.to_frame().compare(
             other.to_frame(),
             align_axis=align_axis,
             keep_shape=keep_shape,
@@ -1010,7 +1009,7 @@ class Series(BasePandasDataset):
                 '"value" parameter must be a scalar, dict or Series, but '
                 + f'you passed a "{type(value).__name__}"'
             )
-        return super(Series, self)._fillna(
+        return super(Series, self).fillna(
             squeeze_self=True,
             squeeze_value=isinstance(value, Series),
             value=value,
@@ -1135,7 +1134,7 @@ class Series(BasePandasDataset):
         """
         if skipna is None:
             skipna = True
-        return super(Series, self)._idxmax(axis=axis, skipna=skipna, *args, **kwargs)
+        return super(Series, self).idxmax(axis=axis, skipna=skipna, *args, **kwargs)
 
     def idxmin(self, axis=0, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
@@ -1143,7 +1142,7 @@ class Series(BasePandasDataset):
         """
         if skipna is None:
             skipna = True
-        return super(Series, self)._idxmin(axis=axis, skipna=skipna, *args, **kwargs)
+        return super(Series, self).idxmin(axis=axis, skipna=skipna, *args, **kwargs)
 
     def info(
         self,
@@ -1527,7 +1526,7 @@ class Series(BasePandasDataset):
                 "reindex() got an unexpected keyword "
                 + f'argument "{list(kwargs.keys())[0]}"'
             )
-        return super(Series, self)._reindex(
+        return super().reindex(
             index=index,
             columns=None,
             method=method,
@@ -1612,7 +1611,7 @@ class Series(BasePandasDataset):
             obj.name = name
             from .dataframe import DataFrame
 
-            return DataFrame(obj)._reset_index(
+            return DataFrame(obj).reset_index(
                 level=level,
                 drop=drop,
                 inplace=inplace,
@@ -1693,7 +1692,7 @@ class Series(BasePandasDataset):
         """
         Return value at the given quantile.
         """
-        return super(self).quantile(
+        return super().quantile(
             q=q,
             axis=0,
             numeric_only=False,

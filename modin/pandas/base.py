@@ -61,7 +61,7 @@ from modin.error_message import ErrorMessage
 from modin import pandas as pd
 from modin.pandas.utils import is_scalar
 from modin.config import IsExperimental
-from modin.logging import disable_logging
+from modin.logging import disable_logging, ClassLogger
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -108,7 +108,7 @@ _doc_binary_op_kwargs = {"returns": "BasePandasDataset", "left": "BasePandasData
 
 
 @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
-class BasePandasDataset:
+class BasePandasDataset(ClassLogger):
     """
     Implement most of the common code that exists in DataFrame/Series.
 
@@ -1450,7 +1450,7 @@ class BasePandasDataset:
 
     pad = ffill
 
-    def _fillna(
+    def fillna(
         self,
         squeeze_self,
         squeeze_value,
@@ -1640,7 +1640,7 @@ class BasePandasDataset:
 
         return _iLocIndexer(self)
 
-    def idxmax(self, axis, skipna, **kwargs):  # noqa: PR01, RT01, D200
+    def idxmax(self, axis, skipna, numeric_only=False):  # noqa: PR01, RT01, D200
         """
         Return index of first occurrence of maximum over requested axis.
         """
@@ -1648,7 +1648,9 @@ class BasePandasDataset:
             raise TypeError("reduce operation 'argmax' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
-            self._query_compiler.idxmax(axis=axis, skipna=skipna, **kwargs)
+            self._query_compiler.idxmax(
+                axis=axis, skipna=skipna, numeric_only=numeric_only
+            )
         )
 
     def idxmin(self, axis, skipna, **kwargs):  # noqa: PR01, RT01, D200
@@ -2341,7 +2343,7 @@ class BasePandasDataset:
         """
         from .resample import Resampler
 
-        return Resampler._make(
+        return Resampler(
             dataframe=self,
             rule=rule,
             axis=axis,
@@ -2700,6 +2702,23 @@ class BasePandasDataset:
         """
         Assign desired index to given axis.
         """
+        if inplace is not no_default:
+            warnings.warn(
+                f"{type(self).__name__}.set_axis 'inplace' keyword is deprecated "
+                "and will be removed in a future version. Use "
+                "`obj = obj.set_axis(..., copy=False)` instead",
+                FutureWarning,
+                stacklevel=2,
+            )
+        else:
+            inplace = False
+
+        if inplace:
+            if copy is True:
+                raise ValueError("Cannot specify both inplace=True and copy=True")
+            copy = False
+        elif copy is no_default:
+            copy = True
         if is_scalar(labels):
             warnings.warn(
                 'set_axis now takes "labels" as first argument, and '
@@ -2712,7 +2731,7 @@ class BasePandasDataset:
             labels, axis = axis, labels
         obj = self.copy() if copy else self
         setattr(obj, pandas.DataFrame._get_axis_name(axis), labels)
-        return None if inplace else obj
+        return None if inplace == True else obj
 
     def set_flags(
         self, *, copy: bool = False, allows_duplicate_labels: Optional[bool] = None
@@ -3381,7 +3400,7 @@ class BasePandasDataset:
         else:
             new_labels = self.axes[axis].tz_convert(tz)
         obj = self.copy() if copy else self
-        return obj._set_axis(new_labels, axis, inplace=False, copy=copy)
+        return obj.set_axis(new_labels, axis, inplace=False, copy=copy)
 
     def tz_localize(
         self, tz, axis=0, level=None, copy=True, ambiguous="raise", nonexistent="raise"
@@ -3402,7 +3421,7 @@ class BasePandasDataset:
             )
             .index
         )
-        return self._set_axis(new_labels, axis, inplace=False, copy=copy)
+        return self.set_axis(new_labels, axis, inplace=False, copy=copy)
 
     # TODO: uncomment the following lines when #3331 issue will be closed
     # @prepend_to_notes(

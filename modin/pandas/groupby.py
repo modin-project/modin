@@ -25,6 +25,7 @@ from types import BuiltinFunctionType
 from collections.abc import Iterable
 
 from modin.error_message import ErrorMessage
+from modin.logging import ClassLogger
 from modin.utils import (
     _inherit_docstrings,
     try_cast_to_pandas,
@@ -41,7 +42,7 @@ from .utils import is_label
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
-class DataFrameGroupBy:
+class DataFrameGroupBy(ClassLogger):
     def __init__(
         self,
         df,
@@ -292,7 +293,7 @@ class DataFrameGroupBy:
         return self._indices_cache
 
     @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy.pct_change)
-    def _pct_change(self, *args, **kwargs):
+    def pct_change(self, *args, **kwargs):
         return self._default_to_pandas(lambda df: df.pct_change(*args, **kwargs))
 
     def filter(self, func, dropna=True, *args, **kwargs):

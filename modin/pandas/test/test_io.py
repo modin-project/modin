@@ -829,7 +829,7 @@ class TestCsv:
             filepath_or_buffer=pytest.csvs_names["test_read_csv_bad_lines"],
             warn_bad_lines=warn_bad_lines,
             error_bad_lines=error_bad_lines,
-            on_bad_lines=on_bad_lines
+            on_bad_lines=on_bad_lines,
         )
 
     # Internal parameters tests
@@ -971,7 +971,7 @@ class TestCsv:
             index_col=index_col,
             parse_dates=parse_dates,
             encoding=encoding,
-           encoding_errors=encoding_errors
+            encoding_errors=encoding_errors,
         )
 
     @pytest.mark.parametrize(
@@ -1555,11 +1555,7 @@ class TestParquet:
 
     @pytest.mark.parametrize(
         "path_type",
-        [
-            "object",
-            "directory",
-            "url"
-        ],
+        ["object", "directory", "url"],
     )
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1938,7 +1934,7 @@ class TestExcel:
             assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
 
     @pytest.mark.xfail(
-        Engine.get() != "Python"
+        Engine.get() != "Python",
         reason="Test fails because of issue 3305",
     )
     @check_file_leaks

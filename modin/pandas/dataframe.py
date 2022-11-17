@@ -42,7 +42,6 @@ from modin.utils import (
     _inherit_docstrings,
     to_pandas,
     hashable,
-    append_to_docstring,
     MODIN_UNNAMED_SERIES_LABEL,
 )
 from modin.config import Engine, IsExperimental, PersistentPickle
@@ -380,7 +379,11 @@ class DataFrame(BasePandasDataset):
         """
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
-        return DataFrame(query_compiler=self._query_compiler.applymap(func, **kwargs))
+        return DataFrame(
+            query_compiler=self._query_compiler.applymap(
+                func, na_action=na_action, **kwargs
+            )
+        )
 
     def apply(
         self, func, axis=0, raw=False, result_type=None, args=(), **kwargs
@@ -389,7 +392,7 @@ class DataFrame(BasePandasDataset):
         Apply a function along an axis of the ``DataFrame``.
         """
         axis = self._get_axis_number(axis)
-        query_compiler = super(DataFrame, self)._apply(
+        query_compiler = super().apply(
             func,
             axis=axis,
             broadcast=None,
@@ -741,7 +744,7 @@ class DataFrame(BasePandasDataset):
             axis=axis,
             drop=drop,
             method=method,
-            **kwargs,
+            numeric_only=numeric_only,
         )
 
     def cov(self, min_periods=None, ddof: Optional[int] = 1, numeric_only=no_default):
@@ -919,7 +922,7 @@ class DataFrame(BasePandasDataset):
         """
         Fill NA/NaN values using the specified method.
         """
-        return super(DataFrame, self)._fillna(
+        return super().fillna(
             squeeze_self=False,
             squeeze_value=isinstance(value, Series),
             value=value,
@@ -1037,12 +1040,6 @@ class DataFrame(BasePandasDataset):
             bins=bins,
             **kwds,
         )
-
-    def idxmax(self, axis=0, skipna=True, numeric_only=False):
-        return self._idxmax(axis=axis, skipna=skipna, numeric_only=numeric_only)
-
-    def idxmin(self, axis=0, skipna=True, numeric_only=False):
-        return self._idxmin(axis=axis, skipna=skipna, numeric_only=numeric_only)
 
     def info(
         self,
@@ -1737,7 +1734,7 @@ class DataFrame(BasePandasDataset):
         """
         Return the product of the values over the requested axis.
         """
-        self._validate_bool_kwarg(skipna, "skipna", none_allowed=False)
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis = self._get_axis_number(axis)
         if level is not None:
             if (
@@ -1795,7 +1792,7 @@ class DataFrame(BasePandasDataset):
         interpolation="linear",
         method="single",
     ):
-        return self._quantile(
+        return super().quantile(
             q=q,
             axis=axis,
             numeric_only=True if numeric_only is no_default else numeric_only,

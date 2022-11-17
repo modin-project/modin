@@ -351,7 +351,7 @@ def test_sort_index(axis, ascending, na_position):
         dfs[idx] = dfs[idx].set_axis(
             [np.nan if i % 2 == 0 else sort_index[i] for i in range(len(sort_index))],
             axis=axis,
-            copy=False
+            copy=False,
         )
     modin_df, pandas_df = dfs
 

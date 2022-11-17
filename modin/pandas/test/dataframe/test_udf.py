@@ -407,7 +407,5 @@ def test_query_after_insert():
 )
 def test_transform(data, func):
     eval_general(
-        *create_test_dfs(data),
-        lambda df: df.transform(func),
-        check_exception_type=True
+        *create_test_dfs(data), lambda df: df.transform(func), check_exception_type=True
     )

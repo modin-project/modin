@@ -57,6 +57,7 @@ from modin.core.dataframe.algebra import (
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
 
+
 def _get_axis(axis):
     """
     Build index labels getter of the specified axis.

@@ -63,7 +63,7 @@ def test_top_level_api_equality():
         "warnings",
         "os",
     ]
-    
+
     assert not len(
         missing_from_modin - set(ignore_pandas)
     ), "Differences found in API: {}".format(missing_from_modin - set(ignore_pandas))

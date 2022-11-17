@@ -19,6 +19,7 @@ for better maintability.
 Manually add documentation for methods which are not presented in pandas.
 """
 
+from collections import OrderedDict
 import inspect
 import pandas
 from pandas._libs.lib import no_default

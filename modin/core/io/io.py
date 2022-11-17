@@ -121,7 +121,7 @@ class BaseIO:
         summary="Load a parquet object from the file path, returning a query compiler",
         returns=_doc_returns_qc,
     )
-    def _read_parquet(cls, **kwargs):  # noqa: PR01
+    def read_parquet(cls, **kwargs):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_parquet`")
         return cls.from_pandas(
             pandas.read_parquet(
@@ -136,7 +136,7 @@ class BaseIO:
         summary="Read a comma-separated values (CSV) file into query compiler",
         returns=_doc_returns_qc_or_parser,
     )
-    def _read_csv(
+    def read_csv(
         cls,
         filepath_or_buffer,
         **kwargs,
@@ -178,7 +178,7 @@ class BaseIO:
         summary="Convert a JSON string to query compiler",
         returns=_doc_returns_qc,
     )
-    def _read_json(
+    def read_json(
         cls,
         **kwargs,
     ):  # noqa: PR01
@@ -417,7 +417,7 @@ class BaseIO:
         summary="Load a feather-format object from the file path into query compiler",
         returns=_doc_returns_qc,
     )
-    def _read_feather(
+    def read_feather(
         cls,
         path,
         **kwargs,
@@ -437,7 +437,7 @@ class BaseIO:
         summary="Read Stata file into query compiler",
         returns=_doc_returns_qc,
     )
-    def _read_stata(
+    def read_stata(
         cls,
         filepath_or_buffer,
         **kwargs,
@@ -482,7 +482,7 @@ class BaseIO:
         summary="Load pickled pandas object (or any object) from file into query compiler",
         returns=_doc_returns_qc,
     )
-    def _read_pickle(
+    def read_pickle(
         cls,
         filepath_or_buffer,
         **kwargs,
@@ -597,7 +597,7 @@ class BaseIO:
         summary="Read SQL query into query compiler",
         returns=_doc_returns_qc,
     )
-    def _read_sql_query(
+    def read_sql_query(
         cls,
         sql,
         con,
@@ -661,7 +661,7 @@ class BaseIO:
     @_inherit_docstrings(
         pandas.DataFrame.to_pickle, apilink="pandas.DataFrame.to_pickle"
     )
-    def _to_pickle(
+    def to_pickle(
         cls,
         obj: Any,
         filepath_or_buffer,

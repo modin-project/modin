@@ -1216,7 +1216,7 @@ def test_set_axis(data, axis):
     else:
         assert False
 
-    pandas_df = pandas_df.set_axis(labels, axis=axis, **kw)
+    pandas_df = pandas_df.set_axis(labels, axis=axis)
     df_equals(modin_df, pandas_df)
 
 
