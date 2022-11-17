@@ -65,6 +65,7 @@ class Resampler(ClassLogger):
     def _get_groups(self):
         """
         Compute the resampled groups.
+
         Returns
         -------
         PandasGroupby

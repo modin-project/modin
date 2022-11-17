@@ -379,7 +379,9 @@ class DataFrame(BasePandasDataset):
         """
         return DataFrame(query_compiler=self._query_compiler.add_suffix(suffix))
 
-    def applymap(self, func, na_action: Optional[str] = None, **kwargs):
+    def applymap(
+        self, func, na_action: Optional[str] = None, **kwargs
+    ):  # noqa: PR01, RT01, D200
         """
         Apply a function to a ``DataFrame`` elementwise.
         """
@@ -441,7 +443,7 @@ class DataFrame(BasePandasDataset):
         squeeze: bool = no_default,
         observed=False,
         dropna: bool = True,
-    ):
+    ):  # noqa: PR01, RT01, D200
         """
         Group ``DataFrame`` using a mapper or by a ``Series`` of columns.
         """
@@ -701,7 +703,7 @@ class DataFrame(BasePandasDataset):
         keep_shape: bool = False,
         keep_equal: bool = False,
         result_names=("self", "other"),
-    ):
+    ) -> "DataFrame":  # noqa: PR01, RT01, D200
         """
         Compare to another ``DataFrame`` and show the differences.
         """
@@ -718,7 +720,9 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-    def corr(self, method="pearson", min_periods=1, numeric_only=no_default):
+    def corr(
+        self, method="pearson", min_periods=1, numeric_only=no_default
+    ):  # noqa: PR01, RT01, D200
         """
         Compute pairwise correlation of columns, excluding NA/null values.
         """
@@ -738,7 +742,7 @@ class DataFrame(BasePandasDataset):
 
     def corrwith(
         self, other, axis=0, drop=False, method="pearson", numeric_only=no_default
-    ):
+    ):  # noqa: PR01, RT01, D200
         """
         Compute pairwise correlation.
         """
@@ -753,7 +757,9 @@ class DataFrame(BasePandasDataset):
             numeric_only=numeric_only,
         )
 
-    def cov(self, min_periods=None, ddof: Optional[int] = 1, numeric_only=no_default):
+    def cov(
+        self, min_periods=None, ddof: Optional[int] = 1, numeric_only=no_default
+    ):  # noqa: PR01, RT01, D200
         """
         Compute pairwise covariance of columns, excluding NA/null values.
         """
@@ -1187,7 +1193,9 @@ class DataFrame(BasePandasDataset):
         output.append("")
         buf.write("\n".join(output))
 
-    def insert(self, loc, column, value, allow_duplicates=no_default):
+    def insert(
+        self, loc, column, value, allow_duplicates=no_default
+    ):  # noqa: PR01, D200
         """
         Insert column into ``DataFrame`` at specified location.
         """
@@ -1325,7 +1333,7 @@ class DataFrame(BasePandasDataset):
         rsuffix="",
         sort=False,
         validate=None,
-    ):
+    ):  # noqa: PR01, RT01, D200
         """
         Join columns of another ``DataFrame``.
         """
@@ -1826,7 +1834,7 @@ class DataFrame(BasePandasDataset):
         inplace=False,
         level=None,
         errors="ignore",
-    ):
+    ):  # noqa: PR01, RT01, D200
         """
         Alter axes labels.
         """

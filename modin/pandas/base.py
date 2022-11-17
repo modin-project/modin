@@ -2748,7 +2748,7 @@ class BasePandasDataset(ClassLogger):
         )
 
     @property
-    def flags(self):
+    def flags(self):  # noqa: RT01, D200
         """
         Get the properties associated with this `BasePandasDataset`.
         """
