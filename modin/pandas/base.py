@@ -1410,6 +1410,9 @@ class BasePandasDataset(ClassLogger):
         times: "str | np.ndarray | BasePandasDataset | None" = None,
         method: "str" = "single",
     ) -> pandas.core.window.ewm.ExponentialMovingWindow:  # noqa: PR01, RT01, D200
+        """
+        Provide exponentially weighted (EW) calculations.
+        """
         return self._default_to_pandas(
             "ewm",
             com=com,
@@ -1430,6 +1433,9 @@ class BasePandasDataset(ClassLogger):
     def expanding(
         self, min_periods=1, center=None, axis=0, method="single"
     ):  # noqa: PR01, RT01, D200
+        """
+        Provide expanding window calculations.
+        """
         return self._default_to_pandas(
             "expanding",
             min_periods=min_periods,
@@ -1790,7 +1796,10 @@ class BasePandasDataset(ClassLogger):
         return _LocIndexer(self)
 
     @_inherit_docstrings(pandas.DataFrame.mad, apilink="pandas.DataFrame.mad")
-    def mad(self, axis=None, skipna=True, level=None):
+    def mad(self, axis=None, skipna=True, level=None):  # noqa: PR01, RT01, D200
+        """
+        Return the mean absolute deviation of the values over the requested axis.
+        """
         validate_bool_kwarg(skipna, "skipna")
         axis = self._get_axis_number(axis)
         if level is not None:
@@ -1817,7 +1826,10 @@ class BasePandasDataset(ClassLogger):
         level: Level = None,
         errors: "IgnoreRaise | NoDefault" = "raise",
         try_cast=no_default,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Replace values where the condition is True.
+        """
         return self._default_to_pandas(
             "mask",
             cond,
@@ -1837,7 +1849,10 @@ class BasePandasDataset(ClassLogger):
         level=None,
         numeric_only=None,
         **kwargs,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return the maximum of the values over the requested axis.
+        """
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if level is not None:
             return self._default_to_pandas(
@@ -3067,7 +3082,10 @@ class BasePandasDataset(ClassLogger):
         verbose=no_default,
         freeze_panes=None,
         storage_options: StorageOptions = None,
-    ):  # pragma: no cover
+    ):  # pragma: no cover  # noqa: PR01, RT01, D200
+        """
+        Write object to an Excel sheet.
+        """
         return self._default_to_pandas(
             "to_excel",
             excel_writer,
@@ -3114,7 +3132,10 @@ class BasePandasDataset(ClassLogger):
         index=True,
         indent=None,
         storage_options: StorageOptions = None,
-    ):  # pragma: no cover
+    ):  # pragma: no cover  # noqa: PR01, RT01, D200
+        """
+        Convert the object to a JSON string.
+        """
         return self._default_to_pandas(
             "to_json",
             path_or_buf,
@@ -3193,6 +3214,9 @@ class BasePandasDataset(ClassLogger):
         storage_options: StorageOptions = None,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
+        """
+        Print `BasePandasDataset` in Markdown-friendly format.
+        """
         return self._default_to_pandas(
             "to_markdown",
             buf=buf,
@@ -3208,7 +3232,10 @@ class BasePandasDataset(ClassLogger):
         compression: CompressionOptions = "infer",
         protocol: int = pkl.HIGHEST_PROTOCOL,
         storage_options: StorageOptions = None,
-    ):  # pragma: no cover
+    ):  # pragma: no cover  # noqa: PR01, D200
+        """
+        Pickle (serialize) object to file.
+        """
         from modin.pandas import to_pickle
 
         to_pickle(
@@ -3219,7 +3246,12 @@ class BasePandasDataset(ClassLogger):
             storage_options=storage_options,
         )
 
-    def to_numpy(self, dtype=None, copy=False, na_value=no_default):
+    def to_numpy(
+        self, dtype=None, copy=False, na_value=no_default
+    ):  # noqa: PR01, RT01, D200
+        """
+        Convert the `BasePandasDataset` to a NumPy array.
+        """
         return self._query_compiler.to_numpy(
             dtype=dtype,
             copy=copy,
