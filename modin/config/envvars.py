@@ -20,8 +20,10 @@ import warnings
 from packaging import version
 import secrets
 
+from pandas.util._decorators import doc  # type: ignore[attr-defined]
+
 from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
-from typing import Optional
+from typing import Any, Optional
 
 
 class EnvironmentVariable(Parameter, type=str, abstract=True):
@@ -76,6 +78,10 @@ class Engine(EnvironmentVariable, type=str):
 
     varname = "MODIN_ENGINE"
     choices = ("Ray", "Dask", "Python", "Native")
+
+    NOINIT_ENGINES = {
+        "Python",
+    }  # engines that don't require initialization, useful for unit tests
 
     @classmethod
     def _get_default(cls) -> str:
@@ -134,6 +140,13 @@ class Engine(EnvironmentVariable, type=str):
         raise ImportError(
             "Please refer to installation documentation page to install an engine"
         )
+
+    @classmethod
+    @doc(Parameter.add_option.__doc__)
+    def add_option(cls, choice: Any) -> Any:
+        choice = super().add_option(choice)
+        cls.NOINIT_ENGINES.add(choice)
+        return choice
 
 
 class StorageFormat(EnvironmentVariable, type=str):

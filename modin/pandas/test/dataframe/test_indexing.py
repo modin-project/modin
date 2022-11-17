@@ -307,6 +307,14 @@ def test_set_index(data):
     eval_general(modin_df, pandas_df, lambda df: df.set_index("inexistent_col"))
 
 
+@pytest.mark.parametrize("index", ["a", ["a", ("b", "")]])
+def test_set_index_with_multiindex(index):
+    # see #5186 for details
+    kwargs = {"columns": [["a", "b", "c", "d"], ["", "", "x", "y"]]}
+    modin_df, pandas_df = create_test_dfs(np.random.rand(2, 4), **kwargs)
+    eval_general(modin_df, pandas_df, lambda df: df.set_index(index))
+
+
 @pytest.mark.gpu
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_keys(data):

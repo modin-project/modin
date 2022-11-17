@@ -47,8 +47,21 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
     [
         lambda df: 4,
         lambda df, axis: df.iloc[0] if axis == "columns" else list(df[df.columns[0]]),
+        lambda df, axis: {
+            label: idx + 1
+            for idx, label in enumerate(df.axes[0 if axis == "rows" else 1])
+        },
+        lambda df, axis: {
+            label if idx % 2 else f"random_key{idx}": idx + 1
+            for idx, label in enumerate(df.axes[0 if axis == "rows" else 1][::-1])
+        },
     ],
-    ids=["scalar", "series_or_list"],
+    ids=[
+        "scalar",
+        "series_or_list",
+        "dictionary_keys_equal_columns",
+        "dictionary_keys_unequal_columns",
+    ],
 )
 @pytest.mark.parametrize("axis", ["rows", "columns"])
 @pytest.mark.parametrize(

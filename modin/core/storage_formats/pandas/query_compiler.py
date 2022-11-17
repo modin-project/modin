@@ -2374,9 +2374,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             value.columns = [column]
             return self.insert_item(axis=1, loc=loc, value=value, how=None)
 
-        if is_list_like(value):
-            value = list(value)
-        else:
+        if is_list_like(value) and not isinstance(value, np.ndarray):
+            value = np.array(value)
+        elif is_scalar(value):
             value = [value] * len(self.index)
 
         def insert(df, internal_indices=[]):

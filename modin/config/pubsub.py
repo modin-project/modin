@@ -15,7 +15,7 @@
 
 from collections import defaultdict
 from enum import IntEnum
-from typing import Any, Callable, DefaultDict, NamedTuple, Optional, Sequence
+from typing import Any, Callable, DefaultDict, NamedTuple, Optional, Tuple
 
 
 class TypeDescriptor(NamedTuple):
@@ -136,7 +136,7 @@ class Parameter(object):
         ``ValueSource``.
     """
 
-    choices: Optional[Sequence[str]] = None
+    choices: Optional[Tuple[str, ...]] = None
     type = str
     default: Optional[Any] = None
     is_abstract = True
@@ -339,6 +339,30 @@ class Parameter(object):
             callback(cls)
         for callback in cls._once.pop(cls.get(), ()):
             callback(cls)
+
+    @classmethod
+    def add_option(cls, choice: Any) -> Any:
+        """
+        Add a new choice for the parameter.
+
+        Parameters
+        ----------
+        choice : Any
+            New choice to add to the available choices.
+
+        Returns
+        -------
+        Any
+            Added choice normalized according to the parameter type.
+        """
+        if cls.choices is not None:
+            if not _TYPE_PARAMS[cls.type].verify(choice):
+                raise ValueError(f"Unsupported choice value: {choice}")
+            choice = _TYPE_PARAMS[cls.type].normalize(choice)
+            if choice not in cls.choices:
+                cls.choices += (choice,)
+            return choice
+        raise TypeError("Cannot add a choice to a parameter where choices is None")
 
 
 __all__ = ["Parameter"]

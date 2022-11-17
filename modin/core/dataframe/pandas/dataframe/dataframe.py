@@ -652,11 +652,31 @@ class PandasDataframe(ClassLogger):
 
         if row_labels is not None:
             # Get numpy array of positions of values from `row_labels`
-            row_positions = self.index.get_indexer_for(row_labels)
+            if isinstance(self.index, pandas.MultiIndex):
+                row_positions = np.zeros(len(row_labels), dtype="int64")
+                # we can't use .get_locs(row_labels) because the function
+                # requires a different format for row_labels
+                for idx, label in enumerate(row_labels):
+                    if isinstance(label, str):
+                        label = [label]
+                    # get_loc can return slice that _take_2d_positional can't handle
+                    row_positions[idx] = self.index.get_locs(label)[0]
+            else:
+                row_positions = self.index.get_indexer_for(row_labels)
 
         if col_labels is not None:
             # Get numpy array of positions of values from `col_labels`
-            col_positions = self.columns.get_indexer_for(col_labels)
+            if isinstance(self.columns, pandas.MultiIndex):
+                col_positions = np.zeros(len(col_labels), dtype="int64")
+                # we can't use .get_locs(col_labels) because the function
+                # requires a different format for row_labels
+                for idx, label in enumerate(col_labels):
+                    if isinstance(label, str):
+                        label = [label]
+                    # get_loc can return slice that _take_2d_positional can't handle
+                    col_positions[idx] = self.columns.get_locs(label)[0]
+            else:
+                col_positions = self.columns.get_indexer_for(col_labels)
 
         return self._take_2d_positional(row_positions, col_positions)
 
@@ -1041,12 +1061,17 @@ class PandasDataframe(ClassLogger):
         extracted_columns = self.take_2d_labels_or_positional(
             col_labels=column_list
         ).to_pandas()
+
         if len(column_list) == 1:
-            new_labels = pandas.Index(extracted_columns.squeeze(axis=1))
+            new_labels = pandas.Index(
+                extracted_columns.squeeze(axis=1), name=column_list[0]
+            )
         else:
-            new_labels = pandas.MultiIndex.from_frame(extracted_columns)
+            new_labels = pandas.MultiIndex.from_frame(
+                extracted_columns, names=column_list
+            )
         result = self.take_2d_labels_or_positional(
-            col_labels=[i for i in self.columns if i not in column_list]
+            col_labels=[i for i in self.columns if i not in extracted_columns.columns]
         )
         result.index = new_labels
         return result

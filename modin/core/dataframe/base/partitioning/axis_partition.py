@@ -13,7 +13,8 @@
 
 """Base class of an axis partition for a Modin Dataframe."""
 
-from abc import ABC
+from abc import ABC, abstractmethod
+from typing import Any, Callable, Iterable, Optional, Tuple, Union
 
 
 class BaseDataframeAxisPartition(ABC):  # pragma: no cover
@@ -23,17 +24,23 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
     This class is intended to simplify the way that operations are performed.
     """
 
+    @property
+    @abstractmethod
+    def list_of_blocks(self) -> list:
+        """Get the list of physical partition objects that compose this partition."""
+        pass
+
     def apply(
         self,
-        func,
-        *args,
-        num_splits=None,
-        other_axis_partition=None,
-        maintain_partitioning=True,
-        lengths=None,
-        manual_partition=False,
-        **kwargs,
-    ):
+        func: Callable,
+        *args: Iterable,
+        num_splits: Optional[int] = None,
+        other_axis_partition: Optional["BaseDataframeAxisPartition"] = None,
+        maintain_partitioning: bool = True,
+        lengths: Optional[Iterable] = None,
+        manual_partition: bool = False,
+        **kwargs: dict,
+    ) -> Any:
         """
         Apply a function to this axis partition along full axis.
 
@@ -81,7 +88,7 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
     instance_type = None
     partition_type = None
 
-    def _wrap_partitions(self, partitions):
+    def _wrap_partitions(self, partitions: list) -> list:
         """
         Wrap remote partition objects with `BaseDataframePartition` class.
 
@@ -95,9 +102,14 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         list
             List of wrapped remote partition objects.
         """
+        assert self.partition_type is not None
+        assert self.instance_type is not None  # type: ignore
+
         return [self.partition_type(obj) for obj in partitions]
 
-    def force_materialization(self, get_ip=False):
+    def force_materialization(
+        self, get_ip: bool = False
+    ) -> "BaseDataframeAxisPartition":
         """
         Materialize axis partitions into a single partition.
 
@@ -114,9 +126,11 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         materialized = self.apply(
             lambda x: x, num_splits=1, maintain_partitioning=False
         )
-        return type(self)(materialized, get_ip=get_ip)
+        return type(self)(materialized, get_ip=get_ip)  # type: ignore[call-arg]
 
-    def unwrap(self, squeeze=False, get_ip=False):
+    def unwrap(
+        self, squeeze: bool = False, get_ip: bool = False
+    ) -> Union[list, Tuple[list, list]]:
         """
         Unwrap partitions from this axis partition.
 
@@ -134,17 +148,19 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
 
         Notes
         -----
-        If `get_ip=True`, a list of tuples of Ray.ObjectRef/Dask.Future to node ip addresses and
+        If `get_ip=True`, a tuple of lists of Ray.ObjectRef/Dask.Future to node ip addresses and
         unwrapped partitions, respectively, is returned if Ray/Dask is used as an engine
         (i.e. [(Ray.ObjectRef/Dask.Future, Ray.ObjectRef/Dask.Future), ...]).
         """
         if squeeze and len(self.list_of_blocks) == 1:
             if get_ip:
-                return self.list_of_ips[0], self.list_of_blocks[0]
+                # TODO(https://github.com/modin-project/modin/issues/5176): Stop ignoring the list_of_ips
+                # check once we know that we're not calling list_of_ips on python axis partitions
+                return self.list_of_ips[0], self.list_of_blocks[0]  # type: ignore[attr-defined]
             else:
                 return self.list_of_blocks[0]
         else:
             if get_ip:
-                return list(zip(self.list_of_ips, self.list_of_blocks))
+                return list(zip(self.list_of_ips, self.list_of_blocks))  # type: ignore[attr-defined]
             else:
                 return self.list_of_blocks

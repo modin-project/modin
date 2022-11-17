@@ -18,7 +18,7 @@ dependencies:
   - lxml
   - openpyxl
   - xlrd
-  - matplotlib<=3.2.2
+  - matplotlib
   - sqlalchemy>=1.4.0
   - pandas-gbq
   - pytables
@@ -29,8 +29,8 @@ dependencies:
   - pytest-cov>=2.10.1
   - pytest-xdist>=2.1.0
   - packaging
-  - coverage<5.0
-  - pygithub==1.53
+  - coverage
+  - pygithub
   - rpyc==4.1.5
   - cloudpickle
   - boto3
@@ -43,7 +43,7 @@ dependencies:
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - tqdm
-      - ray[default]>=1.4.0
+      - ray[default]>=1.4.0,<2.1.0
       # TODO: remove when resolving GH#4398
       - redis>=3.5.0,<4.0.0
       - black
