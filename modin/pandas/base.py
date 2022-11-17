@@ -1306,8 +1306,8 @@ class BasePandasDataset(ClassLogger):
     def dropna(
         self,
         axis: Axis = 0,
-        how: "str | NoDefault" = no_default,
-        thresh: "int | NoDefault" = no_default,
+        how: str | NoDefault = no_default,
+        thresh: int | NoDefault = no_default,
         subset: IndexLabel = None,
         inplace: bool = False,
     ):  # noqa: PR01, RT01, D200
@@ -1822,9 +1822,9 @@ class BasePandasDataset(ClassLogger):
         cond,
         other=np.nan,
         inplace: bool = False,
-        axis: "Axis | None" = None,
+        axis: Axis | None = None,
         level: Level = None,
-        errors: "IgnoreRaise | NoDefault" = "raise",
+        errors: IgnoreRaise | NoDefault = "raise",
         try_cast=no_default,
     ):  # noqa: PR01, RT01, D200
         """
@@ -1844,7 +1844,7 @@ class BasePandasDataset(ClassLogger):
     @_inherit_docstrings(pandas.DataFrame.max, apilink="pandas.DataFrame.max")
     def max(
         self,
-        axis: "int | None | NoDefault" = no_default,
+        axis: int | None | NoDefault = no_default,
         skipna=True,
         level=None,
         numeric_only=None,
@@ -1960,9 +1960,9 @@ class BasePandasDataset(ClassLogger):
 
     def min(
         self,
-        axis: "Axis | None | NoDefault" = no_default,
+        axis: Axis | None | NoDefault = no_default,
         skipna: bool = True,
-        level: "Level | None" = None,
+        level: Level | None = None,
         numeric_only=None,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
@@ -2343,16 +2343,16 @@ class BasePandasDataset(ClassLogger):
         self,
         rule,
         axis: Axis = 0,
-        closed: "str | None" = None,
-        label: "str | None" = None,
+        closed: str | None = None,
+        label: str | None = None,
         convention: str = "start",
-        kind: "str | None" = None,
+        kind: str | None = None,
         loffset=None,
-        base: "int | None" = None,
+        base: int | None = None,
         on: Level = None,
         level: Level = None,
-        origin: "str | TimestampConvertibleTypes" = "start_day",
-        offset: "TimedeltaConvertibleTypes | None" = None,
+        origin: str | TimestampConvertibleTypes = "start_day",
+        offset: TimedeltaConvertibleTypes | None = None,
         group_keys=no_default,
     ):  # noqa: PR01, RT01, D200
         """
@@ -2385,7 +2385,7 @@ class BasePandasDataset(ClassLogger):
         col_level: Hashable = 0,
         col_fill: Hashable = "",
         allow_duplicates=no_default,
-        names: "Hashable | Sequence[Hashable]" = None,
+        names: Hashable | Sequence[Hashable] = None,
     ):  # noqa: PR01, RT01, D200
         """
         Reset the index, or a level of it.
@@ -2456,13 +2456,13 @@ class BasePandasDataset(ClassLogger):
     def rolling(
         self,
         window,
-        min_periods: "int | None" = None,
+        min_periods: int | None = None,
         center: bool = False,
-        win_type: "str | None" = None,
-        on: "str | None" = None,
+        win_type: str | None = None,
+        on: str | None = None,
         axis: Axis = 0,
-        closed: "str | None" = None,
-        step: "int | None" = None,
+        closed: str | None = None,
+        step: int | None = None,
         method: str = "single",
     ):  # noqa: PR01, RT01, D200
         """
@@ -2542,12 +2542,12 @@ class BasePandasDataset(ClassLogger):
 
     def sample(
         self,
-        n: "int | None" = None,
-        frac: "float | None" = None,
+        n: int | None = None,
+        frac: float | None = None,
         replace: bool = False,
         weights=None,
-        random_state: "RandomState | None" = None,
-        axis: "Axis | None" = None,
+        random_state: RandomState | None = None,
+        axis: Axis | None = None,
         ignore_index: bool = False,
     ):  # noqa: PR01, RT01, D200
         """
@@ -2668,9 +2668,9 @@ class BasePandasDataset(ClassLogger):
 
     def sem(
         self,
-        axis: "Axis | None" = None,
+        axis: Axis | None = None,
         skipna: bool = True,
-        level: "Level | None" = None,
+        level: Level | None = None,
         ddof: int = 1,
         numeric_only=None,
         **kwargs,
@@ -2856,9 +2856,9 @@ class BasePandasDataset(ClassLogger):
 
     def skew(
         self,
-        axis: "Axis | None | NoDefault" = no_default,
+        axis: Axis | None | NoDefault = no_default,
         skipna: bool = True,
-        level: "Level | None" = None,
+        level: Level | None = None,
         numeric_only=None,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
@@ -2941,9 +2941,9 @@ class BasePandasDataset(ClassLogger):
 
     def std(
         self,
-        axis: "Axis | None" = None,
+        axis: Axis | None = None,
         skipna: bool = True,
-        level: "Level | None" = None,
+        level: Level | None = None,
         ddof: int = 1,
         numeric_only=None,
         **kwargs,
@@ -3476,7 +3476,7 @@ class BasePandasDataset(ClassLogger):
     )
     def value_counts(
         self,
-        subset: "Sequence[Hashable] | None" = None,
+        subset: Sequence[Hashable] | None = None,
         normalize: bool = False,
         sort: bool = True,
         ascending: bool = False,
@@ -3499,9 +3499,9 @@ class BasePandasDataset(ClassLogger):
 
     def var(
         self,
-        axis: "Axis | None" = None,
+        axis: Axis | None = None,
         skipna: bool = True,
-        level: "Level | None" = None,
+        level: Level | None = None,
         ddof: int = 1,
         numeric_only=None,
         **kwargs,
