@@ -4223,6 +4223,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return StrDefault.register(pandas.Series.str.match)(self, pat, case, flags, na)
 
     @doc_utils.doc_str_method(
+        refer_to="extract",
+        params="""
+        pat : str
+        flags : int, default: 0
+        expand : bool, default: True""",
+    )
+    def str_extract(self, pat, flags=0, expand=True):
+        return StrDefault.register(pandas.Series.str.extract)(self, pat, flags, expand)
+
+    @doc_utils.doc_str_method(
         refer_to="normalize", params="form : {'NFC', 'NFKC', 'NFD', 'NFKD'}"
     )
     def str_normalize(self, form):

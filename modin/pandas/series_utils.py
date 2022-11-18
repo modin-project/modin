@@ -296,6 +296,14 @@ class StringMethods(ClassLogger):
         )
 
     def extract(self, pat, flags=0, expand=True):
+        if expand:
+            from .dataframe import DataFrame
+
+            return DataFrame(
+                query_compiler=self._query_compiler.str_extract(
+                    pat, flags=flags, expand=expand
+                )
+            )
         return self._default_to_pandas(
             pandas.Series.str.extract, pat, flags=flags, expand=expand
         )
