@@ -2762,10 +2762,7 @@ class BasePandasDataset(ClassLogger):
         Get the properties associated with this `BasePandasDataset`.
         """
 
-        def flags(df):
-            return df.flags
-
-        return self._default_to_pandas(flags)
+        return self._default_to_pandas(lambda df: df.flags)
 
     def shift(
         self,
