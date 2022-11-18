@@ -245,21 +245,20 @@ class BasePandasDataset(BasePandasDatasetCompat):
         TypeError
             If any validation checks fail.
         """
-        # We skip dtype checking if the other is a scalar. Note that pandas
-        # is_scalar can be misleading as it is False for almost all objects,
-        # even when those objects should be treated as scalars. See e.g.
-        # https://github.com/modin-project/modin/issues/5236. Therefore, we
-        # also skip dtype checking if the other is neither a list-like nor
-        # another BasePandasDataset.
-        if is_scalar(other) or (
-            not isinstance(other, BasePandasDataset) and not is_list_like(other)
-        ):
+        if not isinstance(other, BasePandasDataset) and not is_list_like(other):
+            return other
+        if isinstance(other, BasePandasDataset):
+            return other._query_compiler
+        if not is_list_like(other):
+            # We skip dtype checking if the other is a scalar. Note that pandas
+            # is_scalar can be misleading as it is False for almost all objects,
+            # even when those objects should be treated as scalars. See e.g.
+            # https://github.com/modin-project/modin/issues/5236. Therefore, we
+            # detect scalars by checking that `other` is neither a list-like nor
+            # another BasePandasDataset.
             return other
         axis = self._get_axis_number(axis) if axis is not None else 1
         result = other
-        if isinstance(other, BasePandasDataset):
-            return other._query_compiler
-        assert is_list_like(other)
         if axis == 0:
             if len(other) != len(self._query_compiler.index):
                 raise ValueError(
