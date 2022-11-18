@@ -16,6 +16,7 @@ import pandas
 import matplotlib
 import modin.pandas as pd
 
+from modin._compat import PandasCompatVersion
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -337,6 +338,11 @@ def test_add_string_to_df():
     eval_general(modin_df, pandas_df, lambda df: df + "string")
 
 
+@pytest.mark.xfailif(
+    PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+    reason="Seems to be a bug in pandas 1.1.5. pandas throws ValueError "
+    + "for this particular dataframe",
+)
 def test_add_custom_class():
     # see https://github.com/modin-project/modin/issues/5236
     # Test that we can add any object that is addable to pandas object data

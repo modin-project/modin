@@ -735,6 +735,7 @@ def eval_general(
         try:
             pd_result = fn(pandas_df, **pd_kwargs)
         except Exception as pd_e:
+            raise pd_e
             if check_exception_type is None:
                 return None
             with pytest.raises(Exception) as md_e:
