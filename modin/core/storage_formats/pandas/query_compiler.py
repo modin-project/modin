@@ -3303,7 +3303,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(
             self._modin_frame.broadcast_apply_full_axis(
                 0,
-                lambda l, r: pandas.DataFrame.compare(l, r, **kwargs),
+                lambda l, r: pandas.DataFrame.compare(l, other=r, **kwargs),
                 other._modin_frame,
             )
         )
