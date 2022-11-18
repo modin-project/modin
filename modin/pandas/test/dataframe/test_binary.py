@@ -338,10 +338,10 @@ def test_add_string_to_df():
     eval_general(modin_df, pandas_df, lambda df: df + "string")
 
 
-@pytest.mark.xfailif(
+@pytest.mark.xfail(
     PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
     reason="Seems to be a bug in pandas 1.1.5. pandas throws ValueError "
-    + "for this particular dataframe",
+    + "for this particular dataframe.",
 )
 def test_add_custom_class():
     # see https://github.com/modin-project/modin/issues/5236
