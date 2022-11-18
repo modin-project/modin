@@ -245,8 +245,6 @@ class BasePandasDataset(BasePandasDatasetCompat):
         TypeError
             If any validation checks fail.
         """
-        if not isinstance(other, BasePandasDataset) and not is_list_like(other):
-            return other
         if isinstance(other, BasePandasDataset):
             return other._query_compiler
         if not is_list_like(other):
@@ -301,6 +299,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
                     if label in other
                 ]
 
+            # TODO(https://github.com/modin-project/modin/issues/5239):
+            # this spuriously rejects other that is a list including some
+            # custom type that can be added to self's elements.
             if not all(
                 (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
                 or (is_object_dtype(self_dtype) and is_object_dtype(other_dtype))
