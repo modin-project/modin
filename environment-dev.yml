@@ -5,7 +5,7 @@ dependencies:
   - pandas==1.5.1
   - numpy>=1.18.5
   - pyarrow>=4.0.1
-  - dask[complete]>=2.22.0
+  - dask>=2.22.0
   - distributed>=2.22.0
   - fsspec
   - xarray
