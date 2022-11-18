@@ -13,7 +13,7 @@
 
 import os
 import pytest
-
+import modin.config as cfg
 from modin.config.envvars import EnvironmentVariable, _check_vars, ExactStr
 
 
@@ -60,3 +60,32 @@ def test_custom_set(make_custom_envvar, set_custom_envvar):
 def test_custom_help(make_custom_envvar):
     assert "MODIN_CUSTOM" in make_custom_envvar.get_help()
     assert "custom var" in make_custom_envvar.get_help()
+
+
+def test_hdk_envvar():
+    os.environ[
+        cfg.OmnisciLaunchParameters.varname
+    ] = "enable_union=2,enable_thrift_logs=3"
+    params = cfg.OmnisciLaunchParameters.get()
+    assert params["enable_union"] == 2
+    assert params["enable_thrift_logs"] == 3
+
+    params = cfg.HdkLaunchParameters.get()
+    assert params["enable_union"] == 2
+    assert params["enable_thrift_logs"] == 3
+
+    os.environ[cfg.HdkLaunchParameters.varname] = "enable_union=4,enable_thrift_logs=5"
+    del cfg.HdkLaunchParameters._value
+    params = cfg.HdkLaunchParameters.get()
+    assert params["enable_union"] == 4
+    assert params["enable_thrift_logs"] == 5
+
+    params = cfg.OmnisciLaunchParameters.get()
+    assert params["enable_union"] == 2
+    assert params["enable_thrift_logs"] == 3
+
+    del os.environ[cfg.OmnisciLaunchParameters.varname]
+    del cfg.OmnisciLaunchParameters._value
+    params = cfg.OmnisciLaunchParameters.get()
+    assert params["enable_union"] == 4
+    assert params["enable_thrift_logs"] == 5
