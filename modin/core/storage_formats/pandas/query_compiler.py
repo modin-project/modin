@@ -33,6 +33,7 @@ from pandas.core.dtypes.common import (
     is_bool_dtype,
 )
 from pandas.errors import DataError
+from pandas._libs.lib import no_default
 from collections.abc import Iterable
 from typing import List, Hashable
 import warnings
@@ -538,9 +539,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def reset_index(self, **kwargs):
-        allow_duplicates = kwargs.pop("allow_duplicates", None)
+        allow_duplicates = kwargs.pop("allow_duplicates", no_default)
         names = kwargs.pop("names", None)
-        if allow_duplicates not in (None, False) or names is not None:
+        if allow_duplicates not in (no_default, False) or names is not None:
             return self.default_to_pandas(
                 pandas.DataFrame.reset_index,
                 allow_duplicates=allow_duplicates,

@@ -1397,7 +1397,6 @@ class BasePandasDataset(ClassLogger):
             exploded = exploded.reset_index(drop=True)
         return exploded
 
-    @_inherit_docstrings(pandas.DataFrame.ewm, apilink="pandas.DataFrame.ewm")
     def ewm(
         self,
         com: "float | None" = None,
@@ -1428,9 +1427,6 @@ class BasePandasDataset(ClassLogger):
             method=method,
         )
 
-    @_inherit_docstrings(
-        pandas.DataFrame.expanding, apilink="pandas.DataFrame.expanding"
-    )
     def expanding(
         self, min_periods=1, center=None, axis=0, method="single"
     ):  # noqa: PR01, RT01, D200
@@ -1796,7 +1792,6 @@ class BasePandasDataset(ClassLogger):
 
         return _LocIndexer(self)
 
-    @_inherit_docstrings(pandas.DataFrame.mad, apilink="pandas.DataFrame.mad")
     def mad(self, axis=None, skipna=True, level=None):  # noqa: PR01, RT01, D200
         """
         Return the mean absolute deviation of the values over the requested axis.
@@ -1817,7 +1812,6 @@ class BasePandasDataset(ClassLogger):
             self._query_compiler.mad(axis=axis, skipna=skipna, level=level)
         )
 
-    @_inherit_docstrings(pandas.DataFrame.mask, apilink="pandas.DataFrame.mask")
     def mask(
         self,
         cond,
@@ -1842,7 +1836,6 @@ class BasePandasDataset(ClassLogger):
             try_cast=try_cast,
         )
 
-    @_inherit_docstrings(pandas.DataFrame.max, apilink="pandas.DataFrame.max")
     def max(
         self,
         axis: int | None | NoDefault = no_default,
@@ -2407,9 +2400,7 @@ class BasePandasDataset(ClassLogger):
                 level=level,
                 col_level=col_level,
                 col_fill=col_fill,
-                allow_duplicates=None
-                if allow_duplicates is no_default
-                else allow_duplicates,
+                allow_duplicates=allow_duplicates,
                 names=names,
             )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)

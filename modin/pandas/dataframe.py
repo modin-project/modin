@@ -380,12 +380,7 @@ class DataFrame(BasePandasDataset):
         """
         return DataFrame(query_compiler=self._query_compiler.add_suffix(suffix))
 
-    def applymap(
-        self, func, na_action: Optional[str] = None, **kwargs
-    ):  # noqa: PR01, RT01, D200
-        """
-        Apply a function to a ``DataFrame`` elementwise.
-        """
+    def applymap(self, func, na_action: Optional[str] = None, **kwargs):
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
         return DataFrame(
@@ -2348,21 +2343,20 @@ class DataFrame(BasePandasDataset):
         storage_options: StorageOptions = None,
         **kwargs,
     ):
-        config = {
-            "path": path,
-            "engine": engine,
-            "compression": compression,
-            "index": index,
-            "partition_cols": partition_cols,
-            "storage_options": storage_options,
-        }
-        new_query_compiler = self._query_compiler
-
         from modin.core.execution.dispatching.factories.dispatcher import (
             FactoryDispatcher,
         )
 
-        return FactoryDispatcher.to_parquet(new_query_compiler, **config, **kwargs)
+        return FactoryDispatcher.to_parquet(
+            self._query_compiler,
+            path=path,
+            engine=engine,
+            compression=compression,
+            index=index,
+            partition_cols=partition_cols,
+            storage_options=storage_options,
+            **kwargs,
+        )
 
     def to_period(
         self, freq=None, axis=0, copy=True
@@ -2400,7 +2394,7 @@ class DataFrame(BasePandasDataset):
         storage_options: StorageOptions = None,
         *,
         value_labels: dict[Hashable, dict[float | int, str]] | None = None,
-    ):  # pragma: no cover # noqa: PR01, RT01, D200
+    ):
         return self._default_to_pandas(
             pandas.DataFrame.to_stata,
             path,

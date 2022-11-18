@@ -332,10 +332,7 @@ def pivot_table(
     margins_name="All",
     observed=False,
     sort=True,
-):  # noqa: PR01, RT01, D200
-    """
-    Create a spreadsheet-style pivot table as a DataFrame.
-    """
+):
     if not isinstance(data, DataFrame):
         raise ValueError(
             "can not create pivot table with instance of type {}".format(type(data))
