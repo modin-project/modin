@@ -1525,7 +1525,22 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             broadcast=isinstance(other, Series),
         )
 
-    rmul = multiply = mul
+    multiply = mul
+
+    def rmul(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get multiplication of ``DataFrame`` and `other`, element-wise (binary operator `mul`).
+        """
+        return self._binary_op(
+            "rmul",
+            other,
+            axis=axis,
+            level=level,
+            fill_value=fill_value,
+            broadcast=isinstance(other, Series),
+        )
 
     def ne(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
