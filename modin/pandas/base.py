@@ -2757,11 +2757,7 @@ class BasePandasDataset(ClassLogger):
         )
 
     @property
-    def flags(self):  # noqa: RT01, D200
-        """
-        Get the properties associated with this `BasePandasDataset`.
-        """
-
+    def flags(self):
         return self._default_to_pandas(lambda df: df.flags)
 
     def shift(
