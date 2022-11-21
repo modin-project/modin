@@ -36,6 +36,18 @@ from .utils import (
     translator_groupby_ngroups,
     get_benchmark_shapes,
     trigger_import,
+    
+)
+
+from modin.pandas import (
+    Series,
+    Index
+    
+)
+
+from pandas import (
+    date_range,
+    period_range,
 )
 
 
@@ -820,3 +832,106 @@ class TimeProperties:
 
 
 from .utils import setup  # noqa: E402, F401
+
+
+class NumericSeriesIndexing:
+
+    params = [
+        (np.int64, np.uint64, np.float64),
+        ("unique_monotonic_inc", "nonunique_monotonic_inc"),
+    ]
+    param_names = ["dtype", "index_structure"]
+
+    def setup(self, dtype, index_structure):
+        N = 10**6
+        indices = {
+            "unique_monotonic_inc": Index(range(N), dtype=dtype),
+            "nonunique_monotonic_inc": Index(
+                list(range(55)) + [54] + list(range(55, N - 1)), dtype=dtype
+            ),
+        }
+        self.data = Series(np.random.rand(N), index=indices[index_structure])
+        self.array = np.arange(10000)
+        self.array_list = self.array.tolist()
+
+    def time_getitem_scalar(self, index, index_structure):
+        self.data[800000]
+
+    def time_getitem_slice(self, index, index_structure):
+        self.data[:800000]
+
+    def time_getitem_list_like(self, index, index_structure):
+        self.data[[800000]]
+
+    def time_getitem_array(self, index, index_structure):
+        self.data[self.array]
+
+    def time_getitem_lists(self, index, index_structure):
+        self.data[self.array_list]
+
+    def time_iloc_array(self, index, index_structure):
+        self.data.iloc[self.array]
+
+    def time_iloc_list_like(self, index, index_structure):
+        self.data.iloc[[800000]]
+
+    def time_iloc_scalar(self, index, index_structure):
+        self.data.iloc[800000]
+
+    def time_iloc_slice(self, index, index_structure):
+        self.data.iloc[:800000]
+
+    def time_loc_array(self, index, index_structure):
+        self.data.loc[self.array]
+
+    def time_loc_list_like(self, index, index_structure):
+        self.data.loc[[800000]]
+
+    def time_loc_scalar(self, index, index_structure):
+        self.data.loc[800000]
+
+    def time_loc_slice(self, index, index_structure):
+        self.data.loc[:800000]
+
+class NonNumericSeriesIndexing:
+
+    params = [
+        ("string", "datetime", "period"),
+        ("unique_monotonic_inc", "nonunique_monotonic_inc", "non_monotonic"),
+    ]
+    param_names = ["index_dtype", "index_structure"]
+
+    def setup(self, index, index_structure):
+        N = 10**6
+        if index == "string":
+            index = tm.makeStringIndex(N)
+        elif index == "datetime":
+            index = date_range("1900", periods=N, freq="s")
+        elif index == "period":
+            index = period_range("1900", periods=N, freq="s")
+        index = index.sort_values()
+        assert index.is_unique and index.is_monotonic_increasing
+        if index_structure == "nonunique_monotonic_inc":
+            index = index.insert(item=index[2], loc=2)[:-1]
+        elif index_structure == "non_monotonic":
+            index = index[::2].append(index[1::2])
+            assert len(index) == N
+        self.s = Series(np.random.rand(N), index=index)
+        self.lbl = index[80000]
+        # warm up index mapping
+        self.s[self.lbl]
+
+    def time_getitem_label_slice(self, index, index_structure):
+        self.s[: self.lbl]
+
+    def time_getitem_pos_slice(self, index, index_structure):
+        self.s[:80000]
+
+    def time_getitem_scalar(self, index, index_structure):
+        self.s[self.lbl]
+
+    def time_getitem_list_like(self, index, index_structure):
+        self.s[[self.lbl]]
+
+
+
