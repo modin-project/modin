@@ -1135,8 +1135,9 @@ def test_array(data):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_between():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_between(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.between(None, None)
@@ -1577,8 +1578,9 @@ def test_matmul(data):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_drop():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_drop(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.drop(None, None, None, None)
@@ -1879,8 +1881,9 @@ def test_fillna(data, reindex, limit):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_filter():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_filter(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.filter(None, None, None)
@@ -2400,8 +2403,9 @@ def test_ne(data):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_nlargest():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_nlargest(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.nlargest(None)
@@ -2877,8 +2881,9 @@ def test_reset_index(data, drop, name, inplace):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_reshape():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_reshape(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.reshape(None)
