@@ -245,47 +245,42 @@ class BasePandasDataset(BasePandasDatasetCompat):
         TypeError
             If any validation checks fail.
         """
-        # We skip dtype checking if the other is a scalar.
-        if is_scalar(other):
+        if isinstance(other, BasePandasDataset):
+            return other._query_compiler
+        if not is_list_like(other):
+            # We skip dtype checking if the other is a scalar. Note that pandas
+            # is_scalar can be misleading as it is False for almost all objects,
+            # even when those objects should be treated as scalars. See e.g.
+            # https://github.com/modin-project/modin/issues/5236. Therefore, we
+            # detect scalars by checking that `other` is neither a list-like nor
+            # another BasePandasDataset.
             return other
         axis = self._get_axis_number(axis) if axis is not None else 1
         result = other
-        if isinstance(other, BasePandasDataset):
-            return other._query_compiler
-        elif is_list_like(other):
-            if axis == 0:
-                if len(other) != len(self._query_compiler.index):
-                    raise ValueError(
-                        f"Unable to coerce to Series, length must be {len(self._query_compiler.index)}: "
-                        + f"given {len(other)}"
-                    )
-            else:
-                if len(other) != len(self._query_compiler.columns):
-                    raise ValueError(
-                        f"Unable to coerce to Series, length must be {len(self._query_compiler.columns)}: "
-                        + f"given {len(other)}"
-                    )
-            if hasattr(other, "dtype"):
-                other_dtypes = [other.dtype] * len(other)
-            elif is_dict_like(other):
-                other_dtypes = [
-                    type(other[label])
-                    for label in self._query_compiler.get_axis(axis)
-                    # The binary operation is applied for intersection of axis labels
-                    # and dictionary keys. So filtering out extra keys.
-                    if label in other
-                ]
-            else:
-                other_dtypes = [type(x) for x in other]
-        else:
-            other_dtypes = [
-                type(other)
-                for _ in range(
-                    len(self._query_compiler.index)
-                    if axis
-                    else len(self._query_compiler.columns)
+        if axis == 0:
+            if len(other) != len(self._query_compiler.index):
+                raise ValueError(
+                    f"Unable to coerce to Series, length must be {len(self._query_compiler.index)}: "
+                    + f"given {len(other)}"
                 )
+        else:
+            if len(other) != len(self._query_compiler.columns):
+                raise ValueError(
+                    f"Unable to coerce to Series, length must be {len(self._query_compiler.columns)}: "
+                    + f"given {len(other)}"
+                )
+        if hasattr(other, "dtype"):
+            other_dtypes = [other.dtype] * len(other)
+        elif is_dict_like(other):
+            other_dtypes = [
+                type(other[label])
+                for label in self._query_compiler.get_axis(axis)
+                # The binary operation is applied for intersection of axis labels
+                # and dictionary keys. So filtering out extra keys.
+                if label in other
             ]
+        else:
+            other_dtypes = [type(x) for x in other]
         if compare_index:
             if not self.index.equals(other.index):
                 raise TypeError("Cannot perform operation with non-equal index")
@@ -304,6 +299,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
                     if label in other
                 ]
 
+            # TODO(https://github.com/modin-project/modin/issues/5239):
+            # this spuriously rejects other that is a list including some
+            # custom type that can be added to self's elements.
             if not all(
                 (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
                 or (is_object_dtype(self_dtype) and is_object_dtype(other_dtype))

@@ -74,6 +74,7 @@ from .utils import (
     test_data_large_categorical_series_keys,
     test_data_large_categorical_series_values,
     default_to_pandas_ignore_string,
+    CustomIntegerForAddition,
 )
 from modin.config import NPartitions
 
@@ -632,6 +633,16 @@ def test_add_suffix(data):
     modin_series, pandas_series = create_test_series(data)
     df_equals(
         modin_series.add_suffix("SUFFIX_ADD_"), pandas_series.add_suffix("SUFFIX_ADD_")
+    )
+
+
+def test_add_custom_class():
+    # see https://github.com/modin-project/modin/issues/5236
+    # Test that we can add any object that is addable to pandas object data
+    # via "+".
+    eval_general(
+        *create_test_series(test_data["int_data"]),
+        lambda df: df + CustomIntegerForAddition(4),
     )
 
 
