@@ -29,10 +29,7 @@ from modin.pandas.test.utils import (
     create_test_dfs,
     default_to_pandas_ignore_string,
     CustomIntegerForAddition,
-<<<<<<< HEAD
-=======
     NonCommutativeMultiplyInteger,
->>>>>>> 513be39b (FIX-#5238: Make rmul really rmul instead of mul.)
 )
 from modin.config import Engine, NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
