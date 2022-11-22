@@ -16,8 +16,8 @@
 import unidist
 import uuid
 
-from modin.core.execution.unidist.common.utils import deserialize
 from modin.core.execution.unidist.common import UnidistWrapper
+from modin.core.execution.unidist.common.utils import deserialize, wait
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
 from modin.logging import get_logger
@@ -196,7 +196,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        unidist.wait([self._data])
+        wait([self._data])
 
     def __copy__(self):
         """

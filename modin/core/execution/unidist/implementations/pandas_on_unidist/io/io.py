@@ -17,6 +17,7 @@ import io
 import os
 
 import pandas
+from modin._compat.core.pandas_common import pandas_to_csv
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.unidist.generic.io import UnidistIO
@@ -203,7 +204,7 @@ class PandasOnUnidistIO(UnidistIO):
             path_or_buf = csv_kwargs["path_or_buf"]
             is_binary = "b" in csv_kwargs["mode"]
             csv_kwargs["path_or_buf"] = io.BytesIO() if is_binary else io.StringIO()
-            df.to_csv(**csv_kwargs)
+            pandas_to_csv(df, **csv_kwargs)
             content = csv_kwargs["path_or_buf"].getvalue()
             csv_kwargs["path_or_buf"].close()
 
@@ -310,6 +311,8 @@ class PandasOnUnidistIO(UnidistIO):
             df.to_parquet(**kwargs)
             return pandas.DataFrame()
 
+        # Ensure that the metadata is synchronized
+        qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
             partitions=qc._modin_frame._partitions,

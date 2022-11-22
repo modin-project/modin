@@ -474,29 +474,30 @@ class ExperimentalBaseFactory(BaseFactory):
     @classmethod
     @_inherit_docstrings(BaseFactory._read_sql)
     def _read_sql(cls, **kwargs):
-        if Engine.get() not in ("Ray", "Unidist"):
+        supported_engines = ("Ray", "Unidist")
+        if Engine.get() not in supported_engines:
             if "partition_column" in kwargs:
                 if kwargs["partition_column"] is not None:
                     warnings.warn(
-                        "Distributed read_sql() was only implemented for Ray and Unidist engines."
+                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
                     )
                 del kwargs["partition_column"]
             if "lower_bound" in kwargs:
                 if kwargs["lower_bound"] is not None:
                     warnings.warn(
-                        "Distributed read_sql() was only implemented for Ray and Unidist engines."
+                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
                     )
                 del kwargs["lower_bound"]
             if "upper_bound" in kwargs:
                 if kwargs["upper_bound"] is not None:
                     warnings.warn(
-                        "Distributed read_sql() was only implemented for Ray and Unidist engines."
+                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
                     )
                 del kwargs["upper_bound"]
             if "max_sessions" in kwargs:
                 if kwargs["max_sessions"] is not None:
                     warnings.warn(
-                        "Distributed read_sql() was only implemented for Ray and Unidist engines."
+                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
                     )
                 del kwargs["max_sessions"]
         return cls.io_cls.read_sql(**kwargs)

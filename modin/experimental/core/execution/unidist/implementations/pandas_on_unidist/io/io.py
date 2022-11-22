@@ -21,6 +21,7 @@ Query Compiler API, even if it is only extending the API.
 import numpy as np
 import pandas
 import warnings
+import unidist
 
 from modin.core.storage_formats.pandas.parsers import (
     _split_result_for_readers,
@@ -45,8 +46,6 @@ from modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning
 )
 from modin.core.execution.unidist.common import UnidistWrapper
 from modin.config import NPartitions
-
-import unidist
 
 
 class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):

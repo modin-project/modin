@@ -16,13 +16,12 @@
 import inspect
 import threading
 
-import unidist
-
 from modin.config import ProgressBar
 from modin.core.execution.unidist.generic.partitioning import (
     GenericUnidistDataframePartitionManager,
 )
 from modin.core.execution.unidist.common import UnidistWrapper
+from modin.core.execution.unidist.common.utils import wait
 from .virtual_partition import (
     PandasOnUnidistDataframeColumnPartition,
     PandasOnUnidistDataframeRowPartition,
@@ -131,7 +130,7 @@ class PandasOnUnidistDataframePartitionManager(GenericUnidistDataframePartitionM
         blocks = [
             block for partition in partitions for block in partition.list_of_blocks
         ]
-        unidist.wait(blocks, num_returns=len(blocks))
+        wait(blocks)
 
 
 def _make_wrapped_method(name: str):
