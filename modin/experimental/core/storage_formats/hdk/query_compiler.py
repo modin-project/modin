@@ -556,7 +556,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def drop(self, index=None, columns=None):
-        assert index is None, "Only column drop is supported"
+        if index is not None:
+            raise NotImplementedError("Row drop")
         return self.__constructor__(
             self._modin_frame.take_2d_labels_or_positional(
                 row_labels=index, col_labels=self.columns.drop(columns)
