@@ -1194,9 +1194,21 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
 
 @_inherit_docstrings(pandas.core.groupby.SeriesGroupBy)
 class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
-
     def __init__(
-            self,
+        self,
+        df,
+        by,
+        axis,
+        level,
+        as_index,
+        sort,
+        group_keys,
+        squeeze,
+        idx_name,
+        drop,
+        **kwargs,
+    ):
+        super(SeriesGroupBy, self).__init__(
             df,
             by,
             axis,
@@ -1208,8 +1220,7 @@ class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
             idx_name,
             drop,
             **kwargs,
-    ):
-        super(SeriesGroupBy, self).__init__(df, by, axis, level, as_index, sort, group_keys, squeeze, idx_name, drop, **kwargs)
+        )
         self._squeeze = True
 
     @property
