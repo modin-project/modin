@@ -2147,7 +2147,7 @@ class TestArrowExecution:
 
     def test_drop_row(self):
         def drop_row(df, **kwargs):
-            return df.drop(1)
+            return df.drop(labels=1)
 
         run_and_compare(
             drop_row,
