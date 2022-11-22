@@ -89,10 +89,6 @@ def test_from_sql_defaults(make_sql_connection):  # noqa: F811
 
 @pytest.mark.usefixtures("TestReadGlobCSVFixture")
 @pytest.mark.skipif(
-    condition=Engine.get() == "Unidist",
-    reason="Modin on unidist with MPI backend hangs.",
-)
-@pytest.mark.skipif(
     Engine.get() != "Ray", reason="Currently only support Ray engine for glob paths."
 )
 class TestCsvGlob:
