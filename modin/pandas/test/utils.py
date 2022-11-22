@@ -489,7 +489,7 @@ def df_categories_equals(df1, df2):
         if isinstance(df1, pandas.CategoricalDtype):
             return categories_equals(df1, df2)
         elif isinstance(getattr(df1, "dtype"), pandas.CategoricalDtype) and isinstance(
-            getattr(df1, "dtype"), pandas.CategoricalDtype
+            getattr(df2, "dtype"), pandas.CategoricalDtype
         ):
             return categories_equals(df1.dtype, df2.dtype)
         else:
