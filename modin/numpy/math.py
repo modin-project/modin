@@ -26,7 +26,7 @@ def subtract(x1, x2, out=None, where=True, casting='same_kind', order='K', dtype
     return numpy.subtract(x1, x2, out=out, where=where, casting=casting, order=order, dtype=dtype, subok=subok)
 
 
-def sum(arr, axis):
+def sum(arr, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None):
     if hasattr(arr, "_sum"):
         return arr._sum(axis)
     else:

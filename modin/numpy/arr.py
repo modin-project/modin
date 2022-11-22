@@ -28,7 +28,11 @@ class array(object):
     def _sum(self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None):
         result = self._query_compiler.sum(axis=axis)
         if dtype is not None:
-            result.astype(dtype)
+            result = result.astype(dtype)
+        if out is not None:
+            out._query_compiler = result
+            return
+        return array(query_compiler=result)
 
     def __repr__(self):
         return repr(self._query_compiler.to_numpy())
