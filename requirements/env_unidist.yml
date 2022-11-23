@@ -5,8 +5,6 @@ dependencies:
   - pandas==1.5.1
   - numpy>=1.18.5
   - pyarrow>=4.0.1
-  # we install unidist-mpi as Modin only supports unidist on MPI backend for now
-  - unidist-mpi>=0.2.1
   - fsspec
   - xarray
   - Jinja2
@@ -29,7 +27,7 @@ dependencies:
   - pytest-xdist>=2.1.0
   - packaging
   - coverage
-  - pygithub==1.53
+  - pygithub
   - rpyc==4.1.5
   - cloudpickle
   - boto3
@@ -39,7 +37,10 @@ dependencies:
   - mypy
   - pandas-stubs
   - fastparquet
+  # for release script
+  - pygit2
   - pip:
+      - unidist[mpi]>=0.2.1
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - tqdm
