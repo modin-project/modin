@@ -108,9 +108,9 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         list
             The objects wrapped by `partitions`.
         """
-        for idx in range(len(partitions)):
-            if hasattr(partitions[idx], "force_materialization"):
-                partitions[idx] = partitions[idx].force_materialization()
+        for idx, part in enumerate(partitions):
+            if hasattr(part, "force_materialization"):
+                partitions[idx] = part.force_materialization()
         assert all(
             [len(partition.list_of_blocks) == 1 for partition in partitions]
         ), "Implementation assumes that each partition contains a signle block."
