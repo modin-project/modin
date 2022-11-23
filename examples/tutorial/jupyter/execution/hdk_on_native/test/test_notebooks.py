@@ -13,6 +13,7 @@
 
 import os
 import sys
+import pytest
 
 import nbformat
 
@@ -44,6 +45,9 @@ def test_exercise_1():
 
 
 # this notebook works "as is"
+# GH #5252: Access to the modin-test bucket has changed, so we cannot currently run this test.
+# We will need to come back and unskip this test once the access control issue is resolved.
+@pytest.mark.skip(reason="Bucket cannot currently be accessed.")
 def test_exercise_2():
     modified_notebook_path = os.path.join(local_notebooks_dir, "exercise_2_test.ipynb")
     nb = nbformat.read(
