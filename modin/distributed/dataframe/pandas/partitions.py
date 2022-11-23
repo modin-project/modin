@@ -23,18 +23,30 @@ from modin.pandas.dataframe import DataFrame, Series
 if TYPE_CHECKING:
     from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframePartition,
+        PandasOnRayDataframeColumnPartition,
+        PandasOnRayDataframeRowPartition,
     )
     from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframePartition,
+        PandasOnDaskDataframeColumnPartition,
+        PandasOnDaskDataframeRowPartition,
     )
-    from modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning.partition import (
+    from modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning import (
         PandasOnUnidistDataframePartition,
+        PandasOnUnidistDataframeColumnPartition,
+        PandasOnUnidistDataframeRowPartition,
     )
 
     PartitionUnionType = Union[
         PandasOnRayDataframePartition,
         PandasOnDaskDataframePartition,
         PandasOnUnidistDataframePartition,
+        PandasOnRayDataframeColumnPartition,
+        PandasOnRayDataframeRowPartition,
+        PandasOnDaskDataframeColumnPartition,
+        PandasOnDaskDataframeRowPartition,
+        PandasOnUnidistDataframeColumnPartition,
+        PandasOnUnidistDataframeRowPartition,
     ]
 else:
     from typing import Any
@@ -85,7 +97,10 @@ def unwrap_partitions(
             [p.drain_call_queue() for p in modin_frame._partitions.flatten()]
 
             def get_block(partition: PartitionUnionType) -> np.ndarray:
-                blocks = partition.list_of_blocks
+                if hasattr(partition, "axis"):
+                    blocks = partition.force_materialization()
+                else:
+                    blocks = partition.list_of_blocks
                 assert (
                     len(blocks) == 1
                 ), f"Implementation assumes that partition contains a single block, but {len(blocks)} recieved."
@@ -109,6 +124,12 @@ def unwrap_partitions(
             "PandasOnRayDataframePartition",
             "PandasOnDaskDataframePartition",
             "PandasOnUnidistDataframePartition",
+            "PandasOnRayDataframeColumnPartition",
+            "PandasOnRayDataframeRowPartition",
+            "PandasOnDaskDataframeColumnPartition",
+            "PandasOnDaskDataframeRowPartition",
+            "PandasOnUnidistDataframeColumnPartition",
+            "PandasOnUnidistDataframeRowPartition",
         ):
             return _unwrap_partitions()
         raise ValueError(
