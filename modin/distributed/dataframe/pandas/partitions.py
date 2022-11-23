@@ -24,12 +24,25 @@ if TYPE_CHECKING:
     from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframePartition,
     )
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.virtual_partition import (
+        PandasOnRayDataframeColumnPartition,
+        PandasOnRayDataframeRowPartition,
+    )
     from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition import (
         PandasOnDaskDataframePartition,
     )
+    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.virtual_partition import (
+        PandasOnDaskDataframeColumnPartition,
+        PandasOnDaskDataframeRowPartition,
+    )
 
     PartitionUnionType = Union[
-        PandasOnRayDataframePartition, PandasOnDaskDataframePartition
+        PandasOnRayDataframePartition,
+        PandasOnDaskDataframePartition,
+        PandasOnRayDataframeColumnPartition,
+        PandasOnRayDataframeRowPartition,
+        PandasOnDaskDataframeColumnPartition,
+        PandasOnDaskDataframeRowPartition,
     ]
 else:
     from typing import Any
@@ -78,6 +91,8 @@ def unwrap_partitions(
             [p.drain_call_queue() for p in modin_frame._partitions.flatten()]
 
             def get_block(partition: PartitionUnionType) -> np.ndarray:
+                if hasattr(partition, "axis"):
+                    blocks = partition.force_materialization()
                 blocks = partition.list_of_blocks
                 assert (
                     len(blocks) == 1
@@ -101,6 +116,10 @@ def unwrap_partitions(
         if actual_engine in (
             "PandasOnRayDataframePartition",
             "PandasOnDaskDataframePartition",
+            "PandasOnRayDataframeColumnPartition",
+            "PandasOnRayDataframeRowPartition",
+            "PandasOnDaskDataframeColumnPartition",
+            "PandasOnDaskDataframeRowPartition",
         ):
             return _unwrap_partitions()
         raise ValueError(
