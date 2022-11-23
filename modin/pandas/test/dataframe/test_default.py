@@ -406,6 +406,24 @@ def test_info(verbose, max_cols, memory_usage, null_counts):
         assert modin_info[1:] == pandas_info[1:]
 
 
+def test_info_default_cols():
+    # Covers https://github.com/modin-project/modin/issues/5137
+    with io.StringIO() as first, io.StringIO() as second:
+        data = np.random.randint(0, 100, (10, 10))
+        eval_general(
+            pd.DataFrame(data),
+            pandas.DataFrame(data),
+            operation=lambda df, **kwargs: df.info(**kwargs),
+            buf=lambda df: second if isinstance(df, pandas.DataFrame) else first,
+        )
+        modin_info = first.getvalue().splitlines()
+        pandas_info = second.getvalue().splitlines()
+
+        assert modin_info[0] == str(pd.DataFrame)
+        assert pandas_info[0] == str(pandas.DataFrame)
+        assert modin_info[1:] == pandas_info[1:]
+
+
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
 @pytest.mark.parametrize("numeric_only", bool_arg_values, ids=bool_arg_keys)
