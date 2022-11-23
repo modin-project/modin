@@ -126,17 +126,3 @@ class SignalActor:  # pragma: no cover
         event_idx : int
         """
         await self.events[event_idx].wait()
-
-    def is_set(self, event_idx: int) -> bool:
-        """
-        Check that event with `event_idx` had occured or not.
-
-        Parameters
-        ----------
-        event_idx : int
-
-        Returns
-        -------
-        bool
-        """
-        return self.events[event_idx].is_set()

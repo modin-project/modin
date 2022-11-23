@@ -5,6 +5,8 @@ dependencies:
   - pandas==1.5.1
   - numpy>=1.18.5
   - pyarrow>=4.0.1
+  # we install unidist-mpi as Modin only supports unidist on MPI backend for now
+  - unidist-mpi>=0.2.1
   - fsspec
   - xarray
   - Jinja2
@@ -49,4 +51,3 @@ dependencies:
       - flake8-print
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
       - numpydoc==1.1.0
-      - git+https://github.com/modin-project/unidist#egg=unidist[mpi]

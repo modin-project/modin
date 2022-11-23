@@ -86,7 +86,7 @@ def progress_bar_wrapper(f):
 class PandasOnUnidistDataframePartitionManager(GenericUnidistDataframePartitionManager):
     """The class implements the interface in `PandasDataframePartitionManager`."""
 
-    # This object uses UnidistRemotePartition objects as the underlying store.
+    # This object uses PandasOnUnidistDataframePartition objects as the underlying store.
     _partition_class = PandasOnUnidistDataframePartition
     _column_partitions_class = PandasOnUnidistDataframeColumnPartition
     _row_partition_class = PandasOnUnidistDataframeRowPartition
