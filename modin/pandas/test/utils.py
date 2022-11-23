@@ -479,6 +479,17 @@ COMP_TO_EXT = {"gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
 time_parsing_csv_path = "modin/pandas/test/data/test_time_parsing.csv"
 
 
+class CustomIntegerForAddition:
+    def __init__(self, value: int):
+        self.value = value
+
+    def __add__(self, other):
+        return self.value + other
+
+    def __radd__(self, other):
+        return other + self.value
+
+
 def categories_equals(left, right):
     assert (left.ordered and right.ordered) or (not left.ordered and not right.ordered)
     assert_extension_array_equal(left, right)
