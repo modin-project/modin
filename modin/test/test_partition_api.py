@@ -83,6 +83,24 @@ def test_unwrap_partitions(axis, reverse_index, reverse_columns):
                     get_func(expected_partitions[row_idx][col_idx].list_of_blocks[0]),
                     get_func(actual_partitions[row_idx][col_idx]),
                 )
+        df = get_df(pd, data)
+        virtual_partitioned_df = pd.concat([df] * 10)
+        actual_partitions = np.array(
+            unwrap_partitions(virtual_partitioned_df, axis=axis)
+        )
+        assert expected_partitions.shape == actual_partitions.shape
+        expected_df = pd.concat([pd.DataFrame(get_df(pandas, data))] * 10)
+        expected_partitions = expected_df._query_compiler._modin_frame._partitions
+        for row_idx in range(expected_partitions.shape[0]):
+            for col_idx in range(expected_partitions.shape[1]):
+                df_equals(
+                    get_func(
+                        expected_partitions[row_idx][col_idx]
+                        .force_materialization()
+                        .list_of_blocks[0]
+                    ),
+                    get_func(actual_partitions[row_idx][col_idx]),
+                )
     else:
         expected_axis_partitions = (
             expected_df._query_compiler._modin_frame._partition_mgr_cls.axis_partition(
