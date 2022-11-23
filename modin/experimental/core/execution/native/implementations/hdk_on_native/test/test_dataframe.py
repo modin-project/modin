@@ -2388,5 +2388,16 @@ class TestDuplicateColumns:
         )
 
 
+class TestFromArrow:
+    def test_dict(self):
+        indices = pyarrow.array([0, 1, 0, 1, 2, 0, None, 2])
+        dictionary = pyarrow.array(["first", "second", "third"])
+        dict_array = pyarrow.DictionaryArray.from_arrays(indices, dictionary)
+        at = pyarrow.table({"col": dict_array})
+        pdf = at.to_pandas()
+        mdf = from_arrow(at)
+        df_equals(mdf, pdf)
+
+
 if __name__ == "__main__":
     pytest.main(["-v", __file__])
