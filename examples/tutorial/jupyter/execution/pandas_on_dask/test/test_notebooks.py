@@ -13,6 +13,7 @@
 
 import os
 import sys
+import pytest
 
 import nbformat
 
@@ -46,6 +47,9 @@ def test_exercise_1():
 
 
 # this notebook works "as is" but for testing purposes we can use smaller dataset
+# GH #5252: Access to the modin-test bucket has changed, so we cannot currently run this test.
+# We will need to come back and unskip this test once the access control issue is resolved.
+@pytest.mark.skip(reason="Bucket cannot currently be accessed.")
 def test_exercise_2():
     modified_notebook_path = os.path.join(local_notebooks_dir, "exercise_2_test.ipynb")
     nb = nbformat.read(
@@ -99,6 +103,9 @@ modin_mad_custom = df.sq_mad_custom()
 
 
 # this notebook works "as is" but for testing purposes we can use smaller dataset
+# GH #5252: Access to the modin-test bucket has changed, so we cannot currently run this test.
+# We will need to come back and unskip this test once the access control issue is resolved.
+@pytest.mark.skip(reason="Bucket cannot currently be accessed.")
 def test_exercise_4():
     modified_notebook_path = os.path.join(local_notebooks_dir, "exercise_4_test.ipynb")
     nb = nbformat.read(
