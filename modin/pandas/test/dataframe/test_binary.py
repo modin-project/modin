@@ -356,15 +356,20 @@ def test_add_custom_class():
     )
 
 
+def test_non_commutative_multiply_pandas():
+    # The non commutative integer class implementation is tricky. Check that
+    # multiplying such an integer with a pandas dataframe is really not
+    # commutative.
+    pandas_df = pd.DataFrame([[1]], dtype=int)
+    integer = NonCommutativeMultiplyInteger(2)
+    assert not (integer * pandas_df).equals(pandas_df * integer)
+
+
 def test_non_commutative_multiply():
     # This test checks that mul and rmul do different things when
     # multiplication is not commutative, e.g. for adding a string to a string.
     # For context see https://github.com/modin-project/modin/issues/5238
     modin_df, pandas_df = create_test_dfs([1], dtype=int)
     integer = NonCommutativeMultiplyInteger(2)
-    # It's tricky to get the non commutative integer class implementation
-    # right, so before we do the actual test, check that the operation
-    # we care about is really not commmutative in pandas.
-    assert not (integer * pandas_df).equals(pandas_df * integer)
     eval_general(modin_df, pandas_df, lambda s: integer * s)
     eval_general(modin_df, pandas_df, lambda s: s * integer)

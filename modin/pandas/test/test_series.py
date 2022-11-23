@@ -4267,16 +4267,21 @@ def test_non_commutative_add_string_to_series(data):
     eval_general(*create_test_series(data), lambda s: s + "string")
 
 
+def test_non_commutative_multiply_pandas():
+    # The non commutative integer class implementation is tricky. Check that
+    # multiplying such an integer with a pandas series is really not
+    # commutative.
+    pandas_series = pd.DataFrame([[1]], dtype=int)
+    integer = NonCommutativeMultiplyInteger(2)
+    assert not (integer * pandas_series).equals(pandas_series * integer)
+
+
 def test_non_commutative_multiply():
     # This test checks that mul and rmul do different things when
     # multiplication is not commutative, e.g. for adding a string to a string.
     # For context see https://github.com/modin-project/modin/issues/5238
     modin_series, pandas_series = create_test_series(1, dtype=int)
     integer = NonCommutativeMultiplyInteger(2)
-    # It's tricky to get the non commutative integer class implementation
-    # right, so before we do the actual test, check that the operation
-    # we care about is really not commmutative in pandas.
-    assert not (integer * pandas_series).equals(pandas_series * integer)
     eval_general(modin_series, pandas_series, lambda s: integer * s)
     eval_general(modin_series, pandas_series, lambda s: s * integer)
 
