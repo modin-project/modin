@@ -93,7 +93,8 @@ def unwrap_partitions(
             def get_block(partition: PartitionUnionType) -> np.ndarray:
                 if hasattr(partition, "axis"):
                     blocks = partition.force_materialization()
-                blocks = partition.list_of_blocks
+                else:
+                    blocks = partition.list_of_blocks
                 assert (
                     len(blocks) == 1
                 ), f"Implementation assumes that partition contains a single block, but {len(blocks)} recieved."
