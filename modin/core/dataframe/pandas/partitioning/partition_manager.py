@@ -648,11 +648,11 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 retrieved_objects,
             )
         ):
-            old_shape = partitions.shape
+            height, width = partitions.shape
             # restore 2d array
             retrieved_objects = [
-                [retrieved_objects[i * old_shape[1] + j] for j in range(old_shape[1])]
-                for i in range(old_shape[0])
+                [retrieved_objects[i * width + j] for j in range(width)]
+                for i in range(height)
             ]
         else:
             retrieved_objects = [
