@@ -36,16 +36,9 @@ from .utils import (
     translator_groupby_ngroups,
     get_benchmark_shapes,
     trigger_import,
-    
 )
 
-from modin.pandas import (
-    Series,
-    Index,
-    DataFrame,
-    MultiIndex
-    
-)
+from modin.pandas import Series, Index, DataFrame, MultiIndex
 
 from pandas import (
     date_range,
@@ -833,9 +826,6 @@ class TimeProperties:
         return self.df.index
 
 
-from .utils import setup  # noqa: E402, F401
-
-
 class NumericSeriesIndexing:
 
     params = [
@@ -936,6 +926,7 @@ class Reindex:
         # Copy to avoid MultiIndex._values getting cached
         execute(self.s2_subset.reindex(self.s2.index.copy()))
 
+
 class ReindexMethod:
 
     params = [["pad", "backfill"], [date_range, period_range]]
@@ -948,6 +939,7 @@ class ReindexMethod:
 
     def time_reindex_method(self, method, constructor):
         execute(self.ts.reindex(self.idx, method=method))
+
 
 class Fillna:
 
@@ -966,7 +958,8 @@ class Fillna:
 
     def time_float_32(self, method):
         execute(self.ts_float32.fillna(method=method))
-        
+
+
 class LevelAlign:
     def setup(self):
         self.index = MultiIndex(
@@ -985,6 +978,7 @@ class LevelAlign:
 
     def time_reindex_level(self):
         execute(self.df_level.reindex(self.index, level=1))
+
 
 class DropDuplicates:
 
@@ -1029,6 +1023,7 @@ class DropDuplicates:
     def time_frame_drop_dups_bool(self, inplace):
         execute(self.df_bool.drop_duplicates(inplace=inplace))
 
+
 class Align:
     # blog "pandas escaped the zoo"
     def setup(self):
@@ -1043,3 +1038,6 @@ class Align:
 
     def time_align_series_irregular_string(self):
         execute(self.x + self.y)
+
+
+from .utils import setup  # noqa: E402, F401
