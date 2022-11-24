@@ -646,7 +646,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             isinstance(obj, (pandas.DataFrame, pandas.Series))
             for obj in retrieved_objects
         ):
-            retrieved_objects = retrieved_objects.reshape(partitions.shape)
+            retrieved_objects = np.reshape(retrieved_objects, partitions.shape)
         else:
             retrieved_objects = [
                 [obj.to_pandas() for obj in part] for part in partitions
