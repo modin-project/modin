@@ -826,16 +826,17 @@ class TimeProperties:
         return self.df.index
 
 
-class NumericSeriesIndexing:
+class TimeIndexingNumericSeries:
 
+    param_names = ["shape", "dtype", "index_structure"]
     params = [
+        get_benchmark_shapes("TimeIndexingNumericSeries"),
         (np.int64, np.uint64, np.float64),
         ("unique_monotonic_inc", "nonunique_monotonic_inc"),
     ]
-    param_names = ["dtype", "index_structure"]
 
-    def setup(self, dtype, index_structure):
-        N = 10**6
+    def setup(self, shape, dtype, index_structure):
+        N = shape[0]
         indices = {
             "unique_monotonic_inc": Index(range(N), dtype=dtype),
             "nonunique_monotonic_inc": Index(
@@ -843,60 +844,64 @@ class NumericSeriesIndexing:
             ),
         }
         self.data = Series(np.random.rand(N), index=indices[index_structure])
-        self.array = np.arange(10000)
+        self.array = np.arange(800)
         self.array_list = self.array.tolist()
 
-    def time_getitem_scalar(self, index, index_structure):
-        execute(self.data[800000])
+    def time_getitem_scalar(self, shape, index, index_structure):
+        self.data[800]
 
-    def time_getitem_slice(self, index, index_structure):
-        execute(self.data[:800000])
+    def time_getitem_slice(self, shape, index, index_structure):
+        execute(self.data[:800])
 
-    def time_getitem_list_like(self, index, index_structure):
-        execute(self.data[[800000]])
+    def time_getitem_list_like(self, shape, index, index_structure):
+        execute(self.data[[800]])
 
-    def time_getitem_array(self, index, index_structure):
+    def time_getitem_array(self, shape, index, index_structure):
         execute(self.data[self.array])
 
-    def time_getitem_lists(self, index, index_structure):
+    def time_getitem_lists(self, shape, index, index_structure):
         execute(self.data[self.array_list])
 
-    def time_iloc_array(self, index, index_structure):
+    def time_iloc_array(self, shape, index, index_structure):
         execute(self.data.iloc[self.array])
 
-    def time_iloc_list_like(self, index, index_structure):
-        execute(self.data.iloc[[800000]])
+    def time_iloc_list_like(self, shape, index, index_structure):
+        execute(self.data.iloc[[800]])
 
-    def time_iloc_scalar(self, index, index_structure):
-        execute(self.data.iloc[800000])
+    def time_iloc_scalar(self, shape, index, index_structure):
+        self.data.iloc[800]
 
-    def time_iloc_slice(self, index, index_structure):
-        execute(self.data.iloc[:800000])
+    def time_iloc_slice(self, shape, index, index_structure):
+        execute(self.data.iloc[:800])
 
-    def time_loc_array(self, index, index_structure):
+    def time_loc_array(self, shape, index, index_structure):
         execute(self.data.loc[self.array])
 
-    def time_loc_list_like(self, index, index_structure):
-        execute(self.data.loc[[800000]])
+    def time_loc_list_like(self, shape, index, index_structure):
+        execute(self.data.loc[[800]])
 
-    def time_loc_scalar(self, index, index_structure):
-        execute(self.data.loc[800000])
+    def time_loc_scalar(self, shape, index, index_structure):
+        self.data.loc[800]
 
-    def time_loc_slice(self, index, index_structure):
-        execute(self.data.loc[:800000])
+    def time_loc_slice(self, shape, index, index_structure):
+        execute(self.data.loc[:800])
 
 
-class Reindex:
-    def setup(self):
-        rng = date_range(start="1/1/1970", periods=10000, freq="1min")
-        self.df = DataFrame(np.random.rand(10000, 10), index=rng, columns=range(10))
+class TimeReindex:
+    param_names = ["shape"]
+    params = [get_benchmark_shapes("TimeReindex")]
+
+    def setup(self, shape):
+        Rows , Cols = shape
+        rng = date_range(start="1/1/1970", periods=Rows, freq="1min")
+        self.df = DataFrame(np.random.rand(Rows, Cols), index=rng, columns=range(Cols))
         self.df["foo"] = "bar"
         self.rng_subset = Index(rng[::2])
         self.df2 = DataFrame(
-            index=range(10000), data=np.random.rand(10000, 30), columns=range(30)
+            index=range(Rows), data=np.random.rand(Rows, Cols), columns=range(Cols)
         )
-        N = 5000
-        K = 200
+        N = Rows
+        K = Cols
         level1 = tm.makeStringIndex(N).values.repeat(K)
         level2 = np.tile(tm.makeStringIndex(K).values, N)
         index = MultiIndex.from_arrays([level1, level2])
@@ -908,136 +913,57 @@ class Reindex:
         self.s2 = Series(np.random.randn(len(mi)), index=mi)
         self.s2_subset = self.s2[::2].copy()
 
-    def time_reindex_dates(self):
+    def time_reindex_dates(self, shape):
         execute(self.df.reindex(self.rng_subset))
 
-    def time_reindex_columns(self):
+    def time_reindex_columns(self, shape):
         execute(self.df2.reindex(columns=self.df.columns[1:5]))
 
-    def time_reindex_multiindex_with_cache(self):
+    def time_reindex_multiindex_with_cache(self, shape):
         # MultiIndex._values gets cached
         execute(self.s.reindex(self.s_subset.index))
 
-    def time_reindex_multiindex_no_cache(self):
+    def time_reindex_multiindex_no_cache(self, shape):
         # Copy to avoid MultiIndex._values getting cached
         execute(self.s.reindex(self.s_subset_no_cache.index.copy()))
 
-    def time_reindex_multiindex_no_cache_dates(self):
+    def time_reindex_multiindex_no_cache_dates(self, shape):
         # Copy to avoid MultiIndex._values getting cached
         execute(self.s2_subset.reindex(self.s2.index.copy()))
 
 
-class ReindexMethod:
+class TimeReindexMethod:
 
-    params = [["pad", "backfill"], [date_range, period_range]]
-    param_names = ["method", "constructor"]
+    params = [
+        get_benchmark_shapes("TimeReindexMethod"),
+        ["pad", "backfill"],
+        [date_range, period_range],
+    ]
+    param_names = ["shape", "method", "constructor"]
 
-    def setup(self, method, constructor):
-        N = 100000
+    def setup(self, shape, method, constructor):
+        N = shape[0]
         self.idx = constructor("1/1/2000", periods=N, freq="1min")
         self.ts = Series(np.random.randn(N), index=self.idx)[::2]
 
-    def time_reindex_method(self, method, constructor):
+    def time_reindex_method(self, shape, method, constructor):
         execute(self.ts.reindex(self.idx, method=method))
 
 
-class Fillna:
+class TimeFillnaMethodSeries:
 
-    params = ["pad", "backfill"]
-    param_names = ["method"]
+    params = [get_benchmark_shapes("TimeReindexMethod"), ["pad", "backfill"]]
+    param_names = ["shape", "method"]
 
-    def setup(self, method):
-        N = 100000
+    def setup(self, shape, method):
+        N = shape[0]
         self.idx = date_range("1/1/2000", periods=N, freq="1min")
         ts = Series(np.random.randn(N), index=self.idx)[::2]
         self.ts_reindexed = ts.reindex(self.idx)
         self.ts_float32 = self.ts_reindexed.astype("float32")
 
-    def time_reindexed(self, method):
+    def time_reindexed(self, shape, method):
         execute(self.ts_reindexed.fillna(method=method))
 
-    def time_float_32(self, method):
+    def time_float_32(self, shape, method):
         execute(self.ts_float32.fillna(method=method))
-
-
-class LevelAlign:
-    def setup(self):
-        self.index = MultiIndex(
-            levels=[np.arange(10), np.arange(100), np.arange(100)],
-            codes=[
-                np.arange(10).repeat(10000),
-                np.tile(np.arange(100).repeat(100), 10),
-                np.tile(np.tile(np.arange(100), 100), 10),
-            ],
-        )
-        self.df = DataFrame(np.random.randn(len(self.index), 4), index=self.index)
-        self.df_level = DataFrame(np.random.randn(100, 4), index=self.index.levels[1])
-
-    def time_align_level(self):
-        execute(self.df.align(self.df_level, level=1, copy=False))
-
-    def time_reindex_level(self):
-        execute(self.df_level.reindex(self.index, level=1))
-
-
-class DropDuplicates:
-
-    params = [True, False]
-    param_names = ["inplace"]
-
-    def setup(self, inplace):
-        N = 10000
-        K = 10
-        key1 = tm.makeStringIndex(N).values.repeat(K)
-        key2 = tm.makeStringIndex(N).values.repeat(K)
-        self.df = DataFrame(
-            {"key1": key1, "key2": key2, "value": np.random.randn(N * K)}
-        )
-        self.df_nan = self.df.copy()
-        self.df_nan.iloc[:10000, :] = np.nan
-
-        self.s = Series(np.random.randint(0, 1000, size=10000))
-        self.s_str = Series(np.tile(tm.makeStringIndex(1000).values, 10))
-
-        N = 1000000
-        K = 10000
-        key1 = np.random.randint(0, K, size=N)
-        self.df_int = DataFrame({"key1": key1})
-        self.df_bool = DataFrame(np.random.randint(0, 2, size=(K, 10), dtype=bool))
-
-    def time_frame_drop_dups(self, inplace):
-        execute(self.df.drop_duplicates(["key1", "key2"], inplace=inplace))
-
-    def time_frame_drop_dups_na(self, inplace):
-        execute(self.df_nan.drop_duplicates(["key1", "key2"], inplace=inplace))
-
-    def time_series_drop_dups_int(self, inplace):
-        execute(self.s.drop_duplicates(inplace=inplace))
-
-    def time_series_drop_dups_string(self, inplace):
-        execute(self.s_str.drop_duplicates(inplace=inplace))
-
-    def time_frame_drop_dups_int(self, inplace):
-        execute(self.df_int.drop_duplicates(inplace=inplace))
-
-    def time_frame_drop_dups_bool(self, inplace):
-        execute(self.df_bool.drop_duplicates(inplace=inplace))
-
-
-class Align:
-    # blog "pandas escaped the zoo"
-    def setup(self):
-        n = 50000
-        indices = tm.makeStringIndex(n)
-        subsample_size = 40000
-        self.x = Series(np.random.randn(n), indices)
-        self.y = Series(
-            np.random.randn(subsample_size),
-            index=np.random.choice(indices, subsample_size, replace=False),
-        )
-
-    def time_align_series_irregular_string(self):
-        execute(self.x + self.y)
-
-
-from .utils import setup  # noqa: E402, F401
