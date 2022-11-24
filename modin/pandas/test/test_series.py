@@ -626,7 +626,7 @@ def test_add_does_not_change_original_series_name():
     s2 = pd.Series(2, name=2)
     original_s1 = s1.copy(deep=True)
     original_s2 = s2.copy(deep=True)
-    s1 + s2
+    _ = s1 + s2
     df_equals(s1, original_s1)
     df_equals(s2, original_s2)
 
