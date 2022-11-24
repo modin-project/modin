@@ -646,10 +646,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             isinstance(obj, (pandas.DataFrame, pandas.Series))
             for obj in retrieved_objects
         ):
-            height, width = 0, 0
-            if len(partitions.shape) == 2:
-                # possible case when shape == (0,)
-                height, width = partitions.shape
+            height, width, *_ = tuple(partitions.shape) + (0,)
             # restore 2d array
             retrieved_objects = [
                 [retrieved_objects[i * width + j] for j in range(width)]
