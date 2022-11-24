@@ -620,6 +620,17 @@ def test_add(data):
     inter_df_math_helper(modin_series, pandas_series, "add")
 
 
+def test_add_does_not_change_original_series_name():
+    # See https://github.com/modin-project/modin/issues/5232
+    s1 = pd.Series(1, name=1)
+    s2 = pd.Series(2, name=2)
+    original_s1 = s1.copy(deep=True)
+    original_s2 = s2.copy(deep=True)
+    _ = s1 + s2
+    df_equals(s1, original_s1)
+    df_equals(s2, original_s2)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_add_prefix(data):
     modin_series, pandas_series = create_test_series(data)
