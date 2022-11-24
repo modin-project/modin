@@ -642,7 +642,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             A pandas DataFrame
         """
         retrieved_objects = cls.get_objects_from_partitions(partitions.flatten())
-        if all(isinstance(obj, (pandas.DataFrame, pandas.Series)) for obj in retrieved_objects):
+        if all(
+            isinstance(obj, (pandas.DataFrame, pandas.Series))
+            for obj in retrieved_objects
+        ):
             retrieved_objects = retrieved_objects.reshape(partitions.shape)
         else:
             retrieved_objects = [
