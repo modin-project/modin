@@ -643,15 +643,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         """
         retrieved_objects = cls.get_objects_from_partitions(partitions.flatten())
         if all(isinstance(obj, (pandas.DataFrame, pandas.Series)) for obj in retrieved_objects):
-            height, width = 0, 0
-            if len(partitions.shape) == 2:
-                # possible case when shape == (0,)
-                height, width = partitions.shape
-            # restore 2d array
-            retrieved_objects = [
-                [retrieved_objects[i * width + j] for j in range(width)]
-                for i in range(height)
-            ]
+            retrieved_objects = retrieved_objects.reshape(partitions.shape)
         else:
             retrieved_objects = [
                 [obj.to_pandas() for obj in part] for part in partitions
