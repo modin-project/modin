@@ -653,6 +653,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 for i in range(height)
             ]
         else:
+            # Partitions do not always contain pandas objects, for example, hdk uses pyarrow tables.
+            # This implementation comes from the fact that calling `partition.get`
+            # function is not always equivalent to `partition.to_pandas`.
             retrieved_objects = [
                 [obj.to_pandas() for obj in part] for part in partitions
             ]
