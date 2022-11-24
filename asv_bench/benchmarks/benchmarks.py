@@ -892,7 +892,7 @@ class TimeReindex:
     params = [get_benchmark_shapes("TimeReindex")]
 
     def setup(self, shape):
-        Rows , Cols = shape
+        Rows, Cols = shape
         rng = date_range(start="1/1/1970", periods=Rows, freq="1min")
         self.df = DataFrame(np.random.rand(Rows, Cols), index=rng, columns=range(Cols))
         self.df["foo"] = "bar"
