@@ -646,7 +646,15 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             isinstance(obj, (pandas.DataFrame, pandas.Series))
             for obj in retrieved_objects
         ):
-            retrieved_objects = np.reshape(retrieved_objects, partitions.shape)
+            height, width = 0, 0
+            if len(partitions.shape) == 2:
+                # possible case when shape == (0,)
+                height, width = partitions.shape
+            # restore 2d array
+            retrieved_objects = [
+                [retrieved_objects[i * width + j] for j in range(width)]
+                for i in range(height)
+            ]
         else:
             retrieved_objects = [
                 [obj.to_pandas() for obj in part] for part in partitions
