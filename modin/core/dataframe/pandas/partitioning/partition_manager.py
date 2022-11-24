@@ -642,12 +642,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             A pandas DataFrame
         """
         retrieved_objects = cls.get_objects_from_partitions(partitions.flatten())
-        if all(
-            map(
-                lambda obj: isinstance(obj, (pandas.DataFrame, pandas.Series)),
-                retrieved_objects,
-            )
-        ):
+        if all(isinstance(obj, (pandas.DataFrame, pandas.Series)) for obj in retrieved_objects):
             height, width = 0, 0
             if len(partitions.shape) == 2:
                 # possible case when shape == (0,)
