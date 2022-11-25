@@ -648,9 +648,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         ):
             height, width, *_ = tuple(partitions.shape) + (0,)
             # restore 2d array
+            objs = iter(retrieved_objects)
             retrieved_objects = [
-                [retrieved_objects[i * width + j] for j in range(width)]
-                for i in range(height)
+                [next(objs) for _ in range(width)] for __ in range(height)
             ]
         else:
             # Partitions do not always contain pandas objects, for example, hdk uses pyarrow tables.
