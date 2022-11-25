@@ -13,6 +13,9 @@
 
 """Implement utils for pandas component."""
 
+import re
+from typing import Hashable
+
 from pandas.util._decorators import doc
 import pandas
 import numpy as np
@@ -252,6 +255,24 @@ def check_both_not_none(option1, option2):
         True if both option1 and option2 are not None, False otherwise.
     """
     return not (option1 is None or option2 is None)
+
+
+def _get_group_names(regex: re.Pattern) -> list[Hashable]:
+    """
+    Get named groups from compiled regex.
+
+    Unnamed groups are numbered.
+
+    Parameters
+    ----------
+    regex : compiled regex
+
+    Returns
+    -------
+    list of column labels
+    """
+    names = {v: k for k, v in regex.groupindex.items()}
+    return [names.get(1 + i, i) for i in range(regex.groups)]
 
 
 def broadcast_item(

@@ -3972,20 +3972,15 @@ def test_str_match(data, pat, case, na):
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
-def test_str_extract(data, expand):
+@pytest.mark.parametrize("pat", [r"([ab])", r"([ab])(\d)"])
+def test_str_extract(data, expand, pat):
     modin_series, pandas_series = create_test_series(data)
 
-    if expand is False:
-        with warns_that_defaulting_to_pandas():
-            # We are only testing that this defaults to pandas, so we will just check for
-            # the warning
-            modin_series.str.extract(r"([ab])(\d)", expand=expand)
-    elif expand:
-        eval_general(
-            modin_series,
-            pandas_series,
-            lambda series: series.str.extract(r"([ab])(\d)", expand=expand),
-        )
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.extract(pat, expand=expand),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)

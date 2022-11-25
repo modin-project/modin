@@ -18,10 +18,12 @@ Accessors: `Series.cat`, `Series.str`, `Series.dt`
 """
 from typing import TYPE_CHECKING
 import sys
+import re
 import numpy as np
 import pandas
 from modin.logging import ClassLogger
 from modin.utils import _inherit_docstrings
+from .utils import _get_group_names
 from .series import Series
 
 if sys.version_info[0] == 3 and sys.version_info[1] >= 7:
@@ -296,14 +298,18 @@ class StringMethods(ClassLogger):
         )
 
     def extract(self, pat, flags=0, expand=True):
-        if expand:
+        regex = re.compile(pat, flags=flags)
+        # need an operator that can create more columns than before
+        if expand and regex.groups == 1:
             from .dataframe import DataFrame
 
-            return DataFrame(
+            df = DataFrame(
                 query_compiler=self._query_compiler.str_extract(
                     pat, flags=flags, expand=expand
                 )
             )
+            df.columns = _get_group_names(regex)
+            return df
         return self._default_to_pandas(
             pandas.Series.str.extract, pat, flags=flags, expand=expand
         )

@@ -127,7 +127,10 @@ def _str_map(func_name):
     def str_op_builder(df, *args, **kwargs):
         """Apply specified function against `str` accessor of the passed frame."""
         str_s = df.squeeze(axis=1).str
-        return getattr(pandas.Series.str, func_name)(str_s, *args, **kwargs).to_frame()
+        res = getattr(pandas.Series.str, func_name)(str_s, *args, **kwargs)
+        if hasattr(res, "to_frame"):
+            res = res.to_frame()
+        return res
 
     return str_op_builder
 
@@ -1431,6 +1434,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_pad = Map.register(_str_map("pad"), dtypes="copy")
     str_partition = Map.register(_str_map("partition"), dtypes="copy")
     str_repeat = Map.register(_str_map("repeat"), dtypes="copy")
+    str_extract = Map.register(_str_map("extract"), dtypes="copy")
     str_replace = Map.register(_str_map("replace"), dtypes="copy")
     str_rfind = Map.register(_str_map("rfind"), dtypes="copy")
     str_rindex = Map.register(_str_map("rindex"), dtypes="copy")
