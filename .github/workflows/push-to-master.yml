@@ -20,7 +20,9 @@ jobs:
           environment-file: requirements/requirements-no-engine.yml
           python-version: 3.8
           channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+          use-only-tar-bz2: false
       - name: install Ray nightly build
         run: pip install https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-2.0.0.dev0-cp38-cp38-manylinux2014_x86_64.whl
       - name: Conda environment
@@ -76,7 +78,9 @@ jobs:
           environment-file: environment-dev.yml
           python-version: 3.8
           channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+          use-only-tar-bz2: false
       - name: Conda environment
         run: |
           conda info
@@ -125,7 +129,9 @@ jobs:
           activate-environment: modin
           python-version: ${{matrix.python-version}}
           channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+          use-only-tar-bz2: false
       - run: pip install -r requirements-dev.txt
       # Use a ray master commit that includes the fix here: https://github.com/ray-project/ray/pull/16278
       # Can be changed after a Ray version > 1.4 is released.
