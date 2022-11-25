@@ -12,7 +12,7 @@ if sys.version_info < (3, 8):
     dask_deps.append("pickle5")
 
 ray_deps = [
-    "ray[default]>=1.4.0,<2.1.0",
+    "ray[default]>=1.4.0",
     "pyarrow>=4.0.1",
     "redis>=3.5.0,<4.0.0",
 ]
