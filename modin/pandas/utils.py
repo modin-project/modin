@@ -14,7 +14,7 @@
 """Implement utils for pandas component."""
 
 import re
-from typing import Hashable
+from typing import Hashable, List
 
 from pandas.util._decorators import doc
 import pandas
@@ -257,7 +257,7 @@ def check_both_not_none(option1, option2):
     return not (option1 is None or option2 is None)
 
 
-def _get_group_names(regex: re.Pattern) -> list[Hashable]:
+def _get_group_names(regex: re.Pattern) -> List[Hashable]:
     """
     Get named groups from compiled regex.
 
