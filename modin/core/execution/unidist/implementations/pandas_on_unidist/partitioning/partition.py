@@ -46,9 +46,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
     def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
         assert unidist.is_object_ref(data)
         self._data = data
-        if call_queue is None:
-            call_queue = []
-        self.call_queue = call_queue
+        self.call_queue = call_queue if call_queue is not None else []
         self._length_cache = length
         self._width_cache = width
         self._ip_cache = ip
@@ -114,10 +112,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
-            func, f_args, f_kwargs = call_queue[0]
-            result, length, width, ip = _apply_func.remote(
-                data, func, *f_args, **f_kwargs
-            )
+            result, length, width, ip = _apply_func.remote(data, func, *args, **kwargs)
             logger.debug(f"SUBMIT::_apply_func::{self._identity}")
         logger.debug(f"EXIT::Partition.apply::{self._identity}")
         return PandasOnUnidistDataframePartition(result, length, width, ip)
@@ -304,9 +299,10 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._length_cache, self._width_cache = _get_index_and_columns.remote(
-                    self._data
-                )
+                (
+                    self._length_cache,
+                    self._width_cache,
+                ) = _get_index_and_columns_size.remote(self._data)
         if unidist.is_object_ref(self._length_cache):
             self._length_cache = UnidistWrapper.materialize(self._length_cache)
         return self._length_cache
@@ -324,9 +320,10 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._length_cache, self._width_cache = _get_index_and_columns.remote(
-                    self._data
-                )
+                (
+                    self._length_cache,
+                    self._width_cache,
+                ) = _get_index_and_columns_size.remote(self._data)
         if unidist.is_object_ref(self._width_cache):
             self._width_cache = UnidistWrapper.materialize(self._width_cache)
         return self._width_cache
@@ -351,7 +348,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
 
 
 @unidist.remote(num_returns=2)
-def _get_index_and_columns(df):
+def _get_index_and_columns_size(df):
     """
     Get the number of rows and columns of a pandas DataFrame.
 
@@ -412,7 +409,7 @@ def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     return (
         result,
         len(result) if hasattr(result, "__len__") else 0,
-        len(result.columns) if hasattr(result, "columns") else 0,
+        len(getattr(result, "columns", ())),
         unidist.get_ip(),
     )
 

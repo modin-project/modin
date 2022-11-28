@@ -37,7 +37,7 @@ def _deploy_unidist_func(func, *args, **kwargs):  # pragma: no cover
 
     Returns
     -------
-    unidist.ObjectRef or list
+    unidist.ObjectRef or list[unidist.ObjectRef]
         Unidist identifier of the result being put to object store.
     """
     return func(*args, **kwargs)
@@ -96,12 +96,14 @@ class SignalActor:  # pragma: no cover
     """
     Help synchronize across tasks and actors on cluster.
 
-    For details see: https://docs.ray.io/en/latest/advanced.html?highlight=signalactor#multi-node-synchronization-using-an-actor
-
     Parameters
     ----------
     event_count : int
         Number of events required for synchronization.
+
+    Notes
+    -----
+    For details see: https://docs.ray.io/en/latest/advanced.html?highlight=signalactor#multi-node-synchronization-using-an-actor.
     """
 
     def __init__(self, event_count: int):

@@ -322,13 +322,6 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         -------
         list
             A list of `PandasOnUnidistDataframeVirtualPartition` objects.
-
-        Notes
-        -----
-        In older versions of Modin, ``args`` was passed internally as ``kwargs["args"]``, and
-        deserialization was handled in a special case in ``deploy_unidist_func``, making control flow
-        difficult to follow. All deserialization is still handled in ``deploy_unidist_func``, but
-        in a more direct fashion.
         """
         if not self.full_axis:
             # If this is not a full axis partition, it already contains a subset of

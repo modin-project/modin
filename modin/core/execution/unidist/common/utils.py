@@ -16,16 +16,14 @@
 import unidist
 import unidist.config as unidist_cfg
 
-from modin.config import (
-    NPartitions,
-)
+import modin.config as modin_cfg
 from modin.error_message import ErrorMessage
 from .engine_wrapper import UnidistWrapper
 
 
 def initialize_unidist():
     """
-    Initialize unidist based on ``unidist.config`` variables and internal defaults.
+    Initialize unidist based on ``modin.config`` variables and internal defaults.
     """
 
     if unidist_cfg.Backend.get() != "mpi":
@@ -34,6 +32,7 @@ def initialize_unidist():
         )
 
     if not unidist.is_initialized():
+        unidist_cfg.CpuCount.put(modin_cfg.CpuCount.get())
         # This string is intentionally formatted this way. We want it indented in
         # the warning message.
         ErrorMessage.not_initialized(
@@ -46,9 +45,8 @@ def initialize_unidist():
 
         unidist.init()
 
-    num_cpus = [v["CPU"] for v in unidist.cluster_resources().values()]
-    num_cpus = sum(num_cpus)
-    NPartitions._put(num_cpus)
+    num_cpus = sum(v["CPU"] for v in unidist.cluster_resources().values())
+    modin_cfg.NPartitions._put(num_cpus)
 
 
 def deserialize(obj):
@@ -63,7 +61,7 @@ def deserialize(obj):
     Returns
     -------
     obj
-        The deserialized object.
+        The deserialized object(s).
     """
     if unidist.is_object_ref(obj):
         return UnidistWrapper.materialize(obj)
@@ -77,11 +75,11 @@ def deserialize(obj):
                 ref_indices.append(i)
                 refs.append(unidist_ref)
         unidist_result = UnidistWrapper.materialize(refs)
-        new_lst = list(obj[:])
+        new_lst = list(obj)
         for i, deser_item in zip(ref_indices, unidist_result):
             new_lst[i] = deser_item
         # Check that all objects have been deserialized
-        assert not any([unidist.is_object_ref(o) for o in new_lst])
+        assert not any(unidist.is_object_ref(o) for o in new_lst)
         return new_lst
     elif isinstance(obj, dict) and any(
         unidist.is_object_ref(val) for val in obj.values()
@@ -95,9 +93,6 @@ def wait(obj_refs):
     """
     Wrap ``unidist.wait`` to handle duplicate object references.
 
-    ``ray.wait`` assumes a list of unique object references: see
-    https://github.com/modin-project/modin/issues/5045
-
     Parameters
     ----------
     obj_refs : List[unidist.ObjectRef]
@@ -109,6 +104,11 @@ def wait(obj_refs):
         A list of object refs that are ready, and a list of object refs remaining (this
         is the same as for ``ray.wait``). Unlike ``ray.wait``, the order of these refs is not
         guaranteed.
+
+    Notes
+    -----
+    ``ray.wait`` assumes a list of unique object references: see
+    https://github.com/modin-project/modin/issues/5045.
     """
     unique_refs = list(set(obj_refs))
     return unidist.wait(unique_refs, num_returns=len(unique_refs))

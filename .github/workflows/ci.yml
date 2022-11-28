@@ -517,8 +517,8 @@ jobs:
           path: asv_bench/benchmarks.log
         if: failure()
 
-  # This should be migrated to push-to-master.yml before merging!!!
   test-all-unidist:
+    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -547,7 +547,7 @@ jobs:
             ~/conda_pkgs_dir
             ~/.cache/pip
           key:
-            ${{ runner.os }}-conda-${{ hashFiles('requirements/env_hdk.yml') }}
+            ${{ runner.os }}-conda-${{ hashFiles('requirements/env_unidist.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
           miniforge-variant: Mambaforge
