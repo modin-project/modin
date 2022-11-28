@@ -964,6 +964,4 @@ class TimeFillnaMethodSeries:
         execute(self.ts_float32.fillna(method=method))
 
 
-
-
 from .utils import setup  # noqa: E402, F401
