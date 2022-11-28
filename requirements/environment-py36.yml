@@ -46,7 +46,7 @@ dependencies:
       - tqdm
       - ray[default]>=1.4.0
       # TODO: remove when resolving GH#4398
-      - redis>=3.5.0,<4.0.0
+      - redis>=3.5.0
       - black
       # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
       - flake8<5
