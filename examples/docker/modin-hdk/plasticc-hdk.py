@@ -230,7 +230,7 @@ def ml(train_final, test_final):
         evals=watchlist,
         feval=func_loss,
         early_stopping_rounds=10,
-        verbose_eval=1000,
+        verbose_eval=None,
     )
 
     yp = clf.predict(dvalid)
