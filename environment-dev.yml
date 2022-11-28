@@ -39,6 +39,7 @@ dependencies:
   - mypy<0.990
   - pandas-stubs
   - fastparquet
+  - grpcio<=1.48.2
   # for release script
   - pygit2
   - pip:
