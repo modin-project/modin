@@ -40,11 +40,6 @@ from .utils import (
 
 from modin.pandas import Series, Index, DataFrame, MultiIndex
 
-from pandas import (
-    date_range,
-    period_range,
-)
-
 
 class BaseTimeGroupBy:
     def setup(self, shape, ngroups=5, groupby_ncols=1):
@@ -893,7 +888,7 @@ class TimeReindex:
 
     def setup(self, shape):
         Rows, Cols = shape
-        rng = date_range(start="1/1/1970", periods=Rows, freq="1min")
+        rng = IMPL.date_range(start="1/1/1970", periods=Rows, freq="1min")
         self.df = DataFrame(np.random.rand(Rows, Cols), index=rng, columns=range(Cols))
         self.df["foo"] = "bar"
         self.rng_subset = Index(rng[::2])
@@ -937,7 +932,7 @@ class TimeReindexMethod:
     params = [
         get_benchmark_shapes("TimeReindexMethod"),
         ["pad", "backfill"],
-        [date_range, period_range],
+        [IMPL.date_range, IMPL.period_range],
     ]
     param_names = ["shape", "method", "constructor"]
 
@@ -957,7 +952,7 @@ class TimeFillnaMethodSeries:
 
     def setup(self, shape, method):
         N = shape[0]
-        self.idx = date_range("1/1/2000", periods=N, freq="1min")
+        self.idx = IMPL.date_range("1/1/2000", periods=N, freq="1min")
         ts = Series(np.random.randn(N), index=self.idx)[::2]
         self.ts_reindexed = ts.reindex(self.idx)
         self.ts_float32 = self.ts_reindexed.astype("float32")
@@ -967,3 +962,8 @@ class TimeFillnaMethodSeries:
 
     def time_float_32(self, shape, method):
         execute(self.ts_float32.fillna(method=method))
+
+
+
+
+from .utils import setup  # noqa: E402, F401
