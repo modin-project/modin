@@ -14,6 +14,7 @@ if sys.version_info < (3, 8):
 ray_deps = [
     "ray[default]>=1.4.0",
     "pyarrow>=4.0.1",
+    "grpcio<=1.48.2",
 ]
 unidist_deps = ["unidist[mpi]>=0.2.1"]
 remote_deps = ["rpyc==4.1.5", "cloudpickle", "boto3"]
