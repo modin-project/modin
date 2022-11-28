@@ -74,6 +74,7 @@ from .utils import (
     test_data_large_categorical_series_keys,
     test_data_large_categorical_series_values,
     default_to_pandas_ignore_string,
+    CustomIntegerForAddition,
 )
 from modin.config import NPartitions
 
@@ -619,6 +620,17 @@ def test_add(data):
     inter_df_math_helper(modin_series, pandas_series, "add")
 
 
+def test_add_does_not_change_original_series_name():
+    # See https://github.com/modin-project/modin/issues/5232
+    s1 = pd.Series(1, name=1)
+    s2 = pd.Series(2, name=2)
+    original_s1 = s1.copy(deep=True)
+    original_s2 = s2.copy(deep=True)
+    _ = s1 + s2
+    df_equals(s1, original_s1)
+    df_equals(s2, original_s2)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_add_prefix(data):
     modin_series, pandas_series = create_test_series(data)
@@ -632,6 +644,16 @@ def test_add_suffix(data):
     modin_series, pandas_series = create_test_series(data)
     df_equals(
         modin_series.add_suffix("SUFFIX_ADD_"), pandas_series.add_suffix("SUFFIX_ADD_")
+    )
+
+
+def test_add_custom_class():
+    # see https://github.com/modin-project/modin/issues/5236
+    # Test that we can add any object that is addable to pandas object data
+    # via "+".
+    eval_general(
+        *create_test_series(test_data["int_data"]),
+        lambda df: df + CustomIntegerForAddition(4),
     )
 
 
@@ -1135,8 +1157,9 @@ def test_array(data):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_between():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_between(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.between(None, None)
@@ -1577,8 +1600,9 @@ def test_matmul(data):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_drop():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_drop(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.drop(None, None, None, None)
@@ -1879,8 +1903,9 @@ def test_fillna(data, reindex, limit):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_filter():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_filter(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.filter(None, None, None)
@@ -2400,8 +2425,9 @@ def test_ne(data):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_nlargest():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_nlargest(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.nlargest(None)
@@ -2877,8 +2903,9 @@ def test_reset_index(data, drop, name, inplace):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_reshape():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_reshape(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.reshape(None)

@@ -1,0 +1,7 @@
+name: "Modin CodeQL config"
+
+paths:
+  - modin/** 
+paths-ignore: 
+  - modin/experimental/cloud/** # TODO: fix module-level cyclic error, see #5228
+  - modin/experimental/core/execution/native/implementations/hdk_on_native/test/** # TODO: fix unhashable list error, see #5227

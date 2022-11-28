@@ -201,7 +201,8 @@ def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
                 last_exception = err
                 continue
             break
-        else:
+        # If we do have an exception that's valid let's raise it
+        if last_exception:
             raise last_exception
 
         getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
@@ -1727,6 +1728,21 @@ class TestParquet:
             read_df = pd.read_parquet(path, engine=engine)
 
             df_equals(test_df, read_df)
+
+    @pytest.mark.skipif(
+        PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
+        reason="storage_options not supported for older pandas",
+    )
+    def test_read_parquet_s3_with_column_partitioning(self, engine):
+        # This test case comes from
+        # https://github.com/modin-project/modin/issues/4636
+        dataset_url = "s3://modin-datasets/modin-bugs/modin_bug_5159_parquet/df.parquet"
+        eval_io(
+            fn_name="read_parquet",
+            path=dataset_url,
+            engine=engine,
+            storage_options={"anon": True},
+        )
 
 
 class TestJson:
