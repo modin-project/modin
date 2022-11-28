@@ -5,6 +5,8 @@ dependencies:
   - pandas==1.5.2
   - numpy>=1.18.5
   - pyarrow>=4.0.1
+  - ray-core>=1.4.0
+  - redis-py>=3.5.0,<4.0.0
   - dask>=2.22.0
   - distributed>=2.22.0
   - fsspec
@@ -39,7 +41,6 @@ dependencies:
   - mypy<0.990
   - pandas-stubs
   - fastparquet
-  - grpcio<=1.48.2
   # for release script
   - pygit2
   - pip:
@@ -50,7 +51,6 @@ dependencies:
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - tqdm
       - git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
-      - ray[default]>=1.13.0
       - connectorx>=0.2.6a4
       - black
       # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
