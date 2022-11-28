@@ -12,9 +12,9 @@ if sys.version_info < (3, 8):
     dask_deps.append("pickle5")
 
 ray_deps = [
-    "ray[default]>=1.13.0",
+    "ray[default]>=1.4.0",
     "pyarrow>=4.0.1",
-    "grpcio<=1.48.2",
+    "redis>=3.5.0,<4.0.0",
 ]
 remote_deps = ["rpyc==4.1.5", "cloudpickle", "boto3"]
 spreadsheet_deps = ["modin-spreadsheet>=0.1.0"]
