@@ -16,7 +16,7 @@ ray_deps = [
     "pyarrow>=4.0.1",
     "redis>=3.5.0,<4.0.0",
 ]
-remote_deps = ["rpyc", "cloudpickle", "boto3"]
+remote_deps = ["rpyc==4.1.5", "cloudpickle", "boto3"]
 spreadsheet_deps = ["modin-spreadsheet>=0.1.0"]
 sql_deps = ["dfsql>=0.4.2", "pyparsing<=2.4.7"]
 all_deps = dask_deps + ray_deps + remote_deps + spreadsheet_deps
