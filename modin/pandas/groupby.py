@@ -1243,7 +1243,7 @@ class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
         """
         intermediate = super(SeriesGroupBy, self)._default_to_pandas(f, *args, **kwargs)
         if not isinstance(intermediate, Series) and self._squeeze:
-            return intermediate.squeeze(axis=1)
+            return intermediate.squeeze(axis=self._axis ^ 1)
         return intermediate
 
     @property
