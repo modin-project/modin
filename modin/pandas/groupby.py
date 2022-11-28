@@ -1291,6 +1291,7 @@ class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
 
     agg = aggregate
 
+
 if IsExperimental.get():
     from modin.experimental.cloud.meta_magic import make_wrapped_class
 
