@@ -87,18 +87,31 @@ def q2(df):
 
 
 def q3(df):
-    df["pickup_datetime"] = df["pickup_datetime"].dt.year
-    return df.groupby(["pickup_datetime", "passenger_count"]).size().reset_index()
+    transformed = pd.DataFrame(
+            {
+                "pickup_datetime": df["pickup_datetime"].dt.year,
+                "passenger_count": df["passenger_count"],
+            }
+        )
+    return transformed.groupby(
+            ["pickup_datetime", "passenger_count"], as_index=False
+        ).size()
 
 
 def q4(df):
-    df["pickup_datetime"] = df["pickup_datetime"].dt.year
-    df["trip_distance"] = df["trip_distance"].astype("int64")
+    transformed = pd.DataFrame(
+        {
+            "passenger_count": df["passenger_count"],
+            "pickup_datetime": df["pickup_datetime"].dt.year,
+            "trip_distance": df["trip_distance"].astype("int64"),
+        }
+    )
     return (
-        df.groupby(["passenger_count", "pickup_datetime", "trip_distance"])
+        transformed.groupby(
+            ["passenger_count", "pickup_datetime", "trip_distance"], as_index=False
+        )
         .size()
-        .reset_index()
-        .sort_values(by=["pickup_datetime", 0], ascending=[True, False])
+        .sort_values(by=["pickup_datetime", "size"], ascending=[True, False])
     )
 
 
@@ -119,8 +132,8 @@ def main():
     df = measure("Reading", read, sys.argv[1])
     measure("Q1", q1, df)
     measure("Q2", q2, df)
-    measure("Q3", q3, df.copy())
-    measure("Q4", q4, df.copy())
+    measure("Q3", q3, df)
+    measure("Q4", q4, df)
 
 
 if __name__ == "__main__":
