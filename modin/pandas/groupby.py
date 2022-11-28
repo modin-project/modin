@@ -1224,6 +1224,23 @@ class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
         self._squeeze = True
 
     def _default_to_pandas(self, f, *args, **kwargs):
+        """
+        Execute function `f` in default-to-pandas way.
+
+        Parameters
+        ----------
+        f : callable
+            The function to apply to each group.
+        *args : list
+            Extra positional arguments to pass to `f`.
+        **kwargs : dict
+            Extra keyword arguments to pass to `f`.
+
+        Returns
+        -------
+        modin.pandas.Series or modin.pandas.DataFrame
+            A new Modin Series or DataFrame with the result of the pandas function.
+        """
         intermediate = super(SeriesGroupBy, self)._default_to_pandas(f, *args, **kwargs)
         if not isinstance(intermediate, Series) and self._squeeze:
             return intermediate.squeeze(axis=1)
