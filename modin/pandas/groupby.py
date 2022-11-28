@@ -461,7 +461,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
             )
         return SeriesGroupBy(
             self._df[key],
-            drop=False,
+            drop=True,
             **kwargs,
         )
 
@@ -1223,6 +1223,12 @@ class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
         )
         self._squeeze = True
 
+    def _default_to_pandas(self, f, *args, **kwargs):
+        intermediate = super(SeriesGroupBy, self)._default_to_pandas(f, *args, **kwargs)
+        if not isinstance(intermediate, Series) and self._squeeze:
+            return intermediate.squeeze(axis=1)
+        return intermediate
+
     @property
     def ndim(self):
         """
@@ -1276,6 +1282,14 @@ class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
                 for k in (sorted(group_ids) if self._sort else group_ids)
             )
 
+    def aggregate(self, func=None, *args, **kwargs):
+        if isinstance(func, (list, dict)):
+            self._squeeze = False
+        result = super(SeriesGroupBy, self).aggregate(func, *args, **kwargs)
+        self._squeeze = True
+        return result
+
+    agg = aggregate
 
 if IsExperimental.get():
     from modin.experimental.cloud.meta_magic import make_wrapped_class
