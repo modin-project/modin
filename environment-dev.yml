@@ -30,7 +30,7 @@ dependencies:
   - packaging
   - coverage
   - pygithub
-  - rpyc==4.1.5
+  - rpyc
   - cloudpickle
   - boto3
   - scikit-learn
