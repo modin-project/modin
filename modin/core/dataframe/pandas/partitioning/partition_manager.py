@@ -641,7 +641,24 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         pandas.DataFrame
             A pandas DataFrame
         """
-        retrieved_objects = [[obj.to_pandas() for obj in part] for part in partitions]
+        retrieved_objects = cls.get_objects_from_partitions(partitions.flatten())
+        if all(
+            isinstance(obj, (pandas.DataFrame, pandas.Series))
+            for obj in retrieved_objects
+        ):
+            height, width, *_ = tuple(partitions.shape) + (0,)
+            # restore 2d array
+            objs = iter(retrieved_objects)
+            retrieved_objects = [
+                [next(objs) for _ in range(width)] for __ in range(height)
+            ]
+        else:
+            # Partitions do not always contain pandas objects, for example, hdk uses pyarrow tables.
+            # This implementation comes from the fact that calling `partition.get`
+            # function is not always equivalent to `partition.to_pandas`.
+            retrieved_objects = [
+                [obj.to_pandas() for obj in part] for part in partitions
+            ]
         if all(
             isinstance(part, pandas.Series) for row in retrieved_objects for part in row
         ):

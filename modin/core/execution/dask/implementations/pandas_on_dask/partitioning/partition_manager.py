@@ -51,6 +51,9 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         list
             The objects wrapped by `partitions`.
         """
+        for idx, part in enumerate(partitions):
+            if hasattr(part, "force_materialization"):
+                partitions[idx] = part.force_materialization()
         assert all(
             [len(partition.list_of_blocks) == 1 for partition in partitions]
         ), "Implementation assumes that each partition contains a signle block."

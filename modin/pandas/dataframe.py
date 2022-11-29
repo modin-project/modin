@@ -179,6 +179,26 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             elif is_dict_like(data) and not isinstance(
                 data, (pandas.Series, Series, pandas.DataFrame, DataFrame)
             ):
+                if columns is not None:
+                    data = {key: value for key, value in data.items() if key in columns}
+
+                if len(data) and all(isinstance(v, Series) for v in data.values()):
+                    from .general import concat
+
+                    new_qc = concat(
+                        data.values(), axis=1, keys=data.keys()
+                    )._query_compiler
+
+                    if dtype is not None:
+                        new_qc = new_qc.astype({col: dtype for col in new_qc.columns})
+                    if index is not None:
+                        new_qc = new_qc.reindex(axis=0, labels=index)
+                    if columns is not None:
+                        new_qc = new_qc.reindex(axis=1, labels=columns)
+
+                    self._query_compiler = new_qc
+                    return
+
                 data = {
                     k: v._to_pandas() if isinstance(v, Series) else v
                     for k, v in data.items()
@@ -1505,7 +1525,22 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             broadcast=isinstance(other, Series),
         )
 
-    rmul = multiply = mul
+    multiply = mul
+
+    def rmul(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get multiplication of ``DataFrame`` and `other`, element-wise (binary operator `mul`).
+        """
+        return self._binary_op(
+            "rmul",
+            other,
+            axis=axis,
+            level=level,
+            fill_value=fill_value,
+            broadcast=isinstance(other, Series),
+        )
 
     def ne(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """

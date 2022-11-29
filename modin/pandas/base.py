@@ -245,44 +245,63 @@ class BasePandasDataset(BasePandasDatasetCompat):
         TypeError
             If any validation checks fail.
         """
-        # We skip dtype checking if the other is a scalar.
-        if is_scalar(other):
+        if isinstance(other, BasePandasDataset):
+            return other._query_compiler
+        if not is_list_like(other):
+            # We skip dtype checking if the other is a scalar. Note that pandas
+            # is_scalar can be misleading as it is False for almost all objects,
+            # even when those objects should be treated as scalars. See e.g.
+            # https://github.com/modin-project/modin/issues/5236. Therefore, we
+            # detect scalars by checking that `other` is neither a list-like nor
+            # another BasePandasDataset.
             return other
         axis = self._get_axis_number(axis) if axis is not None else 1
         result = other
-        if isinstance(other, BasePandasDataset):
-            return other._query_compiler
-        elif is_list_like(other):
-            if axis == 0:
-                if len(other) != len(self._query_compiler.index):
-                    raise ValueError(
-                        f"Unable to coerce to Series, length must be {len(self._query_compiler.index)}: "
-                        + f"given {len(other)}"
-                    )
-            else:
-                if len(other) != len(self._query_compiler.columns):
-                    raise ValueError(
-                        f"Unable to coerce to Series, length must be {len(self._query_compiler.columns)}: "
-                        + f"given {len(other)}"
-                    )
-            if hasattr(other, "dtype"):
-                other_dtypes = [other.dtype] * len(other)
-            else:
-                other_dtypes = [type(x) for x in other]
-        else:
-            other_dtypes = [
-                type(other)
-                for _ in range(
-                    len(self._query_compiler.index)
-                    if axis
-                    else len(self._query_compiler.columns)
+        if axis == 0:
+            if len(other) != len(self._query_compiler.index):
+                raise ValueError(
+                    f"Unable to coerce to Series, length must be {len(self._query_compiler.index)}: "
+                    + f"given {len(other)}"
                 )
+        else:
+            if len(other) != len(self._query_compiler.columns):
+                raise ValueError(
+                    f"Unable to coerce to Series, length must be {len(self._query_compiler.columns)}: "
+                    + f"given {len(other)}"
+                )
+        if hasattr(other, "dtype"):
+            other_dtypes = [other.dtype] * len(other)
+        elif is_dict_like(other):
+            other_dtypes = [
+                type(other[label])
+                for label in self._query_compiler.get_axis(axis)
+                # The binary operation is applied for intersection of axis labels
+                # and dictionary keys. So filtering out extra keys.
+                if label in other
             ]
+        else:
+            other_dtypes = [type(x) for x in other]
         if compare_index:
             if not self.index.equals(other.index):
                 raise TypeError("Cannot perform operation with non-equal index")
         # Do dtype checking.
         if dtype_check:
+            self_dtypes = self._get_dtypes()
+            if is_dict_like(other):
+                # The binary operation is applied for the intersection of axis labels
+                # and dictionary keys. So filtering `self_dtypes` to match the `other`
+                # dictionary.
+                self_dtypes = [
+                    dtype
+                    for label, dtype in zip(
+                        self._query_compiler.get_axis(axis), self._get_dtypes()
+                    )
+                    if label in other
+                ]
+
+            # TODO(https://github.com/modin-project/modin/issues/5239):
+            # this spuriously rejects other that is a list including some
+            # custom type that can be added to self's elements.
             if not all(
                 (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
                 or (is_object_dtype(self_dtype) and is_object_dtype(other_dtype))
@@ -291,7 +310,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
                     and is_datetime_or_timedelta_dtype(other_dtype)
                 )
                 or is_dtype_equal(self_dtype, other_dtype)
-                for self_dtype, other_dtype in zip(self._get_dtypes(), other_dtypes)
+                for self_dtype, other_dtype in zip(self_dtypes, other_dtypes)
             ):
                 raise TypeError("Cannot do operation with improper dtypes")
         return result
@@ -1711,7 +1730,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         )
 
     @_inherit_docstrings(pandas.DataFrame.mask, apilink="pandas.DataFrame.mask")
-    def _mask(self, *args, **kwargs):
+    def _compat_mask(self, *args, **kwargs):
         return self._default_to_pandas("mask", *args, **kwargs)
 
     @_inherit_docstrings(pandas.DataFrame.max, apilink="pandas.DataFrame.max")
@@ -2303,7 +2322,15 @@ class BasePandasDataset(BasePandasDatasetCompat):
             "rmod", other, axis=axis, level=level, fill_value=fill_value
         )
 
-    rmul = mul
+    def rmul(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get Multiplication of dataframe and other, element-wise (binary operator `rmul`).
+        """
+        return self._binary_op(
+            "rmul", other, axis=axis, level=level, fill_value=fill_value
+        )
 
     def _rolling(
         self, window, min_periods, center, win_type, *args, **kwargs

@@ -2171,3 +2171,22 @@ def test_groupby_with_frozenlist():
     pandas_df = pandas_df.set_index(["a", "b"])
     modin_df = from_pandas(pandas_df)
     eval_general(modin_df, pandas_df, lambda df: df.groupby(df.index.names).count())
+
+
+@pytest.mark.parametrize(
+    "by_func",
+    [
+        lambda df: "timestamp0",
+        lambda df: ["timestamp0", "timestamp1"],
+        lambda df: ["timestamp0", df["timestamp1"]],
+    ],
+)
+def test_mean_with_datetime(by_func):
+    data = {
+        "timestamp0": [pd.to_datetime(1490195805, unit="s")],
+        "timestamp1": [pd.to_datetime(1490195805, unit="s")],
+        "numeric": [0],
+    }
+
+    modin_df, pandas_df = create_test_dfs(data)
+    eval_general(modin_df, pandas_df, lambda df: df.groupby(by=by_func(df)).mean())

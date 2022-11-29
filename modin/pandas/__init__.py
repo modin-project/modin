@@ -30,7 +30,7 @@ if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
             f"Starting Modin in compatibility mode to support legacy pandas version {__pandas_version__}"
         )
 elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
-    __pandas_version__ = "1.5.1"
+    __pandas_version__ = "1.5.2"
 
     if pandas.__version__ != __pandas_version__:
         warnings.warn(
@@ -99,21 +99,18 @@ with warnings.catch_warnings():
     )
 import os
 
-from modin.config import Engine, Parameter
-
-# Set this so that Pandas doesn't try to multithread by itself
-os.environ["OMP_NUM_THREADS"] = "1"
+from modin.config import Parameter
 
 _is_first_update = {}
-_NOINIT_ENGINES = {
-    "Python",
-}  # engines that don't require initialization, useful for unit tests
 
 
 def _update_engine(publisher: Parameter):
-    from modin.config import StorageFormat, CpuCount
+    from modin.config import Engine, StorageFormat, CpuCount
     from modin.config.envvars import IsExperimental
     from modin.config.pubsub import ValueSource
+
+    # Set this so that Pandas doesn't try to multithread by itself
+    os.environ["OMP_NUM_THREADS"] = "1"
 
     sfmt = StorageFormat.get()
 
@@ -159,6 +156,11 @@ def _update_engine(publisher: Parameter):
             from modin.core.execution.dask.common import initialize_dask
 
             initialize_dask()
+    elif publisher.get() == "Unidist":
+        if _is_first_update.get("Unidist", True):
+            from modin.core.execution.unidist.common import initialize_unidist
+
+            initialize_unidist()
     elif publisher.get() == "Cloudray":
         from modin.experimental.cloud import get_connection
 
@@ -196,7 +198,7 @@ def _update_engine(publisher: Parameter):
         ), f"Storage format should be 'Hdk' with 'Cloudnative' engine, but provided {sfmt}."
         get_connection().modules["modin"].set_execution("Native", "Hdk")
 
-    elif publisher.get() not in _NOINIT_ENGINES:
+    elif publisher.get() not in Engine.NOINIT_ENGINES:
         raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
 
     _is_first_update[publisher.get()] = False
@@ -381,4 +383,4 @@ if PandasCompatVersion.CURRENT != PandasCompatVersion.PY36:
     )
 del PandasCompatVersion
 
-del pandas, Engine, Parameter
+del pandas, Parameter

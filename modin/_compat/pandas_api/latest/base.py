@@ -168,7 +168,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
         errors="raise",
         try_cast=no_default,
     ):
-        return self._mask(
+        return self._compat_mask(
             cond,
             other=other,
             inplace=inplace,

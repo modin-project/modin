@@ -138,18 +138,16 @@ class FactoryDispatcher(object):
                 # allow missing factories in experimenal mode only
                 if hasattr(factories, "Experimental" + factory_name):
                     msg = (
-                        "{0} on {1} is only accessible through the experimental API.\nRun "
-                        + "`import modin.experimental.pandas as pd` to use {0} on {1}."
+                        "{0} is only accessible through the experimental API.\nRun "
+                        + "`import modin.experimental.pandas as pd` to use {0}."
                     )
                 else:
                     msg = (
-                        "Cannot find a factory for partition '{}' and execution engine '{}'. "
+                        "Cannot find factory {}. "
                         + "Potential reason might be incorrect environment variable value for "
                         + f"{StorageFormat.varname} or {Engine.varname}"
                     )
-                raise FactoryNotFoundError(
-                    msg.format(StorageFormat.get(), Engine.get())
-                )
+                raise FactoryNotFoundError(msg.format(factory_name))
             cls.__factory = StubFactory.set_failing_name(factory_name)
         else:
             cls.__factory.prepare()

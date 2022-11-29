@@ -1244,7 +1244,7 @@ class Series(SeriesCompat, BasePandasDataset):
         )
 
     @_inherit_docstrings(pandas.Series.mask, apilink="pandas.Series.mask")
-    def _mask(
+    def _compat_mask(
         self,
         cond,
         other,
@@ -1301,7 +1301,18 @@ class Series(SeriesCompat, BasePandasDataset):
             new_other, level=level, fill_value=None, axis=axis
         )
 
-    multiply = rmul = mul
+    multiply = mul
+
+    def rmul(
+        self, other, level=None, fill_value=None, axis=0
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return multiplication of series and `other`, element-wise (binary operator `mul`).
+        """
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).rmul(
+            new_other, level=level, fill_value=None, axis=axis
+        )
 
     def ne(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
         """
@@ -2409,12 +2420,15 @@ class Series(SeriesCompat, BasePandasDataset):
             Prepared `other`.
         """
         if isinstance(other, Series):
-            # NB: deep=False is important for performance bc it retains obj.index._id
-            new_self = self.copy(deep=False)
-            new_other = other.copy(deep=False)
-            if self.name == other.name:
-                new_self.name = new_other.name = self.name
-            else:
+            names_different = self.name != other.name
+            # NB: if we don't need a rename, do the interaction with shallow
+            # copies so that we preserve obj.index._id. It's fine to work
+            # with shallow copies because we'll discard the copies but keep
+            # the result after the interaction opreation. We can't do a rename
+            # on shallow copies because we'll mutate the original objects.
+            new_self = self.copy(deep=names_different)
+            new_other = other.copy(deep=names_different)
+            if names_different:
                 new_self.name = new_other.name = MODIN_UNNAMED_SERIES_LABEL
         else:
             new_self = self

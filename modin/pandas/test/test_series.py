@@ -74,6 +74,8 @@ from .utils import (
     test_data_large_categorical_series_keys,
     test_data_large_categorical_series_values,
     default_to_pandas_ignore_string,
+    CustomIntegerForAddition,
+    NonCommutativeMultiplyInteger,
 )
 from modin.config import NPartitions
 
@@ -619,6 +621,17 @@ def test_add(data):
     inter_df_math_helper(modin_series, pandas_series, "add")
 
 
+def test_add_does_not_change_original_series_name():
+    # See https://github.com/modin-project/modin/issues/5232
+    s1 = pd.Series(1, name=1)
+    s2 = pd.Series(2, name=2)
+    original_s1 = s1.copy(deep=True)
+    original_s2 = s2.copy(deep=True)
+    _ = s1 + s2
+    df_equals(s1, original_s1)
+    df_equals(s2, original_s2)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_add_prefix(data):
     modin_series, pandas_series = create_test_series(data)
@@ -632,6 +645,16 @@ def test_add_suffix(data):
     modin_series, pandas_series = create_test_series(data)
     df_equals(
         modin_series.add_suffix("SUFFIX_ADD_"), pandas_series.add_suffix("SUFFIX_ADD_")
+    )
+
+
+def test_add_custom_class():
+    # see https://github.com/modin-project/modin/issues/5236
+    # Test that we can add any object that is addable to pandas object data
+    # via "+".
+    eval_general(
+        *create_test_series(test_data["int_data"]),
+        lambda df: df + CustomIntegerForAddition(4),
     )
 
 
@@ -1135,8 +1158,9 @@ def test_array(data):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_between():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_between(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.between(None, None)
@@ -1577,8 +1601,9 @@ def test_matmul(data):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_drop():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_drop(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.drop(None, None, None, None)
@@ -1733,6 +1758,22 @@ def test_dt(timezone):
     df_equals(modin_series.dt.end_time, pandas_series.dt.end_time)
     df_equals(modin_series.dt.to_timestamp(), pandas_series.dt.to_timestamp())
 
+    def dt_with_empty_partition(lib):
+        # For context, see https://github.com/modin-project/modin/issues/5112
+        df_a = lib.DataFrame({"A": [lib.to_datetime("26/10/2020")]})
+        df_b = lib.DataFrame({"B": [lib.to_datetime("27/10/2020")]})
+        df = lib.concat([df_a, df_b], axis=1)
+        eval_result = df.eval("B - A", engine="python")
+        # BaseOnPython had a single partition after the concat, and it
+        # maintains that partition after eval. In other execution modes,
+        # eval() should re-split the result into two column partitions,
+        # one of which is empty.
+        if isinstance(df, pd.DataFrame) and get_current_execution() != "BaseOnPython":
+            assert eval_result._query_compiler._modin_frame._partitions.shape == (1, 2)
+        return eval_result.dt.days
+
+    eval_general(pd, pandas, dt_with_empty_partition)
+
 
 @pytest.mark.parametrize(
     "data", test_data_with_duplicates_values, ids=test_data_with_duplicates_keys
@@ -1863,8 +1904,9 @@ def test_fillna(data, reindex, limit):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_filter():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_filter(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.filter(None, None, None)
@@ -2384,8 +2426,9 @@ def test_ne(data):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_nlargest():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_nlargest(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.nlargest(None)
@@ -2861,8 +2904,9 @@ def test_reset_index(data, drop, name, inplace):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_reshape():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_reshape(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.reshape(None)
@@ -4226,9 +4270,31 @@ def test_encode(data, encoding_type):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-def test_add_string_to_series(data):
+def test_non_commutative_add_string_to_series(data):
+    # This test checks that add and radd do different things when addition is
+    # not commutative, e.g. for adding a string to a string. For context see
+    # https://github.com/modin-project/modin/issues/4908
     eval_general(*create_test_series(data), lambda s: "string" + s)
     eval_general(*create_test_series(data), lambda s: s + "string")
+
+
+def test_non_commutative_multiply_pandas():
+    # The non commutative integer class implementation is tricky. Check that
+    # multiplying such an integer with a pandas series is really not
+    # commutative.
+    pandas_series = pd.DataFrame([[1]], dtype=int)
+    integer = NonCommutativeMultiplyInteger(2)
+    assert not (integer * pandas_series).equals(pandas_series * integer)
+
+
+def test_non_commutative_multiply():
+    # This test checks that mul and rmul do different things when
+    # multiplication is not commutative, e.g. for adding a string to a string.
+    # For context see https://github.com/modin-project/modin/issues/5238
+    modin_series, pandas_series = create_test_series(1, dtype=int)
+    integer = NonCommutativeMultiplyInteger(2)
+    eval_general(modin_series, pandas_series, lambda s: integer * s)
+    eval_general(modin_series, pandas_series, lambda s: s * integer)
 
 
 @pytest.mark.parametrize(

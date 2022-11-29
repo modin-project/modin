@@ -45,13 +45,15 @@ jobs:
           environment-file: environment-dev.yml
           python-version: 3.8
           channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+          use-only-tar-bz2: false
       - name: Conda environment
         run: |
           conda info
           conda list
       - name: test-fuzzydata (engine ${{matrix.engine}}, python ${{matrix.python-version}})
-        run: python -m pytest modin/experimental/fuzzydata/test/test_fuzzydata.py -Wignore::UserWarning
+        run: python -m pytest modin/experimental/fuzzydata/test/test_fuzzydata.py -Wignore::UserWarning --log-file=/tmp/fuzzydata-test-wf-${{matrix.engine}}/run.log --log-file-level=INFO
         env:
           MODIN_ENGINE: ${{matrix.engine}}
       - uses: actions/upload-artifact@v3

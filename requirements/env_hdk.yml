@@ -2,16 +2,16 @@ name: modin_on_hdk
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.5.1
+  - pandas==1.5.2
   - pyarrow=6
-  - numpy>=1.23
+  - numpy>=1.18.5
   - fsspec
   - pip
   - pytest>=6.0.1
   - pytest-cov>=2.10.1
   - pytest-xdist>=2.1.0
-  - coverage<5.0
-  - pygithub==1.53
+  - coverage
+  - pygithub
   - pyhdk==0.2
   - s3fs>=2021.8
   - psutil
@@ -19,7 +19,7 @@ dependencies:
   - xlrd
   - sqlalchemy
   - scipy
-  - xgboost
+  - xgboost>=1.7.1,<2.0.0
   - scikit-learn-intelex
   - pip:
       - black
