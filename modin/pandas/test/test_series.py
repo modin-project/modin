@@ -4282,7 +4282,7 @@ def test_non_commutative_multiply_pandas():
     # The non commutative integer class implementation is tricky. Check that
     # multiplying such an integer with a pandas series is really not
     # commutative.
-    pandas_series = pd.DataFrame([[1]], dtype=int)
+    pandas_series = pandas.Series(1, dtype=int)
     integer = NonCommutativeMultiplyInteger(2)
     assert not (integer * pandas_series).equals(pandas_series * integer)
 
