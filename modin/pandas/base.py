@@ -2322,7 +2322,15 @@ class BasePandasDataset(BasePandasDatasetCompat):
             "rmod", other, axis=axis, level=level, fill_value=fill_value
         )
 
-    rmul = mul
+    def rmul(
+        self, other, axis="columns", level=None, fill_value=None
+    ):  # noqa: PR01, RT01, D200
+        """
+        Get Multiplication of dataframe and other, element-wise (binary operator `rmul`).
+        """
+        return self._binary_op(
+            "rmul", other, axis=axis, level=level, fill_value=fill_value
+        )
 
     def _rolling(
         self, window, min_periods, center, win_type, *args, **kwargs

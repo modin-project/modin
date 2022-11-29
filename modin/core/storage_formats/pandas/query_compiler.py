@@ -404,6 +404,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     lt = Binary.register(pandas.DataFrame.lt)
     mod = Binary.register(pandas.DataFrame.mod)
     mul = Binary.register(pandas.DataFrame.mul)
+    rmul = Binary.register(pandas.DataFrame.rmul)
     ne = Binary.register(pandas.DataFrame.ne)
     pow = Binary.register(pandas.DataFrame.pow)
     radd = Binary.register(pandas.DataFrame.radd)

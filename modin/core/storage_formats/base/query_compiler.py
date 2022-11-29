@@ -529,6 +529,14 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def mul(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.mul)(self, other=other, **kwargs)
 
+    @doc_utils.doc_binary_method(
+        operation="multiplication", sign="*", self_on_right=True
+    )
+    def rmul(self, other, **kwargs):  # noqa: PR02
+        return BinaryDefault.register(pandas.DataFrame.rmul)(
+            self, other=other, **kwargs
+        )
+
     @doc_utils.add_refer_to("DataFrame.corr")
     def corr(self, **kwargs):  # noqa: PR02
         """

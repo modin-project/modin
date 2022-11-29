@@ -490,6 +490,38 @@ class CustomIntegerForAddition:
         return other + self.value
 
 
+class NonCommutativeMultiplyInteger:
+    """int-like class with non-commutative multiply operation.
+
+    We need to test that rmul and mul do different things even when
+    multiplication is not commutative, but almost all multiplication is
+    commutative. This class' fake multiplication overloads are not commutative
+    when you multiply an instance of this class with pandas.series, which
+    does not know how to __mul__ with this class. e.g.
+
+    NonCommutativeMultiplyInteger(2) * pd.Series(1, dtype=int) == pd.Series(2, dtype=int)
+    pd.Series(1, dtype=int) * NonCommutativeMultiplyInteger(2) == pd.Series(3, dtype=int)
+    """
+
+    def __init__(self, value: int):
+        if not isinstance(value, int):
+            raise TypeError(
+                f"must initialize with integer, but got {value} of type {type(value)}"
+            )
+        self.value = value
+
+    def __mul__(self, other):
+        # Note that we need to check other is an int, otherwise when we (left) mul
+        # this with a series, we'll just multiply self.value by the series, whereas
+        # we want to make the series do an rmul instead.
+        if not isinstance(other, int):
+            return NotImplemented
+        return self.value * other
+
+    def __rmul__(self, other):
+        return self.value * other + 1
+
+
 def categories_equals(left, right):
     assert (left.ordered and right.ordered) or (not left.ordered and not right.ordered)
     assert_extension_array_equal(left, right)

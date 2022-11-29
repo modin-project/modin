@@ -1301,7 +1301,18 @@ class Series(SeriesCompat, BasePandasDataset):
             new_other, level=level, fill_value=None, axis=axis
         )
 
-    multiply = rmul = mul
+    multiply = mul
+
+    def rmul(
+        self, other, level=None, fill_value=None, axis=0
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return multiplication of series and `other`, element-wise (binary operator `mul`).
+        """
+        new_self, new_other = self._prepare_inter_op(other)
+        return super(Series, new_self).rmul(
+            new_other, level=level, fill_value=None, axis=axis
+        )
 
     def ne(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
         """
