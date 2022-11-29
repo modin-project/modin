@@ -43,10 +43,10 @@ dependencies:
   - fastparquet
   # for release script
   - pygit2
+  # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
+  # when we use collective instead of rabit.
+  - xgboost>=1.7.1,<2.0.0
   - pip:
-      # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
-      # when we use collective instead of rabit.
-      - xgboost>=1.7.1,<2.0.0
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - tqdm
