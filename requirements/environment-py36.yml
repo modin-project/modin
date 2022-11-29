@@ -5,7 +5,7 @@ dependencies:
   - pandas
   - numpy>=1.18.5
   - pyarrow>=4.0.1
-  - ray-core>=1.4.0
+  - ray-default>=1.4.0
   - redis-py>=3.5.0,<4.0.0
   - dask>=2.22.0,<2021.3.0
   - distributed>=2.22.0,<2021.3.0
