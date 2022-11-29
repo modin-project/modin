@@ -101,7 +101,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         """
         if self._list_of_block_partitions is not None:
             return self._list_of_block_partitions
-        self._list_of_block_partitions = []
+        list_of_block_partitions = []
         # Extract block partitions from the block and virtual partitions that
         # constitute this partition.
         for partition in self._list_of_constituent_partitions:
@@ -114,9 +114,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
                     # applied to the entire `partition` before we execute any
                     # further operations on its block parittions.
                     partition.drain_call_queue()
-                    self._list_of_block_partitions.extend(
-                        partition.list_of_block_partitions
-                    )
+                    list_of_block_partitions.extend(partition.list_of_block_partitions)
                 else:
                     # If this virtual partition is made of virtual partitions
                     # for the other axes, squeeze such partitions into a single
@@ -124,11 +122,12 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
                     # list of blocks. We could change this implementation to
                     # hold a 2-d list of blocks, but that would complicate the
                     # code quite a bit.
-                    self._list_of_block_partitions.append(
+                    list_of_block_partitions.append(
                         partition.force_materialization().list_of_block_partitions[0]
                     )
             else:
-                self._list_of_block_partitions.append(partition)
+                list_of_block_partitions.append(partition)
+        self._list_of_block_partitions = list_of_block_partitions
         return self._list_of_block_partitions
 
     @property

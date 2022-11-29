@@ -32,7 +32,9 @@ def initialize_unidist():
         )
 
     if not unidist.is_initialized():
-        unidist_cfg.CpuCount.put(modin_cfg.CpuCount.get())
+        modin_cfg.CpuCount.subscribe(
+            lambda cpu_count: unidist_cfg.CpuCount.put(cpu_count.get())
+        )
         # This string is intentionally formatted this way. We want it indented in
         # the warning message.
         ErrorMessage.not_initialized(
