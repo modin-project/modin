@@ -24,7 +24,7 @@ import sys
 if sys.version_info.minor < 8:
     from typing_extensions import Literal
 else:
-    from typing import Literal
+    from typing import Literal  # type: ignore
 
 
 class Axis(Enum):  # noqa: PR01
