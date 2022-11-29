@@ -19,10 +19,15 @@ for better maintability.
 Manually add documentation for methods which are not presented in pandas.
 """
 
+from __future__ import annotations
+
 from collections import OrderedDict
+import csv
 import inspect
 import pandas
-from pandas._libs.lib import no_default
+from pandas.io.parsers import TextFileReader
+from pandas.io.parsers.readers import _c_parser_defaults
+from pandas._libs.lib import no_default, NoDefault
 from pandas._typing import (
     CompressionOptions,
     CSVEngine,
@@ -31,6 +36,11 @@ from pandas._typing import (
     FilePath,
     StorageOptions,
     IntStrT,
+    ReadBuffer,
+    IndexLabel,
+    ConvertersArg,
+    ParseDatesArg,
+    XMLParsers,
 )
 import pathlib
 import pickle
@@ -48,11 +58,14 @@ from typing import (
     Hashable,
     Callable,
     Iterable,
+    Pattern,
+    Iterator,
 )
 
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, enable_logging
 from .dataframe import DataFrame
+from .series import Series
 from modin.utils import _inherit_docstrings, Engine
 from . import _update_engine
 
@@ -78,7 +91,7 @@ def _read(**kwargs):
     squeeze = kwargs.pop("squeeze", False)
     pd_obj = FactoryDispatcher.read_csv(**kwargs)
     # This happens when `read_csv` returns a TextFileReader object for iterating through
-    if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
+    if isinstance(pd_obj, TextFileReader):
         reader = pd_obj.read
         pd_obj.read = lambda *args, **kwargs: DataFrame(
             query_compiler=reader(*args, **kwargs)
@@ -136,15 +149,15 @@ def read_xml(
 @enable_logging
 def read_csv(
     filepath_or_buffer: FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str],
-    sep: str | None | lib.NoDefault = lib.no_default,
-    delimiter: str | None | lib.NoDefault = None,
+    sep: str | None | NoDefault = no_default,
+    delimiter: str | None | NoDefault = None,
     # Column and Index Locations and Names
     header: int | Sequence[int] | None | Literal["infer"] = "infer",
-    names: Sequence[Hashable] | None | lib.NoDefault = lib.no_default,
+    names: Sequence[Hashable] | None | NoDefault = no_default,
     index_col: IndexLabel | Literal[False] | None = None,
     usecols=None,
     squeeze: bool | None = None,
-    prefix: str | lib.NoDefault = lib.no_default,
+    prefix: str | NoDefault = no_default,
     mangle_dupe_cols: bool = True,
     # General Parsing Configuration
     dtype: DtypeArg | None = None,
@@ -212,15 +225,15 @@ def read_csv(
 @enable_logging
 def read_table(
     filepath_or_buffer: FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str],
-    sep: str | None | lib.NoDefault = lib.no_default,
-    delimiter: str | None | lib.NoDefault = None,
+    sep: str | None | NoDefault = no_default,
+    delimiter: str | None | NoDefault = None,
     # Column and Index Locations and Names
     header: int | Sequence[int] | None | Literal["infer"] = "infer",
-    names: Sequence[Hashable] | None | lib.NoDefault = lib.no_default,
+    names: Sequence[Hashable] | None | NoDefault = no_default,
     index_col: IndexLabel | Literal[False] | None = None,
     usecols=None,
     squeeze: bool | None = None,
-    prefix: str | lib.NoDefault = lib.no_default,
+    prefix: str | NoDefault = no_default,
     mangle_dupe_cols: bool = True,
     # General Parsing Configuration
     dtype: DtypeArg | None = None,
@@ -331,7 +344,7 @@ def read_json(
     compression: CompressionOptions = "infer",
     nrows: int | None = None,
     storage_options: StorageOptions = None,
-) -> DataFrame | Series | JsonReader:
+) -> DataFrame | Series | pandas.io.json._json.JsonReader:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     Engine.subscribe(_update_engine)
@@ -541,7 +554,7 @@ def read_stata(
     iterator: bool = False,
     compression: CompressionOptions = "infer",
     storage_options: StorageOptions = None,
-) -> DataFrame | StataReader:
+) -> DataFrame | pandas.io.stata.StataReader:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     Engine.subscribe(_update_engine)
@@ -560,7 +573,7 @@ def read_sas(
     chunksize: int | None = None,
     iterator: bool = False,
     compression: CompressionOptions = "infer",
-) -> DataFrame | ReaderBase:  # noqa: PR01, RT01, D200
+) -> DataFrame | pandas.io.sas.sasreader.ReaderBase:  # noqa: PR01, RT01, D200
     """
     Read SAS files stored as either XPORT or SAS7BDAT format files.
     """
@@ -646,7 +659,7 @@ def read_fwf(
     target_kwargs.update(kwargs)
     pd_obj = FactoryDispatcher.read_fwf(**target_kwargs)
     # When `read_fwf` returns a TextFileReader object for iterating through
-    if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
+    if isinstance(pd_obj, TextFileReader):
         reader = pd_obj.read
         pd_obj.read = lambda *args, **kwargs: DataFrame(
             query_compiler=reader(*args, **kwargs)

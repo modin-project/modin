@@ -1668,10 +1668,6 @@ class TestParquet:
 
             df_equals(test_df, read_df)
 
-    @pytest.mark.skipif(
-        PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
-        reason="storage_options not supported for older pandas",
-    )
     def test_read_parquet_s3_with_column_partitioning(self, engine):
         # This test case comes from
         # https://github.com/modin-project/modin/issues/4636
