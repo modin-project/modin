@@ -37,7 +37,7 @@ from modin.pandas.test.utils import parse_dates_values_by_id, time_parsing_csv_p
     reason="Dask does not have experimental API",
 )
 def test_from_sql_distributed(make_sql_connection):  # noqa: F811
-    if Engine.get() == "Ray":
+    if Engine.get() in ("Ray", "Unidist"):
         with ensure_clean_dir() as dirname:
             filename = "test_from_sql_distributed.db"
             table = "test_from_sql_distributed"
@@ -175,7 +175,8 @@ class TestCsvGlob:
     ],
 )
 @pytest.mark.skipif(
-    Engine.get() != "Ray", reason="Currently only support Ray engine for glob paths."
+    Engine.get() not in ("Ray", "Unidist"),
+    reason="Currently only support Ray and Unidist engines for glob paths.",
 )
 def test_read_multiple_csv_cloud_store(path):
     def _pandas_read_csv_glob(path, storage_options):
@@ -201,7 +202,8 @@ test_default_to_pickle_filename = "test_default_to_pickle.pkl"
 
 
 @pytest.mark.skipif(
-    get_current_execution() != "ExperimentalPandasOnRay",
+    get_current_execution()
+    not in ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist"),
     reason=f"Execution {get_current_execution()} isn't supported.",
 )
 @pytest.mark.parametrize(
@@ -234,7 +236,7 @@ def test_read_multiple_csv_s3_storage_opts(storage_options):
 
 
 @pytest.mark.skipif(
-    not Engine.get() == "Ray",
+    Engine.get() not in ("Ray", "Unidist"),
     reason=f"{Engine.get()} does not have experimental API",
 )
 @pytest.mark.parametrize("compression", [None, "gzip"])
@@ -263,7 +265,7 @@ def test_distributed_pickling(filename, compression):
 
 
 @pytest.mark.skipif(
-    not Engine.get() == "Ray",
+    Engine.get() not in ("Ray", "Unidist"),
     reason=f"{Engine.get()} does not have experimental read_custom_text API",
 )
 def test_read_custom_json_text():
@@ -301,7 +303,7 @@ def test_read_custom_json_text():
 
 
 @pytest.mark.skipif(
-    not Engine.get() == "Ray",
+    Engine.get() not in ("Ray", "Unidist"),
     reason=f"{Engine.get()} does not have experimental API",
 )
 def test_read_evaluated_dict():

@@ -77,7 +77,7 @@ class Engine(EnvironmentVariable, type=str):
     """Distribution engine to run queries by."""
 
     varname = "MODIN_ENGINE"
-    choices = ("Ray", "Dask", "Python", "Native")
+    choices = ("Ray", "Dask", "Python", "Native", "Unidist")
 
     NOINIT_ENGINES = {
         "Python",
@@ -95,6 +95,7 @@ class Engine(EnvironmentVariable, type=str):
         from modin.utils import (
             MIN_RAY_VERSION,
             MIN_DASK_VERSION,
+            MIN_UNIDIST_VERSION,
         )
 
         if IsDebug.get():
@@ -137,6 +138,19 @@ class Engine(EnvironmentVariable, type=str):
             pass
         else:
             return "Native"
+        try:
+            import unidist
+
+        except ImportError:
+            pass
+        else:
+            if version.parse(unidist.__version__) < MIN_UNIDIST_VERSION:
+                raise ImportError(
+                    "Please `pip install unidist[mpi]` to install compatible unidist on MPI "
+                    + "version "
+                    + f"(>={MIN_UNIDIST_VERSION})."
+                )
+            return "Unidist"
         raise ImportError(
             "Please refer to installation documentation page to install an engine"
         )

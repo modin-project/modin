@@ -33,6 +33,12 @@ elif engine == "Dask":
         + "pandas_on_dask.partitioning.partition_manager."
         + "PandasOnDaskDataframePartitionManager.wait_partitions"
     )
+elif engine == "Unidist":
+    wait_method = (
+        "modin.core.execution.unidist.implementations."
+        + "pandas_on_unidist.partitioning.partition_manager."
+        + "PandasOnUnidistDataframePartitionManager.wait_partitions"
+    )
 else:
     wait_method = (
         "modin.core.dataframe.pandas.partitioning."

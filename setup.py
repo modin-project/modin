@@ -16,10 +16,11 @@ ray_deps = [
     "pyarrow>=4.0.1",
     "redis>=3.5.0,<4.0.0",
 ]
+unidist_deps = ["unidist[mpi]>=0.2.1"]
 remote_deps = ["rpyc==4.1.5", "cloudpickle", "boto3"]
 spreadsheet_deps = ["modin-spreadsheet>=0.1.0"]
 sql_deps = ["dfsql>=0.4.2", "pyparsing<=2.4.7"]
-all_deps = dask_deps + ray_deps + remote_deps + spreadsheet_deps
+all_deps = dask_deps + ray_deps + unidist_deps + remote_deps + spreadsheet_deps
 
 # Distribute 'modin-autoimport-pandas.pth' along with binary and source distributions.
 # This file provides the "import pandas before Ray init" feature if specific
@@ -60,6 +61,7 @@ setup(
         # can be installed by pip install modin[dask]
         "dask": dask_deps,
         "ray": ray_deps,
+        "unidist": unidist_deps,
         "remote": remote_deps,
         "spreadsheet": spreadsheet_deps,
         "sql": sql_deps,
