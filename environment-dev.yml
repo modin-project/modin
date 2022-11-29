@@ -5,10 +5,7 @@ dependencies:
   - pandas==1.5.2
   - numpy>=1.18.5
   - pyarrow>=4.0.1
-  - ray-default>=1.4.0,<2.1.0
-  # This will allow us to install ray==2.0.1 instead of ray==1.12.1;
-  # Apparently the priority is to install a later version of protobuf, instead of ray
-  - protobuf>=3.15.3,<4.0.0
+  - ray-default>=1.4.0
   - redis-py>=3.5.0,<4.0.0
   - dask>=2.22.0
   - distributed>=2.22.0
