@@ -1498,7 +1498,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     def shuffle_partitions(
-        cls, partitions, sample_func, pivot_func, split_func, final_shuffle_func
+        cls, partitions, index, sample_func, pivot_func, split_func, final_shuffle_func
     ):
         """
         Return shuffled partitions.
@@ -1507,6 +1507,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         ----------
         partitions : np.ndarray
             The 2-d array of partitions to shuffle.
+        index : int
+            The index of partitions corresponding to the partitions that contain the column to sample.
         sample_func : Callable(pandas.DataFrame) -> Any
             Function to sample partitions. Output of this function will be passed to ``pivot_func``
             to determine pivots.
@@ -1525,7 +1527,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             A list of row-partitions that have been shuffled.
         """
         # Sample each partition
-        samples = cls.map_axis_partitions(1, partitions, sample_func, lengths=[None])
+        samples = cls.map_axis_partitions(
+            1, partitions[:, index], sample_func, lengths=[None]
+        )
         # Get each sample to pass in to the pivot function
         samples = [sample.get() for sample in samples.flatten()]
         pivots = pivot_func(samples)

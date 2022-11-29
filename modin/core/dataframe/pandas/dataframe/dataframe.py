@@ -2033,8 +2033,17 @@ class PandasDataframe(ClassLogger):
             shuffling_functions = build_sort_functions(
                 self, columns, method, ascending, **kwargs
             )
+            major_col_partition_index = self.columns.get_loc(columns[0])
+            cols_seen = 0
+            index = -1
+            for i, length in enumerate(self._column_widths_cache):
+                cols_seen += length
+                if major_col_partition_index <= cols_seen:
+                    index = i
+                    break
             new_partitions = self._partition_mgr_cls.shuffle_partitions(
                 self._partitions,
+                index,
                 shuffling_functions["sample_function"],
                 shuffling_functions["pivot_function"],
                 shuffling_functions["split_function"],
