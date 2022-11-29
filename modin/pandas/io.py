@@ -93,21 +93,21 @@ def _read(**kwargs):
 @_inherit_docstrings(pandas.read_xml, apilink="pandas.read_xml")
 @enable_logging
 def read_xml(
-    path_or_buffer,
-    xpath="./*",
-    namespaces=None,
-    elems_only=False,
-    attrs_only=False,
-    names=None,
-    dtype=None,
-    converters=None,
-    parse_dates=None,
-    encoding="utf-8",
-    parser="lxml",
-    stylesheet=None,
-    iterparse=None,
-    compression="infer",
-    storage_options=None,
+    path_or_buffer: FilePath | ReadBuffer[bytes] | ReadBuffer[str],
+    xpath: str = "./*",
+    namespaces: dict[str, str] | None = None,
+    elems_only: bool = False,
+    attrs_only: bool = False,
+    names: Sequence[str] | None = None,
+    dtype: DtypeArg | None = None,
+    converters: ConvertersArg | None = None,
+    parse_dates: ParseDatesArg | None = None,
+    encoding: str | None = "utf-8",
+    parser: XMLParsers = "lxml",
+    stylesheet: FilePath | ReadBuffer[bytes] | ReadBuffer[str] | None = None,
+    iterparse: dict[str, list[str]] | None = None,
+    compression: CompressionOptions = "infer",
+    storage_options: StorageOptions = None,
 ) -> DataFrame:
     ErrorMessage.default_to_pandas("read_xml")
     Engine.subscribe(_update_engine)
@@ -135,59 +135,67 @@ def read_xml(
 @_inherit_docstrings(pandas.read_csv, apilink="pandas.read_csv")
 @enable_logging
 def read_csv(
-    filepath_or_buffer: "FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str]",
-    sep=no_default,
-    delimiter=None,
-    header="infer",
-    names=no_default,
-    index_col=None,
+    filepath_or_buffer: FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str],
+    sep: str | None | lib.NoDefault = lib.no_default,
+    delimiter: str | None | lib.NoDefault = None,
+    # Column and Index Locations and Names
+    header: int | Sequence[int] | None | Literal["infer"] = "infer",
+    names: Sequence[Hashable] | None | lib.NoDefault = lib.no_default,
+    index_col: IndexLabel | Literal[False] | None = None,
     usecols=None,
-    squeeze=None,
-    prefix=no_default,
-    mangle_dupe_cols=True,
-    dtype: "DtypeArg | None" = None,
-    engine: "CSVEngine | None" = None,
+    squeeze: bool | None = None,
+    prefix: str | lib.NoDefault = lib.no_default,
+    mangle_dupe_cols: bool = True,
+    # General Parsing Configuration
+    dtype: DtypeArg | None = None,
+    engine: CSVEngine | None = None,
     converters=None,
     true_values=None,
     false_values=None,
-    skipinitialspace=False,
+    skipinitialspace: bool = False,
     skiprows=None,
-    nrows=None,
+    skipfooter: int = 0,
+    nrows: int | None = None,
+    # NA and Missing Data Handling
     na_values=None,
-    keep_default_na=True,
-    na_filter=True,
-    verbose=False,
-    skip_blank_lines=True,
+    keep_default_na: bool = True,
+    na_filter: bool = True,
+    verbose: bool = False,
+    skip_blank_lines: bool = True,
+    # Datetime Handling
     parse_dates=None,
-    infer_datetime_format=False,
-    keep_date_col=False,
+    infer_datetime_format: bool = False,
+    keep_date_col: bool = False,
     date_parser=None,
-    dayfirst=False,
-    cache_dates=True,
-    iterator=False,
-    chunksize=None,
-    compression: "CompressionOptions" = "infer",
-    thousands=None,
-    decimal: "str" = ".",
-    lineterminator=None,
-    quotechar='"',
-    quoting=0,
-    escapechar=None,
-    comment=None,
-    encoding=None,
-    encoding_errors: "str | None" = "strict",
-    dialect=None,
-    error_bad_lines=None,
-    warn_bad_lines=None,
+    dayfirst: bool = False,
+    cache_dates: bool = True,
+    # Iteration
+    iterator: bool = False,
+    chunksize: int | None = None,
+    # Quoting, Compression, and File Format
+    compression: CompressionOptions = "infer",
+    thousands: str | None = None,
+    decimal: str = ".",
+    lineterminator: str | None = None,
+    quotechar: str = '"',
+    quoting: int = csv.QUOTE_MINIMAL,
+    doublequote: bool = True,
+    escapechar: str | None = None,
+    comment: str | None = None,
+    encoding: str | None = None,
+    encoding_errors: str | None = "strict",
+    dialect: str | csv.Dialect | None = None,
+    # Error Handling
+    error_bad_lines: bool | None = None,
+    warn_bad_lines: bool | None = None,
     on_bad_lines=None,
-    skipfooter=0,
-    doublequote=True,
-    delim_whitespace=False,
-    low_memory=True,
-    memory_map=False,
-    float_precision=None,
-    storage_options: "StorageOptions" = None,
-):
+    # Internal
+    delim_whitespace: bool = False,
+    low_memory=_c_parser_defaults["low_memory"],
+    memory_map: bool = False,
+    float_precision: Literal["high", "legacy"] | None = None,
+    storage_options: StorageOptions = None,
+) -> DataFrame | TextFileReader:
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_csv_signature = {
         val.name for val in inspect.signature(pandas.read_csv).parameters.values()
@@ -203,59 +211,67 @@ def read_csv(
 @_inherit_docstrings(pandas.read_table, apilink="pandas.read_table")
 @enable_logging
 def read_table(
-    filepath_or_buffer: "FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str]",
-    sep=no_default,
-    delimiter=None,
-    header="infer",
-    names=no_default,
-    index_col=None,
+    filepath_or_buffer: FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str],
+    sep: str | None | lib.NoDefault = lib.no_default,
+    delimiter: str | None | lib.NoDefault = None,
+    # Column and Index Locations and Names
+    header: int | Sequence[int] | None | Literal["infer"] = "infer",
+    names: Sequence[Hashable] | None | lib.NoDefault = lib.no_default,
+    index_col: IndexLabel | Literal[False] | None = None,
     usecols=None,
-    squeeze=None,
-    prefix=no_default,
-    mangle_dupe_cols=True,
-    dtype: "DtypeArg | None" = None,
-    engine: "CSVEngine | None" = None,
+    squeeze: bool | None = None,
+    prefix: str | lib.NoDefault = lib.no_default,
+    mangle_dupe_cols: bool = True,
+    # General Parsing Configuration
+    dtype: DtypeArg | None = None,
+    engine: CSVEngine | None = None,
     converters=None,
     true_values=None,
     false_values=None,
-    skipinitialspace=False,
+    skipinitialspace: bool = False,
     skiprows=None,
-    skipfooter=0,
-    nrows=None,
+    skipfooter: int = 0,
+    nrows: int | None = None,
+    # NA and Missing Data Handling
     na_values=None,
-    keep_default_na=True,
-    na_filter=True,
-    verbose=False,
-    skip_blank_lines=True,
+    keep_default_na: bool = True,
+    na_filter: bool = True,
+    verbose: bool = False,
+    skip_blank_lines: bool = True,
+    # Datetime Handling
     parse_dates=False,
-    infer_datetime_format=False,
-    keep_date_col=False,
+    infer_datetime_format: bool = False,
+    keep_date_col: bool = False,
     date_parser=None,
-    dayfirst=False,
-    cache_dates=True,
-    iterator=False,
-    chunksize=None,
-    compression: "CompressionOptions" = "infer",
-    thousands=None,
-    decimal: "str" = ".",
-    lineterminator=None,
-    quotechar='"',
-    quoting=0,
-    doublequote=True,
-    escapechar=None,
-    comment=None,
-    encoding=None,
-    encoding_errors: "str | None" = "strict",
-    dialect=None,
-    error_bad_lines=None,
-    warn_bad_lines=None,
+    dayfirst: bool = False,
+    cache_dates: bool = True,
+    # Iteration
+    iterator: bool = False,
+    chunksize: int | None = None,
+    # Quoting, Compression, and File Format
+    compression: CompressionOptions = "infer",
+    thousands: str | None = None,
+    decimal: str = ".",
+    lineterminator: str | None = None,
+    quotechar: str = '"',
+    quoting: int = csv.QUOTE_MINIMAL,
+    doublequote: bool = True,
+    escapechar: str | None = None,
+    comment: str | None = None,
+    encoding: str | None = None,
+    encoding_errors: str | None = "strict",
+    dialect: str | csv.Dialect | None = None,
+    # Error Handling
+    error_bad_lines: bool | None = None,
+    warn_bad_lines: bool | None = None,
     on_bad_lines=None,
+    # Internal
     delim_whitespace=False,
-    low_memory=True,
-    memory_map=False,
-    float_precision=None,
-    storage_options: "StorageOptions" = None,
-):
+    low_memory=_c_parser_defaults["low_memory"],
+    memory_map: bool = False,
+    float_precision: str | None = None,
+    storage_options: StorageOptions = None,
+) -> DataFrame | TextFileReader:
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_table_signature = {
         val.name for val in inspect.signature(pandas.read_table).parameters.values()
@@ -275,11 +291,11 @@ def read_table(
 def read_parquet(
     path,
     engine: str = "auto",
-    columns=None,
-    storage_options: "StorageOptions" = None,
+    columns: list[str] | None = None,
+    storage_options: StorageOptions = None,
     use_nullable_dtypes: bool = False,
     **kwargs,
-):
+) -> DataFrame:
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
@@ -299,23 +315,23 @@ def read_parquet(
 @enable_logging
 def read_json(
     path_or_buf,
-    orient=None,
-    typ="frame",
-    dtype=None,
+    orient: str | None = None,
+    typ: Literal["frame", "series"] = "frame",
+    dtype: DtypeArg | None = None,
     convert_axes=None,
-    convert_dates=True,
-    keep_default_dates=True,
-    numpy=False,
-    precise_float=False,
-    date_unit=None,
-    encoding=None,
-    encoding_errors="strict",
-    lines=False,
-    chunksize=None,
-    compression="infer",
-    nrows: Optional[int] = None,
-    storage_options: "StorageOptions" = None,
-):
+    convert_dates: bool | list[str] = True,
+    keep_default_dates: bool = True,
+    numpy: bool = False,
+    precise_float: bool = False,
+    date_unit: str | None = None,
+    encoding: str | None = None,
+    encoding_errors: str | None = "strict",
+    lines: bool = False,
+    chunksize: int | None = None,
+    compression: CompressionOptions = "infer",
+    nrows: int | None = None,
+    storage_options: StorageOptions = None,
+) -> DataFrame | Series | JsonReader:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     Engine.subscribe(_update_engine)
@@ -328,18 +344,18 @@ def read_json(
 @enable_logging
 def read_gbq(
     query: str,
-    project_id: Optional[str] = None,
-    index_col: Optional[str] = None,
-    col_order: Optional[List[str]] = None,
+    project_id: str | None = None,
+    index_col: str | None = None,
+    col_order: list[str] | None = None,
     reauth: bool = False,
     auth_local_webserver: bool = True,
-    dialect: Optional[str] = None,
-    location: Optional[str] = None,
-    configuration: Optional[Dict[str, Any]] = None,
+    dialect: str | None = None,
+    location: str | None = None,
+    configuration: dict[str, Any] | None = None,
     credentials=None,
-    use_bqstorage_api: Optional[bool] = None,
-    progress_bar_type: Optional[str] = None,
-    max_results: Optional[int] = None,
+    use_bqstorage_api: bool | None = None,
+    max_results: int | None = None,
+    progress_bar_type: str | None = None,
 ) -> DataFrame:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
@@ -354,22 +370,22 @@ def read_gbq(
 @enable_logging
 def read_html(
     io,
-    match=".+",
-    flavor=None,
-    header=None,
-    index_col=None,
-    skiprows=None,
-    attrs=None,
-    parse_dates=False,
-    thousands=",",
-    encoding=None,
-    decimal=".",
-    converters=None,
-    na_values=None,
-    keep_default_na=True,
-    displayed_only=True,
-    extract_links=None,
-):  # noqa: PR01, RT01, D200
+    match: str | Pattern = ".+",
+    flavor: str | None = None,
+    header: int | Sequence[int] | None = None,
+    index_col: int | Sequence[int] | None = None,
+    skiprows: int | Sequence[int] | slice | None = None,
+    attrs: dict[str, str] | None = None,
+    parse_dates: bool = False,
+    thousands: str | None = ",",
+    encoding: str | None = None,
+    decimal: str = ".",
+    converters: dict | None = None,
+    na_values: Iterable[object] | None = None,
+    keep_default_na: bool = True,
+    displayed_only: bool = True,
+    extract_links: Literal[None, "header", "footer", "body", "all"] = None,
+) -> list[DataFrame]:  # noqa: PR01, RT01, D200
     """
     Read HTML tables into a ``DataFrame`` object.
     """
@@ -417,33 +433,38 @@ def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover  # noqa: PR01, RT0
 @enable_logging
 def read_excel(
     io,
-    sheet_name: "str | int | list[IntStrT] | None" = 0,
-    header: "int | Sequence[int] | None" = 0,
-    names=None,
-    index_col: "int | Sequence[int] | None" = None,
-    usecols=None,
-    squeeze: "bool | None" = None,
-    dtype: "DtypeArg | None" = None,
-    engine: "Literal[('xlrd', 'openpyxl', 'odf', 'pyxlsb')] | None" = None,
-    converters=None,
-    true_values: "Iterable[Hashable] | None" = None,
-    false_values: "Iterable[Hashable] | None" = None,
-    skiprows: "Sequence[int] | int | Callable[[int], object] | None" = None,
-    nrows: "int | None" = None,
+    sheet_name: str | int | list[IntStrT] | None = 0,
+    header: int | Sequence[int] | None = 0,
+    names: list[str] | None = None,
+    index_col: int | Sequence[int] | None = None,
+    usecols: int
+    | str
+    | Sequence[int]
+    | Sequence[str]
+    | Callable[[str], bool]
+    | None = None,
+    squeeze: bool | None = None,
+    dtype: DtypeArg | None = None,
+    engine: Literal[("xlrd", "openpyxl", "odf", "pyxlsb")] | None = None,
+    converters: dict[str, Callable] | dict[int, Callable] | None = None,
+    true_values: Iterable[Hashable] | None = None,
+    false_values: Iterable[Hashable] | None = None,
+    skiprows: Sequence[int] | int | Callable[[int], object] | None = None,
+    nrows: int | None = None,
     na_values=None,
-    keep_default_na: "bool" = True,
-    na_filter: "bool" = True,
-    verbose: "bool" = False,
-    parse_dates=False,
-    date_parser=None,
-    thousands: "str | None" = None,
-    decimal: "str" = ".",
-    comment: "str | None" = None,
-    skipfooter: "int" = 0,
-    convert_float: "bool | None" = None,
-    mangle_dupe_cols: "bool" = True,
-    storage_options: "StorageOptions" = None,
-) -> "DataFrame | dict[IntStrT, DataFrame]":
+    keep_default_na: bool = True,
+    na_filter: bool = True,
+    verbose: bool = False,
+    parse_dates: list | dict | bool = False,
+    date_parser: Callable | None = None,
+    thousands: str | None = None,
+    decimal: str = ".",
+    comment: str | None = None,
+    skipfooter: int = 0,
+    convert_float: bool | None = None,
+    mangle_dupe_cols: bool = True,
+    storage_options: StorageOptions = None,
+) -> DataFrame | dict[IntStrT, DataFrame]:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     # mangle_dupe_cols has no effect starting in pandas 1.5. Exclude it from
     # kwargs so pandas doesn't spuriously warn people not to use it.
@@ -493,9 +514,9 @@ def read_hdf(
 @enable_logging
 def read_feather(
     path,
-    columns=None,
+    columns: Sequence[Hashable] | None = None,
     use_threads: bool = True,
-    storage_options: "StorageOptions" = None,
+    storage_options: StorageOptions = None,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -509,18 +530,18 @@ def read_feather(
 @enable_logging
 def read_stata(
     filepath_or_buffer,
-    convert_dates=True,
-    convert_categoricals=True,
-    index_col=None,
-    convert_missing=False,
-    preserve_dtypes=True,
-    columns=None,
-    order_categoricals=True,
-    chunksize=None,
-    iterator=False,
-    compression="infer",
-    storage_options: "StorageOptions" = None,
-):
+    convert_dates: bool = True,
+    convert_categoricals: bool = True,
+    index_col: str | None = None,
+    convert_missing: bool = False,
+    preserve_dtypes: bool = True,
+    columns: Sequence[str] | None = None,
+    order_categoricals: bool = True,
+    chunksize: int | None = None,
+    iterator: bool = False,
+    compression: CompressionOptions = "infer",
+    storage_options: StorageOptions = None,
+) -> DataFrame | StataReader:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     Engine.subscribe(_update_engine)
@@ -533,13 +554,13 @@ def read_stata(
 @enable_logging
 def read_sas(
     filepath_or_buffer,
-    format=None,
-    index=None,
-    encoding=None,
-    chunksize=None,
-    iterator=False,
-    compression="infer",
-):  # pragma: no cover  # noqa: PR01, RT01, D200
+    format: str | None = None,
+    index: Hashable | None = None,
+    encoding: str | None = None,
+    chunksize: int | None = None,
+    iterator: bool = False,
+    compression: CompressionOptions = "infer",
+) -> DataFrame | ReaderBase:  # noqa: PR01, RT01, D200
     """
     Read SAS files stored as either XPORT or SAS7BDAT format files.
     """
@@ -563,8 +584,8 @@ def read_sas(
 @enable_logging
 def read_pickle(
     filepath_or_buffer,
-    compression: Optional[str] = "infer",
-    storage_options: "StorageOptions" = None,
+    compression: CompressionOptions = "infer",
+    storage_options: StorageOptions = None,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -662,13 +683,13 @@ def read_sql_table(
 def read_sql_query(
     sql,
     con,
-    index_col=None,
-    coerce_float=True,
-    params=None,
-    parse_dates=None,
-    chunksize=None,
-    dtype=None,
-):
+    index_col: str | list[str] | None = None,
+    coerce_float: bool = True,
+    params: list[str] | dict[str, str] | None = None,
+    parse_dates: list[str] | dict[str, str] | None = None,
+    chunksize: int | None = None,
+    dtype: DtypeArg | None = None,
+) -> DataFrame | Iterator[DataFrame]:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     Engine.subscribe(_update_engine)
@@ -682,10 +703,10 @@ def read_sql_query(
 def to_pickle(
     obj: Any,
     filepath_or_buffer,
-    compression: "CompressionOptions" = "infer",
+    compression: CompressionOptions = "infer",
     protocol: int = pickle.HIGHEST_PROTOCOL,
-    storage_options: "StorageOptions" = None,
-):
+    storage_options: StorageOptions = None,
+) -> None:
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
