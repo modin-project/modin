@@ -99,6 +99,7 @@ _DEFAULT_CONFIG_T = [
             "TimeProperties",
             "TimeReindex",
             "TimeReindexMethod",
+            "TimeFillnaMethodDataframe",
             # IO benchmarks
             "TimeReadCsvSkiprows",
             "TimeReadCsvTrueFalseValues",

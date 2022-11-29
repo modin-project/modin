@@ -38,8 +38,6 @@ from .utils import (
     trigger_import,
 )
 
-from modin.pandas import Series, Index, DataFrame, MultiIndex
-
 
 class BaseTimeGroupBy:
     def setup(self, shape, ngroups=5, groupby_ncols=1):
@@ -833,23 +831,27 @@ class TimeIndexingNumericSeries:
     def setup(self, shape, dtype, index_structure):
         N = shape[0]
         indices = {
-            "unique_monotonic_inc": Index(range(N), dtype=dtype),
-            "nonunique_monotonic_inc": Index(
-                list(range(55)) + [54] + list(range(55, N - 1)), dtype=dtype
+            "unique_monotonic_inc": IMPL.Index(range(N), dtype=dtype),
+            "nonunique_monotonic_inc": IMPL.Index(
+                list(range(N // 100)) + [(N // 100) - 1] + list(range(N // 100, N - 1)),
+                dtype=dtype,
             ),
         }
-        self.data = Series(np.random.rand(N), index=indices[index_structure])
-        self.array = np.arange(800)
+        self.data = IMPL.Series(np.random.rand(N), index=indices[index_structure])
+        self.array = np.arange(N // 2)
+        self.index_to_query = N // 2
         self.array_list = self.array.tolist()
+        execute(self.data)
 
     def time_getitem_scalar(self, shape, index, index_structure):
-        self.data[800]
+        # not calling execute as execute function fails for scalar
+        self.data[self.index_to_query]
 
     def time_getitem_slice(self, shape, index, index_structure):
-        execute(self.data[:800])
+        execute(self.data[: self.index_to_query])
 
     def time_getitem_list_like(self, shape, index, index_structure):
-        execute(self.data[[800]])
+        execute(self.data[[self.index_to_query]])
 
     def time_getitem_array(self, shape, index, index_structure):
         execute(self.data[self.array])
@@ -861,25 +863,26 @@ class TimeIndexingNumericSeries:
         execute(self.data.iloc[self.array])
 
     def time_iloc_list_like(self, shape, index, index_structure):
-        execute(self.data.iloc[[800]])
+        execute(self.data.iloc[[self.index_to_query]])
 
     def time_iloc_scalar(self, shape, index, index_structure):
-        self.data.iloc[800]
+        # not calling execute as execute function fails for scalar
+        self.data.iloc[self.index_to_query]
 
     def time_iloc_slice(self, shape, index, index_structure):
-        execute(self.data.iloc[:800])
+        execute(self.data.iloc[: self.index_to_query])
 
     def time_loc_array(self, shape, index, index_structure):
         execute(self.data.loc[self.array])
 
     def time_loc_list_like(self, shape, index, index_structure):
-        execute(self.data.loc[[800]])
+        execute(self.data.loc[[self.index_to_query]])
 
     def time_loc_scalar(self, shape, index, index_structure):
-        self.data.loc[800]
+        self.data.loc[self.index_to_query]
 
     def time_loc_slice(self, shape, index, index_structure):
-        execute(self.data.loc[:800])
+        execute(self.data.loc[: self.index_to_query])
 
 
 class TimeReindex:
@@ -887,26 +890,35 @@ class TimeReindex:
     params = [get_benchmark_shapes("TimeReindex")]
 
     def setup(self, shape):
-        Rows, Cols = shape
-        rng = IMPL.date_range(start="1/1/1970", periods=Rows, freq="1min")
-        self.df = DataFrame(np.random.rand(Rows, Cols), index=rng, columns=range(Cols))
-        self.df["foo"] = "bar"
-        self.rng_subset = Index(rng[::2])
-        self.df2 = DataFrame(
-            index=range(Rows), data=np.random.rand(Rows, Cols), columns=range(Cols)
+        rows, cols = shape
+        rng = IMPL.date_range(start="1/1/1970", periods=rows, freq="1min")
+        self.df = IMPL.DataFrame(
+            np.random.rand(rows, cols), index=rng, columns=range(cols)
         )
-        N = Rows
-        K = Cols
+        self.df["foo"] = "bar"
+        self.rng_subset = IMPL.Index(rng[::2])
+        self.df2 = IMPL.DataFrame(
+            index=range(rows), data=np.random.rand(rows, cols), columns=range(cols)
+        )
+        N = rows
+        K = cols
         level1 = tm.makeStringIndex(N).values.repeat(K)
         level2 = np.tile(tm.makeStringIndex(K).values, N)
-        index = MultiIndex.from_arrays([level1, level2])
-        self.s = Series(np.random.randn(N * K), index=index)
+        index = IMPL.MultiIndex.from_arrays([level1, level2])
+        self.s = IMPL.Series(np.random.randn(N * K), index=index)
         self.s_subset = self.s[::2]
         self.s_subset_no_cache = self.s[::2].copy()
 
-        mi = MultiIndex.from_product([rng, range(100)])
-        self.s2 = Series(np.random.randn(len(mi)), index=mi)
+        mi = IMPL.MultiIndex.from_product([rng, range(100)])
+        self.s2 = IMPL.Series(np.random.randn(len(mi)), index=mi)
         self.s2_subset = self.s2[::2].copy()
+        execute(self.df)
+        execute(self.df2)
+        execute(self.s)
+        execute(self.s2_subset)
+        execute(self.s2)
+        execute(self.s_subset)
+        execute(self.s_subset_no_cache)
 
     def time_reindex_dates(self, shape):
         execute(self.df.reindex(self.rng_subset))
@@ -915,15 +927,15 @@ class TimeReindex:
         execute(self.df2.reindex(columns=self.df.columns[1:5]))
 
     def time_reindex_multiindex_with_cache(self, shape):
-        # MultiIndex._values gets cached
+        # MultiIndex._values gets cached (pandas specific)
         execute(self.s.reindex(self.s_subset.index))
 
     def time_reindex_multiindex_no_cache(self, shape):
-        # Copy to avoid MultiIndex._values getting cached
+        # Copy to avoid MultiIndex._values getting cached (pandas specific)
         execute(self.s.reindex(self.s_subset_no_cache.index.copy()))
 
     def time_reindex_multiindex_no_cache_dates(self, shape):
-        # Copy to avoid MultiIndex._values getting cached
+        # Copy to avoid MultiIndex._values getting cached (pandas specific)
         execute(self.s2_subset.reindex(self.s2.index.copy()))
 
 
@@ -939,7 +951,8 @@ class TimeReindexMethod:
     def setup(self, shape, method, constructor):
         N = shape[0]
         self.idx = constructor("1/1/2000", periods=N, freq="1min")
-        self.ts = Series(np.random.randn(N), index=self.idx)[::2]
+        self.ts = IMPL.Series(np.random.randn(N), index=self.idx)[::2]
+        execute(self.ts)
 
     def time_reindex_method(self, shape, method, constructor):
         execute(self.ts.reindex(self.idx, method=method))
@@ -947,21 +960,44 @@ class TimeReindexMethod:
 
 class TimeFillnaMethodSeries:
 
-    params = [get_benchmark_shapes("TimeReindexMethod"), ["pad", "backfill"]]
+    params = [get_benchmark_shapes("TimeFillnaMethodSeries"), ["pad", "backfill"]]
     param_names = ["shape", "method"]
 
     def setup(self, shape, method):
         N = shape[0]
         self.idx = IMPL.date_range("1/1/2000", periods=N, freq="1min")
-        ts = Series(np.random.randn(N), index=self.idx)[::2]
+        ts = IMPL.Series(np.random.randn(N), index=self.idx)[::2]
         self.ts_reindexed = ts.reindex(self.idx)
         self.ts_float32 = self.ts_reindexed.astype("float32")
+        execute(self.ts_reindexed)
+        execute(self.ts_float32)
 
     def time_reindexed(self, shape, method):
         execute(self.ts_reindexed.fillna(method=method))
 
     def time_float_32(self, shape, method):
         execute(self.ts_float32.fillna(method=method))
+
+
+class TimeFillnaMethodDataframe:
+
+    params = [get_benchmark_shapes("TimeFillnaMethodDataframe"), ["pad", "backfill"]]
+    param_names = ["shape", "method"]
+
+    def setup(self, shape, method):
+        N = shape[0]
+        self.idx = IMPL.date_range("1/1/2000", periods=N, freq="1min")
+        td = IMPL.DataFrame(np.random.randn(*shape), index=self.idx)[::2]
+        self.td_reindexed = td.reindex(self.idx)
+        self.td_float32 = self.td_reindexed.astype("float32")
+        execute(self.td_reindexed)
+        execute(self.td_float32)
+
+    def time_reindexed(self, shape, method):
+        execute(self.td_reindexed.fillna(method=method))
+
+    def time_float_32(self, shape, method):
+        execute(self.td_float32.fillna(method=method))
 
 
 from .utils import setup  # noqa: E402, F401
