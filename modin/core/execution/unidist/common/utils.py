@@ -84,7 +84,7 @@ def deserialize(obj):
     elif isinstance(obj, dict) and any(
         unidist.is_object_ref(val) for val in obj.values()
     ):
-        return dict(zip(obj.keys(), UnidistWrapper.materialize(list(obj.values()))))
+        return dict(zip(obj.keys(), deserialize(tuple(obj.values()))))
     else:
         return obj
 

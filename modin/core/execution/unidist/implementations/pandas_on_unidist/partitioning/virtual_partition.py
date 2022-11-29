@@ -24,6 +24,8 @@ from .partition import PandasOnUnidistDataframePartition
 from modin.utils import _inherit_docstrings
 
 
+# If unidist has not been initialized yet by Modin,
+# unidist itself handles initialization when calling `unidist.put`.
 _DEPLOY_AXIS_FUNC = unidist.put(PandasDataframeAxisPartition.deploy_axis_func)
 _DRAIN = unidist.put(PandasDataframeAxisPartition.drain)
 
@@ -342,7 +344,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         if self.full_axis:
             return result
         else:
-            # If this is a full axis partition, just take out the single split in the result.
+            # If this is not a full axis partition, just take out the single split in the result.
             return result[0]
 
     def force_materialization(self, get_ip=False):
@@ -448,7 +450,8 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
             The number of times to split the result object.
         """
         if len(self.call_queue) == 0:
-            # this implicitly calls `drain_call_queue`
+            # this implicitly calls `drain_call_queue` for block partitions,
+            # which might have deferred call queues
             _ = self.list_of_blocks
             return
         drained = super(PandasOnUnidistDataframeVirtualPartition, self).apply(
@@ -484,11 +487,6 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         -------
         PandasOnUnidistDataframeVirtualPartition
             A new ``PandasOnUnidistDataframeVirtualPartition`` object.
-
-        Notes
-        -----
-        It does not matter if `func` is callable or an ``unidist.ObjectRef``. Unidist will
-        handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         return type(self)(
             self.list_of_block_partitions,

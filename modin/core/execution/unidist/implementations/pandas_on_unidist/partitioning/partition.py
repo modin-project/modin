@@ -193,23 +193,8 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         self.drain_call_queue()
         wait([self._data])
 
-    def __copy__(self):
-        """
-        Create a copy of this partition.
-
-        Returns
-        -------
-        PandasOnUnidistDataframePartition
-            A copy of this partition.
-        """
-        return PandasOnUnidistDataframePartition(
-            self._data,
-            length=self._length_cache,
-            width=self._width_cache,
-            ip=self._ip_cache,
-            call_queue=self.call_queue,
-        )
-
+    # If unidist has not been initialized yet by Modin,
+    # unidist itself handles initialization when calling `unidist.put`.
     _iloc = unidist.put(PandasDataframePartition._iloc)
 
     def mask(self, row_labels, col_labels):
