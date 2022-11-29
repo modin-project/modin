@@ -2,9 +2,9 @@
 Pandas backwards compatibility mode
 ===================================
 
-Modin verions 0.16 and 0.17, but no later minor versions, have limited support
-for running with legacy pandas versions. This support no longer exists in Modin
-0.18 and later versions.
+Modin verions 0.16 and 0.17, but no later minor versions, had limited support
+for running with legacy pandas versions. The latest version of Modin no longer
+has such support.
 
 Motivation for compatibility mode
 ---------------------------------
