@@ -2194,9 +2194,9 @@ class BasePandasDataset(ClassLogger):
 
     def reindex(
         self,
-        index,
-        columns,
-        copy,
+        index=None,
+        columns=None,
+        copy=True,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
