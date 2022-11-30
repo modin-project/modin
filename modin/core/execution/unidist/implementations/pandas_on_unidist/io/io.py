@@ -29,7 +29,6 @@ from modin.core.io import (
     SQLDispatcher,
     ExcelDispatcher,
 )
-from modin._compat.core.pandas_common import get_handle as pd_get_handle
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVParser,
     PandasFWFParser,
@@ -211,7 +210,7 @@ class PandasOnUnidistIO(UnidistIO):
             UnidistWrapper.materialize(signals.wait.remote(partition_idx))
 
             # preparing to write data from the buffer to a file
-            with pd_get_handle(
+            with pandas.io.common.get_handle(
                 path_or_buf,
                 # in case when using URL in implicit text mode
                 # pandas try to open `path_or_buf` in binary mode
