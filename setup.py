@@ -15,7 +15,6 @@ ray_deps = [
     "ray[default]>=1.4.0,<2.1.0",
     "pyarrow>=4.0.1",
     "redis>=3.5.0,<4.0.0",
-    "protobuf>=3.15.3,<4.0.0",
 ]
 remote_deps = ["rpyc==4.1.5", "cloudpickle", "boto3"]
 spreadsheet_deps = ["modin-spreadsheet>=0.1.0"]
