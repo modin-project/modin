@@ -102,7 +102,7 @@ class PandasOnRayIO(RayIO):
 
             Notes
             -----
-            This function returns an empty ``pandas.DataFrame`` because ``map``
+            This function returns an empty ``pandas.DataFrame`` because ``map_full_axis``
             expects a Frame object as a result of operation (and ``to_sql`` has no dataframe result).
             """
             df.columns = columns
