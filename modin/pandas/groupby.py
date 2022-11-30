@@ -1239,6 +1239,7 @@ class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
         modin.pandas.Series or modin.pandas.DataFrame
             A new Modin Series or DataFrame with the result of the pandas function.
         """
+        old_df = self._df
         self._df = self._df[
             next(
                 col_name
@@ -1247,6 +1248,7 @@ class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
             )
         ]
         intermediate = super(SeriesGroupBy, self)._default_to_pandas(f, *args, **kwargs)
+        self._df = old_df
         return intermediate
 
     @property
