@@ -900,9 +900,7 @@ class TimeReindex:
         self.df2 = IMPL.DataFrame(
             index=range(rows), data=np.random.rand(rows, cols), columns=range(cols)
         )
-        N = rows
-        K = cols
-        level1 = tm.makeStringIndex(N).values.repeat(K)
+        level1 = tm.makeStringIndex(rows).values.repeat(cols)
         level2 = np.tile(tm.makeStringIndex(K).values, N)
         index = IMPL.MultiIndex.from_arrays([level1, level2])
         self.s = IMPL.Series(np.random.randn(N * K), index=index)
@@ -912,12 +910,9 @@ class TimeReindex:
         mi = IMPL.MultiIndex.from_product([rng, range(100)])
         self.s2 = IMPL.Series(np.random.randn(len(mi)), index=mi)
         self.s2_subset = self.s2[::2].copy()
-        execute(self.df)
-        execute(self.df2)
-        execute(self.s)
-        execute(self.s2_subset)
-        execute(self.s2)
-        execute(self.s_subset)
+        execute(self.df), execute(self.df2)
+        execute(self.s), execute(self.s_subset)
+        execute(self.s2), execute(self.s2_subset)
         execute(self.s_subset_no_cache)
 
     def time_reindex_dates(self, shape):
@@ -969,8 +964,7 @@ class TimeFillnaMethodSeries:
         ts = IMPL.Series(np.random.randn(N), index=self.idx)[::2]
         self.ts_reindexed = ts.reindex(self.idx)
         self.ts_float32 = self.ts_reindexed.astype("float32")
-        execute(self.ts_reindexed)
-        execute(self.ts_float32)
+        execute(self.ts_reindexed), execute(self.ts_float32)
 
     def time_reindexed(self, shape, method):
         execute(self.ts_reindexed.fillna(method=method))
@@ -985,13 +979,11 @@ class TimeFillnaMethodDataframe:
     param_names = ["shape", "method"]
 
     def setup(self, shape, method):
-        N = shape[0]
-        self.idx = IMPL.date_range("1/1/2000", periods=N, freq="1min")
+        self.idx = IMPL.date_range("1/1/2000", periods=shape[0], freq="1min")
         td = IMPL.DataFrame(np.random.randn(*shape), index=self.idx)[::2]
         self.td_reindexed = td.reindex(self.idx)
         self.td_float32 = self.td_reindexed.astype("float32")
-        execute(self.td_reindexed)
-        execute(self.td_float32)
+        execute(self.td_reindexed), execute(self.td_float32)
 
     def time_reindexed(self, shape, method):
         execute(self.td_reindexed.fillna(method=method))
