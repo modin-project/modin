@@ -687,8 +687,6 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                 if MODIN_UNNAMED_SERIES_LABEL in result.columns
                 else result
             )
-        elif isinstance(self._df, Series):
-            result.name = self._df.name
         else:
             result.name = None
         return result.fillna(0)
@@ -1264,6 +1262,14 @@ class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
         Deprecated and removed in pandas and will be likely removed in Modin.
         """
         return 1  # ndim is always 1 for Series
+
+    def size(self):
+        intermediate = super(SeriesGroupBy, self).size()
+        if isinstance(self._df, Series):
+            intermediate.name = self._df.name
+        else:
+            intermediate.name = next(col_name for col_name in self._df.columns if col_name not in self._internal_by)
+        return intermediate
 
     @property
     def _iter(self):
