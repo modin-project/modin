@@ -311,10 +311,10 @@ class PandasOnUnidistIO(UnidistIO):
 
         # Ensure that the metadata is synchronized
         qc._modin_frame._propagate_index_objs(axis=None)
-        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
+        result = qc._modin_frame._partition_mgr_cls.map_partitions_full_axis(
+            qc._modin_frame._partitions,
+            func,
             axis=1,
-            partitions=qc._modin_frame._partitions,
-            map_func=func,
             keep_partitioning=True,
             lengths=None,
             enumerate_partitions=True,
