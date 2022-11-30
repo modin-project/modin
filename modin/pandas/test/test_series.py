@@ -1641,10 +1641,6 @@ def test_dropna_inplace(data):
     df_equals(modin_series, pandas_result)
 
     modin_series, pandas_series = create_test_series(data)
-    with pytest.raises(TypeError):
-        modin_series.dropna(thresh=2, inplace=True)
-
-    modin_series, pandas_series = create_test_series(data)
     pandas_series.dropna(how="any", inplace=True)
     modin_series.dropna(how="any", inplace=True)
     df_equals(modin_series, pandas_series)
