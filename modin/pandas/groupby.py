@@ -1241,8 +1241,11 @@ class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
         modin.pandas.Series or modin.pandas.DataFrame
             A new Modin Series or DataFrame with the result of the pandas function.
         """
+        squeeze = self._squeeze
+        self._squeeze = False
         intermediate = super(SeriesGroupBy, self)._default_to_pandas(f, *args, **kwargs)
-        if not isinstance(intermediate, Series) and self._squeeze:
+        self._squeeze = squeeze
+        if not isinstance(intermediate, Series) and squeeze:
             return intermediate.squeeze(axis=self._axis ^ 1)
         return intermediate
 
