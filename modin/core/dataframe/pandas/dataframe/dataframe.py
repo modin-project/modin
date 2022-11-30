@@ -2055,6 +2055,15 @@ class PandasDataframe(ClassLogger):
                 new_axes[axis.value] = self._compute_axis_labels_and_lengths(
                     axis.value, new_partitions
                 )[0]
+            # Sometimes when performing a sort for `value_counts` the partitions have a MultiIndex
+            # but the _compute_axis_labels_and_lengths function gives us an Index of tuples instead
+            # of a MultiIndex.
+            if isinstance(self.axes[axis.value], pandas.MultiIndex) and isinstance(
+                new_axes[axis.value][0], tuple
+            ):
+                new_axes[axis.value] = pandas.MultiIndex.from_tuples(
+                    new_axes[axis.value].values
+                )
             new_axes[axis.value] = new_axes[axis.value].set_names(
                 self.axes[axis.value].names
             )
