@@ -901,9 +901,9 @@ class TimeReindex:
             index=range(rows), data=np.random.rand(rows, cols), columns=range(cols)
         )
         level1 = tm.makeStringIndex(rows).values.repeat(cols)
-        level2 = np.tile(tm.makeStringIndex(K).values, N)
+        level2 = np.tile(tm.makeStringIndex(cols).values, rows)
         index = IMPL.MultiIndex.from_arrays([level1, level2])
-        self.s = IMPL.Series(np.random.randn(N * K), index=index)
+        self.s = IMPL.Series(np.random.randn(rows * cols), index=index)
         self.s_subset = self.s[::2]
         self.s_subset_no_cache = self.s[::2].copy()
 
@@ -980,16 +980,16 @@ class TimeFillnaMethodDataframe:
 
     def setup(self, shape, method):
         self.idx = IMPL.date_range("1/1/2000", periods=shape[0], freq="1min")
-        td = IMPL.DataFrame(np.random.randn(*shape), index=self.idx)[::2]
-        self.td_reindexed = td.reindex(self.idx)
-        self.td_float32 = self.td_reindexed.astype("float32")
-        execute(self.td_reindexed), execute(self.td_float32)
+        df_ts = IMPL.DataFrame(np.random.randn(*shape), index=self.idx)[::2]
+        self.df_ts_reindexed = df_ts.reindex(self.idx)
+        self.df_ts_float32 = self.df_ts_reindexed.astype("float32")
+        execute(self.df_ts_reindexed), execute(self.df_ts_float32)
 
     def time_reindexed(self, shape, method):
-        execute(self.td_reindexed.fillna(method=method))
+        execute(self.df_ts_reindexed.fillna(method=method))
 
     def time_float_32(self, shape, method):
-        execute(self.td_float32.fillna(method=method))
+        execute(self.df_ts_float32.fillna(method=method))
 
 
 from .utils import setup  # noqa: E402, F401
