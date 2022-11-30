@@ -17,7 +17,6 @@ import io
 import os
 
 import pandas
-from modin._compat.core.pandas_common import pandas_to_csv
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.unidist.generic.io import UnidistIO
@@ -204,7 +203,7 @@ class PandasOnUnidistIO(UnidistIO):
             path_or_buf = csv_kwargs["path_or_buf"]
             is_binary = "b" in csv_kwargs["mode"]
             csv_kwargs["path_or_buf"] = io.BytesIO() if is_binary else io.StringIO()
-            pandas_to_csv(df, **csv_kwargs)
+            df.to_csv(**csv_kwargs)
             content = csv_kwargs["path_or_buf"].getvalue()
             csv_kwargs["path_or_buf"].close()
 
