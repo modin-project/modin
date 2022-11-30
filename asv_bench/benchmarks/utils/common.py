@@ -497,7 +497,9 @@ def execute(
             return
         partitions = df._query_compiler._modin_frame._partitions.flatten()
         if len(partitions) > 0 and hasattr(partitions[0], "wait"):
-            df._query_compiler._modin_frame._partition_mgr_cls.wait_partitions(partitions)
+            df._query_compiler._modin_frame._partition_mgr_cls.wait_partitions(
+                partitions
+            )
             return
 
         # compatibility with old Modin versions
