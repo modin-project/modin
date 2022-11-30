@@ -2043,9 +2043,9 @@ class PandasDataframe(ClassLogger):
             new_partitions = self._partition_mgr_cls.shuffle_partitions(
                 self._partitions,
                 index,
-                shuffling_functions["sample_function"],
-                shuffling_functions["pivot_function"],
-                shuffling_functions["split_function"],
+                shuffling_functions.sample_function,
+                shuffling_functions.pivot_function,
+                shuffling_functions.split_function,
                 sort_function,
             )
             new_axes = self.axes
