@@ -26,7 +26,7 @@ jobs:
       matrix:
         python-version: ["3.8"]
         engine: ["ray"]
-        grpcio: ["1.47", "1.48.1", "1.49"]
+        grpcio: ["1.47", "1.48", "1.49"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-windows
