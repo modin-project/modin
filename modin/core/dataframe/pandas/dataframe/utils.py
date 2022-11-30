@@ -16,9 +16,14 @@
 import numpy as np
 import pandas
 from typing import Callable, Union, Optional
+from collections import namedtuple
 
-from modin.config import NPartitions
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+
+
+SortFunctions = namedtuple(
+    "SortFunctions", ["sample_function", "pivot_function", "split_function"]
+)
 
 
 def build_sort_functions(
@@ -27,7 +32,7 @@ def build_sort_functions(
     method: str,
     ascending: Union[list, bool],
     **kwargs: dict,
-) -> "dict[str, Callable]":
+) -> SortFunctions:
     """
     Return a dictionary containing the functions necessary to perform a sort.
 
@@ -65,11 +70,9 @@ def build_sort_functions(
             modin_frame, partition, column, pivots, ascending, **kwargs
         )
 
-    return {
-        "sample_function": sample_fn,
-        "pivot_function": pivot_fn,
-        "split_function": split_fn,
-    }
+    return SortFunctions(
+        sample_function=sample_fn, pivot_function=pivot_fn, split_function=split_fn
+    )
 
 
 def _find_quantiles(
@@ -162,9 +165,9 @@ def pick_pivots_from_samples_for_sort(
     Determine quantiles from the given samples.
 
     This function takes as input the quantiles calculated over all partitions from
-    `sample_func` defined above, and determines a final NPartitions.get() * 2 quantiles
+    `sample_func` defined above, and determines a final NPartitions.get() quantiles
     to use to roughly sort the entire dataframe. It does so by collating all the samples
-    and computing NPartitions.get() * 2 quantiles for the overall set.
+    and computing NPartitions.get() quantiles for the overall set.
 
     Parameters
     ----------
@@ -209,7 +212,7 @@ def split_partitions_using_pivots_for_sort(
     Split the given dataframe into the partitions specified by `pivots`.
 
     This function takes as input a row-axis partition, as well as the quantiles determined
-    by the `pivot_func` defined above. It then splits the input dataframe into NPartitions.get() * 2
+    by the `pivot_func` defined above. It then splits the input dataframe into NPartitions.get()
     dataframes, with the elements in the i-th split belonging to the i-th partition, as determined
     by the quantiles we're using.
 
