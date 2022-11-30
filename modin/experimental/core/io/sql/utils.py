@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses util functions for handling experimental SQL IO functions."""
+"""Utilities for experimental SQL format type IO functions implementations."""
 
 from collections import OrderedDict
 from sqlalchemy import MetaData, Table, create_engine, inspect

@@ -503,17 +503,8 @@ class ExperimentalBaseFactory(BaseFactory):
         return cls.io_cls.read_sql(**kwargs)
 
 
-@doc(_doc_factory_class, execution_name="experimental PandasOnRay")
-class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
-    @classmethod
-    @doc(_doc_factory_prepare_method, io_module_name="``ExperimentalPandasOnRayIO``")
-    def prepare(cls):
-        from modin.experimental.core.execution.ray.implementations.pandas_on_ray.io import (
-            ExperimentalPandasOnRayIO,
-        )
-
-        cls.io_cls = ExperimentalPandasOnRayIO
-
+@doc(_doc_abstract_factory_class, role="experimental custom")
+class ExperimentalCustomFactory(BaseFactory):
     @classmethod
     @doc(
         _doc_io_method_raw_template,
@@ -554,6 +545,20 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
             Arguments to the writer method.
         """
         return cls.io_cls.to_pickle_distributed(*args, **kwargs)
+
+
+@doc(_doc_factory_class, execution_name="experimental PandasOnRay")
+class ExperimentalPandasOnRayFactory(
+    ExperimentalBaseFactory, ExperimentalCustomFactory, PandasOnRayFactory
+):
+    @classmethod
+    @doc(_doc_factory_prepare_method, io_module_name="``ExperimentalPandasOnRayIO``")
+    def prepare(cls):
+        from modin.experimental.core.execution.ray.implementations.pandas_on_ray.io import (
+            ExperimentalPandasOnRayIO,
+        )
+
+        cls.io_cls = ExperimentalPandasOnRayIO
 
 
 @doc(_doc_factory_class, execution_name="experimental PandasOnDask")
@@ -668,7 +673,7 @@ class PandasOnUnidistFactory(BaseFactory):
 
 @doc(_doc_factory_class, execution_name="experimental PandasOnUnidist")
 class ExperimentalPandasOnUnidistFactory(
-    ExperimentalBaseFactory, PandasOnUnidistFactory
+    ExperimentalBaseFactory, ExperimentalCustomFactory, PandasOnUnidistFactory
 ):
     @classmethod
     @doc(
@@ -680,44 +685,3 @@ class ExperimentalPandasOnUnidistFactory(
         )
 
         cls.io_cls = ExperimentalPandasOnUnidistIO
-
-    @classmethod
-    @doc(
-        _doc_io_method_raw_template,
-        source="CSV files",
-        params=_doc_io_method_kwargs_params,
-    )
-    def _read_csv_glob(cls, **kwargs):
-        return cls.io_cls.read_csv_glob(**kwargs)
-
-    @classmethod
-    @doc(
-        _doc_io_method_raw_template,
-        source="Pickle files",
-        params=_doc_io_method_kwargs_params,
-    )
-    def _read_pickle_distributed(cls, **kwargs):
-        return cls.io_cls.read_pickle_distributed(**kwargs)
-
-    @classmethod
-    @doc(
-        _doc_io_method_raw_template,
-        source="Custom text files",
-        params=_doc_io_method_kwargs_params,
-    )
-    def _read_custom_text(cls, **kwargs):
-        return cls.io_cls.read_custom_text(**kwargs)
-
-    @classmethod
-    def _to_pickle_distributed(cls, *args, **kwargs):
-        """
-        Distributed pickle query compiler object.
-
-        Parameters
-        ----------
-        *args : args
-            Arguments to the writer method.
-        **kwargs : kwargs
-            Arguments to the writer method.
-        """
-        return cls.io_cls.to_pickle_distributed(*args, **kwargs)

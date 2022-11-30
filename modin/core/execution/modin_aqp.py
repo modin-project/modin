@@ -11,13 +11,15 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""The module for working with displaying progress bars for Ray engine."""
+"""The module for working with displaying progress bars for Modin execution engines."""
 
-import ray
 import os
 import time
 import threading
 import warnings
+
+from modin.config import Engine
+
 
 progress_bars = {}
 bar_lock = threading.Lock()
@@ -31,7 +33,7 @@ def call_progress_bar(result_parts, line_no):
 
     Parameters
     ----------
-    result_parts : list of list of ray.ObjectRef
+    result_parts : list of list of object refs (futures)
         Objects which are being computed for which progress is requested.
     line_no : int
         Line number in the call stack which we're displaying progress for.
@@ -84,8 +86,13 @@ def call_progress_bar(result_parts, line_no):
     bar_lock.release()
 
     threading.Thread(target=_show_time_updates, args=(progress_bars[pbar_id],)).start()
+    modin_engine = Engine.get()
+    if modin_engine == "Ray":
+        from modin.core.execution.ray.common.utils import wait
+    elif modin_engine == "Unidist":
+        from modin.core.execution.unidist.common.utils import wait
     for i in range(1, len(futures) + 1):
-        ray.wait(futures, num_returns=i)
+        wait(futures, num_returns=i)
         progress_bars[pbar_id].update(1)
         progress_bars[pbar_id].refresh()
     if progress_bars[pbar_id].n == progress_bars[pbar_id].total:
