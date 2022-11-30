@@ -44,7 +44,12 @@ from modin.utils import (
     append_to_docstring,
     MODIN_UNNAMED_SERIES_LABEL,
 )
-from modin.config import Engine, IsExperimental, PersistentPickle
+from modin.config import (
+    Engine,
+    IsExperimental,
+    InitializeWithSmallQueryCompilers,
+    PersistentPickle,
+)
 from .utils import (
     from_pandas,
     from_non_pandas,
@@ -57,6 +62,9 @@ from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .groupby import DataFrameGroupBy
 from .accessor import CachedAccessor, SparseFrameAccessor
 from modin._compat.pandas_api.classes import DataFrameCompat
+from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
+    SmallQueryCompiler,
+)
 
 
 @_inherit_docstrings(
@@ -122,7 +130,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         self._siblings = []
         Engine.subscribe(_update_engine)
         if isinstance(data, (DataFrame, Series)):
-            self._query_compiler = data._query_compiler.copy()
+            query_compiler = data._query_compiler.copy()
+            self._query_compiler = query_compiler
             if index is not None and any(i not in data.index for i in index):
                 raise NotImplementedError(
                     "Passing non-existant columns or index values to constructor not"
@@ -209,6 +218,12 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
             self._query_compiler = from_pandas(pandas_df)._query_compiler
         else:
             self._query_compiler = query_compiler
+
+        if query_compiler is None and InitializeWithSmallQueryCompilers.get():
+            small_dataframe = pandas.DataFrame(
+                data=data, index=index, columns=columns, dtype=dtype, copy=copy
+            )
+            self._query_compiler = SmallQueryCompiler(small_dataframe)
 
     def __repr__(self):
         """

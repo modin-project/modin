@@ -15,7 +15,11 @@
 
 from pandas.util._decorators import doc
 import pandas
+from modin.config import InitializeWithSmallQueryCompilers
 import numpy as np
+from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
+    SmallQueryCompiler,
+)
 
 from modin.utils import hashable
 
@@ -80,6 +84,8 @@ def from_pandas(df):
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
     from .dataframe import DataFrame
 
+    if InitializeWithSmallQueryCompilers.get():
+        return DataFrame(query_compiler=SmallQueryCompiler(df))
     return DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
 
 

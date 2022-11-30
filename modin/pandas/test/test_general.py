@@ -17,6 +17,7 @@ import pytest
 import modin.pandas as pd
 import numpy as np
 from numpy.testing import assert_array_equal
+from modin.config import InitializeWithSmallQueryCompilers
 from modin.utils import get_current_execution, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from pandas.testing import assert_frame_equal
@@ -118,13 +119,13 @@ def test_merge():
 
     join_types = ["outer", "inner"]
     for how in join_types:
-        with warns_that_defaulting_to_pandas() if how == "outer" else _nullcontext():
+        with warns_that_defaulting_to_pandas() if how == "outer" and not InitializeWithSmallQueryCompilers.get() else _nullcontext():
             modin_result = pd.merge(modin_df, modin_df2, how=how)
         pandas_result = pandas.merge(pandas_df, pandas_df2, how=how)
         df_equals(modin_result, pandas_result)
 
         # left_on and right_index
-        with warns_that_defaulting_to_pandas():
+        with warns_that_defaulting_to_pandas() if not InitializeWithSmallQueryCompilers.get() else _nullcontext():
             modin_result = pd.merge(
                 modin_df, modin_df2, how=how, left_on="col1", right_index=True
             )
@@ -134,7 +135,7 @@ def test_merge():
         df_equals(modin_result, pandas_result)
 
         # left_index and right_on
-        with warns_that_defaulting_to_pandas():
+        with warns_that_defaulting_to_pandas() if not InitializeWithSmallQueryCompilers.get() else _nullcontext():
             modin_result = pd.merge(
                 modin_df, modin_df2, how=how, left_index=True, right_on="col1"
             )
@@ -144,7 +145,7 @@ def test_merge():
         df_equals(modin_result, pandas_result)
 
         # left_on and right_on col1
-        if how == "outer":
+        if how == "outer" and not InitializeWithSmallQueryCompilers.get():
             warning_catcher = warns_that_defaulting_to_pandas()
         else:
             warning_catcher = _nullcontext()
@@ -158,7 +159,7 @@ def test_merge():
         df_equals(modin_result, pandas_result)
 
         # left_on and right_on col2
-        if how == "outer":
+        if how == "outer" and not InitializeWithSmallQueryCompilers.get():
             warning_catcher = warns_that_defaulting_to_pandas()
         else:
             warning_catcher = _nullcontext()
@@ -636,7 +637,7 @@ def test_unique():
 def test_value_counts(normalize, bins, dropna):
     # We sort indices for Modin and pandas result because of issue #1650
     values = np.array([3, 1, 2, 3, 4, np.nan])
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas() if not InitializeWithSmallQueryCompilers.get() else _nullcontext():
         modin_result = sort_index_for_equal_values(
             pd.value_counts(values, normalize=normalize, ascending=False), False
         )
@@ -654,7 +655,7 @@ def test_value_counts(normalize, bins, dropna):
     )
     df_equals(modin_result, pandas_result)
 
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas() if not InitializeWithSmallQueryCompilers.get() else _nullcontext():
         modin_result = sort_index_for_equal_values(
             pd.value_counts(values, dropna=dropna, ascending=True), True
         )

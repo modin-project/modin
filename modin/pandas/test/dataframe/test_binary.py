@@ -31,7 +31,7 @@ from modin.pandas.test.utils import (
     CustomIntegerForAddition,
     NonCommutativeMultiplyInteger,
 )
-from modin.config import Engine, NPartitions
+from modin.config import Engine, InitializeWithSmallQueryCompilers, NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -174,6 +174,10 @@ def test_comparison(data, op, other):
     Engine.get() not in ("Ray", "Dask"),
     reason="Modin on this engine doesn't create virtual partitions.",
 )
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not contain partitions.",
+)
 @pytest.mark.parametrize(
     "left_virtual,right_virtual", [(True, False), (False, True), (True, True)]
 )
@@ -236,6 +240,10 @@ def test_equals():
     assert modin_df1.equals(modin_df2._query_compiler.to_pandas())
 
 
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not contain partitions.",
+)
 @pytest.mark.parametrize("is_more_other_partitions", [True, False])
 @pytest.mark.parametrize(
     "op_type", ["df_ser", "df_df", "ser_ser_same_name", "ser_ser_different_name"]

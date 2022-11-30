@@ -41,7 +41,7 @@ from modin.pandas.test.utils import (
     arg_keys,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions, StorageFormat
+from modin.config import InitializeWithSmallQueryCompilers, NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution
 
@@ -122,7 +122,7 @@ def test_aggregate_error_checking():
 
 
 @pytest.mark.xfail(
-    StorageFormat.get() == "Pandas",
+    StorageFormat.get() == "Pandas" and not InitializeWithSmallQueryCompilers.get(),
     reason="DataFrame.apply(dict) raises an exception because of a bug in its"
     + "implementation for pandas storage format, this prevents us from catching the desired"
     + "exception. You can track this bug at:"

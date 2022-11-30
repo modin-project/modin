@@ -13,6 +13,9 @@
 
 """Module houses `Series` class, that is distributed version of `pandas.Series`."""
 
+from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
+    SmallQueryCompiler,
+)
 import numpy as np
 import pandas
 from pandas.api.types import is_integer
@@ -33,7 +36,11 @@ from modin.utils import (
     Engine,
     MODIN_UNNAMED_SERIES_LABEL,
 )
-from modin.config import IsExperimental, PersistentPickle
+from modin.config import (
+    InitializeWithSmallQueryCompilers,
+    IsExperimental,
+    PersistentPickle,
+)
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar, _doc_binary_op
@@ -114,22 +121,35 @@ class Series(SeriesCompat, BasePandasDataset):
                 name = MODIN_UNNAMED_SERIES_LABEL
                 if isinstance(data, pandas.Series) and data.name is not None:
                     name = data.name
-
-            query_compiler = from_pandas(
-                pandas.DataFrame(
-                    pandas.Series(
-                        data=data,
-                        index=index,
-                        dtype=dtype,
-                        name=name,
-                        copy=copy,
-                        fastpath=fastpath,
+            # Not sure about checking, want to check if empty without constructing series
+            if InitializeWithSmallQueryCompilers.get():
+                query_compiler = SmallQueryCompiler(
+                    pandas.DataFrame(
+                        pandas.Series(
+                            data=data,
+                            index=index,
+                            dtype=dtype,
+                            name=name,
+                            copy=copy,
+                            fastpath=fastpath,
+                        )
                     )
                 )
-            )._query_compiler
+            else:
+                query_compiler = from_pandas(
+                    pandas.DataFrame(
+                        pandas.Series(
+                            data=data,
+                            index=index,
+                            dtype=dtype,
+                            name=name,
+                            copy=copy,
+                            fastpath=fastpath,
+                        )
+                    )
+                )._query_compiler
         self._query_compiler = query_compiler.columnarize()
         if name is not None:
-            self._query_compiler = self._query_compiler
             self.name = name
 
     def _get_name(self):
@@ -2270,11 +2290,13 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         return query_compiler.to_pandas().squeeze()
 
-    def _validate_dtypes_sum_prod_mean(self, axis, numeric_only, ignore_axis=False):
+    def _validate_dtypes_sum_prod_mean(
+        self, axis, numeric_only, ignore_axis=False
+    ):  # noqa: PR01
         """
         Validate data dtype for `sum`, `prod` and `mean` methods.
 
-        Parameters
+        Parameter
         ----------
         axis : {0, 1}
             Axis to validate over.
