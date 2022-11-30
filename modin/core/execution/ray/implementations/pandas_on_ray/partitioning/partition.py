@@ -116,10 +116,10 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             func, f_args, f_kwargs = call_queue[0]
-            logger.debug(f"SUBMIT::_apply_func::{self._identity}")
             result, length, width, ip = _apply_func.remote(
                 data, func, *f_args, **f_kwargs
             )
+            logger.debug(f"SUBMIT::_apply_func::{self._identity}")
         logger.debug(f"EXIT::Partition.apply::{self._identity}")
         return PandasOnRayDataframePartition(result, length, width, ip)
 
@@ -361,7 +361,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         Parameters
         ----------
         split_func : Callable[pandas.DataFrame, List[Any]] -> List[pandas.DataFrame]
-            The function that will split this partition into multiple partitions.
+            The function that will split this partition into multiple partitions. The list contains
+            pivots to split by, and will have the same dtype as the major column we are shuffling on.
         num_splits : int
             The number of resulting partitions, which may be empty.
         *args : List[Any]

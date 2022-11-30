@@ -15,26 +15,27 @@
 
 import numpy as np
 import pandas
-from typing import Callable, Union, Optional
+from typing import Callable, Union, Optional, TYPE_CHECKING
 from collections import namedtuple
 
-from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+if TYPE_CHECKING:
+    from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
 
-SortFunctions = namedtuple(
-    "SortFunctions", ["sample_function", "pivot_function", "split_function"]
+ShuffleFunctions = namedtuple(
+    "ShuffleFunctions", ["sample_function", "pivot_function", "split_function"]
 )
 
 
 def build_sort_functions(
-    modin_frame: PandasDataframe,
+    modin_frame: "PandasDataframe",
     column: str,
     method: str,
     ascending: Union[list, bool],
     **kwargs: dict,
-) -> SortFunctions:
+) -> ShuffleFunctions:
     """
-    Return a dictionary containing the functions necessary to perform a sort.
+    Return a named tuple containing the functions necessary to perform a sort.
 
     Parameters
     ----------
@@ -51,8 +52,8 @@ def build_sort_functions(
 
     Returns
     -------
-    dict :
-        A dictionary containing the functions to pick quantiles, pick overall quantiles, and split
+    ShuffleFunctions :
+        A named tuple containing the functions to pick quantiles, choose pivot points, and split
         partitions for sorting.
     """
 
@@ -70,7 +71,7 @@ def build_sort_functions(
             modin_frame, partition, column, pivots, ascending, **kwargs
         )
 
-    return SortFunctions(
+    return ShuffleFunctions(
         sample_function=sample_fn, pivot_function=pivot_fn, split_function=split_fn
     )
 
@@ -156,8 +157,8 @@ def pick_samples_for_quantiles(
 
 
 def pick_pivots_from_samples_for_sort(
-    df: PandasDataframe,
-    samples: np.ndarray,
+    df: "PandasDataframe",
+    samples: "list[np.ndarray]",
     method: str = "linear",
     key: Optional[Callable] = None,
 ) -> np.ndarray:
@@ -173,7 +174,7 @@ def pick_pivots_from_samples_for_sort(
     ----------
     df : PandasDataframe
         The Modin Dataframe calling this function.
-    samples : np.ndarray
+    samples : list[np.ndarray]
         The samples computed by ``get_partition_quantiles_for_sort``.
     method : str, default: linear
         The method to use when picking quantiles.
@@ -201,13 +202,13 @@ def pick_pivots_from_samples_for_sort(
 
 
 def split_partitions_using_pivots_for_sort(
-    modin_frame: PandasDataframe,
+    modin_frame: "PandasDataframe",
     df: pandas.DataFrame,
     column: str,
     pivots: np.ndarray,
     ascending: bool,
     **kwargs: dict,
-) -> "tuple[pandas.DataFrame]":
+) -> "tuple[pandas.DataFrame, ...]":
     """
     Split the given dataframe into the partitions specified by `pivots`.
 
@@ -236,20 +237,31 @@ def split_partitions_using_pivots_for_sort(
     tuple[pandas.DataFrame]
         A tuple of the splits from this partition.
     """
+    # If `ascending=False` and we are dealing with a numeric dtype, we can pass in a reversed list
+    # of pivots, and `np.digitize` will work correctly. For object dtypes, we use `np.searchsorted`
+    # which breaks when we reverse the pivots.
     if not ascending and modin_frame.dtypes[column] != object:
+        # `key` is already applied to `pivots` in the `pick_pivots_from_samples_for_sort` function.
         pivots = pivots[::-1]
     key = kwargs.pop("key", None)
-    na_rows = df[df[column].isna()]
-    non_na_rows = df[~df[column].isna()]
+    na_index = df[column].isna()
+    na_rows = df[na_index]
+    non_na_rows = df[~na_index]
     cols_to_digitize = non_na_rows[column]
     if key is not None:
         cols_to_digitize = key(cols_to_digitize)
     if modin_frame.dtypes[column] != object:
         groupby_col = np.digitize(cols_to_digitize.squeeze(), pivots)
+        # `np.digitize` returns results based off of the sort order of the pivots it is passed.
+        # When we only have one unique value in our pivots, `np.digitize` assumes that the pivots
+        # are sorted in ascending order, and gives us results based off of that assumption - so if
+        # we actually want to sort in descending order, we need to swap the new indices.
         if not ascending and len(np.unique(pivots)) == 1 and len(pivots) != 1:
             groupby_col = len(pivots) - groupby_col
     else:
         groupby_col = np.searchsorted(pivots, cols_to_digitize.squeeze(), side="right")
+        # Since np.searchsorted requires the pivots to be in ascending order, if we want to sort
+        # in descending order, we need to swap the new indices.
         if not ascending:
             groupby_col = len(pivots) - groupby_col
     grouped = non_na_rows.groupby(groupby_col)

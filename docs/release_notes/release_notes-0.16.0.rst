@@ -175,7 +175,6 @@ Key Features and Updates
   * FEAT-#4766: Support fsspec URLs in `read_csv` and `read_csv_glob` (#4898)
   * FEAT-#4827: Implement `infer_types` dataframe algebra operator (#4871)
   * FEAT-#4989: Switch pandas version to 1.5 (#5037)
-  * FEAT-#3535: Implement partition shuffling mechanism and algebra sort_by (#4601)
 
 Contributors
 ------------

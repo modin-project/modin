@@ -38,6 +38,7 @@ from modin.core.dataframe.base.dataframe.utils import (
     Axis,
     JoinType,
 )
+from modin.core.dataframe.pandas.dataframe.utils import build_sort_functions
 
 if TYPE_CHECKING:
     from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
@@ -2006,83 +2007,84 @@ class PandasDataframe(ClassLogger):
             return df
 
         axis = Axis(axis)
-        if axis == Axis.ROW_WISE:
-            # If this df is empty, we don't want to try and shuffle or sort.
-            if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
-                return self.copy()
-            # If this df only has one row partition, we don't want to do a shuffle and sort - we can
-            # just do a full-axis sort.
-            if len(self._partitions) == 1:
-                return self.apply_full_axis(
-                    1,
-                    sort_function,
-                )
-            if self.dtypes[columns[0]] == object:
-                # This means we are not sorting numbers, so we need our quantiles to not try
-                # arithmetic on the values.
-                method = "inverted_cdf"
-            else:
-                method = "linear"
-            from .utils import build_sort_functions
-
-            shuffling_functions = build_sort_functions(
-                self,
-                columns[0],
-                method,
-                ascending if not isinstance(ascending, list) else ascending[0],
-                **kwargs,
+        if axis != Axis.ROW_WISE:
+            raise NotImplementedError(
+                f"Algebra sort only implemented row-wise. {axis.name} sort not implemented yet!"
             )
-            major_col_partition_index = self.columns.get_loc(columns[0])
-            cols_seen = 0
-            index = -1
-            for i, length in enumerate(self._column_widths_cache):
-                cols_seen += length
-                if major_col_partition_index <= cols_seen:
-                    index = i
-                    break
-            new_partitions = self._partition_mgr_cls.shuffle_partitions(
-                self._partitions,
-                index,
-                shuffling_functions.sample_function,
-                shuffling_functions.pivot_function,
-                shuffling_functions.split_function,
+
+        # If this df is empty, we don't want to try and shuffle or sort.
+        if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
+            return self.copy()
+        # If this df only has one row partition, we don't want to do a shuffle and sort - we can
+        # just do a full-axis sort.
+        if len(self._partitions) == 1:
+            return self.apply_full_axis(
+                1,
                 sort_function,
             )
-            new_axes = self.axes
-            if kwargs.get("ignore_index", False):
-                new_axes[axis.value] = RangeIndex(len(new_axes[axis.value]))
-            else:
-                new_axes[axis.value] = self._compute_axis_labels_and_lengths(
-                    axis.value, new_partitions
-                )[0]
-            # Sometimes when performing a sort for `value_counts` the partitions have a MultiIndex
-            # but the _compute_axis_labels_and_lengths function gives us an Index of tuples instead
-            # of a MultiIndex.
-            if isinstance(self.axes[axis.value], pandas.MultiIndex) and isinstance(
-                new_axes[axis.value][0], tuple
-            ):
-                new_axes[axis.value] = pandas.MultiIndex.from_tuples(
-                    new_axes[axis.value].values
-                )
-            new_axes[axis.value] = new_axes[axis.value].set_names(
-                self.axes[axis.value].names
+        if self.dtypes[columns[0]] == object:
+            # This means we are not sorting numbers, so we need our quantiles to not try
+            # arithmetic on the values.
+            method = "inverted_cdf"
+        else:
+            method = "linear"
+
+        shuffling_functions = build_sort_functions(
+            self,
+            columns[0],
+            method,
+            ascending[0] if is_list_like(ascending) else ascending,
+            **kwargs,
+        )
+        major_col_partition_index = self.columns.get_loc(columns[0])
+        cols_seen = 0
+        index = -1
+        for i, length in enumerate(self.column_widths):
+            cols_seen += length
+            if major_col_partition_index <= cols_seen:
+                index = i
+                break
+        new_partitions = self._partition_mgr_cls.shuffle_partitions(
+            self._partitions,
+            index,
+            shuffling_functions,
+            sort_function,
+        )
+        new_axes = self.axes
+        if kwargs.get("ignore_index", False):
+            new_axes[axis.value] = RangeIndex(len(new_axes[axis.value]))
+        else:
+            new_axes[axis.value] = self._compute_axis_labels_and_lengths(
+                axis.value, new_partitions
+            )[0]
+        # If we have a MultiIndex, but the first partition is empty, which may happen when
+        # the dataframe is small, `_compute_axis_labels_and_lengths` will return us a flattened
+        # MultiIndex - i.e. an Index consisting of tuples. This is because the MultiIndex from
+        # the remaining partitions is appended to an empty flat Index, which results in a
+        # flattened index. To work around this, we need to convert this flattened Index back
+        # into a MultiIndex.
+        if isinstance(self.axes[axis.value], pandas.MultiIndex) and isinstance(
+            new_axes[axis.value][0], tuple
+        ):
+            new_axes[axis.value] = pandas.MultiIndex.from_tuples(
+                new_axes[axis.value].values
             )
-            new_axes[axis.value ^ 1] = self.axes[axis.value ^ 1]
-            new_lengths = [None, None]
-            (
-                new_partitions,
-                new_lengths[axis.value],
-            ) = self._partition_mgr_cls.rebalance_partitions(new_partitions)
-            col_parts = new_partitions[0]
-            new_lengths[axis.value ^ 1] = [part.width() for part in col_parts]
-            new_modin_frame = self.__constructor__(
-                new_partitions, *new_axes, *new_lengths, self.dtypes
-            )
-            if kwargs.get("ignore_index", False):
-                new_modin_frame._propagate_index_objs(axis=0)
-            return new_modin_frame
-        elif axis == Axis.COL_WISE:
-            raise NotImplementedError("Algebra column-wise sort not implemented yet!")
+        new_axes[axis.value] = new_axes[axis.value].set_names(
+            self.axes[axis.value].names
+        )
+        new_lengths = [None, None]
+        (
+            new_partitions,
+            new_lengths[axis.value],
+        ) = self._partition_mgr_cls.rebalance_partitions(new_partitions)
+        col_parts = new_partitions[0]
+        new_lengths[axis.value ^ 1] = [part.width() for part in col_parts]
+        new_modin_frame = self.__constructor__(
+            new_partitions, *new_axes, *new_lengths, self.dtypes
+        )
+        if kwargs.get("ignore_index", False):
+            new_modin_frame._propagate_index_objs(axis=0)
+        return new_modin_frame
 
     @lazy_metadata_decorator(apply_axis="both")
     def filter(self, axis: Union[Axis, int], condition: Callable) -> "PandasDataframe":

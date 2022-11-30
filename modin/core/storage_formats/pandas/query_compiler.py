@@ -3254,8 +3254,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
         # Our algebra sort is only implemented for Engines that support virtual partitioning.
-        if Engine.get() in ["Ray", "Dask"]:
-            kwargs.pop("ascending", False)
+        if Engine.get() in ["Ray", "Dask", "Unidist"]:
             new_modin_frame = self._modin_frame.sort_by(
                 0, columns, ascending=ascending, **kwargs
             )

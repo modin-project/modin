@@ -1498,7 +1498,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     def shuffle_partitions(
-        cls, partitions, index, sample_func, pivot_func, split_func, final_shuffle_func
+        cls, partitions, index, shuffle_functions, final_shuffle_func
     ):
         """
         Return shuffled partitions.
@@ -1509,15 +1509,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             The 2-d array of partitions to shuffle.
         index : int
             The index of partitions corresponding to the partitions that contain the column to sample.
-        sample_func : Callable(pandas.DataFrame) -> np.ndarray
-            Function to sample partitions. Output of this function will be passed to ``pivot_func``
-            to determine pivots.
-        pivot_func : Callable(List[Any]) -> np.ndarray
-            Function to determine pivots from partitions. The pivots determined by this function
-            will be passed to ``split_func`` to split each partition.
-        split_func : Callable(pandas.DataFrame, Any) -> List[pandas.Dataframe]
-            Function that splits a partition based off of the pivots provided. Should return an
-            unpacked list of pandas Dataframes.
+        shuffle_functions : NamedTuple
+            A named tuple containing the functions that we will be using to perform this shuffle.
         final_shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
             Function that shuffles the data within each new partition.
 
@@ -1529,11 +1522,11 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         # Mask the partition that contains the column that will be sampled.
         masked_partitions = partitions[:, index]
         # Sample each partition
-        sample_func = cls.preprocess_func(sample_func)
+        sample_func = cls.preprocess_func(shuffle_functions.sample_function)
         samples = [partition.apply(sample_func) for partition in masked_partitions]
         # Get each sample to pass in to the pivot function
-        samples = [sample.get() for sample in samples]
-        pivots = pivot_func(samples)
+        samples = cls.get_objects_from_partitions(samples)
+        pivots = shuffle_functions.pivot_function(samples)
         # Convert our list of block partitions to row partitions
         row_partitions = [
             partition.force_materialization().list_of_block_partitions[0]
@@ -1542,7 +1535,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         # Gather together all of the sub-partitions
         split_row_partitions = np.array(
             [
-                partition.split(split_func, len(pivots) + 1, pivots)
+                partition.split(
+                    shuffle_functions.split_function, len(pivots) + 1, pivots
+                )
                 for partition in row_partitions
             ]
         ).T
