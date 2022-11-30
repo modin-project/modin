@@ -363,7 +363,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         split_func : Callable[pandas.DataFrame, List[Any]] -> List[pandas.DataFrame]
             The function that will split this partition into multiple partitions.
         num_splits : int
-            The number of resulting partitions (may be empty).
+            The number of resulting partitions, which may be empty.
         *args : List[Any]
             Arguments to pass to ``split_func``.
 
@@ -382,31 +382,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         logger.debug(f"SUBMIT::_split_df::{self._identity}")
         outputs = _split_df.remote(self._data, split_func, *args)
         logger.debug(f"EXIT::Partition.split::{self._identity}")
-        return outputs
-
-    @classmethod
-    def put_splits(cls, shuffle_func, splits):
-        """
-        Create a new partition that wraps the input splits after concatenating them.
-
-        Parameters
-        ----------
-        shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
-            Function that shuffles the data within the new partition.
-        splits : List[ray.ObjectRef]
-            List of references to partition splits to concatenate and wrap.
-
-        Returns
-        -------
-        PandasOnRayDataframePartition
-            New `PandasOnRayDataframePartition` object.
-        """
-        logger = get_logger()
-        logger.debug("ENTER::Partition.put_splits")
-        logger.debug("SUBMIT::_concat_splits")
-        data, length, width, ip = _concat_splits.remote(shuffle_func, *splits)
-        logger.debug("EXIT::Partition.put_splits")
-        return cls(data, length, width, ip)
+        return [PandasOnRayDataframePartition(output) for output in outputs]
 
 
 @ray.remote(num_returns=2)
@@ -517,32 +493,3 @@ def _apply_list_of_funcs(call_queue, partition):  # pragma: no cover
         len(partition.columns) if hasattr(partition, "columns") else 0,
         get_node_ip_address(),
     )
-
-
-@ray.remote(num_returns=4)
-def _concat_splits(shuffle_func, *splits):
-    """
-    Concatenate the splits into one dataframe in a worker process.
-
-    Parameters
-    ----------
-    shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
-        Function that shuffles the data within the new partition.
-    *splits : List[pandas.DataFrame]
-        List of dataframes that correspond to splits to concatenate.
-
-    Returns
-    -------
-    pandas.DataFrame
-        The resulting pandas DataFrame.
-    int
-        The number of rows of the resulting pandas DataFrame.
-    int
-        The number of columns of the resulting pandas DataFrame.
-    str
-        The node IP address of the worker process.
-    """
-    import pandas
-
-    df = shuffle_func(pandas.concat(splits))
-    return (df, len(df), len(df.columns), get_node_ip_address())

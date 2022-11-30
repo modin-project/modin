@@ -322,62 +322,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         outputs = DaskWrapper.deploy(
             split_func, [self._data] + list(args), num_returns=num_splits, pure=True
         )
-        return outputs
-
-    @classmethod
-    def put_splits(cls, shuffle_func, splits):
-        """
-        Create a new partition that wraps the input splits after concatenating them.
-
-        Parameters
-        ----------
-        shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
-            Function that shuffles the data within the new partition.
-        splits : List[Future]
-            List of references to partition splits to concatenate and wrap.
-
-        Returns
-        -------
-        PandasOnDaskDataframePartition
-            New `PandasOnDaskDataframePartition` object.
-        """
-        futures = DaskWrapper.deploy(
-            _concat_splits,
-            [shuffle_func, *splits],
-            num_returns=4,
-            pure=True,
-        )
-        data = futures[0]
-        length, width, ip = DaskWrapper.materialize(futures[1:])
-        return cls(data, length, width, ip)
-
-
-def _concat_splits(shuffle_func, *splits):
-    """
-    Concatenate the splits into one dataframe in a worker process.
-
-    Parameters
-    ----------
-    shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
-        Function that shuffles the data within the new partition.
-    *splits : List[Future]
-        List of ObjectIDs that correspond to splits to concatenate.
-
-    Returns
-    -------
-    pandas.DataFrame
-        The resulting pandas DataFrame.
-    int
-        The number of rows of the resulting pandas DataFrame.
-    int
-        The number of columns of the resulting pandas DataFrame.
-    str
-        The node IP address of the worker process.
-    """
-    import pandas
-
-    df = shuffle_func(pandas.concat(splits))
-    return (df, len(df), len(df.columns), get_ip())
+        return [PandasOnDaskDataframePartition(output) for output in outputs]
 
 
 def apply_func(partition, func, *args, **kwargs):

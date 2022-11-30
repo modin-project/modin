@@ -2068,33 +2068,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if axis:
             new_columns = self.columns.to_frame().sort_index(**kwargs).index
             new_index = self.index
-            new_modin_frame = self._modin_frame.apply_full_axis(
-                axis,
-                lambda df: df.sort_index(
-                    axis=axis, level=level, sort_remaining=sort_remaining, **kwargs
-                ),
-                new_index,
-                new_columns,
-                dtypes="copy" if axis == 0 else None,
-            )
         else:
-            if Engine.get() in ["Ray", "Dask"]:
-                kwargs.pop("ascending", False)
-                new_modin_frame = self._modin_frame.sort_by(
-                    axis, "__index__", ascending=ascending, **kwargs
-                )
-            else:
-                new_index = self.index.to_frame().sort_index(**kwargs).index
-                new_columns = self.columns
-                new_modin_frame = self._modin_frame.apply_full_axis(
-                    axis,
-                    lambda df: df.sort_index(
-                        axis=axis, level=level, sort_remaining=sort_remaining, **kwargs
-                    ),
-                    new_index,
-                    new_columns,
-                    dtypes="copy" if axis == 0 else None,
-                )
+            new_index = self.index.to_frame().sort_index(**kwargs).index
+            new_columns = self.columns
+        new_modin_frame = self._modin_frame.apply_full_axis(
+            axis,
+            lambda df: df.sort_index(
+                axis=axis, level=level, sort_remaining=sort_remaining, **kwargs
+            ),
+            new_index,
+            new_columns,
+            dtypes="copy" if axis == 0 else None,
+        )
         return self.__constructor__(new_modin_frame)
 
     def melt(

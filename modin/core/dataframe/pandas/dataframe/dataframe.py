@@ -2006,12 +2006,7 @@ class PandasDataframe(ClassLogger):
             return df
 
         axis = Axis(axis)
-        # This if selects cases where we are either sorting by a single column that is not
-        # the index, or we are sorting by multiple columns, since in this case, we will have to
-        # shuffle the data before sorting.
-        if axis == Axis.ROW_WISE and not (
-            len(columns) == 1 and columns[0] == "__index__"
-        ):
+        if axis == Axis.ROW_WISE:
             # If this df is empty, we don't want to try and shuffle or sort.
             if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
                 return self.copy()
@@ -2031,7 +2026,11 @@ class PandasDataframe(ClassLogger):
             from .utils import build_sort_functions
 
             shuffling_functions = build_sort_functions(
-                self, columns, method, ascending, **kwargs
+                self,
+                columns[0],
+                method,
+                ascending if not isinstance(ascending, list) else ascending[0],
+                **kwargs,
             )
             major_col_partition_index = self.columns.get_loc(columns[0])
             cols_seen = 0
@@ -2065,38 +2064,16 @@ class PandasDataframe(ClassLogger):
                 new_partitions,
                 new_lengths[axis.value],
             ) = self._partition_mgr_cls.rebalance_partitions(new_partitions)
+            col_parts = new_partitions[0]
+            new_lengths[axis.value ^ 1] = [part.width() for part in col_parts]
             new_modin_frame = self.__constructor__(
                 new_partitions, *new_axes, *new_lengths, self.dtypes
             )
             if kwargs.get("ignore_index", False):
                 new_modin_frame._propagate_index_objs(axis=0)
             return new_modin_frame
-        # The elif selects the case where we are only sorting by index. All partitions maintain
-        # a copy of the index for their data, so if we are just sorting by index, we can make
-        # column partitions, and sort each by their index in parallel, which should be faster than
-        # shuffling our data and sorting.
-        elif axis == Axis.ROW_WISE and len(columns) == 1 and columns[0] == "__index__":
-            new_partitions = self._partition_mgr_cls.map_axis_partitions(
-                axis.value,
-                self._partitions,
-                lambda df: df.sort_index(ascending=ascending, **kwargs),
-            )
-            new_axes = self.axes
-            new_axes[axis.value] = self._compute_axis_labels_and_lengths(
-                axis.value, new_partitions
-            )[0]
-            new_axes[axis.value] = new_axes[axis.value].set_names(
-                self.axes[axis.value].names
-            )
-            new_lengths = [None, None]
-            new_modin_frame = self.__constructor__(
-                new_partitions, *new_axes, *new_lengths, self._dtypes
-            )
-            return new_modin_frame
         elif axis == Axis.COL_WISE:
             raise NotImplementedError("Algebra column-wise sort not implemented yet!")
-        else:
-            raise ValueError("Algebra sort by index + other columns is not supported!")
 
     @lazy_metadata_decorator(apply_axis="both")
     def filter(self, axis: Union[Axis, int], condition: Callable) -> "PandasDataframe":
