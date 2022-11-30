@@ -34,6 +34,11 @@ Dask engine
 There is no mentioned above issue for Modin on ``Dask`` engine with ``pandas`` in-memory format because ``Dask`` saves any objects
 in the worker process that processes a function (please, refer to `Dask documentation`_ for more information).
 
+Unidist engine
+--------------
+There is no mentioned above issue for Modin on ``Unidist`` engine with ``pandas`` in-memory format because ``Unidist`` saves any objects
+in the worker process that processes a function (please, refer to `Unidist documentation`_ for more information).
+
 How to handle Ray objects that are lower than 100 kB
 ----------------------------------------------------
 
@@ -47,3 +52,4 @@ Note that when specifying the threshold the performance of some Modin operations
 
 .. _`Ray documentation`: https://docs.ray.io/en/master/index.html#
 .. _`Dask documentation`: https://distributed.dask.org/en/latest/index.html
+.. _`Unidist documentation`: https://unidist.readthedocs.io/en/latest/index.html

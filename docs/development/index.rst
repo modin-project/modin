@@ -10,6 +10,7 @@ Development
     using_pandas_on_ray
     using_pandas_on_dask
     using_pandas_on_python
+    using_pandas_on_unidist
     using_hdk
     using_pyarrow_on_ray
     using_sql_on_ray
