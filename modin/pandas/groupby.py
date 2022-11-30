@@ -1268,7 +1268,11 @@ class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
         if isinstance(self._df, Series):
             intermediate.name = self._df.name
         else:
-            intermediate.name = next(col_name for col_name in self._df.columns if col_name not in self._internal_by)
+            intermediate.name = next(
+                col_name
+                for col_name in self._df.columns
+                if col_name not in self._internal_by
+            )
         return intermediate
 
     @property
