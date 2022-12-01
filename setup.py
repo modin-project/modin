@@ -1,14 +1,10 @@
 from setuptools import setup, find_packages
 import versioneer
-import sys
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 dask_deps = ["dask>=2.22.0", "distributed>=2.22.0"]
-if sys.version_info < (3, 8):
-    dask_deps.append("pickle5")
-
 ray_deps = [
     "ray[default]>=1.4.0,<2.1.0",
     "pyarrow>=4.0.1",
@@ -71,5 +67,5 @@ setup(
         "sql": sql_deps,
         "all": all_deps,
     },
-    python_requires=">=3.6",
+    python_requires=">=3.8",
 )
