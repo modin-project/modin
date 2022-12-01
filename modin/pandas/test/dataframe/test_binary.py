@@ -16,7 +16,6 @@ import pandas
 import matplotlib
 import modin.pandas as pd
 
-from modin._compat import PandasCompatVersion
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -341,11 +340,6 @@ def test_add_string_to_df():
     eval_general(modin_df, pandas_df, lambda df: df + "string")
 
 
-@pytest.mark.xfail(
-    PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
-    reason="Seems to be a bug in pandas 1.1.5. pandas throws ValueError "
-    + "for this particular dataframe.",
-)
 def test_add_custom_class():
     # see https://github.com/modin-project/modin/issues/5236
     # Test that we can add any object that is addable to pandas object data
@@ -360,7 +354,7 @@ def test_non_commutative_multiply_pandas():
     # The non commutative integer class implementation is tricky. Check that
     # multiplying such an integer with a pandas dataframe is really not
     # commutative.
-    pandas_df = pd.DataFrame([[1]], dtype=int)
+    pandas_df = pandas.DataFrame([[1]], dtype=int)
     integer = NonCommutativeMultiplyInteger(2)
     assert not (integer * pandas_df).equals(pandas_df * integer)
 

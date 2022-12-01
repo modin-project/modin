@@ -19,7 +19,6 @@ from numpy.testing import assert_array_equal
 import io
 import warnings
 
-from modin._compat import PandasCompatVersion
 import modin.pandas as pd
 from modin.utils import (
     to_pandas,
@@ -75,20 +74,8 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
         ("mask", lambda df: {"cond": df != 0}),
         ("pct_change", None),
         ("to_xarray", None),
-        pytest.param(
-            *("flags", None),
-            marks=pytest.mark.skipif(
-                condition=PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
-                reason="pandas 1.1 does not support .flags",
-            ),
-        ),
-        pytest.param(
-            *("set_flags", lambda df: {"allows_duplicate_labels": False}),
-            marks=pytest.mark.skipif(
-                condition=PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
-                reason="pandas 1.1 does not support .set_flags()",
-            ),
-        ),
+        ("flags", None),
+        ("set_flags", lambda df: {"allows_duplicate_labels": False}),
     ],
 )
 def test_ops_defaulting_to_pandas(op, make_args):
@@ -381,12 +368,15 @@ def test_info_default_param(data):
         assert modin_info[1:] == pandas_info[1:]
 
 
+# randint data covers https://github.com/modin-project/modin/issues/5137
+@pytest.mark.parametrize(
+    "data", [test_data_values[0], np.random.randint(0, 100, (10, 10))]
+)
 @pytest.mark.parametrize("verbose", [True, False])
 @pytest.mark.parametrize("max_cols", [10, 99999999])
 @pytest.mark.parametrize("memory_usage", [True, False, "deep"])
 @pytest.mark.parametrize("null_counts", [True, False])
-def test_info(verbose, max_cols, memory_usage, null_counts):
-    data = test_data_values[0]
+def test_info(data, verbose, max_cols, memory_usage, null_counts):
     with io.StringIO() as first, io.StringIO() as second:
         eval_general(
             pd.DataFrame(data),
@@ -801,13 +791,7 @@ def test_resample_specific(rule, closed, label, on, level):
         ("volume",),
         pandas.Series(["volume"]),
         pandas.Index(["volume"]),
-        pytest.param(
-            ["volume", "volume", "volume"],
-            marks=pytest.mark.skipif(
-                condition=PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
-                reason="pandas 1.1 does not support duplicate columns in resample",
-            ),
-        ),
+        ["volume", "volume", "volume"],
         ["volume", "price", "date"],
     ],
     ids=[

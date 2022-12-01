@@ -97,6 +97,9 @@ _DEFAULT_CONFIG_T = [
             "TimeAstype",
             "TimeDescribe",
             "TimeProperties",
+            "TimeReindex",
+            "TimeReindexMethod",
+            "TimeFillnaMethodDataframe",
             # IO benchmarks
             "TimeReadCsvSkiprows",
             "TimeReadCsvTrueFalseValues",
@@ -123,6 +126,8 @@ _DEFAULT_CONFIG_T = [
         [
             # Pandas storage format benchmarks
             "TimeFillnaSeries",
+            "TimeIndexingNumericSeries",
+            "TimeFillnaMethodSeries",
         ],
     ),
     (

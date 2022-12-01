@@ -17,19 +17,77 @@ import numpy as np
 import pandas
 import pandas.core.resample
 from pandas.core.dtypes.common import is_list_like
+from pandas._libs.lib import no_default
 from typing import Optional
-from modin._compat.pandas_api.classes import ResamplerCompat
+from modin.logging import ClassLogger
 from modin.utils import _inherit_docstrings
 
 
 @_inherit_docstrings(pandas.core.resample.Resampler)
-class Resampler(ResamplerCompat):
-    def _init(self, dataframe, axis, **resample_kwargs):
+class Resampler(ClassLogger):
+    def __init__(
+        self,
+        dataframe,
+        rule,
+        axis=0,
+        closed=None,
+        label=None,
+        convention="start",
+        kind=None,
+        loffset=None,
+        base=0,
+        on=None,
+        level=None,
+        origin="start_day",
+        offset=None,
+        group_keys=no_default,
+    ):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
         self.axis = self._dataframe._get_axis_number(axis)
-        self.resample_kwargs = dict(resample_kwargs, axis=self.axis)
+        self.resample_kwargs = {
+            "rule": rule,
+            "axis": axis,
+            "closed": closed,
+            "label": label,
+            "convention": convention,
+            "kind": kind,
+            "loffset": loffset,
+            "base": base,
+            "on": on,
+            "level": level,
+            "origin": origin,
+            "offset": offset,
+            "group_keys": group_keys,
+        }
         self.__groups = self._get_groups()
+
+    def _get_groups(self):
+        """
+        Compute the resampled groups.
+
+        Returns
+        -------
+        PandasGroupby
+            Groups as specified by resampling arguments.
+        """
+        df = self._dataframe if self.axis == 0 else self._dataframe.T
+        groups = df.groupby(
+            pandas.Grouper(
+                key=self.resample_kwargs["on"],
+                freq=self.resample_kwargs["rule"],
+                closed=self.resample_kwargs["closed"],
+                label=self.resample_kwargs["label"],
+                convention=self.resample_kwargs["convention"],
+                loffset=self.resample_kwargs["loffset"],
+                base=self.resample_kwargs["base"],
+                level=self.resample_kwargs["level"],
+                origin=self.resample_kwargs["origin"],
+                offset=self.resample_kwargs["offset"],
+            ),
+            group_keys=self.resample_kwargs["group_keys"],
+        )
+        return groups
 
     def __getitem__(self, key):
         """

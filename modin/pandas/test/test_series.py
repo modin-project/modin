@@ -15,12 +15,11 @@ import pytest
 import numpy as np
 import json
 import pandas
+from pandas.errors import SpecificationError
 import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
 
-from modin._compat import PandasCompatVersion
-from modin._compat.core.pandas_common import SpecificationError
 from modin.utils import get_current_execution
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 import sys
@@ -661,13 +660,6 @@ def test_add_custom_class():
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_agg(data, func):
-    if (
-        isinstance(func, int)
-        and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36
-    ):
-        pytest.xfail(
-            "Older pandas raises TypeError but Modin conforms to AssertionError"
-        )
     eval_general(
         *create_test_series(data),
         lambda df: df.agg(func),
@@ -718,13 +710,6 @@ def test_agg_numeric_except(request, data, func):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_aggregate(data, func):
-    if (
-        isinstance(func, int)
-        and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36
-    ):
-        pytest.xfail(
-            "Older pandas raises TypeError but Modin conforms to AssertionError"
-        )
     axis = 0
     eval_general(
         *create_test_series(data),
@@ -1628,10 +1613,6 @@ def test_drop_duplicates(data, keep, inplace):
 @pytest.mark.parametrize("how", ["any", "all"], ids=["any", "all"])
 def test_dropna(data, how):
     modin_series, pandas_series = create_test_series(data)
-
-    with pytest.raises(TypeError):
-        modin_series.dropna(how=None, thresh=None)
-
     modin_result = modin_series.dropna(how=how)
     pandas_result = pandas_series.dropna(how=how)
     df_equals(modin_result, pandas_result)
@@ -1643,10 +1624,6 @@ def test_dropna_inplace(data):
     pandas_result = pandas_series.dropna()
     modin_series.dropna(inplace=True)
     df_equals(modin_series, pandas_result)
-
-    modin_series, pandas_series = create_test_series(data)
-    with pytest.raises(TypeError):
-        modin_series.dropna(thresh=2, inplace=True)
 
     modin_series, pandas_series = create_test_series(data)
     pandas_series.dropna(how="any", inplace=True)
@@ -2889,10 +2866,6 @@ def test_resample(closed, label, level):
 @pytest.mark.parametrize("name", [None, "Custom name"])
 @pytest.mark.parametrize("inplace", [True, False])
 def test_reset_index(data, drop, name, inplace):
-    if name is not None and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-        pytest.xfail(
-            "pandas.Series.reset_index() should ignore `name` when `drop=True` but it does not"
-        )
     eval_general(
         *create_test_series(data),
         lambda df, *args, **kwargs: df.reset_index(*args, **kwargs),
@@ -3133,10 +3106,6 @@ def test_shift_slice_shift(data, index, periods):
 )
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 def test_sort_index(data, ascending, sort_remaining, na_position):
-    if ascending is None and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-        pytest.xfail(
-            "Modin expects pandas to raise ValueError on ascending=None which older pandas does not"
-        )
     modin_series, pandas_series = create_test_series(data)
     eval_general(
         modin_series,
@@ -4282,7 +4251,7 @@ def test_non_commutative_multiply_pandas():
     # The non commutative integer class implementation is tricky. Check that
     # multiplying such an integer with a pandas series is really not
     # commutative.
-    pandas_series = pd.DataFrame([[1]], dtype=int)
+    pandas_series = pandas.Series(1, dtype=int)
     integer = NonCommutativeMultiplyInteger(2)
     assert not (integer * pandas_series).equals(pandas_series * integer)
 
