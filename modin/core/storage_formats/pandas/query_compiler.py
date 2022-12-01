@@ -2707,6 +2707,59 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         return result
 
+    def groupby_skew(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
+        def map_skew(dfbg, *args, **kwargs):
+            return pandas.concat(
+                [
+                    dfbg.count(),
+                    dfbg.sum(),
+                    dfbg.apply(lambda x: (x**2).sum()),
+                    dfbg.apply(lambda x: (x**3).sum()),
+                ],
+                copy=False,
+                axis=1,
+            )
+
+        def reduce_skew(dfbg, *args, **kwargs):
+            df = dfbg.sum()
+            chunk_size = df.shape[1] // 4
+
+            count = df.iloc[:, :chunk_size]
+            # s = sum(x)
+            s = df.iloc[:, chunk_size : chunk_size * 2]
+            # s2 = sum(x^2)
+            s2 = df.iloc[:, chunk_size * 2 : chunk_size * 3]
+            # s3 = sum(x^3)
+            s3 = df.iloc[:, chunk_size * 3 : chunk_size * 4]
+
+            # mean = sum(x) / count
+            m = s / count
+
+            # m2 = sum( (x - m)^ 2) = sum(x^2 - 2*x*m + m^2)
+            m2 = s2 - 2 * m * s + count * (m**2)
+
+            # m3 = sum( (x - m)^ 3) = sum(x^3 - 3*x^2*m + 3*x*m^2 - m^3)
+            m3 = s3 - 3 * m * s2 + 3 * s * (m**2) - count * (m**3)
+
+            # skew = [ (count * sqrt(count - 1)) / (count - 2) ] * [ sum( (x - m)^3 ) / sum( (x - m)^2 ) ]
+            skew_res = (count * (count - 1) ** 0.5 / (count - 2)) * (m3 / m2**1.5)
+            return skew_res
+
+        result = GroupByReduce.register(
+            map_skew,
+            reduce_skew,
+            default_to_pandas_func=lambda dfgb, **kwargs: dfgb.skew(**kwargs),
+        )(
+            query_compiler=self,
+            by=by,
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+        return result
+
     def _groupby_dict_reduce(
         self,
         by,

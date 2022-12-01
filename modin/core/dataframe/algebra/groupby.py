@@ -80,6 +80,7 @@ class GroupByReduce(TreeReduce):
         agg_kwargs,
         other=None,
         by=None,
+        drop=False,
     ):
         """
         Execute Map phase of GroupByReduce.
@@ -108,6 +109,8 @@ class GroupByReduce(TreeReduce):
         by : level index name or list of such labels, optional
             Index levels, that is used to determine groups.
             If not specified, `other` parameter is used.
+        drop : bool, default: False
+            Indicates whether or not by-data came from the `self` frame.
 
         Returns
         -------
@@ -126,7 +129,8 @@ class GroupByReduce(TreeReduce):
         if other is not None:
             # Other is a broadcasted partition that represents 'by' columns
             # Concatenate it with 'df' to group on its columns names
-            other = other.squeeze(axis=axis ^ 1)
+            if not drop:
+                other = other.squeeze(axis=axis ^ 1)
             if isinstance(other, pandas.DataFrame):
                 df = pandas.concat(
                     [df] + [other[[o for o in other if o not in df]]],
@@ -439,6 +443,7 @@ class GroupByReduce(TreeReduce):
                     map_func=map_func,
                     agg_args=agg_args,
                     agg_kwargs=agg_kwargs,
+                    drop=drop,
                     **kwargs,
                 )
 
