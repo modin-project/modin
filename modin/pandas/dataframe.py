@@ -1156,10 +1156,10 @@ class DataFrame(BasePandasDataset):
             header, lengths = get_header()
             output.extend([columns_line, *header])
             for i, col in enumerate(columns):
-                i, col, dtype = map(pprint_thing, [i, col, dtypes[col]])
+                i, col_s, dtype = map(pprint_thing, [i, col, dtypes[col]])
 
                 to_append = put_str(" {}".format(i), lengths["head"]) + put_str(
-                    col, lengths["column"]
+                    col_s, lengths["column"]
                 )
                 if null_counts:
                     non_null = pprint_thing(non_null_count[col])

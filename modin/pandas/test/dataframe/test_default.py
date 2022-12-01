@@ -368,12 +368,15 @@ def test_info_default_param(data):
         assert modin_info[1:] == pandas_info[1:]
 
 
+# randint data covers https://github.com/modin-project/modin/issues/5137
+@pytest.mark.parametrize(
+    "data", [test_data_values[0], np.random.randint(0, 100, (10, 10))]
+)
 @pytest.mark.parametrize("verbose", [True, False])
 @pytest.mark.parametrize("max_cols", [10, 99999999])
 @pytest.mark.parametrize("memory_usage", [True, False, "deep"])
 @pytest.mark.parametrize("null_counts", [True, False])
-def test_info(verbose, max_cols, memory_usage, null_counts):
-    data = test_data_values[0]
+def test_info(data, verbose, max_cols, memory_usage, null_counts):
     with io.StringIO() as first, io.StringIO() as second:
         eval_general(
             pd.DataFrame(data),
