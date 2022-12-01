@@ -382,7 +382,9 @@ def test_info_default_param(data):
 
 
 # randint data covers https://github.com/modin-project/modin/issues/5137
-@pytest.mark.parametrize("data", [test_data_values[0], np.random.randint(0, 100, (10, 10))])
+@pytest.mark.parametrize(
+    "data", [test_data_values[0], np.random.randint(0, 100, (10, 10))]
+)
 @pytest.mark.parametrize("verbose", [True, False])
 @pytest.mark.parametrize("max_cols", [10, 99999999])
 @pytest.mark.parametrize("memory_usage", [True, False, "deep"])
