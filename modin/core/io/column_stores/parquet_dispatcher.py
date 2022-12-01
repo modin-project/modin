@@ -27,7 +27,7 @@ from modin.config import NPartitions
 
 
 from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
-from modin.utils import import_optional_dependency, _inherit_docstrings
+from modin.utils import _inherit_docstrings
 
 
 class ColumnStoreDataset:
@@ -603,10 +603,6 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
         """
-        import_optional_dependency(
-            "pyarrow",
-            "pyarrow is required to read parquet files.",
-        )
         from modin.pandas.io import PQ_INDEX_REGEX
 
         if isinstance(path, str):
