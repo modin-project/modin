@@ -1480,7 +1480,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                     for obj in partitions[stop]:
                         obj._length_cache = new_last_partition_size
 
-                    partition_size = ideal_partition_size
                 # The new virtual partitions are not `full_axis`, even if they
                 # happen to span all rows in the dataframe, because they are
                 # meant to be the final partitions of the dataframe. They've
