@@ -2882,21 +2882,6 @@ class BasePandasDataset(ClassLogger):
         """
         Sort by the values along either axis.
         """
-        if self._query_compiler.has_multiindex(axis=axis):
-            if not isinstance(by, list):
-                temp_by = [by]
-            if any(map(lambda name: name in self.axes[axis]), temp_by):
-                return self._default_to_pandas(
-                    "sort_values",
-                    by,
-                    axis,
-                    ascending,
-                    inplace,
-                    kind,
-                    na_position,
-                    ignore_index,
-                    key,
-                )
         axis = self._get_axis_number(axis)
         inplace = validate_bool_kwarg(inplace, "inplace")
         ascending = validate_ascending(ascending)

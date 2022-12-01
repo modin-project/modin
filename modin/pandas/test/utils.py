@@ -1367,7 +1367,6 @@ def df_equals_with_non_stable_indices(df1, df2):
 
 def rotate_decimal_digits_or_symbols(value):
     if value.dtype == object:
-        # import pdb;pdb.set_trace()
         # When dtype is object, we assume that it is actually strings from MultiIndex level names
         return [x[-1] + x[:-1] for x in value]
     else:

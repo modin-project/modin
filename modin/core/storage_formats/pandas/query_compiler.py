@@ -2227,7 +2227,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
 
     def getitem_row_array(self, key):
-        # import pdb;pdb.set_trace()
         if all(map(lambda name: name in self.columns.names, key)):
             return self.from_pandas(
                 self.columns.to_frame()[key].T.reset_index(drop=True),
@@ -3287,7 +3286,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             [row for row, idx in index_builder], copy=False
         )
         broadcast_values.columns = self.columns
-        # broadcast_values.index = [1,2,3,4]
         new_columns = broadcast_values.sort_values(
             by=rows, axis=1, ascending=ascending, **kwargs
         ).columns
