@@ -2708,20 +2708,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return result
 
     def groupby_skew(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
-        def map_skew(dfbg, *args, **kwargs):
+        def map_skew(dfgb, *args, **kwargs):
             return pandas.concat(
                 [
-                    dfbg.count(),
-                    dfbg.sum(),
-                    dfbg.apply(lambda x: (x**2).sum()),
-                    dfbg.apply(lambda x: (x**3).sum()),
+                    dfgb.count(),
+                    dfgb.sum(),
+                    dfgb.apply(lambda x: (x**2).sum()),
+                    dfgb.apply(lambda x: (x**3).sum()),
                 ],
                 copy=False,
                 axis=1,
             )
 
-        def reduce_skew(dfbg, *args, **kwargs):
-            df = dfbg.sum()
+        def reduce_skew(dfgb, *args, **kwargs):
+            df = dfgb.sum()
             chunk_size = df.shape[1] // 4
 
             count = df.iloc[:, :chunk_size]
@@ -2741,6 +2741,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # m3 = sum( (x - m)^ 3) = sum(x^3 - 3*x^2*m + 3*x*m^2 - m^3)
             m3 = s3 - 3 * m * s2 + 3 * s * (m**2) - count * (m**3)
 
+            # The equation for the 'skew' was taken directly from pandas:
+            # https://github.com/pandas-dev/pandas/blob/8dab54d6573f7186ff0c3b6364d5e4dd635ff3e7/pandas/core/nanops.py#L1226
             # skew = [ (count * sqrt(count - 1)) / (count - 2) ] * [ sum( (x - m)^3 ) / sum( (x - m)^2 ) ]
             skew_res = (count * (count - 1) ** 0.5 / (count - 2)) * (m3 / m2**1.5)
             return skew_res
