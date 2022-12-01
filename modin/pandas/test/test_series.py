@@ -1628,10 +1628,6 @@ def test_drop_duplicates(data, keep, inplace):
 @pytest.mark.parametrize("how", ["any", "all"], ids=["any", "all"])
 def test_dropna(data, how):
     modin_series, pandas_series = create_test_series(data)
-
-    with pytest.raises(TypeError):
-        modin_series.dropna(how=None, thresh=None)
-
     modin_result = modin_series.dropna(how=how)
     pandas_result = pandas_series.dropna(how=how)
     df_equals(modin_result, pandas_result)
@@ -1643,10 +1639,6 @@ def test_dropna_inplace(data):
     pandas_result = pandas_series.dropna()
     modin_series.dropna(inplace=True)
     df_equals(modin_series, pandas_result)
-
-    modin_series, pandas_series = create_test_series(data)
-    with pytest.raises(TypeError):
-        modin_series.dropna(thresh=2, inplace=True)
 
     modin_series, pandas_series = create_test_series(data)
     pandas_series.dropna(how="any", inplace=True)
