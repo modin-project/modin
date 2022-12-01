@@ -74,15 +74,15 @@ def initialize_ray(
         What password to use when connecting to Redis.
         If not specified, ``modin.config.RayRedisPassword`` is used.
     """
+    # TODO(https://github.com/ray-project/ray/issues/28216): remove this
+    # workaround once Ray gives a better way to suppress task errors.
+    # Ideally we would not set global environment variables.
+    # If user has explicitly set _RAY_IGNORE_UNHANDLED_ERRORS_VAR, don't
+    # don't override its value.
+    if _RAY_IGNORE_UNHANDLED_ERRORS_VAR not in os.environ:
+        os.environ[_RAY_IGNORE_UNHANDLED_ERRORS_VAR] = "1"
     extra_init_kw = {"runtime_env": {"env_vars": {"__MODIN_AUTOIMPORT_PANDAS__": "1"}}}
     if not ray.is_initialized() or override_is_cluster:
-        # TODO(https://github.com/ray-project/ray/issues/28216): remove this
-        # workaround once Ray gives a better way to suppress task errors.
-        # Ideally we would not set global environment variables.
-        # If user has explicitly set _RAY_IGNORE_UNHANDLED_ERRORS_VAR, don't
-        # don't override its value.
-        if _RAY_IGNORE_UNHANDLED_ERRORS_VAR not in os.environ:
-            os.environ[_RAY_IGNORE_UNHANDLED_ERRORS_VAR] = "1"
         cluster = override_is_cluster or IsRayCluster.get()
         redis_address = override_redis_address or RayRedisAddress.get()
         redis_password = (
