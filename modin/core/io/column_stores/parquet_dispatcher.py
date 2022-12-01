@@ -603,10 +603,16 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
         """
-        import_optional_dependency(
-            "pyarrow",
-            "pyarrow is required to read parquet files.",
-        )
+        try:
+            import_optional_dependency(
+                "pyarrow",
+                "pyarrow or fastparquet is required to read parquet files.",
+            )
+        except ImportError:
+            import_optional_dependency(
+                "fastparquet",
+                "pyarrow or fastparquet is required to read parquet files.",
+            )
         from modin.pandas.io import PQ_INDEX_REGEX
 
         if isinstance(path, str):
