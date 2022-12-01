@@ -407,9 +407,6 @@ def test_sort_multiindex(sort_remaining):
             marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
         ),
         "first,last,middle",
-        "multiindex_level0",
-        "multiindex_level1,multiindex_level0",
-        "multiindex_level0,last,first,multiindex_level1",
     ],
 )
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
