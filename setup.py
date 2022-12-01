@@ -2,8 +2,6 @@ from setuptools import setup, find_packages
 import versioneer
 import sys
 
-PANDAS_VERSION = "1.5.2" if sys.version_info >= (3, 8) else "1.1.5"
-
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
@@ -56,7 +54,13 @@ setup(
     url="https://github.com/modin-project/modin",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    install_requires=[f"pandas=={PANDAS_VERSION}", "packaging", "numpy>=1.18.5", "fsspec", "psutil"],
+    install_requires=[
+        f"pandas==1.5.2",
+        "packaging",
+        "numpy>=1.18.5",
+        "fsspec",
+        "psutil",
+    ],
     extras_require={
         # can be installed by pip install modin[dask]
         "dask": dask_deps,
