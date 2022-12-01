@@ -1,4 +1,4 @@
-<p align="center"><a href="https://modin.readthedocs.io"><img width=77% alt="" src="https://github.com/modin-project/modin/raw/3d6368edf311995ad231ec5342a51cd9e4e3dc20/docs/img/MODIN_ver2_hrz.png?raw=true"></a></p>
+<p align="center"><a href="https://modin.readthedocs.io"><img width=77% alt="" src="https://github.com/modin-project/modin/raw/7c009c747caa90554607e30b9ac2bd1b190b8c7d/docs/img/MODIN_ver2_hrz.png?raw=true"></a></p>
 <h2 align="center">Scale your pandas workflows by changing one line of code</h2>
 
 <div align="center">
@@ -26,28 +26,28 @@ cores. Modin works especially well on larger datasets, where pandas becomes pain
 
 By simply replacing the import statement, Modin offers users effortless speed and scale for their pandas workflows:
 
-<img src="https://github.com/modin-project/modin/raw/master/docs/img/Import.gif" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
+<img src="https://github.com/modin-project/modin/raw/7c009c747caa90554607e30b9ac2bd1b190b8c7d/docs/img/Import.gif" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
 
 In the GIFs below, Modin (left) and pandas (right) perform *the same pandas operations* on a 2GB dataset. The only difference between the two notebook examples is the import statement. 
 
 <table class="tg">
 <thead>
   <tr>
-    <th class="tg-0lax" style="text-align: center;"><img src="https://github.com/modin-project/modin/raw/master/docs/img/MODIN_ver2_hrz.png?raw=True" height="35px"></th>
+    <th class="tg-0lax" style="text-align: center;"><img src="https://github.com/modin-project/modin/raw/7c009c747caa90554607e30b9ac2bd1b190b8c7d/docs/img/MODIN_ver2_hrz.png?raw=True" height="35px"></th>
     <th class="tg-0lax" style="text-align: center;"><img src="https://pandas.pydata.org/static/img/pandas.svg" height="50px"></img></th>
   </tr>
 </thead>
 <tbody>
   <tr>
-    <td class="tg-0lax"><img src="https://github.com/modin-project/modin/raw/master/docs/img/Modin.gif"></img></td>
-    <td class="tg-0lax"><img src="https://github.com/modin-project/modin/raw/master/docs/img/Pandas.gif"></img></td>
+    <td class="tg-0lax"><img src="https://github.com/modin-project/modin/raw/7c009c747caa90554607e30b9ac2bd1b190b8c7d/docs/img/Modin.gif"></img></td>
+    <td class="tg-0lax"><img src="https://github.com/modin-project/modin/raw/7c009c747caa90554607e30b9ac2bd1b190b8c7d/docs/img/Pandas.gif"></img></td>
   </tr>
 </tbody>
 </table>
 
 The charts below show the speedup you get by replacing pandas with Modin based on the examples above. The example notebooks can be found [here](examples/jupyter). To learn more about the speedups you could get with Modin and try out some examples on your own, check out our [10-minute quickstart guide](https://modin.readthedocs.io/en/latest/getting_started/quickstart.html) to try out some examples on your own!
 
-<img src="https://github.com/modin-project/modin/raw/master/docs/img/Modin_Speedup.svg" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
+<img src="https://github.com/modin-project/modin/raw/7c009c747caa90554607e30b9ac2bd1b190b8c7d/docs/img/Modin_Speedup.svg" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
 
 ### Installation
 
@@ -157,7 +157,7 @@ you would with pandas!
 
 #### Faster pandas, even on your laptop
 
-<img align="right" style="display:inline;" height="350" width="300" src="https://github.com/modin-project/modin/raw/master/docs/img/read_csv_benchmark.png?raw=true"></a>
+<img align="right" style="display:inline;" height="350" width="300" src="https://github.com/modin-project/modin/raw/7c009c747caa90554607e30b9ac2bd1b190b8c7d/docs/img/read_csv_benchmark.png?raw=true"></a>
 
 The `modin.pandas` DataFrame is an extremely light-weight parallel DataFrame.
 Modin transparently distributes the data and computation so that you can continue using the same pandas API
@@ -194,7 +194,7 @@ scalability in a cluster.
 We designed [Modin's architecture](https://modin.readthedocs.io/en/latest/development/architecture.html)
 to be modular so we can plug in different components as they develop and improve:
 
-<img src="https://github.com/modin-project/modin/raw/master/docs/img/modin_architecture.png" alt="Modin's architecture" width="75%"></img>
+<img src="https://github.com/modin-project/modin/raw/7c009c747caa90554607e30b9ac2bd1b190b8c7d/docs/img/modin_architecture.png" alt="Modin's architecture" width="75%"></img>
 
 ### Other Resources
 
