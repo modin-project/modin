@@ -15,6 +15,8 @@
 
 import numpy as np
 import pandas
+from pandas.core.apply import reconstruct_func
+from pandas.errors import SpecificationError
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
 from pandas._libs.lib import no_default
@@ -23,6 +25,7 @@ from types import BuiltinFunctionType
 from collections.abc import Iterable
 
 from modin.error_message import ErrorMessage
+from modin.logging import ClassLogger
 from modin.utils import (
     _inherit_docstrings,
     try_cast_to_pandas,
@@ -36,13 +39,10 @@ from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.config import IsExperimental
 from .series import Series
 from .utils import is_label
-from modin._compat import PandasCompatVersion
-from modin._compat.core.pandas_common import reconstruct_func
-from modin._compat.pandas_api.classes import DataFrameGroupByCompat, SeriesGroupByCompat
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
-class DataFrameGroupBy(DataFrameGroupByCompat):
+class DataFrameGroupBy(ClassLogger):
     def __init__(
         self,
         df,
@@ -236,12 +236,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                 and DataFrame(query_compiler=self._by.isna()).any(axis=None)
             ):
                 mask_nan_rows = data[self._by.columns].isna().any(axis=1)
-                if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-                    # older pandas filled invalid rows with NaN-s
-                    result.loc[mask_nan_rows] = np.nan
-                else:
-                    # drop NaN groups
-                    result = result.loc[~mask_nan_rows]
+                result = result.loc[~mask_nan_rows]
             return result
 
         if freq is None and axis == 1 and self._axis == 0:
@@ -255,16 +250,6 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
             result = _shift(
                 self._df, periods, freq, axis, fill_value, is_set_nan_rows=False
             )
-            if PandasCompatVersion.CURRENT != PandasCompatVersion.LATEST:
-                # pandas>=1.5 no longer make multi-index in groupby().shift()
-                new_idx_lvl_arrays = np.concatenate(
-                    [self._df[self._by.columns].values.T, [list(result.index)]]
-                )
-                result.index = pandas.MultiIndex.from_arrays(
-                    new_idx_lvl_arrays,
-                    names=[col_name for col_name in self._by.columns]
-                    + [result._query_compiler.get_index_name()],
-                )
             result = result.dropna(subset=self._by.columns)
             if self._sort:
                 result = result.sort_values(list(self._by.columns), axis=axis)
@@ -308,7 +293,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
         return self._indices_cache
 
     @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy.pct_change)
-    def _pct_change(self, *args, **kwargs):
+    def pct_change(self, *args, **kwargs):
         return self._default_to_pandas(lambda df: df.pct_change(*args, **kwargs))
 
     def filter(self, func, dropna=True, *args, **kwargs):
@@ -544,8 +529,6 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                 )
 
             if any(i not in self._df.columns for i in func_dict.keys()):
-                from modin._compat.core.pandas_common import SpecificationError
-
                 raise SpecificationError("nested renamer is not supported")
             if func is None:
                 kwargs = {}
@@ -1193,7 +1176,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
 
 
 @_inherit_docstrings(pandas.core.groupby.SeriesGroupBy)
-class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
+class SeriesGroupBy(DataFrameGroupBy):
     @property
     def ndim(self):
         """

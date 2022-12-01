@@ -17,7 +17,7 @@ import io
 import os
 
 import pandas
-from modin._compat.core.pandas_common import pandas_to_csv
+from pandas.io.common import get_handle
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.ray.generic.io import RayIO
@@ -30,7 +30,6 @@ from modin.core.io import (
     SQLDispatcher,
     ExcelDispatcher,
 )
-from modin._compat.core.pandas_common import get_handle as pd_get_handle
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVParser,
     PandasFWFParser,
@@ -198,7 +197,7 @@ class PandasOnRayIO(RayIO):
             path_or_buf = csv_kwargs["path_or_buf"]
             is_binary = "b" in csv_kwargs["mode"]
             csv_kwargs["path_or_buf"] = io.BytesIO() if is_binary else io.StringIO()
-            pandas_to_csv(df, **csv_kwargs)
+            df.to_csv(**csv_kwargs)
             content = csv_kwargs["path_or_buf"].getvalue()
             csv_kwargs["path_or_buf"].close()
 
@@ -206,7 +205,7 @@ class PandasOnRayIO(RayIO):
             RayWrapper.materialize(signals.wait.remote(partition_idx))
 
             # preparing to write data from the buffer to a file
-            with pd_get_handle(
+            with get_handle(
                 path_or_buf,
                 # in case when using URL in implicit text mode
                 # pandas try to open `path_or_buf` in binary mode

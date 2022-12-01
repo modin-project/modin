@@ -16,7 +16,6 @@ import numpy as np
 import pandas
 import matplotlib
 
-from modin._compat import PandasCompatVersion
 import modin.pandas as pd
 from modin.utils import to_pandas
 
@@ -336,9 +335,6 @@ def test_merge(test_data, test_data2):
 )
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 def test_sort_index(axis, ascending, na_position):
-    if ascending is None and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-        pytest.skip("pandas 1.1 did not raise on ascending=None but Modin does")
-
     data = test_data["float_nan_data"]
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
@@ -349,16 +345,13 @@ def test_sort_index(axis, ascending, na_position):
             df.index = [(i - length / 2) % length for i in range(length)]
 
     dfs = [modin_df, pandas_df]
-    kw = {"copy": False}
-    if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-        kw = {"inplace": False}
     # Add NaNs to sorted index
     for idx in range(len(dfs)):
         sort_index = dfs[idx].axes[axis]
         dfs[idx] = dfs[idx].set_axis(
             [np.nan if i % 2 == 0 else sort_index[i] for i in range(len(sort_index))],
             axis=axis,
-            **kw,
+            copy=False,
         )
     modin_df, pandas_df = dfs
 

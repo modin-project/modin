@@ -17,16 +17,38 @@ from typing import Optional
 import pandas.core.window.rolling
 from pandas.core.dtypes.common import is_list_like
 
+from modin.logging import ClassLogger
 from modin.utils import _inherit_docstrings
-from modin._compat.pandas_api.classes import WindowCompat, RollingCompat
 
 
 @_inherit_docstrings(pandas.core.window.rolling.Window)
-class Window(WindowCompat):
-    def _init(self, dataframe, window_args, axis):
+class Window(ClassLogger):
+    def __init__(
+        self,
+        dataframe,
+        window=None,
+        min_periods=None,
+        center=False,
+        win_type=None,
+        on=None,
+        axis=0,
+        closed=None,
+        step=None,
+        method="single",
+    ):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
-        self.window_args = window_args
+        self.window_args = [
+            window,
+            min_periods,
+            center,
+            win_type,
+            on,
+            axis,
+            closed,
+            step,
+            method,
+        ]
         self.axis = axis
 
     def mean(self, *args, **kwargs):
@@ -62,11 +84,35 @@ class Window(WindowCompat):
     pandas.core.window.rolling.Rolling,
     excluded=[pandas.core.window.rolling.Rolling.__init__],
 )
-class Rolling(RollingCompat):
-    def _init(self, dataframe, rolling_args, axis):
+class Rolling(ClassLogger):
+    def __init__(
+        self,
+        dataframe,
+        window=None,
+        min_periods=None,
+        center=False,
+        win_type=None,
+        on=None,
+        axis=0,
+        closed=None,
+        step=None,
+        method="single",
+    ):
+        if step is not None:
+            raise NotImplementedError("step parameter is not implemented yet.")
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
-        self.rolling_args = rolling_args
+        self.rolling_args = [
+            window,
+            min_periods,
+            center,
+            win_type,
+            on,
+            axis,
+            closed,
+            step,
+            method,
+        ]
         self.axis = axis
 
     def count(self):
