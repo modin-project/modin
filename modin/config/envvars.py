@@ -77,7 +77,7 @@ class Engine(EnvironmentVariable, type=str):
     """Distribution engine to run queries by."""
 
     varname = "MODIN_ENGINE"
-    choices = ("Ray", "Dask", "Python", "Native")
+    choices = ("Ray", "Dask", "Python", "Native", "Unidist")
 
     NOINIT_ENGINES = {
         "Python",
@@ -95,6 +95,7 @@ class Engine(EnvironmentVariable, type=str):
         from modin.utils import (
             MIN_RAY_VERSION,
             MIN_DASK_VERSION,
+            MIN_UNIDIST_VERSION,
         )
 
         if IsDebug.get():
@@ -137,6 +138,19 @@ class Engine(EnvironmentVariable, type=str):
             pass
         else:
             return "Native"
+        try:
+            import unidist
+
+        except ImportError:
+            pass
+        else:
+            if version.parse(unidist.__version__) < MIN_UNIDIST_VERSION:
+                raise ImportError(
+                    "Please `pip install unidist[mpi]` to install compatible unidist on MPI "
+                    + "version "
+                    + f"(>={MIN_UNIDIST_VERSION})."
+                )
+            return "Unidist"
         raise ImportError(
             "Please refer to installation documentation page to install an engine"
         )
@@ -491,7 +505,7 @@ class PersistentPickle(EnvironmentVariable, type=bool):
 
 class HdkLaunchParameters(EnvironmentVariable, type=dict):
     """
-    Additional command line options for the OmniSci engine.
+    Additional command line options for the HDK engine.
 
     Please visit OmniSci documentation for the description of available parameters:
     https://docs.omnisci.com/installation-and-configuration/config-parameters#configuration-parameters-for-omniscidb
@@ -523,8 +537,20 @@ class HdkLaunchParameters(EnvironmentVariable, type=dict):
             OmnisciLaunchParameters.varname in os.environ
             and HdkLaunchParameters.varname not in os.environ
         ):
-            return OmnisciLaunchParameters.get()
+            return OmnisciLaunchParameters._get()
+        else:
+            return HdkLaunchParameters._get()
 
+    @classmethod
+    def _get(cls) -> dict:
+        """
+        Get the resulted command-line options.
+
+        Returns
+        -------
+        dict
+            Decoded and verified config value.
+        """
         custom_parameters = super().get()
         result = cls.default.copy()
         result.update(

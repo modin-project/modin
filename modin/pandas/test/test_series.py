@@ -15,12 +15,11 @@ import pytest
 import numpy as np
 import json
 import pandas
+from pandas.errors import SpecificationError
 import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
 
-from modin._compat import PandasCompatVersion
-from modin._compat.core.pandas_common import SpecificationError
 from modin.utils import get_current_execution
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 import sys
@@ -74,6 +73,8 @@ from .utils import (
     test_data_large_categorical_series_keys,
     test_data_large_categorical_series_values,
     default_to_pandas_ignore_string,
+    CustomIntegerForAddition,
+    NonCommutativeMultiplyInteger,
 )
 from modin.config import NPartitions
 
@@ -619,6 +620,17 @@ def test_add(data):
     inter_df_math_helper(modin_series, pandas_series, "add")
 
 
+def test_add_does_not_change_original_series_name():
+    # See https://github.com/modin-project/modin/issues/5232
+    s1 = pd.Series(1, name=1)
+    s2 = pd.Series(2, name=2)
+    original_s1 = s1.copy(deep=True)
+    original_s2 = s2.copy(deep=True)
+    _ = s1 + s2
+    df_equals(s1, original_s1)
+    df_equals(s2, original_s2)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_add_prefix(data):
     modin_series, pandas_series = create_test_series(data)
@@ -635,16 +647,19 @@ def test_add_suffix(data):
     )
 
 
+def test_add_custom_class():
+    # see https://github.com/modin-project/modin/issues/5236
+    # Test that we can add any object that is addable to pandas object data
+    # via "+".
+    eval_general(
+        *create_test_series(test_data["int_data"]),
+        lambda df: df + CustomIntegerForAddition(4),
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_agg(data, func):
-    if (
-        isinstance(func, int)
-        and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36
-    ):
-        pytest.xfail(
-            "Older pandas raises TypeError but Modin conforms to AssertionError"
-        )
     eval_general(
         *create_test_series(data),
         lambda df: df.agg(func),
@@ -695,13 +710,6 @@ def test_agg_numeric_except(request, data, func):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_aggregate(data, func):
-    if (
-        isinstance(func, int)
-        and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36
-    ):
-        pytest.xfail(
-            "Older pandas raises TypeError but Modin conforms to AssertionError"
-        )
     axis = 0
     eval_general(
         *create_test_series(data),
@@ -1135,8 +1143,9 @@ def test_array(data):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_between():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_between(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.between(None, None)
@@ -1577,8 +1586,9 @@ def test_matmul(data):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_drop():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_drop(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.drop(None, None, None, None)
@@ -1603,10 +1613,6 @@ def test_drop_duplicates(data, keep, inplace):
 @pytest.mark.parametrize("how", ["any", "all"], ids=["any", "all"])
 def test_dropna(data, how):
     modin_series, pandas_series = create_test_series(data)
-
-    with pytest.raises(TypeError):
-        modin_series.dropna(how=None, thresh=None)
-
     modin_result = modin_series.dropna(how=how)
     pandas_result = pandas_series.dropna(how=how)
     df_equals(modin_result, pandas_result)
@@ -1618,10 +1624,6 @@ def test_dropna_inplace(data):
     pandas_result = pandas_series.dropna()
     modin_series.dropna(inplace=True)
     df_equals(modin_series, pandas_result)
-
-    modin_series, pandas_series = create_test_series(data)
-    with pytest.raises(TypeError):
-        modin_series.dropna(thresh=2, inplace=True)
 
     modin_series, pandas_series = create_test_series(data)
     pandas_series.dropna(how="any", inplace=True)
@@ -1879,8 +1881,9 @@ def test_fillna(data, reindex, limit):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_filter():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_filter(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.filter(None, None, None)
@@ -2400,8 +2403,9 @@ def test_ne(data):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_nlargest():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_nlargest(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.nlargest(None)
@@ -2862,10 +2866,6 @@ def test_resample(closed, label, level):
 @pytest.mark.parametrize("name", [None, "Custom name"])
 @pytest.mark.parametrize("inplace", [True, False])
 def test_reset_index(data, drop, name, inplace):
-    if name is not None and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-        pytest.xfail(
-            "pandas.Series.reset_index() should ignore `name` when `drop=True` but it does not"
-        )
     eval_general(
         *create_test_series(data),
         lambda df, *args, **kwargs: df.reset_index(*args, **kwargs),
@@ -2877,8 +2877,9 @@ def test_reset_index(data, drop, name, inplace):
 
 
 @pytest.mark.xfail(reason="Using pandas Series.")
-def test_reshape():
-    modin_series = create_test_series()
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_reshape(data):
+    modin_series = create_test_series(data)
 
     with pytest.raises(NotImplementedError):
         modin_series.reshape(None)
@@ -3105,10 +3106,6 @@ def test_shift_slice_shift(data, index, periods):
 )
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 def test_sort_index(data, ascending, sort_remaining, na_position):
-    if ascending is None and PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-        pytest.xfail(
-            "Modin expects pandas to raise ValueError on ascending=None which older pandas does not"
-        )
     modin_series, pandas_series = create_test_series(data)
     eval_general(
         modin_series,
@@ -4243,9 +4240,31 @@ def test_encode(data, encoding_type):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-def test_add_string_to_series(data):
+def test_non_commutative_add_string_to_series(data):
+    # This test checks that add and radd do different things when addition is
+    # not commutative, e.g. for adding a string to a string. For context see
+    # https://github.com/modin-project/modin/issues/4908
     eval_general(*create_test_series(data), lambda s: "string" + s)
     eval_general(*create_test_series(data), lambda s: s + "string")
+
+
+def test_non_commutative_multiply_pandas():
+    # The non commutative integer class implementation is tricky. Check that
+    # multiplying such an integer with a pandas series is really not
+    # commutative.
+    pandas_series = pandas.Series(1, dtype=int)
+    integer = NonCommutativeMultiplyInteger(2)
+    assert not (integer * pandas_series).equals(pandas_series * integer)
+
+
+def test_non_commutative_multiply():
+    # This test checks that mul and rmul do different things when
+    # multiplication is not commutative, e.g. for adding a string to a string.
+    # For context see https://github.com/modin-project/modin/issues/5238
+    modin_series, pandas_series = create_test_series(1, dtype=int)
+    integer = NonCommutativeMultiplyInteger(2)
+    eval_general(modin_series, pandas_series, lambda s: integer * s)
+    eval_general(modin_series, pandas_series, lambda s: s * integer)
 
 
 @pytest.mark.parametrize(

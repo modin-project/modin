@@ -14,29 +14,13 @@
 import pandas
 import warnings
 
-from modin._compat import PandasCompatVersion
+__pandas_version__ = "1.5.2"
 
-if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-    __pandas_version__ = "1.1.5"
-
-    if pandas.__version__ != __pandas_version__:
-        warnings.warn(
-            f"The pandas version installed ({pandas.__version__}) does not match the pandas version"
-            + f" Modin supports ({__pandas_version__}) in Python 3.6 legacy compatibility mode."
-            + " This may cause undesired side effects!"
-        )
-    else:
-        warnings.warn(
-            f"Starting Modin in compatibility mode to support legacy pandas version {__pandas_version__}"
-        )
-elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
-    __pandas_version__ = "1.5.1"
-
-    if pandas.__version__ != __pandas_version__:
-        warnings.warn(
-            f"The pandas version installed ({pandas.__version__}) does not match the pandas version"
-            + f" Modin supports ({__pandas_version__}). This may cause undesired side effects!"
-        )
+if pandas.__version__ != __pandas_version__:
+    warnings.warn(
+        f"The pandas version installed ({pandas.__version__}) does not match the supported pandas version in"
+        + f" Modin ({__pandas_version__}). This may cause undesired side effects!"
+    )
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
@@ -96,6 +80,11 @@ with warnings.catch_warnings():
         NamedAgg,
         NA,
         api,
+        ArrowDtype,
+        Flags,
+        Float32Dtype,
+        Float64Dtype,
+        from_dummies,
     )
 import os
 
@@ -156,6 +145,11 @@ def _update_engine(publisher: Parameter):
             from modin.core.execution.dask.common import initialize_dask
 
             initialize_dask()
+    elif publisher.get() == "Unidist":
+        if _is_first_update.get("Unidist", True):
+            from modin.core.execution.unidist.common import initialize_unidist
+
+            initialize_unidist()
     elif publisher.get() == "Cloudray":
         from modin.experimental.cloud import get_connection
 
@@ -248,10 +242,8 @@ from .general import (
     lreshape,
     wide_to_long,
     to_timedelta,
+    pivot_table,
 )
-
-from modin._compat.pandas_api.namespace import pivot_table
-from modin._compat import PandasCompatVersion
 
 from .plotting import Plotting as plotting
 from modin.utils import show_versions
@@ -362,20 +354,11 @@ __all__ = [  # noqa: F405
     "NamedAgg",
     "api",
     "read_xml",
+    "ArrowDtype",
+    "Flags",
+    "Float32Dtype",
+    "Float64Dtype",
+    "from_dummies",
 ]
-
-if PandasCompatVersion.CURRENT != PandasCompatVersion.PY36:
-    from modin._compat.pandas_api.namespace import (
-        ArrowDtype,
-        Flags,
-        Float32Dtype,
-        Float64Dtype,
-        from_dummies,
-    )
-
-    __all__.extend(
-        ["ArrowDtype", "Flags", "Float32Dtype", "Float64Dtype", "from_dummies"]
-    )
-del PandasCompatVersion
 
 del pandas, Parameter

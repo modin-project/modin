@@ -27,7 +27,7 @@ from modin.config import NPartitions
 
 
 from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
-from modin.utils import import_optional_dependency, _inherit_docstrings
+from modin.utils import _inherit_docstrings
 
 
 class ColumnStoreDataset:
@@ -603,24 +603,30 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
         """
-        import_optional_dependency(
-            "pyarrow",
-            "pyarrow is required to read parquet files.",
-        )
         from modin.pandas.io import PQ_INDEX_REGEX
 
-        if isinstance(path, str) and os.path.isdir(path):
+        if isinstance(path, str):
+            if os.path.isdir(path):
+                path_generator = os.walk(path)
+            else:
+                storage_options = kwargs.get("storage_options")
+                if storage_options is not None:
+                    fs, fs_path = url_to_fs(path, **storage_options)
+                else:
+                    fs, fs_path = url_to_fs(path)
+                path_generator = fs.walk(fs_path)
             partitioned_columns = set()
             # We do a tree walk of the path directory because partitioned
             # parquet directories have a unique column at each directory level.
             # Thus, we can use os.walk(), which does a dfs search, to walk
             # through the different columns that the data is partitioned on
-            for (_, dir_names, files) in os.walk(path):
+            for (_, dir_names, files) in path_generator:
                 if dir_names:
                     partitioned_columns.add(dir_names[0].split("=")[0])
                 if files:
                     # Metadata files, git files, .DSStore
-                    if files[0][0] == ".":
+                    # TODO: fix conditional for column partitioning, see issue #4637
+                    if len(files[0]) > 0 and files[0][0] == ".":
                         continue
                     break
             partitioned_columns = list(partitioned_columns)

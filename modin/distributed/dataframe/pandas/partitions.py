@@ -27,9 +27,14 @@ if TYPE_CHECKING:
     from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition import (
         PandasOnDaskDataframePartition,
     )
+    from modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning.partition import (
+        PandasOnUnidistDataframePartition,
+    )
 
     PartitionUnionType = Union[
-        PandasOnRayDataframePartition, PandasOnDaskDataframePartition
+        PandasOnRayDataframePartition,
+        PandasOnDaskDataframePartition,
+        PandasOnUnidistDataframePartition,
     ]
 else:
     from typing import Any
@@ -101,6 +106,7 @@ def unwrap_partitions(
         if actual_engine in (
             "PandasOnRayDataframePartition",
             "PandasOnDaskDataframePartition",
+            "PandasOnUnidistDataframePartition",
         ):
             return _unwrap_partitions()
         raise ValueError(

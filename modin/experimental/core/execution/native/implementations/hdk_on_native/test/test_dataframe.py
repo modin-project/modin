@@ -2197,6 +2197,28 @@ class TestArrowExecution:
             force_arrow_execute=True,
         )
 
+    def test_drop_row(self):
+        def drop_row(df, **kwargs):
+            return df.drop(labels=1)
+
+        run_and_compare(
+            drop_row,
+            data=self.data1,
+            force_lazy=False,
+        )
+
+    def test_series_pop(self):
+        def pop(df, **kwargs):
+            col = df["a"]
+            col.pop(0)
+            return col
+
+        run_and_compare(
+            pop,
+            data=self.data1,
+            force_lazy=False,
+        )
+
     def test_empty_transform(self):
         def apply(df, **kwargs):
             return df + 1
@@ -2364,6 +2386,17 @@ class TestDuplicateColumns:
             force_lazy=False,
             set_axis_inplace=False,
         )
+
+
+class TestFromArrow:
+    def test_dict(self):
+        indices = pyarrow.array([0, 1, 0, 1, 2, 0, None, 2])
+        dictionary = pyarrow.array(["first", "second", "third"])
+        dict_array = pyarrow.DictionaryArray.from_arrays(indices, dictionary)
+        at = pyarrow.table({"col": dict_array})
+        pdf = at.to_pandas()
+        mdf = from_arrow(at)
+        df_equals(mdf, pdf)
 
 
 if __name__ == "__main__":
