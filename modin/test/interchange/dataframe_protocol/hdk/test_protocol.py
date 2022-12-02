@@ -251,7 +251,7 @@ def test_zero_copy_export_for_primitives(data_has_nulls):
     non_zero_copy_protocol_df = md_df.__dataframe__(allow_copy=False)
 
     with pytest.raises(RuntimeError):
-        _, _ = primitive_column_to_ndarray(
+        primitive_column_to_ndarray(
             non_zero_copy_protocol_df.get_column_by_name("float32")
         )
 
