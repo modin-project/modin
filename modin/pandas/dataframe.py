@@ -2043,7 +2043,7 @@ class DataFrame(BasePandasDataset):
             return column, functools.partial(issubclass, dtype.type)
 
         for column, f in itertools.starmap(
-            is_dtype_instance_mapper, self.dtypes.iteritems()
+            is_dtype_instance_mapper, self.dtypes.items()
         ):
             if include:  # checks for the case of empty include or exclude
                 include_these[column] = any(map(f, include))
