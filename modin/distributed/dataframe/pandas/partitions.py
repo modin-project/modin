@@ -43,7 +43,9 @@ else:
 
 
 def unwrap_partitions(
-    api_layer_object: Union[DataFrame, Series], axis: int = None, get_ip: bool = False
+    api_layer_object: Union[DataFrame, Series],
+    axis: Optional[int] = None,
+    get_ip: bool = False,
 ) -> list:
     """
     Unwrap partitions of the ``api_layer_object``.
