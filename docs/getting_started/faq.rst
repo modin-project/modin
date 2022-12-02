@@ -118,7 +118,7 @@ and Modin will do computation with that engine:
     pip install "modin[dask]" # Install Modin dependencies and Dask to run on Dask
     export MODIN_ENGINE=dask  # Modin will use Dask
 
-    pip install "modin[unidist]" # Install Modin dependencies and Unidist to run on Unidist. Currently, Modin only supports Unidist on MPI backend.
+    pip install "modin[unidist]" # Install Modin dependencies and Unidist to run on Unidist.
     export MODIN_ENGINE=unidist  # Modin will use Unidist
     export UNIDIST_BACKEND=mpi   # Unidist will use MPI backend.
 

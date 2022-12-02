@@ -125,7 +125,7 @@ _Note: You should not change the engine after your first operation with Modin as
 
 #### Which engine should I use?
 
-On Linux, MacOS, and Windows you can install and use either Ray, Dask or. There is no knowledge required
+On Linux, MacOS, and Windows you can install and use either Ray, Dask or Unidist. There is no knowledge required
 to use either of these engines as Modin abstracts away all of the complexity, so feel
 free to pick either!
 
