@@ -381,7 +381,7 @@ def _doc_binary_op(operation, bin_op, left="Series", right="right", returns="Ser
     return doc_op
 
 
-class NumericOnly(IntEnum):
+class NumericOnly(IntEnum):  # noqa: PR01
     """
     An enum that represents the `numeric_only` argument provided to some aggregation function.
 
@@ -406,6 +406,18 @@ class NumericOnly(IntEnum):
 
     @classmethod
     def _missing_(cls, name):
+        """
+        Get corresponding ``NumericOnly`` from a native value.
+
+        Parameters
+        ----------
+        name : object
+            Native value for ``numeric_only`` parameter.
+
+        Returns
+        -------
+        NumericOnly
+        """
         value = {None: cls.AUTO, False: cls.FALSE, True: cls.TRUE}.get(name)
         if value is None:
             return super()._missing_(name)
