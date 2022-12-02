@@ -1512,7 +1512,7 @@ def test_dot(data):
 
     # Test bad dimensions
     with pytest.raises(ValueError):
-        _ = modin_series.dot(np.arange(ind_len + 10))
+        modin_series.dot(np.arange(ind_len + 10))
 
     # Test dataframe input
     modin_df = pd.DataFrame(data)
@@ -1530,7 +1530,7 @@ def test_dot(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        _ = modin_series.dot(
+        modin_series.dot(
             pd.Series(
                 np.arange(ind_len), index=["a" for _ in range(len(modin_series.index))]
             )
@@ -1562,7 +1562,7 @@ def test_matmul(data):
 
     # Test bad dimensions
     with pytest.raises(ValueError):
-        _ = modin_series @ np.arange(ind_len + 10)
+        modin_series @ np.arange(ind_len + 10)
 
     # Test dataframe input
     modin_df = pd.DataFrame(data)

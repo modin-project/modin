@@ -970,7 +970,7 @@ def test_rename_sanity():
         modin_df.rename()
 
     # partial columns
-    _ = source_df.rename(columns={"col3": "foo", "col4": "bar"})
+    source_df.rename(columns={"col3": "foo", "col4": "bar"})
     modin_df = pd.DataFrame(source_df)
     assert_index_equal(
         modin_df.rename(columns={"col3": "foo", "col4": "bar"}).index,
@@ -978,7 +978,7 @@ def test_rename_sanity():
     )
 
     # other axis
-    _ = source_df.T.rename(index={"col3": "foo", "col4": "bar"})
+    source_df.T.rename(index={"col3": "foo", "col4": "bar"})
     assert_index_equal(
         source_df.T.rename(index={"col3": "foo", "col4": "bar"}).index,
         modin_df.T.rename(index={"col3": "foo", "col4": "bar"}).index,
@@ -1833,7 +1833,7 @@ def test___getattr__(request, data):
 
     if "empty_data" not in request.node.name:
         key = modin_df.columns[0]
-        _ = modin_df.__getattr__(key)
+        modin_df.__getattr__(key)
 
         col = modin_df.__getattr__("col1")
         assert isinstance(col, pd.Series)
