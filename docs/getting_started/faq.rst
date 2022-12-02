@@ -73,7 +73,7 @@ queries from the top-level pandas API Layer that users interact with to the Modi
 Dataframe layer.
 The Modin Core DataFrame is our efficient DataFrame implementation that utilizes a partitioning schema
 which allows for distributing tasks and queries. From here, the Modin DataFrame works with engines like
-Ray or Dask to execute computation, and then return the results to the user.
+Ray, Dask or Unidist to execute computation, and then return the results to the user.
 
 For more details, take a look at our system :doc:`architecture </development/architecture>`.
 
@@ -100,10 +100,10 @@ import with Modin import:
     # import pandas as pd
     import modin.pandas as pd
 
-Which execution engine (Ray or Dask) should I use for Modin?
+Which execution engine (Ray, Dask or Unidist) should I use for Modin?
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-Modin lets you effortlessly speed up your pandas workflows with either Ray_'s or Dask_'s execution engine.
+Modin lets you effortlessly speed up your pandas workflows with either Ray_'s, Dask_'s or Unidist_'s execution engine.
 You don't need to know anything about either engine in order to use it with Modin. If you only have one engine
 installed, Modin will automatically detect which engine you have installed and use that for scheduling computation.
 If you don't have a preference, we recommend starting with Modin's default Ray engine.
@@ -118,14 +118,22 @@ and Modin will do computation with that engine:
     pip install "modin[dask]" # Install Modin dependencies and Dask to run on Dask
     export MODIN_ENGINE=dask  # Modin will use Dask
 
+    pip install "modin[unidist]" # Install Modin dependencies and Unidist to run on Unidist. Currently, Modin only supports Unidist on MPI backend.
+    export MODIN_ENGINE=unidist  # Modin will use Unidist
+    export UNIDIST_BACKEND=mpi   # Unidist will use MPI backend.
+
 This can also be done with:
 
 .. code-block:: python
 
-    from modin.config import Engine
+    import modin.config as modin_cfg
+    import unidist.config as unidist_cfg
 
-    Engine.put("ray")  # Modin will use Ray
-    Engine.put("dask")  # Modin will use Dask
+    modin_cfg.Engine.put("ray")  # Modin will use Ray
+    modin_cfg.Engine.put("dask")  # Modin will use Dask
+
+    modin_cfg.Engine.put('unidist') # Modin will use Unidist
+    unidist_cfg.Backend.put('mpi') # Unidist will use MPI backend
 
 We also have an experimental HDK-based engine of Modin you can read about :doc:`here </development/using_hdk>`.
 We plan to support more execution engines in future. If you have a specific request,
@@ -182,6 +190,7 @@ Also check out the `Github`_ to view open issues and make contributions.
 .. _Github: https://github.com/modin-project/modin
 .. _Ray: https://github.com/ray-project/ray/
 .. _Dask: https://github.com/dask/dask
+.. _Unidist: https://github.com/modin-project/unidist
 .. _papers: https://people.eecs.berkeley.edu/~totemtang/paper/Modin.pdf
 .. _guide: https://modin.readthedocs.io/en/latest/getting_started/installation.html#installing-on-google-colab
 .. _tutorial: https://github.com/modin-project/modin/tree/master/examples/tutorial
