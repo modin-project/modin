@@ -127,11 +127,10 @@ class GroupByReduce(TreeReduce):
         # present in the func-dict:
         apply_func = cls.try_filter_dict(map_func, df)
         if other is not None:
-            # Other is a broadcasted partition that represents 'by' columns
-            # Concatenate it with 'df' to group on its columns names
-            if not drop:
-                other = other.squeeze(axis=axis ^ 1)
-            if isinstance(other, pandas.DataFrame):
+            # Other is a broadcasted partition that represents 'by' data to group on.
+            # If 'drop' then the 'by' data came from the 'self' frame, thus
+            # inserting missed columns to the partition to group on them.
+            if drop or isinstance(other := other.squeeze(axis=1), pandas.DataFrame):
                 df = pandas.concat(
                     [df] + [other[[o for o in other if o not in df]]],
                     axis=1,

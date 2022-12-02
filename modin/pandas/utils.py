@@ -14,6 +14,7 @@
 """Implement utils for pandas component."""
 
 from pandas.util._decorators import doc
+from enum import IntEnum
 import pandas
 import numpy as np
 
@@ -378,6 +379,37 @@ def _doc_binary_op(operation, bin_op, left="Series", right="right", returns="Ser
     )
 
     return doc_op
+
+
+class NumericOnly(IntEnum):
+    """
+    An enum that represents the `numeric_only` argument provided to some aggregation function.
+
+    Attributes
+    ----------
+    AUTO : -1
+        Infer the parameter, ``False`` if there are no numeric types in the frame,
+        ``True`` otherwise.
+    FALSE : 0
+        Use every column in aggregation and raise an error if it fails.
+    TRUE : 1
+        Apply an aggregation only to numeric columns (int, float, bool) including categorical
+        that holds a numeric data type.
+    TRUE_EXCL_NUMERIC_CATEGORIES : 2
+        Apply an aggregation only to numeric columns (int, float, bool).
+    """
+
+    AUTO = -1
+    FALSE = 0
+    TRUE = 1
+    TRUE_EXCL_NUMERIC_CATEGORIES = 2
+
+    @classmethod
+    def _missing_(cls, name):
+        value = {None: cls.AUTO, False: cls.FALSE, True: cls.TRUE}.get(name)
+        if value is None:
+            return super()._missing_(name)
+        return value
 
 
 _original_pandas_MultiIndex_from_frame = pandas.MultiIndex.from_frame

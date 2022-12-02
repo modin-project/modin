@@ -2711,17 +2711,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
         def map_skew(dfgb, *args, **kwargs):
             return pandas.concat(
                 [
-                    dfgb.count(),
-                    dfgb.sum(),
-                    dfgb.apply(lambda x: (x**2).sum()),
-                    dfgb.apply(lambda x: (x**3).sum()),
+                    dfgb.count(*args, **kwargs),
+                    dfgb.sum(*args, **kwargs),
+                    dfgb.apply(lambda x: (x**2).sum(*args, **kwargs)),
+                    dfgb.apply(lambda x: (x**3).sum(*args, **kwargs)),
                 ],
                 copy=False,
                 axis=1,
             )
 
         def reduce_skew(dfgb, *args, **kwargs):
-            df = dfgb.sum()
+            df = dfgb.sum(*args, **kwargs)
             chunk_size = df.shape[1] // 4
 
             count = df.iloc[:, :chunk_size]
