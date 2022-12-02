@@ -373,7 +373,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         self._list_of_block_partitions = materialized.list_of_block_partitions
         return materialized
 
-    def mask(self, row_indices, col_indices):
+    def mask(self, row_indices, col_indices, order_broken=False):
         """
         Create (synchronously) a mask that extracts the indices provided.
 
@@ -383,6 +383,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             The row labels for the rows to extract.
         col_indices : list-like, slice or label
             The column labels for the columns to extract.
+        order_broken : bool, default: False
+            If the value is True, then some optimizations are not applicable.
 
         Returns
         -------
@@ -393,7 +395,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         return (
             self.force_materialization()
             .list_of_block_partitions[0]
-            .mask(row_indices, col_indices)
+            .mask(row_indices, col_indices, order_broken)
         )
 
     def to_pandas(self):

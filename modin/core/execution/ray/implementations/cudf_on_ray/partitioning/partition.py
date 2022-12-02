@@ -215,7 +215,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             return self._width_cache
         return self.gpu_manager.width.remote(self.get_key())
 
-    def mask(self, row_labels, col_labels):
+    def mask(self, row_labels, col_labels, order_broken=False):
         """
         Select columns or rows from given indices.
 
@@ -225,6 +225,8 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             The row labels to extract.
         col_labels : list of hashable
             The column labels to extract.
+        order_broken : bool, default: False
+            If the value is True, then some optimizations are not applicable.
 
         Returns
         -------

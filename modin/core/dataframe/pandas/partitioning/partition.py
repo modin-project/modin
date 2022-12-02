@@ -171,9 +171,12 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """Perform `iloc` on dataframes wrapped in partitions (helper function)."""
         return df.iloc[row_labels, col_labels]
 
-    def mask(self, row_labels, col_labels):
+    def mask(self, row_labels, col_labels, order_broken=False):
         """
         Lazily create a mask that extracts the indices provided.
+
+        By default, assumes that the order of the requested roes/cols is
+        the same as the order in which they are stored.
 
         Parameters
         ----------
@@ -181,6 +184,8 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             The row labels for the rows to extract.
         col_labels : list-like, slice or label
             The column labels for the columns to extract.
+        order_broken : bool, default: False
+            If the value is True, then some optimizations are not applicable.
 
         Returns
         -------
@@ -204,8 +209,10 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         row_labels = [row_labels] if is_scalar(row_labels) else row_labels
         col_labels = [col_labels] if is_scalar(col_labels) else col_labels
 
-        if is_full_axis_mask(row_labels, self._length_cache) and is_full_axis_mask(
-            col_labels, self._width_cache
+        if (
+            not order_broken
+            and is_full_axis_mask(row_labels, self._length_cache)
+            and is_full_axis_mask(col_labels, self._width_cache)
         ):
             return copy(self)
 

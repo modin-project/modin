@@ -170,7 +170,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         self.drain_call_queue()
         wait(self._data)
 
-    def mask(self, row_labels, col_labels):
+    def mask(self, row_labels, col_labels, order_broken=False):
         """
         Lazily create a mask that extracts the indices provided.
 
@@ -180,13 +180,15 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             The row labels for the rows to extract.
         col_labels : list-like, slice or label
             The column labels for the columns to extract.
+        order_broken : bool, default: False
+            If the value is True, then some optimizations are not applicable.
 
         Returns
         -------
         PandasOnDaskDataframePartition
             A new ``PandasOnDaskDataframePartition`` object.
         """
-        new_obj = super().mask(row_labels, col_labels)
+        new_obj = super().mask(row_labels, col_labels, order_broken)
         if isinstance(row_labels, slice) and isinstance(self._length_cache, Future):
             if row_labels == slice(None):
                 # fast path - full axis take

@@ -197,7 +197,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
     # unidist itself handles initialization when calling `unidist.put`.
     _iloc = unidist.put(PandasDataframePartition._iloc)
 
-    def mask(self, row_labels, col_labels):
+    def mask(self, row_labels, col_labels, order_broken=False):
         """
         Lazily create a mask that extracts the indices provided.
 
@@ -207,6 +207,8 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             The row labels for the rows to extract.
         col_labels : list-like, slice or label
             The column labels for the columns to extract.
+        order_broken : bool, default: False
+            If the value is True, then some optimizations are not applicable.
 
         Returns
         -------
@@ -215,7 +217,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         """
         logger = get_logger()
         logger.debug(f"ENTER::Partition.mask::{self._identity}")
-        new_obj = super().mask(row_labels, col_labels)
+        new_obj = super().mask(row_labels, col_labels, order_broken)
         if isinstance(row_labels, slice) and unidist.is_object_ref(self._length_cache):
             if row_labels == slice(None):
                 # fast path - full axis take
