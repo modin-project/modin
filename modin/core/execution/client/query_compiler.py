@@ -594,6 +594,12 @@ class ClientQueryCompiler(BaseQueryCompiler):
             self._service.str_count(self._id, pat, flags, **kwargs)
         )
 
+    def str_decode(self, encoding, errors):
+        return self.__constructor__(self._service.str_decode(self._id, encoding, errors))
+
+    def str_encode(self, encoding, errors):
+        return self.__constructor__(self._service.str_encode(self._id, encoding, errors))
+
     def str_endswith(self, pat, na=np.nan):
         return self.__constructor__(self._service.str_endswith(self._id, pat, na))
 
@@ -841,6 +847,9 @@ class ClientQueryCompiler(BaseQueryCompiler):
                 variable_list.append(v)
         expr = " ".join(variable_list)
         return self.__constructor__(self._service.query(self._id, expr, **kwargs))
+
+    def to_datetime(self, *args, **kwargs):
+        return self.__constructor__(self._service.to_datetime(self._id, *args, **kwargs))
 
     def finalize(self):
         raise NotImplementedError

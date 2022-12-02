@@ -146,17 +146,18 @@ class StringMethods(ClassLogger):
         )
 
     def decode(self, encoding, errors="strict"):
-        return self._default_to_pandas(
-            pandas.Series.str.decode, encoding, errors=errors
-        )
+        return Series(query_compiler=self._query_compiler.str_decode(encoding, errors))
 
     def split(self, pat=None, n=-1, expand=False):
+        from .dataframe import DataFrame
         if not pat and pat is not None:
             raise ValueError("split() requires a non-empty pattern match.")
 
         if expand:
-            return self._default_to_pandas(
-                pandas.Series.str.split, pat=pat, n=n, expand=expand
+            return DataFrame(
+                query_compiler=self._query_compiler.str_split(
+                    pat=pat, n=n, expand=expand
+                )
             )
         else:
             return Series(
@@ -166,12 +167,15 @@ class StringMethods(ClassLogger):
             )
 
     def rsplit(self, pat=None, n=-1, expand=False):
+        from .dataframe import DataFrame
         if not pat and pat is not None:
             raise ValueError("rsplit() requires a non-empty pattern match.")
 
         if expand:
-            return self._default_to_pandas(
-                pandas.Series.str.rsplit, pat=pat, n=n, expand=expand
+            return DataFrame(
+                query_compiler=self._query_compiler.str_rsplit(
+                    pat=pat, n=n, expand=expand
+                )
             )
         else:
             return Series(
@@ -274,9 +278,7 @@ class StringMethods(ClassLogger):
         return Series(query_compiler=self._query_compiler.str_startswith(pat, na=na))
 
     def encode(self, encoding, errors="strict"):
-        return self._default_to_pandas(
-            pandas.Series.str.encode, encoding, errors=errors
-        )
+        return Series(query_compiler=self._query_compiler.str_encode(encoding, errors))
 
     def endswith(self, pat, na=np.NaN):
         return Series(query_compiler=self._query_compiler.str_endswith(pat, na=na))
