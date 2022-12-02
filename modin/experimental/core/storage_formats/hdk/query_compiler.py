@@ -555,13 +555,14 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_modin_frame)
 
-    def drop(self, index=None, columns=None):
-        # `errors` parameter needs to be part of the function signature because
-        # other query compilers may not take care of error handling at the API
-        # layer. This query compiler assumes there won't be any errors due to
-        # invalid keys.
+    def drop(self, index=None, columns=None, errors: str = "raise"):
         if index is not None:
             raise NotImplementedError("Row drop")
+        if errors != "raise":
+            raise NotImplementedError(
+                "This lazy query compiler will always "
+                + "raise an error on invalid columns."
+            )
         return self.__constructor__(
             self._modin_frame.take_2d_labels_or_positional(
                 row_labels=index, col_labels=self.columns.drop(columns)
@@ -693,10 +694,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
 
     def astype(self, col_dtypes, errors: str = "raise"):
-        # `errors` parameter needs to be part of the function signature because
-        # other query compilers may not take care of error handling at the API
-        # layer. This query compiler assumes there won't be any errors due to
-        # invalid type keys.
+        if errors != "raise":
+            raise NotImplementedError(
+                "This lazy query compiler will always "
+                + "raise an error on invalid type keys."
+            )
         return self.__constructor__(
             self._modin_frame.astype(col_dtypes),
             self._shape_hint,
