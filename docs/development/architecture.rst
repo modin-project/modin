@@ -228,6 +228,10 @@ documentation page on :doc:`contributing </development/contributing>`.
     - Uses the Ray_ execution framework.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`experimental pandas on Ray </flow/modin/experimental/core/execution/ray/implementations/pandas_on_ray/index>` page.
+- pandas on Unidist (experimental)
+    - Uses the Unidist_ execution framework.
+    - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
+    - For more information on the execution path, see the :doc:`experimental pandas on Unidist </flow/modin/experimental/core/execution/unidist/implementations/pandas_on_unidist/index>` page.
 - :doc:`HDK on Native </development/using_hdk>` (experimental)
     - Uses HDK as an engine.
     - The storage format is `hdk` and the in-memory partition type is a pyarrow Table. When defaulting to pandas, the pandas DataFrame is used.
