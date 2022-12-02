@@ -465,12 +465,6 @@ def test_astype():
     expected_df_casted = expected_df.astype(dtype_dict)
     df_equals(modin_df_casted, expected_df_casted)
 
-    # Ignore lint because this is testing bad input
-    bad_dtype_dict = {"index": np.int32, "index": np.int64, "index": str}  # noqa F601
-    modin_df_casted = modin_df.astype(bad_dtype_dict)
-    expected_df_casted = expected_df.astype(bad_dtype_dict)
-    df_equals(modin_df_casted, expected_df_casted)
-
     modin_df = pd.DataFrame(index=["row1"], columns=["col1"])
     modin_df["col1"]["row1"] = 11
     modin_df_casted = modin_df.astype(int)
