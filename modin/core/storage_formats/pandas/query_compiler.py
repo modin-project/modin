@@ -18,6 +18,7 @@ Module contains ``PandasQueryCompiler`` class.
 queries for the ``PandasDataframe``.
 """
 
+import re
 import numpy as np
 import pandas
 import functools
@@ -63,6 +64,7 @@ from modin._compat.core.pandas_common import (
     pandas_dataframe_join,
     DataError,
 )
+from .utils import get_group_names
 
 
 def _get_axis(axis):
@@ -1434,7 +1436,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_pad = Map.register(_str_map("pad"), dtypes="copy")
     str_partition = Map.register(_str_map("partition"), dtypes="copy")
     str_repeat = Map.register(_str_map("repeat"), dtypes="copy")
-    str_extract = Map.register(_str_map("extract"), dtypes="copy")
+    _str_extract = Map.register(_str_map("extract"), dtypes="copy")
+
+    def str_extract(self, pat, flags, expand):
+        regex = re.compile(pat, flags=flags)
+        # need an operator that can create more columns than before
+        if expand and regex.groups == 1:
+            qc = self._str_extract(pat, flags=flags, expand=expand)
+        else:
+            qc = super().str_extract(pat, flags=flags, expand=expand)
+        qc.columns = get_group_names(regex)
+        return qc
+
     str_replace = Map.register(_str_map("replace"), dtypes="copy")
     str_rfind = Map.register(_str_map("rfind"), dtypes="copy")
     str_rindex = Map.register(_str_map("rindex"), dtypes="copy")
