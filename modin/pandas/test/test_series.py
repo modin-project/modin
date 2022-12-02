@@ -1084,7 +1084,7 @@ def test_astype(data):
     "data", [["A", "A", "B", "B", "A"], [1, 1, 2, 1, 2, 2, 3, 1, 2, 1, 2]]
 )
 def test_astype_categorical(data):
-    modin_df, pandas_df = pd.Series(data), pandas.Series(data)
+    modin_df, pandas_df = create_test_series(data)
 
     modin_result = modin_df.astype("category")
     pandas_result = pandas_df.astype("category")
