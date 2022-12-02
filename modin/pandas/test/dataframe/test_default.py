@@ -332,7 +332,7 @@ def test_matmul(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        _ = modin_df @ pd.Series(np.arange(col_len))
+        modin_df @ pd.Series(np.arange(col_len))
 
 
 def test_first():

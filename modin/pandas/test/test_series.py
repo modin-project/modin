@@ -1577,7 +1577,7 @@ def test_matmul(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        _ = modin_series @ pd.Series(
+        modin_series @ pd.Series(
             np.arange(ind_len), index=["a" for _ in range(len(modin_series.index))]
         )
 

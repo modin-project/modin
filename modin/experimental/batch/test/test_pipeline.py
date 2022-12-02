@@ -454,7 +454,7 @@ class TestPipelineRayEngine:
             NotImplementedError,
             match="Fan out is only supported with DataFrames with 1 partition.",
         ):
-            _ = pipeline.compute_batch()[0]
+            pipeline.compute_batch()[0]
 
     def test_pipeline_complex(self):
         """Create a complex pipeline with both `fan_out`, `repartition_after` and postprocessing and ensure that it runs end to end correctly."""
