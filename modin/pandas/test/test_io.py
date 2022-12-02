@@ -1968,7 +1968,6 @@ class TestHdf:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_HDFStore(self):
-        hdf_file = None
         with ensure_clean_dir() as dirname:
             unique_filename_modin = get_unique_filename(
                 extension="hdf", data_dir=dirname

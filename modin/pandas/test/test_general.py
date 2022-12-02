@@ -308,7 +308,7 @@ def test_merge_asof_suffixes():
             suffixes=(False, False),
         )
     with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
-        modin_merged = pd.merge_asof(
+        _ = pd.merge_asof(
             modin_left,
             modin_right,
             left_index=True,

@@ -192,7 +192,6 @@ def test_bfill(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_bool(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     with pytest.raises(ValueError):
         modin_df.bool()
@@ -211,7 +210,6 @@ def test_bool(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_boxplot(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     assert modin_df.boxplot() == to_pandas(modin_df).boxplot()
 
@@ -334,7 +332,7 @@ def test_matmul(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        modin_result = modin_df @ pd.Series(np.arange(col_len))
+        _ = modin_df @ pd.Series(np.arange(col_len))
 
 
 def test_first():

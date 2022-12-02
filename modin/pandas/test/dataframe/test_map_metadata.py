@@ -284,7 +284,6 @@ def test_axes(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_copy(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     # pandas_df is unused but there so there won't be confusing list comprehension
     # stuff in the pytest.mark.parametrize
@@ -1433,7 +1432,6 @@ def test___delitem__(request, data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___nonzero__(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     with pytest.raises(ValueError):
         # Always raises ValueError
