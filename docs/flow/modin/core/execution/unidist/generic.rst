@@ -12,8 +12,5 @@ as a foundation for building storage format specific objects:
 * :py:class:`~modin.core.execution.unidist.generic.io.UnidistIO` -- implements parallel :meth:`~modin.core.execution.unidist.generic.io.UnidistIO.to_csv` and :meth:`~modin.core.execution.unidist.generic.io.UnidistIO.to_sql`.
 * :py:class:`~modin.core.execution.unidist.generic.partitioning.GenericUnidistDataframePartitionManager` -- implements parallel :meth:`~modin.core.execution.unidist.generic.partitioning.GenericUnidistDataframePartitionManager.to_numpy`.
 
-.. autoclass:: modin.core.execution.unidist.generic.io.UnidistIO
-  :members:
-
 .. autoclass:: modin.core.execution.unidist.generic.partitioning.GenericUnidistDataframePartitionManager
   :members:

@@ -77,7 +77,7 @@ variable ``MODIN_ENGINE`` and Modin will do computation with that engine:
    export MODIN_ENGINE=unidist # Modin will use Unidist
 
 If you want to choose a Unidist engine, you should set the additional environment 
-variable ``UNIDIST_BACKEND``, because Modin only supports Unidist on MPI:
+variable ``UNIDIST_BACKEND``, currently because Modin only supports Unidist on MPI:
 
 .. code-block:: bash
 
