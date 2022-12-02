@@ -54,7 +54,7 @@ dependencies:
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
-      # no conda package for windows
+      # no conda package for windows so we install it with pip
       - connectorx>=0.2.6a4
       - black
       # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745

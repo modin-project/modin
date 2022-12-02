@@ -530,13 +530,12 @@ def categories_equals(left, right):
 def df_categories_equals(df1, df2):
     if not hasattr(df1, "select_dtypes"):
         if isinstance(df1, pandas.CategoricalDtype):
-            return categories_equals(df1, df2)
+            categories_equals(df1, df2)
         elif isinstance(getattr(df1, "dtype"), pandas.CategoricalDtype) and isinstance(
             getattr(df2, "dtype"), pandas.CategoricalDtype
         ):
-            return categories_equals(df1.dtype, df2.dtype)
-        else:
-            return True
+            categories_equals(df1.dtype, df2.dtype)
+        return True
 
     df1_categorical = df1.select_dtypes(include="category")
     df2_categorical = df2.select_dtypes(include="category")
