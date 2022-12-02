@@ -2891,7 +2891,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 external_by_df = by[external_by].squeeze(axis=1)
 
                 if isinstance(external_by_df, pandas.DataFrame):
-                    external_by_cols = [o for _, o in external_by_df.iteritems()]
+                    external_by_cols = [o for _, o in external_by_df.items()]
                 else:
                     external_by_cols = [external_by_df]
 
