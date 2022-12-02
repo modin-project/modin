@@ -31,7 +31,7 @@ To run a python application you should use ``mpiexec -n 1 python <script.py>`` c
 
 .. code-block:: bash
 
-   $ mpiexec -n 1 python script.py
+   mpiexec -n 1 python script.py
 
 For more information on how to run a python application with unidist on MPI backend
 please refer to `Unidist on MPI`_ section of the unidist documentation.
