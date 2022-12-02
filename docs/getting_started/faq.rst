@@ -101,7 +101,7 @@ import with Modin import:
     import modin.pandas as pd
 
 Which execution engine (Ray, Dask or Unidist) should I use for Modin?
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 Modin lets you effortlessly speed up your pandas workflows with either Ray_'s, Dask_'s or Unidist_'s execution engine.
 You don't need to know anything about either engine in order to use it with Modin. If you only have one engine
