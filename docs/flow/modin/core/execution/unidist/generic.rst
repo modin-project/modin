@@ -9,7 +9,6 @@ are placed in ``modin.core.execution.unidist.generic``.
 Their purpose is to implement certain parallel I/O operations and to serve
 as a foundation for building storage format specific objects:
 
-* :py:class:`~modin.core.execution.unidist.generic.partitioning.GenericUnidistDataframePartitionManager` -- implements parallel :meth:`~modin.core.execution.unidist.generic.partitioning.GenericUnidistDataframePartitionManager.to_numpy`.
 
 .. autoclass:: modin.core.execution.unidist.generic.partitioning.GenericUnidistDataframePartitionManager
   :members:
