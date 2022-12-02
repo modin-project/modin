@@ -41,7 +41,7 @@ dependencies:
   - scikit-learn
   - pymssql
   - psycopg2
-  - mypy<0.990
+  - mypy<0.982
   - pandas-stubs
   - fastparquet
   # for release script
