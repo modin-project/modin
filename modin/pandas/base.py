@@ -123,12 +123,17 @@ class BasePandasDataset(ClassLogger):
     _pandas_class = pandas.core.generic.NDFrame
 
     def _is_dataframe(self) -> bool:
-        """Tells whether this is a dataframe.
+        """
+        Tell whether this is a dataframe.
 
         Ideally, other methods of BasePandasDataset shouldn't care whether this
         is a dataframe or a series, but sometimes we need to know. This method
         is better than hasattr(self, "columns"), which for series will call
-        # self.__getattr__("columns"), which requires materializing the index.
+        self.__getattr__("columns"), which requires materializing the index.
+
+        Returns
+        -------
+        bool : Whether this is a dataframe.
         """
         from .dataframe import DataFrame
 
