@@ -3089,7 +3089,145 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return self.index if axis == 0 else self.columns
 
-    def take_2d(self, index=None, columns=None):
+    def take_2d_labels(
+        self,
+        index,
+        columns,
+    ):
+        """
+        Take the given labels.
+
+        Parameters
+        ----------
+        index : slice, scalar, list-like, or BaseQueryCompiler
+            Labels of rows to grab.
+        columns : slice, scalar, list-like, or BaseQueryCompiler
+            Labels of columns to grab.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Subset of this QueryCompiler.
+        """
+        row_lookup, col_lookup = self.get_positions_from_labels(index, columns)
+        if isinstance(row_lookup, slice):
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=row_lookup != slice(None),
+                extra_log=f"Only None-slices are acceptable as a slice argument in masking, got: {row_lookup}",
+            )
+            row_lookup = None
+        if isinstance(col_lookup, slice):
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=col_lookup != slice(None),
+                extra_log=f"Only None-slices are acceptable as a slice argument in masking, got: {col_lookup}",
+            )
+            col_lookup = None
+        return self.take_2d_positional(row_lookup, col_lookup)
+
+    def get_positions_from_labels(self, row_loc, col_loc):
+        """
+        Compute index and column positions from their respective locators.
+
+        Inputs to this method are arguments the the pandas user could pass to loc.
+        This function will compute the corresponding index and column positions
+        that the user could equivalently pass to iloc.
+
+        Parameters
+        ----------
+        row_loc : scalar, slice, list, array or tuple
+            Row locator.
+        col_loc : scalar, slice, list, array or tuple
+            Columns locator.
+
+        Returns
+        -------
+        row_lookup : slice(None) if full axis grab, pandas.RangeIndex if repetition is detected, numpy.ndarray otherwise
+            List of index labels.
+        col_lookup : slice(None) if full axis grab, pandas.RangeIndex if repetition is detected, numpy.ndarray otherwise
+            List of columns labels.
+
+        Notes
+        -----
+        Usage of `slice(None)` as a resulting lookup is a hack to pass information about
+        full-axis grab without computing actual indices that triggers lazy computations.
+        Ideally, this API should get rid of using slices as indexers and either use a
+        common ``Indexer`` object or range and ``np.ndarray`` only.
+        """
+        from modin.pandas.indexing import (
+            is_boolean_array,
+            is_list_like,
+            is_range_like,
+            boolean_mask_to_numeric,
+        )
+
+        lookups = []
+        for axis, axis_loc in enumerate((row_loc, col_loc)):
+            if is_scalar(axis_loc):
+                axis_loc = np.array([axis_loc])
+            if isinstance(axis_loc, slice) or is_range_like(axis_loc):
+                if isinstance(axis_loc, slice) and axis_loc == slice(None):
+                    axis_lookup = axis_loc
+                else:
+                    axis_labels = self.get_axis(axis)
+                    # `slice_indexer` returns a fully-defined numeric slice for a non-fully-defined labels-based slice
+                    axis_lookup = axis_labels.slice_indexer(
+                        axis_loc.start, axis_loc.stop, axis_loc.step
+                    )
+                    # Converting negative indices to their actual positions:
+                    axis_lookup = pandas.RangeIndex(
+                        start=(
+                            axis_lookup.start
+                            if axis_lookup.start >= 0
+                            else axis_lookup.start + len(axis_labels)
+                        ),
+                        stop=(
+                            axis_lookup.stop
+                            if axis_lookup.stop >= 0
+                            else axis_lookup.stop + len(axis_labels)
+                        ),
+                        step=axis_lookup.step,
+                    )
+            elif self.has_multiindex(axis):
+                # `Index.get_locs` raises an IndexError by itself if missing labels were provided,
+                # we don't have to do missing-check for the received `axis_lookup`.
+                if isinstance(axis_loc, pandas.MultiIndex):
+                    axis_lookup = self.get_axis(axis).get_indexer_for(axis_loc)
+                else:
+                    axis_lookup = self.get_axis(axis).get_locs(axis_loc)
+            elif is_boolean_array(axis_loc):
+                axis_lookup = boolean_mask_to_numeric(axis_loc)
+            else:
+                axis_labels = self.get_axis(axis)
+                if is_list_like(axis_loc) and not isinstance(
+                    axis_loc, (np.ndarray, pandas.Index)
+                ):
+                    # `Index.get_indexer_for` works much faster with numpy arrays than with python lists,
+                    # so although we lose some time here on converting to numpy, `Index.get_indexer_for`
+                    # speedup covers the loss that we gain here.
+                    axis_loc = np.array(axis_loc, dtype=axis_labels.dtype)
+                axis_lookup = axis_labels.get_indexer_for(axis_loc)
+                # `Index.get_indexer_for` sets -1 value for missing labels, we have to verify whether
+                # there are any -1 in the received indexer to raise a KeyError here.
+                missing_mask = axis_lookup < 0
+                if missing_mask.any():
+                    missing_labels = (
+                        # Converting `axis_loc` to maskable `np.array` to not fail
+                        # on masking non-maskable list-like
+                        np.array(axis_loc)[missing_mask]
+                        if is_list_like(axis_loc)
+                        # If `axis_loc` is not a list-like then we can't select certain
+                        # labels that are missing and so printing the whole indexer
+                        else axis_loc
+                    )
+                    raise KeyError(missing_labels)
+
+            if isinstance(axis_lookup, pandas.Index) and not is_range_like(axis_lookup):
+                axis_lookup = axis_lookup.values
+
+            lookups.append(axis_lookup)
+        return lookups
+
+    def take_2d_positional(self, index=None, columns=None):
         """
         Index QueryCompiler with passed keys.
 

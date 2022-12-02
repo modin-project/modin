@@ -285,7 +285,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         else:
             return self.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
 
-    def take_2d(self, index=None, columns=None):
+    def take_2d_positional(self, index=None, columns=None):
         return self.__constructor__(
             self._modin_frame.take_2d_labels_or_positional(
                 row_positions=index, col_positions=columns
