@@ -239,7 +239,7 @@ def test_zero_copy_export_for_primitives(data_has_nulls):
     protocol_df = md_df.__dataframe__(allow_copy=False)
 
     for i, col in enumerate(protocol_df.get_columns()):
-        col_arr, memory_owner = primitive_column_to_ndarray(col)
+        col_arr, _ = primitive_column_to_ndarray(col)
 
         exported_ptr = col_arr.__array_interface__["data"][0]
         producer_ptr = at.column(i).chunks[0].buffers()[-1].address
@@ -251,7 +251,7 @@ def test_zero_copy_export_for_primitives(data_has_nulls):
     non_zero_copy_protocol_df = md_df.__dataframe__(allow_copy=False)
 
     with pytest.raises(RuntimeError):
-        col_arr, memory_owner = primitive_column_to_ndarray(
+        primitive_column_to_ndarray(
             non_zero_copy_protocol_df.get_column_by_name("float32")
         )
 

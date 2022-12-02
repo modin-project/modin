@@ -198,7 +198,6 @@ def test_head(data, n):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_iat(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     with pytest.raises(NotImplementedError):
         modin_df.iat()
@@ -1829,7 +1828,6 @@ def test_getitem_same_name():
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___getattr__(request, data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     if "empty_data" not in request.node.name:
         key = modin_df.columns[0]

@@ -410,7 +410,6 @@ def test_fillna_columns(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_fillna_invalid_method(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     with pytest.raises(ValueError):
         modin_df.fillna(method="ffil")

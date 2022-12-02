@@ -1080,17 +1080,14 @@ def test_astype(data):
     # dict to astype() for a series with no name.
 
 
-def test_astype_categorical():
-    modin_df = pd.Series(["A", "A", "B", "B", "A"])
-    pandas_df = pandas.Series(["A", "A", "B", "B", "A"])
+@pytest.mark.parametrize(
+    "data", [["A", "A", "B", "B", "A"], [1, 1, 2, 1, 2, 2, 3, 1, 2, 1, 2]]
+)
+def test_astype_categorical(data):
+    modin_df, pandas_df = create_test_series(data)
 
     modin_result = modin_df.astype("category")
     pandas_result = pandas_df.astype("category")
-    df_equals(modin_result, pandas_result)
-    assert modin_result.dtype == pandas_result.dtype
-
-    modin_df = pd.Series([1, 1, 2, 1, 2, 2, 3, 1, 2, 1, 2])
-    pandas_df = pandas.Series([1, 1, 2, 1, 2, 2, 3, 1, 2, 1, 2])
     df_equals(modin_result, pandas_result)
     assert modin_result.dtype == pandas_result.dtype
 
@@ -1580,7 +1577,7 @@ def test_matmul(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        modin_result = modin_series @ pd.Series(
+        modin_series @ pd.Series(
             np.arange(ind_len), index=["a" for _ in range(len(modin_series.index))]
         )
 
