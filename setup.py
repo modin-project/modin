@@ -4,7 +4,7 @@ import versioneer
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-dask_deps = ["dask>=2.22.0", "distributed>=2.22.0"]
+dask_deps = ["dask>=2.22.0", "distributed>=2.22.0,<2022.12.0"]
 ray_deps = [
     "ray[default]>=1.4.0",
     "pyarrow>=4.0.1",
