@@ -1522,7 +1522,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Dt map partitions operations
 
-    def astype(self, col_dtypes, **kwargs):
+    def astype(self, col_dtypes, errors: str = "raise"):
+        # `errors` parameter needs to be part of the function signature because
+        # other query compilers may not take care of error handling at the API
+        # layer. This query compiler assumes there won't be any errors due to
+        # invalid type keys.
         return self.__constructor__(self._modin_frame.astype(col_dtypes))
 
     def infer_objects(self):
@@ -2334,7 +2338,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         )
 
-    def drop(self, index=None, columns=None):
+    def drop(self, index=None, columns=None, errors: str = "raise"):
+        # `errors` parameter needs to be part of the function signature because
+        # other query compilers may not take care of error handling at the API
+        # layer. This query compiler assumes there won't be any errors due to
+        # invalid keys.
         if index is not None:
             index = np.sort(self.index.get_indexer_for(self.index.difference(index)))
         if columns is not None:

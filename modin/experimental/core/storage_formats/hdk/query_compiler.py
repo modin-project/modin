@@ -556,6 +556,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def drop(self, index=None, columns=None):
+        # `errors` parameter needs to be part of the function signature because
+        # other query compilers may not take care of error handling at the API
+        # layer. This query compiler assumes there won't be any errors due to
+        # invalid keys.
         if index is not None:
             raise NotImplementedError("Row drop")
         return self.__constructor__(
@@ -688,9 +692,14 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             self._modin_frame.reset_index(drop), shape_hint=shape_hint
         )
 
-    def astype(self, col_dtypes, **kwargs):
+    def astype(self, col_dtypes, errors: str = "raise"):
+        # `errors` parameter needs to be part of the function signature because
+        # other query compilers may not take care of error handling at the API
+        # layer. This query compiler assumes there won't be any errors due to
+        # invalid type keys.
         return self.__constructor__(
-            self._modin_frame.astype(col_dtypes), self._shape_hint
+            self._modin_frame.astype(col_dtypes),
+            self._shape_hint,
         )
 
     def setitem(self, axis, key, value):
