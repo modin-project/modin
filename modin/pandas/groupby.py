@@ -545,11 +545,13 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                 kwargs = {}
             func = func_dict
         elif is_list_like(func):
-            return self._default_to_pandas(
-                lambda df, *args, **kwargs: df.aggregate(func, *args, **kwargs),
-                *args,
-                **kwargs,
-            )
+            return self._wrap_aggregation(
+                qc_method=type(self._query_compiler).groupby_agg,
+                numeric_only=False,
+                agg_func=func,
+                agg_args=args,
+                agg_kwargs=kwargs,
+                how="axis_wise")
         elif callable(func):
             return self._check_index(
                 self._wrap_aggregation(
@@ -1182,7 +1184,6 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                 *args,
                 **kwargs,
             )
-
         return self._df._default_to_pandas(groupby_on_multiple_columns, *args, **kwargs)
 
 
