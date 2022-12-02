@@ -1423,7 +1423,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         ----------
         col_dtypes : dict
             Map for column names and new dtypes.
-        errors : {'raise', 'ignore'}, default 'raise'
+        errors : {'raise', 'ignore'}, default: 'raise'
             Control raising of exceptions on invalid data for provided dtype.
             - raise : allow exceptions to be raised
             - ignore : suppress exceptions. On error return original object.
