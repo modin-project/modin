@@ -76,8 +76,8 @@ variable ``MODIN_ENGINE`` and Modin will do computation with that engine:
    export MODIN_ENGINE=dask  # Modin will use Dask
    export MODIN_ENGINE=unidist # Modin will use Unidist
 
-If you want to choose a Unidist engine, you should set the additional environment 
-variable ``UNIDIST_BACKEND``, currently because Modin only supports Unidist on MPI:
+If you want to choose the Unidist engine, you should set the additional environment 
+variable ``UNIDIST_BACKEND``, because currently Modin only supports Unidist on MPI:
 
 .. code-block:: bash
 
