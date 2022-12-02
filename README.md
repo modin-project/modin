@@ -64,6 +64,7 @@ If you want to install Modin with a specific engine, we recommend:
 ```bash
 pip install modin[ray] # Install Modin dependencies and Ray.
 pip install modin[dask] # Install Modin dependencies and Dask.
+pip install modin[unidist] # Install Modin dependencies and Unidist to run on Unidist
 ```
 
 Modin automatically detects which engine(s) you have installed and uses that for scheduling computation.
@@ -71,8 +72,8 @@ Modin automatically detects which engine(s) you have installed and uses that for
 #### From conda-forge
 
 Installing from [conda forge](https://github.com/conda-forge/modin-feedstock) using `modin-all`
-will install Modin and three engines: [Ray](https://github.com/ray-project/ray),
-[Dask](https://github.com/dask/dask), and [HDK](https://github.com/intel-ai/hdk).
+will install Modin and four engines: [Ray](https://github.com/ray-project/ray), [Dask](https://github.com/dask/dask),
+[Unidist](https://github.com/modin-project/unidist) and [HDK](https://github.com/intel-ai/hdk).
 
 ```bash
 conda install -c conda-forge modin-all
@@ -83,6 +84,7 @@ Each engine can also be installed individually:
 ```bash
 conda install -c conda-forge modin-ray  # Install Modin dependencies and Ray.
 conda install -c conda-forge modin-dask # Install Modin dependencies and Dask.
+conda install -c conda-forge modin-unidist # Install Modin dependencies and Unidist.
 conda install -c conda-forge modin-hdk # Install Modin dependencies and HDK.
 ```
 
@@ -94,15 +96,27 @@ variable `MODIN_ENGINE` and Modin will do computation with that engine:
 ```bash
 export MODIN_ENGINE=ray  # Modin will use Ray
 export MODIN_ENGINE=dask  # Modin will use Dask
+export MODIN_ENGINE=unidist # Modin will use Unidist
+```
+
+If you want to choose the Unidist engine, you should set the additional environment 
+variable ``UNIDIST_BACKEND``, because currently Modin only supports Unidist on MPI:
+
+```bash
+export UNIDIST_BACKEND=mpi # Unidist will use MPI backend
 ```
 
 This can also be done within a notebook/interpreter before you import Modin:
 
 ```python
-from modin.config import Engine
+import modin.config as modin_cfg
+import unidist.config as unidist_cfg
 
-Engine.put("ray")  # Modin will use Ray
-Engine.put("dask")  # Modin will use Dask
+modin_cfg.Engine.put("ray")  # Modin will use Ray
+modin_cfg.Engine.put("dask")  # Modin will use Dask
+
+modin_cfg.Engine.put('unidist') # Modin will use Unidist
+unidist_cfg.Backend.put('mpi') # Unidist will use MPI backend
 ```
 
 Check [this Modin docs section](https://modin.readthedocs.io/en/latest/development/using_hdk.html) for HDK engine setup.
@@ -111,7 +125,7 @@ _Note: You should not change the engine after your first operation with Modin as
 
 #### Which engine should I use?
 
-On Linux, MacOS, and Windows you can install and use either Ray or Dask. There is no knowledge required
+On Linux, MacOS, and Windows you can install and use either Ray, Dask or Unidist. There is no knowledge required
 to use either of these engines as Modin abstracts away all of the complexity, so feel
 free to pick either!
 
@@ -124,18 +138,18 @@ which is a part of [Intel® oneAPI AI Analytics Toolkit (AI Kit)](https://www.in
 
 <p align="center">
 
-| pandas Object     | Modin's Ray Engine Coverage                                                          | Modin's Dask Engine Coverage |
-|-------------------|:------------------------------------------------------------------------------------:|:---------------:|
-| `pd.DataFrame`    | <img src=https://img.shields.io/badge/api%20coverage-90.8%25-hunter.svg> | <img src=https://img.shields.io/badge/api%20coverage-90.8%25-hunter.svg> |
-| `pd.Series`       | <img src=https://img.shields.io/badge/api%20coverage-88.05%25-green.svg> | <img src=https://img.shields.io/badge/api%20coverage-88.05%25-green.svg> |
-| `pd.read_csv`     | ✅                                               | ✅ |
-| `pd.read_table`   | ✅                                               | ✅ |
-| `pd.read_parquet` | ✅                                               | ✅ |
-| `pd.read_sql`     | ✅                                               | ✅ |
-| `pd.read_feather` | ✅                                               | ✅ |
-| `pd.read_excel`   | ✅                                               | ✅ |
-| `pd.read_json`    | [✳️](https://github.com/modin-project/modin/issues/554)                                         | [✳️](https://github.com/modin-project/modin/issues/554) |
-| `pd.read_<other>` | [✴️](https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html) | [✴️](https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html) |
+| pandas Object     | Modin's Ray Engine Coverage                                                          | Modin's Dask Engine Coverage | Modin's Unidist Engine Coverage |
+|-------------------|:------------------------------------------------------------------------------------:|:---------------:|:---------------:|
+| `pd.DataFrame`    | <img src=https://img.shields.io/badge/api%20coverage-90.8%25-hunter.svg> | <img src=https://img.shields.io/badge/api%20coverage-90.8%25-hunter.svg> | <img src=https://img.shields.io/badge/api%20coverage-90.8%25-hunter.svg> |
+| `pd.Series`       | <img src=https://img.shields.io/badge/api%20coverage-88.05%25-green.svg> | <img src=https://img.shields.io/badge/api%20coverage-88.05%25-green.svg> | <img src=https://img.shields.io/badge/api%20coverage-88.05%25-green.svg> 
+| `pd.read_csv`     | ✅                                               | ✅ | ✅ |
+| `pd.read_table`   | ✅                                               | ✅ | ✅ |
+| `pd.read_parquet` | ✅                                               | ✅ | ✅ |
+| `pd.read_sql`     | ✅                                               | ✅ | ✅ |
+| `pd.read_feather` | ✅                                               | ✅ | ✅ |
+| `pd.read_excel`   | ✅                                               | ✅ | ✅ |
+| `pd.read_json`    | [✳️](https://github.com/modin-project/modin/issues/554)                                         | [✳️](https://github.com/modin-project/modin/issues/554) | [✳️](https://github.com/modin-project/modin/issues/554) |
+| `pd.read_<other>` | [✴️](https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html) | [✴️](https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html) | [✴️](https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html) |
 
 </p>
 Some pandas APIs are easier to implement than others, so if something is missing feel
