@@ -315,7 +315,7 @@ def broadcast_item(
         index_values = obj.index[row_lookup]
         if not index_values.equals(item.index):
             axes_to_reindex["index"] = index_values
-        if need_columns_reindex and hasattr(item, "columns"):
+        if need_columns_reindex and isinstance(item, (pandas.DataFrame, DataFrame)):
             column_values = obj.columns[col_lookup]
             if not column_values.equals(item.columns):
                 axes_to_reindex["columns"] = column_values

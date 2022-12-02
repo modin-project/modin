@@ -964,7 +964,7 @@ class DataFrameGroupBy(ClassLogger):
         # `dropna` param is the only one that matters for the group indices result
         dropna = self._kwargs.get("dropna", True)
 
-        if hasattr(self._by, "columns") and is_multi_by:
+        if isinstance(self._by, BaseQueryCompiler) and is_multi_by:
             by = list(self._by.columns)
 
         if is_multi_by:
