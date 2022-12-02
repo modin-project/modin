@@ -47,7 +47,7 @@ flake8-print
 numpydoc==1.1.0
 # experimental version of fuzzydata requires at least 0.0.6 to successfully resolve all dependencies
 fuzzydata>=0.0.6
-mypy<0.982
+mypy<0.990
 pandas-stubs
 fastparquet
 # for release script
