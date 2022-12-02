@@ -149,7 +149,7 @@ class TestCsvGlob:
     )
     def test_read_single_csv_with_parse_dates(self, parse_dates):
         if isinstance(parse_dates, dict):
-            pytest.xfail("raises KeyError when dict is not empty")
+            pytest.xfail("raises KeyError when dict is not empty. See GH#5325")
         try:
             pandas_df = pandas.read_csv(time_parsing_csv_path, parse_dates=parse_dates)
         except Exception as pandas_exception:
