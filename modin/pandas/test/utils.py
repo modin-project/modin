@@ -129,6 +129,7 @@ parse_dates_values_by_id = {
     "list_of_list_of_ints": [[1, 2, 3]],
     "list_of_list_of_strings_and_ints": [["year", 2, "date"]],
     "empty_list": [],
+    "dict": {"year_and_month": [1, 2], "day": ["date"]},
     "nonexistent_string_column": ["z"],
     "nonexistent_int_column": [99],
 }
