@@ -17,14 +17,15 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           activate-environment: modin
-          environment-file: requirements/requirements-no-engine.yml
+          environment-file: environment-dev.yml
           python-version: 3.8
           channel-priority: strict
           # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
           # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
           use-only-tar-bz2: false
       - name: install Ray nightly build
-        run: pip install https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-3.0.0.dev0-cp38-cp38-manylinux2014_x86_64.whl
+        # Use --force-reinstall to always reinstall ray and its dependencies.
+        run: pip install --force-reinstall https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-3.0.0.dev0-cp38-cp38-manylinux2014_x86_64.whl
       - name: Conda environment
         run: |
           conda info
