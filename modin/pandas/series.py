@@ -1556,17 +1556,16 @@ class Series(BasePandasDataset):
         if non_mapping:
             if inplace:
                 self.name = index
-                return
-            else:
-                self_cp = self.copy()
-                self_cp.name = index
-                return self_cp
-        else:
-            from .dataframe import DataFrame
+                return None
+            self_cp = self.copy()
+            self_cp.name = index
+            return self_cp
 
-            result = DataFrame(self.copy()).rename(index=index).squeeze(axis=1)
-            result.name = self.name
-            return result
+        from .dataframe import DataFrame
+
+        result = DataFrame(self.copy()).rename(index=index).squeeze(axis=1)
+        result.name = self.name
+        return result
 
     def repeat(self, repeats, axis=None):  # noqa: PR01, RT01, D200
         """
@@ -1604,25 +1603,23 @@ class Series(BasePandasDataset):
             new_idx = pandas.RangeIndex(len(self.index))
             if inplace:
                 self.index = new_idx
-                return
-            else:
-                result = self.copy()
-                result.index = new_idx
-                return result
-        else:
-            obj = self.copy()
-            obj.name = name
-            from .dataframe import DataFrame
+                return None
+            result = self.copy()
+            result.index = new_idx
+            return result
+        obj = self.copy()
+        obj.name = name
+        from .dataframe import DataFrame
 
-            return DataFrame(obj).reset_index(
-                level=level,
-                drop=drop,
-                inplace=inplace,
-                col_level=0,
-                col_fill="",
-                allow_duplicates=allow_duplicates,
-                names=None,
-            )
+        return DataFrame(obj).reset_index(
+            level=level,
+            drop=drop,
+            inplace=inplace,
+            col_level=0,
+            col_fill="",
+            allow_duplicates=allow_duplicates,
+            names=None,
+        )
 
     def rdivmod(
         self, other, level=None, fill_value=None, axis=0
@@ -2430,9 +2427,8 @@ class Series(BasePandasDataset):
             from .dataframe import DataFrame
 
             return DataFrame(query_compiler=new_query_compiler)
-        else:
-            self._update_inplace(new_query_compiler=new_query_compiler)
-            return
+        self._update_inplace(new_query_compiler=new_query_compiler)
+        return None
 
     def _prepare_inter_op(self, other):
         """

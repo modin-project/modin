@@ -2936,9 +2936,8 @@ class DataFrame(BasePandasDataset):
         ), "Invalid Query Compiler object: {}".format(type(new_query_compiler))
         if not inplace:
             return DataFrame(query_compiler=new_query_compiler)
-        else:
-            self._update_inplace(new_query_compiler=new_query_compiler)
-            return
+        self._update_inplace(new_query_compiler=new_query_compiler)
+        return None
 
     def _get_numeric_data(self, axis: int):
         """

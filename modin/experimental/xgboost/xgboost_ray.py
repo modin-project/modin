@@ -247,11 +247,10 @@ def _get_num_actors(num_actors=None):
     if num_actors is None:
         num_actors_per_node = max(1, int(min_cpus_per_node // 2))
         return num_actors_per_node * len(ray.nodes())
-    elif isinstance(num_actors, int):
-        assert (
-            num_actors % len(ray.nodes()) == 0
-        ), "`num_actors` must be a multiple to number of nodes in Ray cluster."
-        return num_actors
+    assert (
+        num_actors % len(ray.nodes()) == 0
+    ), "`num_actors` must be a multiple to number of nodes in Ray cluster."
+    return num_actors
 
 
 def create_actors(num_actors):

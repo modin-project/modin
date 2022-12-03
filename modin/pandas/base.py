@@ -1377,9 +1377,8 @@ class BasePandasDataset(ClassLogger):
             result.index = pandas.RangeIndex(stop=len(result))
         if inplace:
             self._update_inplace(result._query_compiler)
-            return
-        else:
-            return result
+            return None
+        return result
 
     def eq(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """

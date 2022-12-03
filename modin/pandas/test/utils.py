@@ -768,7 +768,7 @@ def eval_general(
             pd_result = fn(pandas_df, **pd_kwargs)
         except Exception as pd_e:
             if check_exception_type is None:
-                return
+                return None
             with pytest.raises(Exception) as md_e:
                 # repr to force materialization
                 repr(fn(modin_df, **md_kwargs))
@@ -782,10 +782,9 @@ def eval_general(
                     assert not isinstance(
                         md_e.value, tuple(raising_exceptions)
                     ), f"not acceptable exception type: {md_e.value}"
-                return
-        else:
-            md_result = fn(modin_df, **md_kwargs)
-            return (md_result, pd_result) if not inplace else (modin_df, pandas_df)
+            return None
+        md_result = fn(modin_df, **md_kwargs)
+        return (md_result, pd_result) if not inplace else (modin_df, pandas_df)
 
     for key, value in kwargs.items():
         if check_kwargs_callable and callable(value):
