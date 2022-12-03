@@ -135,7 +135,7 @@ jobs:
       - run: pip install -r requirements-dev.txt
       # Use a ray master commit that includes the fix here: https://github.com/ray-project/ray/pull/16278
       # Can be changed after a Ray version > 1.4 is released.
-      - run: pip install https://s3-us-west-2.amazonaws.com/ray-wheels/master/c8e3ed9eec30119092ef966ee7b8982c8954c333/ray-3.0.0.dev0-cp38-cp38-manylinux2014_x86_64.whl
+      - run: pip install https://s3-us-west-2.amazonaws.com/ray-wheels/master/c8e3ed9eec30119092ef966ee7b8982c8954c333/ray-2.0.0.dev0-cp38-cp38-manylinux2014_x86_64.whl
         if: matrix.python-version == '3.8'
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
