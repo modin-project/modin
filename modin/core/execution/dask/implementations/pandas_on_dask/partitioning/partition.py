@@ -266,7 +266,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             The length of the object.
         """
         if self._length_cache is None:
-            self._length_cache = self.apply(lambda df: len(df))._data
+            self._length_cache = self.apply(len)._data
         if isinstance(self._length_cache, Future):
             self._length_cache = DaskWrapper.materialize(self._length_cache)
         return self._length_cache
