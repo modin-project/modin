@@ -350,9 +350,8 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
                 df = df.iloc[:, 0]
             if isinstance(df, cudf.Series):  # convert to column vector
                 return cupy.asnumpy(df.to_array())[:, np.newaxis]
-            elif isinstance(
-                df, cudf.DataFrame
-            ):  # dataframes do not support df.values with strings
+            else:
+                # dataframes do not support df.values with strings
                 return cupy.asnumpy(df.values)
 
         # FIXME: Can't find `gpu_manager.apply_result_not_dataframe` method.

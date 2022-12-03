@@ -230,7 +230,8 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             and "*" in kwargs["filepath_or_buffer"]
         ) or not isinstance(qc, PandasQueryCompiler):
             warnings.warn("Defaulting to Modin core implementation")
-            return PandasOnRayIO.to_pickle(qc, **kwargs)
+            PandasOnRayIO.to_pickle(qc, **kwargs)
+            return
 
         def func(df, **kw):
             idx = str(kw["partition_idx"])

@@ -1866,8 +1866,7 @@ class DataFrame(BasePandasDataset):
         if new_columns is not None:
             obj.columns = new_columns
 
-        if not inplace:
-            return obj
+        return obj if not inplace else None
 
     def reindex(
         self,
@@ -2088,10 +2087,7 @@ class DataFrame(BasePandasDataset):
                 .set_index(keys, append=append, verify_integrity=verify_integrity)
                 .index
             )
-            if not inplace:
-                return frame
-            else:
-                return
+            return frame if not inplace else None
 
         missing = []
         for col in keys:
@@ -2694,7 +2690,8 @@ class DataFrame(BasePandasDataset):
         None
         """
         if isinstance(key, slice):
-            return self._setitem_slice(key, value)
+            self._setitem_slice(key, value)
+            return
 
         if hashable(key) and key not in self.columns:
             if isinstance(value, Series) and len(self.columns) == 0:
@@ -2715,7 +2712,8 @@ class DataFrame(BasePandasDataset):
                     if key.shape != self.shape:
                         raise ValueError("Array must be same shape as DataFrame")
                     key = DataFrame(key, columns=self.columns)
-                return self.mask(key, value, inplace=True)
+                self.mask(key, value, inplace=True)
+                return
 
             if isinstance(key, list) and all((x in self.columns for x in key)):
                 if is_list_like(value):
@@ -2762,9 +2760,10 @@ class DataFrame(BasePandasDataset):
                 df[key] = value
                 return df
 
-            return self._update_inplace(
+            self._update_inplace(
                 self._default_to_pandas(setitem_unhashable_key, value)._query_compiler
             )
+            return
         if is_list_like(value):
             if isinstance(value, (pandas.DataFrame, DataFrame)):
                 value = value[value.columns[0]].values
@@ -2939,6 +2938,7 @@ class DataFrame(BasePandasDataset):
             return DataFrame(query_compiler=new_query_compiler)
         else:
             self._update_inplace(new_query_compiler=new_query_compiler)
+            return
 
     def _get_numeric_data(self, axis: int):
         """
@@ -3151,8 +3151,7 @@ class DataFrame(BasePandasDataset):
             renamed.index = renamed.index.set_names(name)
         else:
             renamed.columns = renamed.columns.set_names(name)
-        if not inplace:
-            return renamed
+        return renamed if not inplace else None
 
     def _to_datetime(self, **kwargs):
         """

@@ -240,6 +240,9 @@ def _get_num_actors(num_actors=None):
     int
         Number of actors to create.
     """
+    if num_actors is None or isinstance(num_actors, int):
+        RuntimeError("`num_actors` must be int or None")
+
     min_cpus_per_node = _get_min_cpus_per_node()
     if num_actors is None:
         num_actors_per_node = max(1, int(min_cpus_per_node // 2))
@@ -249,8 +252,6 @@ def _get_num_actors(num_actors=None):
             num_actors % len(ray.nodes()) == 0
         ), "`num_actors` must be a multiple to number of nodes in Ray cluster."
         return num_actors
-    else:
-        RuntimeError("`num_actors` must be int or None")
 
 
 def create_actors(num_actors):

@@ -235,7 +235,8 @@ class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
             and "*" in kwargs["filepath_or_buffer"]
         ) or not isinstance(qc, PandasQueryCompiler):
             warnings.warn("Defaulting to Modin core implementation")
-            return PandasOnUnidistIO.to_pickle(qc, **kwargs)
+            PandasOnUnidistIO.to_pickle(qc, **kwargs)
+            return
 
         def func(df, **kw):
             idx = str(kw["partition_idx"])

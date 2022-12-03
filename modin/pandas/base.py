@@ -1377,6 +1377,7 @@ class BasePandasDataset(ClassLogger):
             result.index = pandas.RangeIndex(stop=len(result))
         if inplace:
             self._update_inplace(result._query_compiler)
+            return
         else:
             return result
 
@@ -2322,8 +2323,7 @@ class BasePandasDataset(ClassLogger):
                     curnames = self.index.names if axis == 0 else self.columns.names
                     newnames = [f(name) for name in curnames]
                 result._set_axis_name(newnames, axis=axis, inplace=True)
-            if not inplace:
-                return result
+            return result if not inplace else None
 
     def reorder_levels(self, order, axis=0):  # noqa: PR01, RT01, D200
         """

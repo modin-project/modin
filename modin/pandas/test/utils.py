@@ -535,7 +535,7 @@ def df_categories_equals(df1, df2):
             getattr(df2, "dtype"), pandas.CategoricalDtype
         ):
             categories_equals(df1.dtype, df2.dtype)
-        return True
+        return
 
     df1_categorical = df1.select_dtypes(include="category")
     df2_categorical = df2.select_dtypes(include="category")
@@ -613,7 +613,8 @@ def df_equals(df1, df2):
     ):
         assert isinstance(df2, type(df1)), "Different type of collection"
         assert len(df1) == len(df2), "Different length result"
-        return (df_equals(d1, d2) for d1, d2 in zip(df1, df2))
+        (df_equals(d1, d2) for d1, d2 in zip(df1, df2))
+        return
 
     # Convert to pandas
     if isinstance(df1, (pd.DataFrame, pd.Series)):
@@ -767,7 +768,7 @@ def eval_general(
             pd_result = fn(pandas_df, **pd_kwargs)
         except Exception as pd_e:
             if check_exception_type is None:
-                return None
+                return
             with pytest.raises(Exception) as md_e:
                 # repr to force materialization
                 repr(fn(modin_df, **md_kwargs))
@@ -781,6 +782,7 @@ def eval_general(
                     assert not isinstance(
                         md_e.value, tuple(raising_exceptions)
                     ), f"not acceptable exception type: {md_e.value}"
+                return
         else:
             md_result = fn(modin_df, **md_kwargs)
             return (md_result, pd_result) if not inplace else (modin_df, pandas_df)
@@ -1318,7 +1320,6 @@ def _make_csv_file(filenames):
                     **csv_reader_writer_params,
                 )
             filenames.append(filename)
-            return df
 
     return _csv_file_maker
 

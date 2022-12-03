@@ -1556,6 +1556,7 @@ class Series(BasePandasDataset):
         if non_mapping:
             if inplace:
                 self.name = index
+                return
             else:
                 self_cp = self.copy()
                 self_cp.name = index
@@ -1594,18 +1595,20 @@ class Series(BasePandasDataset):
             #  [None] when self.name is None
             name = 0 if self.name is None else self.name
 
+        if not drop and inplace:
+            raise TypeError(
+                "Cannot reset_index inplace on a Series to create a DataFrame"
+            )
+
         if drop and level is None:
             new_idx = pandas.RangeIndex(len(self.index))
             if inplace:
                 self.index = new_idx
+                return
             else:
                 result = self.copy()
                 result.index = new_idx
                 return result
-        elif not drop and inplace:
-            raise TypeError(
-                "Cannot reset_index inplace on a Series to create a DataFrame"
-            )
         else:
             obj = self.copy()
             obj.name = name
@@ -2429,6 +2432,7 @@ class Series(BasePandasDataset):
             return DataFrame(query_compiler=new_query_compiler)
         else:
             self._update_inplace(new_query_compiler=new_query_compiler)
+            return
 
     def _prepare_inter_op(self, other):
         """

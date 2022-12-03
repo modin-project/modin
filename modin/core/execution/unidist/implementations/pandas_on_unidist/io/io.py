@@ -170,7 +170,8 @@ class PandasOnUnidistIO(UnidistIO):
             Parameters for ``pandas.to_csv(**kwargs)``.
         """
         if not cls._to_csv_check_support(kwargs):
-            return UnidistIO.to_csv(qc, **kwargs)
+            UnidistIO.to_csv(qc, **kwargs)
+            return
 
         signals = SignalActor.remote(len(qc._modin_frame._partitions) + 1)
 
@@ -284,7 +285,8 @@ class PandasOnUnidistIO(UnidistIO):
             Parameters for `pandas.to_parquet(**kwargs)`.
         """
         if not cls._to_parquet_check_support(kwargs):
-            return UnidistIO.to_parquet(qc, **kwargs)
+            UnidistIO.to_parquet(qc, **kwargs)
+            return
 
         output_path = kwargs["path"]
         os.makedirs(output_path, exist_ok=True)
