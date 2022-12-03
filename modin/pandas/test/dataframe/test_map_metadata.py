@@ -1399,7 +1399,7 @@ def test___hash__():
     data = test_data_values[0]
     pandas_df = pandas.DataFrame(data)
     modin_df = pd.DataFrame(data)
-    eval_general(modin_df, pandas_df, lambda df: hash(df))
+    eval_general(modin_df, pandas_df, hash)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
