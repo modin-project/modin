@@ -143,33 +143,14 @@ class BaseIO:
         **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_csv`")
-        return cls._read(filepath_or_buffer=filepath_or_buffer, **kwargs)
-
-    @classmethod
-    def _read(cls, **kwargs):
-        """
-        Read csv file into query compiler.
-
-        Parameters
-        ----------
-        **kwargs : dict
-            `read_csv` function kwargs including `filepath_or_buffer` parameter.
-
-        Returns
-        -------
-        BaseQueryCompiler
-            QueryCompiler with read data.
-        """
-        pd_obj = pandas.read_csv(**kwargs)
+        pd_obj = pandas.read_csv(filepath_or_buffer, **kwargs)
         if isinstance(pd_obj, pandas.DataFrame):
             return cls.from_pandas(pd_obj)
         if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
             # Overwriting the read method should return a Modin DataFrame for calls
             # to __next__ and get_chunk
             pd_read = pd_obj.read
-            pd_obj.read = lambda *args, **kwargs: cls.from_pandas(
-                pd_read(*args, **kwargs)
-            )
+            pd_obj.read = lambda *args, **kw: cls.from_pandas(pd_read(*args, **kw))
         return pd_obj
 
     @classmethod
