@@ -379,6 +379,9 @@ jobs:
             ray start --head --port=6379 --object-store-memory=1000000000
             echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
         if: matrix.engine == 'ray'
+      - name: Tell Modin to use existing ray cluster
+        run: echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
+        if: matrix.engine == 'ray'
       - run: python -m pytest ${{matrix.test-task}}
         if: matrix.test-task != 'modin/pandas/test/test_io.py'
       - timeout-minutes: 30
