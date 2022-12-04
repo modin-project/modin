@@ -373,7 +373,6 @@ jobs:
         # https://github.com/modin-project/modin/issues/4562
         uses: nick-fields/retry@v2
         with:
-          shell: bash
           timeout_minutes: 5
           max_attempts: 5
           command: |
