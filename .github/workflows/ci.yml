@@ -836,13 +836,16 @@ jobs:
           conda info
           conda list
       - name: Start local ray cluster
-        run: |
-          ray start --head --port=6379 --object-store-memory=1000000000
-          while [ $? -ne 0 ]; do
-            echo "Failed to start ray cluster. retrying..."
+        # Try a few times to start ray to work around
+        # https://github.com/modin-project/modin/issues/4562
+        uses: nick-fields/retry@v2
+        with:
+          shell: bash
+          timeout_minutes: 5
+          max_attempts: 5
+          command: |
             ray start --head --port=6379 --object-store-memory=1000000000
-          done
-          echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
+            echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
         if: matrix.engine == 'ray'
       - run: python -m pytest ${{matrix.test-task}}
         if: matrix.test-task != 'modin/pandas/test/test_io.py'
