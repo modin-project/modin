@@ -41,7 +41,8 @@ dependencies:
   - scikit-learn
   - pymssql
   - psycopg2
-  - mypy<=0.991
+  # Mypy 0.990 doesn't work: https://github.com/modin-project/modin/issues/5206  
+  - mypy!=0.990
   - pandas-stubs
   - fastparquet
   # for release script
