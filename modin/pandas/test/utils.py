@@ -129,6 +129,7 @@ parse_dates_values_by_id = {
     "list_of_list_of_ints": [[1, 2, 3]],
     "list_of_list_of_strings_and_ints": [["year", 2, "date"]],
     "empty_list": [],
+    "dict": {"year_and_month": [1, 2], "day": ["date"]},
     "nonexistent_string_column": ["z"],
     "nonexistent_int_column": [99],
 }
@@ -280,7 +281,7 @@ join_type_values = list(join_type.values())
 # Test functions for applymap
 test_func = {
     "plus one": lambda x: x + 1,
-    "convert to string": lambda x: str(x),
+    "convert to string": str,
     "square": lambda x: x * x,
     "identity": lambda x: x,
     "return false": lambda x: False,
@@ -530,13 +531,12 @@ def categories_equals(left, right):
 def df_categories_equals(df1, df2):
     if not hasattr(df1, "select_dtypes"):
         if isinstance(df1, pandas.CategoricalDtype):
-            return categories_equals(df1, df2)
+            categories_equals(df1, df2)
         elif isinstance(getattr(df1, "dtype"), pandas.CategoricalDtype) and isinstance(
             getattr(df2, "dtype"), pandas.CategoricalDtype
         ):
-            return categories_equals(df1.dtype, df2.dtype)
-        else:
-            return True
+            categories_equals(df1.dtype, df2.dtype)
+        return True
 
     df1_categorical = df1.select_dtypes(include="category")
     df2_categorical = df2.select_dtypes(include="category")

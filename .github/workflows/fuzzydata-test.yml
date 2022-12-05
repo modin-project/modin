@@ -5,6 +5,8 @@ on:
       # NOTE: keep these paths in sync with the paths that trigger the CI Github
       # Actions in .github/workflows/ci.yml
       - .github/workflows/**
+      - '!.github/workflows/push-to-master.yml'
+      - '!.github/workflows/push.yml'
       - asv_bench/**
       - modin/**
       - requirements/**

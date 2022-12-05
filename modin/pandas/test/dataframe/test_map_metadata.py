@@ -19,8 +19,6 @@ import matplotlib
 import modin.pandas as pd
 from modin.utils import get_current_execution
 
-from modin._compat import PandasCompatVersion
-
 from modin.pandas.test.utils import (
     random_state,
     RAND_LOW,
@@ -286,7 +284,6 @@ def test_axes(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_copy(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     # pandas_df is unused but there so there won't be confusing list comprehension
     # stuff in the pytest.mark.parametrize
@@ -411,13 +408,6 @@ def test_append(data):
             modin_df.append(list(modin_df.iloc[-1]))
     else:
         modin_result = modin_df.append(list(modin_df.iloc[-1]))
-        if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-            # Note: older pandas does not preserve order of columns when
-            # inserting something which columns don't already belong to original frame.
-            # For now just disable this particular edge case test.
-            # Hence we sort both frames to compare them.
-            pandas_result = pandas_result[sorted(pandas_result.columns, key=str)]
-            modin_result = modin_result[sorted(modin_result.columns, key=str)]
         df_equals(modin_result, pandas_result)
 
     verify_integrity_values = [True, False]
@@ -474,12 +464,6 @@ def test_astype():
     expected_df_casted = expected_df.astype(dtype_dict)
     df_equals(modin_df_casted, expected_df_casted)
 
-    # Ignore lint because this is testing bad input
-    bad_dtype_dict = {"index": np.int32, "index": np.int64, "index": str}  # noqa F601
-    modin_df_casted = modin_df.astype(bad_dtype_dict)
-    expected_df_casted = expected_df.astype(bad_dtype_dict)
-    df_equals(modin_df_casted, expected_df_casted)
-
     modin_df = pd.DataFrame(index=["row1"], columns=["col1"])
     modin_df["col1"]["row1"] = 11
     modin_df_casted = modin_df.astype(int)
@@ -500,8 +484,7 @@ def test_astype():
             if isinstance(df, pd.DataFrame)
             else pandas.Series([str, str], index=["col1", "col1"])
         ),
-        # NOTE: older pandas gives different error, so we ignore it here
-        check_exception_type=PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST,
+        check_exception_type=True,
     )
 
 
@@ -615,8 +598,6 @@ def test_convert_dtypes_single_partition(
         "convert_boolean": convert_boolean,
         "convert_floating": convert_floating,
     }
-    if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-        del kwargs["convert_floating"]  # pandas 1.1 does not have this argument
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
     modin_result = modin_df.convert_dtypes(**kwargs)
@@ -1149,10 +1130,6 @@ def test_insert(data):
     )
 
 
-@pytest.mark.skipif(
-    PandasCompatVersion.CURRENT != PandasCompatVersion.LATEST,
-    reason="assert_series_equal() does not have check_index in older pandas",
-)
 def test_insert_4407():
     data = {"col1": [1, 2, 3], "col2": [2, 3, 4]}
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
@@ -1217,15 +1194,12 @@ def test_set_axis(data, axis):
     index = modin_df.columns if x else modin_df.index
     labels = ["{0}_{1}".format(index[i], i) for i in range(modin_df.shape[x])]
 
-    kw = {"copy": True}
-    if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-        kw = {"inplace": False}
-    eval_general(modin_df, pandas_df, lambda df: df.set_axis(labels, axis=axis, **kw))
+    eval_general(
+        modin_df, pandas_df, lambda df: df.set_axis(labels, axis=axis, copy=True)
+    )
 
     modin_df_copy = modin_df.copy()
-    if "copy" in kw:
-        kw["copy"] = False
-    modin_df = modin_df.set_axis(labels, axis=axis, **kw)
+    modin_df = modin_df.set_axis(labels, axis=axis, copy=False)
 
     # Check that the copy and original are different
     try:
@@ -1235,7 +1209,7 @@ def test_set_axis(data, axis):
     else:
         assert False
 
-    pandas_df = pandas_df.set_axis(labels, axis=axis, **kw)
+    pandas_df = pandas_df.set_axis(labels, axis=axis)
     df_equals(modin_df, pandas_df)
 
 
@@ -1425,7 +1399,7 @@ def test___hash__():
     data = test_data_values[0]
     pandas_df = pandas.DataFrame(data)
     modin_df = pd.DataFrame(data)
-    eval_general(modin_df, pandas_df, lambda df: hash(df))
+    eval_general(modin_df, pandas_df, hash)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1452,7 +1426,6 @@ def test___delitem__(request, data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___nonzero__(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     with pytest.raises(ValueError):
         # Always raises ValueError

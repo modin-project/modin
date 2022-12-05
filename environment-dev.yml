@@ -5,6 +5,11 @@ dependencies:
   - pandas==1.5.2
   - numpy>=1.18.5
   - pyarrow>=4.0.1
+  - ray-default>=1.4.0
+  # workaround for https://github.com/conda/conda/issues/11744
+  - grpcio!=1.45.*
+  - grpcio!=1.46.*
+  - redis-py>=3.5.0,<4.0.0
   - dask>=2.22.0
   - distributed>=2.22.0
   - fsspec
@@ -36,23 +41,21 @@ dependencies:
   - scikit-learn
   - pymssql
   - psycopg2
-  - mypy<0.990
+  - mypy<=0.991
   - pandas-stubs
   - fastparquet
   # for release script
   - pygit2
+  # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
+  # when we use collective instead of rabit.
+  - xgboost>=1.7.1,<2.0.0
+  - tqdm
   - pip:
-      # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
-      # when we use collective instead of rabit.
-      - xgboost>=1.7.1,<2.0.0
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
-      - tqdm
       - git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
-      - ray[default]>=1.4.0,<2.1.0
+      # no conda package for windows so we install it with pip
       - connectorx>=0.2.6a4
-      # TODO: remove when resolving GH#4398
-      - redis>=3.5.0,<4.0.0
       - black
       # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
       - flake8<5

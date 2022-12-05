@@ -819,4 +819,177 @@ class TimeProperties:
         return self.df.index
 
 
+class TimeIndexingNumericSeries:
+
+    param_names = ["shape", "dtype", "index_structure"]
+    params = [
+        get_benchmark_shapes("TimeIndexingNumericSeries"),
+        (np.int64, np.uint64, np.float64),
+        ("unique_monotonic_inc", "nonunique_monotonic_inc"),
+    ]
+
+    def setup(self, shape, dtype, index_structure):
+        N = shape[0]
+        indices = {
+            "unique_monotonic_inc": IMPL.Index(range(N), dtype=dtype),
+            "nonunique_monotonic_inc": IMPL.Index(
+                list(range(N // 100)) + [(N // 100) - 1] + list(range(N // 100, N - 1)),
+                dtype=dtype,
+            ),
+        }
+        self.data = IMPL.Series(np.random.rand(N), index=indices[index_structure])
+        self.array = np.arange(N // 2)
+        self.index_to_query = N // 2
+        self.array_list = self.array.tolist()
+        execute(self.data)
+
+    def time_getitem_scalar(self, shape, index, index_structure):
+        # not calling execute as execute function fails for scalar
+        self.data[self.index_to_query]
+
+    def time_getitem_slice(self, shape, index, index_structure):
+        execute(self.data[: self.index_to_query])
+
+    def time_getitem_list_like(self, shape, index, index_structure):
+        execute(self.data[[self.index_to_query]])
+
+    def time_getitem_array(self, shape, index, index_structure):
+        execute(self.data[self.array])
+
+    def time_getitem_lists(self, shape, index, index_structure):
+        execute(self.data[self.array_list])
+
+    def time_iloc_array(self, shape, index, index_structure):
+        execute(self.data.iloc[self.array])
+
+    def time_iloc_list_like(self, shape, index, index_structure):
+        execute(self.data.iloc[[self.index_to_query]])
+
+    def time_iloc_scalar(self, shape, index, index_structure):
+        # not calling execute as execute function fails for scalar
+        self.data.iloc[self.index_to_query]
+
+    def time_iloc_slice(self, shape, index, index_structure):
+        execute(self.data.iloc[: self.index_to_query])
+
+    def time_loc_array(self, shape, index, index_structure):
+        execute(self.data.loc[self.array])
+
+    def time_loc_list_like(self, shape, index, index_structure):
+        execute(self.data.loc[[self.index_to_query]])
+
+    def time_loc_scalar(self, shape, index, index_structure):
+        self.data.loc[self.index_to_query]
+
+    def time_loc_slice(self, shape, index, index_structure):
+        execute(self.data.loc[: self.index_to_query])
+
+
+class TimeReindex:
+    param_names = ["shape"]
+    params = [get_benchmark_shapes("TimeReindex")]
+
+    def setup(self, shape):
+        rows, cols = shape
+        rng = IMPL.date_range(start="1/1/1970", periods=rows, freq="1min")
+        self.df = IMPL.DataFrame(
+            np.random.rand(rows, cols), index=rng, columns=range(cols)
+        )
+        self.df["foo"] = "bar"
+        self.rng_subset = IMPL.Index(rng[::2])
+        self.df2 = IMPL.DataFrame(
+            index=range(rows), data=np.random.rand(rows, cols), columns=range(cols)
+        )
+        level1 = tm.makeStringIndex(rows).values.repeat(cols)
+        level2 = np.tile(tm.makeStringIndex(cols).values, rows)
+        index = IMPL.MultiIndex.from_arrays([level1, level2])
+        self.s = IMPL.Series(np.random.randn(rows * cols), index=index)
+        self.s_subset = self.s[::2]
+        self.s_subset_no_cache = self.s[::2].copy()
+
+        mi = IMPL.MultiIndex.from_product([rng, range(100)])
+        self.s2 = IMPL.Series(np.random.randn(len(mi)), index=mi)
+        self.s2_subset = self.s2[::2].copy()
+        execute(self.df), execute(self.df2)
+        execute(self.s), execute(self.s_subset)
+        execute(self.s2), execute(self.s2_subset)
+        execute(self.s_subset_no_cache)
+
+    def time_reindex_dates(self, shape):
+        execute(self.df.reindex(self.rng_subset))
+
+    def time_reindex_columns(self, shape):
+        execute(self.df2.reindex(columns=self.df.columns[1:5]))
+
+    def time_reindex_multiindex_with_cache(self, shape):
+        # MultiIndex._values gets cached (pandas specific)
+        execute(self.s.reindex(self.s_subset.index))
+
+    def time_reindex_multiindex_no_cache(self, shape):
+        # Copy to avoid MultiIndex._values getting cached (pandas specific)
+        execute(self.s.reindex(self.s_subset_no_cache.index.copy()))
+
+    def time_reindex_multiindex_no_cache_dates(self, shape):
+        # Copy to avoid MultiIndex._values getting cached (pandas specific)
+        execute(self.s2_subset.reindex(self.s2.index.copy()))
+
+
+class TimeReindexMethod:
+
+    params = [
+        get_benchmark_shapes("TimeReindexMethod"),
+        ["pad", "backfill"],
+        [IMPL.date_range, IMPL.period_range],
+    ]
+    param_names = ["shape", "method", "constructor"]
+
+    def setup(self, shape, method, constructor):
+        N = shape[0]
+        self.idx = constructor("1/1/2000", periods=N, freq="1min")
+        self.ts = IMPL.Series(np.random.randn(N), index=self.idx)[::2]
+        execute(self.ts)
+
+    def time_reindex_method(self, shape, method, constructor):
+        execute(self.ts.reindex(self.idx, method=method))
+
+
+class TimeFillnaMethodSeries:
+
+    params = [get_benchmark_shapes("TimeFillnaMethodSeries"), ["pad", "backfill"]]
+    param_names = ["shape", "method"]
+
+    def setup(self, shape, method):
+        N = shape[0]
+        self.idx = IMPL.date_range("1/1/2000", periods=N, freq="1min")
+        ts = IMPL.Series(np.random.randn(N), index=self.idx)[::2]
+        self.ts_reindexed = ts.reindex(self.idx)
+        self.ts_float32 = self.ts_reindexed.astype("float32")
+        execute(self.ts_reindexed), execute(self.ts_float32)
+
+    def time_reindexed(self, shape, method):
+        execute(self.ts_reindexed.fillna(method=method))
+
+    def time_float_32(self, shape, method):
+        execute(self.ts_float32.fillna(method=method))
+
+
+class TimeFillnaMethodDataframe:
+
+    params = [get_benchmark_shapes("TimeFillnaMethodDataframe"), ["pad", "backfill"]]
+    param_names = ["shape", "method"]
+
+    def setup(self, shape, method):
+        self.idx = IMPL.date_range("1/1/2000", periods=shape[0], freq="1min")
+        df_ts = IMPL.DataFrame(np.random.randn(*shape), index=self.idx)[::2]
+        self.df_ts_reindexed = df_ts.reindex(self.idx)
+        self.df_ts_float32 = self.df_ts_reindexed.astype("float32")
+        execute(self.df_ts_reindexed), execute(self.df_ts_float32)
+
+    def time_reindexed(self, shape, method):
+        execute(self.df_ts_reindexed.fillna(method=method))
+
+    def time_float_32(self, shape, method):
+        execute(self.df_ts_float32.fillna(method=method))
+
+
 from .utils import setup  # noqa: E402, F401

@@ -232,7 +232,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         eng = str(engine).lower().strip()
         try:
             if eng in ["pandas", "c"]:
-                return cls._read(**mykwargs)
+                return super().read_csv(**mykwargs)
 
             cls._validate_read_csv_kwargs(mykwargs)
             use_modin_impl, error_message = cls._read_csv_check_support(
@@ -311,7 +311,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                 raise
 
             ErrorMessage.default_to_pandas("`read_csv`")
-            return cls._read(**mykwargs)
+            return super().read_csv(**mykwargs)
 
     @classmethod
     def _dtype_to_arrow(cls, dtype):

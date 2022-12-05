@@ -142,6 +142,86 @@ jobs:
       - run: pytest modin/test/interchange/dataframe_protocol/hdk
       - uses: codecov/codecov-action@v2
 
+  test-all-unidist:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      matrix:
+        python-version: ["3.8"]
+        unidist-backend: ["mpi"]
+    env:
+      MODIN_ENGINE: "Unidist"
+      UNIDIST_BACKEND: ${{matrix.unidist-backend}}
+      # Only test reading from SQL server and postgres on ubuntu for now.
+      # Eventually, we should test on Windows, too, but we will have to set up
+      # the servers differently.
+      MODIN_TEST_READ_FROM_SQL_SERVER: true
+      MODIN_TEST_READ_FROM_POSTGRES: true
+    name: test-ubuntu (engine unidist ${{matrix.unidist-backend}}, python ${{matrix.python-version}})
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('requirements/env_unidist.yml') }}
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
+          activate-environment: modin_on_unidist
+          environment-file: requirements/env_unidist.yml
+          python-version: ${{matrix.python-version}}
+          channel-priority: strict
+          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+          use-only-tar-bz2: false
+      - name: Conda environment
+        run: |
+          conda info
+          conda list
+      - name: Install HDF5
+        run: sudo apt update && sudo apt install -y libhdf5-dev
+      - name: Set up postgres
+        # Locally, specifying port 2345:5432 works, but 2345:2345 and 5432:5432 do not. This solution is from
+        # https://stackoverflow.com/questions/36415654/cant-connect-docker-postgresql-9-3
+        run: |
+          sudo docker pull postgres
+          sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
+      - run: MODIN_BENCHMARK_MODE=True mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_binary.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_default.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_indexing.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_iter.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_join_sort.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_map_metadata.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_reduce.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_udf.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_window.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_pickle.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_series.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_rolling.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_concat.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_groupby.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_reshape.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_general.py
+      - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
+      - run: ./.github/workflows/sql_server/set_up_sql_server.sh
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_io.py --verbose
+      - run: mpiexec -n 1 python -m pytest modin/experimental/pandas/test/test_io_exp.py
+      - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py
+      - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
+      - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
+      - uses: codecov/codecov-action@v2
+
   test-all:
     runs-on: ubuntu-latest
     defaults:

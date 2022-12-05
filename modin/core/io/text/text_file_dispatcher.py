@@ -34,7 +34,6 @@ from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.utils import _inherit_docstrings
 from modin.core.io.text.utils import CustomNewlineIterator
 from modin.config import NPartitions
-from modin._compat.core.base_io import _validate_usecols_arg
 
 ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
 IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
@@ -677,7 +676,7 @@ class TextFileDispatcher(FileDispatcher):
         return (True, None)
 
     @classmethod
-    @_inherit_docstrings(_validate_usecols_arg)
+    @_inherit_docstrings(pandas.io.parsers.base_parser.ParserBase._validate_usecols_arg)
     def _validate_usecols_arg(cls, usecols):
         msg = (
             "'usecols' must either be list-like of all strings, all unicode, "
