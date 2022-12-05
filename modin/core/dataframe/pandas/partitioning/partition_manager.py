@@ -1527,7 +1527,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         # Get each sample to pass in to the pivot function
         samples = cls.get_objects_from_partitions(samples)
         pivots = shuffle_functions.pivot_function(samples)
-        # Convert our list of block partitions to row partitions
+        # Convert our list of block partitions to row partitions. We need to create full-axis
+        # row partitions since we need to send the whole partition to the split step as otherwise
+        # we wouldn't know how to split the block partitions that don't contain the shuffling key.
         row_partitions = [
             partition.force_materialization().list_of_block_partitions[0]
             for partition in cls.row_partitions(partitions)

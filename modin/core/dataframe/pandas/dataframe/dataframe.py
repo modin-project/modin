@@ -2051,12 +2051,14 @@ class PandasDataframe(ClassLogger):
             sort_function,
         )
         new_axes = self.axes
+        new_lengths = [None, None]
         if kwargs.get("ignore_index", False):
             new_axes[axis.value] = RangeIndex(len(new_axes[axis.value]))
         else:
-            new_axes[axis.value] = self._compute_axis_labels_and_lengths(
-                axis.value, new_partitions
-            )[0]
+            (
+                new_axes[axis.value],
+                new_lengths[axis.value],
+            ) = self._compute_axis_labels_and_lengths(axis.value, new_partitions)
         # If we have a MultiIndex, but the first partition is empty, which may happen when
         # the dataframe is small, `_compute_axis_labels_and_lengths` will return us a flattened
         # MultiIndex - i.e. an Index consisting of tuples. This is because the MultiIndex from
@@ -2072,12 +2074,15 @@ class PandasDataframe(ClassLogger):
         new_axes[axis.value] = new_axes[axis.value].set_names(
             self.axes[axis.value].names
         )
-        new_lengths = [None, None]
-        (
-            new_partitions,
-            new_lengths[axis.value],
-        ) = self._partition_mgr_cls.rebalance_partitions(new_partitions)
+        # We perform the final steps of the sort on full axis partitions, so we know that the
+        # length of each partition is the full length of the dataframe.
         new_lengths[axis.value ^ 1] = [len(self.columns)]
+        # Since the strategy to pick our pivots involves random sampling
+        # we could end up picking poor pivots, leading to skew in our partitions.
+        # We should add a fix to check if there is skew in the partitions and rebalance
+        # them if necessary. Calling `rebalance_partitions` won't do this, since it only
+        # resolves the case where there isn't the right amount of partitions - not where
+        # there is skew across the lengths of partitions.
         new_modin_frame = self.__constructor__(
             new_partitions, *new_axes, *new_lengths, self.dtypes
         )
