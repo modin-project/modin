@@ -15,6 +15,9 @@ import unittest.mock as mock
 import pytest
 from collections import namedtuple
 from inspect import signature
+
+import pandas
+
 from modin.experimental.cloud.rayscale import (
     RayCluster,
     create_or_update_cluster,
@@ -23,6 +26,7 @@ from modin.experimental.cloud.rayscale import (
     bootstrap_config,
 )
 from modin.experimental.cloud.cluster import Provider
+from modin.pandas.test.utils import df_equals
 
 
 @pytest.fixture
@@ -137,3 +141,15 @@ def test_update_conda_requirements(
             assert package in setup_commands_result
     else:
         assert "modin=" in setup_commands_result
+
+
+def test_pickling_proxy_class_for_numpy():
+    import modin.experimental.pandas as pd
+    import numpy as np
+
+    md_s = pd.Series([1, 2, 0, 3, 0])
+    md_s = md_s.apply(lambda x: x if x else np.nan)
+
+    pd_s = pandas.Series([1, 2, 0, 3, 0])
+    pd_s = pd_s.apply(lambda x: x if x else np.nan)
+    df_equals(md_s, pd_s)

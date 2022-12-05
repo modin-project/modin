@@ -140,6 +140,30 @@ else:
                 self.__reducers[name] = reducer
             return reducer
 
+        """
+        def __getstate__(self):
+            #res = {key: getattr(self, key) for key in self.__own_attrs__}
+            res = {}
+            res["__own_attrs__"] = self.__own_attrs__
+            for key in ["__current_numpy", "__prev_numpy", "__has_to_warn"]:
+                full_key = f"_InterceptedNumpy{key}"
+                res[full_key] = getattr(self, full_key)
+            return res
+
+        def __setstate__(self, state):
+            # self.__dict__ is readonly
+            for key in state:
+                setattr(self, key, state[key])
+        """
+
+        def __getstate__(self):
+            return real_numpy
+
+        def __setstate__(self, state):
+            # The state is not saved, but allows us to use this class in lambdas
+            #
+            pass
+
         def __get_numpy(self):
             frame = sys._getframe()
             try:
