@@ -808,9 +808,6 @@ jobs:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-windows
     steps:
-      - name: Limit ray memory
-        run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
-        if: matrix.engine == 'ray'
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
@@ -838,6 +835,19 @@ jobs:
         run: |
           conda info
           conda list
+      - name: Start local ray cluster
+        # Try a few times to start ray to work around
+        # https://github.com/modin-project/modin/issues/4562
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          command: |
+            ray start --head --port=6379 --object-store-memory=1000000000
+        if: matrix.engine == 'ray'
+      - name: Tell Modin to use existing ray cluster
+        run: echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
+        if: matrix.engine == 'ray'
       - run: python -m pytest ${{matrix.test-task}}
         if: matrix.test-task != 'modin/pandas/test/test_io.py'
       - timeout-minutes: 30
