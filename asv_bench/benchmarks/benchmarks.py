@@ -1032,13 +1032,13 @@ class TimeDropDuplicatesDataframe:
     param_names = ["shape"]
 
     def setup(self, shape):
-        N = shape[0] // 10
+        rows,cols = shape
+        N = rows // 10
         K = 10
-        key1 = tm.makeStringIndex(N).values.repeat(K)
-        key2 = tm.makeStringIndex(N).values.repeat(K)
-        self.df = IMPL.DataFrame(
-            {"key1": key1, "key2": key2, "value": np.random.randn(N * K)}
-        )
+        self.df = IMPL.DataFrame()
+        for col in range(cols-1): # dataframe would  have cols-1 keys(strings) and one value(int) column
+            self.df["key"+str(col+1)] = tm.makeStringIndex(N).values.repeat(K)
+        self.df["value"] = np.random.randn(N * K)
         execute(self.df)
 
     def time_drop_dups(self, shape):
