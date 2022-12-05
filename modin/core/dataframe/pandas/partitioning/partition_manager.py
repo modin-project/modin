@@ -881,9 +881,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         new_idx = [idx.apply(func) for idx in target[0]] if len(target) else []
         new_idx = cls.get_objects_from_partitions(new_idx)
         # filter empty indexes
-        new_idx = list(filter(lambda idx: len(idx), new_idx))
-        # TODO FIX INFORMATION LEAK!!!!1!!1!!
-        total_idx = new_idx[0].append(new_idx[1:]) if new_idx else new_idx
+        total_idx = list(filter(len, new_idx))
+        if len(total_idx) > 0:
+            # TODO FIX INFORMATION LEAK!!!!1!!1!!
+            total_idx = total_idx[0].append(total_idx[1:])
         return total_idx, new_idx
 
     @classmethod
