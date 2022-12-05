@@ -41,18 +41,6 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         Width or reference to it of wrapped ``pandas.DataFrame``.
     """
 
-    @property
-    def __constructor__(self):
-        """
-        Create a new instance of this object.
-
-        Returns
-        -------
-        cuDFOnRayDataframePartition
-            New instance of cuDF partition.
-        """
-        return type(self)
-
     def __init__(self, gpu_manager, key, length=None, width=None):
         self.gpu_manager = gpu_manager
         self.key = key
@@ -69,7 +57,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             A copy of this object.
         """
         # Shallow copy.
-        return cuDFOnRayDataframePartition(
+        return self.__constructor__(
             self.gpu_manager, self.key, self._length_cache, self._width_cache
         )
 
@@ -165,7 +153,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         -----
         We eagerly schedule the apply `func` and produce a new ``cuDFOnRayDataframePartition``.
         """
-        return cuDFOnRayDataframePartition(
+        return self.__constructor__(
             self.gpu_manager,
             self.apply(func, *args, **kwargs),
             length=length,

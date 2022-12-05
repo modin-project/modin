@@ -103,40 +103,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
                 num_returns=2,
                 pure=False,
             )
-        return PandasOnDaskDataframePartition(futures[0], ip=futures[1])
-
-    def add_to_apply_calls(self, func, *args, length=None, width=None, **kwargs):
-        """
-        Add a function to the call queue.
-
-        Parameters
-        ----------
-        func : callable
-            Function to be added to the call queue.
-        *args : iterable
-            Additional positional arguments to be passed in `func`.
-        length : distributed.Future or int, optional
-            Length, or reference to length, of wrapped ``pandas.DataFrame``.
-        width : distributed.Future or int, optional
-            Width, or reference to width, of wrapped ``pandas.DataFrame``.
-        **kwargs : dict
-            Additional keyword arguments to be passed in `func`.
-
-        Returns
-        -------
-        PandasOnDaskDataframePartition
-            A new ``PandasOnDaskDataframePartition`` object.
-
-        Notes
-        -----
-        The keyword arguments are sent as a dictionary.
-        """
-        return PandasOnDaskDataframePartition(
-            self._data,
-            call_queue=self.call_queue + [[func, args, kwargs]],
-            length=length,
-            width=width,
-        )
+        return self.__constructor__(futures[0], ip=futures[1])
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
@@ -214,7 +181,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         PandasOnDaskDataframePartition
             A copy of this partition.
         """
-        return PandasOnDaskDataframePartition(
+        return self.__constructor__(
             self._data,
             length=self._length_cache,
             width=self._width_cache,

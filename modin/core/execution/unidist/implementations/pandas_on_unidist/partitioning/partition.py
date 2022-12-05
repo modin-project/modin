@@ -115,41 +115,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             result, length, width, ip = _apply_func.remote(data, func, *args, **kwargs)
             logger.debug(f"SUBMIT::_apply_func::{self._identity}")
         logger.debug(f"EXIT::Partition.apply::{self._identity}")
-        return PandasOnUnidistDataframePartition(result, length, width, ip)
-
-    def add_to_apply_calls(self, func, *args, length=None, width=None, **kwargs):
-        """
-        Add a function to the call queue.
-
-        Parameters
-        ----------
-        func : callable or unidist.ObjectRef
-            Function to be added to the call queue.
-        *args : iterable
-            Additional positional arguments to be passed in `func`.
-        length : unidist.ObjectRef or int, optional
-            Length, or reference to length, of wrapped ``pandas.DataFrame``.
-        width : unidist.ObjectRef or int, optional
-            Width, or reference to width, of wrapped ``pandas.DataFrame``.
-        **kwargs : dict
-            Additional keyword arguments to be passed in `func`.
-
-        Returns
-        -------
-        PandasOnUnidistDataframePartition
-            A new ``PandasOnUnidistDataframePartition`` object.
-
-        Notes
-        -----
-        It does not matter if `func` is callable or an ``unidist.ObjectRef``. Unidist will
-        handle it correctly either way. The keyword arguments are sent as a dictionary.
-        """
-        return PandasOnUnidistDataframePartition(
-            self._data,
-            call_queue=self.call_queue + [[func, args, kwargs]],
-            length=length,
-            width=width,
-        )
+        return self.__constructor__(result, length, width, ip)
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
@@ -250,9 +216,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         PandasOnUnidistDataframePartition
             A new ``PandasOnUnidistDataframePartition`` object.
         """
-        return PandasOnUnidistDataframePartition(
-            unidist.put(obj), len(obj.index), len(obj.columns)
-        )
+        return cls(unidist.put(obj), len(obj.index), len(obj.columns))
 
     @classmethod
     def preprocess_func(cls, func):
