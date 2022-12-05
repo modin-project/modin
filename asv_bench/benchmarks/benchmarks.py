@@ -21,6 +21,7 @@
 
 import numpy as np
 import pandas._testing as tm
+import math
 
 from .utils import (
     generate_dataframe,
@@ -990,6 +991,98 @@ class TimeFillnaMethodDataframe:
 
     def time_float_32(self, shape, method):
         execute(self.df_ts_float32.fillna(method=method))
+
+
+class TimeLevelAlign:
+    params = [get_benchmark_shapes("TimeLevelAlign")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        row1, col1 = shape[0]
+        row2, col2 = shape[1]
+        Nroot = round(math.sqrt(row1))
+        N = Nroot * Nroot
+        self.index = IMPL.MultiIndex(
+            levels=[np.arange(10), np.arange(Nroot), np.arange(Nroot)],
+            codes=[
+                np.arange(10).repeat(N),
+                np.tile(np.arange(Nroot).repeat(Nroot), 10),
+                np.tile(np.tile(np.arange(Nroot), Nroot), 10),
+            ],
+        )
+        self.df = IMPL.DataFrame(
+            np.random.randn(len(self.index), col1), index=self.index
+        )
+        self.df_level = IMPL.DataFrame(np.random.randn(row2, col2))
+        execute(self.df)
+        execute(self.df_level)
+
+    def time_align_level(self, shape):
+        left, right = self.df.align(self.df_level, level=1, copy=False)
+        execute(left)
+        execute(right)
+
+    def time_reindex_level(self, shape):
+        execute(self.df_level.reindex(self.index, level=1))
+
+
+class TimeDropDuplicates:
+
+    params = [get_benchmark_shapes("TimeDropDuplicates")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        N = shape[0]
+        K = shape[1]
+        key1 = tm.makeStringIndex(N).values.repeat(K)
+        key2 = tm.makeStringIndex(N).values.repeat(K)
+        self.df = IMPL.DataFrame(
+            {"key1": key1, "key2": key2, "value": np.random.randn(N * K)}
+        )
+        self.df_nan = self.df.copy()
+        self.df_nan.iloc[:N, :] = np.nan
+        self.s = IMPL.Series(np.random.randint(0, N // 10, size=N))
+        self.s_str = IMPL.Series(np.tile(tm.makeStringIndex(N // 10).values, 10))
+        key1 = np.random.randint(0, K, size=N)
+        self.df_int = IMPL.DataFrame({"key1": key1})
+        execute(self.df), execute(self.df_nan)
+        execute(self.s), execute(self.s_str)
+        execute(self.df_int)
+
+    def time_frame_drop_dups(self, shape):
+        execute(self.df.drop_duplicates(["key1", "key2"]))
+
+    def time_frame_drop_dups_inplace(self, shape):
+        self.df.drop_duplicates(["key1", "key2"], inplace=True)
+        execute(self.df)
+
+    def time_frame_drop_dups_na(self, shape):
+        execute(self.df_nan.drop_duplicates(["key1", "key2"]))
+
+    def time_frame_drop_dups_na_inplace(self, shape):
+        self.df_nan.drop_duplicates(["key1", "key2"], inplace=True)
+        execute(self.df_nan)
+
+    def time_series_drop_dups_int(self, shape):
+        execute(self.s.drop_duplicates())
+
+    def time_series_drop_dups_int_inplace(self, shape):
+        self.s.drop_duplicates(inplace=True)
+        execute(self.s)
+
+    def time_series_drop_dups_string(self, shape):
+        execute(self.s_str.drop_duplicates())
+
+    def time_series_drop_dups_string_inplace(self, shape):
+        self.s_str.drop_duplicates(inplace=True)
+        execute(self.s_str)
+
+    def time_frame_drop_dups_int(self, shape):
+        execute(self.df_int.drop_duplicates())
+
+    def time_frame_drop_dups_int_inplace(self, shape):
+        self.df_int.drop_duplicates(inplace=True)
+        execute(self.df_int)
 
 
 from .utils import setup  # noqa: E402, F401
