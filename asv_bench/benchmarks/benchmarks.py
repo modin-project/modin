@@ -1047,24 +1047,24 @@ class TimeDropDuplicatesDataframe:
         execute(self.df), execute(self.df_nan)
         execute(self.df_int)
 
-    def time_frame_drop_dups(self, shape):
+    def time_drop_dups(self, shape):
         execute(self.df.drop_duplicates(["key1", "key2"]))
 
-    def time_frame_drop_dups_inplace(self, shape):
+    def time_drop_dups_inplace(self, shape):
         self.df.drop_duplicates(["key1", "key2"], inplace=True)
         execute(self.df)
 
-    def time_frame_drop_dups_na(self, shape):
+    def time_drop_dups_na(self, shape):
         execute(self.df_nan.drop_duplicates(["key1", "key2"]))
 
-    def time_frame_drop_dups_na_inplace(self, shape):
+    def time_drop_dups_na_inplace(self, shape):
         self.df_nan.drop_duplicates(["key1", "key2"], inplace=True)
         execute(self.df_nan)
 
-    def time_frame_drop_dups_int(self, shape):
+    def time_drop_dups_int(self, shape):
         execute(self.df_int.drop_duplicates())
 
-    def time_frame_drop_dups_int_inplace(self, shape):
+    def time_drop_dups_int_inplace(self, shape):
         self.df_int.drop_duplicates(inplace=True)
         execute(self.df_int)
 
@@ -1080,17 +1080,17 @@ class TimeDropDuplicatesSeries:
         self.s_str = IMPL.Series(np.tile(tm.makeStringIndex(N // 10).values, 10))
         execute(self.s), execute(self.s_str)
 
-    def time_series_drop_dups_int(self, shape):
+    def time_drop_dups_int(self, shape):
         execute(self.s.drop_duplicates())
 
-    def time_series_drop_dups_int_inplace(self, shape):
+    def time_drop_dups_int_inplace(self, shape):
         self.s.drop_duplicates(inplace=True)
         execute(self.s)
 
-    def time_series_drop_dups_string(self, shape):
+    def time_drop_dups_string(self, shape):
         execute(self.s_str.drop_duplicates())
 
-    def time_series_drop_dups_string_inplace(self, shape):
+    def time_drop_dups_string_inplace(self, shape):
         self.s_str.drop_duplicates(inplace=True)
         execute(self.s_str)
 
