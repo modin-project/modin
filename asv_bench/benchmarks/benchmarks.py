@@ -1056,15 +1056,15 @@ class TimeDropDuplicatesSeries:
 
     def setup(self, shape):
         rows = shape[0]
-        self.s_str = IMPL.Series(np.tile(tm.makeStringIndex(rows // 10).values, 10))
-        execute(self.s_str)
+        self.series = IMPL.Series(np.tile(tm.makeStringIndex(rows // 10).values, 10))
+        execute(self.series)
+
+    def time_drop_dups(self, shape):
+        execute(self.series.drop_duplicates())
 
     def time_drop_dups_string(self, shape):
-        execute(self.s_str.drop_duplicates())
-
-    def time_drop_dups_string_inplace(self, shape):
-        self.s_str.drop_duplicates(inplace=True)
-        execute(self.s_str)
+        self.series.drop_duplicates(inplace=True)
+        execute(self.series)
 
 
 from .utils import setup  # noqa: E402, F401
