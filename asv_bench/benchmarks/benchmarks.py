@@ -1043,10 +1043,10 @@ class TimeDropDuplicatesDataframe:
         execute(self.df)
 
     def time_drop_dups(self, shape):
-        execute(self.df.drop_duplicates(["key1", "key2"]))
+        execute(self.df.drop_duplicates(self.df.columns[:-1]))
 
     def time_drop_dups_inplace(self, shape):
-        self.df.drop_duplicates(["key1", "key2"], inplace=True)
+        self.df.drop_duplicates(self.df.columns[:-1], inplace=True)
         execute(self.df)
 
 
