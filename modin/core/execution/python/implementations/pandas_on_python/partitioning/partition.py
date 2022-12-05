@@ -42,7 +42,9 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
     """
 
     def __init__(self, data, length=None, width=None, call_queue=None):
-        self._data = data.copy()
+        if hasattr(data, "copy"):
+            data = data.copy()
+        self._data = data
         if call_queue is None:
             call_queue = []
         self.call_queue = call_queue
