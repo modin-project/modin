@@ -998,24 +998,23 @@ class TimeLevelAlign:
     param_names = ["shapes"]
 
     def setup(self, shapes):
-        row1, col1 = shapes[0]
-        row2, col2 = shapes[1]
-        Nroot = round(math.sqrt(row1))
-        N = Nroot * Nroot
+        rows, cols = shapes[0]
+        rows_sqrt = round(math.sqrt(rows))
+        # the new number of rows may differ from the requested (slightly, so ok)
+        rows = rows_sqrt * rows_sqrt
         self.index = IMPL.MultiIndex(
-            levels=[np.arange(10), np.arange(Nroot), np.arange(Nroot)],
+            levels=[np.arange(10), np.arange(rows_sqrt), np.arange(rows_sqrt)],
             codes=[
-                np.arange(10).repeat(N),
-                np.tile(np.arange(Nroot).repeat(Nroot), 10),
-                np.tile(np.tile(np.arange(Nroot), Nroot), 10),
+                np.arange(10).repeat(rows),
+                np.tile(np.arange(rows_sqrt).repeat(rows_sqrt), 10),
+                np.tile(np.tile(np.arange(rows_sqrt), rows_sqrt), 10),
             ],
         )
         self.df1 = IMPL.DataFrame(
-            np.random.randn(len(self.index), col1), index=self.index
+            np.random.randn(len(self.index), cols), index=self.index
         )
-        self.df2 = IMPL.DataFrame(np.random.randn(row2, col2))
-        execute(self.df1)
-        execute(self.df2)
+        self.df2 = IMPL.DataFrame(np.random.randn(*shapes[1]))
+        execute(self.df1), execute(self.df2)
 
     def time_align_level(self, shapes):
         left, right = self.df1.align(self.df2, level=1, copy=False)
