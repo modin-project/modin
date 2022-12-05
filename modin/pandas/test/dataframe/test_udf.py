@@ -57,6 +57,13 @@ matplotlib.use("Agg")
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
+# Initialize the environment. If not initialized here,
+# StorageFormat.get() == "Pandas" is always true for
+# @pytest.mark.xfail() and the test test_apply_key_error
+# fails in case of HDK backend.
+pd.DataFrame()
+
+
 def test_agg_dict():
     md_df, pd_df = create_test_dfs(test_data_values[0])
     agg_dict = {pd_df.columns[0]: "sum", pd_df.columns[-1]: ("sum", "count")}

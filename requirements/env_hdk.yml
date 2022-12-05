@@ -21,6 +21,7 @@ dependencies:
   - scipy
   - xgboost>=1.7.1,<2.0.0
   - scikit-learn-intelex
+  - matplotlib
   - pip:
       - black
       # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
