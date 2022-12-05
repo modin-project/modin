@@ -1018,8 +1018,7 @@ class TimeLevelAlign:
 
     def time_align_level(self, shapes):
         left, right = self.df1.align(self.df2, level=1, copy=False)
-        execute(left)
-        execute(right)
+        execute(left), execute(right)
 
     # reindex returns  the same result as align. Approximately the same performance is expected.
     def time_reindex_level(self, shapes):
