@@ -79,13 +79,31 @@ will install Modin and four engines: [Ray](https://github.com/ray-project/ray), 
 conda install -c conda-forge modin-all
 ```
 
-Each engine can also be installed individually:
+Each engine can also be installed individually (and also as a combination of several engines):
 
 ```bash
 conda install -c conda-forge modin-ray  # Install Modin dependencies and Ray.
 conda install -c conda-forge modin-dask # Install Modin dependencies and Dask.
 conda install -c conda-forge modin-unidist # Install Modin dependencies and Unidist.
 conda install -c conda-forge modin-hdk # Install Modin dependencies and HDK.
+```
+
+To speed up conda installation we recommend using libmamba solver. To do this install it in a base environment:
+
+```bash
+conda install -n base conda-libmamba-solver
+```
+
+and then use it during istallation either like eg:
+
+```bash
+conda install -c conda-forge modin-ray modin-hdk --experimental-solver=libmamba
+```
+
+or starting from conda 22.11 and libmamba solver 22.12 versions:
+
+```bash
+conda install -c conda-forge modin-ray modin-hdk --solver=libmamba
 ```
 
 #### Choosing a Compute Engine
