@@ -1032,19 +1032,14 @@ class TimeDropDuplicatesDataframe:
     param_names = ["shape"]
 
     def setup(self, shape):
-        N = shape[0]
-        K = shape[1]
+        N = shape[0] // 10
+        K = 10
         key1 = tm.makeStringIndex(N).values.repeat(K)
         key2 = tm.makeStringIndex(N).values.repeat(K)
         self.df = IMPL.DataFrame(
             {"key1": key1, "key2": key2, "value": np.random.randn(N * K)}
         )
-        self.df_nan = self.df.copy()
-        self.df_nan.iloc[:N, :] = np.nan
-        key1 = np.random.randint(0, K, size=N)
-        self.df_int = IMPL.DataFrame({"key1": key1})
-        execute(self.df), execute(self.df_nan)
-        execute(self.df_int)
+        execute(self.df)
 
     def time_drop_dups(self, shape):
         execute(self.df.drop_duplicates(["key1", "key2"]))
@@ -1053,20 +1048,6 @@ class TimeDropDuplicatesDataframe:
         self.df.drop_duplicates(["key1", "key2"], inplace=True)
         execute(self.df)
 
-    def time_drop_dups_na(self, shape):
-        execute(self.df_nan.drop_duplicates(["key1", "key2"]))
-
-    def time_drop_dups_na_inplace(self, shape):
-        self.df_nan.drop_duplicates(["key1", "key2"], inplace=True)
-        execute(self.df_nan)
-
-    def time_drop_dups_int(self, shape):
-        execute(self.df_int.drop_duplicates())
-
-    def time_drop_dups_int_inplace(self, shape):
-        self.df_int.drop_duplicates(inplace=True)
-        execute(self.df_int)
-
 
 class TimeDropDuplicatesSeries:
 
@@ -1074,17 +1055,9 @@ class TimeDropDuplicatesSeries:
     param_names = ["shape"]
 
     def setup(self, shape):
-        N = shape[0]
-        self.s = IMPL.Series(np.random.randint(0, N // 10, size=N))
-        self.s_str = IMPL.Series(np.tile(tm.makeStringIndex(N // 10).values, 10))
-        execute(self.s), execute(self.s_str)
-
-    def time_drop_dups_int(self, shape):
-        execute(self.s.drop_duplicates())
-
-    def time_drop_dups_int_inplace(self, shape):
-        self.s.drop_duplicates(inplace=True)
-        execute(self.s)
+        rows = shape[0]
+        self.s_str = IMPL.Series(np.tile(tm.makeStringIndex(rows // 10).values, 10))
+        execute(self.s_str)
 
     def time_drop_dups_string(self, shape):
         execute(self.s_str.drop_duplicates())
