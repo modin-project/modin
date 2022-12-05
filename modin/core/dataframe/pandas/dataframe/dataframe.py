@@ -2077,8 +2077,7 @@ class PandasDataframe(ClassLogger):
             new_partitions,
             new_lengths[axis.value],
         ) = self._partition_mgr_cls.rebalance_partitions(new_partitions)
-        col_parts = new_partitions[0]
-        new_lengths[axis.value ^ 1] = [part.width() for part in col_parts]
+        new_lengths[axis.value ^ 1] = [len(self.columns)]
         new_modin_frame = self.__constructor__(
             new_partitions, *new_axes, *new_lengths, self.dtypes
         )

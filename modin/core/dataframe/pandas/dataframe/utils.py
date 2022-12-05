@@ -59,7 +59,7 @@ def build_sort_functions(
 
     def sample_fn(partition):
         return pick_samples_for_quantiles(
-            partition, column, len(modin_frame._partitions), len(modin_frame.index)
+            partition[column], len(modin_frame._partitions), len(modin_frame.index)
         )
 
     def pivot_fn(samples):
@@ -119,7 +119,6 @@ def _find_quantiles(
 
 def pick_samples_for_quantiles(
     df: pandas.DataFrame,
-    column: str,
     num_partitions: int,
     length: int,
 ) -> np.ndarray:
@@ -134,8 +133,6 @@ def pick_samples_for_quantiles(
     ----------
     df : pandas.Dataframe
         The masked dataframe to pick samples from.
-    column : str
-        The columns to pick quantiles from. Only the first column in the list will be used.
     num_partitions : int
         The number of partitions.
     length : int
@@ -153,7 +150,7 @@ def pick_samples_for_quantiles(
     """
     m = length / num_partitions
     probability = (1 / m) * np.log(num_partitions * length)
-    return df[column].sample(frac=probability).to_numpy()
+    return df.sample(frac=probability).to_numpy()
 
 
 def pick_pivots_from_samples_for_sort(
