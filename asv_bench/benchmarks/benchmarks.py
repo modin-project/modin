@@ -1022,6 +1022,7 @@ class TimeLevelAlign:
         execute(left)
         execute(right)
 
+    #reindex returns  the same result as align. Approximately the same performance is expected.
     def time_reindex_level(self, shape):
         execute(self.df_level.reindex(self.index, level=1))
 
@@ -1083,6 +1084,62 @@ class TimeDropDuplicates:
     def time_frame_drop_dups_int_inplace(self, shape):
         self.df_int.drop_duplicates(inplace=True)
         execute(self.df_int)
+
+
+class TimeDatetimeAccessor:
+    
+    params = [get_benchmark_shapes("TimeDatetimeAccessor")]
+    param_names = ["shape"]
+    
+    def setup(self, shape):
+        N = shape[0]
+        self.series = IMPL.Series(IMPL.timedelta_range("1 days", periods=N, freq="h"))
+        execute(self.series)
+
+    def time_dt_accessor(self, shape):        
+        execute(self.series.dt)
+
+    def time_timedelta_days(self, shape):
+        execute(self.series.dt.days)
+
+    def time_timedelta_seconds(self, shape):
+        execute(self.series.dt.seconds)
+
+    def time_timedelta_microseconds(self, shape):
+        execute(self.series.dt.microseconds)
+
+    def time_timedelta_nanoseconds(self, shape):
+        execute(self.series.dt.nanoseconds)
+
+
+class TimeSetCategories:
+    
+    params = [get_benchmark_shapes("TimeSetCategories")]
+    param_names = ["shape"]
+    
+    def setup(self, shape):
+        n = shape[0]
+        arr = [f"s{i:04d}" for i in np.random.randint(0, n // 10, size=n)]
+        self.ts = IMPL.Series(arr).astype("category")
+        execute(self.ts)
+
+    def time_set_categories(self, shape):
+        execute(self.ts.cat.set_categories(self.ts.cat.categories[::2]))
+
+
+class TimeRemoveCategories:
+    
+    params = [get_benchmark_shapes("TimeRemoveCategories")]
+    param_names = ["shape"]
+    
+    def setup(self, shape):
+        n = shape[0]
+        arr = [f"s{i:04d}" for i in np.random.randint(0, n // 10, size=n)]
+        self.ts = IMPL.Series(arr).astype("category")
+        execute(self.ts)
+
+    def time_remove_categories(self, shape):
+        execute(self.ts.cat.remove_categories(self.ts.cat.categories[::2]))
 
 
 from .utils import setup  # noqa: E402, F401
