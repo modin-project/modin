@@ -20,6 +20,7 @@ from modin.error_message import ErrorMessage
 import modin.utils
 import modin.pandas as pd
 
+
 # Note: classes below are used for purely testing purposes - they
 # simulate real-world use cases for _inherit_docstring
 class BaseParent:
