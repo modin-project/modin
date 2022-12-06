@@ -19,6 +19,7 @@ from pandas._typing import Axes
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.pandas.dataframe import DataFrame, Series
+from modin.config import StorageFormat
 
 if TYPE_CHECKING:
     from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
@@ -275,6 +276,11 @@ def repartition(
 
     if not isinstance(df, (DataFrame, Series)):
         raise NotImplementedError
+
+    if StorageFormat.get() == "Hdk":
+        # Hdk uses only one partition, it makes
+        # no sense for it to repartition the dataframe.
+        return df
 
     list_axis = [0, 1] if axis is None else [axis]
 
