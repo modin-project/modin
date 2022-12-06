@@ -2418,16 +2418,15 @@ class TestFromArrow:
         assert mdt == "category"
         assert isinstance(mdt, pandas.CategoricalDtype)
         assert pandas.api.types.is_categorical_dtype(mdt)
+        assert str(mdt) == str(pdt)
 
         if type(mdt) != pandas.CategoricalDtype:
             # This is a lazy proxy.
-            # Make sure the table is not materialized after
-            # the instance check and comparison with string.
+            # Make sure the table is not materialized yet.
             assert mdt._table is not None
 
         assert mdt == pdt
         assert pdt == mdt
-        assert str(mdt) == str(pdt)
         assert repr(mdt) == repr(pdt)
 
 
