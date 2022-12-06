@@ -527,7 +527,7 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
     return obj
 
 
-def repartition(df, axis: Optional[int] = None):
+def repartition(df, axis: Optional[int] = None):  # type:ignore
     """
     Repartitioning Modin objects to get ideal partitions inside.
 
