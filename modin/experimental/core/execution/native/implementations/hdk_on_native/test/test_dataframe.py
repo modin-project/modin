@@ -2402,15 +2402,8 @@ class TestFromArrow:
         chunks = split_df_into_chunks(pdf, nchunks)
         at = pyarrow.concat_tables([pyarrow.Table.from_pandas(c) for c in chunks])
         mdf = from_arrow(at)
-        assert (
-            len(
-                mdf._query_compiler._modin_frame._partitions[0][0]
-                .get()
-                .column(0)
-                .chunks
-            )
-            == nchunks
-        )
+        at = mdf._query_compiler._modin_frame._partitions[0][0].get()
+        assert len(at.column(0).chunks) == nchunks
         df_equals(mdf, pdf)
 
         mdt = mdf.dtypes[0]
@@ -2423,10 +2416,16 @@ class TestFromArrow:
         # Make sure the lazy proxy dtype is not materialized yet.
         assert type(mdt) != pandas.CategoricalDtype
         assert mdt._table is not None
+        assert mdt._new(at, at.column(0)._name) is mdt
+        assert mdt._new(at, at.column(2)._name) is not mdt
+        assert type(mdt._new(at, at.column(2)._name)) != pandas.CategoricalDtype
 
         assert mdt == pdt
         assert pdt == mdt
         assert repr(mdt) == repr(pdt)
+
+        # Should be materialized now
+        assert type(mdt._new(at, at.column(2)._name)) == pandas.CategoricalDtype
 
 
 if __name__ == "__main__":
