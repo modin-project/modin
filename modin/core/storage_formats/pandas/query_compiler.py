@@ -2721,8 +2721,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 [
                     dfgb.count(*args, **kwargs),
                     dfgb.sum(*args, **kwargs),
-                    df_pow2.groupby(dfgb.grouper).sum(*args, **kwargs),
-                    df_pow3.groupby(dfgb.grouper).sum(*args, **kwargs),
+                    df_pow2.groupby(dfgb.keys, **groupby_kwargs).sum(*args, **kwargs),
+                    df_pow3.groupby(dfgb.keys, **groupby_kwargs).sum(*args, **kwargs),
                 ],
                 copy=False,
                 axis=1,
