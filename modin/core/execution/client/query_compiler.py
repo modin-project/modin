@@ -669,6 +669,9 @@ class ClientQueryCompiler(BaseQueryCompiler):
     def merge(self, right, **kwargs):
         return self.__constructor__(self._service.merge(self._id, right._id, **kwargs))
 
+    def merge_asof(self, right, **kwargs):
+        return self.__constructor__(self._service.merge_asof(self._id, right._id, **kwargs))
+
     def groupby_mean(
         self,
         by,
