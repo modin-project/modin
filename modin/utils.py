@@ -527,22 +527,41 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
     return obj
 
 
-def repartition(df, axis):
-    from modin.pandas import DataFrame
+def repartition(df, axis: Optional[int] = None):
+    """
+    Repartitioning Modin objects to get ideal partitions inside.
 
-    if not isinstance(df, DataFrame):
+    Allows to improve performance where the query compiler cannot yet.
+
+    Parameters
+    ----------
+    df : DataFrame or Series
+    axis : int, optional
+
+    Returns
+    -------
+    DataFrame or Series
+        The repartitioned dataframe or series, depending on the original type.
+    """
+
+    from modin.pandas import DataFrame, Series
+
+    if not isinstance(df, (DataFrame, Series)):
         raise NotImplementedError
 
-    if axis not in (0, 1):
+    if axis not in (0, 1, None):
         raise NotImplementedError
 
-    return DataFrame(
-        query_compiler=df._query_compiler.__constructor__(
-            df._query_compiler._modin_frame.apply_full_axis(
-                axis, lambda df: df, keep_partitioning=False
+    list_axis = [0, 1] if axis is None else [axis]
+
+    new_query_compiler = df._query_compiler
+    for _ax in list_axis:
+        new_query_compiler = new_query_compiler.__constructor__(
+            new_query_compiler._modin_frame.apply_full_axis(
+                _ax, lambda df: df, keep_partitioning=False
             )
         )
-    )
+    return df.__constructor__(query_compiler=new_query_compiler)
 
 
 def wrap_into_list(*args: Any, skipna: bool = True) -> List[Any]:
