@@ -1034,9 +1034,8 @@ class TestCsv:
             # This tests that we default to pandas on a buffer
             from io import StringIO
 
-            pd.read_csv(
-                StringIO(open(pytest.csvs_names["test_read_csv_regular"], "r").read())
-            )
+            with open(pytest.csvs_names["test_read_csv_regular"], "r") as _f:
+                pd.read_csv(StringIO(_f.read()))
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
