@@ -2181,6 +2181,7 @@ class PandasDataframe(ClassLogger):
         new_index=None,
         new_columns=None,
         dtypes=None,
+        keep_partitioning=True,
     ):
         """
         Perform a function across an entire axis.
@@ -2201,6 +2202,9 @@ class PandasDataframe(ClassLogger):
             The data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
+        keep_partitioning : boolean, default: True
+            The flag to keep partition boundaries for Modin Frame.
+            Setting it to True disables shuffling data from one partition to another.
 
         Returns
         -------
@@ -2218,6 +2222,7 @@ class PandasDataframe(ClassLogger):
             new_columns=new_columns,
             dtypes=dtypes,
             other=None,
+            keep_partitioning=keep_partitioning,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -2608,6 +2613,7 @@ class PandasDataframe(ClassLogger):
         apply_indices=None,
         enumerate_partitions=False,
         dtypes=None,
+        keep_partitioning=True,
     ):
         """
         Broadcast partitions of `other` Modin DataFrame and apply a function along full axis.
@@ -2635,6 +2641,9 @@ class PandasDataframe(ClassLogger):
             Data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
+        keep_partitioning : boolean, default: True
+            The flag to keep partition boundaries for Modin Frame.
+            Setting it to True disables shuffling data from one partition to another.
 
         Returns
         -------
@@ -2659,7 +2668,7 @@ class PandasDataframe(ClassLogger):
             apply_func=self._build_treereduce_func(axis, func),
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
-            keep_partitioning=True,
+            keep_partitioning=keep_partitioning,
         )
         # Index objects for new object creation. This is shorter than if..else
         kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)

@@ -527,6 +527,24 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
     return obj
 
 
+def repartition(df, axis):
+    from modin.pandas import DataFrame
+
+    if not isinstance(df, DataFrame):
+        raise NotImplementedError
+
+    if axis not in (0, 1):
+        raise NotImplementedError
+
+    return DataFrame(
+        query_compiler=df._query_compiler.__constructor__(
+            df._query_compiler._modin_frame.apply_full_axis(
+                axis, lambda df: df, keep_partitioning=False
+            )
+        )
+    )
+
+
 def wrap_into_list(*args: Any, skipna: bool = True) -> List[Any]:
     """
     Wrap a sequence of passed values in a flattened list.
