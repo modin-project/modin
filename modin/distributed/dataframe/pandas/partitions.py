@@ -283,4 +283,4 @@ def repartition(df, axis: Optional[int] = None):  # type:ignore
                 _ax, lambda df: df, keep_partitioning=False
             )
         )
-    return df.__constructor__(query_compiler=new_query_compiler)
+    return df.__constructor__(query_compiler=new_query_compiler)  # type:ignore
