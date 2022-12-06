@@ -240,7 +240,7 @@ def _get_num_actors(num_actors=None):
     int
         Number of actors to create.
     """
-    if num_actors is None or isinstance(num_actors, int):
+    if not (num_actors is None or isinstance(num_actors, int)):
         RuntimeError("`num_actors` must be int or None")
 
     min_cpus_per_node = _get_min_cpus_per_node()
