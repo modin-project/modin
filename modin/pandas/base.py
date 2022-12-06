@@ -2202,24 +2202,9 @@ class BasePandasDataset(ClassLogger):
         """
         Conform `BasePandasDataset` to new index with optional filling logic.
         """
-        if (
-            kwargs.get("level") is not None
-            or (index is not None and self._query_compiler.has_multiindex())
-            or (columns is not None and self._query_compiler.has_multiindex(axis=1))
-        ):
-            if index is not None:
-                kwargs["index"] = index
-            if columns is not None:
-                kwargs["columns"] = columns
-            return self._default_to_pandas("reindex", copy=copy, **kwargs)
-
         new_query_compiler = None
         if index is not None:
-            if not isinstance(index, pandas.Index):
-                index = self._copy_index_metadata(
-                    source=self.index, destination=self._ensure_index(index, axis=0)
-                )
-            if not index.equals(self.index):
+            if not isinstance(index, pandas.Index) or not index.equals(self.index):
                 new_query_compiler = self._query_compiler.reindex(
                     axis=0, labels=index, **kwargs
                 )
@@ -2227,11 +2212,7 @@ class BasePandasDataset(ClassLogger):
             new_query_compiler = self._query_compiler
         final_query_compiler = None
         if columns is not None:
-            if not isinstance(columns, pandas.Index):
-                columns = self._copy_index_metadata(
-                    source=self.columns, destination=self._ensure_index(columns, axis=1)
-                )
-            if not columns.equals(self.columns):
+            if not isinstance(index, pandas.Index) or not columns.equals(self.columns):
                 final_query_compiler = new_query_compiler.reindex(
                     axis=1, labels=columns, **kwargs
                 )
