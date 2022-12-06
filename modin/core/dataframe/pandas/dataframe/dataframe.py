@@ -1095,7 +1095,6 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             A new PandasDataframe with reordered columns and/or rows.
         """
-        new_lengths, new_widths = None, None
         new_dtypes = self._dtypes
         if row_positions is not None:
             ordered_rows = self._partition_mgr_cls.map_axis_partitions(

@@ -1108,7 +1108,6 @@ def insert_lines_to_csv(
     encoding: str
         Encoding type that should be used during file reading and writing.
     """
-    cols_number = len(pandas.read_csv(csv_name, nrows=1).columns)
     if lines_type == "blank":
         lines_data = []
     elif lines_type == "bad":
@@ -1119,7 +1118,6 @@ def insert_lines_to_csv(
             f"acceptable values for  parameter are ['blank', 'bad'], actually passed {lines_type}"
         )
     lines = []
-    dialect = "excel"
     with open(csv_name, "r", encoding=encoding, newline="") as read_file:
         try:
             dialect = csv.Sniffer().sniff(read_file.read())

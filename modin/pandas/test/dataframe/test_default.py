@@ -269,7 +269,7 @@ def test_dot(data):
 
     # Test bad dimensions
     with pytest.raises(ValueError):
-        modin_result = modin_df.dot(np.arange(col_len + 10))
+        modin_df.dot(np.arange(col_len + 10))
 
     # Test series input
     modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
@@ -285,7 +285,7 @@ def test_dot(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        modin_result = modin_df.dot(pd.Series(np.arange(col_len)))
+        modin_df.dot(pd.Series(np.arange(col_len)))
 
     # Test case when left dataframe has size (n x 1)
     # and right dataframe has size (1 x n)
@@ -316,7 +316,7 @@ def test_matmul(data):
 
     # Test bad dimensions
     with pytest.raises(ValueError):
-        modin_result = modin_df @ np.arange(col_len + 10)
+        modin_df @ np.arange(col_len + 10)
 
     # Test series input
     modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
