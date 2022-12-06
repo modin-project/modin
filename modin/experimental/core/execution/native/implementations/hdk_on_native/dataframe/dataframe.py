@@ -2581,6 +2581,10 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
     """
 
     def __init__(self, table: pyarrow.Table, name: str):
+        ErrorMessage.catch_bugs_and_request_email(
+            failure_condition=table is None,
+            extra_log="attempted to bind 'None' pyarrow table to a lazy category",
+        )
         self._table = table
         self._name = name
         self._ordered = False
@@ -2599,7 +2603,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
 
         Returns
         -------
-        pandas.CategoricalDtype
+        pandas.CategoricalDtype or LazyProxyCategoricalDtype
         """
         if self._table is None:
             # The table has been materialized, we don't need a proxy anymore.
@@ -2621,3 +2625,4 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
     @_categories.setter
     def _set_categories(self, categories):  # noqa: GL08
         self._lazy_categories = categories
+        self._table = None

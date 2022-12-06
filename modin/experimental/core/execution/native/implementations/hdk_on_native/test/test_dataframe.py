@@ -2420,10 +2420,9 @@ class TestFromArrow:
         assert pandas.api.types.is_categorical_dtype(mdt)
         assert str(mdt) == str(pdt)
 
-        if type(mdt) != pandas.CategoricalDtype:
-            # This is a lazy proxy.
-            # Make sure the table is not materialized yet.
-            assert mdt._table is not None
+        # Make sure the lazy proxy dtype is not materialized yet.
+        assert type(mdt) != pandas.CategoricalDtype
+        assert mdt._table is not None
 
         assert mdt == pdt
         assert pdt == mdt
