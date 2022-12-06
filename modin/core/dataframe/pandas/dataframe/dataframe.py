@@ -2058,18 +2058,7 @@ class PandasDataframe(ClassLogger):
                 new_axes[axis.value],
                 new_lengths[axis.value],
             ) = self._compute_axis_labels_and_lengths(axis.value, new_partitions)
-        # If we have a MultiIndex, but the first partition is empty, which may happen when
-        # the dataframe is small, `_compute_axis_labels_and_lengths` will return us a flattened
-        # MultiIndex - i.e. an Index consisting of tuples. This is because the MultiIndex from
-        # the remaining partitions is appended to an empty flat Index, which results in a
-        # flattened index. To work around this, we need to convert this flattened Index back
-        # into a MultiIndex.
-        if isinstance(self.axes[axis.value], pandas.MultiIndex) and isinstance(
-            new_axes[axis.value][0], tuple
-        ):
-            new_axes[axis.value] = pandas.MultiIndex.from_tuples(
-                new_axes[axis.value].values
-            )
+
         new_axes[axis.value] = new_axes[axis.value].set_names(
             self.axes[axis.value].names
         )
