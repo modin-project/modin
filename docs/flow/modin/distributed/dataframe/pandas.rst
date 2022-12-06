@@ -12,6 +12,10 @@ from_partitions
 ---------------
 .. autofunction:: modin.distributed.dataframe.pandas.from_partitions
 
+repartition
+-----------
+.. autofunction:: modin.distributed.dataframe.pandas.repartition
+
 Example
 -------
 
