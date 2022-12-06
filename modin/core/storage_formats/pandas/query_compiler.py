@@ -1454,7 +1454,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_zfill = Map.register(_str_map("zfill"), dtypes="copy")
     str___getitem__ = Map.register(_str_map("__getitem__"), dtypes="copy")
 
-
     # END String map partitions operations
 
     def unique(self):

@@ -2237,6 +2237,7 @@ class PandasDataframe(ClassLogger):
     ) -> "PandasDataframe":
         """
         Apply a sliding window operator that acts as a GROUPBY on each window, and reduces down to a single row (column) per window.
+
         Parameters
         ----------
         axis : int or modin.core.dataframe.base.utils.Axis
@@ -2248,11 +2249,13 @@ class PandasDataframe(ClassLogger):
             (The size of the sliding window).
         result_schema : dict, optional
             Mapping from column labels to data types that represents the types of the output dataframe.
+
         Returns
         -------
         PandasDataframe
             A new PandasDataframe with the reduce function applied over windows of the specified
                 axis.
+
         Notes
         -----
         The user-defined reduce function must reduce each window’s column
@@ -2270,6 +2273,7 @@ class PandasDataframe(ClassLogger):
     ) -> "PandasDataframe":
         """
         Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
+
         Parameters
         ----------
         axis : int or modin.core.dataframe.base.utils.Axis
@@ -2280,6 +2284,7 @@ class PandasDataframe(ClassLogger):
             Whether to sort in ascending or descending order.
         **kwargs : dict
             Keyword arguments to pass when sorting partitions.
+
         Returns
         -------
         PandasDataframe
@@ -2558,31 +2563,6 @@ class PandasDataframe(ClassLogger):
             self._column_widths_cache,
             new_dtypes,
         )
-
-    def sort_by(
-        self,
-        axis: Union[int, Axis],
-        columns: Union[str, List[str]],
-        ascending: bool = True,
-    ) -> "PandasDataframe":
-        """
-        Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
-
-        Parameters
-        ----------
-        axis : int or modin.core.dataframe.base.utils.Axis
-            The axis to perform the sort over.
-        columns : string or list
-            Column label(s) to use to determine lexicographical ordering.
-        ascending : boolean, default: True
-            Whether to sort in ascending or descending order.
-
-        Returns
-        -------
-        PandasDataframe
-            A new PandasDataframe sorted into lexicographical order by the specified column(s).
-        """
-        pass
 
     @lazy_metadata_decorator(apply_axis="both")
     def filter(self, axis: Union[Axis, int], condition: Callable) -> "PandasDataframe":
