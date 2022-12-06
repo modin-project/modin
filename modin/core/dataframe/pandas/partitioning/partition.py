@@ -18,6 +18,7 @@ from copy import copy
 
 import pandas
 from pandas.api.types import is_scalar
+from pandas.util import cache_readonly
 
 from modin.pandas.indexing import compute_sliced_len
 from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
@@ -34,7 +35,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
     _width_cache = None
     _data = None
 
-    @property
+    @cache_readonly
     def __constructor__(self):
         """
         Create a new instance of this object.
