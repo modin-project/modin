@@ -94,7 +94,7 @@ To speed up conda installation we recommend using libmamba solver. To do this in
 conda install -n base conda-libmamba-solver
 ```
 
-and then use it during istallation either like eg:
+and then use it during istallation either like:
 
 ```bash
 conda install -c conda-forge modin-ray modin-hdk --experimental-solver=libmamba
