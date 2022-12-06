@@ -498,6 +498,7 @@ def pydocstyle_validate(
 def monkeypatching():
     """Monkeypatch not installed modules and decorators which change __doc__ attribute."""
     import ray
+    import pandas.util
     import modin.utils
     from unittest.mock import Mock
 
@@ -508,6 +509,7 @@ def monkeypatching():
         return lambda cls_or_func: cls_or_func
 
     ray.remote = monkeypatch
+    pandas.util.cache_readonly = property
 
     # We are mocking packages we don't need for docs checking in order to avoid import errors
     sys.modules["pyarrow.gandiva"] = Mock()
