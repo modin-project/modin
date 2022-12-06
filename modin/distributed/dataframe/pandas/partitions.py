@@ -250,7 +250,9 @@ def from_partitions(
     return DataFrame(query_compiler=PandasQueryCompiler(frame))
 
 
-def repartition(df, axis: Optional[int] = None):  # type:ignore
+def repartition(
+    df: Union[DataFrame, Series], axis: Optional[int] = None
+) -> Union[DataFrame, Series]:
     """
     Repartitioning Modin objects to get ideal partitions inside.
 
