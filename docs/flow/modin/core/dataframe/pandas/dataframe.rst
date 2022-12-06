@@ -16,8 +16,8 @@ providing set of methods to perform operations on the internal data.
 
 As mentioned above, ``PandasDataframe`` shouldn't work with stored partitions directly and
 the responsibility for modifying partitions array has to lay on :doc:`partitioning/partition_manager`. For example, method
-:meth:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe.broadcast_apply_full_axis` redirects applying
-function to :meth:`~PandasDataframePartitionManager.broadcast_axis_partitions` method.
+:meth:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe.map_full_axis` redirects applying
+function to :meth:`~PandasDataframePartitionManager.map_partitions_full_axis` method.
 
 ``Modin PandasDataframe`` can be created from ``pandas.DataFrame``, ``pyarrow.Table``
 (methods :meth:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe.from_pandas`,
