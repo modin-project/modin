@@ -122,6 +122,22 @@ class BasePandasDataset(ClassLogger):
     # but lives in "pandas" namespace.
     _pandas_class = pandas.core.generic.NDFrame
 
+    @pandas.util.cache_readonly
+    def _is_dataframe(self) -> bool:
+        """
+        Tell whether this is a dataframe.
+
+        Ideally, other methods of BasePandasDataset shouldn't care whether this
+        is a dataframe or a series, but sometimes we need to know. This method
+        is better than hasattr(self, "columns"), which for series will call
+        self.__getattr__("columns"), which requires materializing the index.
+
+        Returns
+        -------
+        bool : Whether this is a dataframe.
+        """
+        return issubclass(self._pandas_class, pandas.DataFrame)
+
     def _add_sibling(self, sibling):
         """
         Add a DataFrame or Series object to the list of siblings.
@@ -162,12 +178,10 @@ class BasePandasDataset(ClassLogger):
             A pandas dataset with `num_rows` or fewer rows and `num_cols` or fewer columns.
         """
         # Fast track for empty dataframe.
-        if len(self.index) == 0 or (
-            hasattr(self, "columns") and len(self.columns) == 0
-        ):
+        if len(self.index) == 0 or (self._is_dataframe and len(self.columns) == 0):
             return pandas.DataFrame(
                 index=self.index,
-                columns=self.columns if hasattr(self, "columns") else None,
+                columns=self.columns if self._is_dataframe else None,
             )
         if len(self.index) <= num_rows:
             row_indexer = slice(None)
@@ -188,7 +202,7 @@ class BasePandasDataset(ClassLogger):
                 if num_rows_for_tail is not None
                 else []
             )
-        if hasattr(self, "columns"):
+        if self._is_dataframe:
             if len(self.columns) <= num_cols:
                 col_indexer = slice(None)
             else:
@@ -3632,8 +3646,7 @@ class BasePandasDataset(ClassLogger):
         # This lets us reuse code in pandas to error check
         indexer = None
         if isinstance(key, slice) or (
-            isinstance(key, str)
-            and (not hasattr(self, "columns") or key not in self.columns)
+            isinstance(key, str) and (not self._is_dataframe or key not in self.columns)
         ):
             indexer = convert_to_index_sliceable(
                 pandas.DataFrame(index=self.index), key
