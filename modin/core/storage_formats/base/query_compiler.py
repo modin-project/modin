@@ -3208,12 +3208,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                 axis_lookup = axis_labels.get_indexer_for(axis_loc)
                 # `Index.get_indexer_for` sets -1 value for missing labels, we have to verify whether
                 # there are any -1 in the received indexer to raise a KeyError here.
-                missing_mask = axis_lookup < 0
+                missing_mask = axis_lookup == -1
                 if missing_mask.any():
                     missing_labels = (
-                        # Converting `axis_loc` to maskable `np.array` to not fail
-                        # on masking non-maskable list-like
-                        np.array(axis_loc)[missing_mask]
+                        axis_loc[missing_mask]
                         if is_list_like(axis_loc)
                         # If `axis_loc` is not a list-like then we can't select certain
                         # labels that are missing and so printing the whole indexer
