@@ -541,23 +541,17 @@ class BasePandasDataset(ClassLogger):
 
         return cls._pandas_class._get_axis_number(axis) if axis is not None else 0
 
-    def __constructor__(self, *args, **kwargs):
+    @pandas.util.cache_readonly
+    def __constructor__(self):
         """
         Construct DataFrame or Series object depending on self type.
-
-        Parameters
-        ----------
-        *args : list
-            Additional positional arguments to be passed to constructor.
-        **kwargs : dict
-            Additional keywords arguments to be passed to constructor.
 
         Returns
         -------
         modin.pandas.BasePandasDataset
             Constructed object.
         """
-        return type(self)(*args, **kwargs)
+        return type(self)
 
     def abs(self):  # noqa: RT01, D200
         """

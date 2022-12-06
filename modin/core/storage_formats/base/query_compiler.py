@@ -3225,7 +3225,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # END Abstract methods for QueryCompiler
 
-    @property
+    @pandas.util.cache_readonly
     def __constructor__(self):
         """
         Get query compiler constructor.

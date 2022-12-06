@@ -18,6 +18,7 @@ import cudf
 import cupy
 import numpy as np
 import cupy as cp
+from pandas.util import cache_readonly
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from pandas.core.dtypes.common import is_list_like
