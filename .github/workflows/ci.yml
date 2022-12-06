@@ -435,7 +435,6 @@ jobs:
       - run: pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_init.py
       - run: pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_dataframe.py
       - run: pytest modin/pandas/test/test_io.py::TestCsv --verbose
-      - run: pytest modin/pandas/test/dataframe/test_udf.py
       - run: pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: pytest modin/test/interchange/dataframe_protocol/hdk
       - run: python examples/docker/modin-hdk/census-hdk.py examples/data/census_1k.csv -no-ml
