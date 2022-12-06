@@ -16,7 +16,11 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.distributed.dataframe.pandas import unwrap_partitions, from_partitions
+from modin.distributed.dataframe.pandas import (
+    unwrap_partitions,
+    from_partitions,
+    repartition,
+)
 from modin.config import Engine, NPartitions
 from modin.pandas.test.utils import df_equals, test_data
 from modin.pandas.indexing import compute_sliced_len
@@ -222,3 +226,39 @@ def test_mask_preserve_cache(row_labels, col_labels, is_length_future, is_width_
     masked_partition._width_cache = None
     assert expected_length == masked_partition.length()
     assert expected_width == masked_partition.width()
+
+
+@pytest.mark.parametrize("axis", [0, 1, None])
+@pytest.mark.parametrize("dtype", ["DataFrame", "Series"])
+def test_repartition(axis, dtype):
+    df = pd.DataFrame({"col1": [1, 2], "col2": [5, 6]})
+    df2 = pd.DataFrame({"col3": [9, 4]})
+
+    df = pd.concat([df, df2], axis=1)
+    df = pd.concat([df, df], axis=0)
+
+    obj = df if dtype == "DataFrame" else df["col1"]
+
+    source_shapes = {
+        "DataFrame": (2, 2),
+        "Series": (2, 1),
+    }
+    # check that the test makes sense
+    assert obj._query_compiler._modin_frame._partitions.shape == source_shapes[dtype]
+
+    obj = repartition(obj, axis=axis)
+
+    if dtype == "DataFrame":
+        results = {
+            None: (1, 1),
+            0: (1, 2),
+            1: (2, 1),
+        }
+    else:
+        results = {
+            None: (1, 1),
+            0: (1, 1),
+            1: (2, 1),
+        }
+
+    assert obj._query_compiler._modin_frame._partitions.shape == results[axis]
