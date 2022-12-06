@@ -880,8 +880,11 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         target = partitions.T if axis == 0 else partitions
         new_idx = [idx.apply(func) for idx in target[0]] if len(target) else []
         new_idx = cls.get_objects_from_partitions(new_idx)
-        # TODO FIX INFORMATION LEAK!!!!1!!1!!
-        total_idx = new_idx[0].append(new_idx[1:]) if new_idx else new_idx
+        # filter empty indexes
+        total_idx = list(filter(len, new_idx))
+        if len(total_idx) > 0:
+            # TODO FIX INFORMATION LEAK!!!!1!!1!!
+            total_idx = total_idx[0].append(total_idx[1:])
         return total_idx, new_idx
 
     @classmethod
