@@ -1494,3 +1494,65 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             lengths = [part.length() for part in new_partitions[:, 0]]
             return new_partitions, lengths
         return partitions, None
+
+    @classmethod
+    def shuffle_partitions(
+        cls, partitions, index, shuffle_functions, final_shuffle_func
+    ):
+        """
+        Return shuffled partitions.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            The 2-d array of partitions to shuffle.
+        index : int
+            The index of partitions corresponding to the partitions that contain the column to sample.
+        shuffle_functions : NamedTuple
+            A named tuple containing the functions that we will be using to perform this shuffle.
+        final_shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
+            Function that shuffles the data within each new partition.
+
+        Returns
+        -------
+        np.ndarray
+            A list of row-partitions that have been shuffled.
+        """
+        # Mask the partition that contains the column that will be sampled.
+        masked_partitions = partitions[:, index]
+        # Sample each partition
+        sample_func = cls.preprocess_func(shuffle_functions.sample_function)
+        samples = [partition.apply(sample_func) for partition in masked_partitions]
+        # Get each sample to pass in to the pivot function
+        samples = cls.get_objects_from_partitions(samples)
+        pivots = shuffle_functions.pivot_function(samples)
+        # Convert our list of block partitions to row partitions. We need to create full-axis
+        # row partitions since we need to send the whole partition to the split step as otherwise
+        # we wouldn't know how to split the block partitions that don't contain the shuffling key.
+        row_partitions = [
+            partition.force_materialization().list_of_block_partitions[0]
+            for partition in cls.row_partitions(partitions)
+        ]
+        # Gather together all of the sub-partitions
+        split_row_partitions = np.array(
+            [
+                partition.split(
+                    shuffle_functions.split_function, len(pivots) + 1, pivots
+                )
+                for partition in row_partitions
+            ]
+        ).T
+        # We need to convert every partition that came from the splits into a full-axis column partition.
+        col_partitioning_func = np.vectorize(
+            lambda partition: cls._row_partition_class(partition)
+        )
+        split_row_partitions = col_partitioning_func(split_row_partitions)
+        new_partitions = [
+            [
+                cls._column_partitions_class(row_partition, full_axis=False).apply(
+                    final_shuffle_func
+                )
+            ]
+            for row_partition in split_row_partitions
+        ]
+        return np.array(new_partitions)

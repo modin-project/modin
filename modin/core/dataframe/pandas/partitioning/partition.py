@@ -314,6 +314,27 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             self._width_cache = self.apply(self._width_extraction_fn()).get()
         return self._width_cache
 
+    def split(self, split_func, num_splits, *args):
+        """
+        Split the object wrapped by the partition into multiple partitions.
+
+        Parameters
+        ----------
+        split_func : Callable[pandas.DataFrame, List[Any]] -> List[pandas.DataFrame]
+            The function that will split this partition into multiple partitions. The list contains
+            pivots to split by, and will have the same dtype as the major column we are shuffling on.
+        num_splits : int
+            The number of resulting partitions (may be empty).
+        *args : List[Any]
+            Arguments to pass to ``split_func``.
+
+        Returns
+        -------
+        list
+            A list of partitions.
+        """
+        pass
+
     @classmethod
     def empty(cls):
         """

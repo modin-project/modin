@@ -301,6 +301,30 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             self._ip_cache = DaskWrapper.materialize(self._ip_cache)
         return self._ip_cache
 
+    def split(self, split_func, num_splits, *args):
+        """
+        Split the object wrapped by the partition into multiple partitions.
+
+        Parameters
+        ----------
+        split_func : Callable[pandas.DataFrame, List[Any]] -> List[pandas.DataFrame]
+            The function that will split this partition into multiple partitions. The list contains
+            pivots to split by, and will have the same dtype as the major column we are shuffling on.
+        num_splits : int
+            The number of resulting partitions (may be empty).
+        *args : List[Any]
+            Arguments to pass to ``split_func``.
+
+        Returns
+        -------
+        list
+            A list of partitions.
+        """
+        outputs = DaskWrapper.deploy(
+            split_func, [self._data] + list(args), num_returns=num_splits, pure=True
+        )
+        return [PandasOnDaskDataframePartition(output) for output in outputs]
+
 
 def apply_func(partition, func, *args, **kwargs):
     """

@@ -40,6 +40,7 @@ from typing import List, Hashable
 import warnings
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.config import Engine
 from modin.error_message import ErrorMessage
 from modin.utils import (
     try_cast_to_pandas,
@@ -3252,6 +3253,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
+        # Our algebra sort is only implemented for Engines that support virtual partitioning.
+        if Engine.get() in ["Ray", "Dask", "Unidist"]:
+            new_modin_frame = self._modin_frame.sort_by(
+                0, columns, ascending=ascending, **kwargs
+            )
+            return self.__constructor__(new_modin_frame)
         ignore_index = kwargs.get("ignore_index", False)
         kwargs["ignore_index"] = False
         if not is_list_like(columns):
