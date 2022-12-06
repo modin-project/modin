@@ -1183,13 +1183,8 @@ class TestCsv:
     def test_read_csv_within_decorator(self):
         @dummy_decorator()
         def wrapped_read_csv(file, method):
-            if method not in ("pandas", "modin"):
-                raise NotImplementedError
-            if method == "pandas":
-                df = pandas.read_csv(file)
-            else:
-                df = pd.read_csv(file)
-            return df
+            assert method in ("pandas", "modin")
+            return (pd if method == "modin" else pandas).read_csv(file)
 
         pandas_df = wrapped_read_csv(
             pytest.csvs_names["test_read_csv_regular"], method="pandas"
@@ -1329,13 +1324,8 @@ class TestTable:
     def test_read_table_within_decorator(self, make_csv_file):
         @dummy_decorator()
         def wrapped_read_table(file, method):
-            if method not in ("pandas", "modin"):
-                raise NotImplementedError
-            if method == "pandas":
-                df = pandas.read_table(file)
-            else:
-                df = pd.read_table(file)
-            return df
+            assert method in ("pandas", "modin")
+            return (pd if method == "modin" else pandas).read_table(file)
 
         with ensure_clean() as unique_filename:
             make_csv_file(filename=unique_filename, delimiter="\t")
