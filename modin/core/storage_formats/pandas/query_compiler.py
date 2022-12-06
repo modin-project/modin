@@ -2709,12 +2709,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def groupby_skew(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
         def map_skew(dfgb, *args, **kwargs):
+            df = dfgb.obj
+            by_cols, cols_to_agg = dfgb.exclusions, df.columns.difference(
+                dfgb.exclusions
+            )
+
+            df_pow2 = pandas.concat([df[by_cols], df[cols_to_agg] ** 2], axis=1)
+            df_pow3 = pandas.concat([df[by_cols], df[cols_to_agg] ** 3], axis=1)
+
             return pandas.concat(
                 [
                     dfgb.count(*args, **kwargs),
                     dfgb.sum(*args, **kwargs),
-                    dfgb.apply(lambda x: (x**2).sum(*args, **kwargs)),
-                    dfgb.apply(lambda x: (x**3).sum(*args, **kwargs)),
+                    df_pow2.groupby(dfgb.grouper).sum(*args, **kwargs),
+                    df_pow3.groupby(dfgb.grouper).sum(*args, **kwargs),
                 ],
                 copy=False,
                 axis=1,
