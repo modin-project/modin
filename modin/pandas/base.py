@@ -122,9 +122,7 @@ class BasePandasDataset(ClassLogger):
     # but lives in "pandas" namespace.
     _pandas_class = pandas.core.generic.NDFrame
 
-    # TODO(https://github.com/modin-project/modin/issues/4821):
-    # make this cache_readonly
-    @property
+    @pandas.util.cache_readonly
     def _is_dataframe(self) -> bool:
         """
         Tell whether this is a dataframe.
