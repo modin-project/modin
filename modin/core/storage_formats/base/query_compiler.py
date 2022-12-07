@@ -888,9 +888,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         allow_exact_matches: bool = True,
         direction: str = "backward",
     ):
-        def default_merge_asof(df, *args, **kwargs):
-            return pandas.merge_asof(df, *args, **kwargs)
-
         # Pandas fallbacks for tricky cases:
         if (
             # No idea how this works or why it does what it does; and in fact
@@ -909,7 +906,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             or not right.index.is_unique
         ):
             return self.default_to_pandas(
-                default_merge_asof,
+                pandas.merge_asof,
                 right,
                 left_on=left_on,
                 right_on=right_on,
