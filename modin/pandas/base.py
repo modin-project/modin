@@ -61,7 +61,7 @@ from modin.utils import try_cast_to_pandas, _inherit_docstrings
 from modin.error_message import ErrorMessage
 from modin import pandas as pd
 from modin.pandas.utils import is_scalar
-from modin.config import IsExperimental
+from modin.config import IsExperimental, StorageFormat
 from modin.logging import disable_logging, ClassLogger
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
@@ -3855,6 +3855,40 @@ class BasePandasDataset(ClassLogger):
         Return a NumPy representation of the `BasePandasDataset`.
         """
         return self.to_numpy()
+
+    def _repartition(self, axis: Optional[int] = None):
+        """
+        Repartitioning Modin objects to get ideal partitions inside.
+
+        Allows to improve performance where the query compiler cannot yet.
+
+        Parameters
+        ----------
+        axis : int, optional
+
+        Returns
+        -------
+        DataFrame or Series
+            The repartitioned dataframe or series, depending on the original type.
+        """
+        if axis not in (0, 1, None):
+            raise NotImplementedError
+
+        if StorageFormat.get() == "Hdk":
+            # Hdk uses only one partition, it makes
+            # no sense for it to repartition the dataframe.
+            return self
+
+        list_axis = [0, 1] if axis is None else [axis]
+
+        new_query_compiler = self._query_compiler
+        for _ax in list_axis:
+            new_query_compiler = new_query_compiler.__constructor__(
+                new_query_compiler._modin_frame.apply_full_axis(
+                    _ax, lambda df: df, keep_partitioning=False
+                )
+            )
+        return self.__constructor__(query_compiler=new_query_compiler)
 
     @disable_logging
     def __getattribute__(self, item):

@@ -11,13 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import json
-from textwrap import dedent, indent
-
 import pytest
-
-from modin.error_message import ErrorMessage
 import modin.utils
+import json
+
+from textwrap import dedent, indent
+from modin.error_message import ErrorMessage
 
 
 # Note: classes below are used for purely testing purposes - they

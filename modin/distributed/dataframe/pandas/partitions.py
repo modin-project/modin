@@ -19,7 +19,6 @@ from pandas._typing import Axes
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.pandas.dataframe import DataFrame, Series
-from modin.config import StorageFormat
 
 if TYPE_CHECKING:
     from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
@@ -249,46 +248,3 @@ def from_partitions(
         frame.synchronize_labels(axis=labels_axis_to_sync)
 
     return DataFrame(query_compiler=PandasQueryCompiler(frame))
-
-
-def repartition(
-    df: Union[DataFrame, Series], axis: Optional[int] = None
-) -> Union[DataFrame, Series]:
-    """
-    Repartitioning Modin objects to get ideal partitions inside.
-
-    Allows to improve performance where the query compiler cannot yet.
-
-    Parameters
-    ----------
-    df : DataFrame or Series
-    axis : int, optional
-
-    Returns
-    -------
-    DataFrame or Series
-        The repartitioned dataframe or series, depending on the original type.
-    """
-    if axis not in (0, 1, None):
-        raise NotImplementedError
-
-    from modin.pandas import DataFrame, Series
-
-    if not isinstance(df, (DataFrame, Series)):
-        raise NotImplementedError
-
-    if StorageFormat.get() == "Hdk":
-        # Hdk uses only one partition, it makes
-        # no sense for it to repartition the dataframe.
-        return df
-
-    list_axis = [0, 1] if axis is None else [axis]
-
-    new_query_compiler = df._query_compiler
-    for _ax in list_axis:
-        new_query_compiler = new_query_compiler.__constructor__(
-            new_query_compiler._modin_frame.apply_full_axis(
-                _ax, lambda df: df, keep_partitioning=False
-            )
-        )
-    return df.__constructor__(query_compiler=new_query_compiler)  # type:ignore
