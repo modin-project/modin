@@ -492,7 +492,7 @@ class DataFrameGroupBy(ClassLogger):
         ):
             func = func.__name__
 
-        relabeling_required = False
+        do_relabel = None
         if isinstance(func, dict) or func is None:
 
             def try_get_str_func(fn):
@@ -503,6 +503,30 @@ class DataFrameGroupBy(ClassLogger):
             relabeling_required, func_dict, new_columns, order = reconstruct_func(
                 func, **kwargs
             )
+
+            if relabeling_required:
+
+                def do_relabel(obj_to_relabel):
+                    new_order, new_columns_idx = order, pandas.Index(new_columns)
+                    if not self._as_index:
+                        nby_cols = len(obj_to_relabel.columns) - len(new_columns_idx)
+                        new_order = np.concatenate(
+                            [np.arange(nby_cols), new_order + nby_cols]
+                        )
+                        by_cols = obj_to_relabel.columns[:nby_cols]
+                        if by_cols.nlevels != new_columns_idx.nlevels:
+                            by_cols = by_cols.remove_unused_levels()
+                            empty_levels = [
+                                i
+                                for i, level in enumerate(by_cols.levels)
+                                if len(level) == 1 and level[0] == ""
+                            ]
+                            by_cols = by_cols.droplevel(empty_levels)
+                        new_columns_idx = by_cols.append(new_columns_idx)
+                    result = obj_to_relabel.iloc[:, new_order]
+                    result.columns = new_columns_idx
+                    return result
+
             func_dict = {col: try_get_str_func(fn) for col, fn in func_dict.items()}
             if any(isinstance(fn, list) for fn in func_dict.values()):
                 # multicolumn case
@@ -565,25 +589,7 @@ class DataFrameGroupBy(ClassLogger):
             agg_kwargs=kwargs,
             how="axis_wise",
         )
-
-        if relabeling_required:
-            if not self._as_index:
-                nby_cols = len(result.columns) - len(new_columns)
-                order = np.concatenate([np.arange(nby_cols), order + nby_cols])
-                by_cols = result.columns[:nby_cols]
-                new_columns = pandas.Index(new_columns)
-                if by_cols.nlevels != new_columns.nlevels:
-                    by_cols = by_cols.remove_unused_levels()
-                    empty_levels = [
-                        i
-                        for i, level in enumerate(by_cols.levels)
-                        if len(level) == 1 and level[0] == ""
-                    ]
-                    by_cols = by_cols.droplevel(empty_levels)
-                new_columns = by_cols.append(new_columns)
-            result = result.iloc[:, order]
-            result.columns = new_columns
-        return result
+        return result if not do_relabel else do_relabel(result)
 
     agg = aggregate
 
