@@ -14,7 +14,7 @@
 import pytest
 from contextlib import contextmanager
 
-from modin.config import Parameter, Engine, StorageFormat, TestNoEnginesInstalled
+from modin.config import Parameter, Engine, StorageFormat
 from modin import set_execution
 
 from modin.core.execution.dispatching.factories.dispatcher import (
@@ -124,33 +124,6 @@ def test_set_execution():
 
 
 def test_add_option():
-    if TestNoEnginesInstalled.get():
-        # Double check that we really have no known engines installed by
-        # checking that the default engine is Python. If we had any installed
-        # engines, one of them would be the default.
-        assert Engine.get() == "Python"
-
-    class DifferentlyNamedFactory(factories.BaseFactory):
-        @classmethod
-        def prepare(cls):
-            cls.io_cls = PandasOnPythonIO
-
-    factories.StorageOnExecFactory = DifferentlyNamedFactory
-    StorageFormat.add_option("sToragE")
-    Engine.add_option("Exec")
-
-    with _switch_execution("Exec", "Storage"):
-        df = pd.DataFrame([[1, 2, 3], [3, 4, 5], [5, 6, 7]])
-        assert isinstance(df._query_compiler, PandasQueryCompiler)
-
-
-def test_add_option_no_explicity_set():
-    if TestNoEnginesInstalled.get():
-        # Double check that we really have no known engines installed by
-        # checking that the default engine is Python. If we had any installed
-        # engines, one of them would be the default.
-        assert Engine.get() == "Python"
-
     class DifferentlyNamedFactory(factories.BaseFactory):
         @classmethod
         def prepare(cls):
