@@ -361,10 +361,10 @@ jobs:
           use-only-tar-bz2: false
       - name: Conda environment
       - steps:
-        run: |
+        - run: |
           conda info
           conda list
-        run: |
+        - run: |
           python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py::test_add_option
         - uses: codecov/codecov-action@v2
 
