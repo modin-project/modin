@@ -70,7 +70,7 @@ sentinel = object()
 
 # Do not lookup certain attributes in columns or index, as they're used for some
 # special purposes, like serving remote context
-_ATTRS_NO_LOOKUP = {"____id_pack__", "__name__"}
+_ATTRS_NO_LOOKUP = {"____id_pack__", "__name__", "_cache"}
 
 _DEFAULT_BEHAVIOUR = {
     "__init__",
@@ -94,6 +94,7 @@ _DEFAULT_BEHAVIOUR = {
     "_reduce_dimension",
     "__repr__",
     "__len__",
+    "__constructor__",
     "_create_or_update_from_compiler",
     "_update_inplace",
     # for persistance support;
