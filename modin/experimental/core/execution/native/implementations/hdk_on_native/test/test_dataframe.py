@@ -25,6 +25,7 @@ from modin.pandas.test.utils import (
     random_state,
     test_data,
 )
+from modin.test.interchange.dataframe_protocol.hdk.utils import split_df_into_chunks
 from .utils import eval_io, ForceHdkImport, set_execution_mode, run_and_compare
 from pandas.core.dtypes.common import is_list_like
 
@@ -2393,10 +2394,38 @@ class TestFromArrow:
         indices = pyarrow.array([0, 1, 0, 1, 2, 0, None, 2])
         dictionary = pyarrow.array(["first", "second", "third"])
         dict_array = pyarrow.DictionaryArray.from_arrays(indices, dictionary)
-        at = pyarrow.table({"col": dict_array})
+        at = pyarrow.table(
+            {"col1": dict_array, "col2": [1, 2, 3, 4, 5, 6, 7, 8], "col3": dict_array}
+        )
         pdf = at.to_pandas()
+        nchunks = 3
+        chunks = split_df_into_chunks(pdf, nchunks)
+        at = pyarrow.concat_tables([pyarrow.Table.from_pandas(c) for c in chunks])
         mdf = from_arrow(at)
+        at = mdf._query_compiler._modin_frame._partitions[0][0].get()
+        assert len(at.column(0).chunks) == nchunks
         df_equals(mdf, pdf)
+
+        mdt = mdf.dtypes[0]
+        pdt = pdf.dtypes[0]
+        assert mdt == "category"
+        assert isinstance(mdt, pandas.CategoricalDtype)
+        assert pandas.api.types.is_categorical_dtype(mdt)
+        assert str(mdt) == str(pdt)
+
+        # Make sure the lazy proxy dtype is not materialized yet.
+        assert type(mdt) != pandas.CategoricalDtype
+        assert mdt._table is not None
+        assert mdt._new(at, at.column(0)._name) is mdt
+        assert mdt._new(at, at.column(2)._name) is not mdt
+        assert type(mdt._new(at, at.column(2)._name)) != pandas.CategoricalDtype
+
+        assert mdt == pdt
+        assert pdt == mdt
+        assert repr(mdt) == repr(pdt)
+
+        # Should be materialized now
+        assert type(mdt._new(at, at.column(2)._name)) == pandas.CategoricalDtype
 
 
 if __name__ == "__main__":

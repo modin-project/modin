@@ -3187,8 +3187,6 @@ class PandasDataframe(ClassLogger):
         except NotImplementedError:
             if pyarrow.types.is_time(arrow_type):
                 res = np.dtype(datetime.time)
-            elif pyarrow.types.is_dictionary(arrow_type):
-                res = pandas.CategoricalDtype
             else:
                 raise
 
