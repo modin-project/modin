@@ -131,11 +131,24 @@ or explicitly:
 
   conda install -c conda-forge modin-ray modin-dask modin-unidist modin-hdk
 
-``conda`` may be slow installing ``modin-hdk`` and hence ``modin-all`` packages so it's worth trying to set ``channel_priority`` to ``strict`` prior the installation process:
+``conda`` may be slow installing ``modin-all`` or combitations of execution engines so we currently recommend using libmamba solver for the installation process.
+To do this install it in a base environment:
 
 .. code-block:: bash
 
-  conda config --set channel_priority strict
+  conda install -n base conda-libmamba-solver
+
+Then it can be used during installation either like
+
+.. code-block:: bash
+
+  conda install -c conda-forge modin-ray modin-hdk --experimental-solver=libmamba
+
+or starting from conda 22.11 and libmamba solver 22.12 versions
+
+.. code-block:: bash
+
+  conda install -c conda-forge modin-ray modin-hdk --solver=libmamba
 
 
 Using Intel\ |reg| Distribution of Modin

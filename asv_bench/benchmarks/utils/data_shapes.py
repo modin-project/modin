@@ -100,7 +100,7 @@ _DEFAULT_CONFIG_T = [
             "TimeReindex",
             "TimeReindexMethod",
             "TimeFillnaMethodDataframe",
-            "TimeDropDuplicates",
+            "TimeDropDuplicatesDataframe",
             # IO benchmarks
             "TimeReadCsvSkiprows",
             "TimeReadCsvTrueFalseValues",
@@ -130,6 +130,7 @@ _DEFAULT_CONFIG_T = [
             "TimeFillnaSeries",
             "TimeIndexingNumericSeries",
             "TimeFillnaMethodSeries",
+            "TimeDropDuplicatesSeries",
             "TimeDatetimeAccessor",
             "TimeSetCategories",
             "TimeRemoveCategories",

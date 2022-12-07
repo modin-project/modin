@@ -122,6 +122,22 @@ class BasePandasDataset(ClassLogger):
     # but lives in "pandas" namespace.
     _pandas_class = pandas.core.generic.NDFrame
 
+    @pandas.util.cache_readonly
+    def _is_dataframe(self) -> bool:
+        """
+        Tell whether this is a dataframe.
+
+        Ideally, other methods of BasePandasDataset shouldn't care whether this
+        is a dataframe or a series, but sometimes we need to know. This method
+        is better than hasattr(self, "columns"), which for series will call
+        self.__getattr__("columns"), which requires materializing the index.
+
+        Returns
+        -------
+        bool : Whether this is a dataframe.
+        """
+        return issubclass(self._pandas_class, pandas.DataFrame)
+
     def _add_sibling(self, sibling):
         """
         Add a DataFrame or Series object to the list of siblings.
@@ -162,12 +178,10 @@ class BasePandasDataset(ClassLogger):
             A pandas dataset with `num_rows` or fewer rows and `num_cols` or fewer columns.
         """
         # Fast track for empty dataframe.
-        if len(self.index) == 0 or (
-            hasattr(self, "columns") and len(self.columns) == 0
-        ):
+        if len(self.index) == 0 or (self._is_dataframe and len(self.columns) == 0):
             return pandas.DataFrame(
                 index=self.index,
-                columns=self.columns if hasattr(self, "columns") else None,
+                columns=self.columns if self._is_dataframe else None,
             )
         if len(self.index) <= num_rows:
             row_indexer = slice(None)
@@ -188,7 +202,7 @@ class BasePandasDataset(ClassLogger):
                 if num_rows_for_tail is not None
                 else []
             )
-        if hasattr(self, "columns"):
+        if self._is_dataframe:
             if len(self.columns) <= num_cols:
                 col_indexer = slice(None)
             else:
@@ -2202,24 +2216,9 @@ class BasePandasDataset(ClassLogger):
         """
         Conform `BasePandasDataset` to new index with optional filling logic.
         """
-        if (
-            kwargs.get("level") is not None
-            or (index is not None and self._query_compiler.has_multiindex())
-            or (columns is not None and self._query_compiler.has_multiindex(axis=1))
-        ):
-            if index is not None:
-                kwargs["index"] = index
-            if columns is not None:
-                kwargs["columns"] = columns
-            return self._default_to_pandas("reindex", copy=copy, **kwargs)
-
         new_query_compiler = None
         if index is not None:
-            if not isinstance(index, pandas.Index):
-                index = self._copy_index_metadata(
-                    source=self.index, destination=self._ensure_index(index, axis=0)
-                )
-            if not index.equals(self.index):
+            if not isinstance(index, pandas.Index) or not index.equals(self.index):
                 new_query_compiler = self._query_compiler.reindex(
                     axis=0, labels=index, **kwargs
                 )
@@ -2227,11 +2226,7 @@ class BasePandasDataset(ClassLogger):
             new_query_compiler = self._query_compiler
         final_query_compiler = None
         if columns is not None:
-            if not isinstance(columns, pandas.Index):
-                columns = self._copy_index_metadata(
-                    source=self.columns, destination=self._ensure_index(columns, axis=1)
-                )
-            if not columns.equals(self.columns):
+            if not isinstance(index, pandas.Index) or not columns.equals(self.columns):
                 final_query_compiler = new_query_compiler.reindex(
                     axis=1, labels=columns, **kwargs
                 )
@@ -3651,8 +3646,7 @@ class BasePandasDataset(ClassLogger):
         # This lets us reuse code in pandas to error check
         indexer = None
         if isinstance(key, slice) or (
-            isinstance(key, str)
-            and (not hasattr(self, "columns") or key not in self.columns)
+            isinstance(key, str) and (not self._is_dataframe or key not in self.columns)
         ):
             indexer = convert_to_index_sliceable(
                 pandas.DataFrame(index=self.index), key

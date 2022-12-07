@@ -995,96 +995,78 @@ class TimeFillnaMethodDataframe:
 
 class TimeLevelAlign:
     params = [get_benchmark_shapes("TimeLevelAlign")]
-    param_names = ["shape"]
+    param_names = ["shapes"]
 
-    def setup(self, shape):
-        row1, col1 = shape[0]
-        row2, col2 = shape[1]
-        Nroot = round(math.sqrt(row1))
-        N = Nroot * Nroot
+    def setup(self, shapes):
+        rows, cols = shapes[0]
+        rows_sqrt = round(math.sqrt(rows))
+        # the new number of rows may differ from the requested (slightly, so ok)
+        rows = rows_sqrt * rows_sqrt
         self.index = IMPL.MultiIndex(
-            levels=[np.arange(10), np.arange(Nroot), np.arange(Nroot)],
+            levels=[np.arange(10), np.arange(rows_sqrt), np.arange(rows_sqrt)],
             codes=[
-                np.arange(10).repeat(N),
-                np.tile(np.arange(Nroot).repeat(Nroot), 10),
-                np.tile(np.tile(np.arange(Nroot), Nroot), 10),
+                np.arange(10).repeat(rows),
+                np.tile(np.arange(rows_sqrt).repeat(rows_sqrt), 10),
+                np.tile(np.tile(np.arange(rows_sqrt), rows_sqrt), 10),
             ],
         )
-        self.df = IMPL.DataFrame(
-            np.random.randn(len(self.index), col1), index=self.index
+        self.df1 = IMPL.DataFrame(
+            np.random.randn(len(self.index), cols), index=self.index
         )
-        self.df_level = IMPL.DataFrame(np.random.randn(row2, col2))
-        execute(self.df)
-        execute(self.df_level)
+        self.df2 = IMPL.DataFrame(np.random.randn(*shapes[1]))
+        execute(self.df1), execute(self.df2)
 
-    def time_align_level(self, shape):
-        left, right = self.df.align(self.df_level, level=1, copy=False)
-        execute(left)
-        execute(right)
+    def time_align_level(self, shapes):
+        left, right = self.df1.align(self.df2, level=1, copy=False)
+        execute(left), execute(right)
 
-    #reindex returns  the same result as align. Approximately the same performance is expected.
-    def time_reindex_level(self, shape):
-        execute(self.df_level.reindex(self.index, level=1))
+    def time_reindex_level(self, shapes):
+        # `reindex` returns the same result here as `align`.
+        # Approximately the same performance is expected.
+        execute(self.df2.reindex(self.index, level=1))
 
 
-class TimeDropDuplicates:
+class TimeDropDuplicatesDataframe:
 
-    params = [get_benchmark_shapes("TimeDropDuplicates")]
+    params = [get_benchmark_shapes("TimeDropDuplicatesDataframe")]
     param_names = ["shape"]
 
     def setup(self, shape):
-        N = shape[0]
-        K = shape[1]
-        key1 = tm.makeStringIndex(N).values.repeat(K)
-        key2 = tm.makeStringIndex(N).values.repeat(K)
-        self.df = IMPL.DataFrame(
-            {"key1": key1, "key2": key2, "value": np.random.randn(N * K)}
-        )
-        self.df_nan = self.df.copy()
-        self.df_nan.iloc[:N, :] = np.nan
-        self.s = IMPL.Series(np.random.randint(0, N // 10, size=N))
-        self.s_str = IMPL.Series(np.tile(tm.makeStringIndex(N // 10).values, 10))
-        key1 = np.random.randint(0, K, size=N)
-        self.df_int = IMPL.DataFrame({"key1": key1})
-        execute(self.df), execute(self.df_nan)
-        execute(self.s), execute(self.s_str)
-        execute(self.df_int)
-
-    def time_frame_drop_dups(self, shape):
-        execute(self.df.drop_duplicates(["key1", "key2"]))
-
-    def time_frame_drop_dups_inplace(self, shape):
-        self.df.drop_duplicates(["key1", "key2"], inplace=True)
+        rows, cols = shape
+        N = rows // 10
+        K = 10
+        self.df = IMPL.DataFrame()
+        # dataframe would  have cols-1 keys(strings) and one value(int) column
+        for col in range(cols - 1):
+            self.df["key" + str(col + 1)] = tm.makeStringIndex(N).values.repeat(K)
+        self.df["value"] = np.random.randn(N * K)
         execute(self.df)
 
-    def time_frame_drop_dups_na(self, shape):
-        execute(self.df_nan.drop_duplicates(["key1", "key2"]))
+    def time_drop_dups(self, shape):
+        execute(self.df.drop_duplicates(self.df.columns[:-1]))
 
-    def time_frame_drop_dups_na_inplace(self, shape):
-        self.df_nan.drop_duplicates(["key1", "key2"], inplace=True)
-        execute(self.df_nan)
+    def time_drop_dups_inplace(self, shape):
+        self.df.drop_duplicates(self.df.columns[:-1], inplace=True)
+        execute(self.df)
 
-    def time_series_drop_dups_int(self, shape):
-        execute(self.s.drop_duplicates())
 
-    def time_series_drop_dups_int_inplace(self, shape):
-        self.s.drop_duplicates(inplace=True)
-        execute(self.s)
+class TimeDropDuplicatesSeries:
 
-    def time_series_drop_dups_string(self, shape):
-        execute(self.s_str.drop_duplicates())
+    params = [get_benchmark_shapes("TimeDropDuplicatesSeries")]
+    param_names = ["shape"]
 
-    def time_series_drop_dups_string_inplace(self, shape):
-        self.s_str.drop_duplicates(inplace=True)
-        execute(self.s_str)
+    def setup(self, shape):
+        rows = shape[0]
+        self.series = IMPL.Series(np.tile(tm.makeStringIndex(rows // 10).values, 10))
+        execute(self.series)
 
-    def time_frame_drop_dups_int(self, shape):
-        execute(self.df_int.drop_duplicates())
+    def time_drop_dups(self, shape):
+        execute(self.series.drop_duplicates())
 
-    def time_frame_drop_dups_int_inplace(self, shape):
-        self.df_int.drop_duplicates(inplace=True)
-        execute(self.df_int)
-
+    def time_drop_dups_string(self, shape):
+        self.series.drop_duplicates(inplace=True)
+        execute(self.series)
+        
 
 class TimeDatetimeAccessor:
     

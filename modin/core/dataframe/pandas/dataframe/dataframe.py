@@ -38,6 +38,7 @@ from modin.core.dataframe.base.dataframe.utils import (
     Axis,
     JoinType,
 )
+from modin.core.dataframe.pandas.dataframe.utils import build_sort_functions
 
 if TYPE_CHECKING:
     from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
@@ -1095,7 +1096,6 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             A new PandasDataframe with reordered columns and/or rows.
         """
-        new_lengths, new_widths = None, None
         new_dtypes = self._dtypes
         if row_positions is not None:
             ordered_rows = self._partition_mgr_cls.map_axis_partitions(
@@ -1961,11 +1961,13 @@ class PandasDataframe(ClassLogger):
             new_dtypes,
         )
 
+    @lazy_metadata_decorator(apply_axis="both")
     def sort_by(
         self,
         axis: Union[int, Axis],
         columns: Union[str, List[str]],
         ascending: bool = True,
+        **kwargs,
     ) -> "PandasDataframe":
         """
         Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
@@ -1978,13 +1980,103 @@ class PandasDataframe(ClassLogger):
             Column label(s) to use to determine lexicographical ordering.
         ascending : boolean, default: True
             Whether to sort in ascending or descending order.
+        **kwargs : dict
+            Keyword arguments to pass when sorting partitions.
 
         Returns
         -------
         PandasDataframe
             A new PandasDataframe sorted into lexicographical order by the specified column(s).
         """
-        pass
+        if not isinstance(columns, list):
+            columns = [columns]
+        # When we do a sort on the result of Series.value_counts, we don't rename the index until
+        # after everything is done, which causes an error when sorting the partitions, since the
+        # index and the column share the same name, when in actuality, the index's name should be
+        # None. This fixes the indexes name beforehand in that case, so that the sort works.
+
+        def sort_function(df):
+            index_renaming = None
+            if any(name in df.columns for name in df.index.names):
+                index_renaming = df.index.names
+                df.index = df.index.set_names([None] * len(df.index.names))
+            df = df.sort_values(by=columns, ascending=ascending, **kwargs)
+            if index_renaming is not None:
+                df.index = df.index.set_names(index_renaming)
+            return df
+
+        axis = Axis(axis)
+        if axis != Axis.ROW_WISE:
+            raise NotImplementedError(
+                f"Algebra sort only implemented row-wise. {axis.name} sort not implemented yet!"
+            )
+
+        # If this df is empty, we don't want to try and shuffle or sort.
+        if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
+            return self.copy()
+        # If this df only has one row partition, we don't want to do a shuffle and sort - we can
+        # just do a full-axis sort.
+        if len(self._partitions) == 1:
+            return self.apply_full_axis(
+                1,
+                sort_function,
+            )
+        if self.dtypes[columns[0]] == object:
+            # This means we are not sorting numbers, so we need our quantiles to not try
+            # arithmetic on the values.
+            method = "inverted_cdf"
+        else:
+            method = "linear"
+
+        shuffling_functions = build_sort_functions(
+            self,
+            columns[0],
+            method,
+            ascending[0] if is_list_like(ascending) else ascending,
+            **kwargs,
+        )
+        major_col_partition_index = self.columns.get_loc(columns[0])
+        cols_seen = 0
+        index = -1
+        for i, length in enumerate(self.column_widths):
+            cols_seen += length
+            if major_col_partition_index <= cols_seen:
+                index = i
+                break
+        new_partitions = self._partition_mgr_cls.shuffle_partitions(
+            self._partitions,
+            index,
+            shuffling_functions,
+            sort_function,
+        )
+        new_axes = self.axes
+        new_lengths = [None, None]
+        if kwargs.get("ignore_index", False):
+            new_axes[axis.value] = RangeIndex(len(new_axes[axis.value]))
+        else:
+            (
+                new_axes[axis.value],
+                new_lengths[axis.value],
+            ) = self._compute_axis_labels_and_lengths(axis.value, new_partitions)
+
+        new_axes[axis.value] = new_axes[axis.value].set_names(
+            self.axes[axis.value].names
+        )
+        # We perform the final steps of the sort on full axis partitions, so we know that the
+        # length of each partition is the full length of the dataframe.
+        new_lengths[axis.value ^ 1] = [len(self.columns)]
+        # Since the strategy to pick our pivots involves random sampling
+        # we could end up picking poor pivots, leading to skew in our partitions.
+        # We should add a fix to check if there is skew in the partitions and rebalance
+        # them if necessary. Calling `rebalance_partitions` won't do this, since it only
+        # resolves the case where there isn't the right amount of partitions - not where
+        # there is skew across the lengths of partitions.
+        new_modin_frame = self.__constructor__(
+            new_partitions, *new_axes, *new_lengths, self.dtypes
+        )
+        if kwargs.get("ignore_index", False):
+            new_modin_frame._propagate_index_objs(axis=0)
+        return new_modin_frame
 
     @lazy_metadata_decorator(apply_axis="both")
     def filter(self, axis: Union[Axis, int], condition: Callable) -> "PandasDataframe":

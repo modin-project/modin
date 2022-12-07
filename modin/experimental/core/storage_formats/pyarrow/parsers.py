@@ -53,12 +53,12 @@ class PyarrowCSVParser:
         import pyarrow as pa
         import pyarrow.csv as csv
 
-        bio = open(fname, "rb")
-        # The header line for the CSV file
-        first_line = bio.readline()
-        bio.seek(start)
-        to_read = header + first_line + bio.read(end - start)
-        bio.close()
+        with open(fname, "rb") as bio:
+            # The header line for the CSV file
+            first_line = bio.readline()
+            bio.seek(start)
+            to_read = header + first_line + bio.read(end - start)
+
         table = csv.read_csv(
             BytesIO(to_read), parse_options=csv.ParseOptions(header_rows=1)
         )
