@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Utilities for internal use by te hdk_on_native module."""
+"""Utilities for internal use by the ``HdkOnNativeDataframe``."""
 
 
 import pandas
