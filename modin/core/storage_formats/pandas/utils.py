@@ -13,10 +13,14 @@
 
 """Contains utility functions for frame partitioning."""
 
-from modin.config import MinPartitionSize
+import re
+from typing import Hashable, List
 import contextlib
+
 import numpy as np
 import pandas
+
+from modin.config import MinPartitionSize
 
 
 @contextlib.contextmanager
@@ -158,3 +162,21 @@ def width_fn_pandas(df):
     """
     assert isinstance(df, pandas.DataFrame)
     return len(df.columns) if len(df.columns) > 0 else 0
+
+
+def get_group_names(regex: "re.Pattern") -> "List[Hashable]":
+    """
+    Get named groups from compiled regex.
+
+    Unnamed groups are numbered.
+
+    Parameters
+    ----------
+    regex : compiled regex
+
+    Returns
+    -------
+    list of column labels
+    """
+    names = {v: k for k, v in regex.groupindex.items()}
+    return [names.get(1 + i, i) for i in range(regex.groups)]

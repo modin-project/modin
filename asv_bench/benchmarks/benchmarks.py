@@ -21,6 +21,7 @@
 
 import numpy as np
 import pandas._testing as tm
+import math
 
 from .utils import (
     generate_dataframe,
@@ -990,6 +991,126 @@ class TimeFillnaMethodDataframe:
 
     def time_float_32(self, shape, method):
         execute(self.df_ts_float32.fillna(method=method))
+
+
+class TimeLevelAlign:
+    params = [get_benchmark_shapes("TimeLevelAlign")]
+    param_names = ["shapes"]
+
+    def setup(self, shapes):
+        rows, cols = shapes[0]
+        rows_sqrt = round(math.sqrt(rows))
+        # the new number of rows may differ from the requested (slightly, so ok)
+        rows = rows_sqrt * rows_sqrt
+        self.index = IMPL.MultiIndex(
+            levels=[np.arange(10), np.arange(rows_sqrt), np.arange(rows_sqrt)],
+            codes=[
+                np.arange(10).repeat(rows),
+                np.tile(np.arange(rows_sqrt).repeat(rows_sqrt), 10),
+                np.tile(np.tile(np.arange(rows_sqrt), rows_sqrt), 10),
+            ],
+        )
+        self.df1 = IMPL.DataFrame(
+            np.random.randn(len(self.index), cols), index=self.index
+        )
+        self.df2 = IMPL.DataFrame(np.random.randn(*shapes[1]))
+        execute(self.df1), execute(self.df2)
+
+    def time_align_level(self, shapes):
+        left, right = self.df1.align(self.df2, level=1, copy=False)
+        execute(left), execute(right)
+
+    def time_reindex_level(self, shapes):
+        # `reindex` returns the same result here as `align`.
+        # Approximately the same performance is expected.
+        execute(self.df2.reindex(self.index, level=1))
+
+
+class TimeDropDuplicatesDataframe:
+
+    params = [get_benchmark_shapes("TimeDropDuplicatesDataframe")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        rows, cols = shape
+        N = rows // 10
+        K = 10
+        self.df = IMPL.DataFrame()
+        # dataframe would  have cols-1 keys(strings) and one value(int) column
+        for col in range(cols - 1):
+            self.df["key" + str(col + 1)] = tm.makeStringIndex(N).values.repeat(K)
+        self.df["value"] = np.random.randn(N * K)
+        execute(self.df)
+
+    def time_drop_dups(self, shape):
+        execute(self.df.drop_duplicates(self.df.columns[:-1]))
+
+    def time_drop_dups_inplace(self, shape):
+        self.df.drop_duplicates(self.df.columns[:-1], inplace=True)
+        execute(self.df)
+
+
+class TimeDropDuplicatesSeries:
+
+    params = [get_benchmark_shapes("TimeDropDuplicatesSeries")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        rows = shape[0]
+        self.series = IMPL.Series(np.tile(tm.makeStringIndex(rows // 10).values, 10))
+        execute(self.series)
+
+    def time_drop_dups(self, shape):
+        execute(self.series.drop_duplicates())
+
+    def time_drop_dups_string(self, shape):
+        self.series.drop_duplicates(inplace=True)
+        execute(self.series)
+
+
+class TimeDatetimeAccessor:
+
+    params = [get_benchmark_shapes("TimeDatetimeAccessor")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        self.series = IMPL.Series(
+            IMPL.timedelta_range("1 days", periods=shape[0], freq="h")
+        )
+        execute(self.series)
+
+    def time_dt_accessor(self, shape):
+        execute(self.series.dt)
+
+    def time_timedelta_days(self, shape):
+        execute(self.series.dt.days)
+
+    def time_timedelta_seconds(self, shape):
+        execute(self.series.dt.seconds)
+
+
+class BaseCategories:
+    def setup(self, shape):
+        rows = shape[0]
+        arr = [f"s{i:04d}" for i in np.random.randint(0, rows // 10, size=rows)]
+        self.ts = IMPL.Series(arr).astype("category")
+        execute(self.ts)
+
+
+class TimeSetCategories(BaseCategories):
+    params = [get_benchmark_shapes("TimeSetCategories")]
+    param_names = ["shape"]
+
+    def time_set_categories(self, shape):
+        execute(self.ts.cat.set_categories(self.ts.cat.categories[::2]))
+
+
+class TimeRemoveCategories(BaseCategories):
+    params = [get_benchmark_shapes("TimeRemoveCategories")]
+    param_names = ["shape"]
+
+    def time_remove_categories(self, shape):
+        execute(self.ts.cat.remove_categories(self.ts.cat.categories[::2]))
 
 
 from .utils import setup  # noqa: E402, F401

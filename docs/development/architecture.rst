@@ -216,6 +216,10 @@ documentation page on :doc:`contributing </development/contributing>`.
     - Uses the `Dask Futures`_ execution framework.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`pandas on Dask </flow/modin/core/execution/dask/implementations/pandas_on_dask/index>` page.
+- :doc:`pandas on Unidist </development/using_pandas_on_unidist>`
+    - Uses the Unidist_ execution framework.
+    - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
+    - For more information on the execution path, see the :doc:`pandas on Unidist </flow/modin/core/execution/unidist/implementations/pandas_on_unidist/index>` page.
 - :doc:`pandas on Python </development/using_pandas_on_python>`
     - Uses native python execution - mainly used for debugging.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
@@ -224,6 +228,10 @@ documentation page on :doc:`contributing </development/contributing>`.
     - Uses the Ray_ execution framework.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`experimental pandas on Ray </flow/modin/experimental/core/execution/ray/implementations/pandas_on_ray/index>` page.
+- pandas on Unidist (experimental)
+    - Uses the Unidist_ execution framework.
+    - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
+    - For more information on the execution path, see the :doc:`experimental pandas on Unidist </flow/modin/experimental/core/execution/unidist/implementations/pandas_on_unidist/index>` page.
 - :doc:`HDK on Native </development/using_hdk>` (experimental)
     - Uses HDK as an engine.
     - The storage format is `hdk` and the in-memory partition type is a pyarrow Table. When defaulting to pandas, the pandas DataFrame is used.
@@ -306,12 +314,17 @@ details. The documentation covers most modules, with more docs being added every
    │   │   │   ├───python
    │   │   │   │   └───implementations
    │   │   │   │       └─── :doc:`pandas_on_python </flow/modin/core/execution/python/implementations/pandas_on_python/index>`
-   │   │   │   └───ray
+   │   │   │   ├───ray
+   │   │   │   │   ├───common
+   │   │   │   │   ├─── :doc:`generic </flow/modin/core/execution/ray/generic>`
+   │   │   │   │   └───implementations
+   │   │   │   │       ├─── :doc:`cudf_on_ray </flow/modin/core/execution/ray/implementations/cudf_on_ray/index>`
+   │   │   │   │       └─── :doc:`pandas_on_ray </flow/modin/core/execution/ray/implementations/pandas_on_ray/index>`
+   │   │   │   └───unidist
    │   │   │       ├───common
-   │   │   │       ├─── :doc:`generic </flow/modin/core/execution/ray/generic>`
+   │   │   │       ├─── :doc:`generic </flow/modin/core/execution/unidist/generic>`
    │   │   │       └───implementations
-   │   │   │           ├─── :doc:`cudf_on_ray </flow/modin/core/execution/ray/implementations/cudf_on_ray/index>`
-   │   │   │           └─── :doc:`pandas_on_ray </flow/modin/core/execution/ray/implementations/pandas_on_ray/index>`
+   │   │   │           └─── :doc:`pandas_on_unidist </flow/modin/core/execution/unidist/implementations/pandas_on_unidist/index>`
    │   │   ├─── :doc:`io </flow/modin/core/io/index>`
    │   │   └─── :doc:`storage_formats </flow/modin/core/storage_formats/index>`
    │   │       ├─── :doc:`base </flow/modin/core/storage_formats/base/query_compiler>`
@@ -327,10 +340,13 @@ details. The documentation covers most modules, with more docs being added every
    │   │   │   │   ├───native
    │   │   │   │   │   └───implementations
    │   │   │   │   │       └─── :doc:`hdk_on_native </flow/modin/experimental/core/execution/native/implementations/hdk_on_native/index>`
-   │   │   │   │   └───ray
+   │   │   │   │   ├───ray
+   │   │   │   │   │   └───implementations
+   │   │   │   │   │       ├─── :doc:`pandas_on_ray </flow/modin/experimental/core/execution/ray/implementations/pandas_on_ray/index>`
+   │   │   │   │   │       └─── :doc:`pyarrow_on_ray </flow/modin/experimental/core/execution/ray/implementations/pyarrow_on_ray>`
+   │   │   │   │   └───unidist
    │   │   │   │       └───implementations
-   │   │   │   │           ├─── :doc:`pandas_on_ray </flow/modin/experimental/core/execution/ray/implementations/pandas_on_ray/index>`
-   │   │   │   │           └─── :doc:`pyarrow_on_ray </flow/modin/experimental/core/execution/ray/implementations/pyarrow_on_ray>`
+   │   │   │   │           └─── :doc:`pandas_on_unidist </flow/modin/experimental/core/execution/unidist/implementations/pandas_on_unidist/index>`
    │   │   │   └─── :doc:`storage_formats </flow/modin/experimental/core/storage_formats/index>`
    |   │   │       ├─── :doc:`hdk </flow/modin/experimental/core/storage_formats/hdk/index>`
    │   │   │       └─── :doc:`pyarrow </flow/modin/experimental/core/storage_formats/pyarrow/index>`
@@ -350,6 +366,7 @@ details. The documentation covers most modules, with more docs being added every
 .. _pandas Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _Arrow tables: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html
 .. _Ray: https://github.com/ray-project/ray
+.. _Unidist: https://github.com/modin-project/unidist
 .. _code: https://github.com/modin-project/modin/blob/master/modin/core/dataframe
 .. _Dask Futures: https://docs.dask.org/en/latest/futures.html
 .. _issue: https://github.com/modin-project/modin/issues

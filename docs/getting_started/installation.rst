@@ -24,12 +24,13 @@ To install the most recent stable release run the following:
 
   pip install -U modin # -U for upgrade in case you have an older version
 
-Modin can be used with :doc:`Ray</development/using_pandas_on_ray>`, :doc:`Dask</development/using_pandas_on_dask>`, or :doc:`HDK</development/using_hdk>` engines. If you don't have Ray_ or Dask_ installed, you will need to install Modin with one of the targets:
+Modin can be used with :doc:`Ray</development/using_pandas_on_ray>`, :doc:`Dask</development/using_pandas_on_dask>`, :doc:`Unidist</development/using_pandas_on_unidist>`, or :doc:`HDK</development/using_hdk>` engines. If you don't have Ray_, Dask_ or Unidist_ installed, you will need to install Modin with one of the targets:
 
 .. code-block:: bash
 
   pip install modin[ray] # Install Modin dependencies and Ray to run on Ray
   pip install modin[dask] # Install Modin dependencies and Dask to run on Dask
+  pip install modin[unidist] # Install Modin dependencies and Unidist to run on Unidist
   pip install modin[all] # Install all of the above
 
 Modin will automatically detect which engine you have installed and use that for
@@ -61,6 +62,10 @@ storage formats or for different functionalities of Modin. Here is a list of dep
 .. code-block:: bash
 
   pip install "modin[dask]" # If you want to use the Dask execution engine
+
+.. code-block:: bash
+
+  pip install "modin[unidist]" # If you want to use the Unidist execution engine
 
 Installing on Google Colab
 """""""""""""""""""""""""""
@@ -101,16 +106,18 @@ it is possible to install modin with chosen engine(s) alongside. Current options
 +---------------------------------+---------------------------+-----------------------------+
 | modin-ray                       | Ray_                      |       Linux, Windows        |
 +---------------------------------+---------------------------+-----------------------------+
+| modin-unidist                   | Unidist_                  |   Linux, Windows, MacOS     |
++---------------------------------+---------------------------+-----------------------------+
 | modin-hdk                       | HDK_                      |          Linux              |
 +---------------------------------+---------------------------+-----------------------------+
-| modin-all                       | Dask, Ray, HDK            |          Linux              |
+| modin-all                       | Dask, Ray, Unidist, HDK   |          Linux              |
 +---------------------------------+---------------------------+-----------------------------+
 
-For installing Dask and Ray engines into conda environment following command should be used:
+For installing Dask, Ray and Unidist engines into conda environment following command should be used:
 
 .. code-block:: bash
 
-  conda install -c conda-forge modin-ray modin-dask
+  conda install -c conda-forge modin-ray modin-dask modin-unidist
 
 All set of engines could be available in conda environment by specifying:
 
@@ -122,13 +129,26 @@ or explicitly:
 
 .. code-block:: bash
 
-  conda install -c conda-forge modin-ray modin-dask modin-hdk
+  conda install -c conda-forge modin-ray modin-dask modin-unidist modin-hdk
 
-``conda`` may be slow installing ``modin-hdk`` and hence ``modin-all`` packages so it's worth trying to set ``channel_priority`` to ``strict`` prior the installation process:
+``conda`` may be slow installing ``modin-all`` or combitations of execution engines so we currently recommend using libmamba solver for the installation process.
+To do this install it in a base environment:
 
 .. code-block:: bash
 
-  conda config --set channel_priority strict
+  conda install -n base conda-libmamba-solver
+
+Then it can be used during installation either like
+
+.. code-block:: bash
+
+  conda install -c conda-forge modin-ray modin-hdk --experimental-solver=libmamba
+
+or starting from conda 22.11 and libmamba solver 22.12 versions
+
+.. code-block:: bash
+
+  conda install -c conda-forge modin-ray modin-hdk --solver=libmamba
 
 
 Using Intel\ |reg| Distribution of Modin
@@ -151,7 +171,7 @@ also use ``pip``.
 This will install directly from the repo without you having to manually clone it! Please be aware
 that these changes have not made it into a release and may not be completely stable.
 
-If you would like to install Modin with a specific engine, you can use ``modin[ray]`` or ``modin[dask]`` instead of ``modin[all]`` in the command above.
+If you would like to install Modin with a specific engine, you can use ``modin[ray]`` or ``modin[dask]`` or ``modin[unidist]`` instead of ``modin[all]`` in the command above.
 
 Windows
 -------
@@ -193,6 +213,7 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
 .. _WSL: https://docs.microsoft.com/en-us/windows/wsl/install-win10
 .. _Ray: http://ray.readthedocs.io
 .. _Dask: https://github.com/dask/dask
+.. _Unidist: https://github.com/modin-project/unidist
 .. _HDK: https://github.com/intel-ai/hdk
 .. _`Intel Distribution of Modin`: https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html#gs.86stqv
 .. _`Intel Distribution of Modin Getting Started`: https://www.intel.com/content/www/us/en/developer/articles/technical/intel-distribution-of-modin-getting-started-guide.html

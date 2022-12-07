@@ -3,7 +3,7 @@ numpy>=1.18.5
 pyarrow>=4.0.1
 dask[complete]>=2.22.0
 distributed>=2.22.0
-ray[default]>=1.4.0,<2.1.0
+ray[default]>=1.4.0
 redis>=3.5.0,<4.0.0
 psutil
 fsspec
@@ -47,7 +47,8 @@ flake8-print
 numpydoc==1.1.0
 # experimental version of fuzzydata requires at least 0.0.6 to successfully resolve all dependencies
 fuzzydata>=0.0.6
-mypy<0.990
+# Mypy 0.990 doesn't work: https://github.com/modin-project/modin/issues/5206
+mypy!=0.990
 pandas-stubs
 fastparquet
 # for release script

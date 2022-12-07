@@ -44,7 +44,6 @@ from pandas._typing import (
 )
 import pathlib
 import pickle
-import re
 from typing import (
     Union,
     IO,
@@ -68,8 +67,6 @@ from .dataframe import DataFrame
 from .series import Series
 from modin.utils import _inherit_docstrings, Engine
 from . import _update_engine
-
-PQ_INDEX_REGEX = re.compile(r"__index_level_\d+__")
 
 
 def _read(**kwargs):

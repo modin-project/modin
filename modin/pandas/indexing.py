@@ -718,7 +718,7 @@ class _LocIndexer(_LocationIndexerBase):
             ):
                 result.index = result.index.droplevel(list(range(len(row_loc_as_list))))
         if (
-            hasattr(result, "columns")
+            isinstance(result, DataFrame)
             and not isinstance(col_loc_as_list, slice)
             and not levels_already_dropped
             and result._query_compiler.has_multiindex(axis=1)

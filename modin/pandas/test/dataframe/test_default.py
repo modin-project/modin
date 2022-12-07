@@ -192,7 +192,6 @@ def test_bfill(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_bool(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     with pytest.raises(ValueError):
         modin_df.bool()
@@ -211,7 +210,6 @@ def test_bool(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_boxplot(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     assert modin_df.boxplot() == to_pandas(modin_df).boxplot()
 
@@ -271,7 +269,7 @@ def test_dot(data):
 
     # Test bad dimensions
     with pytest.raises(ValueError):
-        modin_result = modin_df.dot(np.arange(col_len + 10))
+        modin_df.dot(np.arange(col_len + 10))
 
     # Test series input
     modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
@@ -287,7 +285,7 @@ def test_dot(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        modin_result = modin_df.dot(pd.Series(np.arange(col_len)))
+        modin_df.dot(pd.Series(np.arange(col_len)))
 
     # Test case when left dataframe has size (n x 1)
     # and right dataframe has size (1 x n)
@@ -318,7 +316,7 @@ def test_matmul(data):
 
     # Test bad dimensions
     with pytest.raises(ValueError):
-        modin_result = modin_df @ np.arange(col_len + 10)
+        modin_df @ np.arange(col_len + 10)
 
     # Test series input
     modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
@@ -334,7 +332,7 @@ def test_matmul(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        modin_result = modin_df @ pd.Series(np.arange(col_len))
+        modin_df @ pd.Series(np.arange(col_len))
 
 
 def test_first():
@@ -368,12 +366,15 @@ def test_info_default_param(data):
         assert modin_info[1:] == pandas_info[1:]
 
 
+# randint data covers https://github.com/modin-project/modin/issues/5137
+@pytest.mark.parametrize(
+    "data", [test_data_values[0], np.random.randint(0, 100, (10, 10))]
+)
 @pytest.mark.parametrize("verbose", [True, False])
 @pytest.mark.parametrize("max_cols", [10, 99999999])
 @pytest.mark.parametrize("memory_usage", [True, False, "deep"])
 @pytest.mark.parametrize("null_counts", [True, False])
-def test_info(verbose, max_cols, memory_usage, null_counts):
-    data = test_data_values[0]
+def test_info(data, verbose, max_cols, memory_usage, null_counts):
     with io.StringIO() as first, io.StringIO() as second:
         eval_general(
             pd.DataFrame(data),

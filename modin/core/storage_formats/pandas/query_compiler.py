@@ -18,6 +18,7 @@ Module contains ``PandasQueryCompiler`` class.
 queries for the ``PandasDataframe``.
 """
 
+import re
 import numpy as np
 import pandas
 import functools
@@ -39,6 +40,7 @@ from typing import List, Hashable
 import warnings
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.config import Engine
 from modin.error_message import ErrorMessage
 from modin.utils import (
     try_cast_to_pandas,
@@ -58,6 +60,7 @@ from modin.core.dataframe.algebra import (
     is_reduce_function,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
+from .utils import get_group_names
 
 
 def _get_axis(axis):
@@ -122,7 +125,10 @@ def _str_map(func_name):
     def str_op_builder(df, *args, **kwargs):
         """Apply specified function against `str` accessor of the passed frame."""
         str_s = df.squeeze(axis=1).str
-        return getattr(pandas.Series.str, func_name)(str_s, *args, **kwargs).to_frame()
+        res = getattr(pandas.Series.str, func_name)(str_s, *args, **kwargs)
+        if hasattr(res, "to_frame"):
+            res = res.to_frame()
+        return res
 
     return str_op_builder
 
@@ -528,8 +534,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Reindex/reset_index (may shuffle data)
     def reindex(self, axis, labels, **kwargs):
-        new_index = self.index if axis else labels
-        new_columns = labels if axis else self.columns
+        new_index, _ = (self.index, None) if axis else self.index.reindex(labels)
+        new_columns, _ = self.columns.reindex(labels) if axis else (self.columns, None)
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             lambda df: df.reindex(labels=labels, axis=axis, **kwargs),
@@ -1415,6 +1421,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_pad = Map.register(_str_map("pad"), dtypes="copy")
     str_partition = Map.register(_str_map("partition"), dtypes="copy")
     str_repeat = Map.register(_str_map("repeat"), dtypes="copy")
+    _str_extract = Map.register(_str_map("extract"), dtypes="copy")
+
+    def str_extract(self, pat, flags, expand):
+        regex = re.compile(pat, flags=flags)
+        # need an operator that can create more columns than before
+        if expand and regex.groups == 1:
+            qc = self._str_extract(pat, flags=flags, expand=expand)
+        else:
+            qc = super().str_extract(pat, flags=flags, expand=expand)
+        qc.columns = get_group_names(regex)
+        return qc
+
     str_replace = Map.register(_str_map("replace"), dtypes="copy")
     str_rfind = Map.register(_str_map("rfind"), dtypes="copy")
     str_rindex = Map.register(_str_map("rindex"), dtypes="copy")
@@ -2891,7 +2909,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 external_by_df = by[external_by].squeeze(axis=1)
 
                 if isinstance(external_by_df, pandas.DataFrame):
-                    external_by_cols = [o for _, o in external_by_df.iteritems()]
+                    external_by_cols = [o for _, o in external_by_df.items()]
                 else:
                     external_by_cols = [external_by_df]
 
@@ -3235,6 +3253,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
+        # Our algebra sort is only implemented for Engines that support virtual partitioning.
+        if Engine.get() in ["Ray", "Dask", "Unidist"]:
+            new_modin_frame = self._modin_frame.sort_by(
+                0, columns, ascending=ascending, **kwargs
+            )
+            return self.__constructor__(new_modin_frame)
         ignore_index = kwargs.get("ignore_index", False)
         kwargs["ignore_index"] = False
         if not is_list_like(columns):

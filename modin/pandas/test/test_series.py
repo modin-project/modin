@@ -1080,17 +1080,14 @@ def test_astype(data):
     # dict to astype() for a series with no name.
 
 
-def test_astype_categorical():
-    modin_df = pd.Series(["A", "A", "B", "B", "A"])
-    pandas_df = pandas.Series(["A", "A", "B", "B", "A"])
+@pytest.mark.parametrize(
+    "data", [["A", "A", "B", "B", "A"], [1, 1, 2, 1, 2, 2, 3, 1, 2, 1, 2]]
+)
+def test_astype_categorical(data):
+    modin_df, pandas_df = create_test_series(data)
 
     modin_result = modin_df.astype("category")
     pandas_result = pandas_df.astype("category")
-    df_equals(modin_result, pandas_result)
-    assert modin_result.dtype == pandas_result.dtype
-
-    modin_df = pd.Series([1, 1, 2, 1, 2, 2, 3, 1, 2, 1, 2])
-    pandas_df = pandas.Series([1, 1, 2, 1, 2, 2, 3, 1, 2, 1, 2])
     df_equals(modin_result, pandas_result)
     assert modin_result.dtype == pandas_result.dtype
 
@@ -1512,7 +1509,7 @@ def test_dot(data):
 
     # Test bad dimensions
     with pytest.raises(ValueError):
-        modin_result = modin_series.dot(np.arange(ind_len + 10))
+        modin_series.dot(np.arange(ind_len + 10))
 
     # Test dataframe input
     modin_df = pd.DataFrame(data)
@@ -1530,7 +1527,7 @@ def test_dot(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        modin_result = modin_series.dot(
+        modin_series.dot(
             pd.Series(
                 np.arange(ind_len), index=["a" for _ in range(len(modin_series.index))]
             )
@@ -1562,7 +1559,7 @@ def test_matmul(data):
 
     # Test bad dimensions
     with pytest.raises(ValueError):
-        modin_result = modin_series @ np.arange(ind_len + 10)
+        modin_series @ np.arange(ind_len + 10)
 
     # Test dataframe input
     modin_df = pd.DataFrame(data)
@@ -1580,7 +1577,7 @@ def test_matmul(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        modin_result = modin_series @ pd.Series(
+        modin_series @ pd.Series(
             np.arange(ind_len), index=["a" for _ in range(len(modin_series.index))]
         )
 
@@ -1849,7 +1846,6 @@ def test_fillna(data, reindex, limit):
     if reindex is not None:
         if reindex > 0:
             pandas_series = pandas_series[:reindex].reindex(index)
-            modin_series = pd.Series(pandas_series)
         else:
             pandas_series = pandas_series[reindex:].reindex(index)
         # Because of bug #3178 modin Series has to be created from pandas
@@ -3148,7 +3144,7 @@ def test_sort_values(data, ascending, na_position):
     # between `pandas.Series.sort_values`. For this reason, we check that the values are
     # identical instead of the index as well.
     if ascending:
-        df_equals(modin_result, pandas_result)
+        df_equals_with_non_stable_indices(modin_result, pandas_result)
     else:
         np.testing.assert_equal(modin_result.values, pandas_result.values)
 
@@ -3162,7 +3158,7 @@ def test_sort_values(data, ascending, na_position):
     )
     # See above about `ascending=False`
     if ascending:
-        df_equals(modin_series_cp, pandas_series_cp)
+        df_equals_with_non_stable_indices(modin_result, pandas_result)
     else:
         np.testing.assert_equal(modin_series_cp.values, pandas_series_cp.values)
 
@@ -3969,14 +3965,15 @@ def test_str_match(data, pat, case, na):
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
-def test_str_extract(data, expand):
+@pytest.mark.parametrize("pat", [r"([ab])", r"([ab])(\d)"])
+def test_str_extract(data, expand, pat):
     modin_series, pandas_series = create_test_series(data)
 
-    if expand is not None:
-        with warns_that_defaulting_to_pandas():
-            # We are only testing that this defaults to pandas, so we will just check for
-            # the warning
-            modin_series.str.extract(r"([ab])(\d)", expand=expand)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.extract(pat, expand=expand),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)

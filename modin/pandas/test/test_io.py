@@ -1034,9 +1034,8 @@ class TestCsv:
             # This tests that we default to pandas on a buffer
             from io import StringIO
 
-            pd.read_csv(
-                StringIO(open(pytest.csvs_names["test_read_csv_regular"], "r").read())
-            )
+            with open(pytest.csvs_names["test_read_csv_regular"], "r") as _f:
+                pd.read_csv(StringIO(_f.read()))
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1968,7 +1967,6 @@ class TestHdf:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_HDFStore(self):
-        hdf_file = None
         with ensure_clean_dir() as dirname:
             unique_filename_modin = get_unique_filename(
                 extension="hdf", data_dir=dirname

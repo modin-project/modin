@@ -284,7 +284,6 @@ def test_axes(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_copy(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     # pandas_df is unused but there so there won't be confusing list comprehension
     # stuff in the pytest.mark.parametrize
@@ -463,12 +462,6 @@ def test_astype():
     dtype_dict = {"col1": np.int32, "index": np.int64, "col3": str}
     modin_df_casted = modin_df.astype(dtype_dict)
     expected_df_casted = expected_df.astype(dtype_dict)
-    df_equals(modin_df_casted, expected_df_casted)
-
-    # Ignore lint because this is testing bad input
-    bad_dtype_dict = {"index": np.int32, "index": np.int64, "index": str}  # noqa F601
-    modin_df_casted = modin_df.astype(bad_dtype_dict)
-    expected_df_casted = expected_df.astype(bad_dtype_dict)
     df_equals(modin_df_casted, expected_df_casted)
 
     modin_df = pd.DataFrame(index=["row1"], columns=["col1"])
@@ -1406,7 +1399,7 @@ def test___hash__():
     data = test_data_values[0]
     pandas_df = pandas.DataFrame(data)
     modin_df = pd.DataFrame(data)
-    eval_general(modin_df, pandas_df, lambda df: hash(df))
+    eval_general(modin_df, pandas_df, hash)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1433,7 +1426,6 @@ def test___delitem__(request, data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___nonzero__(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     with pytest.raises(ValueError):
         # Always raises ValueError

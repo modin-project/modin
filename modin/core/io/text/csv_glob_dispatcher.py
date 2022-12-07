@@ -17,7 +17,6 @@ from contextlib import ExitStack
 import csv
 import glob
 import os
-import sys
 from typing import List, Tuple
 import warnings
 import fsspec
@@ -85,29 +84,6 @@ class CSVGlobDispatcher(CSVDispatcher):
         compression_type = cls.infer_compression(
             filepath_or_buffer, kwargs.get("compression")
         )
-        if compression_type is not None:
-            # need python3.7 to .seek and .tell ZipExtFile
-            supports_zip = sys.version_info[0] == 3 and sys.version_info[1] >= 7
-            if (
-                compression_type == "gzip"
-                or compression_type == "bz2"
-                or compression_type == "xz"
-            ):
-                kwargs["compression"] = compression_type
-            elif compression_type == "zip" and supports_zip:
-                kwargs["compression"] = compression_type
-            else:
-                supported_types = ["gzip", "bz2", "xz"]
-                if supports_zip:
-                    supported_types.append("zip")
-                supported_str = ", ".join(f"'{s}'" for s in supported_types)
-                if compression_type == "zip" and not supports_zip:
-                    reason_str = "zip compression requires python version >=3.7"
-                else:
-                    reason_str = f"Unsupported compression type '{compression_type}' (supported types are {supported_str})"
-                return cls.single_worker_read(
-                    filepath_or_buffer, reason=reason_str, **kwargs
-                )
 
         chunksize = kwargs.get("chunksize")
         if chunksize is not None:
@@ -151,10 +127,10 @@ class CSVGlobDispatcher(CSVDispatcher):
                 if len(index_col) == 1:
                     index_col = index_col[0]
                 kwargs["index_col"] = index_col
-        empty_pd_df = pandas.read_csv(
-            filepath_or_buffer, **dict(kwargs, nrows=0, skipfooter=0)
+        pd_df_metadata = pandas.read_csv(
+            filepath_or_buffer, **dict(kwargs, nrows=1, skipfooter=0)
         )
-        column_names = empty_pd_df.columns
+        column_names = pd_df_metadata.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
         usecols_md = cls._validate_usecols_arg(usecols)
@@ -214,7 +190,9 @@ class CSVGlobDispatcher(CSVDispatcher):
             if kwargs.get("encoding", None) is not None:
                 partition_kwargs["skiprows"] = 1
             # Launch tasks to read partitions
-            column_widths, num_splits = cls._define_metadata(empty_pd_df, column_names)
+            column_widths, num_splits = cls._define_metadata(
+                pd_df_metadata, column_names
+            )
 
             args = {
                 "num_splits": num_splits,
@@ -251,7 +229,7 @@ class CSVGlobDispatcher(CSVDispatcher):
             index_objs = cls.materialize(index_ids)
             row_lengths = [len(o) for o in index_objs]
             new_index = index_objs[0].append(index_objs[1:])
-            new_index.name = empty_pd_df.index.name
+            new_index.name = pd_df_metadata.index.name
 
         # Compute dtypes by getting collecting and combining all of the partitions. The
         # reported dtypes from differing rows can be different based on the inference in
@@ -260,35 +238,6 @@ class CSVGlobDispatcher(CSVDispatcher):
         dtypes = cls.get_dtypes(dtypes_ids) if len(dtypes_ids) > 0 else None
 
         partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
-        # If parse_dates is present, the column names that we have might not be
-        # the same length as the returned column names. If we do need to modify
-        # the column names, we remove the old names from the column names and
-        # insert the new one at the front of the Index.
-        if parse_dates is not None:
-            # We have to recompute the column widths if `parse_dates` is set because
-            # we are not guaranteed to have the correct information regarding how many
-            # columns are on each partition.
-            column_widths = None
-            if isinstance(parse_dates, list):
-                for date in parse_dates:
-                    # Lists within the parse_dates list are sequences of
-                    # CSV columns that are parsed together as a single date
-                    # column. They can be a list of either string column names
-                    # or integer column indices. e.g. if parse_dates is
-                    # [[1, 2]] and columns at indices 1 and 2 are "b" and "c",
-                    # the output dataframe has the single date column "b_c". If
-                    # parse_dates is [["a", 1]] and the column at index 1 is
-                    # named "b", the output dataframe has the single date
-                    # column "a_b".
-                    if isinstance(date, list):
-                        for i, part in enumerate(date):
-                            if isinstance(part, int):
-                                date[i] = column_names[part]
-                        new_col_name = "_".join(date)
-                        column_names = column_names.drop(date).insert(0, new_col_name)
-            elif isinstance(parse_dates, dict):
-                for new_col_name, group in parse_dates.items():
-                    column_names = column_names.drop(group).insert(0, new_col_name)
         # Set the index for the dtypes to the column names
         if isinstance(dtypes, pandas.Series):
             dtypes.index = column_names
