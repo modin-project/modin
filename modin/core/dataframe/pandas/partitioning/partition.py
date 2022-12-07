@@ -18,6 +18,7 @@ from copy import copy
 
 import pandas
 from pandas.api.types import is_scalar
+from pandas.util import cache_readonly
 
 from modin.pandas.indexing import compute_sliced_len
 from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
@@ -33,6 +34,18 @@ class PandasDataframePartition(ABC):  # pragma: no cover
     _length_cache = None
     _width_cache = None
     _data = None
+
+    @cache_readonly
+    def __constructor__(self):
+        """
+        Create a new instance of this object.
+
+        Returns
+        -------
+        PandasDataframePartition
+            New instance of pandas partition.
+        """
+        return type(self)
 
     def get(self):
         """
@@ -119,7 +132,12 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         This function will be executed when `apply` is called. It will be executed
         in the order inserted; apply's func operates the last and return.
         """
-        pass
+        return self.__constructor__(
+            self._data,
+            call_queue=self.call_queue + [[func, args, kwargs]],
+            length=length,
+            width=width,
+        )
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""

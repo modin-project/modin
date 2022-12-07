@@ -42,6 +42,8 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
     """
 
     def __init__(self, data, length=None, width=None, call_queue=None):
+        if hasattr(data, "copy"):
+            data = data.copy()
         self._data = data
         if call_queue is None:
             call_queue = []
@@ -110,38 +112,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
 
         self._data = call_queue_closure(self._data, self.call_queue)
         self.call_queue = []
-        return PandasOnPythonDataframePartition(
-            func(self._data.copy(), *args, **kwargs)
-        )
-
-    def add_to_apply_calls(self, func, *args, length=None, width=None, **kwargs):
-        """
-        Add a function to the call queue.
-
-        Parameters
-        ----------
-        func : callable
-            Function to be added to the call queue.
-        *args : iterable
-            Additional positional arguments to be passed in `func`.
-        length : int, optional
-            Length of wrapped ``pandas.DataFrame``.
-        width : int, optional
-            Width of wrapped ``pandas.DataFrame``.
-        **kwargs : dict
-            Additional keyword arguments to be passed in `func`.
-
-        Returns
-        -------
-        PandasOnPythonDataframePartition
-            New ``PandasOnPythonDataframePartition`` object with extended call queue.
-        """
-        return PandasOnPythonDataframePartition(
-            self._data.copy(),
-            call_queue=self.call_queue + [[func, args, kwargs]],
-            length=length,
-            width=width,
-        )
+        return self.__constructor__(func(self._data.copy(), *args, **kwargs))
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
