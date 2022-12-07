@@ -1126,4 +1126,25 @@ class TimeRemoveCategories:
         execute(self.ts.cat.remove_categories(self.ts.cat.categories[::2]))
 
 
+class TimeSimpleReshape:
+
+    params = [get_benchmark_shapes("TimeSimpleReshape")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        rows, cols = shape
+        k = 10
+        arrays = [np.arange(rows // k).repeat(k), np.roll(np.tile(np.arange(rows//k), k), 25)]
+        index = IMPL.MultiIndex.from_arrays(arrays)
+        self.df = IMPL.DataFrame(np.random.randn(rows, cols), index=index)
+        self.udf = self.df.unstack(1)
+        execute(self.df), execute(self.udf)
+
+    def time_stack(self, shape):
+        execute(self.udf.stack())
+
+    def time_unstack(self, shape):
+        execute(self.df.unstack(1))
+
+
 from .utils import setup  # noqa: E402, F401
