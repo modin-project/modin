@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 """Module provides ``HdkOnNativeDataframe`` class implementing lazy frame."""
-import pandas
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
@@ -22,6 +21,7 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
 from modin.experimental.core.storage_formats.hdk.query_compiler import (
     DFAlgQueryCompiler,
 )
+from .metadata.utils import LazyProxyCategoricalDtype
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 
 from pandas.core.indexes.api import ensure_index, Index, MultiIndex, RangeIndex
@@ -2566,63 +2566,3 @@ class HdkOnNativeDataframe(PandasDataframe):
             and index.min() == 0
             and index.max() == len(index) - 1
         )
-
-
-class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
-    """
-    Proxy class for lazily retrieving categorical dtypes from arrow tables.
-
-    Parameters
-    ----------
-    table : pyarrow.Table
-        Source table.
-    name : str
-        Column name.
-    """
-
-    def __init__(self, table: pyarrow.Table, name: str):
-        ErrorMessage.catch_bugs_and_request_email(
-            failure_condition=table is None,
-            extra_log="attempted to bind 'None' pyarrow table to a lazy category",
-        )
-        self._table = table
-        self._name = name
-        self._ordered = False
-        self._lazy_categories = None
-
-    def _new(self, table: pyarrow.Table, name: str) -> pandas.CategoricalDtype:
-        """
-        Create a new proxy, if either table or column name are different.
-
-        Parameters
-        ----------
-        table : pyarrow.Table
-            Source table.
-        name : str
-            Column name.
-
-        Returns
-        -------
-        pandas.CategoricalDtype or LazyProxyCategoricalDtype
-        """
-        if self._table is None:
-            # The table has been materialized, we don't need a proxy anymore.
-            return pandas.CategoricalDtype(self.categories)
-        elif table is self._table and name == self._name:
-            return self
-        else:
-            return LazyProxyCategoricalDtype(table, name)
-
-    @property
-    def _categories(self):  # noqa: GL08
-        if self._table is not None:
-            chunks = self._table.column(self._name).chunks
-            cat = pandas.concat([chunk.dictionary.to_pandas() for chunk in chunks])
-            self._lazy_categories = self.validate_categories(cat.unique())
-            self._table = None  # The table is not required any more
-        return self._lazy_categories
-
-    @_categories.setter
-    def _set_categories(self, categories):  # noqa: GL08
-        self._lazy_categories = categories
-        self._table = None
