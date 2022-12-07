@@ -56,6 +56,7 @@ from .utils import (
     from_pandas,
     from_non_pandas,
     broadcast_item,
+    SET_DATAFRAME_ATTRIBUTE_WARNING,
 )
 from . import _update_engine
 from .iterator import PartitionIterator
@@ -2674,8 +2675,7 @@ class DataFrame(BasePandasDataset):
             return
         elif is_list_like(value) and key not in ["index", "columns"]:
             warnings.warn(
-                "Modin doesn't allow columns to be created via a new attribute name - see "
-                + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
+                SET_DATAFRAME_ATTRIBUTE_WARNING,
                 UserWarning,
             )
         object.__setattr__(self, key, value)
