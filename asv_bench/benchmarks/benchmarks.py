@@ -1147,4 +1147,45 @@ class TimeSimpleReshape:
         execute(self.df.unstack(1))
 
 
+class TimeSimpleReshape:
+
+    params = [get_benchmark_shapes("TimeSimpleReshape")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        rows, cols = shape
+        k = 10
+        arrays = [np.arange(rows // k).repeat(k), np.roll(np.tile(np.arange(rows//k), k), 25)]
+        index = IMPL.MultiIndex.from_arrays(arrays)
+        self.df = IMPL.DataFrame(np.random.randn(rows, cols), index=index)
+        self.udf = self.df.unstack(1)
+        execute(self.df), execute(self.udf)
+
+    def time_stack(self, shape):
+        execute(self.udf.stack())
+
+    def time_unstack(self, shape):
+        execute(self.df.unstack(1))
+
+
+class TimeReplaceDataframe:
+
+    params = (["DataFrame", "Series"], get_benchmark_shapes("TimeSimpleReshape"))
+    param_names = ["constructor", "shape"]
+
+    def setup(self, constructor, replace_data):
+        N = 10**3
+        data = {
+            "Series": IMPL.Series(np.random.randint(N, size=N)),
+            
+        }
+        self.to_replace = {i: getattr(IMPL, "Timestamp") for i in range(N)}
+        self.data = IMPL.DataFrame(
+                {"A": np.random.randint(N, size=N), "B": np.random.randint(N, size=N)}
+            )
+
+    def time_replace(self, constructor, replace_data):
+        self.data.replace(self.to_replace)
+
+
 from .utils import setup  # noqa: E402, F401
