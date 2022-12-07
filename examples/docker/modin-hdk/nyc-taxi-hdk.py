@@ -220,8 +220,7 @@ def q4_hdk(df):
         .size()
         .reset_index()
         .sort_values(
-            by=["pickup_datetime", 0, "passenger_count", "trip_distance"],
-            ignore_index=True, ascending=[True, False, True, True]
+            by=["pickup_datetime", 0], ignore_index=True, ascending=[True, False]
         )
     )
     q4_pandas_output.shape  # to trigger real execution
@@ -242,21 +241,22 @@ def q4_sql(df):
         trip_distance
     ORDER BY
         pickup_datetime,
-        the_count desc,
-        passenger_count,
-        trip_distance
+        the_count desc
     """
     df["pickup_datetime"] = df["pickup_datetime"].dt.year
     df["trip_distance"] = df["trip_distance"].astype("int64")
     return query(sql, trips=df)
 
 
-def validate(df, hdk_func, sql_func, reset_index=True):
+def validate(df, hdk_func, sql_func, reset_index=True, sort_by=None):
     hdk_result = hdk_func(df.copy())
     sql_result = sql_func(df.copy())
     if reset_index:
         hdk_result = hdk_result.reset_index()
     hdk_result.columns = sql_result.columns
+    if sort_by is not None:
+        hdk_result = hdk_result.sort_values(by=sort_by)
+        sql_result = hdk_result.sort_values(by=sort_by)
     df_equals(hdk_result, sql_result)
 
 
@@ -279,7 +279,9 @@ def main():
     validate(df, q1_hdk, q1_sql)
     validate(df, q2_hdk, q2_sql)
     validate(df, q3_hdk, q3_sql)
-    validate(df, q4_hdk, q4_sql, reset_index=False)
+    # Additional sorting is required here to make the results identical
+    validate(df, q4_hdk, q4_sql, reset_index=False, sort_by=["trip_distance"])
+
 
 if __name__ == "__main__":
     main()
