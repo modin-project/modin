@@ -1074,9 +1074,8 @@ class TimeDatetimeAccessor:
     param_names = ["shape"]
 
     def setup(self, shape):
-        rows = shape[0]
         self.series = IMPL.Series(
-            IMPL.timedelta_range("1 days", periods=rows, freq="h")
+            IMPL.timedelta_range("1 days", periods=shape[0], freq="h")
         )
         execute(self.series)
 
@@ -1088,12 +1087,6 @@ class TimeDatetimeAccessor:
 
     def time_timedelta_seconds(self, shape):
         execute(self.series.dt.seconds)
-
-    def time_timedelta_microseconds(self, shape):
-        execute(self.series.dt.microseconds)
-
-    def time_timedelta_nanoseconds(self, shape):
-        execute(self.series.dt.nanoseconds)
 
 
 class BaseCategories:
