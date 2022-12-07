@@ -1068,4 +1068,49 @@ class TimeDropDuplicatesSeries:
         execute(self.series)
 
 
+class TimeDatetimeAccessor:
+
+    params = [get_benchmark_shapes("TimeDatetimeAccessor")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        self.series = IMPL.Series(
+            IMPL.timedelta_range("1 days", periods=shape[0], freq="h")
+        )
+        execute(self.series)
+
+    def time_dt_accessor(self, shape):
+        execute(self.series.dt)
+
+    def time_timedelta_days(self, shape):
+        execute(self.series.dt.days)
+
+    def time_timedelta_seconds(self, shape):
+        execute(self.series.dt.seconds)
+
+
+class BaseCategories:
+    def setup(self, shape):
+        rows = shape[0]
+        arr = [f"s{i:04d}" for i in np.random.randint(0, rows // 10, size=rows)]
+        self.ts = IMPL.Series(arr).astype("category")
+        execute(self.ts)
+
+
+class TimeSetCategories(BaseCategories):
+    params = [get_benchmark_shapes("TimeSetCategories")]
+    param_names = ["shape"]
+
+    def time_set_categories(self, shape):
+        execute(self.ts.cat.set_categories(self.ts.cat.categories[::2]))
+
+
+class TimeRemoveCategories(BaseCategories):
+    params = [get_benchmark_shapes("TimeRemoveCategories")]
+    param_names = ["shape"]
+
+    def time_remove_categories(self, shape):
+        execute(self.ts.cat.remove_categories(self.ts.cat.categories[::2]))
+
+
 from .utils import setup  # noqa: E402, F401
