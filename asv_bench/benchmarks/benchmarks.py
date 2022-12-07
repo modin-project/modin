@@ -1066,19 +1066,21 @@ class TimeDropDuplicatesSeries:
     def time_drop_dups_string(self, shape):
         self.series.drop_duplicates(inplace=True)
         execute(self.series)
-        
+
 
 class TimeDatetimeAccessor:
-    
+
     params = [get_benchmark_shapes("TimeDatetimeAccessor")]
     param_names = ["shape"]
-    
+
     def setup(self, shape):
-        N = shape[0]
-        self.series = IMPL.Series(IMPL.timedelta_range("1 days", periods=N, freq="h"))
+        rows = shape[0]
+        self.series = IMPL.Series(
+            IMPL.timedelta_range("1 days", periods=rows, freq="h")
+        )
         execute(self.series)
 
-    def time_dt_accessor(self, shape):        
+    def time_dt_accessor(self, shape):
         execute(self.series.dt)
 
     def time_timedelta_days(self, shape):
@@ -1095,13 +1097,13 @@ class TimeDatetimeAccessor:
 
 
 class TimeSetCategories:
-    
+
     params = [get_benchmark_shapes("TimeSetCategories")]
     param_names = ["shape"]
-    
+
     def setup(self, shape):
-        n = shape[0]
-        arr = [f"s{i:04d}" for i in np.random.randint(0, n // 10, size=n)]
+        rows = shape[0]
+        arr = [f"s{i:04d}" for i in np.random.randint(0, rows // 10, size=rows)]
         self.ts = IMPL.Series(arr).astype("category")
         execute(self.ts)
 
@@ -1110,13 +1112,13 @@ class TimeSetCategories:
 
 
 class TimeRemoveCategories:
-    
+
     params = [get_benchmark_shapes("TimeRemoveCategories")]
     param_names = ["shape"]
-    
+
     def setup(self, shape):
-        n = shape[0]
-        arr = [f"s{i:04d}" for i in np.random.randint(0, n // 10, size=n)]
+        rows = shape[0]
+        arr = [f"s{i:04d}" for i in np.random.randint(0, rows // 10, size=rows)]
         self.ts = IMPL.Series(arr).astype("category")
         execute(self.ts)
 
