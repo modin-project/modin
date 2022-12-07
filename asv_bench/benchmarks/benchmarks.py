@@ -1096,31 +1096,25 @@ class TimeDatetimeAccessor:
         execute(self.series.dt.nanoseconds)
 
 
-class TimeSetCategories:
-
-    params = [get_benchmark_shapes("TimeSetCategories")]
-    param_names = ["shape"]
-
+class BaseCategories:
     def setup(self, shape):
         rows = shape[0]
         arr = [f"s{i:04d}" for i in np.random.randint(0, rows // 10, size=rows)]
         self.ts = IMPL.Series(arr).astype("category")
         execute(self.ts)
+
+
+class TimeSetCategories(BaseCategories):
+    params = [get_benchmark_shapes("TimeSetCategories")]
+    param_names = ["shape"]
 
     def time_set_categories(self, shape):
         execute(self.ts.cat.set_categories(self.ts.cat.categories[::2]))
 
 
-class TimeRemoveCategories:
-
+class TimeRemoveCategories(BaseCategories):
     params = [get_benchmark_shapes("TimeRemoveCategories")]
     param_names = ["shape"]
-
-    def setup(self, shape):
-        rows = shape[0]
-        arr = [f"s{i:04d}" for i in np.random.randint(0, rows // 10, size=rows)]
-        self.ts = IMPL.Series(arr).astype("category")
-        execute(self.ts)
 
     def time_remove_categories(self, shape):
         execute(self.ts.cat.remove_categories(self.ts.cat.categories[::2]))
