@@ -19,7 +19,7 @@ import modin.pandas as pd
 @pytest.mark.parametrize("dtype", ["DataFrame", "Series"])
 def test_repartition(axis, dtype):
     if axis in (1, None) and dtype == "Series":
-        # no sence for Series
+        # no sense for Series
         return
 
     df = pd.DataFrame({"col1": [1, 2], "col2": [5, 6]})

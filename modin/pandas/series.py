@@ -2520,8 +2520,8 @@ class Series(BasePandasDataset):
 
         Returns
         -------
-        DataFrame or Series
-            The repartitioned dataframe or series, depending on the original type.
+        Series
+            The repartitioned Series.
         """
         return super()._repartition(axis=0)
 
