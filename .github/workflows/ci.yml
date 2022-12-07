@@ -328,6 +328,11 @@ jobs:
       - run: python -m pytest asv_bench/test/test_utils.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/base
       - run: python -m pytest modin/test/test_logging.py
+      # NOTE: Uninstalling dependencies to check
+      - name: test
+        run: |
+          pip uninstall ray dask
+          MODIN_TEST_NO_ENGINES_INSTALLED=TRUE python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py::test_add_option
       - uses: codecov/codecov-action@v2
 
   test-defaults:

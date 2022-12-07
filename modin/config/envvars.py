@@ -623,6 +623,13 @@ class TestReadFromPostgres(EnvironmentVariable, type=bool):
     default = False
 
 
+class TestNoEnginesInstalled(EnvironmentVariable, type=bool):
+    """Set to true to test having no engines are installed."""
+
+    varname = "MODIN_TEST_NO_ENGINES_INSTALLED"
+    default = False
+
+
 class ReadSqlEngine(EnvironmentVariable, type=str):
     """Engine to run `read_sql`."""
 
