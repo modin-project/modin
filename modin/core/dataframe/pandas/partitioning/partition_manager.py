@@ -1386,7 +1386,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         list[int] or None
             Row lengths if possible to compute it.
         """
-        if Engine.get() in ["Ray", "Dask"] and StorageFormat.get() == "Pandas":
+        if (
+            Engine.get() in ["Ray", "Dask", "Unidist"]
+            and StorageFormat.get() == "Pandas"
+        ):
             # Rebalancing partitions is currently only implemented for PandasOnRay and PandasOnDask.
             # We rebalance when the ratio of the number of existing partitions to
             # the ideal number of partitions is larger than this threshold. The
