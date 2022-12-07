@@ -871,7 +871,11 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         pandas.Series
         """
         result = self.getitem_array([key]).to_pandas().squeeze(axis=1)
-        assert isinstance(result, pandas.Series)
+        if not isinstance(result, pandas.Series):
+            raise RuntimeError(
+                f"Expected getting column {key} to give "
+                + f"pandas.Series, but instead got {type(result)}"
+            )
         return result
 
     def merge_asof(
