@@ -2512,6 +2512,19 @@ class Series(BasePandasDataset):
             return self._reduce_dimension(result)
         return self.__constructor__(query_compiler=result)
 
+    def _repartition(self):
+        """
+        Repartitioning Series to get ideal partitions inside.
+
+        Allows to improve performance where the query compiler cannot yet.
+
+        Returns
+        -------
+        DataFrame or Series
+            The repartitioned dataframe or series, depending on the original type.
+        """
+        return super()._repartition(axis=0)
+
     # Persistance support methods - BEGIN
     @classmethod
     def _inflate_light(cls, query_compiler, name):

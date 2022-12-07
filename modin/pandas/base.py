@@ -3871,8 +3871,11 @@ class BasePandasDataset(ClassLogger):
         DataFrame or Series
             The repartitioned dataframe or series, depending on the original type.
         """
-        if axis not in (0, 1, None):
-            raise NotImplementedError
+        allowed_axis_values = (0, 1, None)
+        if axis not in allowed_axis_values:
+            raise NotImplementedError(
+                f"passed `axis` parameter: {axis}, but should be one of {allowed_axis_values}"
+            )
 
         if StorageFormat.get() == "Hdk":
             # Hdk uses only one partition, it makes

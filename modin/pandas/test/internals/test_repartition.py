@@ -18,6 +18,10 @@ import modin.pandas as pd
 @pytest.mark.parametrize("axis", [0, 1, None])
 @pytest.mark.parametrize("dtype", ["DataFrame", "Series"])
 def test_repartition(axis, dtype):
+    if axis in (1, None) and dtype == "Series":
+        # no sence for Series
+        return
+
     df = pd.DataFrame({"col1": [1, 2], "col2": [5, 6]})
     df2 = pd.DataFrame({"col3": [9, 4]})
 
@@ -33,7 +37,10 @@ def test_repartition(axis, dtype):
     # check that the test makes sense
     assert obj._query_compiler._modin_frame._partitions.shape == source_shapes[dtype]
 
-    obj = obj._repartition(axis=axis)
+    kwargs = {"axis": axis}
+    if dtype == "Series":
+        kwargs = {}
+    obj = obj._repartition(**kwargs)
 
     if dtype == "DataFrame":
         results = {
