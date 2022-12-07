@@ -22,6 +22,7 @@ from pandas.util import cache_readonly
 
 from modin.pandas.indexing import compute_sliced_len
 from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
+from modin.logging import get_logger
 
 
 class PandasDataframePartition(ABC):  # pragma: no cover
@@ -351,7 +352,15 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         list
             A list of partitions.
         """
-        pass
+        logger = get_logger()
+        logger.debug(f"ENTER::Partition.split::{self._identity}")
+
+        logger.debug(f"SUBMIT::_split_df::{self._identity}")
+        outputs = self.execution_wrapper.deploy(
+            split_func, [self._data] + list(args), num_returns=num_splits
+        )
+        logger.debug(f"EXIT::Partition.split::{self._identity}")
+        return [self.__constructor__(output) for output in outputs]
 
     @classmethod
     def empty(cls):
