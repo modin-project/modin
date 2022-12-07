@@ -2399,5 +2399,13 @@ class TestFromArrow:
         df_equals(mdf, pdf)
 
 
+class TestSparseArray:
+    def test_sparse_series(self):
+        data = pandas.arrays.SparseArray(np.array([3, 1, 2, 3, 4, np.nan]))
+        mds = pd.Series(data)
+        pds = pandas.Series(data)
+        df_equals(mds, pds)
+
+
 if __name__ == "__main__":
     pytest.main(["-v", __file__])
