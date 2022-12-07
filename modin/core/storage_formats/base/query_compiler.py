@@ -38,8 +38,9 @@ from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 from pandas.core.dtypes.common import is_scalar
 import pandas.core.resample
 import pandas
+from pandas._typing import IndexLabel, Suffixes
 import numpy as np
-from typing import List, Hashable
+from typing import List, Hashable, Optional
 
 
 def _get_axis(axis):
@@ -855,6 +856,142 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.merge)(
             self, right=right, **kwargs
         )
+
+    def _get_column_as_pandas_series(self, key):
+        """
+        Get column data by label as pandas.Series.
+
+        Parameters
+        ----------
+        key : Any
+            Column label.
+
+        Returns
+        -------
+        pandas.Series
+        """
+        result = self.getitem_array([key]).to_pandas().squeeze(axis=1)
+        assert isinstance(result, pandas.Series)
+        return result
+
+    def merge_asof(
+        self,
+        right: "BaseQueryCompiler",
+        left_on: Optional[IndexLabel] = None,
+        right_on: Optional[IndexLabel] = None,
+        left_index: bool = False,
+        right_index: bool = False,
+        left_by=None,
+        right_by=None,
+        suffixes: Suffixes = ("_x", "_y"),
+        tolerance=None,
+        allow_exact_matches: bool = True,
+        direction: str = "backward",
+    ):
+        def default_merge_asof(df, *args, **kwargs):
+            return pandas.merge_asof(df, *args, **kwargs)
+
+        # Pandas fallbacks for tricky cases:
+        if (
+            # No idea how this works or why it does what it does; and in fact
+            # there's a Pandas bug suggesting it's wrong:
+            # https://github.com/pandas-dev/pandas/issues/33463
+            (left_index and right_on is not None)
+            # This is the case where by is a list of columns. If we're copying lots
+            # of columns out of Pandas, maybe not worth trying our path, it's not
+            # clear it's any better:
+            or not (left_by is None or is_scalar(left_by))
+            or not (right_by is None or is_scalar(right_by))
+            # The implementation below assumes that the right index is unique
+            # because it uses merge_asof to map each position in the merged
+            # index to the label of the one right row that should be merged
+            # at that row position.
+            or not right.index.is_unique
+        ):
+            return self.default_to_pandas(
+                default_merge_asof,
+                right,
+                left_on=left_on,
+                right_on=right_on,
+                left_index=left_index,
+                right_index=right_index,
+                left_by=left_by,
+                right_by=right_by,
+                suffixes=suffixes,
+                tolerance=tolerance,
+                allow_exact_matches=allow_exact_matches,
+                direction=direction,
+            )
+
+        if left_on is None:
+            left_column = self.index
+        else:
+            left_column = self._get_column_as_pandas_series(left_on)
+
+        if right_on is None:
+            right_column = right.index
+        else:
+            right_column = right._get_column_as_pandas_series(right_on)
+
+        left_pandas_limited = {"on": left_column}
+        right_pandas_limited = {"on": right_column, "right_labels": right.index}
+        extra_kwargs = {}  # extra arguments to Pandas merge_asof
+
+        if left_by is not None or right_by is not None:
+            extra_kwargs["by"] = "by"
+            left_pandas_limited["by"] = self._get_column_as_pandas_series(left_by)
+            right_pandas_limited["by"] = right._get_column_as_pandas_series(right_by)
+
+        # 1. Construct Pandas DataFrames with just the 'on' and optional 'by'
+        # columns, and the index as another column.
+        left_pandas_limited = pandas.DataFrame(left_pandas_limited, index=self.index)
+        right_pandas_limited = pandas.DataFrame(right_pandas_limited)
+
+        # 2. Use Pandas' merge_asof to figure out how to map labels on left to
+        # labels on the right.
+        merged = pandas.merge_asof(
+            left_pandas_limited,
+            right_pandas_limited,
+            on="on",
+            direction=direction,
+            allow_exact_matches=allow_exact_matches,
+            tolerance=tolerance,
+            **extra_kwargs,
+        )
+        # Now merged["right_labels"] shows which labels from right map to left's index.
+
+        # 3. Re-index right using the merged["right_labels"]; at this point right
+        # should be same length and (semantically) same order as left:
+        right_subset = right.reindex(
+            axis=0, labels=pandas.Index(merged["right_labels"])
+        )
+        if not right_index:
+            right_subset = right_subset.drop(columns=[right_on])
+        if right_by is not None and left_by == right_by:
+            right_subset = right_subset.drop(columns=[right_by])
+        right_subset.index = self.index
+
+        # 4. Merge left and the new shrunken right:
+        result = self.merge(
+            right_subset,
+            left_index=True,
+            right_index=True,
+            suffixes=suffixes,
+            how="left",
+        )
+
+        # 5. Clean up to match Pandas output:
+        if left_on is not None and right_index:
+            result = result.insert(
+                # In theory this could use get_indexer_for(), but that causes an error:
+                list(result.columns).index(left_on + suffixes[0]),
+                left_on,
+                result.getitem_array([left_on + suffixes[0]]),
+            )
+        if not left_index and not right_index:
+            result = result.reset_index(drop=True)
+
+        return result
 
     @doc_utils.add_refer_to("DataFrame.join")
     def join(self, right, **kwargs):  # noqa: PR02
