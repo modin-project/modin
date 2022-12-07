@@ -232,6 +232,17 @@ def test___repr__():
     assert repr(pandas_df) == repr(modin_df)
 
 
+def test___repr__does_not_raise_attribute_column_warning():
+    # See https://github.com/modin-project/modin/issues/5380
+    df = pd.DataFrame([1])
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            action="error",
+            message="Modin doesn't allow columns to be created via a new attribute name",
+        )
+        repr(df)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_inplace_series_ops(data):
     pandas_df = pandas.DataFrame(data)
