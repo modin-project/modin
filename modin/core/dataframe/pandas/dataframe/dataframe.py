@@ -2040,7 +2040,7 @@ class PandasDataframe(ClassLogger):
         index = -1
         for i, length in enumerate(self.column_widths):
             cols_seen += length
-            if major_col_partition_index <= cols_seen:
+            if major_col_partition_index < cols_seen:
                 index = i
                 break
         new_partitions = self._partition_mgr_cls.shuffle_partitions(
