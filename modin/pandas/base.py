@@ -90,6 +90,7 @@ _DEFAULT_BEHAVIOUR = {
     "_default_to_pandas",
     "_query_compiler",
     "_to_pandas",
+    "_repartition",
     "_build_repr_df",
     "_reduce_dimension",
     "__repr__",
