@@ -3864,7 +3864,7 @@ class BasePandasDataset(ClassLogger):
 
         Parameters
         ----------
-        axis : int, optional
+        axis : {0, 1}, optional
 
         Returns
         -------
