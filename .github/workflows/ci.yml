@@ -360,13 +360,12 @@ jobs:
           # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
           use-only-tar-bz2: false
       - name: Conda environment
-      - steps:
-        - run: |
+        run: |
           conda info
           conda list
-        - run: |
-          python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py::test_add_option
-        - uses: codecov/codecov-action@v2
+      - run: |
+        python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py::test_add_option
+      - uses: codecov/codecov-action@v2
 
   test-defaults:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
