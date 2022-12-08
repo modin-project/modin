@@ -373,6 +373,10 @@ class ClientQueryCompiler(BaseQueryCompiler):
             )
         )
 
+    # take_2d is special because service still uses `view`, but modin calls `take_2d`
+    def take_2d(self, index=None, columns=None):
+        return self.__constructor__(self._service.view(self._id, index, columns))
+
 
 def _set_forwarding_method_for_binary_function(method_name: str) -> None:
     """
@@ -435,6 +439,15 @@ def _set_forwarding_groupby_method(method_name: str):
     setattr(ClientQueryCompiler, method_name, forwading_method)
 
 
+# The service should define the same default of numeric=Fasle, but it doesn't,
+# so we do it here. If we don't define the default here, the service complains
+# because it never gets the `numeric` param.
+def getitem_column_array(self, id, key, numeric=False):
+    new_id = self.generate_id()
+    self._qc[new_id] = self._qc[id].getitem_column_array(key, numeric)
+    return new_id
+
+
 _BINARY_FORWARDING_METHODS = frozenset(
     {
         "eq",
@@ -478,8 +491,6 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "abs",
         "columnarize",
         "transpose",
-        "take_2d",
-        "getitem_column_array",
         "getitem_row_array",
         "getitem_row_labels_array",
         "pivot",
