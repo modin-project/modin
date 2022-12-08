@@ -134,7 +134,7 @@ class cuDFOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
             (num_splits, 1)
         )
         if not return_dims:
-            return parts
+            return parts, None, None
         else:
             row_lengths = [len(df.index) for df in pandas_dfs]
             col_widths = [

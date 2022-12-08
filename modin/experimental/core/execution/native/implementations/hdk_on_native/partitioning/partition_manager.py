@@ -136,7 +136,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
             _, unsupported_cols = cls._get_unsupported_cols(at)
 
         if not return_dims:
-            return np.array(parts), unsupported_cols
+            return np.array(parts), None, None, unsupported_cols
         else:
             row_lengths = [at.num_rows]
             col_widths = [at.num_columns]

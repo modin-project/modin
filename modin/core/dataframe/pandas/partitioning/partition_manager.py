@@ -768,7 +768,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         if ProgressBar.get():
             pbar.close()
         if not return_dims:
-            return np.array(parts)
+            return np.array(parts), None, None
         else:
             row_lengths = [
                 row_chunksize
