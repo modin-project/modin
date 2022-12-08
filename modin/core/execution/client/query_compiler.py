@@ -377,13 +377,13 @@ class ClientQueryCompiler(BaseQueryCompiler):
     def take_2d(self, index=None, columns=None):
         return self.__constructor__(self._service.view(self._id, index, columns))
 
-    # The service should define the same default of numeric=Fasle, but it doesn't,
+    # The service should define the same default of numeric=False, but it doesn't,
     # so we do it here. If we don't define the default here, the service complains
     # because it never gets the `numeric` param.
-    def getitem_column_array(self, id, key, numeric=False):
-        new_id = self.generate_id()
-        self._qc[new_id] = self._qc[id].getitem_column_array(key, numeric)
-        return new_id
+    def getitem_column_array(self, key, numeric=False):
+        return self.__constructor__(
+            self._service.getitem_column_array(self._id, key, numeric)
+        )
 
 
 def _set_forwarding_method_for_binary_function(method_name: str) -> None:
