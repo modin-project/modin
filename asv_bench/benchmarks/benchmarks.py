@@ -22,6 +22,7 @@
 import numpy as np
 import pandas._testing as tm
 import math
+import string
 
 from .utils import (
     generate_dataframe,
@@ -1170,6 +1171,106 @@ class TimeGroups:
     # returns a  dict thus not calling execute
     def time_series_indices(self, shape):
         self.series.groupby(self.series).indices
+
+class Repr:
+    
+    params = [get_benchmark_shapes("TimeReplace")]
+    param_names = ["shape"]
+    
+    def setup(self, shape):        
+        self.df = IMPL.DataFrame(np.random.randn(*shape))
+
+    def time_repr(self, shape):
+        repr(self.df)
+
+class MaskBool:
+    
+    params = [get_benchmark_shapes("TimeReplace")]
+    param_names = ["shape"]
+    
+    def setup(self, shape):
+        df = IMPL.DataFrame(np.random.randn(*shape))
+        df = df.where(df > 0)
+        self.bools = df > 0
+        self.mask = IMPL.isnull(df)
+
+    def time_frame_mask_bools(self, shape):
+        self.bools.mask(self.mask)
+
+    def time_frame_mask_floats(self, shape):
+        self.bools.astype(float).mask(self.mask)
+		
+class Isnull:
+    
+    params = [get_benchmark_shapes("TimeReplace")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        self.df_no_null = IMPL.DataFrame(np.random.randn(*shape))
+        sample = np.array([np.nan, 1.0])
+        data = np.random.choice(sample, (shape[0],shape[1]))
+        self.df = IMPL.DataFrame(data)
+
+    def time_isnull_floats_no_null(self):
+        IMPL.isnull(self.df_no_null)
+
+    def time_isnull(self):
+        IMPL.isnull(self.df)
+
+
+class Dropna:
+
+    params = (["all", "any"], [0, 1])
+    param_names = ["how", "axis"]
+
+    def setup(self, how, axis):
+        self.df = DataFrame(np.random.randn(10000, 1000))
+        self.df.iloc[50:1000, 20:50] = np.nan
+        self.df.iloc[2000:3000] = np.nan
+        self.df.iloc[:, 60:70] = np.nan
+        self.df_mixed = self.df.copy()
+        self.df_mixed["foo"] = "bar"
+
+    def time_dropna(self, how, axis):
+        self.df.dropna(how=how, axis=axis)
+
+    def time_dropna_axis_mixed_dtypes(self, how, axis):
+        self.df_mixed.dropna(how=how, axis=axis)
+		
+
+class Equals:
+    def setup(self):
+        N = 10**3
+        self.float_df = DataFrame(np.random.randn(N, N))
+        self.float_df_nan = self.float_df.copy()
+        self.float_df_nan.iloc[-1, -1] = np.nan
+
+        self.object_df = DataFrame("foo", index=range(N), columns=range(N))
+        self.object_df_nan = self.object_df.copy()
+        self.object_df_nan.iloc[-1, -1] = np.nan
+
+        self.nonunique_cols = self.object_df.copy()
+        self.nonunique_cols.columns = ["A"] * len(self.nonunique_cols.columns)
+        self.nonunique_cols_nan = self.nonunique_cols.copy()
+        self.nonunique_cols_nan.iloc[-1, -1] = np.nan
+
+    def time_frame_float_equal(self):
+        self.float_df.equals(self.float_df)
+
+    def time_frame_float_unequal(self):
+        self.float_df.equals(self.float_df_nan)
+
+    def time_frame_nonunique_equal(self):
+        self.nonunique_cols.equals(self.nonunique_cols)
+
+    def time_frame_nonunique_unequal(self):
+        self.nonunique_cols.equals(self.nonunique_cols_nan)
+
+    def time_frame_object_equal(self):
+        self.object_df.equals(self.object_df)
+
+    def time_frame_object_unequal(self):
+        self.object_df.equals(self.object_df_nan)
 
 
 from .utils import setup  # noqa: E402, F401
