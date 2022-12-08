@@ -63,7 +63,12 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         E.g. if you assign `x = PandasDataframePartition.put(1)`, `x.get()` should
         always return 1.
         """
-        pass
+        logger = get_logger()
+        logger.debug(f"ENTER::Partition.get::{self._identity}")
+        self.drain_call_queue()
+        result = self.execution_wrapper.materialize(self._data)
+        logger.debug(f"EXIT::Partition.get::{self._identity}")
+        return result
 
     @property
     def list_of_blocks(self):
