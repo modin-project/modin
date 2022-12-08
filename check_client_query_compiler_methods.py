@@ -18,6 +18,8 @@ KNOWN_MISSING = frozenset(
         "has_multiindex",
         # Base QC can do this for us
         "is_series_like",
+        # Let Base QC call drop() for us
+        "delitem",
     ]
 )
 
