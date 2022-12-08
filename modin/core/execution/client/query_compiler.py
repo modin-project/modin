@@ -18,6 +18,8 @@ from pandas._libs.lib import no_default, NoDefault
 from pandas.api.types import is_list_like
 from pandas.core.computation.parsing import tokenize_string
 
+from typing import Any
+
 
 class ClientQueryCompiler(BaseQueryCompiler):
     @classmethod
@@ -96,20 +98,8 @@ class ClientQueryCompiler(BaseQueryCompiler):
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         raise NotImplementedError
 
-    def columnarize(self):
-        return self.__constructor__(self._service.columnarize(self._id))
-
-    def transpose(self):
-        return self.__constructor__(self._service.transpose(self._id))
-
     def copy(self):
         return self.__constructor__(self._id)
-
-    def add_prefix(self, prefix, axis=1):
-        return self.__constructor__(self._service.add_prefix(self._id, prefix, axis))
-
-    def add_suffix(self, suffix, axis=1):
-        return self.__constructor__(self._service.add_suffix(self._id, suffix, axis))
 
     def insert(self, loc, column, value):
         if isinstance(value, ClientQueryCompiler):
@@ -119,6 +109,14 @@ class ClientQueryCompiler(BaseQueryCompiler):
             is_qc = False
         return self.__constructor__(
             self._service.insert(self._id, loc, column, value, is_qc)
+        )
+
+    def insert_item(self, axis, loc, value, how="inner", replace=False):
+        value_is_qc = isinstance(value, ClientQueryCompiler)
+        if value_is_qc:
+            value = value._id
+        return self._service.insert_item(
+            self._id, axis, loc, value, how, replace, value_is_qc
         )
 
     def setitem(self, axis, key, value):
@@ -138,46 +136,6 @@ class ClientQueryCompiler(BaseQueryCompiler):
         else:
             is_qc = False
         return self.__constructor__(self._service.getitem_array(self._id, key, is_qc))
-
-    def getitem_column_array(self, key, numeric=False):
-        return self.__constructor__(
-            self._service.getitem_column_array(self._id, key, numeric)
-        )
-
-    def getitem_row_labels_array(self, labels):
-        return self.__constructor__(
-            self._service.getitem_row_labels_array(self._id, labels)
-        )
-
-    def getitem_row_array(self, key):
-        return self.__constructor__(self._service.getitem_row_array(self._id, key))
-
-    def pivot(self, index, columns, values):
-        return self.__constructor__(
-            self._service.pivot(self._id, index, columns, values)
-        )
-
-    def get_dummies(self, columns, **kwargs):
-        return self.__constructor__(
-            self._service.get_dummies(self._id, columns, **kwargs)
-        )
-
-    def view(self, index=None, columns=None):
-        return self.__constructor__(self._service.view(self._id, index, columns))
-
-    take_2d = view
-
-    def drop(self, index=None, columns=None):
-        return self.__constructor__(self._service.drop(self._id, index, columns))
-
-    def isna(self):
-        return self.__constructor__(self._service.isna(self._id))
-
-    def notna(self):
-        return self.__constructor__(self._service.notna(self._id))
-
-    def astype(self, col_dtypes, **kwargs):
-        return self.__constructor__(self._service.astype(self._id, col_dtypes, **kwargs))
 
     def replace(
         self,
@@ -240,60 +198,6 @@ class ClientQueryCompiler(BaseQueryCompiler):
             )
         )
 
-    def dropna(self, **kwargs):
-        return self.__constructor__(self._service.dropna(self._id, **kwargs))
-
-    def sum(self, **kwargs):
-        return self.__constructor__(self._service.sum(self._id, **kwargs))
-
-    def prod(self, **kwargs):
-        return self.__constructor__(self._service.prod(self._id, **kwargs))
-
-    def count(self, **kwargs):
-        return self.__constructor__(self._service.count(self._id, **kwargs))
-
-    def mean(self, **kwargs):
-        return self.__constructor__(self._service.mean(self._id, **kwargs))
-
-    def median(self, **kwargs):
-        return self.__constructor__(self._service.median(self._id, **kwargs))
-
-    def std(self, **kwargs):
-        return self.__constructor__(self._service.std(self._id, **kwargs))
-
-    def min(self, **kwargs):
-        return self.__constructor__(self._service.min(self._id, **kwargs))
-
-    def max(self, **kwargs):
-        return self.__constructor__(self._service.max(self._id, **kwargs))
-
-    def any(self, **kwargs):
-        return self.__constructor__(self._service.any(self._id, **kwargs))
-
-    def all(self, **kwargs):
-        return self.__constructor__(self._service.all(self._id, **kwargs))
-
-    def quantile_for_single_value(self, **kwargs):
-        return self.__constructor__(
-            self._service.quantile_for_single_value(self._id, **kwargs)
-        )
-
-    def quantile_for_list_of_values(self, **kwargs):
-        return self.__constructor__(
-            self._service.quantile_for_list_of_values(self._id, **kwargs)
-        )
-
-    def describe(self, **kwargs):
-        return self.__constructor__(self._service.describe(self._id, **kwargs))
-
-    def set_index_from_columns(self, keys, drop: bool = True, append: bool = False):
-        return self.__constructor__(
-            self._service.set_index_from_columns(self._id, keys, drop, append)
-        )
-
-    def reset_index(self, **kwargs):
-        return self.__constructor__(self._service.reset_index(self._id, **kwargs))
-
     def concat(self, axis, other, **kwargs):
         if is_list_like(other):
             other = [o._id for o in other]
@@ -303,178 +207,6 @@ class ClientQueryCompiler(BaseQueryCompiler):
             self._service.concat(self._id, axis, other, **kwargs)
         )
 
-    def eq(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.eq(self._id, other, is_qc, **kwargs))
-
-    def lt(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.lt(self._id, other, is_qc, **kwargs))
-
-    def le(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.le(self._id, other, is_qc, **kwargs))
-
-    def gt(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.gt(self._id, other, is_qc, **kwargs))
-
-    def ge(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.ge(self._id, other, is_qc, **kwargs))
-
-    def ne(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.ne(self._id, other, is_qc, **kwargs))
-
-    def __and__(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.__and__(self._id, other, is_qc, **kwargs)
-        )
-
-    def __or__(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.__or__(self._id, other, is_qc, **kwargs)
-        )
-
-    def add(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.add(self._id, other, is_qc, **kwargs))
-
-    def radd(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.radd(self._id, other, is_qc, **kwargs)
-        )
-
-    def truediv(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.truediv(self._id, other, is_qc, **kwargs)
-        )
-
-    def mod(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.mod(self._id, other, is_qc, **kwargs))
-
-    def rmod(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.rmod(self._id, other, is_qc, **kwargs)
-        )
-
-    def sub(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.rsub(self._id, other, is_qc, **kwargs)
-        )
-
-    def rsub(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.rsub(self._id, other, is_qc, **kwargs)
-        )
-
-    def mul(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(self._service.mul(self._id, other, is_qc, **kwargs))
-
-    def rmul(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.rmul(self._id, other, is_qc, **kwargs)
-        )
-
-    def floordiv(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.floordiv(self._id, other, is_qc, **kwargs)
-        )
-
-    def rfloordiv(self, other, **kwargs):
-        if isinstance(other, ClientQueryCompiler):
-            other = other._id
-            is_qc = True
-        else:
-            is_qc = False
-        return self.__constructor__(
-            self._service.rfloordiv(self._id, other, is_qc, **kwargs)
-        )
-
     def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
         return self.__constructor__(
             self._service.sort_rows_by_column_values(
@@ -482,203 +214,13 @@ class ClientQueryCompiler(BaseQueryCompiler):
             )
         )
 
-    def sort_index(self, **kwargs):
-        return self.__constructor__(self._service.sort_index(self._id, **kwargs))
-
-    def dt_nanosecond(self):
-        return self.__constructor__(self._service.dt_nanosecond(self._id))
-
-    def dt_microsecond(self):
-        return self.__constructor__(self._service.dt_microsecond(self._id))
-
-    def dt_second(self):
-        return self.__constructor__(self._service.dt_second(self._id))
-
-    def dt_minute(self):
-        return self.__constructor__(self._service.dt_minute(self._id))
-
-    def dt_hour(self):
-        return self.__constructor__(self._service.dt_hour(self._id))
-
-    def dt_day(self):
-        return self.__constructor__(self._service.dt_day(self._id))
-
-    def dt_dayofweek(self):
-        return self.__constructor__(self._service.dt_dayofweek(self._id))
-
-    def dt_day_of_week(self):
-        return self.__constructor__(self._service.dt_day_of_week(self._id))
-
-    def dt_weekday(self):
-        return self.__constructor__(self._service.dt_weekday(self._id))
-
-    def dt_day_name(self):
-        return self.__constructor__(self._service.dt_day_name(self._id))
-
-    def dt_dayofyear(self):
-        return self.__constructor__(self._service.dt_dayofyear(self._id))
-
-    def dt_day_of_year(self):
-        return self.__constructor__(self._service.dt_day_of_year(self._id))
-
-    def dt_week(self):
-        return self.__constructor__(self._service.dt_week(self._id))
-
-    def dt_weekofyear(self):
-        return self.__constructor__(self._service.dt_weekofyear(self._id))
-
-    def dt_month(self):
-        return self.__constructor__(self._service.dt_month(self._id))
-
-    def dt_month_name(self):
-        return self.__constructor__(self._service.dt_month_name(self._id))
-
-    def dt_quarter(self):
-        return self.__constructor__(self._service.dt_quarter(self._id))
-
-    def dt_year(self):
-        return self.__constructor__(self._service.dt_year(self._id))
-
-    def str_capitalize(self):
-        return self.__constructor__(self._service.str_capitalize(self._id))
-
-    def str_isalnum(self):
-        return self.__constructor__(self._service.str_isalnum(self._id))
-
-    def str_isalpha(self):
-        return self.__constructor__(self._service.str_isalpha(self._id))
-
-    def str_isdecimal(self):
-        return self.__constructor__(self._service.str_isdecimal(self._id))
-
-    def str_isdigit(self):
-        return self.__constructor__(self._service.str_isdigit(self._id))
-
-    def str_islower(self):
-        return self.__constructor__(self._service.str_islower(self._id))
-
-    def str_isnumeric(self):
-        return self.__constructor__(self._service.str_isnumeric(self._id))
-
-    def str_isspace(self):
-        return self.__constructor__(self._service.str_isspace(self._id))
-
-    def str_istitle(self):
-        return self.__constructor__(self._service.str_istitle(self._id))
-
-    def str_isupper(self):
-        return self.__constructor__(self._service.str_isupper(self._id))
-
-    def str_len(self):
-        return self.__constructor__(self._service.str_len(self._id))
-
-    def str_lower(self):
-        return self.__constructor__(self._service.str_lower(self._id))
-
-    def str_title(self):
-        return self.__constructor__(self._service.str_title(self._id))
-
-    def str_upper(self):
-        return self.__constructor__(self._service.str_upper(self._id))
-
-    def str_center(self, width, fillchar=" "):
-        return self.__constructor__(self._service.str_center(self._id, width, fillchar))
-
-    def str_contains(self, pat, case=True, flags=0, na=np.nan, regex=True):
-        return self.__constructor__(
-            self._service.str_contains(self._id, pat, case, flags, na, regex)
-        )
-
-    def str_count(self, pat, flags=0, **kwargs):
-        return self.__constructor__(
-            self._service.str_count(self._id, pat, flags, **kwargs)
-        )
-
-    def str_decode(self, encoding, errors):
-        return self.__constructor__(self._service.str_decode(self._id, encoding, errors))
-
-    def str_encode(self, encoding, errors):
-        return self.__constructor__(self._service.str_encode(self._id, encoding, errors))
-
-    def str_endswith(self, pat, na=np.nan):
-        return self.__constructor__(self._service.str_endswith(self._id, pat, na))
-
-    def str_find(self, sub, start=0, end=None):
-        return self.__constructor__(self._service.str_find(self._id, sub, start, end))
-
-    def str_rfind(self, sub, start=0, end=None):
-        return self.__constructor__(self._service.str_rfind(self._id, sub, start, end))
-
-    def str_findall(self, pat, flags=0, **kwargs):
-        return self.__constructor__(
-            self._service.str_findall(self._id, pat, flags, **kwargs)
-        )
-
-    def str_get(self, i):
-        return self.__constructor__(self._service.str_get(self._id, i))
-
-    str_index = str_find
-
-    def str_join(self, sep):
-        return self.__constructor__(self._service.str_join(self._id, sep))
-
-    def str_lstrip(self, to_strip=None):
-        return self.__constructor__(self._service.str_lstrip(self._id, to_strip))
-
-    def str_ljust(self, width, fillchar=" "):
-        return self.__constructor__(self._service.str_ljust(self._id, width, fillchar))
-
-    def str_rjust(self, width, fillchar=" "):
-        return self.__constructor__(self._service.str_rjust(self._id, width, fillchar))
-
-    def str_match(self, pat, case=True, flags=0, na=np.nan):
-        return self.__constructor__(
-            self._service.str_match(self._id, pat, case, flags, na)
-        )
-
-    def str_pad(self, width, side="left", fillchar=" "):
-        return self.__constructor__(
-            self._service.str_pad(self._id, width, side, fillchar)
-        )
-
-    def str_repeat(self, repeats):
-        return self.__constructor__(self._service.str_repeat(self._id, repeats))
-
-    str_rindex = str_rfind
-
-    def str_split(self, pat=None, n=-1, expand=False):
-        return self.__constructor__(self._service.str_split(self._id, pat, n, expand))
-
-    def str_rsplit(self, pat=None, n=-1, expand=False):
-        return self.__constructor__(self._service.str_rsplit(self._id, pat, n, expand))
-
-    def str_rstrip(self, to_strip=None):
-        return self.__constructor__(self._service.str_rstrip(self._id, to_strip))
-
-    def str_slice(self, start=None, stop=None, step=None):
-        return self.__constructor__(
-            self._service.str_slice(self._id, start, stop, step)
-        )
-
-    def str_slice_replace(self, start=None, stop=None, repl=None):
-        return self.__constructor__(
-            self._service.str_slice_replace(self._id, start, stop, repl)
-        )
-
-    def str_startswith(self, pat, na=np.nan):
-        return self.__constructor__(self._service.str_startswith(self._id, pat, na))
-
-    def str_strip(self, to_strip=None):
-        return self.__constructor__(self._service.str_strip(self._id, to_strip))
-
-    def str_zfill(self, width):
-        return self.__constructor__(self._service.str_zfill(self._id, width))
-
     def merge(self, right, **kwargs):
         return self.__constructor__(self._service.merge(self._id, right._id, **kwargs))
 
     def merge_asof(self, right, **kwargs):
-        return self.__constructor__(self._service.merge_asof(self._id, right._id, **kwargs))
+        return self.__constructor__(
+            self._service.merge_asof(self._id, right._id, **kwargs)
+        )
 
     def groupby_mean(
         self,
@@ -780,78 +322,10 @@ class ClientQueryCompiler(BaseQueryCompiler):
             )
         )
 
-    def cummax(self, fold_axis, axis, skipna, *args, **kwargs):
-        return self.__constructor__(
-            self._service.cummax(self._id, fold_axis, axis, skipna, *args, **kwargs)
-        )
-
-    def cummin(self, fold_axis, axis, skipna, *args, **kwargs):
-        return self.__constructor__(
-            self._service.cummin(self._id, fold_axis, axis, skipna, *args, **kwargs)
-        )
-
-    def cumsum(self, fold_axis, axis, skipna, *args, **kwargs):
-        return self.__constructor__(
-            self._service.cumsum(self._id, fold_axis, axis, skipna, *args, **kwargs)
-        )
-
-    def cumprod(self, fold_axis, axis, skipna, *args, **kwargs):
-        return self.__constructor__(
-            self._service.cumprod(self._id, fold_axis, axis, skipna, *args, **kwargs)
-        )
-
-    def get_index_names(self, axis=0):
-        if axis == 0:
-            return self.index.names
-        else:
-            return self.columns.names
-
-    def is_monotonic_increasing(self):
-        return self.__constructor__(self._service.is_monotonic_increasing(self._id))
-
-    def is_monotonic_decreasing(self):
-        return self.__constructor__(self._service.is_monotonic_decreasing(self._id))
-
-    def idxmin(self, **kwargs):
-        return self.__constructor__(self._service.idxmin(self._id, **kwargs))
-
-    def idxmax(self, **kwargs):
-        return self.__constructor__(self._service.idxmax(self._id, **kwargs))
-
-    def query(self, expr, **kwargs):
-        is_variable = False
-        variable_list = []
-        for k, v in tokenize_string(expr):
-            if v == "" or v == " ":
-                continue
-            if is_variable:
-                frame = inspect.currentframe()
-                identified = False
-                while frame:
-                    if v in frame.f_locals:
-                        value = frame.f_locals[v]
-                        if isinstance(value, list):
-                            value = tuple(value)
-                        variable_list.append(str(value))
-                        identified = True
-                        break
-                    frame = frame.f_back
-                if not identified:
-                    # TODO this error does not quite match pandas
-                    raise ValueError(f"{v} not found")
-                is_variable = False
-            elif v == "@":
-                is_variable = True
-                continue
-            else:
-                if v in self.columns:
-                    v = f'`{v}`'
-                variable_list.append(v)
-        expr = " ".join(variable_list)
-        return self.__constructor__(self._service.query(self._id, expr, **kwargs))
-
     def to_datetime(self, *args, **kwargs):
-        return self.__constructor__(self._service.to_datetime(self._id, *args, **kwargs))
+        return self.__constructor__(
+            self._service.to_datetime(self._id, *args, **kwargs)
+        )
 
     def finalize(self):
         raise NotImplementedError
@@ -869,3 +343,411 @@ class ClientQueryCompiler(BaseQueryCompiler):
 
     def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True):
         raise NotImplementedError
+
+    def clip(self, lower, upper, **kwargs):
+        lower_is_qc = isinstance(lower, type(self))
+        upper_is_qc = isinstance(upper, type(self))
+        if lower_is_qc:
+            lower = lower._id
+
+    def isin(self, values):
+        # isin is unusal because it passes API layer objects to query compiler
+        # instead of converting them to query compiler objects (Modin issue #3106)
+        from modin.pandas import Dataframe, Series
+
+        is_qc = isinstance(values, (Dataframe, Series))
+        if is_qc:
+            values = values._query_compiler._id
+        return self._service.isin(self._id, values, is_qc)
+
+    def where(self, cond, other, **kwargs):
+        cond_is_qc = isinstance(cond, type(self))
+        other_is_qc = isinstance(other, type(self))
+        if cond_is_qc:
+            cond = cond._id
+        if other_is_qc:
+            other = other._id
+        return self.__constructor__(
+            self._service.where(
+                self._id, cond, cond_is_qc, other, other_is_qc, **kwargs
+            )
+        )
+
+
+def _set_forwarding_method_for_binary_function(method_name: str) -> None:
+    """
+    Define a binary method that forwards arguments to the service.
+    Parameters
+    ----------
+    method_name : str
+    """
+
+    def forwarding_method(
+        self: ClientQueryCompiler,
+        other: Any,
+        **kwargs,
+    ):
+        other_is_qc = isinstance(other, type(self))
+        if other_is_qc:
+            other = other._id
+        return self.__constructor__(
+            getattr(self._service, method_name)(self._id, other, other_is_qc, **kwargs)
+        )
+
+    setattr(ClientQueryCompiler, method_name, forwarding_method)
+
+
+def _set_forwarding_method_for_single_id(method_name: str) -> None:
+    """
+    Define a method that forwards arguments to the service.
+    Parameters
+    ----------
+    method_name : str
+    """
+
+    def forwarding_method(
+        self: ClientQueryCompiler,
+        *args,
+        **kwargs,
+    ):
+        return self.__constructor__(
+            getattr(self._service, method_name)(self._id, *args, **kwargs)
+        )
+
+    setattr(ClientQueryCompiler, method_name, forwarding_method)
+
+
+def _set_forwarding_groupby_method(method_name: str):
+    """
+    Define a groupby method that forwards arguments to the service.
+    Parameters
+    ----------
+    method_name : str
+    """
+
+    def forwading_method(self, by, *args, **kwargs):
+        if isinstance(by, type(self)):
+            raise NotImplementedError("Cannot yet GroupBy another modin.pandas object")
+        return self.__constructor__(
+            getattr(self._service, method_name)(self._id, by, *args, **kwargs)
+        )
+
+    setattr(ClientQueryCompiler, method_name, forwading_method)
+
+
+_BINARY_FORWARDING_METHODS = frozenset(
+    {
+        "eq",
+        "lt",
+        "le",
+        "gt",
+        "ge",
+        "ne",
+        "__and__",
+        "__or__",
+        "add",
+        "radd",
+        "truediv",
+        "rtruediv",
+        "mod",
+        "rmod",
+        "sub",
+        "rsub",
+        "mul",
+        "rmul",
+        "floordiv",
+        "rfloordiv",
+        "__rand__",
+        "__ror__",
+        "__xor__",
+        "__rxor__",
+        "pow",
+        "rpow",
+        "combine",
+        "combine_first",
+        "compare",
+        "df_update",
+        "dot",
+        "join",
+        "series_update",
+    }
+)
+
+_SINGLE_ID_FORWARDING_METHODS = frozenset(
+    {
+        "abs",
+        "columnarize",
+        "transpose",
+        "take_2d",
+        "getitem_column_array",
+        "getitem_row_array",
+        "getitem_row_labels_array",
+        "pivot",
+        "get_dummies",
+        "drop",
+        "isna",
+        "notna",
+        "add_prefix",
+        "add_suffix",
+        "astype",
+        "dropna",
+        "sum",
+        "prod",
+        "count",
+        "mean",
+        "median",
+        "std",
+        "min",
+        "max",
+        "any",
+        "all",
+        "quantile_for_single_value",
+        "quantile_for_list_of_values",
+        "describe",
+        "set_index_from_columns",
+        "reset_index",
+        "sort_rows_by_column_values",
+        "sort_index",
+        "dt_nanosecond",
+        "dt_microsecond",
+        "dt_second",
+        "dt_minute",
+        "dt_hour",
+        "dt_day",
+        "dt_dayofweek",
+        "dt_weekday",
+        "dt_day_name",
+        "dt_dayofyear",
+        "dt_week",
+        "dt_weekofyear",
+        "dt_month",
+        "dt_month_name",
+        "dt_quarter",
+        "dt_year",
+        "dt_ceil",
+        "dt_components",
+        "dt_date",
+        "dt_days",
+        "dt_days_in_month",
+        "dt_daysinmonth",
+        "dt_end_time",
+        "dt_floor",
+        "dt_freq",
+        "dt_is_leap_year",
+        "dt_is_month_end",
+        "dt_is_month_start",
+        "dt_is_quarter_end",
+        "dt_is_quarter_start",
+        "dt_is_year_end",
+        "dt_is_year_start",
+        "dt_microseconds",
+        "dt_nanoseconds",
+        "dt_normalize",
+        "dt_qyear",
+        "dt_round",
+        "dt_seconds",
+        "dt_start_time",
+        "dt_strftime",
+        "dt_time",
+        "dt_timetz",
+        "dt_to_period",
+        "dt_to_pydatetime",
+        "dt_to_pytimedelta",
+        "dt_to_timestamp",
+        "dt_total_seconds",
+        "dt_tz",
+        "dt_tz_convert",
+        "dt_tz_localize",
+        "str_capitalize",
+        "str_isalnum",
+        "str_isalpha",
+        "str_isdecimal",
+        "str_isdigit",
+        "str_islower",
+        "str_isnumeric",
+        "str_isspace",
+        "str_istitle",
+        "str_isupper",
+        "str_len",
+        "str_lower",
+        "str_title",
+        "str_upper",
+        "str_center",
+        "str_contains",
+        "str_count",
+        "str_endswith",
+        "str_find",
+        "str_index",
+        "str_rfind",
+        "str_findall",
+        "str_get",
+        "str_join",
+        "str_lstrip",
+        "str_ljust",
+        "str_rjust",
+        "str_match",
+        "str_pad",
+        "str_repeat",
+        "str_split",
+        "str_rsplit",
+        "str_rstrip",
+        "str_slice",
+        "str_slice_replace",
+        "str_startswith",
+        "str_strip",
+        "str_zfill",
+        "cummax",
+        "cummin",
+        "cumsum",
+        "cumprod",
+        "is_monotonic_increasing",
+        "is_monotonic_decreasing",
+        "idxmax",
+        "idxmin",
+        "query",
+        "apply",
+        "apply_on_series",
+        "applymap",
+        "cat_codes",
+        "convert_dtypes",
+        "corr",
+        "cov",
+        "delitem",
+        "diff",
+        "eval",
+        "explode",
+        "first_valid_index",
+        "infer_objects",
+        "invert",
+        "kurt",
+        "last_valid_index",
+        "mad",
+        "melt",
+        "memory_usage",
+        "mode",
+        "negative",
+        "nlargest",
+        "nsmallest",
+        "nunique",
+        "pivot_table",
+        "rank",
+        "reindex",
+        "repeat",
+        "resample_agg_df",
+        "resample_agg_ser",
+        "resample_app_df",
+        "resample_app_ser",
+        "resample_asfreq",
+        "resample_backfill",
+        "resample_bfill",
+        "resample_count",
+        "resample_ffill",
+        "resample_fillna",
+        "resample_first",
+        "resample_get_group",
+        "resample_interpolate",
+        "resample_last",
+        "resample_max",
+        "resample_mean",
+        "resample_median",
+        "resample_min",
+        "resample_nearest",
+        "resample_nunique",
+        "resample_ohlc_df",
+        "resample_ohlc_ser",
+        "resample_pad",
+        "resample_pipe",
+        "resample_prod",
+        "resample_quantile",
+        "resample_sem",
+        "resample_size",
+        "resample_std",
+        "resample_sum",
+        "resample_transform",
+        "resample_var",
+        "rolling_aggregate",
+        "rolling_apply",
+        "rolling_corr",
+        "rolling_count",
+        "rolling_cov",
+        "rolling_kurt",
+        "rolling_max",
+        "rolling_mean",
+        "rolling_median",
+        "rolling_min",
+        "rolling_quantile",
+        "rolling_skew",
+        "rolling_std",
+        "rolling_sum",
+        "rolling_var",
+        "window_mean",
+        "window_std",
+        "window_sum",
+        "window_var",
+        "round",
+        "searchsorted",
+        "series_view",
+        "sem",
+        "skew",
+        "sort_columns_by_row_values",
+        "stack",
+        "str___getitem__",
+        "str_normalize",
+        "str_partition",
+        "str_replace",
+        "str_rindex",
+        "str_rpartition",
+        "str_swapcase",
+        "str_translate",
+        "str_wrap",
+        "to_numeric",
+        "to_numpy",
+        "unique",
+        "unstack",
+        "var",
+        "write_items",
+        "set_index_name",
+        "set_index_names",
+    }
+)
+
+_GROUPBY_FORWARDING_METHODS = frozenset(
+    {
+        "mean",
+        "count",
+        "max",
+        "min",
+        "sum",
+        "agg",
+        "all",
+        "any",
+        "size",
+        "skew",
+        "cumsum",
+        "cummax",
+        "cummin",
+        "cumprod",
+        "std",
+        "rank",
+        "nunique",
+        "median",
+        "quantile",
+        "fillna",
+        "dtypes",
+        "shift",
+        "prod",
+        "var",
+    }
+)
+
+for method in _BINARY_FORWARDING_METHODS:
+    _set_forwarding_method_for_binary_function(method)
+
+for method in _SINGLE_ID_FORWARDING_METHODS:
+    _set_forwarding_method_for_single_id(method)
+
+for method in _GROUPBY_FORWARDING_METHODS:
+    _set_forwarding_groupby_method("groupby_" + method)
+
+ClientQueryCompiler.prod_min_count = ClientQueryCompiler.prod
+ClientQueryCompiler.sum_min_count = ClientQueryCompiler.sum
