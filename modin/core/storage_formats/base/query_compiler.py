@@ -4776,7 +4776,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         Parameters
         ----------
-        axis : int, optional
+        axis : {0, 1}, optional
 
         Returns
         -------
