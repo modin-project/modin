@@ -3,7 +3,7 @@ numpy>=1.18.5
 pyarrow>=4.0.1
 dask[complete]>=2.22.0
 distributed>=2.22.0
-ray[default]==1.8.0
+ray[default]==1.11.0
 redis>=3.5.0,<4.0.0
 psutil
 fsspec

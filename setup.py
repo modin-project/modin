@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 dask_deps = ["dask>=2.22.0", "distributed>=2.22.0"]
 ray_deps = [
-    "ray[default]==1.8.0",
+    "ray[default]==1.11.0",
     "pyarrow>=4.0.1",
     "redis>=3.5.0,<4.0.0",
 ]
