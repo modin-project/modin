@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import pytest
+
 import modin.pandas as pd
 
 
@@ -37,9 +38,7 @@ def test_repartition(axis, dtype):
     # check that the test makes sense
     assert obj._query_compiler._modin_frame._partitions.shape == source_shapes[dtype]
 
-    kwargs = {"axis": axis}
-    if dtype == "Series":
-        kwargs = {}
+    kwargs = {"axis": axis} if dtype == "DataFrame" else {}
     obj = obj._repartition(**kwargs)
 
     if dtype == "DataFrame":
