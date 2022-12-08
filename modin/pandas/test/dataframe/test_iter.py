@@ -30,6 +30,7 @@ from modin.pandas.test.utils import (
     create_test_dfs,
     test_data,
 )
+from modin.pandas.utils import SET_DATAFRAME_ATTRIBUTE_WARNING
 from modin.config import NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
@@ -232,6 +233,14 @@ def test___repr__():
     assert repr(pandas_df) == repr(modin_df)
 
 
+def test___repr__does_not_raise_attribute_column_warning():
+    # See https://github.com/modin-project/modin/issues/5380
+    df = pd.DataFrame([1])
+    with warnings.catch_warnings():
+        warnings.filterwarnings(action="error", message=SET_DATAFRAME_ATTRIBUTE_WARNING)
+        repr(df)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_inplace_series_ops(data):
     pandas_df = pandas.DataFrame(data)
@@ -294,16 +303,14 @@ def test___setattr__mutating_column():
     # and adds the provided list as a new attribute and not a column.
     with pytest.warns(
         UserWarning,
-        match="Modin doesn't allow columns to be created via a new attribute name - see "
-        + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
+        match=SET_DATAFRAME_ATTRIBUTE_WARNING,
     ):
         modin_df.col1 = [4]
 
     with warnings.catch_warnings():
         warnings.filterwarnings(
             action="error",
-            message="Modin doesn't allow columns to be created via a new attribute name - see "
-            + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
+            message=SET_DATAFRAME_ATTRIBUTE_WARNING,
         )
         modin_df.col1 = [5]
         modin_df.new_attr = 6
