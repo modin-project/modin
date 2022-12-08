@@ -14,6 +14,9 @@
 import pytest
 
 import modin.pandas as pd
+from modin.config import NPartitions
+
+NPartitions.put(4)
 
 
 @pytest.mark.parametrize("axis", [0, 1, None])
