@@ -385,6 +385,33 @@ class ClientQueryCompiler(BaseQueryCompiler):
             self._service.getitem_column_array(self._id, key, numeric)
         )
 
+    # BUG: cumulative functions are wrong in service. need special treatment here.
+    # service signature is def exposed_cumsum(self, id, axis, skipna, *args, **kwargs):
+    # and query compiler container signature is
+    #     def cumsum(self, id, fold_axis, skipna, *args, **kwargs):
+    # whereas this can take both fold_axis and axis.
+    # I think we're actually passing axis=fold_axis and skipna=axis and skipna
+    # as a *arg to the service.
+    def cummax(self, fold_axis, axis, skipna, *args, **kwargs):
+        return self.__constructor__(
+            self._service.cummax(self._id, fold_axis, axis, skipna, *args, **kwargs)
+        )
+
+    def cummin(self, fold_axis, axis, skipna, *args, **kwargs):
+        return self.__constructor__(
+            self._service.cummin(self._id, fold_axis, axis, skipna, *args, **kwargs)
+        )
+
+    def cumsum(self, fold_axis, axis, skipna, *args, **kwargs):
+        return self.__constructor__(
+            self._service.cumsum(self._id, fold_axis, axis, skipna, *args, **kwargs)
+        )
+
+    def cumprod(self, fold_axis, axis, skipna, *args, **kwargs):
+        return self.__constructor__(
+            self._service.cumprod(self._id, fold_axis, axis, skipna, *args, **kwargs)
+        )
+
 
 def _set_forwarding_method_for_binary_function(method_name: str) -> None:
     """
@@ -606,10 +633,6 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "str_startswith",
         "str_strip",
         "str_zfill",
-        "cummax",
-        "cummin",
-        "cumsum",
-        "cumprod",
         "is_monotonic_increasing",
         "is_monotonic_decreasing",
         "idxmax",
