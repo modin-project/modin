@@ -1113,4 +1113,61 @@ class TimeRemoveCategories(BaseCategories):
         execute(self.ts.cat.remove_categories(self.ts.cat.categories[::2]))
 
 
+class TimeSimpleReshape:
+
+    params = [get_benchmark_shapes("TimeSimpleReshape")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        rows, cols = shape
+        k = 10
+        arrays = [
+            np.arange(rows // k).repeat(k),
+            np.roll(np.tile(np.arange(rows // k), k), 25),
+        ]
+        index = IMPL.MultiIndex.from_arrays(arrays)
+        self.df = IMPL.DataFrame(np.random.randn(rows, cols), index=index)
+        self.udf = self.df.unstack(1)
+        execute(self.df), execute(self.udf)
+
+    def time_stack(self, shape):
+        execute(self.udf.stack())
+
+    def time_unstack(self, shape):
+        execute(self.df.unstack(1))
+
+
+class TimeReplace:
+
+    params = [get_benchmark_shapes("TimeReplace")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        rows, cols = shape
+        self.to_replace = {i: getattr(IMPL, "Timestamp")(i) for i in range(rows)}
+        self.df = IMPL.DataFrame()
+        for col in range(cols):
+            self.df["col" + str(col + 1)] = np.random.randint(rows, size=rows)
+        execute(self.df)
+
+    def time_replace(self, shape):
+        execute(self.df.replace(self.to_replace))
+
+
+class TimeGroups:
+
+    params = [get_benchmark_shapes("TimeGroups")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        self.series = IMPL.Series(np.random.randint(0, 100, size=shape[0]))
+        execute(self.series)
+
+    # returns a pretty dict thus not calling execute
+    def time_series_groups(self, shape):
+        self.series.groupby(self.series).groups
+
+    # returns a  dict thus not calling execute
+    def time_series_indices(self, shape):
+        self.series.groupby(self.series).indices
 from .utils import setup  # noqa: E402, F401
