@@ -1138,6 +1138,7 @@ class TimeStack(BaseReshape):
     def time_stack(self, shape):
         execute(self.udf.stack())
 
+
 class TimeUnstack(BaseReshape):
     params = [get_benchmark_shapes("TimeUnstack")]
     param_names = ["shape"]
@@ -1154,9 +1155,7 @@ class TimeReplace:
     def setup(self, shape):
         rows, cols = shape
         self.to_replace = {i: getattr(IMPL, "Timestamp")(i) for i in range(rows)}
-        self.df = IMPL.DataFrame()
-        for col in range(cols):
-            self.df["col" + str(col + 1)] = np.random.randint(rows, size=rows)
+        self.df = IMPL.DataFrame(np.random.randint(rows, size=(rows, cols)))
         execute(self.df)
 
     def time_replace(self, shape):
