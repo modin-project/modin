@@ -589,7 +589,7 @@ class DataFrameGroupBy(ClassLogger):
             agg_kwargs=kwargs,
             how="axis_wise",
         )
-        return result if not do_relabel else do_relabel(result)
+        return do_relabel(result) if do_relabel else result
 
     agg = aggregate
 
