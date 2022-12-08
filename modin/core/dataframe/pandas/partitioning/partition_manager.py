@@ -718,8 +718,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
         Returns
         -------
-        np.ndarray or (np.ndarray, row_lengths, col_widths)
-            A NumPy array with partitions (with dimensions or not).
+        (partitions, row_lengths, col_widths)
+            A NumPy array with partitions and dimensions.
+            The dimensions will be None if `return_dims==False`.
         """
 
         def update_bar(pbar, f):

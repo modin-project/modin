@@ -125,9 +125,9 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
 
         Returns
         -------
-        tuple
-            Tuple holding array of partitions, list of columns with unsupported
-            data and optionally partitions' dimensions.
+        (partitions, row_lengths, col_widths)
+            A NumPy array with partitions and dimensions.
+            The dimensions will be None if `return_dims==False`.
         """
         put_func = cls._partition_class.put_arrow
 

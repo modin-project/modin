@@ -117,9 +117,9 @@ class cuDFOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
 
         Returns
         -------
-        list or tuple
-            List of partitions in case `return_dims` == False,
-            tuple (partitions, row lengths, col widths) in other case.
+        (partitions, row_lengths, col_widths).
+            A NumPy array with partitions and dimensions.
+            The dimensions will be None if `return_dims==False`.
         """
         num_splits = GpuCount.get()
         put_func = cls._partition_class.put
