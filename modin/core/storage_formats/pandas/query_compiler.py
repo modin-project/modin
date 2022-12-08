@@ -2710,9 +2710,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def groupby_skew(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
         def map_skew(dfgb, *args, **kwargs):
             df = dfgb.obj
-            by_cols, cols_to_agg = dfgb.exclusions, df.columns.difference(
-                dfgb.exclusions
-            )
+            by_cols = dfgb.exclusions
+            cols_to_agg = df.columns.difference(by_cols)
 
             df_pow2 = pandas.concat([df[by_cols], df[cols_to_agg] ** 2], axis=1)
             df_pow3 = pandas.concat([df[by_cols], df[cols_to_agg] ** 3], axis=1)
@@ -2751,7 +2750,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             # The equation for the 'skew' was taken directly from pandas:
             # https://github.com/pandas-dev/pandas/blob/8dab54d6573f7186ff0c3b6364d5e4dd635ff3e7/pandas/core/nanops.py#L1226
-            # skew = [ (count * sqrt(count - 1)) / (count - 2) ] * [ sum( (x - m)^3 ) / sum( (x - m)^2 ) ]
             skew_res = (count * (count - 1) ** 0.5 / (count - 2)) * (m3 / m2**1.5)
             return skew_res
 

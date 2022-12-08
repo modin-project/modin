@@ -14,7 +14,7 @@
 """Implement utils for pandas component."""
 
 from pandas.util._decorators import doc
-from enum import IntEnum
+from enum import IntFlag
 import pandas
 import numpy as np
 
@@ -381,9 +381,9 @@ def _doc_binary_op(operation, bin_op, left="Series", right="right", returns="Ser
     return doc_op
 
 
-class NumericOnly(IntEnum):  # noqa: PR01
+class NumericOnly(IntFlag):  # noqa: PR01
     """
-    An enum that represents the `numeric_only` argument provided to some aggregation function.
+    An integer flag that represents the `numeric_only` argument provided to some aggregation function.
 
     Attributes
     ----------

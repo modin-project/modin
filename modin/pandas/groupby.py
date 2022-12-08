@@ -1041,8 +1041,7 @@ class DataFrameGroupBy(ClassLogger):
         DataFrame or Series
             Returns the same type as `self._df`.
         """
-        if not isinstance(numeric_only, NumericOnly):
-            numeric_only = NumericOnly(numeric_only)
+        numeric_only = NumericOnly(numeric_only)
 
         agg_args = tuple() if agg_args is None else agg_args
         agg_kwargs = dict() if agg_kwargs is None else agg_kwargs
