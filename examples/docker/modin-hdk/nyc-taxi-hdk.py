@@ -248,9 +248,9 @@ def q4_sql(df):
     return query(sql, trips=df)
 
 
-def validate(df, hdk_func, sql_func, reset_index=True, sort_by=None):
-    hdk_result = hdk_func(df.copy())
-    sql_result = sql_func(df.copy())
+def validate(df, hdk_func, sql_func, copy_df=False, reset_index=True, sort_by=None):
+    hdk_result = hdk_func(df.copy() if copy_df else df)
+    sql_result = sql_func(df.copy() if copy_df else df)
     if reset_index:
         hdk_result = hdk_result.reset_index()
     hdk_result.columns = sql_result.columns
@@ -271,6 +271,7 @@ def main():
     measure("Q1S", q1_sql, df)
     measure("Q2H", q2_hdk, df)
     measure("Q2S", q2_sql, df)
+    # The data frame is modified by some tests, therefore a copy should be used for these tests.
     measure("Q3H", q3_hdk, df.copy())
     measure("Q3S", q3_sql, df.copy())
     measure("Q4H", q4_hdk, df.copy())
@@ -278,9 +279,11 @@ def main():
 
     validate(df, q1_hdk, q1_sql)
     validate(df, q2_hdk, q2_sql)
-    validate(df, q3_hdk, q3_sql)
+    validate(df, q3_hdk, q3_sql, copy_df=True)
     # Additional sorting is required here to make the results identical
-    validate(df, q4_hdk, q4_sql, reset_index=False, sort_by=["trip_distance"])
+    validate(
+        df, q4_hdk, q4_sql, copy_df=True, reset_index=False, sort_by=["trip_distance"]
+    )
 
 
 if __name__ == "__main__":

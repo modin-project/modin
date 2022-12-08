@@ -15,6 +15,8 @@ import warnings
 
 try:
     from dfsql import sql_query as dfsql_query
+
+    # This import is required to inject the DataFrame.sql() method.
     import dfsql.extensions  # noqa: F401
 except ImportError:
     warnings.warn(

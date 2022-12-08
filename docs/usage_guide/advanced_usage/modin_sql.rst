@@ -8,7 +8,7 @@ intermediate layer between the query language (e.g. SQL, pandas) and the executi
 (See :doc:`architecture </development/architecture>` documentation for details).
 
 To execute SQL queries, Modin uses either dfsql third-party library or, in case of HDK
-backend (See :doc:`architecture </development/using_hdk>` documentation for details)
+engine (See :doc:`Using HDK </development/using_hdk>` documentation for details)
 the queries are executed directly by HDK. Thus, to execute SQL queries, either dfsql
 or pyhdk module must be installed.
 
@@ -49,7 +49,7 @@ App, Category, and Rating, where Price is ‘0’.
 Writing Complex Queries
 """""""""""""""""""""""
 
-For complex queries, it's recommended to use the HDK backend because it's much more
+For complex queries, it's recommended to use the HDK engine because it's much more
 powerful, comparing to dfsql. Especially, if multiple data frames are involved.
 
 Let's explore a more complicated example.
