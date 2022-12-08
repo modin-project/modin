@@ -1170,4 +1170,6 @@ class TimeGroups:
     # returns a  dict thus not calling execute
     def time_series_indices(self, shape):
         self.series.groupby(self.series).indices
+
+
 from .utils import setup  # noqa: E402, F401
