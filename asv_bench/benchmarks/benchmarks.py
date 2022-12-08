@@ -1113,11 +1113,7 @@ class TimeRemoveCategories(BaseCategories):
         execute(self.ts.cat.remove_categories(self.ts.cat.categories[::2]))
 
 
-class TimeSimpleReshape:
-
-    params = [get_benchmark_shapes("TimeSimpleReshape")]
-    param_names = ["shape"]
-
+class BaseReshape:
     def setup(self, shape):
         rows, cols = shape
         k = 10
@@ -1127,11 +1123,24 @@ class TimeSimpleReshape:
         ]
         index = IMPL.MultiIndex.from_arrays(arrays)
         self.df = IMPL.DataFrame(np.random.randn(rows, cols), index=index)
+        execute(self.df)
+
+
+class TimeStack(BaseReshape):
+    params = [get_benchmark_shapes("TimeStack")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        super().setup(shape)
         self.udf = self.df.unstack(1)
-        execute(self.df), execute(self.udf)
+        execute(self.udf)
 
     def time_stack(self, shape):
         execute(self.udf.stack())
+
+class TimeUnstack(BaseReshape):
+    params = [get_benchmark_shapes("TimeUnstack")]
+    param_names = ["shape"]
 
     def time_unstack(self, shape):
         execute(self.df.unstack(1))
@@ -1167,7 +1176,7 @@ class TimeGroups:
     def time_series_groups(self, shape):
         self.series.groupby(self.series).groups
 
-    # returns a  dict thus not calling execute
+    # returns a dict thus not calling execute
     def time_series_indices(self, shape):
         self.series.groupby(self.series).indices
 

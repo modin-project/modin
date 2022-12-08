@@ -101,7 +101,8 @@ _DEFAULT_CONFIG_T = [
             "TimeReindexMethod",
             "TimeFillnaMethodDataframe",
             "TimeDropDuplicatesDataframe",
-            "TimeSimpleReshape",
+            "TimeStack",
+            "TimeUnstack",
             "TimeReplace",
             # IO benchmarks
             "TimeReadCsvSkiprows",
