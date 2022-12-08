@@ -1032,13 +1032,17 @@ class TimeDropDuplicatesDataframe:
     param_names = ["shape"]
 
     def setup(self, shape):
+        from pandas import DataFrame
+
         rows, cols = shape
         N = rows // 10
         K = 10
-        self.df = IMPL.DataFrame()
+        # Assigning a large number of columns - inefficient in Modin, so use pandas
+        temp_df = DataFrame()
         # dataframe would  have cols-1 keys(strings) and one value(int) column
         for col in range(cols - 1):
-            self.df["key" + str(col + 1)] = tm.makeStringIndex(N).values.repeat(K)
+            temp_df["key" + str(col + 1)] = tm.makeStringIndex(N).values.repeat(K)
+        self.df = IMPL.DataFrame(temp_df)
         self.df["value"] = np.random.randn(N * K)
         execute(self.df)
 
