@@ -109,8 +109,9 @@ class FactoryDispatcher(object):
     @classmethod
     def get_factory(cls) -> factories.BaseFactory:
         """Get current factory."""
-        Engine.subscribe(cls._update_factory)
-        StorageFormat.subscribe(cls._update_factory)
+        if cls.__factory is None:
+            Engine.subscribe(cls._update_factory)
+            StorageFormat.subscribe(cls._update_factory)
         return cls.__factory
 
     @classmethod
