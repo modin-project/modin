@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 """Module provides a partition manager class for ``HdkOnNativeDataframe`` frame."""
+
 from modin.error_message import ErrorMessage
 from modin.pandas.utils import is_scalar
 import numpy as np
@@ -24,7 +25,6 @@ from ..db_worker import DbWorker
 from ..calcite_builder import CalciteBuilder
 from ..calcite_serializer import CalciteSerializer
 from modin.config import DoUseCalcite
-from pandas import SparseDtype
 
 import pyarrow
 import pandas
@@ -191,7 +191,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                 # arrow table - https://github.com/apache/arrow/pull/4497. If this
                 # is the case - fall back to pandas, otherwise - rethrow the error.
                 if type(err) == TypeError:
-                    if any([isinstance(t, SparseDtype) for t in obj.dtypes]):
+                    if any([isinstance(t, pandas.SparseDtype) for t in obj.dtypes]):
                         ErrorMessage.single_warning(
                             "Sparse data is not currently supported!"
                         )
