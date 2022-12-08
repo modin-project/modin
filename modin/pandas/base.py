@@ -3860,7 +3860,8 @@ class BasePandasDataset(ClassLogger):
         """
         Repartitioning Modin objects to get ideal partitions inside.
 
-        Allows to improve performance where the query compiler cannot yet.
+        Allows to improve performance where the query compiler can't improve
+        yet by doing implicit repartitioning.
 
         Parameters
         ----------
@@ -3873,7 +3874,7 @@ class BasePandasDataset(ClassLogger):
         """
         allowed_axis_values = (0, 1, None)
         if axis not in allowed_axis_values:
-            raise NotImplementedError(
+            raise ValueError(
                 f"passed `axis` parameter: {axis}, but should be one of {allowed_axis_values}"
             )
         return self.__constructor__(

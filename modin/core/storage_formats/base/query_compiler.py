@@ -4771,7 +4771,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         Repartitioning QueryCompiler objects to get ideal partitions inside.
 
-        Allows to improve performance where the query compiler cannot yet.
+        Allows to improve performance where the query compiler can't improve
+        yet by doing implicit repartitioning.
 
         Parameters
         ----------
