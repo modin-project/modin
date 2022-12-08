@@ -43,6 +43,8 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         Call queue that needs to be executed on wrapped ``pandas.DataFrame``.
     """
 
+    execution_wrapper = UnidistWrapper
+
     def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
         assert unidist.is_object_ref(data)
         self._data = data
@@ -294,37 +296,6 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         if unidist.is_object_ref(self._ip_cache):
             self._ip_cache = UnidistWrapper.materialize(self._ip_cache)
         return self._ip_cache
-
-    def split(self, split_func, num_splits, *args):
-        """
-        Split the object wrapped by the partition into multiple partitions.
-
-        Parameters
-        ----------
-        split_func : Callable[pandas.DataFrame, List[Any]] -> List[pandas.DataFrame]
-            The function that will split this partition into multiple partitions. The list contains
-            pivots to split by, and will have the same dtype as the major column we are shuffling on.
-        num_splits : int
-            The number of resulting partitions, which may be empty.
-        *args : List[Any]
-            Arguments to pass to ``split_func``.
-
-        Returns
-        -------
-        list
-            A list of partitions.
-        """
-        logger = get_logger()
-        logger.debug(f"ENTER::Partition.split::{self._identity}")
-
-        @unidist.remote(num_returns=num_splits)
-        def _split_df(df, split_func, *args):  # pragma: no cover
-            return split_func(df, *args)
-
-        logger.debug(f"SUBMIT::_split_df::{self._identity}")
-        outputs = _split_df.remote(self._data, split_func, *args)
-        logger.debug(f"EXIT::Partition.split::{self._identity}")
-        return [PandasOnUnidistDataframePartition(output) for output in outputs]
 
 
 @unidist.remote(num_returns=2)
