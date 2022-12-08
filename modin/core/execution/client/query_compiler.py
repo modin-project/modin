@@ -412,6 +412,19 @@ class ClientQueryCompiler(BaseQueryCompiler):
             self._service.cumprod(self._id, fold_axis, axis, skipna, *args, **kwargs)
         )
 
+    # Use this buggy sub which calls rsub because the service expects the bug:
+    # https://github.com/ponder-org/soda/blob/5aca5483ec24b0fc0bb00a3dcab410da297598b1/pushdown_service/test/snowflake/arithmetic/test_numeric.py#L26-L37
+    # need to fix the test in the service.
+    def sub(self, other, **kwargs):
+        if isinstance(other, ClientQueryCompiler):
+            other = other._id
+            is_qc = True
+        else:
+            is_qc = False
+        return self.__constructor__(
+            self._service.rsub(self._id, other, is_qc, **kwargs)
+        )
+
 
 def _set_forwarding_method_for_binary_function(method_name: str) -> None:
     """
@@ -464,14 +477,14 @@ def _set_forwarding_groupby_method(method_name: str):
     method_name : str
     """
 
-    def forwading_method(self, by, *args, **kwargs):
-        if isinstance(by, type(self)):
-            raise NotImplementedError("Cannot yet GroupBy another modin.pandas object")
+    def forwarding_method(self, by, *args, **kwargs):
+        if not isinstance(by, type(self)):
+            raise NotImplementedError("Must always GroupBy another modin.pandas object")
         return self.__constructor__(
-            getattr(self._service, method_name)(self._id, by, *args, **kwargs)
+            getattr(self._service, method_name)(self._id, by._id, *args, **kwargs)
         )
 
-    setattr(ClientQueryCompiler, method_name, forwading_method)
+    setattr(ClientQueryCompiler, method_name, forwarding_method)
 
 
 _BINARY_FORWARDING_METHODS = frozenset(
@@ -490,7 +503,6 @@ _BINARY_FORWARDING_METHODS = frozenset(
         "rtruediv",
         "mod",
         "rmod",
-        "sub",
         "rsub",
         "mul",
         "rmul",
