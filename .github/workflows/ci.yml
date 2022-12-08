@@ -363,8 +363,7 @@ jobs:
         run: |
           conda info
           conda list
-      - run: |
-        python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py::test_add_option
+      - run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py::test_add_option
       - uses: codecov/codecov-action@v2
 
   test-defaults:
