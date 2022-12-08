@@ -1542,7 +1542,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         """
         return self.__constructor__(
             query_compiler=self._query_compiler.pivot(
-                index=index, columns=columns, values=values
+                index=index, columns=columns, values=v  alues
             )
         )
 

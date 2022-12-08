@@ -425,6 +425,41 @@ class ClientQueryCompiler(BaseQueryCompiler):
             self._service.rsub(self._id, other, is_qc, **kwargs)
         )
 
+    def query(self, expr, **kwargs):
+        # TODO: Don't need all this; API layer passes local and global vars
+        # in local_dict and global_dict. But the service is buggy
+        # and dodesn't use those dicts. So wwe need to keep this for now.
+        is_variable = False
+        variable_list = []
+        for k, v in tokenize_string(expr):
+            if v == "" or v == " ":
+                continue
+            if is_variable:
+                frame = inspect.currentframe()
+                identified = False
+                while frame:
+                    if v in frame.f_locals:
+                        value = frame.f_locals[v]
+                        if isinstance(value, list):
+                            value = tuple(value)
+                        variable_list.append(str(value))
+                        identified = True
+                        break
+                    frame = frame.f_back
+                if not identified:
+                    # TODO this error does not quite match pandas
+                    raise ValueError(f"{v} not found")
+                is_variable = False
+            elif v == "@":
+                is_variable = True
+                continue
+            else:
+                if v in self.columns:
+                    v = f"`{v}`"
+                variable_list.append(v)
+        expr = " ".join(variable_list)
+        return self.__constructor__(self._service.query(self._id, expr, **kwargs))
+
 
 def _set_forwarding_method_for_binary_function(method_name: str) -> None:
     """
@@ -649,7 +684,6 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "is_monotonic_decreasing",
         "idxmax",
         "idxmin",
-        "query",
         "apply",
         "apply_on_series",
         "applymap",
@@ -657,7 +691,6 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "convert_dtypes",
         "corr",
         "cov",
-        "delitem",
         "diff",
         "eval",
         "explode",
