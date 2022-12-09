@@ -959,8 +959,12 @@ class BasePandasDataset(ClassLogger):
         # If we got a series or dict originally, dtype is a dict now. Its keys
         # must be column names.
         if isinstance(dtype, dict):
+            # avoid materializing columns in lazy mode. the query compiler
+            # will handle errors where dtype dict includes keys that are not
+            # in columns.
             if (
-                not set(dtype.keys()).issubset(set(self._query_compiler.columns))
+                not self._query_compiler.lazy_execution
+                and not set(dtype.keys()).issubset(set(self._query_compiler.columns))
                 and errors == "raise"
             ):
                 raise KeyError(
@@ -972,7 +976,7 @@ class BasePandasDataset(ClassLogger):
             # Assume that the dtype is a scalar.
             col_dtypes = {column: dtype for column in self._query_compiler.columns}
 
-        new_query_compiler = self._query_compiler.astype(col_dtypes)
+        new_query_compiler = self._query_compiler.astype(col_dtypes, errors=errors)
         return self._create_or_update_from_compiler(new_query_compiler, not copy)
 
     @property
@@ -1294,6 +1298,10 @@ class BasePandasDataset(ClassLogger):
             elif axes[axis] is not None:
                 if not is_list_like(axes[axis]):
                     axes[axis] = [axes[axis]]
+                # In case of lazy execution we should bypass these error checking components
+                # because they can force the materialization of the row or column labels.
+                if self._query_compiler.lazy_execution:
+                    continue
                 if errors == "raise":
                     non_existent = pandas.Index(axes[axis]).difference(
                         getattr(self, axis)
@@ -1309,7 +1317,7 @@ class BasePandasDataset(ClassLogger):
                         axes[axis] = None
 
         new_query_compiler = self._query_compiler.drop(
-            index=axes["index"], columns=axes["columns"]
+            index=axes["index"], columns=axes["columns"], errors=errors
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 

@@ -555,9 +555,14 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_modin_frame)
 
-    def drop(self, index=None, columns=None):
+    def drop(self, index=None, columns=None, errors: str = "raise"):
         if index is not None:
             raise NotImplementedError("Row drop")
+        if errors != "raise":
+            raise NotImplementedError(
+                "This lazy query compiler will always "
+                + "raise an error on invalid columns."
+            )
         return self.__constructor__(
             self._modin_frame.take_2d_labels_or_positional(
                 row_labels=index, col_labels=self.columns.drop(columns)
@@ -688,9 +693,15 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             self._modin_frame.reset_index(drop), shape_hint=shape_hint
         )
 
-    def astype(self, col_dtypes, **kwargs):
+    def astype(self, col_dtypes, errors: str = "raise"):
+        if errors != "raise":
+            raise NotImplementedError(
+                "This lazy query compiler will always "
+                + "raise an error on invalid type keys."
+            )
         return self.__constructor__(
-            self._modin_frame.astype(col_dtypes), self._shape_hint
+            self._modin_frame.astype(col_dtypes),
+            self._shape_hint,
         )
 
     def setitem(self, axis, key, value):

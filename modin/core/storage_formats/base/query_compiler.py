@@ -1415,7 +1415,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     # Abstract map partitions across select indices
-    def astype(self, col_dtypes, **kwargs):  # noqa: PR02
+    def astype(self, col_dtypes, errors: str = "raise"):  # noqa: PR02
         """
         Convert columns dtypes to given dtypes.
 
@@ -1423,8 +1423,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         ----------
         col_dtypes : dict
             Map for column names and new dtypes.
-        **kwargs : dict
-            Serves the compatibility purpose. Does not affect the result.
+        errors : {'raise', 'ignore'}, default: 'raise'
+            Control raising of exceptions on invalid data for provided dtype.
+            - raise : allow exceptions to be raised
+            - ignore : suppress exceptions. On error return original object.
 
         Returns
         -------
@@ -1432,7 +1434,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             New QueryCompiler with updated dtypes.
         """
         return DataFrameDefault.register(pandas.DataFrame.astype)(
-            self, dtype=col_dtypes, **kwargs
+            self, dtype=col_dtypes, errors=errors
         )
 
     def infer_objects(self):
@@ -2209,7 +2211,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # END Abstract insert
 
     # Abstract drop
-    def drop(self, index=None, columns=None):
+    def drop(self, index=None, columns=None, errors: str = "raise"):
         """
         Drop specified rows or columns.
 
@@ -2219,6 +2221,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Labels of rows to drop.
         columns : list of labels, optional
             Labels of columns to drop.
+        errors : str, default: "raise"
+            If 'ignore', suppress error and only existing labels are dropped.
 
         Returns
         -------
@@ -2229,7 +2233,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             return self
         else:
             return DataFrameDefault.register(pandas.DataFrame.drop)(
-                self, index=index, columns=columns
+                self, index=index, columns=columns, errors=errors
             )
 
     # END drop
