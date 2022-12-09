@@ -103,11 +103,9 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
     ]
 
     @classmethod
-    def read_csv(cls, filepath_or_buffer, **kwargs):  # noqa: PR01
+    def read_csv(cls, **kwargs):  # noqa: PR01
         """
-        Read data from `filepath_or_buffer` according to the passed `kwargs` parameters.
-
-        For parameters description please refer to pandas API.
+        Read csv data according to the passed `kwargs` parameters.
 
         Returns
         -------
@@ -192,7 +190,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
             )
 
             at = read_csv(
-                filepath_or_buffer,
+                kwargs["filepath_or_buffer"],
                 read_options=ro,
                 parse_options=po,
                 convert_options=co,
