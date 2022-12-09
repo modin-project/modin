@@ -3866,7 +3866,7 @@ class BasePandasDataset(ClassLogger):
 
         Parameters
         ----------
-        axis : {0, 1}, optional
+        axis : {0, 1, None}, optional
 
         Returns
         -------
@@ -3876,7 +3876,7 @@ class BasePandasDataset(ClassLogger):
         allowed_axis_values = (0, 1, None)
         if axis not in allowed_axis_values:
             raise ValueError(
-                f"passed `axis` parameter: {axis}, but should be one of {allowed_axis_values}"
+                f"Passed `axis` parameter: {axis}, but should be one of {allowed_axis_values}"
             )
         return self.__constructor__(
             query_compiler=self._query_compiler.repartition(axis=axis)

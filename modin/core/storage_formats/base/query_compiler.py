@@ -4767,7 +4767,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             result_names=result_names,
         )
 
-    def repartition(self, axis):
+    def repartition(self, axis=None):
         """
         Repartitioning QueryCompiler objects to get ideal partitions inside.
 
@@ -4776,7 +4776,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         Parameters
         ----------
-        axis : {0, 1}, optional
+        axis : {0, 1, None}, optional
 
         Returns
         -------
@@ -4788,10 +4788,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             # no sense for it to repartition the dataframe.
             return self
 
-        list_axis = [0, 1] if axis is None else [axis]
+        axes = [0, 1] if axis is None else [axis]
 
         new_query_compiler = self
-        for _ax in list_axis:
+        for _ax in axes:
             new_query_compiler = new_query_compiler.__constructor__(
                 new_query_compiler._modin_frame.apply_full_axis(
                     _ax, lambda df: df, keep_partitioning=False
