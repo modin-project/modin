@@ -19,6 +19,12 @@ JoinType is an enum that represents the `join_type` or `how` argument for the jo
 """
 
 from enum import Enum
+import sys
+
+if sys.version_info.minor < 8:
+    from typing_extensions import Literal
+else:
+    from typing import Literal  # type: ignore
 
 
 class Axis(Enum):  # noqa: PR01
@@ -34,6 +40,10 @@ class Axis(Enum):  # noqa: PR01
     ROW_WISE = 0
     COL_WISE = 1
     CELL_WISE = None
+
+
+AxisInt = Literal[0, 1]
+"""Type for the two possible integer values of an axis argument (0 or 1)."""
 
 
 class JoinType(Enum):  # noqa: PR01

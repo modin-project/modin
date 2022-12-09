@@ -175,8 +175,30 @@ def compare_asof(
 def test_first_valid_index(data):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
+    assert modin_df.first_valid_index() == pandas_df.first_valid_index()
 
-    assert modin_df.first_valid_index() == (pandas_df.first_valid_index())
+
+@pytest.mark.parametrize("none_value", [None, np.nan], ids=["None", "np.nan"])
+def test_first_valid_index_none(none_value):
+    data = {0: [none_value] * 100}
+    modin_df = pd.DataFrame(data)
+    pandas_df = pd.DataFrame(data)
+    assert modin_df.first_valid_index() == pandas_df.first_valid_index()
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_last_valid_index(data):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+    assert modin_df.last_valid_index() == pandas_df.last_valid_index()
+
+
+@pytest.mark.parametrize("none_value", [None, np.nan], ids=["None", "np.nan"])
+def test_last_valid_index_none(none_value):
+    data = {0: [none_value] * 100}
+    modin_df = pd.DataFrame(data)
+    pandas_df = pd.DataFrame(data)
+    assert modin_df.last_valid_index() == pandas_df.last_valid_index()
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

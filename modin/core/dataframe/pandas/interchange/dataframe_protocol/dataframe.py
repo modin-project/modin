@@ -176,10 +176,10 @@ class PandasProtocolDataframe(ProtocolDataframe):
         new_lengths = [chunksize] * n_chunks
         new_lengths[-1] = n_rows % n_chunks + new_lengths[-1]
 
-        new_partitions = self._df._partition_mgr_cls.map_axis_partitions(
-            0,
+        new_partitions = self._df._partition_mgr_cls.map_partitions_full_axis(
             self._df._partitions,
             lambda df: df,
+            axis=0,
             keep_partitioning=False,
             lengths=new_lengths,
         )

@@ -107,7 +107,7 @@ class PandasOnUnidistIO(UnidistIO):
 
             Notes
             -----
-            This function returns an empty ``pandas.DataFrame`` because ``apply_full_axis``
+            This function returns an empty ``pandas.DataFrame`` because ``map_full_axis``
             expects a Frame object as a result of operation (and ``to_sql`` has no dataframe result).
             """
             df.columns = columns
@@ -116,7 +116,9 @@ class PandasOnUnidistIO(UnidistIO):
 
         # Ensure that the metadata is syncrhonized
         qc._modin_frame._propagate_index_objs(axis=None)
-        result = qc._modin_frame.apply_full_axis(1, func, new_index=[], new_columns=[])
+        result = qc._modin_frame.map_full_axis(
+            func, axis=1, new_index=[], new_columns=[]
+        )
         # FIXME: we should be waiting for completion less expensievely, maybe use _modin_frame.materialize()?
         result.to_pandas()  # blocking operation
 
@@ -232,10 +234,10 @@ class PandasOnUnidistIO(UnidistIO):
         UnidistWrapper.materialize(signals.send.remote(0))
         # Ensure that the metadata is syncrhonized
         qc._modin_frame._propagate_index_objs(axis=None)
-        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
+        result = qc._modin_frame._partition_mgr_cls.map_partitions_full_axis(
+            qc._modin_frame._partitions,
+            func,
             axis=1,
-            partitions=qc._modin_frame._partitions,
-            map_func=func,
             keep_partitioning=True,
             lengths=None,
             enumerate_partitions=True,
@@ -311,10 +313,10 @@ class PandasOnUnidistIO(UnidistIO):
 
         # Ensure that the metadata is synchronized
         qc._modin_frame._propagate_index_objs(axis=None)
-        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
+        result = qc._modin_frame._partition_mgr_cls.map_partitions_full_axis(
+            qc._modin_frame._partitions,
+            func,
             axis=1,
-            partitions=qc._modin_frame._partitions,
-            map_func=func,
             keep_partitioning=True,
             lengths=None,
             enumerate_partitions=True,

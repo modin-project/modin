@@ -19,6 +19,7 @@ The manager also allows manipulating the data - running functions at each partit
 
 from abc import ABC
 from functools import wraps
+from typing import Optional, List
 import numpy as np
 import pandas
 from pandas._libs.lib import no_default
@@ -26,6 +27,7 @@ import warnings
 
 from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.utils import compute_chunksize
+from modin.core.dataframe.base.dataframe.utils import AxisInt
 from modin.core.dataframe.pandas.utils import concatenate
 from modin.config import NPartitions, ProgressBar, BenchmarkMode, Engine, StorageFormat
 from modin.logging import ClassLogger
@@ -241,125 +243,68 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             )
 
         if by is not None:
-            mapped_partitions = cls.broadcast_apply(
-                axis, map_func, left=partitions, right=by, other_name="other"
+            mapped_partitions = cls.map_partitions(
+                partitions, map_func, axis=axis, other_partitions=by, other_name="other"
             )
         else:
             mapped_partitions = cls.map_partitions(partitions, map_func)
-        return cls.map_axis_partitions(
-            axis, mapped_partitions, reduce_func, enumerate_partitions=True
+        return cls.map_partitions_full_axis(
+            mapped_partitions, reduce_func, axis=axis, enumerate_partitions=True
         )
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def broadcast_apply_select_indices(
+    def map_partitions(
         cls,
-        axis,
+        partitions,
         apply_func,
-        left,
-        right,
-        left_indices,
-        right_indices,
-        keep_remaining=False,
+        *,
+        axis: Optional[AxisInt] = None,
+        other_partitions: Optional = None,
+        other_name: str = "r",
+        **kwargs,
     ):
         """
-        Broadcast the `right` partitions to `left` and apply `apply_func` to selected indices.
+        Apply ``apply_func`` to every partition in ``partitions``.
+
+        If ``other_partitions`` is specified, then this broadcasts those partitions.
 
         Parameters
         ----------
-        axis : {0, 1}
-            Axis to apply and broadcast over.
+        partitions : NumPy 2D array
+            Partitions housing the data of Modin Frame.
         apply_func : callable
-            Function to apply.
-        left : NumPy 2D array
-            Left partitions.
-        right : NumPy 2D array
-            Right partitions.
-        left_indices : list-like
-            Indices to apply function to.
-        right_indices : dictionary of indices of right partitions
-            Indices that you want to bring at specified left partition, for example
-            dict {key: {key1: [0, 1], key2: [5]}} means that in left[key] you want to
-            broadcast [right[key1], right[key2]] partitions and internal indices
-            for `right` must be [[0, 1], [5]].
-        keep_remaining : bool, default: False
-            Whether or not to keep the other partitions.
-            Some operations may want to drop the remaining partitions and
-            keep only the results.
+            Function to apply to ``partitions``.
+            If ``other_partitions`` is supplied, then this is a binary function that is
+            applied to ``partitions`` and ``other_partitions`` together.
+        axis : {0, 1}, optional
+            Axis to map over (cell-wise if None).
+        other_partitions : NumPy 2D array, optional
+            Partitions of another partition to be broadcasted.
+        other_name : str, default: "r"
+            Name of key-value argument for `apply_func` that
+            is used to pass `right` to `apply_func`.
+        **kwargs : dict
+            Additional options to pass to ``apply_func``.
 
         Returns
         -------
         NumPy array
-            An array of partition objects.
-
-        Notes
-        -----
-        Your internal function must take these kwargs:
-        [`internal_indices`, `other`, `internal_other_indices`] to work correctly!
+            An array of partitions.
         """
-        if not axis:
-            partitions_for_apply = left.T
-            right = right.T
-        else:
-            partitions_for_apply = left
+        if axis is None:
+            assert other_partitions is None, "cannot broadcast for a cell-wise map"
+            preprocessed_map_func = cls.preprocess_func(apply_func)
+            return np.array(
+                [
+                    [part.apply(preprocessed_map_func) for part in row_of_parts]
+                    for row_of_parts in partitions
+                ]
+            )
 
-        [obj.drain_call_queue() for row in right for obj in row]
-
-        def get_partitions(index):
-            """Grab required partitions and indices from `right` and `right_indices`."""
-            must_grab = right_indices[index]
-            partitions_list = np.array([right[i] for i in must_grab.keys()])
-            indices_list = list(must_grab.values())
-            return {"other": partitions_list, "internal_other_indices": indices_list}
-
-        new_partitions = np.array(
-            [
-                partitions_for_apply[i]
-                if i not in left_indices
-                else cls._apply_func_to_list_of_partitions_broadcast(
-                    apply_func,
-                    partitions_for_apply[i],
-                    internal_indices=left_indices[i],
-                    **get_partitions(i),
-                )
-                for i in range(len(partitions_for_apply))
-                if i in left_indices or keep_remaining
-            ]
-        )
-        if not axis:
-            new_partitions = new_partitions.T
-        return new_partitions
-
-    @classmethod
-    @wait_computations_if_benchmark_mode
-    def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
-        """
-        Broadcast the `right` partitions to `left` and apply `apply_func` function.
-
-        Parameters
-        ----------
-        axis : {0, 1}
-            Axis to apply and broadcast over.
-        apply_func : callable
-            Function to apply.
-        left : np.ndarray
-            NumPy array of left partitions.
-        right : np.ndarray
-            NumPy array of right partitions.
-        other_name : str, default: "r"
-            Name of key-value argument for `apply_func` that
-            is used to pass `right` to `apply_func`.
-
-        Returns
-        -------
-        np.ndarray
-            NumPy array of result partition objects.
-
-        Notes
-        -----
-        This will often be overridden by implementations. It materializes the
-        entire partitions of the right and applies them to the left through `apply`.
-        """
+        assert (
+            other_partitions is not None
+        ), "Non-full-axis map is not supported for single partitions"
 
         def map_func(df, *others):
             other = (
@@ -367,13 +312,14 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             )
             return apply_func(df, **{other_name: other})
 
-        map_func = cls.preprocess_func(map_func)
-        rt_axis_parts = cls.axis_partition(right, axis ^ 1)
+        preprocessed_map_func = cls.preprocess_func(map_func)
+        left = partitions
+        rt_axis_parts = cls.axis_partition(other_partitions, axis ^ 1)
         return np.array(
             [
                 [
                     part.apply(
-                        map_func,
+                        preprocessed_map_func,
                         *(
                             rt_axis_parts[col_idx].list_of_blocks
                             if axis
@@ -388,69 +334,86 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def broadcast_axis_partitions(
+    def map_partitions_full_axis(
         cls,
-        axis,
+        partitions,
         apply_func,
-        left,
-        right,
+        *,
+        axis: Optional[AxisInt] = None,
+        other_partitions: Optional = None,
         keep_partitioning=False,
-        apply_indices=None,
+        apply_indices: Optional[List[int]] = None,
+        other_apply_indices: Optional[List[int]] = None,
+        keep_remaining=False,
         enumerate_partitions=False,
-        lengths=None,
+        lengths: Optional[List[int]] = None,
         **kwargs,
     ):
         """
-        Broadcast the `right` partitions to `left` and apply `apply_func` along full `axis`.
+        Apply ``apply_func`` to every partition in ``partitions``, converting them into full-axis partitions if necessary.
+
+        If ``other_partitions`` is specified, then this broadcasts those partitions.
+
+        If ``partitions`` or ``other_partitions`` do not encompass the whole axis,
+        the partitions will be concatenated together before the function is called,
+        and then re-split after it returns.
 
         Parameters
         ----------
-        axis : {0, 1}
-            Axis to apply and broadcast over.
+        partitions : NumPy 2D array
+            Partitions housing the data of Modin Frame.
         apply_func : callable
-            Function to apply.
-        left : NumPy 2D array
-            Left partitions.
-        right : NumPy 2D array
-            Right partitions.
+            Function to apply to ``partitions``.
+            If ``other_partitions`` is supplied, then this is a binary function that is
+            applied to ``partitions`` and ``other_partitions`` together.
+        axis : {0, 1}, optional
+            Axis to map over (cell-wise if None).
+        other_partitions : NumPy 2D array, optional
+            Partitions of another partition to be broadcasted.
         keep_partitioning : boolean, default: False
             The flag to keep partition boundaries for Modin Frame.
             Setting it to True disables shuffling data from one partition to another.
-        apply_indices : list of ints, default: None
-            Indices of `axis ^ 1` to apply function over.
+        apply_indices : list of ints, optional
+            Indices of ``axis ^ 1`` in ``partitions`` to apply function over.
+        other_apply_indices : list of ints, optional
+            Indices of ``axis ^ 1`` in ``other_partitions`` to apply function over.
+        keep_remaining : bool, default: False
+            Whether or not to keep the other partitions.
+            Some operations may want to drop the remaining partitions and keep only the results.
         enumerate_partitions : bool, default: False
-            Whether or not to pass partition index into `apply_func`.
-            Note that `apply_func` must be able to accept `partition_idx` kwarg.
+            Whether or not to pass partition index into ``apply_func``.
+            Note that ``apply_func`` must be able to accept ``partition_idx`` kwarg.
         lengths : list of ints, default: None
             The list of lengths to shuffle the object.
         **kwargs : dict
-            Additional options that could be used by different engines.
+            Additional options to pass to ``apply_func``.
 
         Returns
         -------
         NumPy array
-            An array of partition objects.
+            An array of partitions.
         """
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
         # partitions as best we can right now.
         if keep_partitioning:
-            num_splits = len(left) if axis == 0 else len(left.T)
+            num_splits = len(partitions) if axis == 0 else len(partitions.T)
         elif lengths:
             num_splits = len(lengths)
         else:
             num_splits = NPartitions.get()
         preprocessed_map_func = cls.preprocess_func(apply_func)
-        left_partitions = cls.axis_partition(left, axis)
-        right_partitions = None if right is None else cls.axis_partition(right, axis)
+        left_partitions = cls.axis_partition(partitions, axis)
+        right_partitions = (
+            None
+            if other_partitions is None
+            else cls.axis_partition(other_partitions, axis)
+        )
         # For mapping across the entire axis, we don't maintain partitioning because we
         # may want to line to partitioning up with another BlockPartitions object. Since
         # we don't need to maintain the partitioning, this gives us the opportunity to
         # load-balance the data as well.
-        kw = {
-            "num_splits": num_splits,
-            "other_axis_partition": right_partitions,
-        }
+        kw = {"num_splits": num_splits, "other_axis_partition": right_partitions}
         if lengths:
             kw["lengths"] = lengths
             kw["manual_partition"] = True
@@ -473,32 +436,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         # rows, so we need to transpose the returned 2D NumPy array to return
         # the structure to the correct order.
         return result_blocks.T if not axis else result_blocks
-
-    @classmethod
-    @wait_computations_if_benchmark_mode
-    def map_partitions(cls, partitions, map_func):
-        """
-        Apply `map_func` to every partition in `partitions`.
-
-        Parameters
-        ----------
-        partitions : NumPy 2D array
-            Partitions housing the data of Modin Frame.
-        map_func : callable
-            Function to apply.
-
-        Returns
-        -------
-        NumPy array
-            An array of partitions
-        """
-        preprocessed_map_func = cls.preprocess_func(map_func)
-        return np.array(
-            [
-                [part.apply(preprocessed_map_func) for part in row_of_parts]
-                for row_of_parts in partitions
-            ]
-        )
 
     @classmethod
     @wait_computations_if_benchmark_mode
@@ -527,58 +464,395 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         )
 
     @classmethod
-    def map_axis_partitions(
-        cls,
-        axis,
-        partitions,
-        map_func,
-        keep_partitioning=False,
-        lengths=None,
-        enumerate_partitions=False,
-        **kwargs,
-    ):
+    def _apply_func_to_list_of_partitions(cls, preprocessed_func, partitions, **kwargs):
         """
-        Apply `map_func` to every partition in `partitions` along given `axis`.
+        Apply a function to a list of remote partitions.
 
         Parameters
         ----------
-        axis : {0, 1}
-            Axis to perform the map across (0 - index, 1 - columns).
-        partitions : NumPy 2D array
-            Partitions of Modin Frame.
-        map_func : callable
-            Function to apply.
-        keep_partitioning : bool, default: False
-            Whether to keep partitioning for Modin Frame.
-            Setting it to True stops data shuffling between partitions.
-        lengths : list of ints, default: None
-            List of lengths to shuffle the object.
-        enumerate_partitions : bool, default: False
-            Whether or not to pass partition index into `map_func`.
-            Note that `map_func` must be able to accept `partition_idx` kwarg.
+        preprocessed_func : callable
+            The func to apply after being passed through `preprocess_func`.
+        partitions : np.ndarray
+            The partitions to which the `func` will apply.
         **kwargs : dict
-            Additional options that could be used by different engines.
+            Keyword arguments for PandasDataframePartition.apply function.
 
         Returns
         -------
-        NumPy array
-            An array of new partitions for Modin Frame.
+        list
+            A list of PandasDataframePartition objects.
+        """
+        return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
+
+    @classmethod
+    def _apply_func_to_list_of_partitions_broadcast(
+        cls, preprocessed_func, partitions, other, **kwargs
+    ):
+        """
+        Apply a function to a list of remote partitions.
+
+        `other` partitions will be broadcasted to `partitions` and `func` will be applied.
+
+        Parameters
+        ----------
+        preprocessed_func : callable
+            The func to apply after being passed through `preprocess_func`.
+        partitions : np.ndarray
+            The partitions to which the `func` will apply.
+        other : np.ndarray
+            The partitions to be broadcasted to `partitions`.
+        **kwargs : dict
+            Keyword arguments for PandasDataframePartition.apply function.
+
+        Returns
+        -------
+        list
+            A list of PandasDataframePartition objects.
+        """
+        return [
+            obj.apply(preprocessed_func, other=[o.get() for o in broadcasted], **kwargs)
+            for obj, broadcasted in zip(partitions, other.T)
+        ]
+
+    @classmethod
+    @wait_computations_if_benchmark_mode
+    def map_select_indices(
+        cls,
+        partitions,
+        func,
+        *,
+        axis,
+        other_partitions,
+        full_axis,
+        apply_indices,
+        other_apply_indices,
+        keep_remaining=False,
+    ):
+        """
+        Apply a function to select indices.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            The partitions to which the ``func`` will apply.
+        func : callable
+            The function to apply to these indices of partitions.
+        axis : {0, 1}
+            Axis to apply the ``func`` over.
+        other_partitions : np.ndarray
+            Partitions for another dataframe to broadcast.
+        full_axis : bool
+            Whether to apply the function to a virtual partition that encompasses the whole axis.
+            This argument is ignored if other_partitions is specified.
+        apply_indices : dict
+            The indices to apply the function to.
+        other_apply_indices : dict
+            The indices of ``other_partitions`` to apply the function to.
+        keep_remaining : bool, default: False
+            Whether or not to keep the other partitions. Some operations
+            may want to drop the remaining partitions and keep
+            only the results.
+
+        Returns
+        -------
+        np.ndarray
+            A NumPy array with partitions.
 
         Notes
         -----
-        This method should be used in the case when `map_func` relies on
-        some global information about the axis.
+        Your internal function must take a kwarg `internal_indices` for
+        this to work correctly. This prevents information leakage of the
+        internal index to the external representation.
         """
-        return cls.broadcast_axis_partitions(
-            axis=axis,
-            left=partitions,
-            apply_func=map_func,
-            keep_partitioning=keep_partitioning,
-            right=None,
-            lengths=lengths,
-            enumerate_partitions=enumerate_partitions,
-            **kwargs,
-        )
+        if partitions.size == 0:
+            return np.array([[]])
+        # Handling dictionaries has to be done differently, but we still want
+        # to figure out the partitions that need to be applied to, so we will
+        # store the dictionary in a separate variable and assign `apply_indices` to
+        # the keys to handle it the same as we normally would.
+        if isinstance(func, dict):
+            dict_func = func
+        else:
+            dict_func = None
+        preprocessed_func = cls.preprocess_func(func)
+        if full_axis:
+            if not keep_remaining:
+                selected_partitions = partitions.T if not axis else partitions
+                selected_partitions = np.array(
+                    [selected_partitions[i] for i in apply_indices]
+                )
+                selected_partitions = (
+                    selected_partitions.T if not axis else selected_partitions
+                )
+            else:
+                selected_partitions = partitions
+            if not axis:
+                partitions_for_apply = cls.column_partitions(selected_partitions)
+                partitions_for_remaining = partitions.T
+            else:
+                partitions_for_apply = cls.row_partitions(selected_partitions)
+                partitions_for_remaining = partitions
+        else:
+            partitions_for_apply = partitions.T if not axis else partitions
+
+        other_partitions = None if other_partitions is None else other_partitions.T
+
+        def get_partitions(index):
+            """Grab required partitions and indices from `other` and `other_apply_indices`."""
+            if other_partitions is None:
+                return {}
+            must_grab = other_apply_indices[index]
+            partitions_list = np.array([other_partitions[i] for i in must_grab.keys()])
+            indices_list = list(must_grab.values())
+            return {"other": partitions_list, "internal_other_indices": indices_list}
+
+        if other_partitions is not None:
+            [obj.drain_call_queue() for row in other_partitions for obj in row]
+            new_partitions = np.array(
+                [
+                    partitions_for_apply[i]
+                    if i not in apply_indices
+                    else cls._apply_func_to_list_of_partitions_broadcast(
+                        preprocessed_func,
+                        partitions_for_apply[i],
+                        internal_indices=apply_indices[i],
+                        **get_partitions(i),
+                    )
+                    for i in range(len(partitions_for_apply))
+                    if i in apply_indices or keep_remaining
+                ]
+            )
+            if not axis:
+                new_partitions = new_partitions.T
+            return new_partitions
+        # We may have a command to perform different functions on different
+        # columns at the same time. We attempt to handle this as efficiently as
+        # possible here. Functions that use this in the dictionary format must
+        # accept a keyword argument `func_dict`.
+        if dict_func is not None:
+            if not keep_remaining:
+                if full_axis:
+                    result = np.array(
+                        [
+                            part.apply(
+                                preprocessed_func,
+                                func_dict={
+                                    idx: dict_func[idx] for idx in apply_indices[i]
+                                },
+                            )
+                            for i, part in zip(apply_indices, partitions_for_apply)
+                        ]
+                    )
+                else:
+                    result = np.array(
+                        [
+                            cls._apply_func_to_list_of_partitions(
+                                preprocessed_func,
+                                partitions_for_apply[o_idx],
+                                func_dict={
+                                    i_idx: dict_func[i_idx]
+                                    for i_idx in list_to_apply
+                                    if i_idx >= 0
+                                },
+                            )
+                            for o_idx, list_to_apply in apply_indices.items()
+                        ]
+                    )
+            else:
+                if full_axis:
+                    result = np.array(
+                        [
+                            partitions_for_remaining[i]
+                            if i not in apply_indices
+                            else cls._apply_func_to_list_of_partitions(
+                                preprocessed_func,
+                                partitions_for_apply[i],
+                                func_dict={
+                                    idx: dict_func[idx] for idx in apply_indices[i]
+                                },
+                            )
+                            for i in range(len(partitions_for_apply))
+                        ]
+                    )
+                else:
+                    result = np.array(
+                        [
+                            partitions_for_apply[i]
+                            if i not in apply_indices
+                            else cls._apply_func_to_list_of_partitions(
+                                preprocessed_func,
+                                partitions_for_apply[i],
+                                func_dict={
+                                    idx: dict_func[idx]
+                                    for idx in apply_indices[i]
+                                    if idx >= 0
+                                },
+                            )
+                            for i in range(len(partitions_for_apply))
+                        ]
+                    )
+        else:
+            if not keep_remaining:
+                # We are passing internal indices in here. In order for func to
+                # actually be able to use this information, it must be able to take in
+                # the internal indices. This might mean an iloc in the case of Pandas
+                # or some other way to index into the internal representation.
+                if full_axis:
+                    result = np.array(
+                        [
+                            part.apply(
+                                preprocessed_func, internal_indices=apply_indices[i]
+                            )
+                            for i, part in zip(apply_indices, partitions_for_apply)
+                        ]
+                    )
+                else:
+                    result = np.array(
+                        [
+                            cls._apply_func_to_list_of_partitions(
+                                preprocessed_func,
+                                partitions_for_apply[i],
+                                internal_indices=list_to_apply,
+                            )
+                            for i, list_to_apply in apply_indices.items()
+                        ]
+                    )
+            else:
+                # The difference here is that we modify a subset and return the
+                # remaining (non-updated) blocks in their original position.
+                if full_axis:
+                    result = np.array(
+                        [
+                            partitions_for_remaining[i]
+                            if i not in apply_indices
+                            else partitions_for_apply[i].apply(
+                                preprocessed_func,
+                                internal_indices=apply_indices[i],
+                            )
+                            for i in range(len(partitions_for_remaining))
+                        ]
+                    )
+                else:
+                    result = np.array(
+                        [
+                            partitions_for_apply[i]
+                            if i not in apply_indices
+                            else cls._apply_func_to_list_of_partitions(
+                                preprocessed_func,
+                                partitions_for_apply[i],
+                                internal_indices=apply_indices[i],
+                            )
+                            for i in range(len(partitions_for_apply))
+                        ]
+                    )
+        return result.T if not axis else result
+
+    @classmethod
+    @wait_computations_if_benchmark_mode
+    def map_select_indices_both_axes(
+        cls,
+        partitions,
+        func,
+        row_partitions_list,
+        col_partitions_list,
+        item_to_distribute=no_default,
+        row_lengths=None,
+        col_widths=None,
+    ):
+        """
+        Apply a function along both axes.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            The partitions to which the `func` will apply.
+        func : callable
+            The function to apply.
+        row_partitions_list : iterable of tuples
+            Iterable of tuples, containing 2 values:
+                1. Integer row partition index.
+                2. Internal row indexer of this partition.
+        col_partitions_list : iterable of tuples
+            Iterable of tuples, containing 2 values:
+                1. Integer column partition index.
+                2. Internal column indexer of this partition.
+        item_to_distribute : np.ndarray or scalar, default: no_default
+            The item to split up so it can be applied over both axes.
+        row_lengths : list of ints, optional
+            Lengths of partitions for every row. If not specified this information
+            is extracted from partitions itself.
+        col_widths : list of ints, optional
+            Widths of partitions for every column. If not specified this information
+            is extracted from partitions itself.
+
+        Returns
+        -------
+        np.ndarray
+            A NumPy array with partitions.
+
+        Notes
+        -----
+        For your func to operate directly on the indices provided,
+        it must use `row_internal_indices`, `col_internal_indices` as keyword
+        arguments.
+        """
+        partition_copy = partitions.copy()
+        row_position_counter = 0
+
+        if row_lengths is None:
+            row_lengths = [None] * len(row_partitions_list)
+        if col_widths is None:
+            col_widths = [None] * len(col_partitions_list)
+
+        def compute_part_size(indexer, remote_part, part_idx, axis):
+            """Compute indexer length along the specified axis for the passed partition."""
+            if isinstance(indexer, slice):
+                shapes_container = row_lengths if axis == 0 else col_widths
+                part_size = shapes_container[part_idx]
+                if part_size is None:
+                    part_size = (
+                        remote_part.length() if axis == 0 else remote_part.width()
+                    )
+                    shapes_container[part_idx] = part_size
+                indexer = range(*indexer.indices(part_size))
+            return len(indexer)
+
+        for row_idx, row_values in enumerate(row_partitions_list):
+            row_blk_idx, row_internal_idx = row_values
+            col_position_counter = 0
+            row_offset = 0
+            for col_idx, col_values in enumerate(col_partitions_list):
+                col_blk_idx, col_internal_idx = col_values
+                remote_part = partition_copy[row_blk_idx, col_blk_idx]
+
+                row_offset = compute_part_size(
+                    row_internal_idx, remote_part, row_idx, axis=0
+                )
+                col_offset = compute_part_size(
+                    col_internal_idx, remote_part, col_idx, axis=1
+                )
+
+                if item_to_distribute is not no_default:
+                    if isinstance(item_to_distribute, np.ndarray):
+                        item = item_to_distribute[
+                            row_position_counter : row_position_counter + row_offset,
+                            col_position_counter : col_position_counter + col_offset,
+                        ]
+                    else:
+                        item = item_to_distribute
+                    item = {"item": item}
+                else:
+                    item = {}
+                block_result = remote_part.add_to_apply_calls(
+                    func,
+                    row_internal_indices=row_internal_idx,
+                    col_internal_indices=col_internal_idx,
+                    **item,
+                )
+                partition_copy[row_blk_idx, col_blk_idx] = block_result
+                col_position_counter += col_offset
+            row_position_counter += row_offset
+        return partition_copy
 
     @classmethod
     def concat(cls, axis, left_parts, right_parts):
@@ -641,24 +915,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         pandas.DataFrame
             A pandas DataFrame
         """
-        retrieved_objects = cls.get_objects_from_partitions(partitions.flatten())
-        if all(
-            isinstance(obj, (pandas.DataFrame, pandas.Series))
-            for obj in retrieved_objects
-        ):
-            height, width, *_ = tuple(partitions.shape) + (0,)
-            # restore 2d array
-            objs = iter(retrieved_objects)
-            retrieved_objects = [
-                [next(objs) for _ in range(width)] for __ in range(height)
-            ]
-        else:
-            # Partitions do not always contain pandas objects, for example, hdk uses pyarrow tables.
-            # This implementation comes from the fact that calling `partition.get`
-            # function is not always equivalent to `partition.to_pandas`.
-            retrieved_objects = [
-                [obj.to_pandas() for obj in part] for part in partitions
-            ]
+        retrieved_objects = [[obj.to_pandas() for obj in part] for part in partitions]
         if all(
             isinstance(part, pandas.Series) for row in retrieved_objects for part in row
         ):
@@ -886,400 +1143,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             # TODO FIX INFORMATION LEAK!!!!1!!1!!
             total_idx = total_idx[0].append(total_idx[1:])
         return total_idx, new_idx
-
-    @classmethod
-    def _apply_func_to_list_of_partitions_broadcast(
-        cls, func, partitions, other, **kwargs
-    ):
-        """
-        Apply a function to a list of remote partitions.
-
-        `other` partitions will be broadcasted to `partitions`
-        and `func` will be applied.
-
-        Parameters
-        ----------
-        func : callable
-            The func to apply.
-        partitions : np.ndarray
-            The partitions to which the `func` will apply.
-        other : np.ndarray
-            The partitions to be broadcasted to `partitions`.
-        **kwargs : dict
-            Keyword arguments for PandasDataframePartition.apply function.
-
-        Returns
-        -------
-        list
-            A list of PandasDataframePartition objects.
-        """
-        preprocessed_func = cls.preprocess_func(func)
-        return [
-            obj.apply(preprocessed_func, other=[o.get() for o in broadcasted], **kwargs)
-            for obj, broadcasted in zip(partitions, other.T)
-        ]
-
-    @classmethod
-    def _apply_func_to_list_of_partitions(cls, func, partitions, **kwargs):
-        """
-        Apply a function to a list of remote partitions.
-
-        Parameters
-        ----------
-        func : callable
-            The func to apply.
-        partitions : np.ndarray
-            The partitions to which the `func` will apply.
-        **kwargs : dict
-            Keyword arguments for PandasDataframePartition.apply function.
-
-        Returns
-        -------
-        list
-            A list of PandasDataframePartition objects.
-
-        Notes
-        -----
-        This preprocesses the `func` first before applying it to the partitions.
-        """
-        preprocessed_func = cls.preprocess_func(func)
-        return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
-
-    @classmethod
-    @wait_computations_if_benchmark_mode
-    def apply_func_to_select_indices(
-        cls, axis, partitions, func, indices, keep_remaining=False
-    ):
-        """
-        Apply a function to select indices.
-
-        Parameters
-        ----------
-        axis : {0, 1}
-            Axis to apply the `func` over.
-        partitions : np.ndarray
-            The partitions to which the `func` will apply.
-        func : callable
-            The function to apply to these indices of partitions.
-        indices : dict
-            The indices to apply the function to.
-        keep_remaining : bool, default: False
-            Whether or not to keep the other partitions. Some operations
-            may want to drop the remaining partitions and keep
-            only the results.
-
-        Returns
-        -------
-        np.ndarray
-            A NumPy array with partitions.
-
-        Notes
-        -----
-        Your internal function must take a kwarg `internal_indices` for
-        this to work correctly. This prevents information leakage of the
-        internal index to the external representation.
-        """
-        if partitions.size == 0:
-            return np.array([[]])
-        # Handling dictionaries has to be done differently, but we still want
-        # to figure out the partitions that need to be applied to, so we will
-        # store the dictionary in a separate variable and assign `indices` to
-        # the keys to handle it the same as we normally would.
-        if isinstance(func, dict):
-            dict_func = func
-        else:
-            dict_func = None
-        if not axis:
-            partitions_for_apply = partitions.T
-        else:
-            partitions_for_apply = partitions
-        # We may have a command to perform different functions on different
-        # columns at the same time. We attempt to handle this as efficiently as
-        # possible here. Functions that use this in the dictionary format must
-        # accept a keyword argument `func_dict`.
-        if dict_func is not None:
-            if not keep_remaining:
-                result = np.array(
-                    [
-                        cls._apply_func_to_list_of_partitions(
-                            func,
-                            partitions_for_apply[o_idx],
-                            func_dict={
-                                i_idx: dict_func[i_idx]
-                                for i_idx in list_to_apply
-                                if i_idx >= 0
-                            },
-                        )
-                        for o_idx, list_to_apply in indices.items()
-                    ]
-                )
-            else:
-                result = np.array(
-                    [
-                        partitions_for_apply[i]
-                        if i not in indices
-                        else cls._apply_func_to_list_of_partitions(
-                            func,
-                            partitions_for_apply[i],
-                            func_dict={
-                                idx: dict_func[idx] for idx in indices[i] if idx >= 0
-                            },
-                        )
-                        for i in range(len(partitions_for_apply))
-                    ]
-                )
-        else:
-            if not keep_remaining:
-                # We are passing internal indices in here. In order for func to
-                # actually be able to use this information, it must be able to take in
-                # the internal indices. This might mean an iloc in the case of Pandas
-                # or some other way to index into the internal representation.
-                result = np.array(
-                    [
-                        cls._apply_func_to_list_of_partitions(
-                            func,
-                            partitions_for_apply[idx],
-                            internal_indices=list_to_apply,
-                        )
-                        for idx, list_to_apply in indices.items()
-                    ]
-                )
-            else:
-                # The difference here is that we modify a subset and return the
-                # remaining (non-updated) blocks in their original position.
-                result = np.array(
-                    [
-                        partitions_for_apply[i]
-                        if i not in indices
-                        else cls._apply_func_to_list_of_partitions(
-                            func, partitions_for_apply[i], internal_indices=indices[i]
-                        )
-                        for i in range(len(partitions_for_apply))
-                    ]
-                )
-        return result.T if not axis else result
-
-    @classmethod
-    @wait_computations_if_benchmark_mode
-    def apply_func_to_select_indices_along_full_axis(
-        cls, axis, partitions, func, indices, keep_remaining=False
-    ):
-        """
-        Apply a function to a select subset of full columns/rows.
-
-        Parameters
-        ----------
-        axis : {0, 1}
-            The axis to apply the function over.
-        partitions : np.ndarray
-            The partitions to which the `func` will apply.
-        func : callable
-            The function to apply.
-        indices : list-like
-            The global indices to apply the func to.
-        keep_remaining : bool, default: False
-            Whether or not to keep the other partitions.
-            Some operations may want to drop the remaining partitions and
-            keep only the results.
-
-        Returns
-        -------
-        np.ndarray
-            A NumPy array with partitions.
-
-        Notes
-        -----
-        This should be used when you need to apply a function that relies
-        on some global information for the entire column/row, but only need
-        to apply a function to a subset.
-        For your func to operate directly on the indices provided,
-        it must use `internal_indices` as a keyword argument.
-        """
-        if partitions.size == 0:
-            return np.array([[]])
-        # Handling dictionaries has to be done differently, but we still want
-        # to figure out the partitions that need to be applied to, so we will
-        # store the dictionary in a separate variable and assign `indices` to
-        # the keys to handle it the same as we normally would.
-        if isinstance(func, dict):
-            dict_func = func
-        else:
-            dict_func = None
-        preprocessed_func = cls.preprocess_func(func)
-        # Since we might be keeping the remaining blocks that are not modified,
-        # we have to also keep the block_partitions object in the correct
-        # direction (transpose for columns).
-        if not keep_remaining:
-            selected_partitions = partitions.T if not axis else partitions
-            selected_partitions = np.array([selected_partitions[i] for i in indices])
-            selected_partitions = (
-                selected_partitions.T if not axis else selected_partitions
-            )
-        else:
-            selected_partitions = partitions
-        if not axis:
-            partitions_for_apply = cls.column_partitions(selected_partitions)
-            partitions_for_remaining = partitions.T
-        else:
-            partitions_for_apply = cls.row_partitions(selected_partitions)
-            partitions_for_remaining = partitions
-        # We may have a command to perform different functions on different
-        # columns at the same time. We attempt to handle this as efficiently as
-        # possible here. Functions that use this in the dictionary format must
-        # accept a keyword argument `func_dict`.
-        if dict_func is not None:
-            if not keep_remaining:
-                result = np.array(
-                    [
-                        part.apply(
-                            preprocessed_func,
-                            func_dict={idx: dict_func[idx] for idx in indices[i]},
-                        )
-                        for i, part in zip(indices, partitions_for_apply)
-                    ]
-                )
-            else:
-                result = np.array(
-                    [
-                        partitions_for_remaining[i]
-                        if i not in indices
-                        else cls._apply_func_to_list_of_partitions(
-                            preprocessed_func,
-                            partitions_for_apply[i],
-                            func_dict={idx: dict_func[idx] for idx in indices[i]},
-                        )
-                        for i in range(len(partitions_for_apply))
-                    ]
-                )
-        else:
-            if not keep_remaining:
-                # See notes in `apply_func_to_select_indices`
-                result = np.array(
-                    [
-                        part.apply(preprocessed_func, internal_indices=indices[i])
-                        for i, part in zip(indices, partitions_for_apply)
-                    ]
-                )
-            else:
-                # See notes in `apply_func_to_select_indices`
-                result = np.array(
-                    [
-                        partitions_for_remaining[i]
-                        if i not in indices
-                        else partitions_for_apply[i].apply(
-                            preprocessed_func, internal_indices=indices[i]
-                        )
-                        for i in range(len(partitions_for_remaining))
-                    ]
-                )
-        return result.T if not axis else result
-
-    @classmethod
-    @wait_computations_if_benchmark_mode
-    def apply_func_to_indices_both_axis(
-        cls,
-        partitions,
-        func,
-        row_partitions_list,
-        col_partitions_list,
-        item_to_distribute=no_default,
-        row_lengths=None,
-        col_widths=None,
-    ):
-        """
-        Apply a function along both axes.
-
-        Parameters
-        ----------
-        partitions : np.ndarray
-            The partitions to which the `func` will apply.
-        func : callable
-            The function to apply.
-        row_partitions_list : iterable of tuples
-            Iterable of tuples, containing 2 values:
-                1. Integer row partition index.
-                2. Internal row indexer of this partition.
-        col_partitions_list : iterable of tuples
-            Iterable of tuples, containing 2 values:
-                1. Integer column partition index.
-                2. Internal column indexer of this partition.
-        item_to_distribute : np.ndarray or scalar, default: no_default
-            The item to split up so it can be applied over both axes.
-        row_lengths : list of ints, optional
-            Lengths of partitions for every row. If not specified this information
-            is extracted from partitions itself.
-        col_widths : list of ints, optional
-            Widths of partitions for every column. If not specified this information
-            is extracted from partitions itself.
-
-        Returns
-        -------
-        np.ndarray
-            A NumPy array with partitions.
-
-        Notes
-        -----
-        For your func to operate directly on the indices provided,
-        it must use `row_internal_indices`, `col_internal_indices` as keyword
-        arguments.
-        """
-        partition_copy = partitions.copy()
-        row_position_counter = 0
-
-        if row_lengths is None:
-            row_lengths = [None] * len(row_partitions_list)
-        if col_widths is None:
-            col_widths = [None] * len(col_partitions_list)
-
-        def compute_part_size(indexer, remote_part, part_idx, axis):
-            """Compute indexer length along the specified axis for the passed partition."""
-            if isinstance(indexer, slice):
-                shapes_container = row_lengths if axis == 0 else col_widths
-                part_size = shapes_container[part_idx]
-                if part_size is None:
-                    part_size = (
-                        remote_part.length() if axis == 0 else remote_part.width()
-                    )
-                    shapes_container[part_idx] = part_size
-                indexer = range(*indexer.indices(part_size))
-            return len(indexer)
-
-        for row_idx, row_values in enumerate(row_partitions_list):
-            row_blk_idx, row_internal_idx = row_values
-            col_position_counter = 0
-            row_offset = 0
-            for col_idx, col_values in enumerate(col_partitions_list):
-                col_blk_idx, col_internal_idx = col_values
-                remote_part = partition_copy[row_blk_idx, col_blk_idx]
-
-                row_offset = compute_part_size(
-                    row_internal_idx, remote_part, row_idx, axis=0
-                )
-                col_offset = compute_part_size(
-                    col_internal_idx, remote_part, col_idx, axis=1
-                )
-
-                if item_to_distribute is not no_default:
-                    if isinstance(item_to_distribute, np.ndarray):
-                        item = item_to_distribute[
-                            row_position_counter : row_position_counter + row_offset,
-                            col_position_counter : col_position_counter + col_offset,
-                        ]
-                    else:
-                        item = item_to_distribute
-                    item = {"item": item}
-                else:
-                    item = {}
-                block_result = remote_part.add_to_apply_calls(
-                    func,
-                    row_internal_indices=row_internal_idx,
-                    col_internal_indices=col_internal_idx,
-                    **item,
-                )
-                partition_copy[row_blk_idx, col_blk_idx] = block_result
-                col_position_counter += col_offset
-            row_position_counter += row_offset
-        return partition_copy
 
     @classmethod
     @wait_computations_if_benchmark_mode
