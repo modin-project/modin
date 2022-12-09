@@ -664,7 +664,6 @@ class DataFrameGroupBy(ClassLogger):
         if not isinstance(result, Series):
             result = result.squeeze(axis=1)
         if not self._kwargs.get("as_index") and not isinstance(result, Series):
-            result = result.rename(columns={0: "size"})
             result = (
                 result.rename(columns={MODIN_UNNAMED_SERIES_LABEL: "index"})
                 if MODIN_UNNAMED_SERIES_LABEL in result.columns
