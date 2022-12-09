@@ -17,6 +17,7 @@ The module contains the functionality that is used when benchmarking Modin commi
 In the case of using utilities from the main Modin code, there is a chance that when
 benchmarking old commits, the utilities changed, which in turn can unexpectedly affect
 the performance results, hence some utility functions are duplicated here.
+Just trigger for ASV benchmarks.
 """
 
 import logging
