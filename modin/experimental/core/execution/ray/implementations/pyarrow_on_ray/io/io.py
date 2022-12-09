@@ -43,8 +43,3 @@ class PyarrowOnRayIO(RayIO):
     frame_partition_cls = PyarrowOnRayDataframePartition
     query_compiler_cls = PyarrowQueryCompiler
     csv_reader = PyarrowOnRayCSVDispatcher
-
-    read_parquet_remote_task = None
-    read_hdf_remote_task = None
-    read_feather_remote_task = None
-    read_sql_remote_task = None

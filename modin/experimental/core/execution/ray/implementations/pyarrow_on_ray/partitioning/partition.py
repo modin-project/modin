@@ -15,6 +15,7 @@
 
 import ray
 import pyarrow
+import pandas
 
 from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
     PandasOnRayDataframePartition,
@@ -79,3 +80,22 @@ class PyarrowOnRayDataframePartition(PandasOnRayDataframePartition):
         callable
         """
         return lambda table: table.num_columns - (1 if "index" in table.columns else 0)
+
+    def to_pandas(self):
+        """
+        Convert the object wrapped by this partition to a ``pandas.DataFrame``.
+
+        Returns
+        -------
+        pandas.DataFrame
+
+        Notes
+        -----
+        If the underlying object is a pandas DataFrame, this will likely
+        only need to call `get`.
+        """
+        dataframe = self.get()
+        if isinstance(dataframe, pyarrow.Table):
+            dataframe = dataframe.to_pandas()
+        assert isinstance(dataframe, (pandas.DataFrame, pandas.Series))
+        return dataframe

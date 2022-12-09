@@ -31,7 +31,6 @@ from modin.config import (
     TestDatasetSize,
     Engine,
     StorageFormat,
-    IsExperimental,
     TestReadFromPostgres,
     TestReadFromSqlServer,
     ReadSqlEngine,
@@ -226,10 +225,6 @@ def make_parquet_dir():
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
-@pytest.mark.skipif(
-    IsExperimental.get() and StorageFormat.get() == "Pyarrow",
-    reason="Segmentation fault; see PR #2347 ffor details",
-)
 class TestCsv:
     # delimiter tests
     @pytest.mark.parametrize("sep", [None, "_", ",", ".", "\n"])
