@@ -70,7 +70,7 @@ sentinel = object()
 
 # Do not lookup certain attributes in columns or index, as they're used for some
 # special purposes, like serving remote context
-_ATTRS_NO_LOOKUP = {"____id_pack__", "__name__"}
+_ATTRS_NO_LOOKUP = {"____id_pack__", "__name__", "_cache"}
 
 _DEFAULT_BEHAVIOUR = {
     "__init__",
@@ -94,6 +94,7 @@ _DEFAULT_BEHAVIOUR = {
     "_reduce_dimension",
     "__repr__",
     "__len__",
+    "__constructor__",
     "_create_or_update_from_compiler",
     "_update_inplace",
     # for persistance support;
@@ -541,23 +542,17 @@ class BasePandasDataset(ClassLogger):
 
         return cls._pandas_class._get_axis_number(axis) if axis is not None else 0
 
-    def __constructor__(self, *args, **kwargs):
+    @pandas.util.cache_readonly
+    def __constructor__(self):
         """
         Construct DataFrame or Series object depending on self type.
-
-        Parameters
-        ----------
-        *args : list
-            Additional positional arguments to be passed to constructor.
-        **kwargs : dict
-            Additional keywords arguments to be passed to constructor.
 
         Returns
         -------
         modin.pandas.BasePandasDataset
             Constructed object.
         """
-        return type(self)(*args, **kwargs)
+        return type(self)
 
     def abs(self):  # noqa: RT01, D200
         """

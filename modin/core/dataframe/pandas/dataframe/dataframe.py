@@ -176,7 +176,7 @@ class PandasDataframe(ClassLogger):
     _deferred_index = False
     _deferred_column = False
 
-    @property
+    @pandas.util.cache_readonly
     def __constructor__(self):
         """
         Create a new instance of this object.
