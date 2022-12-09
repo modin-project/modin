@@ -4777,6 +4777,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         Parameters
         ----------
         axis : {0, 1, None}, optional
+            The axis along which the repartitioning occurs.
+            `None` is used for repartitioning along both axes.
 
         Returns
         -------
