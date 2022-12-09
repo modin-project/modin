@@ -541,13 +541,13 @@ def test_sort_values_with_only_one_non_na_row_in_partition(ascending, na_positio
     pandas_df.iloc[340:] = np.NaN
     pandas_df.iloc[-1] = -4.0
     modin_df = pd.DataFrame(pandas_df)
-    modin_result = modin_df.sort_values(
-        "col 3", ascending=ascending, na_position=na_position
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.sort_values(
+            "col 3", ascending=ascending, na_position=na_position
+        ),
     )
-    pandas_result = pandas_df.sort_values(
-        "col 3", ascending=ascending, na_position=na_position
-    )
-    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.skipif(
@@ -559,9 +559,7 @@ def test_sort_values_with_sort_key_on_partition_boundary():
         np.random.rand(1000, 100), columns=[f"col {i}" for i in range(100)]
     )
     sort_key = modin_df.columns[modin_df._query_compiler._modin_frame.column_widths[0]]
-    df_equals(
-        modin_df.sort_values(sort_key), modin_df._to_pandas().sort_values(sort_key)
-    )
+    eval_general(modin_df, modin_df._to_pandas(), lambda df: df.sort_values(sort_key))
 
 
 def test_where():
