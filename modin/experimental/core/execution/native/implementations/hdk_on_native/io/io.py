@@ -146,8 +146,11 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
 
             sep = kwargs["sep"]
             delimiter = kwargs["delimiter"]
-            if delimiter is None and sep is not lib.no_default:
-                delimiter = sep
+            if delimiter is None:
+                if sep is not lib.no_default:
+                    delimiter = sep
+                else:
+                    delimiter = ","
 
             usecols_md = cls._prepare_pyarrow_usecols(kwargs)
 
