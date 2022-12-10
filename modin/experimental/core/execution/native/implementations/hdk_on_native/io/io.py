@@ -252,8 +252,8 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         list
             Redefined `usecols` parameter.
         """
-        usecols = read_csv_kwargs.get("usecols", None)
-        engine = read_csv_kwargs.get("engine", None)
+        usecols = read_csv_kwargs["usecols"]
+        engine = read_csv_kwargs["engine"]
         usecols_md, usecols_names_dtypes = cls._validate_usecols_arg(usecols)
         if usecols_md:
             empty_pd_df = pandas.read_csv(
@@ -293,8 +293,10 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
 
         return usecols_md
 
+    from modin.pandas import read_csv as general_read_csv
+
     read_csv_unsup_defaults = {}
-    for k, v in inspect.signature(read_csv.__func__).parameters.items():
+    for k, v in inspect.signature(general_read_csv.__func__).parameters.items():
         if v.default is not inspect.Parameter.empty and k in unsupported_args:
             read_csv_unsup_defaults[k] = v.default
 
@@ -318,15 +320,15 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         str
             Error message that should be raised if user explicitly set `engine="arrow"`.
         """
-        filepath_or_buffer = read_csv_kwargs.get("filepath_or_buffer", None)
-        header = read_csv_kwargs.get("header", "infer")
-        names = read_csv_kwargs.get("names", None)
-        engine = read_csv_kwargs.get("engine", None)
-        skiprows = read_csv_kwargs.get("skiprows", None)
-        delimiter = read_csv_kwargs.get("delimiter", None)
-        parse_dates = read_csv_kwargs.get("parse_dates", False)
+        filepath_or_buffer = read_csv_kwargs["filepath_or_buffer"]
+        header = read_csv_kwargs["header"]
+        names = read_csv_kwargs["names"]
+        engine = read_csv_kwargs["engine"]
+        skiprows = read_csv_kwargs["skiprows"]
+        delimiter = read_csv_kwargs["delimiter"]
+        parse_dates = read_csv_kwargs["parse_dates"]
 
-        if read_csv_kwargs.get("compression", "infer") != "infer":
+        if read_csv_kwargs["compression"] != "infer":
             return (
                 False,
                 "read_csv with 'arrow' engine doesn't support explicit compression parameter, compression"
@@ -359,7 +361,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                     False,
                     f"read_csv with 'arrow' engine doesn't support {arg} parameter",
                 )
-        if delimiter is not None and read_csv_kwargs.get("delim_whitespace", False):
+        if delimiter is not None and read_csv_kwargs["delim_whitespace"]:
             raise ValueError(
                 "Specified a delimiter with both sep and delim_whitespace=True; you can only specify one."
             )
@@ -429,7 +431,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                 if not set(parse_dates).issubset(empty_pandas_df.columns):
                     raise ValueError("Missing column provided to 'parse_dates'")
 
-        if not read_csv_kwargs.get("skip_blank_lines", True):
+        if not read_csv_kwargs["skip_blank_lines"]:
             # in some corner cases empty lines are handled as '',
             # while pandas handles it as NaNs - issue #3084
             return (
@@ -460,12 +462,12 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         read_csv_kwargs : dict
             Parameters of `read_csv` function.
         """
-        delimiter = read_csv_kwargs.get("delimiter", None)
-        sep = read_csv_kwargs.get("sep", lib.no_default)
-        on_bad_lines = read_csv_kwargs.get("on_bad_lines", "error")
-        error_bad_lines = read_csv_kwargs.get("error_bad_lines", None)
-        warn_bad_lines = read_csv_kwargs.get("warn_bad_lines", None)
-        delim_whitespace = read_csv_kwargs.get("delim_whitespace", False)
+        delimiter = read_csv_kwargs["delimiter"]
+        sep = read_csv_kwargs["sep"]
+        on_bad_lines = read_csv_kwargs["on_bad_lines"]
+        error_bad_lines = read_csv_kwargs["error_bad_lines"]
+        warn_bad_lines = read_csv_kwargs["warn_bad_lines"]
+        delim_whitespace = read_csv_kwargs["delim_whitespace"]
 
         if delimiter and (sep is not lib.no_default):
             raise ValueError(
