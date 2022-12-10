@@ -34,6 +34,7 @@ from modin.error_message import ErrorMessage
 from . import doc_utils
 from modin.logging import ClassLogger
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+from modin.config import StorageFormat
 
 from pandas.core.dtypes.common import is_scalar
 import pandas.core.resample
@@ -4905,5 +4906,39 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             keep_equal=keep_equal,
             result_names=result_names,
         )
+
+    def repartition(self, axis=None):
+        """
+        Repartitioning QueryCompiler objects to get ideal partitions inside.
+
+        Allows to improve performance where the query compiler can't improve
+        yet by doing implicit repartitioning.
+
+        Parameters
+        ----------
+        axis : {0, 1, None}, optional
+            The axis along which the repartitioning occurs.
+            `None` is used for repartitioning along both axes.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            The repartitioned BaseQueryCompiler.
+        """
+        if StorageFormat.get() == "Hdk":
+            # Hdk uses only one partition, it makes
+            # no sense for it to repartition the dataframe.
+            return self
+
+        axes = [0, 1] if axis is None else [axis]
+
+        new_query_compiler = self
+        for _ax in axes:
+            new_query_compiler = new_query_compiler.__constructor__(
+                new_query_compiler._modin_frame.apply_full_axis(
+                    _ax, lambda df: df, keep_partitioning=False
+                )
+            )
+        return new_query_compiler
 
     # End of DataFrame methods

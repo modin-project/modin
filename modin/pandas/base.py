@@ -90,6 +90,7 @@ _DEFAULT_BEHAVIOUR = {
     "_default_to_pandas",
     "_query_compiler",
     "_to_pandas",
+    "_repartition",
     "_build_repr_df",
     "_reduce_dimension",
     "__repr__",
@@ -3871,6 +3872,33 @@ class BasePandasDataset(ClassLogger):
         Return a NumPy representation of the `BasePandasDataset`.
         """
         return self.to_numpy()
+
+    def _repartition(self, axis: Optional[int] = None):
+        """
+        Repartitioning Modin objects to get ideal partitions inside.
+
+        Allows to improve performance where the query compiler can't improve
+        yet by doing implicit repartitioning.
+
+        Parameters
+        ----------
+        axis : {0, 1, None}, optional
+            The axis along which the repartitioning occurs.
+            `None` is used for repartitioning along both axes.
+
+        Returns
+        -------
+        DataFrame or Series
+            The repartitioned dataframe or series, depending on the original type.
+        """
+        allowed_axis_values = (0, 1, None)
+        if axis not in allowed_axis_values:
+            raise ValueError(
+                f"Passed `axis` parameter: {axis}, but should be one of {allowed_axis_values}"
+            )
+        return self.__constructor__(
+            query_compiler=self._query_compiler.repartition(axis=axis)
+        )
 
     @disable_logging
     def __getattribute__(self, item):
