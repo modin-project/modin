@@ -8,5 +8,5 @@ It serves as an intermediate level between ``pandas`` query compiler and
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.dask.implementations.pandas_on_dask.dataframe.dataframe.PandasOnDaskDataframe
+.. autoclass:: modin.core.execution.dask.implementations.pandas_on_dask.dataframe.PandasOnDaskDataframe
   :members:
