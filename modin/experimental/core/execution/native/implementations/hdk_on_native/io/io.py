@@ -74,8 +74,6 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         "skipfooter",
         "nrows",
         "skipinitialspace",
-        "squeeze",
-        "mangle_dupe_cols",
         "na_values",
         "keep_default_na",
         "na_filter",
