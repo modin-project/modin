@@ -23,6 +23,7 @@ class ClientIO(BaseIO):
 
     _server_conn = None
     _data_conn = None
+    query_compiler_cls = ClientQueryCompiler
 
     @classmethod
     def set_server_connection(cls, conn):
@@ -77,7 +78,7 @@ class ClientIO(BaseIO):
             raise ConnectionError(
                 "Missing server connection, did you initialize the connection?"
             )
-        return ClientQueryCompiler(
+        return cls.query_compiler_cls(
             cls._server_conn.read_csv(cls._data_conn, filepath_or_buffer, **kwargs)
         )
 
@@ -114,7 +115,7 @@ class ClientIO(BaseIO):
             raise ConnectionError(
                 "Missing server connection, did you initialize the connection?"
             )
-        return ClientQueryCompiler(
+        return cls.query_compiler_cls(
             cls._server_conn.read_sql(sql, cls._data_conn, **kwargs)
         )
 
