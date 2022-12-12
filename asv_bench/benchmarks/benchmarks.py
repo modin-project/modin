@@ -1183,6 +1183,7 @@ class TimeGroups:
     def time_series_indices(self, shape):
         self.series.groupby(self.series).indices
 
+
 class TimeRepr:
 
     params = [get_benchmark_shapes("TimeRepr")]
