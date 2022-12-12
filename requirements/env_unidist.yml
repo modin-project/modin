@@ -5,7 +5,7 @@ dependencies:
   - unidist-mpi>=0.2.1
   - pandas==1.5.2
   - numpy>=1.18.5
-  - pyarrow>=4.0.1
+  - pyarrow
   - fsspec
   - xarray
   - Jinja2
