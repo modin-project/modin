@@ -1,10 +1,16 @@
 SQL on Modin Dataframes
 =======================
 
-MindsDB_ has teamed up with Modin to bring in-memory SQL to distributed Modin Dataframes. 
-Now you can run SQL alongside the pandas API without copying or going through your disk. 
-What this means is that you can now have a SQL solution that you can seamlessly scale 
-horizontally and vertically, by leveraging the incredible power of Ray.
+Modin provides a SQL API that allows you to intermix SQL and pandas operations
+without copying the entire dataset into a new structure between the two. This is possible
+due to the architecture of Modin. Currently, Modin has a query compiler that acts as an
+intermediate layer between the query language (e.g. SQL, pandas) and the execution
+(See :doc:`architecture </development/architecture>` documentation for details).
+
+To execute SQL queries, Modin uses either dfsql third-party library or, in case of HDK
+engine (See :doc:`Using HDK </development/using_hdk>` documentation for details)
+the queries are executed directly by HDK. Thus, to execute SQL queries, either dfsql
+or pyhdk module must be installed.
 
 
 A Short Example Using the Google Play Store
@@ -27,31 +33,33 @@ App, Category, and Rating, where Price is ‘0’.
 .. code-block:: python
 
     # You can then define the query that you want to perform
-    sql_str = "SELECT App, Category, Rating FROM gstore_apps WHERE Price = '0'"
+    query_str = "SELECT App, Category, Rating FROM gstore_apps WHERE Price = '0'"
 
     # And simply apply that query to a dataframe
-    result_df = sql.query(sql_str, gstore_apps=gstore_apps_df)
+    result_df = sql.query(query_str, gstore_apps=gstore_apps_df)
 
-    # Or, in this case, where the query only requires one table, 
+    # Or, in this case, where the query only requires one table,
     # you can also ignore the FROM part in the query string:
-    query_str = "SELECT App, Category, Rating WHERE Price = '0' "
+    sql_str = "SELECT App, Category, Rating WHERE Price = '0' "
 
-    # sql.query can take query strings without FROM statement 
-    # you can specify from as the function argument
-    result_df = sql.query(query_str, from=gstore_apps_df)
-
+    # DataFrame.sql() can take query strings without FROM statement
+    # NOTE: this method required the dfsql module to be installed!
+    result_df = gstore_apps_df.sql(sql_str)
 
 Writing Complex Queries
 """""""""""""""""""""""
 
-Let's explore a more complicated example. 
+For complex queries, it's recommended to use the HDK engine because it's much more
+powerful, comparing to dfsql. Especially, if multiple data frames are involved.
+
+Let's explore a more complicated example.
 
 .. code-block:: python
 
-    gstore_reviews_df = pd.read_csv("https://tinyurl.com/gstorereviewscsv")
+    gstore_reviews_df = pd.read_csv("https://tinyurl.com/googleplaystoreurcsv")
 
 
-.. figure:: /img/modin_sql_example2.png
+.. figure:: /img/modin_sql_google_play_ur_table.png
     :align: center 
 
 
@@ -65,16 +73,17 @@ we need to join the two tables, and operate averages on that join.
 
     # Single query with join and group by
     sql_str = """
-    SELECT 
-    category, 
-    avg(sentiment_polarity) as avg_sentiment_polarity, 
-    avg(sentiment_subjectivity) as avg_sentiment_subjectivity
+    SELECT
+    category,
+    AVG(sentiment_polarity) AS avg_sentiment_polarity,
+    AVG(sentiment_subjectivity) AS avg_sentiment_subjectivity
     FROM (
-    SELECT 
-        category, 
-        CAST(sentiment as float) as sentiment, 
-        CAST(sentiment_polarity as float) as sentiment_polarity
-    FROM gstore_apps_df 
+    SELECT
+        category,
+        CAST(sentiment as float) AS sentiment,
+        CAST(sentiment_polarity AS float) AS sentiment_polarity,
+        CAST(sentiment_subjectivity AS float) AS sentiment_subjectivity
+    FROM gstore_apps_df
         INNER JOIN gstore_reviews_df
         ON gstore_apps_df.app = gstore_reviews_df.app
     ) sub
@@ -98,28 +107,30 @@ Or, you can bring the best of doing this in python and run the query in multiple
 
     # join the items and reviews
 
-    result_df = sql.query( """ 
-    SELECT 
-        category, 
-        sentiment, 
-        sentiment_polarity 
-    FROM gstore_apps_df INNER JOIN gstore_reviews_df 
-    ON gstore_apps_df.app = gstore_reviews_df.app """, 
-    gstore_apps_df = gstore_apps_df, 
-    gstore_reviews_df = gstore_reviews_df )
+    result_df = sql.query("""
+    SELECT
+        category,
+        sentiment,
+        sentiment_polarity,
+        sentiment_subjectivity
+    FROM gstore_apps_df INNER JOIN gstore_reviews_df
+    ON gstore_apps_df.app = gstore_reviews_df.app""",
+                          gstore_apps_df=gstore_apps_df,
+                          gstore_reviews_df=gstore_reviews_df)
 
     # group by category and calculate averages
 
-    result_df = sql.query( """
-    SELECT 
-        category, 
-        avg(sentiment_polarity) as avg_sentiment_polarity, 
-        avg(sentiment_subjectivity) as avg_sentiment_subjectivity 
+    result_df = sql.query("""
+    SELECT
+        category,
+        AVG(sentiment_polarity) AS avg_sentiment_polarity,
+        AVG(sentiment_subjectivity) AS avg_sentiment_subjectivity
+    FROM result_df
     GROUP BY category
-    HAVING CAST(avg_sentiment_subjectivity as float) < 0.5
+    HAVING CAST(avg_sentiment_subjectivity AS float) < 0.5
     ORDER BY avg_sentiment_polarity DESC
-    LIMIT 10""", 
-    from = result_df)
+    LIMIT 10""",
+    result_df=result_df)
 
 
 If you have a cluster or even a computer with more than one CPU core, 
