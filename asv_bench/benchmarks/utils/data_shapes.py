@@ -103,7 +103,6 @@ _DEFAULT_CONFIG_T = [
             "TimeDropDuplicatesDataframe",
             "TimeStack",
             "TimeUnstack",
-            "TimeReplace",
             # IO benchmarks
             "TimeReadCsvSkiprows",
             "TimeReadCsvTrueFalseValues",
@@ -186,6 +185,9 @@ DEFAULT_CONFIG["MergeCategoricals"] = (
 )
 DEFAULT_CONFIG["TimeJoinStringIndex"] = (
     [[100_000, 64]] if ASV_DATASET_SIZE == "big" else [[1_000, 4]]
+)
+DEFAULT_CONFIG["TimeReplace"] = (
+    [[10_000, 2]] if ASV_DATASET_SIZE == "big" else [[1_000, 2]]
 )
 for config in (_DEFAULT_CONFIG_T, _DEFAULT_HDK_CONFIG_T):
     for _shape, _names in config:
