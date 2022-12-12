@@ -13,5 +13,5 @@ from numpy import (
     infty,
     nan,
     newaxis,
-    pi
+    pi,
 )
