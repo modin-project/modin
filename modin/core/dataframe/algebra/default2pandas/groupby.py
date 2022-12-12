@@ -220,7 +220,7 @@ class GroupBy:
             method = kwargs.get("method")
 
             if isinstance(result, pandas.Series):
-                result = result.to_frame(method or MODIN_UNNAMED_SERIES_LABEL)
+                result = result.to_frame(MODIN_UNNAMED_SERIES_LABEL)
 
             if not as_index:
                 if isinstance(by, pandas.Series):
