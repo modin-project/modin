@@ -1599,7 +1599,7 @@ class PandasDataframe(ClassLogger):
 
         return _tree_reduce_func
 
-    def _compute_tree_reduce_metadata(self, axis, new_parts):
+    def _compute_tree_reduce_metadata(self, axis, new_parts, dtypes=None):
         """
         Compute the metadata for the result of reduce function.
 
@@ -1609,6 +1609,8 @@ class PandasDataframe(ClassLogger):
             The axis on which reduce function was applied.
         new_parts : NumPy 2D array
             Partitions with the result of applied function.
+        dtypes : pandas.Series, optional
+            The data types of the result.
 
         Returns
         -------
@@ -1623,12 +1625,11 @@ class PandasDataframe(ClassLogger):
         new_axes_lengths[axis] = [1]
         new_axes_lengths[axis ^ 1] = self._axes_lengths[axis ^ 1]
 
-        new_dtypes = None
         result = self.__constructor__(
             new_parts,
             *new_axes,
             *new_axes_lengths,
-            new_dtypes,
+            dtypes,
         )
         return result
 
@@ -1637,7 +1638,7 @@ class PandasDataframe(ClassLogger):
         self,
         axis: Union[int, Axis],
         function: Callable,
-        dtypes: Optional[str] = None,
+        dtypes: Optional = None,
     ) -> "PandasDataframe":
         """
         Perform a user-defined aggregation on the specified axis, where the axis reduces down to a singleton. Requires knowledge of the full axis for the reduction.
@@ -1648,7 +1649,7 @@ class PandasDataframe(ClassLogger):
             The axis to perform the reduce over.
         function : callable(row|col) -> single value
             The reduce function to apply to each column.
-        dtypes : str, optional
+        dtypes : pandas.Series, optional
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
@@ -1667,7 +1668,7 @@ class PandasDataframe(ClassLogger):
         new_parts = self._partition_mgr_cls.map_axis_partitions(
             axis.value, self._partitions, function
         )
-        return self._compute_tree_reduce_metadata(axis.value, new_parts)
+        return self._compute_tree_reduce_metadata(axis.value, new_parts, dtypes)
 
     @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
     def tree_reduce(
@@ -1675,7 +1676,7 @@ class PandasDataframe(ClassLogger):
         axis: Union[int, Axis],
         map_func: Callable,
         reduce_func: Optional[Callable] = None,
-        dtypes: Optional[str] = None,
+        dtypes: Optional = None,
     ) -> "PandasDataframe":
         """
         Apply function that will reduce the data to a pandas Series.
@@ -1689,7 +1690,7 @@ class PandasDataframe(ClassLogger):
         reduce_func : callable(row|col) -> single value, optional
             Callable function to reduce the dataframe.
             If none, then apply map_func twice.
-        dtypes : str, optional
+        dtypes : pandas.Series, optional
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
@@ -1710,10 +1711,10 @@ class PandasDataframe(ClassLogger):
         reduce_parts = self._partition_mgr_cls.map_axis_partitions(
             axis.value, map_parts, reduce_func
         )
-        return self._compute_tree_reduce_metadata(axis.value, reduce_parts)
+        return self._compute_tree_reduce_metadata(axis.value, reduce_parts, dtypes)
 
     @lazy_metadata_decorator(apply_axis=None)
-    def map(self, func: Callable, dtypes: Optional[str] = None) -> "PandasDataframe":
+    def map(self, func: Callable, dtypes: Optional = None, copy_dtypes: bool = False) -> "PandasDataframe":
         """
         Perform a function that maps across the entire dataset.
 
@@ -1721,10 +1722,13 @@ class PandasDataframe(ClassLogger):
         ----------
         func : callable(row|col|cell) -> row|col|cell
             The function to apply.
-        dtypes : dtypes of the result, optional
+        dtypes : pandas.Series or scalar type, optional
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
+        copy_dtypes : bool, default: False
+            If True, the dtypes of the resulting dataframe are copied from the original,
+            and the ``dtypes`` argument is ignored.
 
         Returns
         -------
@@ -1732,7 +1736,7 @@ class PandasDataframe(ClassLogger):
             A new dataframe.
         """
         new_partitions = self._partition_mgr_cls.map_partitions(self._partitions, func)
-        if dtypes == "copy":
+        if copy_dtypes:
             dtypes = self._dtypes
         elif dtypes is not None:
             dtypes = pandas.Series(
@@ -2186,6 +2190,7 @@ class PandasDataframe(ClassLogger):
         new_index=None,
         new_columns=None,
         dtypes=None,
+        copy_dtypes=False,
         keep_partitioning=True,
     ):
         """
@@ -2207,6 +2212,9 @@ class PandasDataframe(ClassLogger):
             The data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
+        copy_dtypes : bool, default: False
+            If True, the dtypes of the resulting dataframe are copied from the original,
+            and the ``dtypes`` argument is ignored.
         keep_partitioning : boolean, default: True
             The flag to keep partition boundaries for Modin Frame.
             Setting it to True disables shuffling data from one partition to another.
@@ -2226,6 +2234,7 @@ class PandasDataframe(ClassLogger):
             new_index=new_index,
             new_columns=new_columns,
             dtypes=dtypes,
+            copy_dtypes=copy_dtypes,
             other=None,
             keep_partitioning=keep_partitioning,
         )
@@ -2401,7 +2410,7 @@ class PandasDataframe(ClassLogger):
 
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply(
-        self, axis, func, other, join_type="left", labels="keep", dtypes=None
+        self, axis, func, other, join_type="left", labels="keep", dtypes=None, copy_dtypes=False,
     ):
         """
         Broadcast axis partitions of `other` to partitions of `self` and apply a function.
@@ -2419,8 +2428,12 @@ class PandasDataframe(ClassLogger):
         labels : {"keep", "replace", "drop"}, default: "keep"
             Whether keep labels from `self` Modin DataFrame, replace them with labels
             from joined DataFrame or drop altogether to make them be computed lazily later.
-        dtypes : "copy" or None, default: None
-            Whether keep old dtypes or infer new dtypes from data.
+        dtypes : list-like, optional
+            The data types of the result. This is an optimization
+            because there are functions that always result in a particular data
+            type, and allows us to avoid (re)computing it.
+        copy_dtypes : bool, default: False
+            If True, the dtypes of the resulting dataframe are copied from the original.
 
         Returns
         -------
@@ -2441,8 +2454,7 @@ class PandasDataframe(ClassLogger):
         new_frame = self._partition_mgr_cls.broadcast_apply(
             axis, func, left_parts, right_parts
         )
-        if dtypes == "copy":
-            dtypes = self._dtypes
+        dtypes = self._dtypes if copy_dtypes else None
 
         def _pick_axis(get_axis, sizes_cache):
             if labels == "keep":
@@ -2618,6 +2630,7 @@ class PandasDataframe(ClassLogger):
         apply_indices=None,
         enumerate_partitions=False,
         dtypes=None,
+        copy_dtypes=False,
         keep_partitioning=True,
     ):
         """
@@ -2642,10 +2655,13 @@ class PandasDataframe(ClassLogger):
         enumerate_partitions : bool, default: False
             Whether pass partition index into applied `func` or not.
             Note that `func` must be able to obtain `partition_idx` kwarg.
-        dtypes : list-like, default: None
+        dtypes : list-like, optional
             Data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
+        copy_dtypes : bool, default: False
+            If True, the dtypes of the resulting dataframe are copied from the original,
+            and the ``dtypes`` argument is ignored.
         keep_partitioning : boolean, default: True
             The flag to keep partition boundaries for Modin Frame.
             Setting it to True disables shuffling data from one partition to another.
@@ -2677,7 +2693,7 @@ class PandasDataframe(ClassLogger):
         )
         # Index objects for new object creation. This is shorter than if..else
         kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
-        if dtypes == "copy":
+        if copy_dtypes:
             kw["dtypes"] = self._dtypes
         elif dtypes is not None:
             kw["dtypes"] = pandas.Series(

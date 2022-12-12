@@ -1339,7 +1339,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
-    abs = Map.register(pandas.DataFrame.abs, dtypes="copy")
+    abs = Map.register(pandas.DataFrame.abs, copy_dtypes=True)
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
     convert_dtypes = Map.register(pandas.DataFrame.convert_dtypes)
@@ -1374,15 +1374,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # String map partitions operations
 
-    str_capitalize = Map.register(_str_map("capitalize"), dtypes="copy")
-    str_center = Map.register(_str_map("center"), dtypes="copy")
+    str_capitalize = Map.register(_str_map("capitalize"), copy_dtypes=True)
+    str_center = Map.register(_str_map("center"), copy_dtypes=True)
     str_contains = Map.register(_str_map("contains"), dtypes=np.bool_)
     str_count = Map.register(_str_map("count"), dtypes=int)
     str_endswith = Map.register(_str_map("endswith"), dtypes=np.bool_)
-    str_find = Map.register(_str_map("find"), dtypes="copy")
-    str_findall = Map.register(_str_map("findall"), dtypes="copy")
-    str_get = Map.register(_str_map("get"), dtypes="copy")
-    str_index = Map.register(_str_map("index"), dtypes="copy")
+    str_find = Map.register(_str_map("find"), copy_dtypes=True)
+    str_findall = Map.register(_str_map("findall"), copy_dtypes=True)
+    str_get = Map.register(_str_map("get"), copy_dtypes=True)
+    str_index = Map.register(_str_map("index"), copy_dtypes=True)
     str_isalnum = Map.register(_str_map("isalnum"), dtypes=np.bool_)
     str_isalpha = Map.register(_str_map("isalpha"), dtypes=np.bool_)
     str_isdecimal = Map.register(_str_map("isdecimal"), dtypes=np.bool_)
@@ -1392,17 +1392,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_isspace = Map.register(_str_map("isspace"), dtypes=np.bool_)
     str_istitle = Map.register(_str_map("istitle"), dtypes=np.bool_)
     str_isupper = Map.register(_str_map("isupper"), dtypes=np.bool_)
-    str_join = Map.register(_str_map("join"), dtypes="copy")
+    str_join = Map.register(_str_map("join"), copy_dtypes=True)
     str_len = Map.register(_str_map("len"), dtypes=int)
-    str_ljust = Map.register(_str_map("ljust"), dtypes="copy")
-    str_lower = Map.register(_str_map("lower"), dtypes="copy")
-    str_lstrip = Map.register(_str_map("lstrip"), dtypes="copy")
-    str_match = Map.register(_str_map("match"), dtypes="copy")
-    str_normalize = Map.register(_str_map("normalize"), dtypes="copy")
-    str_pad = Map.register(_str_map("pad"), dtypes="copy")
-    str_partition = Map.register(_str_map("partition"), dtypes="copy")
-    str_repeat = Map.register(_str_map("repeat"), dtypes="copy")
-    _str_extract = Map.register(_str_map("extract"), dtypes="copy")
+    str_ljust = Map.register(_str_map("ljust"), copy_dtypes=True)
+    str_lower = Map.register(_str_map("lower"), copy_dtypes=True)
+    str_lstrip = Map.register(_str_map("lstrip"), copy_dtypes=True)
+    str_match = Map.register(_str_map("match"), copy_dtypes=True)
+    str_normalize = Map.register(_str_map("normalize"), copy_dtypes=True)
+    str_pad = Map.register(_str_map("pad"), copy_dtypes=True)
+    str_partition = Map.register(_str_map("partition"), copy_dtypes=True)
+    str_repeat = Map.register(_str_map("repeat"), copy_dtypes=True)
+    _str_extract = Map.register(_str_map("extract"), copy_dtypes=True)
 
     def str_extract(self, pat, flags, expand):
         regex = re.compile(pat, flags=flags)
@@ -1414,25 +1414,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
         qc.columns = get_group_names(regex)
         return qc
 
-    str_replace = Map.register(_str_map("replace"), dtypes="copy")
-    str_rfind = Map.register(_str_map("rfind"), dtypes="copy")
-    str_rindex = Map.register(_str_map("rindex"), dtypes="copy")
-    str_rjust = Map.register(_str_map("rjust"), dtypes="copy")
-    str_rpartition = Map.register(_str_map("rpartition"), dtypes="copy")
-    str_rsplit = Map.register(_str_map("rsplit"), dtypes="copy")
-    str_rstrip = Map.register(_str_map("rstrip"), dtypes="copy")
-    str_slice = Map.register(_str_map("slice"), dtypes="copy")
-    str_slice_replace = Map.register(_str_map("slice_replace"), dtypes="copy")
-    str_split = Map.register(_str_map("split"), dtypes="copy")
+    str_replace = Map.register(_str_map("replace"), copy_dtypes=True)
+    str_rfind = Map.register(_str_map("rfind"), copy_dtypes=True)
+    str_rindex = Map.register(_str_map("rindex"), copy_dtypes=True)
+    str_rjust = Map.register(_str_map("rjust"), copy_dtypes=True)
+    str_rpartition = Map.register(_str_map("rpartition"), copy_dtypes=True)
+    str_rsplit = Map.register(_str_map("rsplit"), copy_dtypes=True)
+    str_rstrip = Map.register(_str_map("rstrip"), copy_dtypes=True)
+    str_slice = Map.register(_str_map("slice"), copy_dtypes=True)
+    str_slice_replace = Map.register(_str_map("slice_replace"), copy_dtypes=True)
+    str_split = Map.register(_str_map("split"), copy_dtypes=True)
     str_startswith = Map.register(_str_map("startswith"), dtypes=np.bool_)
-    str_strip = Map.register(_str_map("strip"), dtypes="copy")
-    str_swapcase = Map.register(_str_map("swapcase"), dtypes="copy")
-    str_title = Map.register(_str_map("title"), dtypes="copy")
-    str_translate = Map.register(_str_map("translate"), dtypes="copy")
-    str_upper = Map.register(_str_map("upper"), dtypes="copy")
-    str_wrap = Map.register(_str_map("wrap"), dtypes="copy")
-    str_zfill = Map.register(_str_map("zfill"), dtypes="copy")
-    str___getitem__ = Map.register(_str_map("__getitem__"), dtypes="copy")
+    str_strip = Map.register(_str_map("strip"), copy_dtypes=True)
+    str_swapcase = Map.register(_str_map("swapcase"), copy_dtypes=True)
+    str_title = Map.register(_str_map("title"), copy_dtypes=True)
+    str_translate = Map.register(_str_map("translate"), copy_dtypes=True)
+    str_upper = Map.register(_str_map("upper"), copy_dtypes=True)
+    str_wrap = Map.register(_str_map("wrap"), copy_dtypes=True)
+    str_zfill = Map.register(_str_map("zfill"), copy_dtypes=True)
+    str___getitem__ = Map.register(_str_map("__getitem__"), copy_dtypes=True)
 
     # END String map partitions operations
 
@@ -2063,7 +2063,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             ),
             new_index,
             new_columns,
-            dtypes="copy" if axis == 0 else None,
+            copy_dtypes=True if axis == 0 else None,
         )
         return self.__constructor__(new_modin_frame)
 
@@ -2195,7 +2195,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # ones are just of bool dtype
             if len(key.dtypes) == 1 and is_bool_dtype(key.dtypes[0]):
                 self.__validate_bool_indexer(key.index)
-                return self.__getitem_bool(key, broadcast=True, dtypes="copy")
+                return self.__getitem_bool(key, broadcast=True, copy_dtypes=True)
 
             key = key.to_pandas().squeeze(axis=1)
 
