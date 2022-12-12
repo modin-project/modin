@@ -19,6 +19,9 @@ ModinDataframe is a parent abstract class for any dataframe class.
 
 from abc import ABC, abstractmethod
 from typing import List, Hashable, Optional, Callable, Union, Dict
+
+import pandas
+
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
 
 
@@ -92,7 +95,7 @@ class ModinDataframe(ABC):
         self,
         function: Callable,
         axis: Optional[Union[int, Axis]] = None,
-        dtypes: Optional = None,
+        dtypes: Optional[Union[pandas.Series, type]] = None,
         copy_dtypes: bool = False,
     ) -> "ModinDataframe":
         """
@@ -262,7 +265,7 @@ class ModinDataframe(ABC):
         self,
         axis: Union[int, Axis],
         function: Callable,
-        dtypes: Optional = None,
+        dtypes: Optional[pandas.Series] = None,
     ) -> "ModinDataframe":
         """
         Perform a user-defined aggregation on the specified axis, where the axis reduces down to a singleton.
@@ -295,7 +298,7 @@ class ModinDataframe(ABC):
         axis: Union[int, Axis],
         map_func: Callable,
         reduce_func: Optional[Callable] = None,
-        dtypes: Optional = None,
+        dtypes: Optional[pandas.Series] = None,
     ) -> "ModinDataframe":
         """
         Perform a user-defined aggregation on the specified axis, where the axis reduces down to a singleton using a tree-reduce computation pattern.

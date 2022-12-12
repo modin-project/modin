@@ -1714,7 +1714,9 @@ class PandasDataframe(ClassLogger):
         return self._compute_tree_reduce_metadata(axis.value, reduce_parts, dtypes)
 
     @lazy_metadata_decorator(apply_axis=None)
-    def map(self, func: Callable, dtypes: Optional = None, copy_dtypes: bool = False) -> "PandasDataframe":
+    def map(
+        self, func: Callable, dtypes: Optional = None, copy_dtypes: bool = False
+    ) -> "PandasDataframe":
         """
         Perform a function that maps across the entire dataset.
 
@@ -2410,7 +2412,14 @@ class PandasDataframe(ClassLogger):
 
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply(
-        self, axis, func, other, join_type="left", labels="keep", dtypes=None, copy_dtypes=False,
+        self,
+        axis,
+        func,
+        other,
+        join_type="left",
+        labels="keep",
+        dtypes=None,
+        copy_dtypes=False,
     ):
         """
         Broadcast axis partitions of `other` to partitions of `self` and apply a function.

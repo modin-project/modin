@@ -44,7 +44,13 @@ class Binary(Operator):
         """
 
         def caller(
-            query_compiler, other, broadcast=False, *args, dtypes=None, copy_dtypes=False, **kwargs
+            query_compiler,
+            other,
+            broadcast=False,
+            *args,
+            dtypes=None,
+            copy_dtypes=False,
+            **kwargs
         ):
             """
             Apply binary `func` to passed operands.
