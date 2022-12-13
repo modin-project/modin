@@ -2656,7 +2656,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         agg_kwargs,
         drop=False,
     ):
-        return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.size)(
+        result = GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.size)(
             self,
             by=by,
             axis=axis,
@@ -2666,6 +2666,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             drop=drop,
             method="size",
         )
+        if not groupby_kwargs.get("as_index", False):
+            # Renaming 'MODIN_UNNAMED_SERIES_LABEL' to a proper name
+            result.columns = result.columns[:-1].append(pandas.Index(["size"]))
+        return result
 
     @doc_utils.add_refer_to("GroupBy.aggregate")
     def groupby_agg(

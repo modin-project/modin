@@ -1828,18 +1828,16 @@ def test_multi_column_groupby_different_partitions(
         1.5,
         "str",
         pandas.Timestamp("2020-02-02"),
-        [None],
         [0, "str"],
-        [None, 0],
         [pandas.Timestamp("2020-02-02"), 1.5],
     ],
 )
 @pytest.mark.parametrize("as_index", [True, False])
 def test_not_str_by(by, as_index):
-    data = {f"col{i}": np.arange(5) for i in range(5)}
-    columns = pandas.Index([0, 1.5, "str", pandas.Timestamp("2020-02-02"), None])
+    columns = pandas.Index([0, 1.5, "str", pandas.Timestamp("2020-02-02")])
+    data = {col: np.arange(5) for col in columns}
+    md_df, pd_df = create_test_dfs(data)
 
-    md_df, pd_df = create_test_dfs(data, columns=columns)
     md_grp, pd_grp = (
         md_df.groupby(by, as_index=as_index),
         pd_df.groupby(by, as_index=as_index),
