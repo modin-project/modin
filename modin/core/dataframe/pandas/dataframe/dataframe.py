@@ -1029,10 +1029,10 @@ class PandasDataframe(ClassLogger):
             return result
 
         new_parts = self._partition_mgr_cls.apply_func_to_select_indices(
-            0,
             self._partitions,
             from_labels_executor,
-            [0],
+            axis=0,
+            indices=[0],
             keep_remaining=True,
         )
         new_column_widths = [
@@ -1104,7 +1104,7 @@ class PandasDataframe(ClassLogger):
         new_dtypes = self._dtypes
         if row_positions is not None:
             ordered_rows = self._partition_mgr_cls.map_axis_partitions(
-                0, self._partitions, lambda df: df.iloc[row_positions]
+                self._partitions, lambda df: df.iloc[row_positions], axis=0
             )
             row_idx = self.index[row_positions]
 
@@ -1665,7 +1665,7 @@ class PandasDataframe(ClassLogger):
         axis = Axis(axis)
         function = self._build_treereduce_func(axis.value, function)
         new_parts = self._partition_mgr_cls.map_axis_partitions(
-            axis.value, self._partitions, function
+            self._partitions, function, axis=axis.value
         )
         return self._compute_tree_reduce_metadata(axis.value, new_parts)
 
@@ -1708,7 +1708,7 @@ class PandasDataframe(ClassLogger):
 
         map_parts = self._partition_mgr_cls.map_partitions(self._partitions, map_func)
         reduce_parts = self._partition_mgr_cls.map_axis_partitions(
-            axis.value, map_parts, reduce_func
+            map_parts, reduce_func, axis=axis.value
         )
         return self._compute_tree_reduce_metadata(axis.value, reduce_parts)
 
@@ -1804,7 +1804,7 @@ class PandasDataframe(ClassLogger):
         The data shape is not changed (length and width of the table).
         """
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func, keep_partitioning=True
+            self._partitions, func, keep_partitioning=True, axis=axis
         )
         return self.__constructor__(
             new_partitions,
@@ -2022,10 +2022,7 @@ class PandasDataframe(ClassLogger):
         # If this df only has one row partition, we don't want to do a shuffle and sort - we can
         # just do a full-axis sort.
         if len(self._partitions) == 1:
-            return self.apply_full_axis(
-                1,
-                sort_function,
-            )
+            return self.apply_full_axis(sort_function, axis=1)
         if self.dtypes[columns[0]] == object:
             # This means we are not sorting numbers, so we need our quantiles to not try
             # arithmetic on the values.
@@ -2108,7 +2105,7 @@ class PandasDataframe(ClassLogger):
         ), "Axis argument to filter operator must be 0 (rows) or 1 (columns)"
 
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis.value, self._partitions, condition, keep_partitioning=True
+            self._partitions, condition, keep_partitioning=True, axis=axis.value
         )
 
         new_axes, new_lengths = [0, 0], [0, 0]
@@ -2162,7 +2159,7 @@ class PandasDataframe(ClassLogger):
         """
         axis = Axis(axis)
         partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis.value, self._partitions, func, keep_partitioning=True
+            self._partitions, func, keep_partitioning=True, axis=axis.value
         )
         if axis == Axis.COL_WISE:
             new_index, row_lengths = self._compute_axis_labels_and_lengths(
@@ -2181,8 +2178,9 @@ class PandasDataframe(ClassLogger):
     @lazy_metadata_decorator(apply_axis="both")
     def apply_full_axis(
         self,
-        axis,
         func,
+        *,
+        axis,
         new_index=None,
         new_columns=None,
         dtypes=None,
@@ -2193,10 +2191,10 @@ class PandasDataframe(ClassLogger):
 
         Parameters
         ----------
-        axis : {0, 1}
-            The axis to apply over (0 - rows, 1 - columns).
         func : callable
             The function to apply.
+        axis : {0, 1}
+            The axis to apply over (0 - rows, 1 - columns).
         new_index : list-like, optional
             The index of the result. We may know this in advance,
             and if not provided it must be computed.
@@ -2221,8 +2219,8 @@ class PandasDataframe(ClassLogger):
         The data shape may change as a result of the function.
         """
         return self.broadcast_apply_full_axis(
-            axis=axis,
             func=func,
+            axis=axis,
             new_index=new_index,
             new_columns=new_columns,
             dtypes=dtypes,
@@ -2233,8 +2231,9 @@ class PandasDataframe(ClassLogger):
     @lazy_metadata_decorator(apply_axis="both")
     def apply_full_axis_select_indices(
         self,
-        axis,
         func,
+        *,
+        axis,
         apply_indices=None,
         numeric_indices=None,
         new_index=None,
@@ -2246,10 +2245,10 @@ class PandasDataframe(ClassLogger):
 
         Parameters
         ----------
-        axis : int
-            The axis to apply over.
         func : callable
             The function to apply.
+        axis : int
+            The axis to apply over.
         apply_indices : list-like, default: None
             The labels to apply over.
         numeric_indices : list-like, default: None
@@ -2278,10 +2277,10 @@ class PandasDataframe(ClassLogger):
         dict_indices = self._get_dict_of_block_index(axis ^ 1, numeric_indices)
         new_partitions = (
             self._partition_mgr_cls.apply_func_to_select_indices_along_full_axis(
-                axis,
                 self._partitions,
                 func,
-                dict_indices,
+                axis=axis,
+                indices=dict_indices,
                 keep_remaining=keep_remaining,
             )
         )
@@ -2295,8 +2294,9 @@ class PandasDataframe(ClassLogger):
     @lazy_metadata_decorator(apply_axis="both")
     def apply_select_indices(
         self,
-        axis,
         func,
+        *,
+        axis,
         apply_indices=None,
         row_labels=None,
         col_labels=None,
@@ -2310,10 +2310,10 @@ class PandasDataframe(ClassLogger):
 
         Parameters
         ----------
-        axis : {0, 1}
-            The axis to apply over.
         func : callable
             The function to apply.
+        axis : {0, 1}
+            The axis to apply over.
         apply_indices : list-like, default: None
             The labels to apply over. Must be given if axis is provided.
         row_labels : list-like, default: None
@@ -2351,10 +2351,10 @@ class PandasDataframe(ClassLogger):
             # Get indices being applied to (opposite of indices being applied over)
             dict_indices = self._get_dict_of_block_index(axis ^ 1, numeric_indices)
             new_partitions = self._partition_mgr_cls.apply_func_to_select_indices(
-                axis,
                 self._partitions,
                 func,
-                dict_indices,
+                axis=axis,
+                indices=dict_indices,
                 keep_remaining=keep_remaining,
             )
             # Length objects for new object creation. This is shorter than if..else
@@ -2383,13 +2383,13 @@ class PandasDataframe(ClassLogger):
             new_partitions = self._partition_mgr_cls.apply_func_to_indices_both_axis(
                 self._partitions,
                 func,
-                row_partitions_list,
-                col_partitions_list,
-                item_to_distribute,
+                row_partitions_list=row_partitions_list,
+                col_partitions_list=col_partitions_list,
+                item_to_distribute=item_to_distribute,
                 # Passing caches instead of values in order to not trigger shapes recomputation
                 # if they are not used inside this function.
-                self._row_lengths_cache,
-                self._column_widths_cache,
+                row_lengths=self._row_lengths_cache,
+                col_widths=self._column_widths_cache,
             )
             return self.__constructor__(
                 new_partitions,
@@ -2401,17 +2401,17 @@ class PandasDataframe(ClassLogger):
 
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply(
-        self, axis, func, other, join_type="left", labels="keep", dtypes=None
+        self, func, *, axis, other, join_type="left", labels="keep", dtypes=None
     ):
         """
         Broadcast axis partitions of `other` to partitions of `self` and apply a function.
 
         Parameters
         ----------
-        axis : {0, 1}
-            Axis to broadcast over.
         func : callable
             Function to apply.
+        axis : {0, 1}
+            Axis to broadcast over.
         other : PandasDataframe
             Modin DataFrame to broadcast.
         join_type : str, default: "left"
@@ -2439,7 +2439,7 @@ class PandasDataframe(ClassLogger):
         # unwrap list returned by `copartition`.
         right_parts = right_parts[0]
         new_frame = self._partition_mgr_cls.broadcast_apply(
-            axis, func, left_parts, right_parts
+            func, axis=axis, left=left_parts, right=right_parts
         )
         if dtypes == "copy":
             dtypes = self._dtypes
@@ -2528,8 +2528,9 @@ class PandasDataframe(ClassLogger):
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_select_indices(
         self,
-        axis,
         func,
+        *,
+        axis,
         other,
         apply_indices=None,
         numeric_indices=None,
@@ -2543,10 +2544,10 @@ class PandasDataframe(ClassLogger):
 
         Parameters
         ----------
-        axis : {0, 1}
-            Axis to apply function along.
         func : callable
             Function to apply.
+        axis : {0, 1}
+            Axis to apply function along.
         other : PandasDataframe
             Partitions of which should be broadcasted.
         apply_indices : list, default: None
@@ -2595,13 +2596,13 @@ class PandasDataframe(ClassLogger):
             axis, dict_indices, broadcast_all=broadcast_all
         )
         new_partitions = self._partition_mgr_cls.broadcast_apply_select_indices(
-            axis,
             func,
-            self._partitions,
-            other._partitions,
-            dict_indices,
-            broadcasted_dict,
-            keep_remaining,
+            axis=axis,
+            left=self._partitions,
+            right=other._partitions,
+            left_indices=dict_indices,
+            right_indices=broadcasted_dict,
+            keep_remaining=keep_remaining,
         )
 
         kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
@@ -2610,8 +2611,9 @@ class PandasDataframe(ClassLogger):
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_full_axis(
         self,
-        axis,
         func,
+        *,
+        axis,
         other,
         new_index=None,
         new_columns=None,
@@ -2625,10 +2627,10 @@ class PandasDataframe(ClassLogger):
 
         Parameters
         ----------
-        axis : {0, 1}
-            Axis to apply over (0 - rows, 1 - columns).
         func : callable
             Function to apply.
+        axis : {0, 1}
+            Axis to apply over (0 - rows, 1 - columns).
         other : PandasDataframe or list
             Modin DataFrame(s) to broadcast.
         new_index : list-like, optional
@@ -2667,13 +2669,13 @@ class PandasDataframe(ClassLogger):
             ).keys()
 
         new_partitions = self._partition_mgr_cls.broadcast_axis_partitions(
+            self._build_treereduce_func(axis, func),
             axis=axis,
             left=self._partitions,
             right=other,
-            apply_func=self._build_treereduce_func(axis, func),
+            keep_partitioning=keep_partitioning,
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
-            keep_partitioning=keep_partitioning,
         )
         # Index objects for new object creation. This is shorter than if..else
         kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
@@ -2764,9 +2766,9 @@ class PandasDataframe(ClassLogger):
         # lengths for alignment.
         if do_repartition_base:
             reindexed_base = base_frame._partition_mgr_cls.map_axis_partitions(
-                axis,
                 base_frame._partitions,
                 make_reindexer(do_reindex_base, base_frame_idx),
+                axis=axis,
             )
             if axis:
                 base_lengths = [obj.width() for obj in reindexed_base[0]]
@@ -2799,9 +2801,9 @@ class PandasDataframe(ClassLogger):
                 reindexed_other_list[i] = other_frames[
                     i
                 ]._partition_mgr_cls.map_axis_partitions(
-                    axis,
                     other_frames[i]._partitions,
                     make_reindexer(do_repartition_others[i], base_frame_idx + 1 + i),
+                    axis=axis,
                     lengths=base_lengths,
                 )
             else:
