@@ -5090,7 +5090,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         for _ax in axes:
             new_query_compiler = new_query_compiler.__constructor__(
                 new_query_compiler._modin_frame.apply_full_axis(
-                    _ax, lambda df: df, keep_partitioning=False
+                    lambda df: df, keep_partitioning=False, axis=_ax,
                 )
             )
         return new_query_compiler
