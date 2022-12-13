@@ -2262,3 +2262,16 @@ def test_lazy_eval_index():
         return df_copy
 
     eval_general(modin_df, pandas_df, func)
+
+
+def test_index_of_empty_frame():
+    data = test_data_values[0]
+    md_df, pd_df = create_test_dfs(
+        data, index=pandas.RangeIndex(len(next(iter(data.values()))), name="index name")
+    )
+
+    md_res = md_df.query(f"{md_df.columns[0]} > {RAND_HIGH}")
+    pd_res = pd_df.query(f"{pd_df.columns[0]} > {RAND_HIGH}")
+
+    assert md_res.empty and pd_res.empty
+    df_equals(md_res.index, pd_res.index)
