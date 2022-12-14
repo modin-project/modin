@@ -15,6 +15,7 @@ import pytest
 import itertools
 import pandas
 import numpy as np
+from unittest import mock
 
 from modin.config.envvars import Engine
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
@@ -2099,3 +2100,107 @@ def test_mean_with_datetime(by_func):
 
     modin_df, pandas_df = create_test_dfs(data)
     eval_general(modin_df, pandas_df, lambda df: df.groupby(by=by_func(df)).mean())
+
+
+@pytest.mark.parametrize(
+    "modin_df_recipie",
+    ["non_lazy_frame", "frame_with_deferred_index", "completly_lazy_frame"],
+)
+def test_groupby_on_empty_data(modin_df_recipie):
+    class ConstructModinDf:
+        def __init__(self, recipie, df_kwargs):
+            self._recipie = recipie
+            self._mock_obj = None
+            self._df_kwargs = df_kwargs
+
+        def non_lazy_frame(self):
+            return pd.DataFrame(**self._df_kwargs)
+
+        def frame_with_deferred_index(self):
+            df = pd.DataFrame(**self._df_kwargs)
+            try:
+                # The frame would stop being lazy once index computation is triggered
+                df._query_compiler._modin_frame._index_cache = None
+            except AttributeError:
+                pytest.skip(
+                    reason="Selected execution doesn't support deferred indices."
+                )
+
+            return df
+
+        def completly_lazy_frame(self):
+            donor_obj = pd.DataFrame()._query_compiler
+
+            self._mock_obj = mock.patch(
+                f"{donor_obj.__module__}.{donor_obj.__class__.__name__}.lazy_execution",
+                new_callable=mock.PropertyMock,
+            )
+            patch_obj = self._mock_obj.__enter__()
+            patch_obj.return_value = True
+
+            df = pd.DataFrame(**self._df_kwargs)
+            # The frame is lazy until `self.__exit__()` is called
+            assert df._query_compiler.lazy_execution
+            return df
+
+        def __enter__(self):
+            return getattr(self, self._recipie)()
+
+        def __exit__(self, *args, **kwargs):
+            if self._mock_obj is not None:
+                self._mock_obj.__exit__(*args, **kwargs)
+
+    def run_test(eval_function, *args, **kwargs):
+        df_kwargs = {"columns": ["a", "b", "c"]}
+        with ConstructModinDf(modin_df_recipie, df_kwargs) as md_df:
+            pd_df = pandas.DataFrame(**df_kwargs)
+
+            md_grp = md_df.groupby(md_df.columns[0])
+            pd_grp = pd_df.groupby(pd_df.columns[0])
+
+            eval_function(md_grp, pd_grp, *args, **kwargs)
+
+    run_test(eval___getattr__, item="b")
+    run_test(eval___getitem__, item="b")
+    run_test(eval_agg, func=lambda df: df.mean())
+    run_test(eval_aggregate, func=lambda df: df.mean())
+    run_test(eval_any)
+    run_test(eval_apply, func=lambda df: df.mean())
+    run_test(eval_count)
+    run_test(eval_cummax)
+    run_test(eval_cummin)
+    run_test(eval_cumprod)
+    run_test(eval_cumsum)
+    run_test(eval_dtypes)
+    run_test(eval_fillna)
+    run_test(eval_groups)
+    run_test(eval_len)
+    run_test(eval_max)
+    run_test(eval_mean)
+    run_test(eval_median)
+    run_test(eval_min)
+    run_test(eval_ndim)
+    run_test(eval_ngroup)
+    run_test(eval_ngroups)
+    run_test(eval_nunique)
+    run_test(eval_prod)
+    run_test(eval_quantile)
+    run_test(eval_rank)
+    run_test(eval_size)
+    run_test(eval_skew)
+    run_test(eval_sum)
+    run_test(eval_var)
+
+    if modin_df_recipie != "completly_lazy_frame":
+        # TODO: these functions have their specific implementations in the
+        # front-end that are unable to operate on empty frames and thus
+        # fail on an empty lazy frame.
+        run_test(eval_pipe, func=lambda df: df.mean())
+        run_test(eval_shift)
+
+    # TODO: these functions fail in case of empty data in the pandas itself,
+    # we have to modify the `eval_*` functions to be able to check for
+    # exceptions equality:
+    # https://github.com/modin-project/modin/issues/5441
+    # run_test(eval_transform, func=lambda df: df.mean())
+    # run_test(eval_std)

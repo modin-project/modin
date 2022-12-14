@@ -85,6 +85,7 @@ _DEFAULT_BEHAVIOUR = {
     "name",
     "dtypes",
     "dtype",
+    "groupby",
     "_get_name",
     "_set_name",
     "_default_to_pandas",

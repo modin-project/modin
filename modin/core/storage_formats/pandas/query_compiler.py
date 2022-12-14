@@ -2897,6 +2897,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         how="axis_wise",
         drop=False,
     ):
+        # Defaulting to pandas in case of an empty frame
+        if len(self.columns) == 0 or len(self.index) == 0:
+            return super().groupby_agg(
+                by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
+            )
+
         if isinstance(agg_func, dict) and all(
             is_reduce_function(x) for x in agg_func.values()
         ):
