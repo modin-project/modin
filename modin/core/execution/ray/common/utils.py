@@ -112,7 +112,7 @@ def initialize_ray(
             ray_init_kwargs = {
                 "num_cpus": CpuCount.get(),
                 "num_gpus": GpuCount.get(),
-                "include_dashboard": False,
+                "include_dashboard": True,
                 "ignore_reinit_error": True,
                 "object_store_memory": object_store_memory,
                 "_redis_password": redis_password,
