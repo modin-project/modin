@@ -120,11 +120,38 @@ class DataFrameGroupBy(ClassLogger):
         return len(self)
 
     def skew(self, *args, **kwargs):
-        return self._wrap_aggregation(
-            type(self._query_compiler).groupby_skew,
+        # The 'skew' aggregation is less tolerant to non-numeric columns than others
+        # (i.e. it doesn't allow numeric categoricals), thus dropping non-numeric
+        # columns here since `._wrap_aggregation(numeric_only=True, ...)` is not enough
+        if self.ndim == 2:
+            by_cols = self._internal_by
+            mask_cols = [
+                col
+                for col, dtype in self._df.dtypes.items()
+                if is_numeric_dtype(dtype) or col in by_cols
+            ]
+            if not self._df.columns.equals(mask_cols):
+                masked_df = self._df[mask_cols]
+                masked_obj = type(self)(
+                    df=masked_df,
+                    by=self._by,
+                    axis=self._axis,
+                    idx_name=self._idx_name,
+                    drop=self._drop,
+                    squeeze=self._squeeze,
+                    **self._kwargs,
+                )
+            else:
+                masked_obj = self
+        else:
+            masked_obj = self
+
+        return masked_obj._wrap_aggregation(
+            type(masked_obj._query_compiler).groupby_skew,
             agg_args=args,
             agg_kwargs=kwargs,
-            numeric_only=True,
+            # Don't want to try to drop non-numeric columns for the second time
+            numeric_only=False,
         )
 
     def ffill(self, limit=None):
