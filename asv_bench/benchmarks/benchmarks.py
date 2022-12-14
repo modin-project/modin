@@ -1193,7 +1193,7 @@ class TimeRepr:
         self.df = IMPL.DataFrame(np.random.randn(*shape))
         execute(self.df)
 
-    # returns a  string thus not calling execute
+    # returns a string thus not calling execute
     def time_repr(self, shape):
         repr(self.df)
 
@@ -1204,14 +1204,12 @@ class TimeMaskBool:
     param_names = ["shape"]
 
     def setup(self, shape):
-        df = IMPL.DataFrame(np.random.randn(*shape))
-        df = df.where(df > 0)
-        self.bools = df > 0
-        self.mask = IMPL.isnull(df)
-        execute(self.bools), execute(self.mask)
+        self.df = IMPL.DataFrame(np.random.randn(*shape))
+        self.mask = df < 0
+        execute(self.df), execute(self.mask)
 
     def time_frame_mask(self, shape):
-        execute(self.bools.astype(float).mask(self.mask))
+        execute(self.df.mask(self.mask))
 
 
 class TimeIsnull:
