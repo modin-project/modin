@@ -116,7 +116,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         """
         eng = str(kwargs["engine"]).lower().strip()
         try:
-            if eng in ["pandas", "c"]:
+            if eng in ("pandas", "c"):
                 return super().read_csv(**kwargs)
 
             cls._validate_read_csv_kwargs(kwargs)
@@ -139,7 +139,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
 
             names = kwargs["names"]
             skiprows = kwargs["skiprows"]
-            if names not in [lib.no_default, None] and kwargs["header"] == 0:
+            if names not in (lib.no_default, None) and kwargs["header"] == 0:
                 skiprows = skiprows + 1 if skiprows is not None else 1
 
             sep = kwargs["sep"]
