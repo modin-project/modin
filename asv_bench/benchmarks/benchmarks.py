@@ -1210,10 +1210,7 @@ class TimeMaskBool:
         self.mask = IMPL.isnull(df)
         execute(self.bools), execute(self.mask)
 
-    def time_frame_mask_bools(self, shape):
-        execute(self.bools.mask(self.mask))
-
-    def time_frame_mask_floats(self, shape):
+    def time_frame_mask(self, shape):
         execute(self.bools.astype(float).mask(self.mask))
 
 
@@ -1241,15 +1238,11 @@ class TimeDropna:
         row, col = shape
         self.df = IMPL.DataFrame(np.random.randn(row, col))
         self.df.iloc[row // 20 : row // 10, col // 3 : col // 2] = np.nan
-        self.df_mixed = self.df.copy()
-        self.df_mixed["foo"] = "bar"
-        execute(self.df), execute(self.df_mixed)
+        self.df["foo"] = "bar"
+        execute(self.df)
 
     def time_dropna(self, how, axis, shape):
         execute(self.df.dropna(how=how, axis=axis))
-
-    def time_dropna_axis_mixed_dtypes(self, how, axis, shape):
-        execute(self.df_mixed.dropna(how=how, axis=axis))
 
 
 class TimeEquals:
@@ -1263,8 +1256,8 @@ class TimeEquals:
         execute(self.df)
 
     # returns a boolean thus not calling execute
-    def time_frame_float_unequal(self, shape):
-        self.df.equals(self.df_nan)
+    def time_frame_float_equal(self, shape):
+        self.df.equals(self.df)
 
 
 from .utils import setup  # noqa: E402, F401
