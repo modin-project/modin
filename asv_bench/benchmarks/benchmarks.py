@@ -1223,14 +1223,10 @@ class TimeIsnull:
     param_names = ["shape"]
 
     def setup(self, shape):
-        self.df_no_null = IMPL.DataFrame(np.random.randn(*shape))
         sample = np.array([np.nan, 1.0])
         data = np.random.choice(sample, (shape[0], shape[1]))
         self.df = IMPL.DataFrame(data)
-        execute(self.df), execute(self.df_no_null)
-
-    def time_isnull_floats_no_null(self, shape):
-        execute(IMPL.isnull(self.df_no_null))
+        execute(self.df)
 
     def time_isnull(self, shape):
         execute(IMPL.isnull(self.df))
@@ -1263,15 +1259,10 @@ class TimeEquals:
 
     def setup(self, shape):
         self.df = IMPL.DataFrame(np.random.randn(*shape))
-        self.df_nan = self.df.copy()
-        self.df_nan.iloc[-1, -1] = np.nan
-        execute(self.df), execute(self.df_nan)
+        self.df.iloc[-1, -1] = np.nan
+        execute(self.df)
 
-    # returns a  boolean thus not calling execute
-    def time_frame_float_equal(self, shape):
-        self.df.equals(self.df)
-
-    # returns a  boolean thus not calling execute
+    # returns a boolean thus not calling execute
     def time_frame_float_unequal(self, shape):
         self.df.equals(self.df_nan)
 
