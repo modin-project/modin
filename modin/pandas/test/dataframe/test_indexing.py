@@ -2269,8 +2269,8 @@ def test_index_of_empty_frame():
     md_df, pd_df = create_test_dfs(
         {}, index=pandas.Index([], name="index name"), columns=["a", "b"]
     )
-    assert md_df.empty and md_df.empty
-    df_equals(md_df.index, md_df.index)
+    assert md_df.empty and pd_df.empty
+    df_equals(md_df.index, pd_df.index)
 
     # Test on an empty frame produced by Modin's logic
     data = test_data_values[0]
