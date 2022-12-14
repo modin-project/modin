@@ -130,7 +130,9 @@ class GroupByReduce(TreeReduce):
             # Other is a broadcasted partition that represents 'by' data to group on.
             # If 'drop' then the 'by' data came from the 'self' frame, thus
             # inserting missed columns to the partition to group on them.
-            if drop or isinstance(other := other.squeeze(axis=1), pandas.DataFrame):
+            if drop or isinstance(
+                other := other.squeeze(axis=axis ^ 1), pandas.DataFrame
+            ):
                 df = pandas.concat(
                     [df] + [other[[o for o in other if o not in df]]],
                     axis=1,
