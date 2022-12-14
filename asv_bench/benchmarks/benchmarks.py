@@ -1205,7 +1205,7 @@ class TimeMaskBool:
 
     def setup(self, shape):
         self.df = IMPL.DataFrame(np.random.randn(*shape))
-        self.mask = df < 0
+        self.mask = self.df < 0
         execute(self.df), execute(self.mask)
 
     def time_frame_mask(self, shape):
