@@ -288,10 +288,8 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
 
         return usecols_md
 
-    from modin.pandas import read_csv as general_read_csv
-
     read_csv_unsup_defaults = {}
-    for k, v in inspect.signature(general_read_csv).parameters.items():
+    for k, v in inspect.signature(pandas.read_csv).parameters.items():
         if v.default is not inspect.Parameter.empty and k in unsupported_args:
             read_csv_unsup_defaults[k] = v.default
 
