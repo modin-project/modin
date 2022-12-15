@@ -968,6 +968,8 @@ class PandasDataframe(ClassLogger):
         """
         new_row_labels = pandas.RangeIndex(len(self.index))
 
+        new_dtypes = self.index.to_frame().dtypes
+        new_dtypes = pandas.concat([new_dtypes, self.dtypes])
         if self.index.nlevels > 1:
             level_names = [
                 self.index.names[i]
@@ -1040,6 +1042,7 @@ class PandasDataframe(ClassLogger):
             new_columns,
             row_lengths=self._row_lengths_cache,
             column_widths=new_column_widths,
+            dtypes=new_dtypes,
         )
         # Set flag for propagating deferred row labels across dataframe partitions
         result.synchronize_labels(axis=0)
