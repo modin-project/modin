@@ -878,13 +878,22 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
         func = cls.preprocess_func(index_func)
         target = partitions.T if axis == 0 else partitions
-        new_idx = [idx.apply(func) for idx in target[0]] if len(target) else []
-        new_idx = cls.get_objects_from_partitions(new_idx)
-        # filter empty indexes
+        if len(target):
+            new_idx = [idx.apply(func) for idx in target[0]]
+            new_idx = cls.get_objects_from_partitions(new_idx)
+        else:
+            new_idx = [pandas.Index([])]
+
+        # filter empty indexes in case there are multiple partitions
         total_idx = list(filter(len, new_idx))
         if len(total_idx) > 0:
             # TODO FIX INFORMATION LEAK!!!!1!!1!!
             total_idx = total_idx[0].append(total_idx[1:])
+        else:
+            # Meaning that all partitions returned a zero-length index,
+            # in this case, we return an index of any partition to preserve
+            # the index's metadata
+            total_idx = new_idx[0]
         return total_idx, new_idx
 
     @classmethod
