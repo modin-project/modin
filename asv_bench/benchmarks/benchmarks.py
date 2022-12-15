@@ -1184,4 +1184,78 @@ class TimeGroups:
         self.series.groupby(self.series).indices
 
 
+class TimeRepr:
+
+    params = [get_benchmark_shapes("TimeRepr")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        self.df = IMPL.DataFrame(np.random.randn(*shape))
+        execute(self.df)
+
+    # returns a string thus not calling execute
+    def time_repr(self, shape):
+        repr(self.df)
+
+
+class TimeMaskBool:
+
+    params = [get_benchmark_shapes("TimeMaskBool")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        self.df = IMPL.DataFrame(np.random.randn(*shape))
+        self.mask = self.df < 0
+        execute(self.df), execute(self.mask)
+
+    def time_frame_mask(self, shape):
+        execute(self.df.mask(self.mask))
+
+
+class TimeIsnull:
+
+    params = [get_benchmark_shapes("TimeIsnull")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        sample = np.array([np.nan, 1.0])
+        data = np.random.choice(sample, (shape[0], shape[1]))
+        self.df = IMPL.DataFrame(data)
+        execute(self.df)
+
+    def time_isnull(self, shape):
+        execute(IMPL.isnull(self.df))
+
+
+class TimeDropna:
+
+    params = (["all", "any"], [0, 1], get_benchmark_shapes("TimeDropna"))
+    param_names = ["how", "axis", "shape"]
+
+    def setup(self, how, axis, shape):
+        row, col = shape
+        self.df = IMPL.DataFrame(np.random.randn(row, col))
+        self.df.iloc[row // 20 : row // 10, col // 3 : col // 2] = np.nan
+        self.df["foo"] = "bar"
+        execute(self.df)
+
+    def time_dropna(self, how, axis, shape):
+        execute(self.df.dropna(how=how, axis=axis))
+
+
+class TimeEquals:
+
+    params = [get_benchmark_shapes("TimeEquals")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        self.df = IMPL.DataFrame(np.random.randn(*shape))
+        self.df.iloc[-1, -1] = np.nan
+        execute(self.df)
+
+    # returns a boolean thus not calling execute
+    def time_frame_float_equal(self, shape):
+        self.df.equals(self.df)
+
+
 from .utils import setup  # noqa: E402, F401

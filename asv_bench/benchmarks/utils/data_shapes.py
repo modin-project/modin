@@ -103,6 +103,11 @@ _DEFAULT_CONFIG_T = [
             "TimeDropDuplicatesDataframe",
             "TimeStack",
             "TimeUnstack",
+            "TimeRepr",
+            "TimeMaskBool",
+            "TimeIsnull",
+            "TimeDropna",
+            "TimeEquals",
             # IO benchmarks
             "TimeReadCsvSkiprows",
             "TimeReadCsvTrueFalseValues",
