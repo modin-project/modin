@@ -198,6 +198,18 @@ for config in (_DEFAULT_CONFIG_T, _DEFAULT_HDK_CONFIG_T):
     for _shape, _names in config:
         DEFAULT_CONFIG.update({_name: _shape for _name in _names})
 
+# Correct shapes in the case when the operation ended with a timeout error
+if ASV_DATASET_SIZE == "big":
+    DEFAULT_CONFIG["TimeLevelAlign"] = [
+        [[2500, 2500], [2500, 2500]],
+        [[250_000, 20], [500_000, 10]],
+    ]
+    DEFAULT_CONFIG["TimeStack"] = [
+        [1500, 1500],
+        [100_000, 10],
+    ]
+    DEFAULT_CONFIG["TimeUnstack"] = DEFAULT_CONFIG["TimeStack"]
+
 CONFIG_FROM_FILE = None
 
 
