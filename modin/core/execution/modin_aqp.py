@@ -52,7 +52,7 @@ def call_progress_bar(result_parts, line_no):
     # No progress bar is supported in that case.
     except AttributeError:
         return
-    pbar_id = str(cell_no) + "-" + str(line_no)
+    pbar_id = f"{cell_no}-{line_no}"
     futures = [
         block
         for row in result_parts

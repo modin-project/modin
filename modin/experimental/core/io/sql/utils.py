@@ -42,8 +42,7 @@ def is_distributed(partition_column, lower_bound, upper_bound):
     ):
         if upper_bound > lower_bound:
             return True
-        else:
-            raise InvalidArguments("upper_bound must be greater than lower_bound.")
+        raise InvalidArguments("upper_bound must be greater than lower_bound.")
     elif (partition_column is None) and (lower_bound is None) and (upper_bound is None):
         return False
     else:
@@ -69,9 +68,7 @@ def is_table(engine, sql):
     bool
         Whether `sql` a table name or not.
     """
-    if inspect(engine).has_table(sql):
-        return True
-    return False
+    return inspect(engine).has_table(sql)
 
 
 def get_table_metadata(engine, table):
@@ -191,10 +188,9 @@ def check_partition_column(partition_column, cols):
         if k == partition_column:
             if v == "int":
                 return
-            else:
-                raise InvalidPartitionColumn(
-                    "partition_column must be int, and not {0}".format(v)
-                )
+            raise InvalidPartitionColumn(
+                "partition_column must be int, and not {0}".format(v)
+            )
     raise InvalidPartitionColumn(
         "partition_column {0} not found in the query".format(partition_column)
     )
@@ -232,8 +228,7 @@ def get_query_info(sql, con, partition_column):
     # TODO allow validation that takes into account edge cases of pandas e.g. "[index]"
     # check_partition_column(partition_column, cols)
     # TODO partition_column isn't used; we need to use it;
-    cols_names = list(cols.keys())
-    return cols_names, query
+    return list(cols.keys()), query
 
 
 def query_put_bounders(query, partition_column, start, end):
