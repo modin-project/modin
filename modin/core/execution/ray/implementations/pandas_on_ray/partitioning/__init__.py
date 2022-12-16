@@ -15,16 +15,8 @@
 
 from .partition import PandasOnRayDataframePartition
 from .partition_manager import PandasOnRayDataframePartitionManager
-from .virtual_partition import (
-    PandasOnRayDataframeVirtualPartition,
-    PandasOnRayDataframeColumnPartition,
-    PandasOnRayDataframeRowPartition,
-)
 
 __all__ = [
     "PandasOnRayDataframePartition",
     "PandasOnRayDataframePartitionManager",
-    "PandasOnRayDataframeVirtualPartition",
-    "PandasOnRayDataframeColumnPartition",
-    "PandasOnRayDataframeRowPartition",
 ]
