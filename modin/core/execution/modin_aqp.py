@@ -86,11 +86,23 @@ def call_progress_bar(result_parts, line_no):
     bar_lock.release()
 
     threading.Thread(target=_show_time_updates, args=(progress_bars[pbar_id],)).start()
+
+    # in order to fix an alert of CodeQL: "Local variable 'wait' may be used before it is initialized.",
+    # we have to add a simple wait method for engines other than Ray and Unidist
+    def _wait(futures, num_returns=1):
+        return futures
+
+    wait = _wait
     modin_engine = Engine.get()
     if modin_engine == "Ray":
-        from ray import wait
+        from ray import wait as ray_wait
+
+        wait = ray_wait
     elif modin_engine == "Unidist":
-        from unidist import wait
+        from unidist import wait as unidist_wait
+
+        wait = unidist_wait
+
     for i in range(1, len(futures) + 1):
         wait(futures, num_returns=i)
         progress_bars[pbar_id].update(1)
