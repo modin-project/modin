@@ -88,9 +88,9 @@ def call_progress_bar(result_parts, line_no):
     threading.Thread(target=_show_time_updates, args=(progress_bars[pbar_id],)).start()
     modin_engine = Engine.get()
     if modin_engine == "Ray":
-        from modin.core.execution.ray.common.utils import wait
+        from ray import wait
     elif modin_engine == "Unidist":
-        from modin.core.execution.unidist.common.utils import wait
+        from unidist import wait
     for i in range(1, len(futures) + 1):
         wait(futures, num_returns=i)
         progress_bars[pbar_id].update(1)
