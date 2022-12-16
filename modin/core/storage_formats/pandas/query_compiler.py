@@ -1945,8 +1945,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
                 else:
                     # Value is a DataFrame type object
-                    def fillna_builder(df, r):
-                        return df.fillna(value=r, **kwargs)
+                    def fillna_builder(df, right):
+                        return df.fillna(value=right, **kwargs)
 
                     new_modin_frame = self._modin_frame.broadcast_apply(
                         0, fillna_builder, value._modin_frame
