@@ -42,11 +42,11 @@ if Engine.get() == "Ray":
     virtual_row_partition_class = PandasOnRayDataframeRowPartition
     put = ray.put
 elif Engine.get() == "Dask":
-    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.virtual_partition import (
+    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframeColumnPartition,
         PandasOnDaskDataframeRowPartition,
     )
-    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition import (
+    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframePartition,
     )
     from modin.core.execution.dask.common import DaskWrapper

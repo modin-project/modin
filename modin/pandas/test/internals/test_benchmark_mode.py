@@ -30,7 +30,7 @@ if engine == "Ray":
 elif engine == "Dask":
     wait_method = (
         "modin.core.execution.dask.implementations."
-        + "pandas_on_dask.partitioning.partition_manager."
+        + "pandas_on_dask.partitioning."
         + "PandasOnDaskDataframePartitionManager.wait_partitions"
     )
 elif engine == "Unidist":
