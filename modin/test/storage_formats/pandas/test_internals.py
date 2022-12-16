@@ -29,10 +29,10 @@ NPartitions.put(4)
 
 if Engine.get() == "Ray":
     import ray
-    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframePartition,
     )
-    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.virtual_partition import (
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframeColumnPartition,
         PandasOnRayDataframeRowPartition,
     )
