@@ -190,7 +190,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         """
         result_num_splits = len(lengths) if lengths else num_splits
         return DaskWrapper.deploy(
-            func=deploy_dask_func,
+            func=_deploy_dask_func,
             f_args=(
                 PandasDataframeAxisPartition.deploy_axis_func,
                 axis,
@@ -250,7 +250,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             A list of distributed.Future.
         """
         return DaskWrapper.deploy(
-            func=deploy_dask_func,
+            func=_deploy_dask_func,
             f_args=(
                 PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
                 axis,
@@ -505,7 +505,7 @@ class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeVirtualPartition):
     axis = 1
 
 
-def deploy_dask_func(deployer, axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs):
+def _deploy_dask_func(deployer, axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs):
     """
     Execute a function on an axis partition in a worker process.
 
