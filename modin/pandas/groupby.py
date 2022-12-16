@@ -137,6 +137,24 @@ class DataFrameGroupBy(ClassLogger):
             numeric_only=True,
         )
 
+    def value_counts(
+        self,
+        subset=None,
+        normalize: bool = False,
+        sort: bool = True,
+        ascending: bool = False,
+        dropna: bool = True,
+    ):
+        return self._default_to_pandas(
+            lambda df: df.value_counts(
+                subset=subset,
+                normalize=normalize,
+                sort=sort,
+                ascending=ascending,
+                dropna=dropna,
+            )
+        )
+
     def mean(self, numeric_only=None):
         return self._check_index(
             self._wrap_aggregation(
@@ -1306,6 +1324,24 @@ class SeriesGroupBy(DataFrameGroupBy):
                 )
                 for k in (sorted(group_ids) if self._sort else group_ids)
             )
+
+    def value_counts(
+        self,
+        normalize: bool = False,
+        sort: bool = True,
+        ascending: bool = False,
+        bins=None,
+        dropna: bool = True,
+    ):
+        return self._default_to_pandas(
+            lambda ser: ser.value_counts(
+                normalize=normalize,
+                sort=sort,
+                ascending=ascending,
+                bins=bins,
+                dropna=dropna,
+            )
+        )
 
     def unique(self):
         return self._check_index(
