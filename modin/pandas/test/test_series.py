@@ -2277,7 +2277,8 @@ def test_map(data, na_values):
 
     # Index into list objects
     df_equals(
-        modin_series_lists.map(lambda l: l[0]), pandas_series_lists.map(lambda l: l[0])
+        modin_series_lists.map(lambda list: list[0]),
+        pandas_series_lists.map(lambda list: list[0]),
     )
 
 
