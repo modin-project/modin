@@ -27,7 +27,7 @@ from .virtual_partition import (
     PandasOnRayDataframeRowPartition,
 )
 from .partition import PandasOnRayDataframePartition
-from modin.core.execution.ray.generic.modin_aqp import call_progress_bar
+from modin.core.execution.modin_aqp import call_progress_bar
 
 
 def progress_bar_wrapper(f):
