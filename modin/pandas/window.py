@@ -182,10 +182,8 @@ class Rolling(ClassLogger):
         from .dataframe import DataFrame
         from .series import Series
 
-        if isinstance(other, DataFrame):
-            other = other._query_compiler.to_pandas()
-        elif isinstance(other, Series):
-            other = other._query_compiler.to_pandas().squeeze()
+        if isinstance(other, (DataFrame, Series)):
+            other = other._query_compiler
 
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_corr(
@@ -197,10 +195,8 @@ class Rolling(ClassLogger):
         from .dataframe import DataFrame
         from .series import Series
 
-        if isinstance(other, DataFrame):
-            other = other._query_compiler.to_pandas()
-        elif isinstance(other, Series):
-            other = other._query_compiler.to_pandas().squeeze()
+        if isinstance(other, (DataFrame, Series)):
+            other = other._query_compiler
 
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_cov(

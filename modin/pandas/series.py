@@ -191,15 +191,11 @@ class Series(BasePandasDataset):
 
     @_doc_binary_op(operation="union", bin_op="and", right="other")
     def __and__(self, other):
-        if isinstance(other, (list, np.ndarray, pandas.Series)):
-            return self._default_to_pandas(pandas.Series.__and__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__and__(new_other)
 
     @_doc_binary_op(operation="union", bin_op="and", right="other")
     def __rand__(self, other):
-        if isinstance(other, (list, np.ndarray, pandas.Series)):
-            return self._default_to_pandas(pandas.Series.__rand__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__rand__(new_other)
 
@@ -352,29 +348,21 @@ class Series(BasePandasDataset):
 
     @_doc_binary_op(operation="disjunction", bin_op="or", right="other")
     def __or__(self, other):
-        if isinstance(other, (list, np.ndarray, pandas.Series)):
-            return self._default_to_pandas(pandas.Series.__or__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__or__(new_other)
 
     @_doc_binary_op(operation="disjunction", bin_op="or", right="other")
     def __ror__(self, other):
-        if isinstance(other, (list, np.ndarray, pandas.Series)):
-            return self._default_to_pandas(pandas.Series.__ror__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__ror__(new_other)
 
     @_doc_binary_op(operation="exclusive or", bin_op="xor", right="other")
     def __xor__(self, other):
-        if isinstance(other, (list, np.ndarray, pandas.Series)):
-            return self._default_to_pandas(pandas.Series.__xor__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__xor__(new_other)
 
     @_doc_binary_op(operation="exclusive or", bin_op="xor", right="other")
     def __rxor__(self, other):
-        if isinstance(other, (list, np.ndarray, pandas.Series)):
-            return self._default_to_pandas(pandas.Series.__rxor__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__rxor__(new_other)
 
@@ -1726,14 +1714,6 @@ class Series(BasePandasDataset):
         Find indices where elements should be inserted to maintain order.
         """
         searchsorted_qc = self._query_compiler
-        if sorter is not None:
-            # `iloc` method works slowly (https://github.com/modin-project/modin/issues/1903),
-            # so _default_to_pandas is used for now
-            # searchsorted_qc = self.iloc[sorter].reset_index(drop=True)._query_compiler
-            # sorter = None
-            return self._default_to_pandas(
-                pandas.Series.searchsorted, value, side=side, sorter=sorter
-            )
         # searchsorted should return item number irrespective of Series index, so
         # Series.index is always set to pandas.RangeIndex, which can be easily processed
         # on the query_compiler level
