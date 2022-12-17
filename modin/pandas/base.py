@@ -682,7 +682,7 @@ class BasePandasDataset(ClassLogger):
             return f
         f = getattr(np, func, None)
         if f is not None:
-            return self._default_to_pandas("agg", func, *args, **kwargs)
+            return self.apply(f, *args, **kwargs)
         raise ValueError("{} is an unknown string function".format(func))
 
     def _get_dtypes(self):
@@ -716,18 +716,17 @@ class BasePandasDataset(ClassLogger):
         """
         Align two objects on their axes with the specified join method.
         """
-        return self._default_to_pandas(
-            "align",
-            other,
-            join=join,
-            axis=axis,
-            level=level,
-            copy=copy,
-            fill_value=fill_value,
-            method=method,
-            limit=limit,
-            fill_axis=fill_axis,
-            broadcast_axis=broadcast_axis,
+        return self._query_compiler.align(
+            other._query_compiler,
+            join,
+            axis,
+            level,
+            copy,
+            fill_value,
+            method,
+            limit,
+            fill_axis,
+            broadcast_axis,
         )
 
     def all(
@@ -911,14 +910,7 @@ class BasePandasDataset(ClassLogger):
         """
         Convert time series to specified frequency.
         """
-        return self._default_to_pandas(
-            "asfreq",
-            freq,
-            method=method,
-            how=how,
-            normalize=normalize,
-            fill_value=fill_value,
-        )
+        return self._query_compiler.asfreq(freq, method, how, normalize, fill_value)
 
     def asof(self, where, subset=None):  # noqa: PR01, RT01, D200
         """
@@ -1436,8 +1428,10 @@ class BasePandasDataset(ClassLogger):
         """
         Provide exponentially weighted (EW) calculations.
         """
-        return self._default_to_pandas(
-            "ewm",
+        from .ewm import ExponentialMovingWindow
+
+        return ExponentialMovingWindow(
+            self,
             com=com,
             span=span,
             halflife=halflife,
@@ -1848,15 +1842,16 @@ class BasePandasDataset(ClassLogger):
         """
         Replace values where the condition is True.
         """
-        return self._default_to_pandas(
-            "mask",
-            cond,
-            other=other,
-            inplace=inplace,
-            axis=axis,
-            level=level,
-            errors=errors,
-            try_cast=try_cast,
+        return self.__constructor__(
+            self._query_compiler.mask(
+                cond,
+                other=other,
+                inplace=inplace,
+                axis=axis,
+                level=level,
+                errors=errors,
+                try_cast=try_cast,
+            )
         )
 
     def max(
@@ -2070,13 +2065,8 @@ class BasePandasDataset(ClassLogger):
         """
         Percentage change between the current and a prior element.
         """
-        return self._default_to_pandas(
-            "pct_change",
-            periods=periods,
-            fill_method=fill_method,
-            limit=limit,
-            freq=freq,
-            **kwargs,
+        return self._query_compiler.pct_change(
+            periods, fill_method, limit, freq, **kwargs
         )
 
     def pipe(self, func, *args, **kwargs):  # noqa: PR01, RT01, D200
@@ -2251,14 +2241,7 @@ class BasePandasDataset(ClassLogger):
         """
         Return an object with matching indices as `other` object.
         """
-        return self._default_to_pandas(
-            "reindex_like",
-            other,
-            method=method,
-            copy=copy,
-            limit=limit,
-            tolerance=tolerance,
-        )
+        return self._query_compiler.reindex_like(other, method, copy, limit, tolerance)
 
     def rename_axis(
         self, mapper=None, index=None, columns=None, axis=None, copy=True, inplace=False
@@ -3452,6 +3435,30 @@ class BasePandasDataset(ClassLogger):
         )
         return self.set_axis(new_labels, axis, inplace=False, copy=copy)
 
+    def interpolate(
+        self,
+        method="linear",
+        axis=0,
+        limit=None,
+        inplace=False,
+        limit_direction: Optional[str] = None,
+        limit_area=None,
+        downcast=None,
+        **kwargs,
+    ):  # noqa: PR01, RT01, D200
+        return self.__constructor__(
+            self._query_compiler.interpolate(
+                method,
+                axis,
+                limit,
+                inplace,
+                limit_direction,
+                limit_area,
+                downcast,
+                **kwargs,
+            )
+        )
+
     # TODO: uncomment the following lines when #3331 issue will be closed
     # @prepend_to_notes(
     #     """
@@ -3842,7 +3849,7 @@ class BasePandasDataset(ClassLogger):
         -------
         int
         """
-        return self._default_to_pandas("__sizeof__")
+        return self._query_compiler.sizeof()
 
     def __str__(self):  # pragma: no cover
         """

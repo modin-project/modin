@@ -1255,32 +1255,6 @@ class DataFrame(BasePandasDataset):
 
         self._update_inplace(new_query_compiler=new_query_compiler)
 
-    def interpolate(
-        self,
-        method="linear",
-        axis=0,
-        limit=None,
-        inplace=False,
-        limit_direction: Optional[str] = None,
-        limit_area=None,
-        downcast=None,
-        **kwargs,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Fill NaN values using an interpolation method.
-        """
-        return self._default_to_pandas(
-            pandas.DataFrame.interpolate,
-            method=method,
-            axis=axis,
-            limit=limit,
-            inplace=inplace,
-            limit_direction=limit_direction,
-            limit_area=limit_area,
-            downcast=downcast,
-            **kwargs,
-        )
-
     def iterrows(self):  # noqa: D200
         """
         Iterate over ``DataFrame`` rows as (index, ``Series``) pairs.
