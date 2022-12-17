@@ -743,8 +743,8 @@ class Series(BasePandasDataset):
         """
         Return the integer indices that would sort the Series values.
         """
-        return self._default_to_pandas(
-            pandas.Series.argsort, axis=axis, kind=kind, order=order
+        return self.__constructor__(
+            query_compiler=self._query_compiler.argsort(axis, kind, order)
         )
 
     def autocorr(self, lag=1):  # noqa: PR01, RT01, D200
@@ -757,8 +757,8 @@ class Series(BasePandasDataset):
         """
         Return boolean Series equivalent to left <= series <= right.
         """
-        return self._default_to_pandas(
-            pandas.Series.between, left, right, inclusive=inclusive
+        return self.__constructor__(
+            query_compiler=self._query_compiler.between(left, right, inclusive)
         )
 
     def combine(self, other, func, fill_value=None):  # noqa: PR01, RT01, D200
@@ -844,12 +844,7 @@ class Series(BasePandasDataset):
             return result[0]
 
         return self.__constructor__(
-            query_compiler=self._query_compiler.default_to_pandas(
-                pandas.Series.corr,
-                other._query_compiler,
-                method=method,
-                min_periods=min_periods,
-            )
+            query_compiler=self._query_compiler.series_corr(other, method, min_periods)
         )
 
     def count(self, level=None):  # noqa: PR01, RT01, D200
@@ -918,8 +913,8 @@ class Series(BasePandasDataset):
         """
         Return Integer division and modulo of series and `other`, element-wise (binary operator `divmod`).
         """
-        return self._default_to_pandas(
-            pandas.Series.divmod, other, level=level, fill_value=fill_value, axis=axis
+        return self.__constructor__(
+            self._query_compiler.divmod(other, level, fill_value, axis)
         )
 
     def dot(self, other):  # noqa: PR01, RT01, D200
@@ -1010,11 +1005,8 @@ class Series(BasePandasDataset):
         """
         Encode the object as an enumerated type or categorical variable.
         """
-        return self._default_to_pandas(
-            pandas.Series.factorize,
-            sort=sort,
-            na_sentinel=na_sentinel,
-            use_na_sentinel=use_na_sentinel,
+        return self.__constructor__(
+            query_compiler=self._query_compiler.factorize(sort, na_sentinel, use_na_sentinel)
         )
 
     def fillna(
@@ -1139,18 +1131,10 @@ class Series(BasePandasDataset):
         """
         Draw histogram of the input series using matplotlib.
         """
-        return self._default_to_pandas(
-            pandas.Series.hist,
-            by=by,
-            ax=ax,
-            grid=grid,
-            xlabelsize=xlabelsize,
-            xrot=xrot,
-            ylabelsize=ylabelsize,
-            yrot=yrot,
-            figsize=figsize,
-            bins=bins,
-            **kwds,
+        return self.__constructor__(
+            query_compiler=self._query_compiler.series_hist(
+                by, ax, grid, xlabelsize, xrot, ylabelsize, yrot, figsize, bins, **kwds
+            )
         )
 
     def idxmax(self, axis=0, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
@@ -1186,31 +1170,6 @@ class Series(BasePandasDataset):
             show_counts=show_counts,
         )
 
-    def interpolate(
-        self,
-        method="linear",
-        axis=0,
-        limit=None,
-        inplace=False,
-        limit_direction: Optional[str] = None,
-        limit_area=None,
-        downcast=None,
-        **kwargs,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Fill NaN values using an interpolation method.
-        """
-        return self._default_to_pandas(
-            pandas.Series.interpolate,
-            method=method,
-            axis=axis,
-            limit=limit,
-            inplace=inplace,
-            limit_direction=limit_direction,
-            limit_area=limit_area,
-            downcast=downcast,
-            **kwargs,
-        )
 
     def isin(self, values):  # noqa: PR01, RT01, D200
         """
@@ -1304,28 +1263,6 @@ class Series(BasePandasDataset):
             )
         )
 
-    @_inherit_docstrings(pandas.Series.mask, apilink="pandas.Series.mask")
-    def mask(
-        self,
-        cond,
-        other=np.nan,
-        inplace=False,
-        axis=None,
-        level=None,
-        errors=no_default,
-        try_cast=no_default,
-    ):
-        return self._default_to_pandas(
-            pandas.Series.mask,
-            cond,
-            other=other,
-            inplace=inplace,
-            axis=axis,
-            level=level,
-            errors=errors,
-            try_cast=try_cast,
-        )
-
     def memory_usage(self, index=True, deep=False):  # noqa: PR01, RT01, D200
         """
         Return the memory usage of the Series.
@@ -1386,14 +1323,28 @@ class Series(BasePandasDataset):
         """
         Return the largest `n` elements.
         """
-        return self._default_to_pandas(pandas.Series.nlargest, n=n, keep=keep)
+        if len(self._query_compiler.columns) == 0:
+            raise NotImplementedError(
+                "Series.nlargest is not implemented for empty Series."
+            )
+        return DataFrame(
+            query_compiler=self._query_compiler.nlargest(
+                n, [self._query_compiler.columns[0]], keep
+            )
+        )
 
     def nsmallest(self, n=5, keep="first"):  # noqa: PR01, RT01, D200
         """
         Return the smallest `n` elements.
         """
+        if len(self._query_compiler.columns) == 0:
+            raise NotImplementedError(
+                "Series.nlargest is not implemented for empty Series."
+            )
         return self.__constructor__(
-            query_compiler=self._query_compiler.nsmallest(n=n, keep=keep)
+            query_compiler=self._query_compiler.nsmallest(
+                n, [self._query_compiler.columns[0]], keep
+            )
         )
 
     def slice_shift(self, periods=1, axis=0):  # noqa: PR01, RT01, D200
@@ -1668,8 +1619,8 @@ class Series(BasePandasDataset):
         """
         Return integer division and modulo of series and `other`, element-wise (binary operator `rdivmod`).
         """
-        return self._default_to_pandas(
-            pandas.Series.rdivmod, other, level=level, fill_value=fill_value, axis=axis
+        return self.__constructor__(
+            self._query_compiler.rdivmod(other, level, fill_value, axis)
         )
 
     def rfloordiv(
@@ -1923,7 +1874,7 @@ class Series(BasePandasDataset):
         """
         Swap levels `i` and `j` in a `MultiIndex`.
         """
-        return self._default_to_pandas("swaplevel", i=i, j=j, copy=copy)
+        return self.__constructor__(self.__query_compiler__.swaplevel(i, j, copy))
 
     def take(self, indices, axis=0, is_copy=None, **kwargs):  # noqa: PR01, RT01, D200
         """
