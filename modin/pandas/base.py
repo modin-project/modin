@@ -432,12 +432,6 @@ class BasePandasDataset(ClassLogger):
                 kwargs["axis"] = axis = 1
         else:
             axis = 0
-        if kwargs.get("level", None) is not None:
-            # Broadcast is an internally used argument
-            kwargs.pop("broadcast", None)
-            return self._default_to_pandas(
-                getattr(self._pandas_class, op), other, **kwargs
-            )
         other = self._validate_other(other, axis, dtype_check=True)
         exclude_list = [
             "__add__",
@@ -659,10 +653,6 @@ class BasePandasDataset(ClassLogger):
         if isinstance(func, str):
             kwargs.pop("is_transform", None)
             return self._string_function(func, *args, **kwargs)
-
-        # Dictionaries have complex behavior because they can be renamed here.
-        elif func is None or isinstance(func, dict):
-            return self._default_to_pandas("agg", func, *args, **kwargs)
         kwargs.pop("is_transform", None)
         return self.apply(func, axis=_axis, args=args, **kwargs)
 
@@ -1288,18 +1278,6 @@ class BasePandasDataset(ClassLogger):
         Drop specified labels from `BasePandasDataset`.
         """
         # TODO implement level
-        if level is not None:
-            return self._default_to_pandas(
-                "drop",
-                labels=labels,
-                axis=axis,
-                index=index,
-                columns=columns,
-                level=level,
-                inplace=inplace,
-                errors=errors,
-            )
-
         inplace = validate_bool_kwarg(inplace, "inplace")
         if labels is not None:
             if index is not None or columns is not None:
@@ -1901,15 +1879,6 @@ class BasePandasDataset(ClassLogger):
         Return the maximum of the values over the requested axis.
         """
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
-        if level is not None:
-            return self._default_to_pandas(
-                "max",
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
         axis = self._get_axis_number(axis)
         data = self._validate_dtypes_min_max(axis, numeric_only)
         return data._reduce_dimension(
@@ -1961,15 +1930,6 @@ class BasePandasDataset(ClassLogger):
         """
         axis = self._get_axis_number(axis)
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
-        if level is not None:
-            return self._default_to_pandas(
-                op_name,
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
         # If `numeric_only` is None, then we can do this precheck to whether or not
         # frame contains non-numeric columns, if it doesn't, then we can pass to a query compiler
         # `numeric_only=False` parameter and make its work easier in that case, rather than
@@ -2017,15 +1977,6 @@ class BasePandasDataset(ClassLogger):
         Return the minimum of the values over the requested axis.
         """
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
-        if level is not None:
-            return self._default_to_pandas(
-                "min",
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
         axis = self._get_axis_number(axis)
         data = self._validate_dtypes_min_max(axis, numeric_only)
         return data._reduce_dimension(
@@ -2634,20 +2585,6 @@ class BasePandasDataset(ClassLogger):
         if n < 0:
             raise ValueError(
                 "A negative number of rows requested. Please provide positive value."
-            )
-        if n == 0:
-            # This returns an empty object, and since it is a weird edge case that
-            # doesn't need to be distributed, we default to pandas for n=0.
-            # We don't need frac to be set to anything since n is already 0.
-            return self._default_to_pandas(
-                "sample",
-                n=n,
-                frac=None,
-                replace=replace,
-                weights=weights,
-                random_state=random_state,
-                axis=axis,
-                ignore_index=ignore_index,
             )
         if random_state is not None:
             # Get a random number generator depending on the type of
