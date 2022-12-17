@@ -365,12 +365,6 @@ class BasePandasDataset(BasePandasDatasetCompat):
                 kwargs["axis"] = axis = 1
         else:
             axis = 0
-        if kwargs.get("level", None) is not None:
-            # Broadcast is an internally used argument
-            kwargs.pop("broadcast", None)
-            return self._default_to_pandas(
-                getattr(self._pandas_class, op), other, **kwargs
-            )
         other = self._validate_other(other, axis, dtype_check=True)
         exclude_list = [
             "__add__",
@@ -594,10 +588,6 @@ class BasePandasDataset(BasePandasDatasetCompat):
         if isinstance(func, str):
             kwargs.pop("is_transform", None)
             return self._string_function(func, *args, **kwargs)
-
-        # Dictionaries have complex behavior because they can be renamed here.
-        elif func is None or isinstance(func, dict):
-            return self._default_to_pandas("agg", func, *args, **kwargs)
         kwargs.pop("is_transform", None)
         return self.apply(func, axis=_axis, args=args, **kwargs)
 
@@ -631,7 +621,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
             return f
         f = getattr(np, func, None)
         if f is not None:
-            return self._default_to_pandas("agg", func, *args, **kwargs)
+            return self.apply(f, *args, **kwargs)
         raise ValueError("{} is an unknown string function".format(func))
 
     def _get_dtypes(self):
@@ -665,18 +655,17 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Align two objects on their axes with the specified join method.
         """
-        return self._default_to_pandas(
-            "align",
-            other,
-            join=join,
-            axis=axis,
-            level=level,
-            copy=copy,
-            fill_value=fill_value,
-            method=method,
-            limit=limit,
-            fill_axis=fill_axis,
-            broadcast_axis=broadcast_axis,
+        return self._query_compiler.align(
+            other._query_compiler,
+            join,
+            axis,
+            level,
+            copy,
+            fill_value,
+            method,
+            limit,
+            fill_axis,
+            broadcast_axis,
         )
 
     def all(
@@ -860,14 +849,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Convert time series to specified frequency.
         """
-        return self._default_to_pandas(
-            "asfreq",
-            freq,
-            method=method,
-            how=how,
-            normalize=normalize,
-            fill_value=fill_value,
-        )
+        return self._query_compiler.asfreq(freq, method, how, normalize, fill_value)
 
     def asof(self, where, subset=None):  # noqa: PR01, RT01, D200
         """
@@ -1198,18 +1180,6 @@ class BasePandasDataset(BasePandasDatasetCompat):
         Drop specified labels from `BasePandasDataset`.
         """
         # TODO implement level
-        if level is not None:
-            return self._default_to_pandas(
-                "drop",
-                labels=labels,
-                axis=axis,
-                index=index,
-                columns=columns,
-                level=level,
-                inplace=inplace,
-                errors=errors,
-            )
-
         inplace = self._validate_bool_kwarg(inplace, "inplace")
         if labels is not None:
             if index is not None or columns is not None:
@@ -1344,23 +1314,17 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     @_inherit_docstrings(pandas.DataFrame.ewm, apilink="pandas.DataFrame.ewm")
     def _ewm(self, **kwargs):
-        return self._default_to_pandas("ewm", **kwargs)
+        from .ewm import ExponentialMovingWindow
+
+        return ExponentialMovingWindow(self, kwargs)
 
     @_inherit_docstrings(
         pandas.DataFrame.expanding, apilink="pandas.DataFrame.expanding"
     )
-    def _expanding(self, min_periods=1, center=None, axis=0, method="single", *args, **kwargs):
-        return Expanding(
-            self,
-            min_periods=min_periods,
-            center=center,
-            axis=axis,
-            method=method,
-            *args,
-            **kwargs
-        )
-        # raise NotImplementedError("Awaiting full implementation... be patient")
-        # return self._default_to_pandas("expanding", **kwargs)
+    def _expanding(self, **kwargs):
+        from .expanding import Expanding
+
+        return Expanding(self, kwargs)
 
     def ffill(
         self, axis=None, inplace=False, limit=None, downcast=None
@@ -1726,20 +1690,11 @@ class BasePandasDataset(BasePandasDatasetCompat):
 
     @_inherit_docstrings(pandas.DataFrame.mask, apilink="pandas.DataFrame.mask")
     def _mask(self, *args, **kwargs):
-        return self._default_to_pandas("mask", *args, **kwargs)
+        return self.__constructor__(self._query_compiler.mask(*args, **kwargs))
 
     @_inherit_docstrings(pandas.DataFrame.max, apilink="pandas.DataFrame.max")
     def _max(self, axis, skipna, level, numeric_only, **kwargs):
         self._validate_bool_kwarg(skipna, "skipna", none_allowed=False)
-        if level is not None:
-            return self._default_to_pandas(
-                "max",
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
         axis = self._get_axis_number(axis)
         data = self._validate_dtypes_min_max(axis, numeric_only)
         return data._reduce_dimension(
@@ -1791,15 +1746,6 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         axis = self._get_axis_number(axis)
         self._validate_bool_kwarg(skipna, "skipna", none_allowed=False)
-        if level is not None:
-            return self._default_to_pandas(
-                op_name,
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
         # If `numeric_only` is None, then we can do this precheck to whether or not
         # frame contains non-numeric columns, if it doesn't, then we can pass to a query compiler
         # `numeric_only=False` parameter and make its work easier in that case, rather than
@@ -1847,15 +1793,6 @@ class BasePandasDataset(BasePandasDatasetCompat):
         Return the minimum of the values over the requested axis.
         """
         self._validate_bool_kwarg(skipna, "skipna", none_allowed=False)
-        if level is not None:
-            return self._default_to_pandas(
-                "min",
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
         axis = self._get_axis_number(axis)
         data = self._validate_dtypes_min_max(axis, numeric_only)
         return data._reduce_dimension(
@@ -1930,13 +1867,8 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Percentage change between the current and a prior element.
         """
-        return self._default_to_pandas(
-            "pct_change",
-            periods=periods,
-            fill_method=fill_method,
-            limit=limit,
-            freq=freq,
-            **kwargs,
+        return self._query_compiler.pct_change(
+            periods, fill_method, limit, freq, **kwargs
         )
 
     def pipe(self, func, *args, **kwargs):  # noqa: PR01, RT01, D200
@@ -2083,17 +2015,6 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Conform `BasePandasDataset` to new index with optional filling logic.
         """
-        if (
-            kwargs.get("level") is not None
-            or (index is not None and self._query_compiler.has_multiindex())
-            or (columns is not None and self._query_compiler.has_multiindex(axis=1))
-        ):
-            if index is not None:
-                kwargs["index"] = index
-            if columns is not None:
-                kwargs["columns"] = columns
-            return self._default_to_pandas("reindex", copy=copy, **kwargs)
-
         new_query_compiler = None
         if index is not None:
             if not isinstance(index, pandas.Index):
@@ -2126,14 +2047,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Return an object with matching indices as `other` object.
         """
-        return self._default_to_pandas(
-            "reindex_like",
-            other,
-            method=method,
-            copy=copy,
-            limit=limit,
-            tolerance=tolerance,
-        )
+        return self._query_compiler.reindex_like(other, method, copy, limit, tolerance)
 
     def rename_axis(
         self, mapper=None, index=None, columns=None, axis=None, copy=True, inplace=False
@@ -2454,20 +2368,6 @@ class BasePandasDataset(BasePandasDatasetCompat):
         if n < 0:
             raise ValueError(
                 "A negative number of rows requested. Please provide positive value."
-            )
-        if n == 0:
-            # This returns an empty object, and since it is a weird edge case that
-            # doesn't need to be distributed, we default to pandas for n=0.
-            # We don't need frac to be set to anything since n is already 0.
-            return self._default_to_pandas(
-                "sample",
-                n=n,
-                frac=None,
-                replace=replace,
-                weights=weights,
-                random_state=random_state,
-                axis=axis,
-                **kwargs,
             )
         if random_state is not None:
             # Get a random number generator depending on the type of
@@ -2991,6 +2891,30 @@ class BasePandasDataset(BasePandasDatasetCompat):
         )
         return self.set_axis(labels=new_labels, axis=axis, inplace=not copy)
 
+    def interpolate(
+        self,
+        method="linear",
+        axis=0,
+        limit=None,
+        inplace=False,
+        limit_direction: Optional[str] = None,
+        limit_area=None,
+        downcast=None,
+        **kwargs,
+    ):  # noqa: PR01, RT01, D200
+        return self.__constructor__(
+            self._query_compiler.interpolate(
+                method,
+                axis,
+                limit,
+                inplace,
+                limit_direction,
+                limit_area,
+                downcast,
+                **kwargs,
+            )
+        )
+
     # TODO: uncomment the following lines when #3331 issue will be closed
     # @prepend_to_notes(
     #     """
@@ -3376,7 +3300,7 @@ class BasePandasDataset(BasePandasDatasetCompat):
         -------
         int
         """
-        return self._default_to_pandas("__sizeof__")
+        return self._query_compiler.sizeof()
 
     def __str__(self):  # pragma: no cover
         """

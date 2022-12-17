@@ -241,7 +241,7 @@ class LatestCompatibleBasePandasDataset(BaseCompatibleBasePandasDataset):
             closed=closed,
             method=method,
         )
-
+        
     def sample(
         self,
         n=None,

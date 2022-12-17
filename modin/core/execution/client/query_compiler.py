@@ -459,6 +459,51 @@ class ClientQueryCompiler(BaseQueryCompiler):
         expr = " ".join(variable_list)
         return self.__constructor__(self._service.query(self._id, expr, **kwargs))
 
+    def ewm_cov(self, other=None, *args, **kwargs):
+        other_is_qc = isinstance(other, type(self))
+        if other_is_qc:
+            other = other._id
+        return self.__constructor__(
+            self._service.ewm_cov(self._id, other, other_is_qc, *args, **kwargs)
+        )
+
+    def ewm_corr(self, other=None, *args, **kwargs):
+        other_is_qc = isinstance(other, type(self))
+        if other_is_qc:
+            other = other._id
+        return self.__constructor__(
+            self._service.ewm_corr(self._id, other, other_is_qc, *args, **kwargs)
+        )
+
+    def expanding_cov(self, other=None, *args, **kwargs):
+        other_is_qc = isinstance(other, type(self))
+        if other_is_qc:
+            other = other._id
+        return self.__constructor__(
+            self._service.ewm_cov(self._id, other, other_is_qc, *args, **kwargs)
+        )
+
+    def expanding_corr(self, other=None, *args, **kwargs):
+        other_is_qc = isinstance(other, type(self))
+        if other_is_qc:
+            other = other._id
+        return self.__constructor__(
+            self._service.ewm_corr(self._id, other, other_is_qc, *args, **kwargs)
+        )
+
+    def mask(self, cond, other=np.nan, *args, **kwargs):
+        cond_is_qc = isinstance(cond, type(self))
+        if cond_is_qc:
+            cond = cond._id
+        other_is_qc = isinstance(other, type(self))
+        if other_is_qc:
+            other = other._id
+        return self.__constructor__(
+            self._service.mask(
+                self._id, cond, cond_is_qc, other, other_is_qc, *args, **kwargs
+            )
+        )
+
 
 def _set_forwarding_method_for_binary_function(method_name: str) -> None:
     """
@@ -555,12 +600,18 @@ _BINARY_FORWARDING_METHODS = frozenset(
         "dot",
         "join",
         "series_update",
+        "align",
+        "series_corr",
+        "divmod",
+        "reindex_like",
+        "rdivmod",
     }
 )
 
 _SINGLE_ID_FORWARDING_METHODS = frozenset(
     {
         "abs",
+        "asfreq",
         "columnarize",
         "transpose",
         "getitem_row_array",
@@ -794,6 +845,36 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "write_items",
         "set_index_name",
         "set_index_names",
+        "ewm_mean",
+        "ewm_sum",
+        "ewm_std",
+        "ewm_var",
+        "expanding_count",
+        "expanding_sum",
+        "expanding_mean",
+        "expanding_median",
+        "expanding_var",
+        "expanding_std",
+        "expanding_min",
+        "expanding_max",
+        "expanding_skew",
+        "expanding_kurt",
+        "expanding_apply",
+        "expanding_aggregate",
+        "expanding_quantile",
+        "expanding_sem",
+        "expanding_rank",
+        "pct_change",
+        "sizeof",
+        "argsort",
+        "between",
+        "factorize",
+        "dataframe_hist",
+        "series_hist",
+        "interpolate",
+        "nlargest",
+        "nsmallest",
+        "swaplevel",
     }
 )
 
