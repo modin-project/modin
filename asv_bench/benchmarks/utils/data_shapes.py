@@ -124,6 +124,7 @@ _DEFAULT_CONFIG_T = [
             # Pandas storage format benchmarks
             "TimeJoin",
             "TimeMerge",
+            "TimeMergeDefault",
             "TimeConcat",
             "TimeAppend",
             "TimeBinaryOp",
@@ -197,6 +198,13 @@ DEFAULT_CONFIG["TimeReplace"] = (
 for config in (_DEFAULT_CONFIG_T, _DEFAULT_HDK_CONFIG_T):
     for _shape, _names in config:
         DEFAULT_CONFIG.update({_name: _shape for _name in _names})
+
+# Correct forms in the case when the operation ended with a timeout error
+if ASV_DATASET_SIZE == "big":
+    DEFAULT_CONFIG["TimeMergeDefault"] = [
+        [[1000, 1000], [1000, 1000]],
+        [[500_000, 20], [1_000_000, 10]],
+    ]
 
 CONFIG_FROM_FILE = None
 
