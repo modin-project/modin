@@ -487,7 +487,7 @@ class Series(BasePandasDataset):
         """
         if not is_numeric_dtype(self.dtype):
             return self._default_to_pandas("values")
-        return super().values
+        return super(Series, self).values
 
     def add(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
         """
