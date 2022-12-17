@@ -173,6 +173,22 @@ class TimeJoinStringIndex:
         execute(self.df.join(self.df_key1, on="key1", sort=sort))
 
 
+class TimeMergeDefault:
+    param_names = ["shapes", "how", "sort"]
+    params = [
+        get_benchmark_shapes("TimeMergeDefault"),
+        ["left", "inner"],
+        [True, False],
+    ]
+
+    def setup(self, shapes, how, sort):
+        self.df1 = generate_dataframe("int", *shapes[0], RAND_LOW, RAND_HIGH)
+        self.df2 = generate_dataframe("int", *shapes[1], RAND_LOW, RAND_HIGH)
+
+    def time_merge(self, shapes, how, sort):
+        execute(IMPL.merge(self.df1, self.df2, how=how, sort=sort))
+
+
 class TimeMerge:
     param_names = ["shapes", "how", "sort"]
     params = [
@@ -192,9 +208,6 @@ class TimeMerge:
                 self.df2, left_index=True, right_index=True, how=how, sort=sort
             )
         )
-
-    def time_merge_default(self, shapes, how, sort):
-        execute(IMPL.merge(self.df1, self.df2, how=how, sort=sort))
 
     def time_merge_dataframe_empty_right(self, shapes, how, sort):
         # Getting an empty dataframe using `iloc` should be very fast,
