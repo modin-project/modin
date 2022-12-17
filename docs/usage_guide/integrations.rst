@@ -1,20 +1,23 @@
 Third Party Library Integrations
 ================================
 
-Our goal is that Modin is a drop-in replacement for Pandas — i.e., it won't break your workflow when you try to use Modin 
-with a third-party library that works with Pandas. In the table we have tested select APIs from several libraries and taken note of each one's success metric
-(the number of successful test calls / total test calls) and compared the overall interoperability between Pandas and Modin. 
+Modin is a drop-in replacement for Pandas, so we want it to interoperate with third-party libraries just as Pandas does. 
+To see where Modin performs well and where it needs to improve, we've selected a number of important machine learning + visualization + statistics libraries, 
+and then looked at examples (from their documentation, if possible) about how they work with Pandas. Then we ran those same workflows with Modin, and 
+tracked what worked, and what failed.
+
+In the table below, you'll see, for each third-party library we tested, the number of successful test calls / total test calls, and a qualitative description of how both Pandas and Modin integrate with that library.
 
 In the deeper dive, you can view the Jupyter notebook we have used to test API calls and the corresponding Github issues filed. If you come across other issues/ examples 
 in your own workflows we encourage you to file an `issue <https://github.com/modin-project/modin/issues/new/choose>`_ or contribute a `PR <https://github.com/modin-project/modin/pulls>`_!
 
 
 .. note::
-    These interoperability metrics are preliminary and not all APIs for each library have been tested.
+    These interoperability metrics are preliminary and not all APIs for each library have been tested. Feel free to add more!
 
 
 Modin Interoperability by Library
-''''''''''''''''''''''''''''''''''''
+'''''''''''''''''''''''''''''''''
 .. list-table::
    :widths: 5 5 20
    :header-rows: 1
@@ -88,7 +91,7 @@ A Deeper Dive
 **seaborn**
 -----------
 
-Jupyter Notebook
+`Jupyter Notebook <https://github.com/labanyamukhopadhyay/modin/blob/doc-integration/docs/jupyter/seaborn.ipynb>`_ 
 
 Github Issues
     * https://github.com/modin-project/modin/issues/5435 
@@ -97,7 +100,7 @@ Github Issues
 **plotly**
 -----------
 
-Jupyter Notebook
+`Jupyter Notebook <https://github.com/labanyamukhopadhyay/modin/blob/doc-integration/docs/jupyter/plotly.ipynb>`_ 
 
 Github Issues
     * https://github.com/modin-project/modin/issues/5447 
@@ -106,7 +109,7 @@ Github Issues
 **altair**
 ----------
 
-Jupyter Notebook
+`Jupyter Notebook <https://github.com/labanyamukhopadhyay/modin/blob/doc-integration/docs/jupyter/altair.ipynb>`_ 
 
 Github Issues
     * https://github.com/modin-project/modin/issues/5438
@@ -114,7 +117,7 @@ Github Issues
 **bokeh**
 ---------
 
-Jupyter Notebook
+`Jupyter Notebook <https://github.com/labanyamukhopadhyay/modin/blob/doc-integration/docs/jupyter/bokeh.ipynb>`_ 
 
 Github Issues
     * https://github.com/modin-project/modin/issues/5437
