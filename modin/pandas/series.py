@@ -22,6 +22,7 @@ from pandas.util._validators import validate_bool_kwarg
 from pandas.core.dtypes.common import (
     is_dict_like,
     is_list_like,
+    is_numeric_dtype,
 )
 from pandas._libs.lib import no_default, NoDefault
 from pandas._typing import IndexKeyFunc, Axis
@@ -484,7 +485,9 @@ class Series(BasePandasDataset):
         """
         Return Series as ndarray or ndarray-like depending on the dtype.
         """
-        return self.to_numpy()
+        if not is_numeric_dtype(self.dtype):
+            return self._default_to_pandas("values")
+        return super().values
 
     def add(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
         """

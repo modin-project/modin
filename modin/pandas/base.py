@@ -476,7 +476,11 @@ class BasePandasDataset(ClassLogger):
             # it is a DataFrame, Series, etc.) as a pandas object. The outer `getattr`
             # will get the operation (`op`) from the pandas version of the class and run
             # it on the object after we have converted it to pandas.
-            result = getattr(self._pandas_class, op)(pandas_obj, *args, **kwargs)
+            attr = getattr(self._pandas_class, op)
+            if isinstance(attr, property):
+                result = getattr(pandas_obj, op)
+            else:
+                result = attr(pandas_obj, *args, **kwargs)
         else:
             ErrorMessage.catch_bugs_and_request_email(
                 failure_condition=True,
