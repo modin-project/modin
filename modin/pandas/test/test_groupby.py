@@ -248,10 +248,10 @@ def test_single_element_list_grouping():
         {"a": [np.nan, 1], "b": [np.nan, 5], "c": [np.nan, 2]}, index=["x", "y"]
     )
     msg = (
-        "In a future version of pandas, a length 1 "
-        "tuple will be returned when iterating over "
-        "a groupby with a grouper equal to a list of "
-        "length 1. Don't supply a list with a single grouper "
+        "In a future version of pandas, a length 1 "  # noqa: NIC002
+        "tuple will be returned when iterating over "  # noqa: NIC002
+        "a groupby with a grouper equal to a list of "  # noqa: NIC002
+        "length 1. Don't supply a list with a single grouper "  # noqa: NIC002
         "to avoid this warning."
     )
     with pytest.warns(FutureWarning, match=msg):
@@ -370,11 +370,11 @@ def test_simple_row_groupby(by, as_index, col1_category):
         modin_df_almost_equals_pandas,
     )
 
-    apply_functions = [
-        lambda df: df.sum(),
-        lambda df: pandas.Series([1, 2, 3, 4], name="result"),
-        min,
-    ]
+    # apply_functions = [
+    #     lambda df: df.sum(),
+    #     lambda df: pandas.Series([1, 2, 3, 4], name="result"),
+    #     min,
+    # ]
     # for func in apply_functions:
     #    eval_apply(modin_groupby, pandas_groupby, func)
 

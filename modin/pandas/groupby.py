@@ -1021,10 +1021,10 @@ class DataFrameGroupBy(ClassLogger):
         if isinstance(keys, list) and len(keys) == 1:
             warnings.warn(
                 (
-                    "In a future version of pandas, a length 1 "
-                    "tuple will be returned when iterating over a "
-                    "groupby with a grouper equal to a list of "
-                    "length 1. Don't supply a list with a single grouper "
+                    "In a future version of pandas, a length 1 "  # noqa: NIC002
+                    "tuple will be returned when iterating over a "  # noqa: NIC002
+                    "groupby with a grouper equal to a list of "  # noqa: NIC002
+                    "length 1. Don't supply a list with a single grouper "  # noqa: NIC002
                     "to avoid this warning."
                 ),
                 FutureWarning,
