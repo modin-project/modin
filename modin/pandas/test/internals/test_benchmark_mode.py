@@ -36,7 +36,7 @@ elif engine == "Dask":
 elif engine == "Unidist":
     wait_method = (
         "modin.core.execution.unidist.implementations."
-        + "pandas_on_unidist.partitioning.partition_manager."
+        + "pandas_on_unidist.partitioning."
         + "PandasOnUnidistDataframePartitionManager.wait_partitions"
     )
 else:
