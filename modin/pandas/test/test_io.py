@@ -2430,6 +2430,15 @@ class TestStata:
         )
 
 
+class TestSas:
+    def test_read_sas(self):
+        eval_io(
+            fn_name="read_sas",
+            # read_stata kwargs
+            filepath_or_buffer="modin/pandas/test/data/airline.sas7bdat",
+        )
+
+
 class TestFeather:
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
