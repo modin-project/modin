@@ -65,6 +65,10 @@ class DataFrameGroupBy(ClassLogger):
         self._query_compiler = self._df._query_compiler
         self._columns = self._query_compiler.columns
         self._by = by
+        if "initial_by" in kwargs:
+            self._initial_by = kwargs.pop("initial_by")
+        else:
+            self._initial_by = by
         self._drop = drop
 
         if (
@@ -122,7 +126,7 @@ class DataFrameGroupBy(ClassLogger):
     def ngroups(self):
         return len(self)
 
-    def skew(self, *args, **kwargs):
+    def skew(self, *args, numeric_only=None, **kwargs):
         # The 'skew' aggregation is less tolerant to non-numeric columns than others
         # (i.e. it doesn't allow numeric categoricals), thus dropping non-numeric
         # columns here since `._wrap_aggregation(numeric_only=True, ...)` is not enough
@@ -149,19 +153,27 @@ class DataFrameGroupBy(ClassLogger):
         else:
             masked_obj = self
 
-        return masked_obj._wrap_aggregation(
+        res = masked_obj._wrap_aggregation(
             type(masked_obj._query_compiler).groupby_skew,
             agg_args=args,
             agg_kwargs=kwargs,
             # Don't want to try to drop non-numeric columns for the second time
             numeric_only=False,
         )
+        if hasattr(self._df, "columns"):
+            if numeric_only is None and len(res.columns) < len(self._df.columns) - len(
+                self._internal_by
+            ):
+                com.deprecate_numeric_only_default(type(self), "skew")
+        return res
 
     def ffill(self, limit=None):
         return self._default_to_pandas(lambda df: df.ffill(limit=limit))
 
-    def sem(self, ddof=1):
-        return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
+    def sem(self, ddof=1, numeric_only=no_default):
+        return self._default_to_pandas(
+            lambda df: df.sem(ddof=ddof, numeric_only=numeric_only)
+        )
 
     def value_counts(
         self,
@@ -182,13 +194,19 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def mean(self, numeric_only=None):
-        return self._check_index(
+        res = self._check_index(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_mean,
                 numeric_only=numeric_only,
                 agg_kwargs=dict(numeric_only=numeric_only),
             )
         )
+        if hasattr(self._df, "columns"):
+            if numeric_only is None and len(res.columns) < len(self._df.columns) - len(
+                self._internal_by
+            ):
+                com.deprecate_numeric_only_default(type(self), "mean")
+        return res
 
     def any(self, skipna=True):
         return self._wrap_aggregation(
@@ -319,14 +337,18 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.nth(n, dropna=dropna))
 
     def cumsum(self, axis=0, *args, **kwargs):
-        return self._check_index_name(
+        res = self._check_index_name(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_cumsum,
                 agg_args=args,
                 agg_kwargs=dict(axis=axis, **kwargs),
-                numeric_only=True,
+                numeric_only=kwargs.pop("numeric_only", no_default),
             )
         )
+        if hasattr(self._df, "columns"):
+            if len(res.columns) < len(self._df.columns) - len(self._internal_by):
+                com.deprecate_numeric_only_default(type(self), "cumsum")
+        return res
 
     _indices_cache = no_default
 
@@ -349,14 +371,18 @@ class DataFrameGroupBy(ClassLogger):
             lambda df: df.filter(func, dropna=dropna, *args, **kwargs)
         )
 
-    def cummax(self, axis=0, **kwargs):
-        return self._check_index_name(
+    def cummax(self, axis=0, numeric_only=False, **kwargs):
+        res = self._check_index_name(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_cummax,
                 agg_kwargs=dict(axis=axis, **kwargs),
-                numeric_only=False,
+                numeric_only=numeric_only,
             )
         )
+        if hasattr(self._df, "columns"):
+            if len(res.columns) < len(self._df.columns) - len(self._internal_by):
+                com.deprecate_numeric_only_default(type(self), "cumsum")
+        return res
 
     def apply(self, func, *args, **kwargs):
         if not isinstance(func, BuiltinFunctionType):
@@ -506,14 +532,18 @@ class DataFrameGroupBy(ClassLogger):
             **kwargs,
         )
 
-    def cummin(self, axis=0, **kwargs):
-        return self._check_index_name(
+    def cummin(self, axis=0, numeric_only=False, **kwargs):
+        res = self._check_index_name(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_cummin,
                 agg_kwargs=dict(axis=axis, **kwargs),
-                numeric_only=False,
+                numeric_only=numeric_only,
             )
         )
+        if hasattr(self._df, "columns"):
+            if len(res.columns) < len(self._df.columns) - len(self._internal_by):
+                com.deprecate_numeric_only_default(type(self), "cummin")
+        return res
 
     def bfill(self, limit=None):
         return self._default_to_pandas(lambda df: df.bfill(limit=limit))
@@ -521,19 +551,27 @@ class DataFrameGroupBy(ClassLogger):
     def idxmin(self):
         return self._default_to_pandas(lambda df: df.idxmin())
 
-    def prod(self, numeric_only=None, min_count=0):
-        return self._wrap_aggregation(
+    def prod(self, numeric_only=no_default, min_count=0):
+        res = self._wrap_aggregation(
             type(self._query_compiler).groupby_prod,
             agg_kwargs=dict(min_count=min_count),
             numeric_only=numeric_only,
         )
+        if hasattr(self._df, "columns"):
+            if len(res.columns) < len(self._df.columns) - len(self._internal_by):
+                com.deprecate_numeric_only_default(type(self), "prod")
+        return res
 
-    def std(self, ddof=1):
-        return self._wrap_aggregation(
+    def std(self, ddof=1, engine=None, engine_kwargs=None, numeric_only=no_default):
+        res = self._wrap_aggregation(
             type(self._query_compiler).groupby_std,
-            agg_kwargs=dict(ddof=ddof),
-            numeric_only=True,
+            agg_kwargs=dict(ddof=ddof, engine=engine, engine_kwargs=engine_kwargs),
+            numeric_only=numeric_only,
         )
+        if hasattr(self._df, "columns"):
+            if len(res.columns) < len(self._df.columns) - len(self._internal_by):
+                com.deprecate_numeric_only_default(type(self), "std")
+        return res
 
     def aggregate(self, func=None, *args, **kwargs):
         if self._axis != 0:
@@ -645,7 +683,11 @@ class DataFrameGroupBy(ClassLogger):
             agg_kwargs=kwargs,
             how="axis_wise",
         )
-        return do_relabel(result) if do_relabel else result
+        result = do_relabel(result) if do_relabel else result
+        if hasattr(self._df, "columns"):
+            if len(result.columns) < len(self._df.columns) - len(self._internal_by):
+                com.deprecate_numeric_only_default(type(self), "agg")
+        return result
 
     agg = aggregate
 
@@ -687,12 +729,16 @@ class DataFrameGroupBy(ClassLogger):
             agg_kwargs=dict(min_count=min_count),
         )
 
-    def var(self, ddof=1):
-        return self._wrap_aggregation(
+    def var(self, ddof=1, engine=None, engine_kwargs=None, numeric_only=no_default):
+        res = self._wrap_aggregation(
             type(self._query_compiler).groupby_var,
-            agg_kwargs=dict(ddof=ddof),
-            numeric_only=True,
+            agg_kwargs=dict(ddof=ddof, engine=engine, engine_kwargs=engine_kwargs),
+            numeric_only=numeric_only,
         )
+        if hasattr(self._df, "columns"):
+            if len(res.columns) < len(self._df.columns) - len(self._internal_by):
+                com.deprecate_numeric_only_default(type(self), "var")
+        return res
 
     def get_group(self, name, obj=None):
         return self._default_to_pandas(lambda df: df.get_group(name, obj=obj))
@@ -746,11 +792,16 @@ class DataFrameGroupBy(ClassLogger):
         return result.fillna(0)
 
     def sum(self, numeric_only=None, min_count=0):
-        return self._wrap_aggregation(
+        res = self._wrap_aggregation(
             type(self._query_compiler).groupby_sum,
             agg_kwargs=dict(min_count=min_count),
             numeric_only=numeric_only,
         )
+        if numeric_only is None and len(res.columns) < len(self._df.columns) - len(
+            self._internal_by
+        ):
+            com.deprecate_numeric_only_default(type(self), "sum")
+        return res
 
     def describe(self, **kwargs):
         return self._default_to_pandas(lambda df: df.describe(**kwargs))
@@ -810,14 +861,18 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.head(n))
 
     def cumprod(self, axis=0, *args, **kwargs):
-        return self._check_index_name(
+        res = self._check_index_name(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_cumprod,
                 agg_args=args,
                 agg_kwargs=dict(axis=axis, **kwargs),
-                numeric_only=True,
+                numeric_only=kwargs.pop("numeric_only", no_default),
             )
         )
+        if hasattr(self._df, "columns"):
+            if len(res.columns) < len(self._df.columns) - len(self._internal_by):
+                com.deprecate_numeric_only_default(type(self), "cumprod")
+        return res
 
     def __iter__(self):
         return self._iter.__iter__()
@@ -961,6 +1016,20 @@ class DataFrameGroupBy(ClassLogger):
             Generator expression of GroupBy object broken down into tuples for iteration.
         """
         from .dataframe import DataFrame
+
+        keys = self._initial_by
+        if isinstance(keys, list) and len(keys) == 1:
+            warnings.warn(
+                (
+                    "In a future version of pandas, a length 1 "
+                    "tuple will be returned when iterating over a "
+                    "groupby with a grouper equal to a list of "
+                    "length 1. Don't supply a list with a single grouper "
+                    "to avoid this warning."
+                ),
+                FutureWarning,
+                stacklevel=2,
+            )
 
         indices = self.indices
         group_ids = indices.keys()

@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 import pandas
-from pandas.core.common import apply_if_callable
+from pandas.core.common import apply_if_callable, deprecate_numeric_only_default
 from pandas.core.dtypes.common import (
     infer_dtype_from_object,
     is_dict_like,
@@ -462,7 +462,7 @@ class DataFrame(BasePandasDataset):
         # strings is passed in, the data used for the groupby is dropped before the
         # groupby takes place.
         drop = False
-
+        initial_by = by
         if (
             not isinstance(by, (pandas.Series, Series))
             and is_list_like(by)
@@ -546,6 +546,7 @@ class DataFrame(BasePandasDataset):
             observed=observed,
             drop=drop,
             dropna=dropna,
+            initial_by=initial_by,
         )
 
     def keys(self):  # noqa: RT01, D200
@@ -2198,6 +2199,8 @@ class DataFrame(BasePandasDataset):
         data = self._validate_dtypes_sum_prod_mean(
             axis, numeric_only, ignore_axis=False
         )
+        if numeric_only is None and len(data.columns) < len(self.columns):
+            deprecate_numeric_only_default(type(self), "sum")
         if level is not None:
             if (
                 not self._query_compiler.has_multiindex(axis=axis)
