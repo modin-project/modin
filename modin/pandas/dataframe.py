@@ -453,8 +453,6 @@ class DataFrame(BasePandasDataset):
                 FutureWarning,
                 stacklevel=2,
             )
-        else:
-            squeeze = False
 
         axis = self._get_axis_number(axis)
         idx_name = None

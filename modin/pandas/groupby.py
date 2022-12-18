@@ -13,6 +13,8 @@
 
 """Implement GroupBy public API as pandas does."""
 
+import warnings
+
 import numpy as np
 import pandas
 from pandas.core.apply import reconstruct_func
@@ -92,7 +94,8 @@ class DataFrameGroupBy(ClassLogger):
             "as_index": as_index,
             "group_keys": group_keys,
         }
-        self._squeeze = squeeze
+        self._initial_squeeze = squeeze
+        self._squeeze = squeeze if squeeze is not no_default else False
         self._kwargs.update(kwargs)
 
     def __getattr__(self, key):
@@ -138,7 +141,7 @@ class DataFrameGroupBy(ClassLogger):
                     axis=self._axis,
                     idx_name=self._idx_name,
                     drop=self._drop,
-                    squeeze=self._squeeze,
+                    squeeze=self._initial_squeeze,
                     **self._kwargs,
                 )
             else:
@@ -385,6 +388,14 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.first(**kwargs))
 
     def backfill(self, limit=None):
+        warnings.warn(
+            (
+                "backfill is deprecated and will be removed in a future version. "
+                + "Use bfill instead."
+            ),
+            FutureWarning,
+            stacklevel=2,
+        )
         return self.bfill(limit)
 
     _internal_by_cache = no_default
@@ -442,7 +453,7 @@ class DataFrameGroupBy(ClassLogger):
             "by": self._by,
             "axis": self._axis,
             "idx_name": self._idx_name,
-            "squeeze": self._squeeze,
+            "squeeze": self._initial_squeeze,
         }
         # The rules of type deduction for the resulted object is the following:
         #   1. If `key` is a list-like or `as_index is False`, then the resulted object is a DataFrameGroupBy
@@ -642,6 +653,14 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.last(**kwargs))
 
     def mad(self, **kwargs):
+        warnings.warn(
+            (
+                "The 'mad' method is deprecated and will be removed in a future version. "
+                + "To compute the same result, you may do `(df - df.mean()).abs().mean()`."
+            ),
+            FutureWarning,
+            stacklevel=2,
+        )
         return self._default_to_pandas(lambda df: df.mad(**kwargs))
 
     def rank(self, **kwargs):
@@ -696,7 +715,7 @@ class DataFrameGroupBy(ClassLogger):
                 0,
                 drop=self._drop,
                 idx_name=self._idx_name,
-                squeeze=self._squeeze,
+                squeeze=self._initial_squeeze,
                 **self._kwargs,
             ).size()
         work_object = type(self)(
@@ -705,7 +724,7 @@ class DataFrameGroupBy(ClassLogger):
             self._axis,
             drop=False,
             idx_name=None,
-            squeeze=self._squeeze,
+            squeeze=self._initial_squeeze,
             **self._kwargs,
         )
         result = work_object._wrap_aggregation(
@@ -830,7 +849,7 @@ class DataFrameGroupBy(ClassLogger):
             axis=self._axis,
             idx_name=self._idx_name,
             drop=self._drop,
-            squeeze=self._squeeze,
+            squeeze=self._initial_squeeze,
             **new_groupby_kwargs,
         )
         return work_object._check_index_name(
@@ -892,8 +911,8 @@ class DataFrameGroupBy(ClassLogger):
     def diff(self):
         return self._default_to_pandas(lambda df: df.diff())
 
-    def take(self, **kwargs):
-        return self._default_to_pandas(lambda df: df.take(**kwargs))
+    def take(self, *args, **kwargs):
+        return self._default_to_pandas(lambda df: df.take(*args, **kwargs))
 
     @property
     def _index(self):
@@ -1216,7 +1235,10 @@ class DataFrameGroupBy(ClassLogger):
         def groupby_on_multiple_columns(df, *args, **kwargs):
             return f(
                 df.groupby(
-                    by=by, axis=self._axis, squeeze=self._squeeze, **self._kwargs
+                    by=by,
+                    axis=self._axis,
+                    squeeze=self._initial_squeeze,
+                    **self._kwargs,
                 ),
                 *args,
                 **kwargs,
