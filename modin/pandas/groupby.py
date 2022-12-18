@@ -892,8 +892,8 @@ class DataFrameGroupBy(ClassLogger):
     def diff(self):
         return self._default_to_pandas(lambda df: df.diff())
 
-    def take(self, **kwargs):
-        return self._default_to_pandas(lambda df: df.take(**kwargs))
+    def take(self, *args, **kwargs):
+        return self._default_to_pandas(lambda df: df.take(*args, **kwargs))
 
     @property
     def _index(self):
