@@ -113,7 +113,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     for a list of requirements for subclassing this object.
     """
 
-    @abc.abstractmethod
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         """
         Do fallback to pandas for the passed function.
@@ -132,7 +131,23 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             The result of the `pandas_op`, converted back to ``BaseQueryCompiler``.
         """
-        pass
+        op_name = getattr(pandas_op, "__name__", str(pandas_op))
+        ErrorMessage.default_to_pandas(op_name)
+        args = (a.to_pandas() if isinstance(a, type(self)) else a for a in args)
+        kwargs = {
+            k: v.to_pandas() if isinstance(v, type(self)) else v
+            for k, v in kwargs.items()
+        }
+
+        result = pandas_op(self.to_pandas(), *args, **kwargs)
+        if isinstance(result, pandas.Series):
+            if result.name is None:
+                result.name = MODIN_UNNAMED_SERIES_LABEL
+            result = result.to_frame()
+        if isinstance(result, pandas.DataFrame):
+            return self.from_pandas(result, type(self._modin_frame))
+        else:
+            return result
 
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for
