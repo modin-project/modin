@@ -914,14 +914,14 @@ class TimeReindex:
         self.df2 = IMPL.DataFrame(
             index=range(rows), data=np.random.rand(rows, cols), columns=range(cols)
         )
-        level1 = tm.makeStringIndex(rows).values.repeat(cols)
-        level2 = np.tile(tm.makeStringIndex(cols).values, rows)
+        level1 = tm.makeStringIndex(rows // 10).values.repeat(10)
+        level2 = np.tile(tm.makeStringIndex(10).values, rows // 10)
         index = IMPL.MultiIndex.from_arrays([level1, level2])
-        self.s = IMPL.Series(np.random.randn(rows * cols), index=index)
+        self.s = IMPL.Series(np.random.randn(rows), index=index)
         self.s_subset = self.s[::2]
         self.s_subset_no_cache = self.s[::2].copy()
 
-        mi = IMPL.MultiIndex.from_product([rng, range(100)])
+        mi = IMPL.MultiIndex.from_product([rng[: len(rng) // 10], range(10)])
         self.s2 = IMPL.Series(np.random.randn(len(mi)), index=mi)
         self.s2_subset = self.s2[::2].copy()
         execute(self.df), execute(self.df2)
