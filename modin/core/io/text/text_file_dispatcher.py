@@ -1014,9 +1014,18 @@ class TextFileDispatcher(FileDispatcher):
             names, skiprows, kwargs.get("skipfooter", 0), kwargs.get("usecols", None)
         )
 
+        skiprows = kwargs["skiprows"]
+        if names not in [None, lib.no_default] and skiprows is not None:
+            # The column names are already defined, there is no need to skip
+            # rows to find the right row to define the column names.
+            # We define this `skiprows` here as `1` instead of `None` to skip
+            # the header if there is one.
+            skiprows = 1
         pd_df_metadata = cls.read_callback(
             filepath_or_buffer_md,
-            **dict(kwargs, nrows=1, skipfooter=0, skiprows=None, index_col=index_col),
+            **dict(
+                kwargs, nrows=1, skipfooter=0, skiprows=skiprows, index_col=index_col
+            ),
         )
         column_names = pd_df_metadata.columns
         column_widths, num_splits = cls._define_metadata(pd_df_metadata, column_names)
