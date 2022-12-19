@@ -982,9 +982,11 @@ class PandasDataframe(ClassLogger):
                 if "index" not in self.columns
                 else "level_{}".format(0)
             ]
-        names = tuple(level_names) if len(level_names) > 1 else level_names[0]
-        new_dtypes = self.index.to_frame(name=names).dtypes
-        new_dtypes = pandas.concat([new_dtypes, self.dtypes])
+        new_dtypes = None
+        if self._dtypes is not None:
+            names = tuple(level_names) if len(level_names) > 1 else level_names[0]
+            new_dtypes = self.index.to_frame(name=names).dtypes
+            new_dtypes = pandas.concat([new_dtypes, self._dtypes])
 
         # We will also use the `new_column_names` in the calculation of the internal metadata, so this is a
         # lightweight way of ensuring the metadata matches.
