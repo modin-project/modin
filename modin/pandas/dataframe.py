@@ -113,6 +113,7 @@ class DataFrame(BasePandasDataset):
     """
 
     _pandas_class = pandas.DataFrame
+    _accessors: set[str] = {"sparse"}
 
     def __init__(
         self,

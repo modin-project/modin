@@ -81,6 +81,7 @@ class Series(BasePandasDataset):
 
     _pandas_class = pandas.Series
     __array_priority__ = pandas.Series.__array_priority__
+    _accessors = {"dt", "cat", "str", "sparse"}
 
     def __init__(
         self,

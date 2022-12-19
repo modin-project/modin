@@ -11,8 +11,10 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pandas
+import os
 import warnings
+
+import pandas
 
 __pandas_version__ = "1.5.2"
 
@@ -79,14 +81,12 @@ with warnings.catch_warnings():
         datetime,
         NamedAgg,
         NA,
-        api,
         ArrowDtype,
         Flags,
         Float32Dtype,
         Float64Dtype,
         from_dummies,
     )
-import os
 
 from modin.config import Parameter
 
@@ -246,6 +246,7 @@ from .general import (
 )
 
 from .plotting import Plotting as plotting
+import modin.pandas.api
 from modin.utils import show_versions
 
 __all__ = [  # noqa: F405
