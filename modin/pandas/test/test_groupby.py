@@ -1780,11 +1780,32 @@ def test_unknown_groupby(columns):
                 list(test_data_values[0].keys())[-2]: np.sum,
             }
         ),
+        lambda grp: grp.agg(
+            {
+                list(test_data_values[0].keys())[1]: [
+                    ("new_sum", "sum"),
+                    ("new_mean", "mean"),
+                ],
+                list(test_data_values[0].keys())[-2]: "skew",
+            }
+        ),
+        lambda grp: grp.agg(
+            {
+                list(test_data_values[0].keys())[1]: "mean",
+                list(test_data_values[0].keys())[-2]: "skew",
+            }
+        ),
+        lambda grp: grp.agg(
+            {
+                list(test_data_values[0].keys())[1]: "mean",
+                list(test_data_values[0].keys())[-2]: "sum",
+            }
+        ),
         pytest.param(
             lambda grp: grp.agg(
                 {
-                    list(test_data_values[0].keys())[1]: (max, min, sum),
-                    list(test_data_values[0].keys())[-1]: (sum, min, max),
+                    list(test_data_values[0].keys())[1]: (max, "mean", sum),
+                    list(test_data_values[0].keys())[-1]: (sum, "skew", max),
                 }
             ),
             id="Agg_and_by_intersection_TreeReduce_implementation",

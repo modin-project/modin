@@ -13,17 +13,39 @@
 
 """Module houses builder class for GroupByReduce operator."""
 
-from collections.abc import Container
 import pandas
 
 from .tree_reduce import TreeReduce
 from .default2pandas.groupby import GroupBy
-from modin.utils import try_cast_to_pandas, hashable, MODIN_UNNAMED_SERIES_LABEL
+from modin.utils import (
+    try_cast_to_pandas,
+    hashable,
+    MODIN_UNNAMED_SERIES_LABEL,
+    walk_aggregation_dict,
+)
 from modin.error_message import ErrorMessage
 
 
 class GroupByReduce(TreeReduce):
-    """Builder class for GroupBy aggregation functions."""
+    """
+    Builder class for GroupBy aggregation functions.
+
+    Attributes
+    ----------
+    ID_LEVEL_NAME : str
+        It's supposed that implementations may produce multiple temporary
+        columns per one source column in an intermediate phase. In order
+        for these columns to be processed accordingly at the Reduce phase,
+        an implementation must store unique names for such temporary
+        columns in the ``ID_LEVEL_NAME`` level. Duplicated names are not allowed.
+    _GROUPBY_REDUCE_IMPL_FLAG : str
+        Attribute indicating that a callable should be treated as an
+        implementation for one of the Map-Reduce phases rather than an
+        arbitrary aggregation. Note: this attribute should consider being private.
+    """
+
+    ID_LEVEL_NAME = "__ID_LEVEL_NAME__"
+    _GROUPBY_REDUCE_IMPL_FLAG = "__groupby_reduce_impl_func__"
 
     @classmethod
     def register(cls, map_func, reduce_func=None, **call_kwds):
@@ -34,12 +56,9 @@ class GroupByReduce(TreeReduce):
 
         Parameters
         ----------
-        map_func : str, dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame
-            If `str` this parameter will be treated as a function name to register,
-            so `map_func` and `reduce_func` will be grabbed from `groupby_reduce_functions`.
-            If dict or callable then this will be treated as a function to apply to the `GroupByObject`
-            at the map phase.
-        reduce_func : str, dict or callable(pandas.DataFrameGroupBy) -> pandas.DataFrame, optional
+        map_func : str, dict or callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
+            Function to apply to the `GroupByObject` at the map phase.
+        reduce_func : str, dict or callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame, optional
             Function to apply to the `GroupByObject` at the reduce phase. If not specified
             will be set the same as 'map_func'.
         **call_kwds : kwargs
@@ -51,14 +70,17 @@ class GroupByReduce(TreeReduce):
             Function that takes query compiler and executes GroupBy aggregation
             with TreeReduce algorithm.
         """
-        if isinstance(map_func, str):
-
-            def build_fn(name):
-                return lambda df, *args, **kwargs: getattr(df, name)(*args, **kwargs)
-
-            map_func, reduce_func = map(build_fn, groupby_reduce_functions[map_func])
         if reduce_func is None:
             reduce_func = map_func
+
+        def build_fn(name):
+            return lambda df, *args, **kwargs: getattr(df, name)(*args, **kwargs)
+
+        if isinstance(map_func, str):
+            map_func = build_fn(map_func)
+        if isinstance(reduce_func, str):
+            reduce_func = build_fn(reduce_func)
+
         assert not (
             isinstance(map_func, dict) ^ isinstance(reduce_func, dict)
         ) and not (
@@ -68,6 +90,21 @@ class GroupByReduce(TreeReduce):
         return lambda *args, **kwargs: cls.caller(
             *args, map_func=map_func, reduce_func=reduce_func, **kwargs, **call_kwds
         )
+
+    @classmethod
+    def register_implementation(cls, map_func, reduce_func):
+        """
+        Register callables to be recognized as an implementations of map-reduce phases.
+
+        Parameters
+        ----------
+        map_func : callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
+            Callable to register.
+        reduce_func : callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
+            Callable to register.
+        """
+        setattr(map_func, cls._GROUPBY_REDUCE_IMPL_FLAG, True)
+        setattr(reduce_func, cls._GROUPBY_REDUCE_IMPL_FLAG, True)
 
     @classmethod
     def map(
@@ -125,7 +162,15 @@ class GroupByReduce(TreeReduce):
         # We have to filter func-dict BEFORE inserting broadcasted 'by' columns
         # to avoid multiple aggregation results for 'by' cols in case they're
         # present in the func-dict:
-        apply_func = cls.try_filter_dict(map_func, df)
+        apply_func = cls.get_callable(
+            map_func,
+            df,
+            # We won't be able to preserve the order as the Map phase would likely
+            # produce some temporary columns that won't fit into the original
+            # aggregation order. It doesn't matter much as we restore the original
+            # order at the Reduce phase.
+            preserve_aggregation_order=False,
+        )
         if other is not None:
             # Other is a broadcasted partition that represents 'by' data to group on.
             # If 'drop' then the 'by' data came from the 'self' frame, thus
@@ -197,12 +242,6 @@ class GroupByReduce(TreeReduce):
         # there is a bug in pandas with intersection that forces us to do so:
         # https://github.com/pandas-dev/pandas/issues/39699
         by_part = pandas.Index(df.index.names)
-        if drop:
-            to_drop = df.columns.intersection(by_part)
-            if isinstance(reduce_func, dict):
-                to_drop = to_drop.difference(reduce_func.keys())
-            if len(to_drop) > 0:
-                df.drop(columns=by_part, errors="ignore", inplace=True)
 
         groupby_kwargs = groupby_kwargs.copy()
         as_index = groupby_kwargs["as_index"]
@@ -214,7 +253,7 @@ class GroupByReduce(TreeReduce):
         # we want to group on these levels
         groupby_kwargs["level"] = list(range(len(df.index.names)))
 
-        apply_func = cls.try_filter_dict(reduce_func, df)
+        apply_func = cls.get_callable(reduce_func, df)
         result = apply_func(
             df.groupby(axis=axis, **groupby_kwargs), *agg_args, **agg_kwargs
         )
@@ -359,8 +398,8 @@ class GroupByReduce(TreeReduce):
             result.index.name = None
         return result
 
-    @staticmethod
-    def try_filter_dict(agg_func, df):
+    @classmethod
+    def get_callable(cls, agg_func, df, preserve_aggregation_order=True):
         """
         Build aggregation function to apply to each group at this particular partition.
 
@@ -373,16 +412,196 @@ class GroupByReduce(TreeReduce):
             Aggregation function.
         df : pandas.DataFrame
             Serialized partition which contains available columns.
+        preserve_aggregation_order : bool, default: True
+            Whether to manually restore the order of columns for the result specified
+            by the `agg_func` keys (only makes sense when `agg_func` is a dictionary).
 
         Returns
         -------
-        Callable
+        callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
             Aggregation function that can be safely applied to this particular partition.
         """
         if not isinstance(agg_func, dict):
             return agg_func
-        partition_dict = {k: v for k, v in agg_func.items() if k in df.columns}
-        return lambda grp: grp.agg(partition_dict)
+
+        grp_has_id_level = df.columns.names[0] == cls.ID_LEVEL_NAME
+        # The 'id' level prevents us from a lookup for the original
+        # partition's columns. So dropping the level.
+        partition_columns = df.columns.droplevel(0) if grp_has_id_level else df.columns
+
+        partition_dict = {k: v for k, v in agg_func.items() if k in partition_columns}
+        return cls._build_callable_for_dict(
+            partition_dict, preserve_aggregation_order, grp_has_id_level
+        )
+
+    @classmethod
+    def _build_callable_for_dict(
+        cls, agg_dict, preserve_aggregation_order=True, grp_has_id_level=False
+    ):
+        """
+        Build callable for an aggregation dictionary.
+
+        Parameters
+        ----------
+        agg_dict : dict
+            Aggregation dictionary.
+        preserve_aggregation_order : bool, default: True
+            Whether to manually restore the order of columns for the result specified
+            by the `agg_func` keys (only makes sense when `agg_func` is a dictionary).
+        grp_has_id_level : bool, default: False
+            Whether the frame we're grouping on has intermediate columns
+            (see ``cls.ID_LEVEL_NAME``).
+
+        Returns
+        -------
+        callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
+        """
+        external_aggs = {}
+        native_aggs = {}
+
+        result_columns = []
+        for col, func, func_name, col_renaming_required in walk_aggregation_dict(
+            agg_dict
+        ):
+            # Filter dictionary
+            dict_to_add = (
+                external_aggs if cls.is_external_aggregation(func) else native_aggs
+            )
+
+            new_value = func if func_name is None else (func_name, func)
+            old_value = dict_to_add.get(col)
+
+            if old_value is not None:
+                assert isinstance(
+                    old_value, list
+                ), f"`{col_renaming_required=}` must be `True` when multiple aggregations per columns is specified."
+                old_value.append(new_value)
+            else:
+                dict_to_add[col] = [new_value] if col_renaming_required else new_value
+
+            # Construct resulting columns
+            if col_renaming_required:
+                func_name = str(func) if func_name is None else func_name
+                result_columns.append(
+                    (*(col if isinstance(col, tuple) else (col,)), func_name)
+                )
+            else:
+                result_columns.append(col)
+
+        result_columns = pandas.Index(result_columns)
+
+        def aggregate_on_dict(grp_obj, *args, **kwargs):
+            """Aggregate the passed groupby object."""
+            if len(native_aggs) == 0:
+                native_agg_res = None
+            elif grp_has_id_level:
+                # Adding the 'id' level to the aggregation keys so they match `grp_obj` columns
+                native_aggs_modified = {
+                    (cls.ID_LEVEL_NAME, *key): value
+                    for key, value in native_aggs.items()
+                }
+                native_agg_res = grp_obj.agg(native_aggs_modified)
+                # Dropping the 'id' level from the resulted frame
+                native_agg_res.columns = native_agg_res.columns.droplevel(0)
+            else:
+                native_agg_res = grp_obj.agg(native_aggs)
+
+            external_results = []
+            insert_id_levels = False
+
+            for col, func, func_name, col_renaming_required in walk_aggregation_dict(
+                external_aggs
+            ):
+                if grp_has_id_level:
+                    cols_without_ids = grp_obj.obj.columns.droplevel(0)
+                    col_pos = (
+                        # We may have multiple columns matching the `col` in
+                        # a MultiIndex case, that's why use `.get_locs` here
+                        cols_without_ids.get_locs(col)
+                        if isinstance(cols_without_ids, pandas.MultiIndex)
+                        # `pandas.Index` doesn't have `.get_locs` method
+                        else cols_without_ids.get_loc(col)
+                    )
+                    agg_key = grp_obj.obj.columns[col_pos]
+                else:
+                    agg_key = [col]
+
+                result = func(grp_obj[agg_key])
+                result_has_id_level = result.columns.names[0] == cls.ID_LEVEL_NAME
+                insert_id_levels |= result_has_id_level
+
+                if col_renaming_required:
+                    func_name = str(func) if func_name is None else func_name
+                    if insert_id_levels:
+                        result.columns = pandas.MultiIndex.from_tuples(
+                            [
+                                # `old_col[0]` stores values from the 'id'
+                                # level, the ones we want to preserve here
+                                (old_col[0], col, func_name)
+                                for old_col in result.columns
+                            ],
+                            names=[
+                                result.columns.names[0],
+                                result.columns.names[1],
+                                None,
+                            ],
+                        )
+                    else:
+                        result.columns = pandas.MultiIndex.from_tuples(
+                            [(col, func_name)] * len(result.columns),
+                            names=[result.columns.names[0], None],
+                        )
+
+                external_results.append(result)
+
+            if insert_id_levels:
+                # As long as any `result` has an id-level we have to insert the level
+                # into every `result` so the number of levels matches
+                for idx in range(len(external_results)):
+                    if external_results[idx].columns.names[0] != cls.ID_LEVEL_NAME:
+                        external_results[idx] = pandas.concat(
+                            [external_results[idx]],
+                            keys=[cls.ID_LEVEL_NAME],
+                            names=[cls.ID_LEVEL_NAME],
+                            axis=1,
+                            copy=False,
+                        )
+
+                if native_agg_res is not None:
+                    native_agg_res = pandas.concat(
+                        [native_agg_res],
+                        keys=[cls.ID_LEVEL_NAME],
+                        names=[cls.ID_LEVEL_NAME],
+                        axis=1,
+                        copy=False,
+                    )
+
+            native_res_part = [] if native_agg_res is None else [native_agg_res]
+            result = pandas.concat(
+                [*native_res_part, *external_results], axis=1, copy=False
+            )
+
+            # The order is naturally preserved if there's no external aggregations
+            if preserve_aggregation_order and len(external_aggs):
+                result = result.reindex(result_columns, axis=1)
+            return result
+
+        return aggregate_on_dict
+
+    @classmethod
+    def is_external_aggregation(cls, func):
+        """
+        Check whether the passed `func` was registered as a Map-Reduce implementation.
+
+        Parameters
+        ----------
+        func : callable
+
+        Returns
+        -------
+        bool
+        """
+        return callable(func) and hasattr(func, cls._GROUPBY_REDUCE_IMPL_FLAG)
 
     @classmethod
     def build_map_reduce_functions(
@@ -479,73 +698,3 @@ class GroupByReduce(TreeReduce):
             return result
 
         return _map, _reduce
-
-
-# This dict is a map for function names and their equivalents in TreeReduce
-groupby_reduce_functions = {
-    "all": ("all", "all"),
-    "any": ("any", "any"),
-    "count": ("count", "sum"),
-    "max": ("max", "max"),
-    "min": ("min", "min"),
-    "prod": ("prod", "prod"),
-    "size": ("size", "sum"),
-    "sum": ("sum", "sum"),
-}
-
-
-def _is_reduce_function_with_depth(fn, depth: int = 0):
-    """
-    Check whether all functions defined by `fn` are groupby reductions.
-
-    If true, all functions defined by `fn` can be implemented with TreeReduce.
-    This is a recursive helper function for is_reduce_function.
-
-    Parameters
-    ----------
-    fn : Any
-        Function to test.
-    depth : int, default: 0
-        How many nested containers we are within for this check.
-            - if it's 0, then we're outside of any container, and `fn` could be
-              either function name or container of function names/renamers.
-            - if it's 1, then we're inside container of function
-              names/renamers.`fn` must be either function name or renamer.
-              renamer is some container which length == 2, where the first
-              element is the new column name and the second is the function
-              name.
-
-    Returns
-    -------
-    bool
-        Whether all functions defined by `fn` are reductions.
-    """
-    if not isinstance(fn, str) and isinstance(fn, Container):
-        assert depth == 0 or (
-            depth > 0 and len(fn) == 2
-        ), f"Got the renamer with incorrect length, expected 2 got {len(fn)}."
-        return (
-            all(_is_reduce_function_with_depth(f, depth + 1) for f in fn)
-            if depth == 0
-            else _is_reduce_function_with_depth(fn[1], depth + 1)
-        )
-    return isinstance(fn, str) and fn in groupby_reduce_functions
-
-
-def is_reduce_function(fn):
-    """
-    Check whether all functions defined by `fn` are groupby reductions.
-
-    If true, all functions defined by `fn` can be implemented with TreeReduce.
-
-    Parameters
-    ----------
-    fn : Any
-        Function to test.
-
-    Returns
-    -------
-    bool
-        Whether all functions defined by `fn` are reductions.
-    """
-    return _is_reduce_function_with_depth(fn, depth=0)

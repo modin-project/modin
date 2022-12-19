@@ -43,6 +43,7 @@ import numpy as np
 from pandas.util._decorators import Appender
 from pandas.util._print_versions import _get_sys_info, _get_dependency_info  # type: ignore[attr-defined]
 from pandas._typing import JSONSerializable
+from pandas.core.dtypes.common import is_list_like
 
 from modin.config import Engine, StorageFormat, IsExperimental
 from modin._version import get_versions
@@ -740,3 +741,46 @@ def show_versions(as_json: Union[str, bool] = False) -> None:
             print(f"\n{name} dependencies\n{'-' * (len(name) + 13)}")
             for k, v in d.items():
                 print(f"{k:<{maxlen}}: {v}")
+
+
+def walk_aggregation_dict(agg_dict):
+    """
+    Walk over an aggregation dictionary.
+
+    Parameters
+    ----------
+    agg_dict : dict
+
+    Yields
+    ------
+    (col: hashable, func: [callable, str], func_name: Optional[str], col_renaming_required: bool)
+        Yield an aggregation function with its metadata:
+            - `col`: column name to apply the function.
+            - `func`: aggregation function to apply to the column.
+            - `func_name`: custom function name that was specified in the dict.
+            - `col_renaming_required`: whether it's required to rename the
+                `col` into ``(col, func_name)``.
+    """
+
+    def _walk(key, value, _depth=0):
+        col_renaming_required = bool(_depth)
+
+        if is_list_like(value):
+            if _depth == 0:
+                for val in value:
+                    yield from _walk(key, val, _depth + 1)
+            elif _depth == 1:
+                if len(value) != 2:
+                    raise ValueError(
+                        f"Incorrect rename format. Renamer must consist of exactly two elements, got {len(value)=}."
+                    )
+                func_name, func = value
+                yield key, func, func_name, col_renaming_required
+            else:
+                # pandas doesn't support this as well
+                raise NotImplementedError("Nested renaming is not supported.")
+        else:
+            yield key, value, None, col_renaming_required
+
+    for key, value in agg_dict.items():
+        yield from _walk(key, value)
