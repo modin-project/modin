@@ -133,13 +133,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         op_name = getattr(pandas_op, "__name__", str(pandas_op))
         ErrorMessage.default_to_pandas(op_name)
-        args = (a.to_pandas() if isinstance(a, type(self)) else a for a in args)
-        kwargs = {
-            k: v.to_pandas() if isinstance(v, type(self)) else v
-            for k, v in kwargs.items()
-        }
+        args = try_cast_to_pandas(args)
+        kwargs = try_cast_to_pandas(kwargs)
 
-        result = pandas_op(self.to_pandas(), *args, **kwargs)
+        result = pandas_op(try_cast_to_pandas(self), *args, **kwargs)
         if isinstance(result, pandas.Series):
             if result.name is None:
                 result.name = MODIN_UNNAMED_SERIES_LABEL
