@@ -1016,7 +1016,7 @@ class TextFileDispatcher(FileDispatcher):
 
         pd_df_metadata = cls.read_callback(
             filepath_or_buffer_md,
-            **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
+            **dict(kwargs, nrows=1, skipfooter=0, skiprows=None, index_col=index_col),
         )
         column_names = pd_df_metadata.columns
         column_widths, num_splits = cls._define_metadata(pd_df_metadata, column_names)
