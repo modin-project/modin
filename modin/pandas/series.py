@@ -484,6 +484,8 @@ class Series(BasePandasDataset):
         """
         Return Series as ndarray or ndarray-like depending on the dtype.
         """
+        import modin.pandas as pd
+
         data = self.to_numpy()
         if isinstance(self.dtype, pd.CategoricalDtype):
             data = pd.Categorical(data, dtype=self.dtype)
