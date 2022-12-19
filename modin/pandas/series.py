@@ -484,7 +484,12 @@ class Series(BasePandasDataset):
         """
         Return Series as ndarray or ndarray-like depending on the dtype.
         """
-        return self.to_numpy()
+        import modin.pandas as pd
+
+        data = self.to_numpy()
+        if isinstance(self.dtype, pd.CategoricalDtype):
+            data = pd.Categorical(data, dtype=self.dtype)
+        return data
 
     def add(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
         """

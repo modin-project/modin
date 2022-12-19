@@ -3613,6 +3613,16 @@ def test_values(data):
     np.testing.assert_equal(modin_series.values, pandas_series.values)
 
 
+def test_values_non_numeric():
+    data = ["str{0}".format(i) for i in range(0, 10**3)]
+    modin_series, pandas_series = create_test_series(data)
+
+    modin_series = modin_series.astype("category")
+    pandas_series = pandas_series.astype("category")
+
+    df_equals(modin_series.values, pandas_series.values)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
