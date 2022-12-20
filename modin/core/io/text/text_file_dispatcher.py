@@ -210,7 +210,6 @@ class TextFileDispatcher(FileDispatcher):
     def partitioned_file(
         cls,
         f,
-        read_callback_kw: dict,
         num_partitions: int = None,
         nrows: int = None,
         skiprows: int = None,
@@ -220,6 +219,7 @@ class TextFileDispatcher(FileDispatcher):
         newline: bytes = None,
         header_size: int = 0,
         pre_reading: int = 0,
+        read_callback_kw: dict = None,
     ):
         """
         Compute chunk sizes in bytes for every partition.
@@ -228,8 +228,6 @@ class TextFileDispatcher(FileDispatcher):
         ----------
         f : file-like object
             File handle of file to be partitioned.
-        read_callback_kw : dict
-            Keyword arguments for `cls.read_callback` to compute metadata.
         num_partitions : int, optional
             For what number of partitions split a file.
             If not specified grabs the value from `modin.config.NPartitions.get()`.
@@ -249,6 +247,8 @@ class TextFileDispatcher(FileDispatcher):
             Number of rows, that occupied by header.
         pre_reading : int, default: 0
             Number of rows between header and skipped rows, that should be read.
+        read_callback_kw : dict, optional
+            Keyword arguments for `cls.read_callback` to compute metadata if needed.
 
         Returns
         -------
@@ -256,7 +256,7 @@ class TextFileDispatcher(FileDispatcher):
             List with the next elements:
                 int : partition start read byte
                 int : partition end read byte
-            Dataframe from which metadata can be retrieved.
+            Dataframe from which metadata can be retrieved. Can be None if `read_callback_kw=None`.
         """
         read_rows_counter = 0
         outside_quotes = True
@@ -295,10 +295,12 @@ class TextFileDispatcher(FileDispatcher):
         rows_skipper(skiprows)
 
         start = f.tell()
-        # For correct behavior, if we want to avoid double skipping rows,
-        # we need to get metadata after skipping.
-        pd_df_metadata = cls.read_callback(f, **read_callback_kw)
-        f.seek(start)
+        pd_df_metadata = None
+        if read_callback_kw:
+            # For correct behavior, if we want to avoid double skipping rows,
+            # we need to get metadata after skipping.
+            pd_df_metadata = cls.read_callback(f, **read_callback_kw)
+            f.seek(start)
 
         if nrows:
             partition_size = max(1, num_partitions, nrows // num_partitions)
@@ -1046,9 +1048,6 @@ class TextFileDispatcher(FileDispatcher):
             f.seek(old_pos)
             splits, pd_df_metadata = cls.partitioned_file(
                 f,
-                read_callback_kw=dict(
-                    kwargs, nrows=1, skipfooter=0, index_col=index_col, skiprows=None
-                ),
                 num_partitions=NPartitions.get(),
                 nrows=kwargs["nrows"] if not should_handle_skiprows else None,
                 skiprows=skiprows_partitioning,
@@ -1058,6 +1057,9 @@ class TextFileDispatcher(FileDispatcher):
                 newline=newline,
                 header_size=header_size,
                 pre_reading=pre_reading,
+                read_callback_kw=dict(
+                    kwargs, nrows=1, skipfooter=0, index_col=index_col, skiprows=None
+                ),
             )
 
         column_names = pd_df_metadata.columns
