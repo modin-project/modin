@@ -27,7 +27,6 @@ from modin.pandas.test.utils import (
     df_equals,
     test_data_values,
     test_data_keys,
-    create_test_dfs,
     test_data,
 )
 from modin.pandas.utils import SET_DATAFRAME_ATTRIBUTE_WARNING
