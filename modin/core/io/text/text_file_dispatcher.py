@@ -210,6 +210,7 @@ class TextFileDispatcher(FileDispatcher):
     def partitioned_file(
         cls,
         f,
+        read_callback_kw: dict,
         num_partitions: int = None,
         nrows: int = None,
         skiprows: int = None,
@@ -227,6 +228,8 @@ class TextFileDispatcher(FileDispatcher):
         ----------
         f : file-like object
             File handle of file to be partitioned.
+        read_callback_kw : dict
+            Keyword arguments for `cls.read_callback` to compute metadata.
         num_partitions : int, optional
             For what number of partitions split a file.
             If not specified grabs the value from `modin.config.NPartitions.get()`.
@@ -249,10 +252,11 @@ class TextFileDispatcher(FileDispatcher):
 
         Returns
         -------
-        list
+        list, pandas.DataFrame
             List with the next elements:
                 int : partition start read byte
                 int : partition end read byte
+            Dataframe from which metadata can be retrieved.
         """
         read_rows_counter = 0
         outside_quotes = True
@@ -291,6 +295,10 @@ class TextFileDispatcher(FileDispatcher):
         rows_skipper(skiprows)
 
         start = f.tell()
+        # For correct behavior, if we want to avoid double skipping rows,
+        # we need to get metadata after skipping.
+        pd_df_metadata = cls.read_callback(f, **read_callback_kw)
+        f.seek(start)
 
         if nrows:
             partition_size = max(1, num_partitions, nrows // num_partitions)
@@ -331,8 +339,7 @@ class TextFileDispatcher(FileDispatcher):
                 # add outside_quotes
                 if is_quoting and not outside_quotes:
                     warnings.warn("File has mismatched quotes")
-
-        return result
+        return result, pd_df_metadata
 
     @classmethod
     def _read_rows(
@@ -1014,29 +1021,11 @@ class TextFileDispatcher(FileDispatcher):
             names, skiprows, kwargs.get("skipfooter", 0), kwargs.get("usecols", None)
         )
 
-        skiprows = kwargs["skiprows"]
-        if names not in [None, lib.no_default] and skiprows is not None:
-            # The column names are already defined, there is no need to skip
-            # rows to find the right row to define the column names.
-            # We define this `skiprows` here as `1` instead of `None` to skip
-            # the header if there is one.
-            skiprows = 1
-        pd_df_metadata = cls.read_callback(
-            filepath_or_buffer_md,
-            **dict(
-                kwargs, nrows=1, skipfooter=0, skiprows=skiprows, index_col=index_col
-            ),
-        )
-        column_names = pd_df_metadata.columns
-        column_widths, num_splits = cls._define_metadata(pd_df_metadata, column_names)
-
         # kwargs that will be passed to the workers
         partition_kwargs = dict(
             kwargs,
             fname=filepath_or_buffer_md,
-            num_splits=num_splits,
             header_size=0 if use_inferred_column_names else header_size,
-            names=column_names if use_inferred_column_names else names,
             header="infer" if use_inferred_column_names else header,
             skipfooter=0,
             skiprows=None,
@@ -1055,8 +1044,11 @@ class TextFileDispatcher(FileDispatcher):
                 fio, encoding, kwargs.get("quotechar", '"')
             )
             f.seek(old_pos)
-            splits = cls.partitioned_file(
+            splits, pd_df_metadata = cls.partitioned_file(
                 f,
+                read_callback_kw=dict(
+                    kwargs, nrows=1, skipfooter=0, index_col=index_col, skiprows=None
+                ),
                 num_partitions=NPartitions.get(),
                 nrows=kwargs["nrows"] if not should_handle_skiprows else None,
                 skiprows=skiprows_partitioning,
@@ -1068,6 +1060,14 @@ class TextFileDispatcher(FileDispatcher):
                 pre_reading=pre_reading,
             )
 
+        column_names = pd_df_metadata.columns
+        column_widths, num_splits = cls._define_metadata(pd_df_metadata, column_names)
+        partition_kwargs.update(
+            dict(
+                num_splits=num_splits,
+                names=column_names if use_inferred_column_names else names,
+            )
+        )
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
             splits, callback=cls.read_callback, **partition_kwargs
         )
