@@ -35,7 +35,6 @@ def test_top_level_api_equality():
         "offsets",
         "datetime",
         "arrays",
-        "api",
         "tseries",
         "errors",
         "to_msgpack",  # This one is experimental, and doesn't look finished

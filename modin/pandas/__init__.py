@@ -246,7 +246,7 @@ from .general import (
 )
 
 from .plotting import Plotting as plotting
-import modin.pandas.api
+from modin.pandas import api
 from modin.utils import show_versions
 
 __all__ = [  # noqa: F405
