@@ -298,6 +298,10 @@ class TextFileDispatcher(FileDispatcher):
         start = f.tell()
         pd_df_metadata = None
         if read_callback_kw:
+            if skiprows == 0:
+                # it is necessary to return to the beginning of the file,
+                # since by this moment the header have been skipped.
+                f.seek(0)
             # For correct behavior, if we want to avoid double skipping rows,
             # we need to get metadata after skipping.
             pd_df_metadata = cls.read_callback(f, **read_callback_kw)
