@@ -1666,7 +1666,7 @@ def test_select_dtypes():
     df = pandas.DataFrame(frame_data)
     rd = pd.DataFrame(frame_data)
 
-    include = np.float, "integer"
+    include = np.float64, "integer"
     exclude = (np.bool_,)
     r = rd.select_dtypes(include=include, exclude=exclude)
 
