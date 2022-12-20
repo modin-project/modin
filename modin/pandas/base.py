@@ -3725,7 +3725,7 @@ class BasePandasDataset(ClassLogger):
                 # if we encounter an array-like and we only have 1 dim
                 # that means that their are list/ndarrays inside the Series!
                 # so just return them (GH 6394)
-                return self._values[loc]
+                return self.iloc[loc]
 
             result = self.iloc[loc]
         elif is_scalar(loc):
