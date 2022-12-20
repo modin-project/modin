@@ -247,25 +247,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def __init__(self, modin_frame):
         self._modin_frame = modin_frame
 
-    def default_to_pandas(self, pandas_op, *args, **kwargs):
-        op_name = getattr(pandas_op, "__name__", str(pandas_op))
-        ErrorMessage.default_to_pandas(op_name)
-        args = (a.to_pandas() if isinstance(a, type(self)) else a for a in args)
-        kwargs = {
-            k: v.to_pandas if isinstance(v, type(self)) else v
-            for k, v in kwargs.items()
-        }
-
-        result = pandas_op(self.to_pandas(), *args, **kwargs)
-        if isinstance(result, pandas.Series):
-            if result.name is None:
-                result.name = MODIN_UNNAMED_SERIES_LABEL
-            result = result.to_frame()
-        if isinstance(result, pandas.DataFrame):
-            return self.from_pandas(result, type(self._modin_frame))
-        else:
-            return result
-
     @property
     def lazy_execution(self):
         """
