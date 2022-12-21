@@ -274,9 +274,13 @@ class TextFileDispatcher(FileDispatcher):
 
         pd_df_metadata = None
         if pre_reading:
-            pd_df_metadata = cls.read_callback(f, **read_callback_kw)
-            f.seek(0)
-            rows_skipper(header_size)
+            if read_callback_kw:
+                pd_df_metadata = cls.read_callback(f, **read_callback_kw)
+                # read_callback read header and 1 rows; the easiest way is to go back
+                # to the beginning and skip as many lines as was calculated for the header
+                f.seek(0)
+                rows_skipper(header_size)
+
             pre_reading_start = f.tell()
             outside_quotes, read_rows = cls._read_rows(
                 f,
@@ -298,13 +302,11 @@ class TextFileDispatcher(FileDispatcher):
             rows_skipper(header_size)
 
         if skiprows > 0:
-            if not pre_reading:
-                rows_skipper(skiprows - 1)
-            else:
-                rows_skipper(skiprows)
+            # The last row may be needed to get metadata
+            rows_skipper(skiprows - 1)
 
-        start = f.tell()
         if read_callback_kw and not pre_reading:
+            start = f.tell()
             if skiprows == 0:
                 # it is necessary to return to the beginning of the file,
                 # since by this moment the header could have been skipped.
@@ -313,9 +315,10 @@ class TextFileDispatcher(FileDispatcher):
             # we need to get metadata after skipping.
             pd_df_metadata = cls.read_callback(f, **read_callback_kw)
             f.seek(start)
-            if skiprows > 0:
-                rows_skipper(1)
-                start = f.tell()
+
+        if skiprows > 0:
+            rows_skipper(1)
+            start = f.tell()
 
         if nrows:
             partition_size = max(1, num_partitions, nrows // num_partitions)
