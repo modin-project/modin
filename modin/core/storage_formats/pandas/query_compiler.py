@@ -1926,8 +1926,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
                 else:
                     # Value is a DataFrame type object
-                    def fillna_builder(df, r):
-                        return df.fillna(value=r, **kwargs)
+                    def fillna_builder(df, right):
+                        return df.fillna(value=right, **kwargs)
 
                     new_modin_frame = self._modin_frame.broadcast_apply(
                         0, fillna_builder, value._modin_frame
@@ -3378,7 +3378,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(
             self._modin_frame.broadcast_apply_full_axis(
                 0,
-                lambda l, r: pandas.DataFrame.compare(l, other=r, **kwargs),
+                lambda left, right: pandas.DataFrame.compare(
+                    left, other=right, **kwargs
+                ),
                 other._modin_frame,
             )
         )

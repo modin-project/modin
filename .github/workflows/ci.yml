@@ -155,8 +155,7 @@ jobs:
           architecture: "x64"
       # NOTE: If you are changing the set of packages installed here, make sure that
       # the dev requirements match them.
-      # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
-      - run: pip install "flake8<5" flake8-print flake8-no-implicit-concat
+      - run: pip install flake8 flake8-print flake8-no-implicit-concat
       # NOTE: keep the flake8 command here in sync with the pre-commit hook in
       # /contributing/pre-commit
       - run: flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py

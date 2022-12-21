@@ -332,7 +332,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
+    def broadcast_apply(cls, axis, apply_func, left, right, other_name="right"):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` function.
 
@@ -346,7 +346,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             NumPy array of left partitions.
         right : np.ndarray
             NumPy array of right partitions.
-        other_name : str, default: "r"
+        other_name : str, default: "right"
             Name of key-value argument for `apply_func` that
             is used to pass `right` to `apply_func`.
 

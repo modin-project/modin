@@ -70,8 +70,7 @@ jobs:
       # install test dependencies
       # NOTE: If you are changing the set of packages installed here, make sure that
       # the dev requirements match them.
-      # TODO: remove pin when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
-      - run: pip install pytest pytest-cov black "flake8<5" flake8-print flake8-no-implicit-concat
+      - run: pip install pytest pytest-cov black flake8 flake8-print flake8-no-implicit-concat
         if: matrix.execution != 'hdk_on_native'
       - run: pip install flake8-print jupyter nbformat nbconvert
         if: matrix.execution == 'hdk_on_native'
