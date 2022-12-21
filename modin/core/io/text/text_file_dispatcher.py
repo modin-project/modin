@@ -1043,7 +1043,11 @@ class TextFileDispatcher(FileDispatcher):
         )
 
         compute_metadata_before_skipping_rows = (
-            usecols is not None and skiprows is not None
+            # basic supported case: isinstance(skiprows, int)
+            not isinstance(skiprows, int)
+            # complex cases
+            or (usecols is not None and skiprows is not None)
+            or pre_reading != 0
         )
         if compute_metadata_before_skipping_rows:
             pd_df_metadata = cls.read_callback(
@@ -1067,6 +1071,8 @@ class TextFileDispatcher(FileDispatcher):
             # they do not need to be used again.
             read_callback_kw.pop("storage_options", None)
             read_callback_kw.pop("compression", None)
+            # `partitioned_file`func already contains an algorithm for working with header
+            read_callback_kw["header"] = "infer" if header is not None else None
 
         # kwargs that will be passed to the workers
         partition_kwargs = dict(
