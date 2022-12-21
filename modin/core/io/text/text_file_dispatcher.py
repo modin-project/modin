@@ -272,15 +272,9 @@ class TextFileDispatcher(FileDispatcher):
 
         file_size = cls.file_size(f)
 
-        pd_df_metadata = None
-        if pre_reading:
-            if read_callback_kw:
-                pd_df_metadata = cls.read_callback(f, **read_callback_kw)
-                # read_callback read header and 1 rows; the easiest way is to go back
-                # to the beginning and skip as many lines as was calculated for the header
-                f.seek(0)
-            rows_skipper(header_size)
+        rows_skipper(header_size)
 
+        if pre_reading:
             pre_reading_start = f.tell()
             outside_quotes, read_rows = cls._read_rows(
                 f,
@@ -298,13 +292,12 @@ class TextFileDispatcher(FileDispatcher):
             # add outside_quotes
             if is_quoting and not outside_quotes:
                 warnings.warn("File has mismatched quotes")
-        else:
-            rows_skipper(header_size)
 
         if skiprows is not None and skiprows > 0:
             # The last row may be needed to get metadata
             rows_skipper(skiprows - 1)
 
+        pd_df_metadata = None
         if read_callback_kw and not pre_reading:
             start = f.tell()
             if skiprows == 0:
