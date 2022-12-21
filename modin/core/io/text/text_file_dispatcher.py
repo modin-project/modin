@@ -272,9 +272,11 @@ class TextFileDispatcher(FileDispatcher):
 
         file_size = cls.file_size(f)
 
-        rows_skipper(header_size)
-
+        pd_df_metadata = None
         if pre_reading:
+            pd_df_metadata = cls.read_callback(f, **read_callback_kw)
+            f.seek(0)
+            rows_skipper(header_size)
             pre_reading_start = f.tell()
             outside_quotes, read_rows = cls._read_rows(
                 f,
@@ -292,20 +294,28 @@ class TextFileDispatcher(FileDispatcher):
             # add outside_quotes
             if is_quoting and not outside_quotes:
                 warnings.warn("File has mismatched quotes")
+        else:
+            rows_skipper(header_size)
 
-        rows_skipper(skiprows)
+        if skiprows > 0:
+            if not pre_reading:
+                rows_skipper(skiprows - 1)
+            else:
+                rows_skipper(skiprows)
 
         start = f.tell()
-        pd_df_metadata = None
-        if read_callback_kw:
+        if read_callback_kw and not pre_reading:
             if skiprows == 0:
                 # it is necessary to return to the beginning of the file,
-                # since by this moment the header have been skipped.
+                # since by this moment the header could have been skipped.
                 f.seek(0)
             # For correct behavior, if we want to avoid double skipping rows,
             # we need to get metadata after skipping.
             pd_df_metadata = cls.read_callback(f, **read_callback_kw)
             f.seek(start)
+            if skiprows > 0:
+                rows_skipper(1)
+                start = f.tell()
 
         if nrows:
             partition_size = max(1, num_partitions, nrows // num_partitions)
@@ -1051,6 +1061,13 @@ class TextFileDispatcher(FileDispatcher):
                 fio, encoding, kwargs.get("quotechar", '"')
             )
             f.seek(old_pos)
+            read_callback_kw = dict(
+                kwargs, nrows=1, skipfooter=0, index_col=index_col, skiprows=None
+            )
+            read_callback_kw.pop("memory_map", None)
+            read_callback_kw.pop("storage_options", None)
+            read_callback_kw.pop("compression", None)
+
             splits, pd_df_metadata = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
@@ -1062,9 +1079,7 @@ class TextFileDispatcher(FileDispatcher):
                 newline=newline,
                 header_size=header_size,
                 pre_reading=pre_reading,
-                read_callback_kw=dict(
-                    kwargs, nrows=1, skipfooter=0, index_col=index_col, skiprows=None
-                ),
+                read_callback_kw=read_callback_kw,
             )
 
         column_names = pd_df_metadata.columns
