@@ -1067,7 +1067,13 @@ class TextFileDispatcher(FileDispatcher):
             read_callback_kw = dict(
                 kwargs, nrows=1, skipfooter=0, index_col=index_col, skiprows=None
             )
+            # `memory_map` doesn't work with file-like object so we can't use it here.
+            # We can definitely skip it without violating the reading logic
+            # since this parameter is intended to optimize reading.
+            # For reading a couple of lines, this is not essential.
             read_callback_kw.pop("memory_map", None)
+            # These parameters are already used when opening file `f`,
+            # they do not need to be used again.
             read_callback_kw.pop("storage_options", None)
             read_callback_kw.pop("compression", None)
 
