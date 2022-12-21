@@ -301,7 +301,7 @@ class TextFileDispatcher(FileDispatcher):
         else:
             rows_skipper(header_size)
 
-        if skiprows > 0:
+        if skiprows is not None and skiprows > 0:
             # The last row may be needed to get metadata
             rows_skipper(skiprows - 1)
 
@@ -316,7 +316,7 @@ class TextFileDispatcher(FileDispatcher):
             pd_df_metadata = cls.read_callback(f, **read_callback_kw)
             f.seek(start)
 
-        if skiprows > 0:
+        if skiprows is not None and skiprows > 0:
             rows_skipper(1)
             start = f.tell()
 
