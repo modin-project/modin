@@ -1037,9 +1037,36 @@ class TextFileDispatcher(FileDispatcher):
             )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE
+        usecols = kwargs["usecols"]
         use_inferred_column_names = cls._uses_inferred_column_names(
-            names, skiprows, kwargs.get("skipfooter", 0), kwargs.get("usecols", None)
+            names, skiprows, kwargs["skipfooter"], usecols
         )
+
+        compute_metadata_before_skipping_rows = (
+            usecols is not None and skiprows is not None
+        )
+        if compute_metadata_before_skipping_rows:
+            pd_df_metadata = cls.read_callback(
+                filepath_or_buffer_md,
+                **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
+            )
+            column_names = pd_df_metadata.columns
+            column_widths, num_splits = cls._define_metadata(
+                pd_df_metadata, column_names
+            )
+        else:
+            read_callback_kw = dict(
+                kwargs, nrows=1, skipfooter=0, index_col=index_col, skiprows=None
+            )
+            # `memory_map` doesn't work with file-like object so we can't use it here.
+            # We can definitely skip it without violating the reading logic
+            # since this parameter is intended to optimize reading.
+            # For reading a couple of lines, this is not essential.
+            read_callback_kw.pop("memory_map", None)
+            # These parameters are already used when opening file `f`,
+            # they do not need to be used again.
+            read_callback_kw.pop("storage_options", None)
+            read_callback_kw.pop("compression", None)
 
         # kwargs that will be passed to the workers
         partition_kwargs = dict(
@@ -1064,20 +1091,8 @@ class TextFileDispatcher(FileDispatcher):
                 fio, encoding, kwargs.get("quotechar", '"')
             )
             f.seek(old_pos)
-            read_callback_kw = dict(
-                kwargs, nrows=1, skipfooter=0, index_col=index_col, skiprows=None
-            )
-            # `memory_map` doesn't work with file-like object so we can't use it here.
-            # We can definitely skip it without violating the reading logic
-            # since this parameter is intended to optimize reading.
-            # For reading a couple of lines, this is not essential.
-            read_callback_kw.pop("memory_map", None)
-            # These parameters are already used when opening file `f`,
-            # they do not need to be used again.
-            read_callback_kw.pop("storage_options", None)
-            read_callback_kw.pop("compression", None)
 
-            splits, pd_df_metadata = cls.partitioned_file(
+            splits, pd_df_metadata_temp = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
                 nrows=kwargs["nrows"] if not should_handle_skiprows else None,
@@ -1088,8 +1103,12 @@ class TextFileDispatcher(FileDispatcher):
                 newline=newline,
                 header_size=header_size,
                 pre_reading=pre_reading,
-                read_callback_kw=read_callback_kw,
+                read_callback_kw=read_callback_kw
+                if not compute_metadata_before_skipping_rows
+                else None,
             )
+            if not compute_metadata_before_skipping_rows:
+                pd_df_metadata = pd_df_metadata_temp
 
         column_names = pd_df_metadata.columns
         column_widths, num_splits = cls._define_metadata(pd_df_metadata, column_names)
