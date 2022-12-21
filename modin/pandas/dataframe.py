@@ -1228,8 +1228,11 @@ class DataFrame(BasePandasDataset):
                 value, index=new_index, columns=new_columns
             )._query_compiler
         elif len(self.columns) == 0 and loc == 0:
+            new_index = self.index
             new_query_compiler = self.__constructor__(
-                data=value, columns=[column], index=self.index
+                data=value,
+                columns=[column],
+                index=None if len(new_index) == 0 else new_index,
             )._query_compiler
         else:
             if (
