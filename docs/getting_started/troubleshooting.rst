@@ -193,6 +193,66 @@ Although this example may work on your machine, we do not recommend it, because
 the Python multiprocessing library will duplicate Ray clusters, causing both
 excessive resource usage and conflict over the available resources.
 
+Poor performance of the first operation with Modin on Ray engine
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+There might be cases when the first operation with Modin on Ray engine is much slower than the subsequent calls of the operation.
+That happens because Ray workers may not be fully set up yet to perform computation after initialization of the engine
+with ``ray.init(runtime_env={'env_vars': {'__MODIN_AUTOIMPORT_PANDAS__': '1'}})``.
+
+.. code-block:: python
+
+  import time
+  import pandas
+  import numpy as np
+  import ray
+  import modin.pandas as pd
+  import modin.config as cfg
+
+  ray.init(runtime_env={'env_vars': {'__MODIN_AUTOIMPORT_PANDAS__': '1'}})
+
+  pandas_df = pandas.DataFrame(
+    np.random.randint(0, 100, size=(1000000, 13))
+  )
+  pandas_df.to_csv("foo.csv", index=False)
+
+  def read_csv_with_pandas():
+    start_time = time.time()
+    pandas_df = pandas.read_csv("foo.csv", index_col=0)
+    end_time = time.time()
+    pandas_duration = end_time - start_time
+    print("Time to read_csv with pandas: {} seconds".format(round(pandas_duration, 3)))
+    return pandas_df
+
+  def read_csv_with_modin():
+    start_time = time.time()
+    modin_df = pd.read_csv("foo.csv", index_col=0)
+    end_time = time.time()
+    modin_duration = end_time - start_time
+    print("Time to read_csv with Modin: {} seconds".format(round(modin_duration, 3))) 
+    return modin_df
+
+  for i in range(5):
+    pandas_df = read_csv_with_pandas()
+    modin_df = read_csv_with_modin()
+
+  Time to read_csv with pandas: 0.708 seconds
+  Time to read_csv with Modin: 4.132 seconds
+  Time to read_csv with pandas: 0.735 seconds
+  Time to read_csv with Modin: 0.37 seconds
+  Time to read_csv with pandas: 0.646 seconds
+  Time to read_csv with Modin: 0.377 seconds
+  Time to read_csv with pandas: 0.673 seconds
+  Time to read_csv with Modin: 0.371 seconds
+  Time to read_csv with pandas: 0.672 seconds
+  Time to read_csv with Modin: 0.379 seconds
+
+**Solution**
+
+So far there is no a solution to fix or work around the problem rather than not to pass a non-empty runtime_env to ``ray.init()``.
+However, this may lead to other problem regarding a race condition in Ray between the import thread and the thread executing the code.
+So for now we just highlight the problem in hope of a future fix in Ray itself.
+
 Common errors
 -------------
 
