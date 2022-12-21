@@ -279,7 +279,7 @@ class TextFileDispatcher(FileDispatcher):
                 # read_callback read header and 1 rows; the easiest way is to go back
                 # to the beginning and skip as many lines as was calculated for the header
                 f.seek(0)
-                rows_skipper(header_size)
+            rows_skipper(header_size)
 
             pre_reading_start = f.tell()
             outside_quotes, read_rows = cls._read_rows(
@@ -318,7 +318,7 @@ class TextFileDispatcher(FileDispatcher):
 
         if skiprows is not None and skiprows > 0:
             rows_skipper(1)
-            start = f.tell()
+        start = f.tell()
 
         if nrows:
             partition_size = max(1, num_partitions, nrows // num_partitions)
