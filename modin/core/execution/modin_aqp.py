@@ -93,7 +93,7 @@ def call_progress_bar(result_parts, line_no):
     elif modin_engine == "Unidist":
         from unidist import wait
     else:
-        raise RuntimeError(
+        raise NotImplementedError(
             f"ProgressBar feature is not supported for {modin_engine} engine."
         )
 
