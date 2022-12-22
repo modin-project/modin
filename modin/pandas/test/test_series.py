@@ -3624,6 +3624,16 @@ def test_values_non_numeric():
     df_equals(modin_series.values, pandas_series.values)
 
 
+def test_values_ea():
+    data = pandas.arrays.SparseArray(np.arange(10, dtype="int64"))
+    modin_series, pandas_series = create_test_series(data)
+    modin_values = modin_series.values
+    pandas_values = pandas_series.values
+
+    assert modin_values.dtype == pandas_values.dtype
+    df_equals(modin_values, pandas_values)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
