@@ -277,7 +277,7 @@ def _read(**kwargs) -> DataFrame:
     try:
         pd_obj = FactoryDispatcher.read_csv_glob(**kwargs)
     except AttributeError:
-        raise AttributeError("read_csv_glob() is only implemented for pandas on Ray.")
+        raise AttributeError(f"read_csv_glob() isn't implemented for {Engine.get()}")
 
     # This happens when `read_csv` returns a TextFileReader object for iterating through
     if isinstance(pd_obj, pandas.io.parsers.TextFileReader):

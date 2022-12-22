@@ -33,6 +33,10 @@ from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.pandas.test.utils import parse_dates_values_by_id, time_parsing_csv_path
 
 
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
+)
 def test_from_sql_distributed(make_sql_connection):
     with ensure_clean_dir() as dirname:
         filename = "test_from_sql_distributed.db"
@@ -62,6 +66,10 @@ def test_from_sql_distributed(make_sql_connection):
     df_equals(modin_df_from_table, pandas_df)
 
 
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
+)
 def test_from_sql_defaults(make_sql_connection):
     with ensure_clean_dir() as dirname:
         filename = "test_from_sql_distributed.db"
@@ -80,6 +88,10 @@ def test_from_sql_defaults(make_sql_connection):
 
 
 @pytest.mark.usefixtures("TestReadGlobCSVFixture")
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
+)
 class TestCsvGlob:
     def test_read_multiple_small_csv(self):
         pandas_df = pandas.concat([pandas.read_csv(fname) for fname in pytest.files])
@@ -163,6 +175,10 @@ class TestCsvGlob:
             df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
+)
 @pytest.mark.parametrize(
     "path",
     [
@@ -193,6 +209,10 @@ def test_read_multiple_csv_cloud_store(path):
 test_default_to_pickle_filename = "test_default_to_pickle.pkl"
 
 
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
+)
 @pytest.mark.parametrize(
     "storage_options",
     [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
@@ -222,6 +242,10 @@ def test_read_multiple_csv_s3_storage_opts(storage_options):
     )
 
 
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
+)
 @pytest.mark.parametrize("compression", [None, "gzip"])
 @pytest.mark.parametrize(
     "filename", [test_default_to_pickle_filename, "test_to_pickle*.pkl"]
@@ -247,6 +271,10 @@ def test_distributed_pickling(filename, compression):
     teardown_test_files(pickle_files)
 
 
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
+)
 def test_read_custom_json_text():
     def _generate_json(file_name, nrows, ncols):
         data = np.random.rand(nrows, ncols)
@@ -281,6 +309,10 @@ def test_read_custom_json_text():
     df_equals(df1, df2)
 
 
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
+)
 def test_read_evaluated_dict():
     def _generate_evaluated_dict(file_name, nrows, ncols):
         result = {}
