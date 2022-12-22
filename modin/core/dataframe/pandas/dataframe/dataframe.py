@@ -2815,7 +2815,7 @@ class PandasDataframe(ClassLogger):
 
     @lazy_metadata_decorator(apply_axis="both")
     def n_ary_op(
-        self, op, right_frames: list, join_type="outer", copartition_along_columns=True
+        self, op, right_frames: list, join_type="outer", copartition_along_columns=True, dtypes=None
     ):
         """
         Perform an n-opary operation by joining with other Modin DataFrame(s).
@@ -2831,6 +2831,9 @@ class PandasDataframe(ClassLogger):
         copartition_along_columns : bool, default: True
             Whether to perform copartitioning along columns or not.
             For some ops this isn't needed (e.g., `fillna`).
+        dtypes : series default:None
+            dtypes of the resultant dataframe, this argument will be
+            received if the resultant dtypes of n-opary operation is precomputed
 
         Returns
         -------
@@ -2885,6 +2888,7 @@ class PandasDataframe(ClassLogger):
             joined_columns,
             row_lengths,
             column_widths,
+            dtypes,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
