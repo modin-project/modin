@@ -2836,9 +2836,9 @@ class PandasDataframe(ClassLogger):
         copartition_along_columns : bool, default: True
             Whether to perform copartitioning along columns or not.
             For some ops this isn't needed (e.g., `fillna`).
-        dtypes : series default:None
+        dtypes : series, default: None
             dtypes of the resultant dataframe, this argument will be
-            received if the resultant dtypes of n-opary operation is precomputed
+            received if the resultant dtypes of n-opary operation is precomputed.
 
         Returns
         -------
