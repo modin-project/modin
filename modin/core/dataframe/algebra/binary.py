@@ -98,14 +98,19 @@ class Binary(Operator):
                 else:
                     if other.dtypes is not None and query_compiler.dtypes is not None:
                         if func.__name__ == "add":
-                            dtypes = pandas.Series(map(lambda x: np.find_common_type([*x], []), zip(other.dtypes, query_compiler.dtypes)))
+                            dtypes = pandas.Series(
+                                map(
+                                    lambda x: np.find_common_type([*x], []),
+                                    zip(other.dtypes, query_compiler.dtypes),
+                                )
+                            )
 
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.n_ary_op(
                             lambda x, y: func(x, y, *args, **kwargs),
                             [other._modin_frame],
                             join_type=join_type,
-                            dtypes=dtypes
+                            dtypes=dtypes,
                         )
                     )
             else:

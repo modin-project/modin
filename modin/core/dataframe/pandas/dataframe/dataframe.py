@@ -2815,7 +2815,12 @@ class PandasDataframe(ClassLogger):
 
     @lazy_metadata_decorator(apply_axis="both")
     def n_ary_op(
-        self, op, right_frames: list, join_type="outer", copartition_along_columns=True, dtypes=None
+        self,
+        op,
+        right_frames: list,
+        join_type="outer",
+        copartition_along_columns=True,
+        dtypes=None,
     ):
         """
         Perform an n-opary operation by joining with other Modin DataFrame(s).
