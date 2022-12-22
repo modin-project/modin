@@ -272,9 +272,8 @@ class TextFileDispatcher(FileDispatcher):
 
         file_size = cls.file_size(f)
 
-        rows_skipper(header_size)
-
         if pre_reading:
+            rows_skipper(header_size)
             pre_reading_start = f.tell()
             outside_quotes, read_rows = cls._read_rows(
                 f,
@@ -293,24 +292,17 @@ class TextFileDispatcher(FileDispatcher):
             if is_quoting and not outside_quotes:
                 warnings.warn("File has mismatched quotes")
 
-        if skiprows is not None and skiprows > 0:
-            # The last row may be needed to get metadata
-            rows_skipper(skiprows - 1)
+        rows_skipper(skiprows)
+        start = f.tell()
 
         pd_df_metadata = None
-        if read_callback_kw and not pre_reading:
-            start = f.tell()
-            if skiprows == 0:
-                # it is necessary to return to the beginning of the file,
-                # since by this moment the header could have been skipped.
-                f.seek(0)
+        if read_callback_kw:
             # For correct behavior, if we want to avoid double skipping rows,
             # we need to get metadata after skipping.
             pd_df_metadata = cls.read_callback(f, **read_callback_kw)
             f.seek(start)
-
-        if skiprows is not None and skiprows > 0:
-            rows_skipper(1)
+        if not pre_reading:
+            rows_skipper(header_size)
         start = f.tell()
 
         if nrows:
@@ -1064,8 +1056,6 @@ class TextFileDispatcher(FileDispatcher):
             # they do not need to be used again.
             read_callback_kw.pop("storage_options", None)
             read_callback_kw.pop("compression", None)
-            # `partitioned_file`func already contains an algorithm for working with header
-            read_callback_kw["header"] = "infer" if header is not None else None
 
         # kwargs that will be passed to the workers
         partition_kwargs = dict(
