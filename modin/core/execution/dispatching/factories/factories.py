@@ -558,7 +558,55 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
 
 @doc(_doc_factory_class, execution_name="experimental PandasOnDask")
 class ExperimentalPandasOnDaskFactory(ExperimentalBaseFactory, PandasOnDaskFactory):
-    pass
+    @classmethod
+    @doc(_doc_factory_prepare_method, io_module_name="``ExperimentalPandasOnDaskIO``")
+    def prepare(cls):
+        from modin.experimental.core.execution.dask.implementations.pandas_on_dask.io import (
+            ExperimentalPandasOnDaskIO,
+        )
+
+        cls.io_cls = ExperimentalPandasOnDaskIO
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="CSV files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_csv_glob(cls, **kwargs):
+        return cls.io_cls.read_csv_glob(**kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="Pickle files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_pickle_distributed(cls, **kwargs):
+        return cls.io_cls.read_pickle_distributed(**kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="Custom text files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_custom_text(cls, **kwargs):
+        return cls.io_cls.read_custom_text(**kwargs)
+
+    @classmethod
+    def _to_pickle_distributed(cls, *args, **kwargs):
+        """
+        Distributed pickle query compiler object.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to the writer method.
+        **kwargs : kwargs
+            Arguments to the writer method.
+        """
+        return cls.io_cls.to_pickle_distributed(*args, **kwargs)
 
 
 @doc(_doc_factory_class, execution_name="experimental PandasOnPython")
