@@ -2109,3 +2109,21 @@ def test_mean_with_datetime(by_func):
 
     modin_df, pandas_df = create_test_dfs(data)
     eval_general(modin_df, pandas_df, lambda df: df.groupby(by=by_func(df)).mean())
+
+
+def test_groupby_mad_warn():
+    modin_df = pd.DataFrame(test_groupby_data)
+    md_grp = modin_df.groupby(by=modin_df.columns[0])
+
+    msg = "The 'mad' method is deprecated and will be removed in a future version."
+    with pytest.warns(FutureWarning, match=msg):
+        md_grp.mad()
+
+
+def test_groupby_backfill_warn():
+    modin_df = pd.DataFrame(test_groupby_data)
+    md_grp = modin_df.groupby(by=modin_df.columns[0])
+
+    msg = "backfill is deprecated and will be removed in a future version."
+    with pytest.warns(FutureWarning, match=msg):
+        md_grp.backfill()
