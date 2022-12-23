@@ -21,7 +21,6 @@ from typing import (
     Iterator,
     List,
     Mapping,
-    Hashable,
     Optional,
     Union,
     Tuple,

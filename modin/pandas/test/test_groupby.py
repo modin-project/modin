@@ -1759,7 +1759,7 @@ def test_unknown_groupby(columns):
         lambda df: df.sum(),
         lambda df: df.size(),
         lambda df: df.quantile(),
-        lambda df: df.dtypes,
+        pytest.param(lambda df: df.dtypes, id="dtypes"),
         lambda df: df.apply(lambda df: df.sum()),
         pytest.param(
             lambda df: df.apply(lambda df: pandas.Series([1, 2, 3, 4])),
@@ -1832,8 +1832,11 @@ def test_unknown_groupby(columns):
     [pytest.param(True, marks=pytest.mark.skip("See modin issue #2513")), False],
 )
 def test_multi_column_groupby_different_partitions(
-    func_to_apply, as_index, by_length, categorical_by
+    func_to_apply, as_index, by_length, categorical_by, request
 ):
+    # Request for test parameters ids
+    _, _, _, func_to_apply_id = request.node.callspec.id.split("-")
+
     data = test_data_values[0]
     md_df, pd_df = create_test_dfs(data)
 
@@ -1847,7 +1850,21 @@ def test_multi_column_groupby_different_partitions(
         md_df.groupby(by, as_index=as_index),
         pd_df.groupby(by, as_index=as_index),
     )
-    eval_general(md_grp, pd_grp, func_to_apply)
+    eval_general(
+        md_grp,
+        pd_grp,
+        func_to_apply,
+        # 'skew' and 'mean' results are not 100% equal to pandas as they use
+        # different formulas and so precision errors come into play. Thus
+        # using a custom comparator that allows slight numeric deviations.
+        comparator=(
+            modin_df_almost_equals_pandas
+            if func_to_apply_id != "dtypes"
+            # `modin_df_almost_equals_pandas` is numeric-only comparator and
+            # `grp.dtypes` returns non-numeric result
+            else df_equals
+        ),
+    )
     eval___getitem__(md_grp, pd_grp, md_df.columns[1])
     eval___getitem__(md_grp, pd_grp, [md_df.columns[1], md_df.columns[2]])
 
