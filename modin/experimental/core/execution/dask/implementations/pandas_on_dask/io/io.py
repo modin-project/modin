@@ -178,7 +178,7 @@ class ExperimentalPandasOnDaskIO(PandasOnDaskIO):
             start = end + 1
             end = start + size - 1
             partition_id = DaskWrapper.deploy(
-                _read_sql_with_offset_pandas_on_ray,
+                _read_sql_with_offset,
                 f_args=(
                     partition_column,
                     start,
@@ -253,7 +253,7 @@ class ExperimentalPandasOnDaskIO(PandasOnDaskIO):
         result.to_pandas()
 
 
-def _read_sql_with_offset_pandas_on_ray(
+def _read_sql_with_offset(
     partition_column,
     start,
     end,
