@@ -2103,11 +2103,11 @@ def test_mean_with_datetime(by_func):
 
 
 @pytest.mark.parametrize(
-    "modin_df_recipie",
-    ["non_lazy_frame", "frame_with_deferred_index", "completly_lazy_frame"],
+    "modin_df_recipe",
+    ["non_lazy_frame", "frame_with_deferred_index", "lazy_frame"],
 )
-def test_groupby_on_empty_data(modin_df_recipie):
-    class ConstructModinDf:
+def test_groupby_on_empty_data(modin_df_recipe):
+    class ModinDfConstructor:
         def __init__(self, recipie, df_kwargs):
             self._recipie = recipie
             self._mock_obj = None
@@ -2128,7 +2128,7 @@ def test_groupby_on_empty_data(modin_df_recipie):
 
             return df
 
-        def completly_lazy_frame(self):
+        def lazy_frame(self):
             donor_obj = pd.DataFrame()._query_compiler
 
             self._mock_obj = mock.patch(
@@ -2152,13 +2152,13 @@ def test_groupby_on_empty_data(modin_df_recipie):
 
     def run_test(eval_function, *args, **kwargs):
         df_kwargs = {"columns": ["a", "b", "c"]}
-        with ConstructModinDf(modin_df_recipie, df_kwargs) as md_df:
-            pd_df = pandas.DataFrame(**df_kwargs)
+        with ModinDfConstructor(modin_df_recipe, df_kwargs) as modin_df:
+            pandas_df = pandas.DataFrame(**df_kwargs)
 
-            md_grp = md_df.groupby(md_df.columns[0])
-            pd_grp = pd_df.groupby(pd_df.columns[0])
+            modin_grp = modin_df.groupby(modin_df.columns[0])
+            pandas_grp = pandas_df.groupby(pandas_df.columns[0])
 
-            eval_function(md_grp, pd_grp, *args, **kwargs)
+            eval_function(modin_grp, pandas_grp, *args, **kwargs)
 
     run_test(eval___getattr__, item="b")
     run_test(eval___getitem__, item="b")
@@ -2191,7 +2191,7 @@ def test_groupby_on_empty_data(modin_df_recipie):
     run_test(eval_sum)
     run_test(eval_var)
 
-    if modin_df_recipie != "completly_lazy_frame":
+    if modin_df_recipe != "lazy_frame":
         # TODO: these functions have their specific implementations in the
         # front-end that are unable to operate on empty frames and thus
         # fail on an empty lazy frame.
