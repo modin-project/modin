@@ -532,7 +532,7 @@ class GroupByReduce(TreeReduce):
 
                 if col_renaming_required:
                     func_name = str(func) if func_name is None else func_name
-                    if insert_id_levels:
+                    if result_has_id_level:
                         result.columns = pandas.MultiIndex.from_tuples(
                             [
                                 # `old_col[0]` stores values from the 'id'
