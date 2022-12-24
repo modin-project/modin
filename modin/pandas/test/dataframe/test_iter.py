@@ -111,17 +111,21 @@ def test___contains__(request, data):
         assert result == (key in modin_df)
 
 
+@pytest.mark.parametrize("expand_frame_repr", [False, True])
 @pytest.mark.parametrize("max_rows_columns", [(5, 5), (10, 10), (75, 75), (None, None)])
-def test__options_display(max_rows_columns):
+def test__options_display(max_rows_columns, expand_frame_repr):
     frame_data = random_state.randint(RAND_LOW, RAND_HIGH, size=(102, 102))
     pandas_df = pandas.DataFrame(frame_data)
     modin_df = pd.DataFrame(frame_data)
 
-    pandas.options.display.max_rows = max_rows_columns[0]
-    pandas.options.display.max_columns = max_rows_columns[1]
+    pd.set_option('display.max_rows', max_rows_columns[0])
+    pandas.set_option('display.max_rows', max_rows_columns[0])
 
-    pd.options.display.max_rows = max_rows_columns[0]
-    pd.options.display.max_columns = max_rows_columns[1]
+    pd.set_option('display.max_columns', max_rows_columns[1])
+    pandas.set_option('display.max_columns', max_rows_columns[1])
+
+    pd.set_option('display.expand_frame_repr', expand_frame_repr)
+    pandas.set_option('display.expand_frame_repr', expand_frame_repr)
 
     assert repr(modin_df) == repr(pandas_df)
 
