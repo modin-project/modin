@@ -118,16 +118,19 @@ def test__options_display(max_rows_columns, expand_frame_repr):
     pandas_df = pandas.DataFrame(frame_data)
     modin_df = pd.DataFrame(frame_data)
 
-    pd.set_option("display.max_rows", max_rows_columns[0])
-    pandas.set_option("display.max_rows", max_rows_columns[0])
-
-    pd.set_option("display.max_columns", max_rows_columns[1])
-    pandas.set_option("display.max_columns", max_rows_columns[1])
-
-    pd.set_option("display.expand_frame_repr", expand_frame_repr)
-    pandas.set_option("display.expand_frame_repr", expand_frame_repr)
-
-    assert repr(modin_df) == repr(pandas_df)
+    context_arg = [
+        "display.max_rows",
+        max_rows_columns[0],
+        "display.max_columns",
+        max_rows_columns[1],
+        "display.expand_frame_repr",
+        expand_frame_repr,
+    ]
+    with pd.option_context(*context_arg):
+        modin_df_repr = repr(modin_df)
+    with pandas.option_context(*context_arg):
+        pandas_df_repr = repr(pandas_df)
+    assert modin_df_repr == pandas_df_repr
 
 
 def test___finalize__():
