@@ -1299,6 +1299,16 @@ class TestCsv:
             actual_pandas_df = modin_df._to_pandas()
         df_equals(expected_pandas_df, actual_pandas_df)
 
+    @pytest.mark.parametrize("usecols", [None, [0, 1, 2, 3, 4]])
+    def test_read_csv_1930(self, usecols):
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer="modin/pandas/test/data/issue_1930.csv",
+            names=["c1", "c2", "c3", "c4", "c5"],
+            usecols=usecols,
+        )
+
 
 class TestTable:
     def test_read_table(self, make_csv_file):
