@@ -153,7 +153,7 @@ class ExcelDispatcher(TextFileDispatcher):
             if index_col is not None:
                 column_names = column_names.drop(column_names[index_col])
 
-            if not all(column_names):
+            if not all(column_names) or kwargs["usecols"]:
                 # some column names are empty, use pandas reader to take the names from it
                 pandas_kw["nrows"] = 1
                 df = pandas.read_excel(io, **pandas_kw)
