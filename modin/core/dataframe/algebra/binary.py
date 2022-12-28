@@ -122,7 +122,7 @@ class Binary(Operator):
                                 )
                             )
                         if func.__name__ in boolean_operators:
-                            dtypes = pandas.Series([bool]*len(other.dtypes))
+                            dtypes = pandas.Series([bool] * len(other.dtypes))
 
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.n_ary_op(
