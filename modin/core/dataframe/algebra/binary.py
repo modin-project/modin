@@ -110,6 +110,7 @@ class Binary(Operator):
                         "mod",
                         "rmod",
                     ]
+                    boolean_operators = ["eq", "ge", "gt", "le", "lt", "ne"]
                     if other.dtypes is not None and query_compiler.dtypes is not None:
                         if func.__name__ in operators_with_common_cast:
                             dtypes = pandas.Series(
@@ -120,6 +121,8 @@ class Binary(Operator):
                                     zip(other.dtypes, query_compiler.dtypes),
                                 )
                             )
+                        if func.__name__ in boolean_operators:
+                            dtypes = pandas.Series([bool]*len(other.dtypes))
 
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.n_ary_op(
