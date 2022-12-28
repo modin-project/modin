@@ -96,11 +96,27 @@ class Binary(Operator):
                         )
                     )
                 else:
+                    operators_with_common_cast = [
+                        "add",
+                        "radd",
+                        "mul",
+                        "rmul",
+                        "pow",
+                        "rpow",
+                        "sub",
+                        "rsub",
+                        "floordiv",
+                        "rfloordiv",
+                        "mod",
+                        "rmod",
+                    ]
                     if other.dtypes is not None and query_compiler.dtypes is not None:
-                        if func.__name__ == "add":
+                        if func.__name__ in operators_with_common_cast:
                             dtypes = pandas.Series(
                                 map(
-                                    lambda x: np.find_common_type([*x], []),
+                                    lambda x: pandas.core.dtypes.cast.find_common_type(
+                                        [*x]
+                                    ),
                                     zip(other.dtypes, query_compiler.dtypes),
                                 )
                             )
