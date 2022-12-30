@@ -1101,12 +1101,8 @@ class TextFileDispatcher(FileDispatcher):
 
         column_names = pd_df_metadata.columns
         column_widths, num_splits = cls._define_metadata(pd_df_metadata, column_names)
-        partition_kwargs.update(
-            dict(
-                num_splits=num_splits,
-                names=column_names if use_inferred_column_names else names,
-            )
-        )
+        partition_kwargs["num_splits"] = num_splits
+        partition_kwargs["names"] = column_names if use_inferred_column_names else names
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
             splits, callback=cls.read_callback, **partition_kwargs
         )
