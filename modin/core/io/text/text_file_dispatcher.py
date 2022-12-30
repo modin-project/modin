@@ -1092,9 +1092,9 @@ class TextFileDispatcher(FileDispatcher):
                 newline=newline,
                 header_size=header_size,
                 pre_reading=pre_reading,
-                read_callback_kw=read_callback_kw
-                if not compute_metadata_before_skipping_rows
-                else None,
+                read_callback_kw=None
+                if compute_metadata_before_skipping_rows
+                else read_callback_kw,
             )
             if not compute_metadata_before_skipping_rows:
                 pd_df_metadata = pd_df_metadata_temp
