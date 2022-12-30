@@ -1034,19 +1034,18 @@ class TextFileDispatcher(FileDispatcher):
             or (usecols is not None and skiprows is not None)
             or pre_reading != 0
         )
+        read_callback_kw = dict(kwargs, nrows=1, skipfooter=0, index_col=index_col)
         if compute_metadata_before_skipping_rows:
             pd_df_metadata = cls.read_callback(
                 filepath_or_buffer_md,
-                **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
+                **read_callback_kw,
             )
             column_names = pd_df_metadata.columns
             column_widths, num_splits = cls._define_metadata(
                 pd_df_metadata, column_names
             )
         else:
-            read_callback_kw = dict(
-                kwargs, nrows=1, skipfooter=0, index_col=index_col, skiprows=None
-            )
+            read_callback_kw = dict(read_callback_kw, skiprows=None)
             # `memory_map` doesn't work with file-like object so we can't use it here.
             # We can definitely skip it without violating the reading logic
             # since this parameter is intended to optimize reading.
