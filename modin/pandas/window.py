@@ -123,6 +123,13 @@ class Rolling(ClassLogger):
             )
         )
 
+    def sem(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_sem(
+                self.axis, self.rolling_args, *args, **kwargs
+            )
+        )
+
     def sum(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_sum(
