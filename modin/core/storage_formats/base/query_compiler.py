@@ -4984,6 +4984,18 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        result="sem",
+        refer_to="sem",
+        params="""
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def rolling_sem(self, fold_axis, rolling_args, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.sem)(
+            self, rolling_args, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
         result="variance",
         refer_to="var",
         params="""

@@ -1163,6 +1163,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df.rolling(*rolling_args).sum(*args, **kwargs)
         )
     )
+    rolling_sem = Fold.register(
+        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).sem(*args, **kwargs)
+        )
+    )
     rolling_mean = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).mean(*args, **kwargs)
