@@ -16,7 +16,6 @@ on:
       - setup.cfg
       - setup.py
       - versioneer.py
-      - docs/**
 jobs:
   lint-black:
     name: lint (black)
