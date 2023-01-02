@@ -742,7 +742,28 @@ def show_versions(as_json: Union[str, bool] = False) -> None:
                 print(f"{k:<{maxlen}}: {v}")
 
 
-def int_to_float32(dtype):
+def int_to_float32(dtype: np.dtype) -> np.dtype:
+    """
+    Check if a datatype is a variant of integer.
+
+    If dtype is integer function returns float32 datatype if not returns the
+    argument datatype itself
+
+    Parameters
+    ----------
+    dtype : np.dtype
+        NumPy datatype.
+
+    Returns
+    -------
+    dtype : np.dtype
+        Returns float64 for all int datatypes or returns the datatype itself
+        for other types.
+
+    Notes
+    -----
+    Used to precompute datatype in case of division in pandas
+    """
     if dtype in np.sctypes["int"] + np.sctypes["uint"]:
         return np.dtype(np.float64)
     else:
