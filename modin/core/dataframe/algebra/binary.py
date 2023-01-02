@@ -17,6 +17,7 @@ import numpy as np
 import pandas
 
 from .operator import Operator
+from modin.utils import int_to_float32
 
 
 class Binary(Operator):
@@ -96,23 +97,11 @@ class Binary(Operator):
                         )
                     )
                 else:
-                    operators_with_common_cast = [
-                        "add",
-                        "radd",
-                        "mul",
-                        "rmul",
-                        "pow",
-                        "rpow",
-                        "sub",
-                        "rsub",
-                        "floordiv",
-                        "rfloordiv",
-                        "mod",
-                        "rmod",
-                    ]
                     boolean_operators = ["eq", "ge", "gt", "le", "lt", "ne"]
                     if other.dtypes is not None and query_compiler.dtypes is not None:
-                        if func.__name__ in operators_with_common_cast:
+                        if func.__name__ in boolean_operators:
+                            dtypes = pandas.Series([bool] * len(other.dtypes))
+                        else:
                             dtypes = pandas.Series(
                                 map(
                                     lambda x: pandas.core.dtypes.cast.find_common_type(
@@ -121,8 +110,8 @@ class Binary(Operator):
                                     zip(other.dtypes, query_compiler.dtypes),
                                 )
                             )
-                        if func.__name__ in boolean_operators:
-                            dtypes = pandas.Series([bool] * len(other.dtypes))
+                            if func.__name__ == "truediv":
+                                dtypes = dtypes.apply(int_to_float32)
 
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.n_ary_op(

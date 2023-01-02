@@ -740,3 +740,10 @@ def show_versions(as_json: Union[str, bool] = False) -> None:
             print(f"\n{name} dependencies\n{'-' * (len(name) + 13)}")
             for k, v in d.items():
                 print(f"{k:<{maxlen}}: {v}")
+
+
+def int_to_float32(dtype):
+    if dtype in np.sctypes["int"] + np.sctypes["uint"]:
+        return np.dtype(np.float64)
+    else:
+        return dtype
