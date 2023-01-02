@@ -120,9 +120,9 @@ current_branch = "nature"
 #
 html_theme = "pydata_sphinx_theme"
 
-favicon_url = "img/MODIN_ver2.ico"
+html_favicon = "img/MODIN_ver2.ico"
 
-logo_url = "img/MODIN_ver2.png"
+html_logo = "img/MODIN_ver2.png"
 
 html_context = {"default_mode": "light"}
 
