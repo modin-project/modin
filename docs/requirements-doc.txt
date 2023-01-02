@@ -10,7 +10,7 @@ opencv-python
 pydata_sphinx_theme
 pyyaml
 recommonmark
-sphinx
+sphinx>=4.0
 sphinx-click
 ray[default]>=1.13.0
 # Override to latest version of modin-spreadsheet
