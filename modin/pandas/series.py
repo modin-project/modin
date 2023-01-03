@@ -420,7 +420,10 @@ class Series(BasePandasDataset):
         )
         if len(self) == 0:
             return "Series([], {}{}{}".format(freq_str, name_str, dtype_str)
-        return temp_str.rsplit("\n", 1)[0] + "\n{}{}{}{}".format(
+        maxsplit = 1
+        if "Name:" in temp_str:
+            maxsplit = 2
+        return temp_str.rsplit("\n", maxsplit)[0] + "\n{}{}{}{}".format(
             freq_str, name_str, len_str, dtype_str
         )
 
