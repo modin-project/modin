@@ -759,6 +759,7 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "rolling_quantile",
         "rolling_skew",
         "rolling_std",
+        "rolling_sem",
         "rolling_sum",
         "rolling_var",
         "window_mean",
