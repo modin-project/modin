@@ -4771,6 +4771,15 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # End of Rolling methods
 
+    # Begin Expanding methods
+
+    def expanding_sum(self, fold_axis, expanding_args, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.expanding.Expanding.sum)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    # End of Expanding methods
+
     # Window methods
 
     @doc_utils.doc_window_method(

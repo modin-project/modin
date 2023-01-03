@@ -270,3 +270,27 @@ class Rolling(ClassLogger):
                 self.axis, self.rolling_args, quantile, interpolation, **kwargs
             )
         )
+
+
+@_inherit_docstrings(
+    pandas.core.window.expanding.Expanding,
+    excluded=[pandas.core.window.expanding.Expanding.__init__],
+)
+class Expanding(ClassLogger):
+    def __init__(self, dataframe, min_periods=1, center=None, axis=0, method="single"):
+        self._dataframe = dataframe
+        self._query_compiler = dataframe._query_compiler
+        self.expanding_args = [
+            min_periods,
+            center,
+            axis,
+            method,
+        ]
+        self.axis = axis
+
+    def sum(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_sum(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
