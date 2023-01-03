@@ -15,7 +15,7 @@ from .base import LatestCompatibleBasePandasDataset
 from .dataframe import LatestCompatibleDataFrame
 from .series import LatestCompatibleSeries
 from .groupby import LatestCompatibleDataFrameGroupBy, LatestCompatibleSeriesGroupBy
-from .window import LatestCompatibleWindow, LatestCompatibleRolling
+from .window import LatestCompatibleWindow, LatestCompatibleRolling, LatestCompatibleExpanding
 
 __all__ = [
     "LatestCompatibleBasePandasDataset",
@@ -25,4 +25,5 @@ __all__ = [
     "LatestCompatibleSeriesGroupBy",
     "LatestCompatibleWindow",
     "LatestCompatibleRolling",
+    "LatestCompatibleExpanding"
 ]

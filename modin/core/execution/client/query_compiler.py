@@ -695,6 +695,7 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "cov",
         "diff",
         "eval",
+        "expanding_sum",
         "explode",
         "first_valid_index",
         "infer_objects",

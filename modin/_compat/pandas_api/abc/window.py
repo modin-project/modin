@@ -56,3 +56,23 @@ class BaseCompatibleRolling(ClassLogger):
             The axis to build Rolling against.
         """
         pass
+
+class BaseCompatibleExpanding(ClassLogger):
+    """Interface for class compatibility layer for Rolling."""
+
+    def _init(self, dataframe, expanding_args, axis):
+        """
+        Initialize the Rolling object for real.
+
+        Utilize translated potentially pandas-specific arguments.
+
+        Parameters
+        ----------
+        dataframe : DataFrame
+            The dataframe object to apply rolling functions against.
+        rolling_args : sequence
+            The arguments to be passed to .Rolling() except dataframe.
+        axis : {0, 1}
+            The axis to build Rolling against.
+        """
+        pass
