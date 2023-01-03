@@ -111,6 +111,7 @@ class ModinDataframe(ABC):
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
+            If the argument is a scalar type, then that type is assigned to each result column.
         copy_dtypes : bool, default: False
             If True, the dtypes of the resulting dataframe are copied from the original,
             and the ``dtypes`` argument is ignored.
