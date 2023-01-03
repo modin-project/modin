@@ -1728,6 +1728,7 @@ class PandasDataframe(ClassLogger):
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
+            If the argument is a scalar type, then that type is assigned to each result column.
         copy_dtypes : bool, default: False
             If True, the dtypes of the resulting dataframe are copied from the original,
             and the ``dtypes`` argument is ignored.
@@ -2210,7 +2211,7 @@ class PandasDataframe(ClassLogger):
         new_columns : list-like, optional
             The columns of the result. We may know this in
             advance, and if not provided it must be computed.
-        dtypes : list-like, optional
+        dtypes : pandas.Series, optional
             The data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
@@ -2437,7 +2438,7 @@ class PandasDataframe(ClassLogger):
         labels : {"keep", "replace", "drop"}, default: "keep"
             Whether keep labels from `self` Modin DataFrame, replace them with labels
             from joined DataFrame or drop altogether to make them be computed lazily later.
-        dtypes : list-like, optional
+        dtypes : pandas.Series, optional
             The data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
@@ -2664,7 +2665,7 @@ class PandasDataframe(ClassLogger):
         enumerate_partitions : bool, default: False
             Whether pass partition index into applied `func` or not.
             Note that `func` must be able to obtain `partition_idx` kwarg.
-        dtypes : list-like, optional
+        dtypes : pandas.Series, optional
             Data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
