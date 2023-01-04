@@ -527,6 +527,13 @@ def test___repr__(name, dt_index, data):
         assert repr(modin_series) == repr(pandas_series)
 
 
+def test___repr__4186():
+    modin_series, pandas_series = create_test_series(
+        ["a", "b", "c", "a"], dtype="category"
+    )
+    assert repr(modin_series) == repr(pandas_series)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___round__(data):
     modin_series, pandas_series = create_test_series(data)
