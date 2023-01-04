@@ -742,11 +742,11 @@ def show_versions(as_json: Union[str, bool] = False) -> None:
                 print(f"{k:<{maxlen}}: {v}")
 
 
-def int_to_float32(dtype: np.dtype) -> np.dtype:
+def int_to_float64(dtype: np.dtype) -> np.dtype:
     """
     Check if a datatype is a variant of integer.
 
-    If dtype is integer function returns float32 datatype if not returns the
+    If dtype is integer function returns float64 datatype if not returns the
     argument datatype itself
 
     Parameters

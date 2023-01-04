@@ -17,7 +17,7 @@ import numpy as np
 import pandas
 
 from .operator import Operator
-from modin.utils import int_to_float32
+from modin.utils import int_to_float64
 
 
 class Binary(Operator):
@@ -102,16 +102,38 @@ class Binary(Operator):
                         if func.__name__ in boolean_operators:
                             dtypes = pandas.Series([bool] * len(other.dtypes))
                         else:
+                            dtypes_query_compiler = dict(
+                                zip(query_compiler.columns, query_compiler.dtypes)
+                            )
+                            dtypes_other = dict(zip(other.columns, other.dtypes))
+                            columns_query_compiler = set(query_compiler.columns)
+                            columns_other = set(other.columns)
+                            # If one columns dont match the result of the non matching column would be nan.
+                            nan_dtype = np.dtype(type(np.nan))
                             dtypes = pandas.Series(
-                                map(
-                                    lambda x: pandas.core.dtypes.cast.find_common_type(
-                                        [*x]
+                                [
+                                    pandas.core.dtypes.cast.find_common_type(
+                                        [
+                                            dtypes_query_compiler.get(x, nan_dtype),
+                                            dtypes_other[x],
+                                        ]
+                                    )
+                                    for x in columns_query_compiler
+                                ],
+                                index=columns_query_compiler,
+                            )
+                            dtypes = pandas.concat(
+                                [
+                                    dtypes,
+                                    pandas.Series(
+                                        [nan_dtype]
+                                        * (len(columns_other - columns_query_compiler)),
+                                        index=columns_other - columns_query_compiler,
                                     ),
-                                    zip(other.dtypes, query_compiler.dtypes),
-                                )
+                                ]
                             )
                             if func.__name__ == "truediv":
-                                dtypes = dtypes.apply(int_to_float32)
+                                dtypes = dtypes.apply(int_to_float64)
 
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.n_ary_op(
