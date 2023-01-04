@@ -421,7 +421,11 @@ class Series(BasePandasDataset):
         if len(self) == 0:
             return "Series([], {}{}{}".format(freq_str, name_str, dtype_str)
         maxsplit = 1
-        if "Name:" in temp_str:
+        if (
+            isinstance(temp_df, pandas.Series)
+            and temp_df.name is not None
+            and temp_df.dtype == "category"
+        ):
             maxsplit = 2
         return temp_str.rsplit("\n", maxsplit)[0] + "\n{}{}{}{}".format(
             freq_str, name_str, len_str, dtype_str
