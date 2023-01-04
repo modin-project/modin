@@ -658,6 +658,9 @@ class TextFileDispatcher(FileDispatcher):
         if read_kwargs.get("dialect") is not None:
             return (False, "`dialect` parameter is not supported")
 
+        if read_kwargs["lineterminator"] is not None:
+            return (False, "`lineterminator` parameter is not supported")
+
         skiprows_supported = True
         if is_list_like(skiprows_md) and skiprows_md[0] < header_size:
             skiprows_supported = False

@@ -715,9 +715,7 @@ class TestCsv:
         escapechar,
         dialect,
     ):
-        if Engine.get() != "Python" and lineterminator == "x":
-            pytest.xfail("read_csv with Ray engine outputs empty frame - issue #2493")
-        elif Engine.get() != "Python" and escapechar:
+        if Engine.get() != "Python" and escapechar:
             pytest.xfail(
                 "read_csv with Ray engine fails with some 'escapechar' parameters - issue #2494"
             )
