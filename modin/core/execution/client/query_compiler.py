@@ -20,9 +20,6 @@ from pandas.core.computation.parsing import tokenize_string
 
 from typing import Any
 
-#Medha test change
-
-
 class ClientQueryCompiler(BaseQueryCompiler):
     @classmethod
     def set_server_connection(cls, conn):
@@ -696,6 +693,13 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "diff",
         "eval",
         "expanding_sum",
+        "expanding_min",
+        "expanding_max",
+        "expanding_mean",
+        "expanding_var",
+        "expanding_std",
+        "expanding_count",
+        "expanding_sem",
         "explode",
         "first_valid_index",
         "infer_objects",
