@@ -301,3 +301,53 @@ class Expanding(ClassLogger):
                 self.axis, self.expanding_args, *args, **kwargs
             )
         )
+
+    def min(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_min(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def max(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_max(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def mean(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_mean(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def var(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_var(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def std(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_std(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def count(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_count(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def sem(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_sem(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+

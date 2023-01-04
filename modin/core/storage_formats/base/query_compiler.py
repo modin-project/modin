@@ -5017,6 +5017,40 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, expanding_args, *args, **kwargs
         )
 
+    def expanding_min(self, fold_axis, expanding_args, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.expanding.Expanding.min)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    def expanding_max(self, fold_axis, expanding_args, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.expanding.Expanding.max)(
+            self, expanding_args, *args, **kwargs
+        )
+    def expanding_mean(self, fold_axis, expanding_args, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.expanding.Expanding.mean)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    def expanding_var(self, fold_axis, expanding_args, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.expanding.Expanding.var)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    def expanding_std(self, fold_axis, expanding_args, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.expanding.Expanding.std)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    def expanding_count(self, fold_axis, expanding_args, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.expanding.Expanding.count)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    def expanding_sem(self, fold_axis, expanding_args, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.expanding.Expanding.sem)(
+            self, expanding_args, *args, **kwargs
+        )
+
     # End of Expanding methods
 
     # Window methods
