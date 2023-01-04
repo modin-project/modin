@@ -188,11 +188,9 @@ def check_partition_column(partition_column, cols):
         if k == partition_column:
             if v == "int":
                 return
-            raise InvalidPartitionColumn(
-                "partition_column must be int, and not {0}".format(v)
-            )
+            raise InvalidPartitionColumn(f"partition_column must be int, and not {v}")
     raise InvalidPartitionColumn(
-        "partition_column {0} not found in the query".format(partition_column)
+        f"partition_column {partition_column} not found in the query"
     )
 
 

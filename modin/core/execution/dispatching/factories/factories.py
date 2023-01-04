@@ -24,7 +24,7 @@ import typing
 import re
 
 from modin.config import Engine
-from modin.utils import _inherit_docstrings
+from modin.utils import _inherit_docstrings, get_current_execution
 from modin.core.io import BaseIO
 from pandas.util._decorators import doc
 
@@ -502,9 +502,6 @@ class ExperimentalBaseFactory(BaseFactory):
                 del kwargs["max_sessions"]
         return cls.io_cls.read_sql(**kwargs)
 
-
-@doc(_doc_abstract_factory_class, role="experimental custom")
-class ExperimentalCustomFactory(BaseFactory):
     @classmethod
     @doc(
         _doc_io_method_raw_template,
@@ -512,6 +509,12 @@ class ExperimentalCustomFactory(BaseFactory):
         params=_doc_io_method_kwargs_params,
     )
     def _read_csv_glob(cls, **kwargs):
+        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
+        current_execution = get_current_execution()
+        if current_execution not in supported_execution:
+            raise NotImplementedError(
+                f"`_read_csv_glob()` is not implemented for {current_execution} execution."
+            )
         return cls.io_cls.read_csv_glob(**kwargs)
 
     @classmethod
@@ -521,6 +524,12 @@ class ExperimentalCustomFactory(BaseFactory):
         params=_doc_io_method_kwargs_params,
     )
     def _read_pickle_distributed(cls, **kwargs):
+        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
+        current_execution = get_current_execution()
+        if current_execution not in supported_execution:
+            raise NotImplementedError(
+                f"`_read_pickle_distributed()` is not implemented for {current_execution} execution."
+            )
         return cls.io_cls.read_pickle_distributed(**kwargs)
 
     @classmethod
@@ -530,6 +539,12 @@ class ExperimentalCustomFactory(BaseFactory):
         params=_doc_io_method_kwargs_params,
     )
     def _read_custom_text(cls, **kwargs):
+        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
+        current_execution = get_current_execution()
+        if current_execution not in supported_execution:
+            raise NotImplementedError(
+                f"`_read_custom_text()` is not implemented for {current_execution} execution."
+            )
         return cls.io_cls.read_custom_text(**kwargs)
 
     @classmethod
@@ -544,13 +559,17 @@ class ExperimentalCustomFactory(BaseFactory):
         **kwargs : kwargs
             Arguments to the writer method.
         """
+        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
+        current_execution = get_current_execution()
+        if current_execution not in supported_execution:
+            raise NotImplementedError(
+                f"`_to_pickle_distributed()` is not implemented for {current_execution} execution."
+            )
         return cls.io_cls.to_pickle_distributed(*args, **kwargs)
 
 
 @doc(_doc_factory_class, execution_name="experimental PandasOnRay")
-class ExperimentalPandasOnRayFactory(
-    ExperimentalBaseFactory, ExperimentalCustomFactory, PandasOnRayFactory
-):
+class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
     @classmethod
     @doc(_doc_factory_prepare_method, io_module_name="``ExperimentalPandasOnRayIO``")
     def prepare(cls):
@@ -673,7 +692,7 @@ class PandasOnUnidistFactory(BaseFactory):
 
 @doc(_doc_factory_class, execution_name="experimental PandasOnUnidist")
 class ExperimentalPandasOnUnidistFactory(
-    ExperimentalBaseFactory, ExperimentalCustomFactory, PandasOnUnidistFactory
+    ExperimentalBaseFactory, PandasOnUnidistFactory
 ):
     @classmethod
     @doc(

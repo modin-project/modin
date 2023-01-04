@@ -11,7 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""The module for working with displaying progress bars for Modin execution engines."""
+"""
+The module for working with displaying progress bars for Modin execution engines.
+
+Modin Automatic Query Progress (AQP).
+"""
 
 import os
 import time
