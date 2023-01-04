@@ -375,7 +375,40 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
 
-    add = Binary.register(pandas.DataFrame.add)
+    def add(self, other, *args, **kwargs):
+
+        dtypes_self = dict(zip(self.columns, self.dtypes))
+        dtypes_other = dict(zip(other.columns, other.dtypes))
+        columns_self = set(self.columns)
+        columns_other = set(other.columns)
+        # If one columns dont match the result of the non matching column would be nan.
+        nan_dtype = np.dtype(type(np.nan))
+        dtypes = pandas.Series(
+            [
+                pandas.core.dtypes.cast.find_common_type(
+                    [
+                        dtypes_self.get(x, nan_dtype),
+                        dtypes_other[x],
+                    ]
+                )
+                for x in columns_self
+            ],
+            index=columns_self,
+        )
+        dtypes = pandas.concat(
+            [
+                dtypes,
+                pandas.Series(
+                    [nan_dtype] * (len(columns_other - columns_self)),
+                    index=columns_other - columns_self,
+                ),
+            ]
+        )
+
+        return Binary.register(
+            pandas.DataFrame.add,
+        )(self, other, dtypes=dtypes, *args, **kwargs)
+
     combine = Binary.register(pandas.DataFrame.combine)
     combine_first = Binary.register(pandas.DataFrame.combine_first)
     eq = Binary.register(pandas.DataFrame.eq)
