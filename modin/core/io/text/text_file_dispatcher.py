@@ -661,6 +661,10 @@ class TextFileDispatcher(FileDispatcher):
         if read_kwargs["lineterminator"] is not None:
             return (False, "`lineterminator` parameter is not supported")
 
+        if read_kwargs.get("skipfooter"):
+            if read_kwargs.get("nrows") or read_kwargs.get("engine") == "c":
+                return (False, "raise exception by pandas itself")
+
         skiprows_supported = True
         if is_list_like(skiprows_md) and skiprows_md[0] < header_size:
             skiprows_supported = False
