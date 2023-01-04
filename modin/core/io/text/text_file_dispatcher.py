@@ -655,6 +655,9 @@ class TextFileDispatcher(FileDispatcher):
         if read_kwargs["chunksize"] is not None:
             return (False, "`chunksize` parameter is not supported")
 
+        if read_kwargs.get("dialect") is not None:
+            return (False, "`dialect` parameter is not supported")
+
         if read_kwargs["lineterminator"] is not None:
             return (False, "`lineterminator` parameter is not supported")
 

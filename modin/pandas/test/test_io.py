@@ -705,7 +705,7 @@ class TestCsv:
     @pytest.mark.parametrize("decimal", [".", "_"])
     @pytest.mark.parametrize("lineterminator", [None, "x", "\n"])
     @pytest.mark.parametrize("escapechar", [None, "d", "x"])
-    @pytest.mark.parametrize("dialect", ["test_csv_dialect", None])
+    @pytest.mark.parametrize("dialect", ["test_csv_dialect", "use_dialect_name", None])
     def test_read_csv_file_format(
         self,
         make_csv_file,
@@ -719,10 +719,6 @@ class TestCsv:
             pytest.xfail(
                 "read_csv with Ray engine fails with some 'escapechar' parameters - issue #2494"
             )
-        elif Engine.get() != "Python" and dialect:
-            pytest.xfail(
-                "read_csv with Ray engine fails with `dialect` parameter - issue #2508"
-            )
 
         with ensure_clean(".csv") as unique_filename:
             if dialect:
@@ -734,7 +730,9 @@ class TestCsv:
                     "quoting": csv.QUOTE_ALL,
                 }
                 csv.register_dialect(dialect, **test_csv_dialect_params)
-                dialect = csv.get_dialect(dialect)
+                if dialect != "use_dialect_name":
+                    # otherwise try with dialect name instead of `_csv.Dialect` object
+                    dialect = csv.get_dialect(dialect)
                 make_csv_file(filename=unique_filename, **test_csv_dialect_params)
             else:
                 make_csv_file(
