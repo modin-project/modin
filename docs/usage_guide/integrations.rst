@@ -63,7 +63,7 @@ Modin Interoperability by Library
      
    * - Tensorflow
      - 75% (3 / 4)
-     - **Panda**s: Converts Pandas dataframes to tensors |br|
+     - **Pandas**: Converts Pandas dataframes to tensors |br|
        **Modin**: Converts Modin DataFrames to tensors, but specialized APIs like Keras might not work yet
      
    * - NLTK
@@ -98,13 +98,19 @@ Github Issues
     * https://github.com/modin-project/modin/issues/5433
 
 **plotly**
------------
+----------
 
 `Jupyter Notebook <https://github.com/labanyamukhopadhyay/modin/blob/doc-integration/docs/jupyter/plotly.ipynb>`_ 
 
 Github Issues
     * https://github.com/modin-project/modin/issues/5447 
     * https://github.com/modin-project/modin/issues/5445
+
+**matplotlib**
+--------------
+
+`Jupyter Notebook <https://github.com/labanyamukhopadhyay/modin/blob/doc-integration/docs/jupyter/matplotlib.ipynb>`_ 
+
 
 **altair**
 ----------
@@ -122,18 +128,38 @@ Github Issues
 Github Issues
     * https://github.com/modin-project/modin/issues/5437
 
+**sklearn**
+-----------
+
+`Jupyter Notebook <https://github.com/labanyamukhopadhyay/modin/blob/doc-integration/docs/jupyter/sklearn.ipynb>`_ 
+
+**Hugging Face**
+----------------
+
+`Jupyter Notebook <https://github.com/labanyamukhopadhyay/modin/blob/doc-integration/docs/jupyter/huggingface.ipynb>`_ 
+
 **Tensorflow**
 --------------
 
-Jupyter Notebook
+`Jupyter Notebook <https://github.com/labanyamukhopadhyay/modin/blob/doc-integration/docs/jupyter/tensorflow.ipynb>`_ 
 
 Github Issues
     * https://github.com/modin-project/modin/issues/5439
 
+**NLTK**
+---------
+
+`Jupyter Notebook <https://github.com/labanyamukhopadhyay/modin/blob/doc-integration/docs/jupyter/NLTK.ipynb>`_ 
+
+**XGBoost**
+-----------
+
+`Jupyter Notebook <https://github.com/labanyamukhopadhyay/modin/blob/doc-integration/docs/jupyter/xgboost.ipynb>`_ 
+
 **statsmodels**
 ---------------
 
-Jupyter Notebook
+`Jupyter Notebook <https://github.com/labanyamukhopadhyay/modin/blob/doc-integration/docs/jupyter/statsmodels.ipynb>`_ 
 
 Github Issues
     * https://github.com/modin-project/modin/issues/5440
