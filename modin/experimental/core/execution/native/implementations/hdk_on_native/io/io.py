@@ -299,6 +299,9 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                 parse_options=po,
                 convert_options=co,
             )
+            if len(set(at.schema.names)) < len(at.schema.names):
+                ErrorMessage.default_to_pandas("`read_csv`")
+                return super().read_csv(**mykwargs)
 
             return cls.from_arrow(at)
         except (

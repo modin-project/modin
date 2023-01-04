@@ -378,17 +378,6 @@ class TestCsv:
         names,
         encoding,
     ):
-        xfail_case = (
-            StorageFormat.get() == "Hdk"
-            and header is not None
-            and isinstance(skiprows, int)
-            and names is None
-            and nrows is None
-        )
-        if xfail_case:
-            pytest.xfail(
-                "read_csv fails because of duplicated columns names - issue #3080"
-            )
         if request.config.getoption(
             "--simulate-cloud"
         ).lower() != "off" and is_list_like(skiprows):
@@ -495,10 +484,6 @@ class TestCsv:
             )
 
     def test_read_csv_mangle_dupe_cols(self):
-        if StorageFormat.get() == "Hdk":
-            pytest.xfail(
-                "processing of duplicated columns in HDK storage format is not supported yet - issue #3080"
-            )
         with ensure_clean() as unique_filename, pytest.warns(
             FutureWarning, match="'mangle_dupe_cols' keyword is deprecated"
         ):
@@ -1001,13 +986,6 @@ class TestCsv:
     @pytest.mark.parametrize("names", [list("XYZ"), None])
     @pytest.mark.parametrize("skiprows", [1, 2, 3, 4, None])
     def test_read_csv_skiprows_names(self, names, skiprows):
-        if StorageFormat.get() == "Hdk" and names is None and skiprows in [1, None]:
-            # If these conditions are satisfied, columns names will be inferred
-            # from the first row, that will contain duplicated values, that is
-            # not supported by  `HDK` storage format yet.
-            pytest.xfail(
-                "processing of duplicated columns in HDK storage format is not supported yet - issue #3080"
-            )
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
