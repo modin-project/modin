@@ -455,7 +455,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                 )
 
         if read_csv_kwargs.get("skipfooter") and read_csv_kwargs.get("nrows"):
-            return (False, "raise exception by pandas itself")
+            return (False, "Exception is raised by pandas itself")
 
         for arg, def_value in cls.read_csv_unsup_defaults.items():
             if read_csv_kwargs[arg] != def_value:

@@ -663,7 +663,7 @@ class TextFileDispatcher(FileDispatcher):
 
         if read_kwargs.get("skipfooter"):
             if read_kwargs.get("nrows") or read_kwargs.get("engine") == "c":
-                return (False, "raise exception by pandas itself")
+                return (False, "Exception is raised by pandas itself")
 
         skiprows_supported = True
         if is_list_like(skiprows_md) and skiprows_md[0] < header_size:
