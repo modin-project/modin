@@ -99,6 +99,7 @@ class Binary(Operator):
                             lambda x, y: func(x, y, *args, **kwargs),
                             [other._modin_frame],
                             join_type=join_type,
+                            dtypes=dtypes,
                         )
                     )
             else:
