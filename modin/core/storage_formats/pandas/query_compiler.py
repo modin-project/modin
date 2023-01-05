@@ -375,10 +375,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
 
-    add = Binary.register(pandas.DataFrame.add)
+    add = Binary.register(pandas.DataFrame.add, precompute_dtypes=True)
     combine = Binary.register(pandas.DataFrame.combine)
     combine_first = Binary.register(pandas.DataFrame.combine_first)
-    eq = Binary.register(pandas.DataFrame.eq)
+    eq = Binary.register(pandas.DataFrame.eq, result_dtype_is_bool=True)
     floordiv = Binary.register(pandas.DataFrame.floordiv)
     ge = Binary.register(pandas.DataFrame.ge)
     gt = Binary.register(pandas.DataFrame.gt)

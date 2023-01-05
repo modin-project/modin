@@ -24,7 +24,14 @@ class Binary(Operator):
     """Builder class for Binary operator."""
 
     @classmethod
-    def register(cls, func, join_type="outer", labels="replace"):
+    def register(
+        cls,
+        func,
+        join_type="outer",
+        labels="replace",
+        precompute_dtypes=False,
+        result_dtype_is_bool=False,
+    ):
         """
         Build template binary operator.
 
@@ -37,6 +44,11 @@ class Binary(Operator):
         labels : {"keep", "replace", "drop"}, default: "replace"
             Whether keep labels from left Modin DataFrame, replace them with labels
             from joined DataFrame or drop altogether to make them be computed lazily later.
+        precompute_dtypes : bool, default: False
+            Whether datatypes should be precomputed in the method using common cast methods
+        result_dtype_is_bool : bool, default: False
+            If the operation returns a result with all boolean data types
+
 
         Returns
         -------
@@ -97,18 +109,17 @@ class Binary(Operator):
                         )
                     )
                 else:
-                    boolean_operators = ["eq", "ge", "gt", "le", "lt", "ne"]
                     if other.dtypes is not None and query_compiler.dtypes is not None:
-                        if func.__name__ in boolean_operators:
+                        if result_dtype_is_bool:
                             dtypes = pandas.Series([bool] * len(other.dtypes))
-                        else:
+                        elif precompute_dtypes:
                             dtypes_query_compiler = dict(
                                 zip(query_compiler.columns, query_compiler.dtypes)
                             )
                             dtypes_other = dict(zip(other.columns, other.dtypes))
                             columns_query_compiler = set(query_compiler.columns)
                             columns_other = set(other.columns)
-                            # If one columns dont match the result of the non matching column would be nan.
+                            # If columns don't match the result of the non-matching column would be nan.
                             nan_dtype = np.dtype(type(np.nan))
                             dtypes = pandas.Series(
                                 [
