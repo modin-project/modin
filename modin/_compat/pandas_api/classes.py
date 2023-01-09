@@ -35,6 +35,7 @@ elif PandasCompatVersion.CURRENT == PandasCompatVersion.LATEST:
     from .latest import LatestCompatibleSeriesGroupBy as SeriesGroupByCompat
     from .latest import LatestCompatibleWindow as WindowCompat
     from .latest import LatestCompatibleRolling as RollingCompat
+    from .latest import LatestCompatibleExpanding as ExpandingCompat
 
 __all__ = [
     "BasePandasDatasetCompat",
@@ -44,4 +45,5 @@ __all__ = [
     "SeriesGroupByCompat",
     "WindowCompat",
     "RollingCompat",
+    "ExpandingCompat"
 ]

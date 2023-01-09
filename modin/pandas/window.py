@@ -18,7 +18,7 @@ import pandas.core.window.rolling
 from pandas.core.dtypes.common import is_list_like
 
 from modin.utils import _inherit_docstrings
-from modin._compat.pandas_api.classes import WindowCompat, RollingCompat
+from modin._compat.pandas_api.classes import WindowCompat, RollingCompat, ExpandingCompat
 
 
 @_inherit_docstrings(pandas.core.window.rolling.Window)
@@ -73,6 +73,13 @@ class Rolling(RollingCompat):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_count(
                 self.axis, self.rolling_args
+            )
+        )
+
+    def sem(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_sem(
+                self.axis, self.rolling_args, *args, **kwargs
             )
         )
 
@@ -224,3 +231,71 @@ class Rolling(RollingCompat):
                 self.axis, self.rolling_args, quantile, interpolation, **kwargs
             )
         )
+
+@_inherit_docstrings(
+    pandas.core.window.expanding.Expanding,
+    excluded=[pandas.core.window.expanding.Expanding.__init__],
+)
+class Expanding(ExpandingCompat):
+    def _init(self, dataframe, expanding_args, axis):
+        self._dataframe = dataframe
+        self._query_compiler = dataframe._query_compiler
+        self.expanding_args = expanding_args
+        self.axis = axis
+
+    def sum(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_sum(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def min(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_min(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def max(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_max(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def mean(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_mean(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def var(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_var(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def std(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_std(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def count(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_count(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def sem(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_sem(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+

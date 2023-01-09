@@ -20,7 +20,6 @@ from pandas.core.computation.parsing import tokenize_string
 
 from typing import Any
 
-
 class ClientQueryCompiler(BaseQueryCompiler):
     @classmethod
     def set_server_connection(cls, conn):
@@ -693,6 +692,14 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "cov",
         "diff",
         "eval",
+        "expanding_sum",
+        "expanding_min",
+        "expanding_max",
+        "expanding_mean",
+        "expanding_var",
+        "expanding_std",
+        "expanding_count",
+        "expanding_sem",
         "explode",
         "first_valid_index",
         "infer_objects",
@@ -756,6 +763,7 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "rolling_quantile",
         "rolling_skew",
         "rolling_std",
+        "rolling_sem",
         "rolling_sum",
         "rolling_var",
         "window_mean",

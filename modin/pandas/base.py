@@ -50,6 +50,7 @@ from modin.pandas.utils import is_scalar
 from modin.config import IsExperimental
 from modin.logging import disable_logging
 from modin._compat.pandas_api.classes import BasePandasDatasetCompat
+from .window import Expanding
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -1348,8 +1349,18 @@ class BasePandasDataset(BasePandasDatasetCompat):
     @_inherit_docstrings(
         pandas.DataFrame.expanding, apilink="pandas.DataFrame.expanding"
     )
-    def _expanding(self, **kwargs):
-        return self._default_to_pandas("expanding", **kwargs)
+    def _expanding(self, min_periods=1, center=None, axis=0, method="single", *args, **kwargs):
+        return Expanding(
+            self,
+            min_periods=min_periods,
+            center=center,
+            axis=axis,
+            method=method,
+            *args,
+            **kwargs
+        )
+        # raise NotImplementedError("Awaiting full implementation... be patient")
+        # return self._default_to_pandas("expanding", **kwargs)
 
     def ffill(
         self, axis=None, inplace=False, limit=None, downcast=None

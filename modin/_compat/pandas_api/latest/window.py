@@ -15,7 +15,7 @@
 
 import pandas.core.window.rolling
 
-from ..abc.window import BaseCompatibleWindow, BaseCompatibleRolling
+from ..abc.window import BaseCompatibleWindow, BaseCompatibleRolling, BaseCompatibleExpanding
 from modin.utils import _inherit_docstrings, append_to_docstring
 
 
@@ -78,4 +78,26 @@ class LatestCompatibleRolling(BaseCompatibleRolling):
                 method,
             ],
             axis,
+        )
+
+@append_to_docstring("Compatibility layer for 'latest pandas' for Expanding.")
+@_inherit_docstrings(pandas.core.window.expanding.Expanding)
+class LatestCompatibleExpanding(BaseCompatibleExpanding):
+    def __init__(
+        self,
+        dataframe,
+        min_periods=1,
+        center=None,
+        axis=0,
+        method="single"
+    ):
+        self._init(
+            dataframe,
+            [
+                min_periods,
+                center,
+                axis,
+                method,
+            ],
+            axis
         )

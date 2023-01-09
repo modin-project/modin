@@ -1054,6 +1054,54 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def resample_quantile(self, resample_kwargs, q, **kwargs):
         return self._resample_func(resample_kwargs, "quantile", q=q, **kwargs)
 
+    expanding_sum = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).sum(*args, **kwargs)
+        )
+    )
+
+    expanding_min = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).min(*args, **kwargs)
+        )
+    )
+
+    expanding_max = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).max(*args, **kwargs)
+        )
+    )
+
+    expanding_mean = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).mean(*args, **kwargs)
+        )
+    )
+
+    expanding_var = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).var(*args, **kwargs)
+        )
+    )
+
+    expanding_std = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).std(*args, **kwargs)
+        )
+    )
+
+    expanding_count = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).count(*args, **kwargs)
+        )
+    )
+
+    expanding_sem = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).sem(*args, **kwargs)
+        )
+    )
+
     window_mean = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).mean(*args, **kwargs)
@@ -1080,6 +1128,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     rolling_sum = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).sum(*args, **kwargs)
+        )
+    )
+    rolling_sem = Fold.register(
+        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).sem(*args, **kwargs)
         )
     )
     rolling_mean = Fold.register(
