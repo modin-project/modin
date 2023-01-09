@@ -399,7 +399,7 @@ def test___gt__(data):
 @pytest.mark.parametrize("count_elements", [0, 1, 10])
 def test___int__(count_elements):
     eval_general(
-        *create_test_series(test_data["float_data"]),
+        *create_test_series(test_data["float_nan_data"]),
         lambda df: int(df[:count_elements]),
     )
 
