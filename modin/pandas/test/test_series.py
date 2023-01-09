@@ -397,11 +397,18 @@ def test___gt__(data):
 
 
 @pytest.mark.parametrize("count_elements", [0, 1, 10])
-@pytest.mark.parametrize("converter", [int, float])
-def test___int__and__float__(converter, count_elements):
+def test___int__(count_elements):
+    eval_general(
+        *create_test_series(test_data["float_data"]),
+        lambda df: int(df[:count_elements]),
+    )
+
+
+@pytest.mark.parametrize("count_elements", [0, 1, 10])
+def test___float__(count_elements):
     eval_general(
         *create_test_series(test_data["int_data"]),
-        lambda df: converter(df[:count_elements]),
+        lambda df: float(df[:count_elements]),
     )
 
 
