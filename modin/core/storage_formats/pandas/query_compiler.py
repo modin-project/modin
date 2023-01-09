@@ -389,7 +389,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END To NumPy
 
     # To precompute datatypes for binary operations which follow pandas find_common_type
-    def precompute_dtypes_common_cast(self, other, broadcast):
+    def _precompute_dtypes_common_cast(self, other, broadcast):
         dtypes = None
         if isinstance(other, type(self)) and not broadcast:
             if other.dtypes is not None and self.dtypes is not None:
@@ -423,7 +423,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return dtypes
 
     # To precompute datatypes for binary boolean operations across dataframes
-    def precompute_dtypes_boolean(self, other, broadcast):
+    def _precompute_dtypes_boolean(self, other, broadcast):
         dtypes = None
         if isinstance(other, type(self)) and not broadcast:
             if other.dtypes is not None and self.dtypes is not None:
@@ -437,13 +437,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # result in NaN values.
 
     def add(self, other, broadcast=False, *args, **kwargs):
-        dtypes = self.precompute_dtypes_common_cast(other, broadcast)
+        dtypes = self._precompute_dtypes_common_cast(other, broadcast)
         return Binary.register(
             pandas.DataFrame.add,
         )(self, other, dtypes=dtypes, *args, **kwargs)
 
     def eq(self, other, broadcast=False, *args, **kwargs):
-        dtypes = self.precompute_dtypes_boolean(other, broadcast)
+        dtypes = self._precompute_dtypes_boolean(other, broadcast)
         return Binary.register(
             pandas.DataFrame.eq,
         )(self, other, dtypes=dtypes, *args, **kwargs)
