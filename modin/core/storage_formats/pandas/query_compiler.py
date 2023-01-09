@@ -390,6 +390,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # To precompute datatypes for binary operations which follow pandas find_common_type
     def _precompute_dtypes_common_cast(self, other, broadcast):
+        """
+        Precompute data types for those binary operations by finding common type between operands.
+
+        Parameters
+        ----------
+        other : PandasQueryCompiler
+            Operand dataframe for which the binary operation would be performed later.
+        broadcast : boolean
+            Whether the subsequent binary operation involves broadcasting operands.
+
+        Returns
+        -------
+        dtypes
+            The pandas series with precomputed dtypes.
+        """
         dtypes = None
         if isinstance(other, type(self)) and not broadcast:
             if other.dtypes is not None and self.dtypes is not None:
@@ -424,6 +439,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # To precompute datatypes for binary boolean operations across dataframes
     def _precompute_dtypes_boolean(self, other, broadcast):
+        """
+        Precompute datatype series for boolean operations.
+
+        Parameters
+        ----------
+        other : PandasQueryCompiler
+            Operand dataframe for which the binary operation would be performed later.
+        broadcast : boolean
+            Whether the subsequent binary operation involves broadcasting operands.
+
+        Returns
+        -------
+        dtypes
+            The pandas series with precomputed dtypes.
+        """
         dtypes = None
         if isinstance(other, type(self)) and not broadcast:
             if other.dtypes is not None and self.dtypes is not None:
