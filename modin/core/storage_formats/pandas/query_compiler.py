@@ -412,29 +412,32 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 dtypes_other = dict(zip(other.columns, other.dtypes))
                 columns_self = set(self.columns)
                 columns_other = set(other.columns)
+                common_columns = columns_self.intersection(columns_other)
+                mismatch_columns = columns_self.union(columns_other) - common_columns
                 # If one columns dont match the result of the non matching column would be nan.
                 nan_dtype = np.dtype(type(np.nan))
                 dtypes = pandas.Series(
                     [
                         pandas.core.dtypes.cast.find_common_type(
                             [
-                                dtypes_self.get(x, nan_dtype),
+                                dtypes_self[x],
                                 dtypes_other[x],
                             ]
                         )
-                        for x in columns_self
+                        for x in common_columns
                     ],
-                    index=columns_self,
+                    index=common_columns,
                 )
                 dtypes = pandas.concat(
                     [
                         dtypes,
                         pandas.Series(
-                            [nan_dtype] * (len(columns_other - columns_self)),
-                            index=columns_other - columns_self,
+                            [nan_dtype] * (len(mismatch_columns)),
+                            index=mismatch_columns,
                         ),
                     ]
                 )
+                dtypes = dtypes.sort_index()
         return dtypes
 
     # To precompute datatypes for binary boolean operations across dataframes
