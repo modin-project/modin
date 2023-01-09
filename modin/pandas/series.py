@@ -493,6 +493,11 @@ class Series(BasePandasDataset):
         """
         import modin.pandas as pd
 
+        if isinstance(
+            self.dtype, pandas.core.dtypes.dtypes.ExtensionDtype
+        ) and not isinstance(self.dtype, pd.CategoricalDtype):
+            return self._default_to_pandas("values")
+
         data = self.to_numpy()
         if isinstance(self.dtype, pd.CategoricalDtype):
             data = pd.Categorical(data, dtype=self.dtype)
