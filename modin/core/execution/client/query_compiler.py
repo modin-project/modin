@@ -20,6 +20,7 @@ from pandas.core.computation.parsing import tokenize_string
 
 from typing import Any
 
+
 class ClientQueryCompiler(BaseQueryCompiler):
     @classmethod
     def set_server_connection(cls, conn):
@@ -459,6 +460,51 @@ class ClientQueryCompiler(BaseQueryCompiler):
         expr = " ".join(variable_list)
         return self.__constructor__(self._service.query(self._id, expr, **kwargs))
 
+    def ewm_cov(self, other=None, *args, **kwargs):
+        other_is_qc = isinstance(other, type(self))
+        if other_is_qc:
+            other = other._id
+        return self.__constructor__(
+            self._service.ewm_cov(self._id, other, other_is_qc, *args, **kwargs)
+        )
+
+    def ewm_corr(self, other=None, *args, **kwargs):
+        other_is_qc = isinstance(other, type(self))
+        if other_is_qc:
+            other = other._id
+        return self.__constructor__(
+            self._service.ewm_corr(self._id, other, other_is_qc, *args, **kwargs)
+        )
+
+    def expanding_cov(self, other=None, *args, **kwargs):
+        other_is_qc = isinstance(other, type(self))
+        if other_is_qc:
+            other = other._id
+        return self.__constructor__(
+            self._service.expanding_cov(self._id, other, other_is_qc, *args, **kwargs)
+        )
+
+    def expanding_corr(self, other=None, *args, **kwargs):
+        other_is_qc = isinstance(other, type(self))
+        if other_is_qc:
+            other = other._id
+        return self.__constructor__(
+            self._service.expanding_corr(self._id, other, other_is_qc, *args, **kwargs)
+        )
+
+    def mask(self, cond, other=np.nan, *args, **kwargs):
+        cond_is_qc = isinstance(cond, type(self))
+        if cond_is_qc:
+            cond = cond._id
+        other_is_qc = isinstance(other, type(self))
+        if other_is_qc:
+            other = other._id
+        return self.__constructor__(
+            self._service.mask(
+                self._id, cond, cond_is_qc, other, other_is_qc, *args, **kwargs
+            )
+        )
+
 
 def _set_forwarding_method_for_binary_function(method_name: str) -> None:
     """
@@ -555,12 +601,19 @@ _BINARY_FORWARDING_METHODS = frozenset(
         "dot",
         "join",
         "series_update",
+        "align",
+        "series_corr",
+        "divmod",
+        "reindex_like",
+        "rdivmod",
+        "corrwith" "merge_ordered",
     }
 )
 
 _SINGLE_ID_FORWARDING_METHODS = frozenset(
     {
         "abs",
+        "asfreq",
         "columnarize",
         "transpose",
         "getitem_row_array",
@@ -679,6 +732,10 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "str_startswith",
         "str_strip",
         "str_zfill",
+        "str_casefold",
+        "str_getdummies",
+        "str_extract",
+        "str_extractall",
         "is_monotonic_increasing",
         "is_monotonic_decreasing",
         "idxmax",
@@ -700,6 +757,15 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "expanding_std",
         "expanding_count",
         "expanding_sem",
+        "expanding_count",
+        "expanding_median",
+        "expanding_var",
+        "expanding_skew",
+        "expanding_kurt",
+        "expanding_apply",
+        "expanding_aggregate",
+        "expanding_quantile",
+        "expanding_rank",
         "explode",
         "first_valid_index",
         "infer_objects",
@@ -794,6 +860,27 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "write_items",
         "set_index_name",
         "set_index_names",
+        "ewm_mean",
+        "ewm_sum",
+        "ewm_std",
+        "ewm_var",
+        "pct_change",
+        "sizeof",
+        "argsort",
+        "between",
+        "factorize",
+        "dataframe_hist",
+        "series_hist",
+        "interpolate",
+        "nlargest",
+        "nsmallest",
+        "swaplevel",
+        "dataframe_to_dict",
+        "series_to_dict",
+        "to_list",
+        "truncate",
+        "lookup",
+        "wide_to_long",
     }
 )
 

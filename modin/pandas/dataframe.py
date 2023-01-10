@@ -704,10 +704,8 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         """
         Compute pairwise correlation.
         """
-        if isinstance(other, DataFrame):
-            other = other._query_compiler.to_pandas()
-        return self._default_to_pandas(
-            pandas.DataFrame.corrwith, other, axis=axis, drop=drop, method=method
+        return self.__constructor__(
+            query_compiler=self._query_compiler.corrwith(other, axis, drop, method)
         )
 
     def cov(self, min_periods=None, ddof: Optional[int] = 1):  # noqa: PR01, RT01, D200
@@ -979,22 +977,23 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         """
         Make a histogram of the ``DataFrame``.
         """
-        return self._default_to_pandas(
-            pandas.DataFrame.hist,
-            column=column,
-            by=by,
-            grid=grid,
-            xlabelsize=xlabelsize,
-            xrot=xrot,
-            ylabelsize=ylabelsize,
-            yrot=yrot,
-            ax=ax,
-            sharex=sharex,
-            sharey=sharey,
-            figsize=figsize,
-            layout=layout,
-            bins=bins,
-            **kwds,
+        return self.__constructor__(
+            query_compiler=self._query_compiler.dataframe_hist(
+                column,
+                by,
+                grid,
+                xlabelsize,
+                xrot,
+                ylabelsize,
+                yrot,
+                ax,
+                sharex,
+                sharey,
+                figsize,
+                layout,
+                bins,
+                **kwds,
+            )
         )
 
     def _info(
@@ -1195,32 +1194,6 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
 
         self._update_inplace(new_query_compiler=new_query_compiler)
 
-    def interpolate(
-        self,
-        method="linear",
-        axis=0,
-        limit=None,
-        inplace=False,
-        limit_direction: Optional[str] = None,
-        limit_area=None,
-        downcast=None,
-        **kwargs,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Fill NaN values using an interpolation method.
-        """
-        return self._default_to_pandas(
-            pandas.DataFrame.interpolate,
-            method=method,
-            axis=axis,
-            limit=limit,
-            inplace=inplace,
-            limit_direction=limit_direction,
-            limit_area=limit_area,
-            downcast=downcast,
-            **kwargs,
-        )
-
     def iterrows(self):  # noqa: D200
         """
         Iterate over ``DataFrame`` rows as (index, ``Series``) pairs.
@@ -1331,7 +1304,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         """
         Label-based "fancy indexing" function for ``DataFrame``.
         """
-        return self._default_to_pandas(pandas.DataFrame.lookup, row_labels, col_labels)
+        return self.__constructor__(self._query_compiler.lookup(row_labels, col_labels))
 
     def lt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
@@ -2555,7 +2528,7 @@ class DataFrame(DataFrameCompat, BasePandasDataset):
         -------
         DataFrame
         """
-        return self._default_to_pandas(pandas.DataFrame.__round__, decimals=decimals)
+        return self.round(decimals)
 
     def __delitem__(self, key):
         """

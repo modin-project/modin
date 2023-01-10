@@ -162,12 +162,6 @@ def read_sql(
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    if kwargs.get("chunksize") is not None:
-        ErrorMessage.default_to_pandas("Parameters provided [chunksize]")
-        df_gen = pandas.read_sql(**kwargs)
-        return (
-            DataFrame(query_compiler=FactoryDispatcher.from_pandas(df)) for df in df_gen
-        )
     return DataFrame(query_compiler=FactoryDispatcher.read_sql(**kwargs))
 
 
