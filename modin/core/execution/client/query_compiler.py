@@ -859,7 +859,6 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "str_translate",
         "str_wrap",
         "to_numeric",
-        "to_numpy",
         "unique",
         "unstack",
         "var",
