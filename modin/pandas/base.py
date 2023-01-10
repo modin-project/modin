@@ -1321,10 +1321,18 @@ class BasePandasDataset(BasePandasDatasetCompat):
     @_inherit_docstrings(
         pandas.DataFrame.expanding, apilink="pandas.DataFrame.expanding"
     )
-    def _expanding(self, **kwargs):
-        from .expanding import Expanding
-
-        return Expanding(self, kwargs)
+    def _expanding(
+        self, min_periods=1, center=None, axis=0, method="single", *args, **kwargs
+    ):
+        return Expanding(
+            self,
+            min_periods=min_periods,
+            center=center,
+            axis=axis,
+            method=method,
+            *args,
+            **kwargs,
+        )
 
     def ffill(
         self, axis=None, inplace=False, limit=None, downcast=None
