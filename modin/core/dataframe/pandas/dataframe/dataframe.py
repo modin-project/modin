@@ -714,9 +714,7 @@ class PandasDataframe(ClassLogger):
         ]
         return new_lengths
 
-    def _get_new_index_obj(
-        self, positions, axis: int
-    ) -> pandas.Index:
+    def _get_new_index_obj(self, positions, axis: int) -> pandas.Index:
         """
         Find the new Index object for take_2d_positional result.
         Parameters
@@ -843,7 +841,7 @@ class PandasDataframe(ClassLogger):
             ErrorMessage.catch_bugs_and_request_email(
                 failure_condition=sum(new_col_widths) != len(new_columns),
                 extra_log=f"{sum(new_col_widths)} != {len(new_columns)}.\n"
-                + f"{col_positions}\n{self.column_widths}\n{col_partitions_dict}",
+                + f"{col_positions}\n{self.column_widths}\n{col_partitions_list}",
             )
 
             if self._dtypes is not None:
