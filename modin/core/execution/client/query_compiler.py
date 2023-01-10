@@ -95,6 +95,12 @@ class ClientQueryCompiler(BaseQueryCompiler):
             raise value
         return value
 
+    def to_numpy(self, **kwargs):
+        value = self._service.to_numpy(self._id, **kwargs)
+        if isinstance(value, Exception):
+            raise value
+        return value
+
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         raise NotImplementedError
 
@@ -853,7 +859,6 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "str_translate",
         "str_wrap",
         "to_numeric",
-        "to_numpy",
         "unique",
         "unstack",
         "var",
