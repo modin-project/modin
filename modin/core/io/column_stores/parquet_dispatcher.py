@@ -14,8 +14,9 @@
 """Module houses `ParquetDispatcher` class, that is used for reading `.parquet` files."""
 
 import os
-
+import re
 import json
+
 import fsspec
 from fsspec.core import url_to_fs
 from fsspec.spec import AbstractBufferedFile
@@ -27,7 +28,7 @@ from modin.config import NPartitions
 
 
 from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
-from modin.utils import import_optional_dependency, _inherit_docstrings
+from modin.utils import _inherit_docstrings
 
 
 class ColumnStoreDataset:
@@ -223,7 +224,9 @@ class PyArrowDataset(ColumnStoreDataset):
     ):
         from pyarrow.parquet import read_table
 
-        return read_table(self.path, columns=columns, filesystem=self.fs).to_pandas()
+        return read_table(
+            self._fs_path, columns=columns, filesystem=self.fs
+        ).to_pandas()
 
 
 @_inherit_docstrings(ColumnStoreDataset)
@@ -289,6 +292,8 @@ class FastParquetDataset(ColumnStoreDataset):
 
 class ParquetDispatcher(ColumnStoreDispatcher):
     """Class handles utils for reading `.parquet` files."""
+
+    index_regex = re.compile(r"__index_level_\d+__")
 
     @classmethod
     def get_dataset(cls, path, engine, storage_options):
@@ -424,13 +429,15 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             all_partitions.append(
                 [
                     cls.deploy(
-                        cls.parse,
-                        files_for_parser=files_to_read,
-                        columns=cols,
-                        engine=dataset.engine,
+                        func=cls.parse,
+                        f_kwargs={
+                            "files_for_parser": files_to_read,
+                            "columns": cols,
+                            "engine": dataset.engine,
+                            "storage_options": storage_options,
+                            **kwargs,
+                        },
                         num_returns=3,
-                        storage_options=storage_options,
-                        **kwargs,
                     )
                     for cols in col_partitions
                 ]
@@ -599,24 +606,28 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
         """
-        import_optional_dependency(
-            "pyarrow",
-            "pyarrow is required to read parquet files.",
-        )
-        from modin.pandas.io import PQ_INDEX_REGEX
-
-        if isinstance(path, str) and os.path.isdir(path):
+        if isinstance(path, str):
+            if os.path.isdir(path):
+                path_generator = os.walk(path)
+            else:
+                storage_options = kwargs.get("storage_options")
+                if storage_options is not None:
+                    fs, fs_path = url_to_fs(path, **storage_options)
+                else:
+                    fs, fs_path = url_to_fs(path)
+                path_generator = fs.walk(fs_path)
             partitioned_columns = set()
             # We do a tree walk of the path directory because partitioned
             # parquet directories have a unique column at each directory level.
             # Thus, we can use os.walk(), which does a dfs search, to walk
             # through the different columns that the data is partitioned on
-            for (_, dir_names, files) in os.walk(path):
+            for (_, dir_names, files) in path_generator:
                 if dir_names:
                     partitioned_columns.add(dir_names[0].split("=")[0])
                 if files:
                     # Metadata files, git files, .DSStore
-                    if files[0][0] == ".":
+                    # TODO: fix conditional for column partitioning, see issue #4637
+                    if len(files[0]) > 0 and files[0][0] == ".":
                         continue
                     break
             partitioned_columns = list(partitioned_columns)
@@ -640,7 +651,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         columns = [
             c
             for c in column_names
-            if c not in index_columns and not PQ_INDEX_REGEX.match(c)
+            if c not in index_columns and not cls.index_regex.match(c)
         ]
 
         return cls.build_query_compiler(dataset, columns, index_columns, **kwargs)

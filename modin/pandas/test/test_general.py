@@ -19,13 +19,16 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from modin.utils import get_current_execution, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.config import Engine
 from pandas.testing import assert_frame_equal
 
 from .utils import (
+    create_test_dfs,
     test_data_values,
     test_data_keys,
     df_equals,
     sort_index_for_equal_values,
+    eval_general,
 )
 
 
@@ -306,7 +309,7 @@ def test_merge_asof_suffixes():
             suffixes=(False, False),
         )
     with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
-        modin_merged = pd.merge_asof(
+        pd.merge_asof(
             modin_left,
             modin_right,
             left_index=True,
@@ -634,7 +637,11 @@ def test_unique():
 def test_value_counts(normalize, bins, dropna):
     # We sort indices for Modin and pandas result because of issue #1650
     values = np.array([3, 1, 2, 3, 4, np.nan])
-    with warns_that_defaulting_to_pandas():
+    with (
+        _nullcontext()
+        if Engine.get() in ["Ray", "Dask", "Unidist"]
+        else warns_that_defaulting_to_pandas()
+    ):
         modin_result = sort_index_for_equal_values(
             pd.value_counts(values, normalize=normalize, ascending=False), False
         )
@@ -652,7 +659,11 @@ def test_value_counts(normalize, bins, dropna):
     )
     df_equals(modin_result, pandas_result)
 
-    with warns_that_defaulting_to_pandas():
+    with (
+        _nullcontext()
+        if Engine.get() in ["Ray", "Dask", "Unidist"]
+        else warns_that_defaulting_to_pandas()
+    ):
         modin_result = sort_index_for_equal_values(
             pd.value_counts(values, dropna=dropna, ascending=True), True
         )
@@ -801,3 +812,35 @@ def test_empty_dataframe():
 def test_empty_series():
     s = pd.Series([])
     pd.to_numeric(s)
+
+
+@pytest.mark.parametrize(
+    "arg",
+    [[1, 2], ["a"], 1, "a"],
+    ids=["list_of_ints", "list_of_invalid_strings", "scalar", "invalid_scalar"],
+)
+def test_to_timedelta(arg):
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/4966
+    eval_general(pd, pandas, lambda lib: lib.to_timedelta(arg))
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_series_to_timedelta(data):
+    def make_frame(lib):
+        series = lib.Series(
+            next(iter(data.values())) if isinstance(data, dict) else data
+        )
+        return lib.to_timedelta(series).to_frame(name="timedelta")
+
+    eval_general(pd, pandas, make_frame)
+
+
+@pytest.mark.parametrize(
+    "key",
+    [["col0"], "col0", "col1"],
+    ids=["valid_list_of_string", "valid_string", "invalid_string"],
+)
+def test_get(key):
+    modin_df, pandas_df = create_test_dfs({"col0": [0, 1]})
+    eval_general(modin_df, pandas_df, lambda df: df.get(key))

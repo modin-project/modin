@@ -34,7 +34,6 @@ from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.utils import _inherit_docstrings
 from modin.core.io.text.utils import CustomNewlineIterator
 from modin.config import NPartitions
-from modin._compat.core.base_io import _validate_usecols_arg
 
 ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
 IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
@@ -608,9 +607,9 @@ class TextFileDispatcher(FileDispatcher):
         for idx, (start, end) in enumerate(splits):
             partition_kwargs.update({"start": start, "end": end})
             *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
-                cls.parse,
+                func=cls.parse,
+                f_kwargs=partition_kwargs,
                 num_returns=partition_kwargs.get("num_splits") + 2,
-                **partition_kwargs,
             )
         return partition_ids, index_ids, dtypes_ids
 
@@ -656,6 +655,19 @@ class TextFileDispatcher(FileDispatcher):
         if read_kwargs["chunksize"] is not None:
             return (False, "`chunksize` parameter is not supported")
 
+        if read_kwargs.get("dialect") is not None:
+            return (False, "`dialect` parameter is not supported")
+
+        if read_kwargs["lineterminator"] is not None:
+            return (False, "`lineterminator` parameter is not supported")
+
+        if read_kwargs["escapechar"] is not None:
+            return (False, "`escapechar` parameter is not supported")
+
+        if read_kwargs.get("skipfooter"):
+            if read_kwargs.get("nrows") or read_kwargs.get("engine") == "c":
+                return (False, "Exception is raised by pandas itself")
+
         skiprows_supported = True
         if is_list_like(skiprows_md) and skiprows_md[0] < header_size:
             skiprows_supported = False
@@ -677,7 +689,7 @@ class TextFileDispatcher(FileDispatcher):
         return (True, None)
 
     @classmethod
-    @_inherit_docstrings(_validate_usecols_arg)
+    @_inherit_docstrings(pandas.io.parsers.base_parser.ParserBase._validate_usecols_arg)
     def _validate_usecols_arg(cls, usecols):
         msg = (
             "'usecols' must either be list-like of all strings, all unicode, "
@@ -918,7 +930,7 @@ class TextFileDispatcher(FileDispatcher):
             nrows = kwargs.get("nrows", None)
             index_range = pandas.RangeIndex(len(new_query_compiler.index))
             if is_list_like(skiprows_md):
-                new_query_compiler = new_query_compiler.take_2d(
+                new_query_compiler = new_query_compiler.take_2d_positional(
                     index=index_range.delete(skiprows_md)
                 )
             elif callable(skiprows_md):
@@ -926,7 +938,9 @@ class TextFileDispatcher(FileDispatcher):
                 if not isinstance(skip_mask, np.ndarray):
                     skip_mask = skip_mask.to_numpy("bool")
                 view_idx = index_range[~skip_mask]
-                new_query_compiler = new_query_compiler.take_2d(index=view_idx)
+                new_query_compiler = new_query_compiler.take_2d_positional(
+                    index=view_idx
+                )
             else:
                 raise TypeError(
                     f"Not acceptable type of `skiprows` parameter: {type(skiprows_md)}"
@@ -936,10 +950,10 @@ class TextFileDispatcher(FileDispatcher):
                 new_query_compiler = new_query_compiler.reset_index(drop=True)
 
             if nrows:
-                new_query_compiler = new_query_compiler.take_2d(
+                new_query_compiler = new_query_compiler.take_2d_positional(
                     pandas.RangeIndex(len(new_query_compiler.index))[:nrows]
                 )
-        if index_col is None:
+        if index_col is None or index_col is False:
             new_query_compiler._modin_frame.synchronize_labels(axis=0)
 
         return new_query_compiler

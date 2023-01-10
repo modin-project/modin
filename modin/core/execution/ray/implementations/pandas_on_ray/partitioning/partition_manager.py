@@ -16,12 +16,12 @@
 import inspect
 import threading
 
-import ray
-
 from modin.config import ProgressBar
 from modin.core.execution.ray.generic.partitioning import (
     GenericRayDataframePartitionManager,
 )
+from modin.core.execution.ray.common import RayWrapper
+from modin.core.execution.ray.common.utils import wait
 from .virtual_partition import (
     PandasOnRayDataframeColumnPartition,
     PandasOnRayDataframeRowPartition,
@@ -108,10 +108,15 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         list
             The objects wrapped by `partitions`.
         """
+        for idx, part in enumerate(partitions):
+            if hasattr(part, "force_materialization"):
+                partitions[idx] = part.force_materialization()
         assert all(
             [len(partition.list_of_blocks) == 1 for partition in partitions]
         ), "Implementation assumes that each partition contains a signle block."
-        return ray.get([partition.list_of_blocks[0] for partition in partitions])
+        return RayWrapper.materialize(
+            [partition.list_of_blocks[0] for partition in partitions]
+        )
 
     @classmethod
     def wait_partitions(cls, partitions):
@@ -128,7 +133,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         blocks = [
             block for partition in partitions for block in partition.list_of_blocks
         ]
-        ray.wait(blocks, num_returns=len(blocks))
+        wait(blocks)
 
 
 def _make_wrapped_method(name: str):

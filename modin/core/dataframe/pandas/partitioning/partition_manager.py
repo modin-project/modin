@@ -51,12 +51,12 @@ def wait_computations_if_benchmark_mode(func):
     -----
     `func` should return NumPy array with partitions.
     """
-    if BenchmarkMode.get():
 
-        @wraps(func)
-        def wait(cls, *args, **kwargs):
-            """Wait for computation results."""
-            result = func(cls, *args, **kwargs)
+    @wraps(func)
+    def wait(cls, *args, **kwargs):
+        """Wait for computation results."""
+        result = func(cls, *args, **kwargs)
+        if BenchmarkMode.get():
             if isinstance(result, tuple):
                 partitions = result[0]
             else:
@@ -67,16 +67,13 @@ def wait_computations_if_benchmark_mode(func):
             # finish before kicking off the next one. Instead, we want to
             # serially kick off all the deferred computations so that they can
             # all run asynchronously, then wait on all the results.
-            [part.drain_call_queue() for part in partitions.flatten()]
+            cls.finalize(partitions)
             # The partition manager invokes the relevant .wait() method under
             # the hood, which should wait in parallel for all computations to finish
-            # (We can't just add a `cls` argument to this `wait` function, since doing so
-            # seems to be incompatible with the way function decorators work)
             cls.wait_partitions(partitions.flatten())
-            return result
+        return result
 
-        return wait
-    return func
+    return wait
 
 
 class PandasDataframePartitionManager(ClassLogger, ABC):
@@ -335,7 +332,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
+    def broadcast_apply(cls, axis, apply_func, left, right, other_name="right"):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` function.
 
@@ -349,7 +346,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             NumPy array of left partitions.
         right : np.ndarray
             NumPy array of right partitions.
-        other_name : str, default: "r"
+        other_name : str, default: "right"
             Name of key-value argument for `apply_func` that
             is used to pass `right` to `apply_func`.
 
@@ -455,7 +452,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             "other_axis_partition": right_partitions,
         }
         if lengths:
-            kw["_lengths"] = lengths
+            kw["lengths"] = lengths
             kw["manual_partition"] = True
 
         if apply_indices is None:
@@ -644,7 +641,24 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         pandas.DataFrame
             A pandas DataFrame
         """
-        retrieved_objects = [[obj.to_pandas() for obj in part] for part in partitions]
+        retrieved_objects = cls.get_objects_from_partitions(partitions.flatten())
+        if all(
+            isinstance(obj, (pandas.DataFrame, pandas.Series))
+            for obj in retrieved_objects
+        ):
+            height, width, *_ = tuple(partitions.shape) + (0,)
+            # restore 2d array
+            objs = iter(retrieved_objects)
+            retrieved_objects = [
+                [next(objs) for _ in range(width)] for __ in range(height)
+            ]
+        else:
+            # Partitions do not always contain pandas objects, for example, hdk uses pyarrow tables.
+            # This implementation comes from the fact that calling `partition.get`
+            # function is not always equivalent to `partition.to_pandas`.
+            retrieved_objects = [
+                [obj.to_pandas() for obj in part] for part in partitions
+            ]
         if all(
             isinstance(part, pandas.Series) for row in retrieved_objects for part in row
         ):
@@ -657,10 +671,16 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             axis = 1
         else:
             ErrorMessage.catch_bugs_and_request_email(True)
+
+        def is_part_empty(part):
+            return part.empty and (
+                not isinstance(part, pandas.DataFrame) or (len(part.columns) == 0)
+            )
+
         df_rows = [
             pandas.concat([part for part in row], axis=axis)
             for row in retrieved_objects
-            if not all(part.empty for part in row)
+            if not all(is_part_empty(part) for part in row)
         ]
         if len(df_rows) == 0:
             return pandas.DataFrame()
@@ -864,10 +884,22 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
         func = cls.preprocess_func(index_func)
         target = partitions.T if axis == 0 else partitions
-        new_idx = [idx.apply(func) for idx in target[0]] if len(target) else []
-        new_idx = cls.get_objects_from_partitions(new_idx)
-        # TODO FIX INFORMATION LEAK!!!!1!!1!!
-        total_idx = new_idx[0].append(new_idx[1:]) if new_idx else new_idx
+        if len(target):
+            new_idx = [idx.apply(func) for idx in target[0]]
+            new_idx = cls.get_objects_from_partitions(new_idx)
+        else:
+            new_idx = [pandas.Index([])]
+
+        # filter empty indexes in case there are multiple partitions
+        total_idx = list(filter(len, new_idx))
+        if len(total_idx) > 0:
+            # TODO FIX INFORMATION LEAK!!!!1!!1!!
+            total_idx = total_idx[0].append(total_idx[1:])
+        else:
+            # Meaning that all partitions returned a zero-length index,
+            # in this case, we return an index of any partition to preserve
+            # the index's metadata
+            total_idx = new_idx[0]
         return total_idx, new_idx
 
     @classmethod
@@ -1230,6 +1262,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         for row_idx, row_values in enumerate(row_partitions_list):
             row_blk_idx, row_internal_idx = row_values
             col_position_counter = 0
+            row_offset = 0
             for col_idx, col_values in enumerate(col_partitions_list):
                 col_blk_idx, col_internal_idx = col_values
                 remote_part = partition_copy[row_blk_idx, col_blk_idx]
@@ -1291,13 +1324,28 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         func = cls.preprocess_func(func)
 
         def get_right_block(right_partitions, row_idx, col_idx):
-            blocks = right_partitions[row_idx][col_idx].list_of_blocks
-            # TODO Resolve this assertion as a part of #4691, because the current implementation assumes
-            # that partition contains only 1 block.
-            assert (
-                len(blocks) == 1
-            ), f"Implementation assumes that partition contains only 1 block, but {len(blocks)} recieved."
-            return blocks[0]
+            partition = right_partitions[row_idx][col_idx]
+            blocks = partition.list_of_blocks
+            """
+            NOTE:
+            Currently we do one remote call per right virtual partition to
+            materialize the partitions' blocks, then another remote call to do
+            the n_ary operation. we could get better performance if we
+            assembled the other partition within the remote `apply` call, by
+            passing the partition in as `other_axis_partition`. However,
+            passing `other_axis_partition` requires some extra care that would
+            complicate the code quite a bit:
+            - block partitions don't know how to deal with `other_axis_partition`
+            - the right axis partition's axis could be different from the axis
+              of the corresponding left partition
+            - there can be multiple other_axis_partition because this is an n-ary
+              operation and n can be > 2.
+            So for now just do the materialization in a separate remote step.
+            """
+            if len(blocks) > 1:
+                partition.force_materialization()
+            assert len(partition.list_of_blocks) == 1
+            return partition.list_of_blocks[0]
 
         return np.array(
             [
@@ -1316,7 +1364,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         )
 
     @classmethod
-    @wait_computations_if_benchmark_mode
     def finalize(cls, partitions):
         """
         Perform all deferred calls on partitions.
@@ -1354,7 +1401,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         list[int] or None
             Row lengths if possible to compute it.
         """
-        if Engine.get() in ["Ray", "Dask"] and StorageFormat.get() == "Pandas":
+        if (
+            Engine.get() in ["Ray", "Dask", "Unidist"]
+            and StorageFormat.get() == "Pandas"
+        ):
             # Rebalancing partitions is currently only implemented for PandasOnRay and PandasOnDask.
             # We rebalance when the ratio of the number of existing partitions to
             # the ideal number of partitions is larger than this threshold. The
@@ -1451,7 +1501,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                     for obj in partitions[stop]:
                         obj._length_cache = new_last_partition_size
 
-                    partition_size = ideal_partition_size
                 # The new virtual partitions are not `full_axis`, even if they
                 # happen to span all rows in the dataframe, because they are
                 # meant to be the final partitions of the dataframe. They've
@@ -1466,3 +1515,65 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             lengths = [part.length() for part in new_partitions[:, 0]]
             return new_partitions, lengths
         return partitions, None
+
+    @classmethod
+    def shuffle_partitions(
+        cls, partitions, index, shuffle_functions, final_shuffle_func
+    ):
+        """
+        Return shuffled partitions.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            The 2-d array of partitions to shuffle.
+        index : int
+            The index of partitions corresponding to the partitions that contain the column to sample.
+        shuffle_functions : NamedTuple
+            A named tuple containing the functions that we will be using to perform this shuffle.
+        final_shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
+            Function that shuffles the data within each new partition.
+
+        Returns
+        -------
+        np.ndarray
+            A list of row-partitions that have been shuffled.
+        """
+        # Mask the partition that contains the column that will be sampled.
+        masked_partitions = partitions[:, index]
+        # Sample each partition
+        sample_func = cls.preprocess_func(shuffle_functions.sample_function)
+        samples = [partition.apply(sample_func) for partition in masked_partitions]
+        # Get each sample to pass in to the pivot function
+        samples = cls.get_objects_from_partitions(samples)
+        pivots = shuffle_functions.pivot_function(samples)
+        # Convert our list of block partitions to row partitions. We need to create full-axis
+        # row partitions since we need to send the whole partition to the split step as otherwise
+        # we wouldn't know how to split the block partitions that don't contain the shuffling key.
+        row_partitions = [
+            partition.force_materialization().list_of_block_partitions[0]
+            for partition in cls.row_partitions(partitions)
+        ]
+        # Gather together all of the sub-partitions
+        split_row_partitions = np.array(
+            [
+                partition.split(
+                    shuffle_functions.split_function, len(pivots) + 1, pivots
+                )
+                for partition in row_partitions
+            ]
+        ).T
+        # We need to convert every partition that came from the splits into a full-axis column partition.
+        col_partitioning_func = np.vectorize(
+            lambda partition: cls._row_partition_class(partition)
+        )
+        split_row_partitions = col_partitioning_func(split_row_partitions)
+        new_partitions = [
+            [
+                cls._column_partitions_class(row_partition, full_axis=False).apply(
+                    final_shuffle_func
+                )
+            ]
+            for row_partition in split_row_partitions
+        ]
+        return np.array(new_partitions)

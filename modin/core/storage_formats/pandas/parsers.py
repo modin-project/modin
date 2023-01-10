@@ -48,7 +48,7 @@ from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
 from pandas.util._decorators import doc
-from typing import Any, NamedTuple
+from typing import Any
 import warnings
 
 from modin.core.io.file_dispatcher import OpenFile
@@ -642,7 +642,7 @@ class PandasJSONParser(PandasParser):
         ]
 
 
-class ParquetFileToRead(NamedTuple):
+class ParquetFileToRead:
     """
     Class to store path and row group information for parquet reads.
 
@@ -656,9 +656,10 @@ class ParquetFileToRead(NamedTuple):
         Row group to stop read.
     """
 
-    path: Any
-    row_group_start: int
-    row_group_end: int
+    def __init__(self, path: Any, row_group_start: int, row_group_end: int):
+        self.path: Any = path
+        self.row_group_start: int = row_group_start
+        self.row_group_end: int = row_group_end
 
 
 @doc(_doc_pandas_parser_class, data_type="PARQUET data")
@@ -705,7 +706,7 @@ engine : str
     )
     def parse(files_for_parser, engine, **kwargs):
         columns = kwargs.get("columns", None)
-        storage_options = kwargs.pop("storage_options", {}) or {}
+        storage_options = kwargs.get("storage_options", {})
         chunks = []
         # `single_worker_read` just passes in a string path
         if isinstance(files_for_parser, str):

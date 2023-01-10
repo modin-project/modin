@@ -159,7 +159,7 @@ def check_spelling_words(doc: Docstring) -> list:
         return []
     components = set(
         ["Modin", "pandas", "NumPy", "Ray", "Dask"]
-        + ["PyArrow", "OmniSci", "XGBoost", "Plasma"]
+        + ["PyArrow", "HDK", "XGBoost", "Plasma"]
     )
     check_words = "|".join(x.lower() for x in components)
 
@@ -498,6 +498,7 @@ def pydocstyle_validate(
 def monkeypatching():
     """Monkeypatch not installed modules and decorators which change __doc__ attribute."""
     import ray
+    import pandas.util
     import modin.utils
     from unittest.mock import Mock
 
@@ -508,6 +509,7 @@ def monkeypatching():
         return lambda cls_or_func: cls_or_func
 
     ray.remote = monkeypatch
+    pandas.util.cache_readonly = property
 
     # We are mocking packages we don't need for docs checking in order to avoid import errors
     sys.modules["pyarrow.gandiva"] = Mock()
@@ -524,15 +526,12 @@ def monkeypatching():
 
     Docstring._load_obj = staticmethod(load_obj)
 
-    # for testing omnisci-engine docs without `dbe` installation
-    sys.modules["dbe"] = Mock()
+    # for testing hdk-engine docs without `pyhdk` installation
+    # TODO: check if we could remove these lines
+    sys.modules["pyhdk"] = Mock()
     # enable docs testing on windows
     sys.getdlopenflags = Mock()
     sys.setdlopenflags = Mock()
-
-    # Some modin._compat submodules cannot be imported without fully importing
-    # modin.pandas first - they break with circular import; so add explicit import here
-    import modin.pandas
 
 
 def validate(

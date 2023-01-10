@@ -409,7 +409,7 @@ class TestPipelineRayEngine:
             NotImplementedError,
             match="Dynamic repartitioning is currently only supported for DataFrames with 1 partition.",
         ):
-            new_dfs = pipeline.compute_batch()
+            pipeline.compute_batch()
 
     def test_fan_out(self):
         """Check that the fan_out argument is appropriately handled."""
@@ -454,7 +454,7 @@ class TestPipelineRayEngine:
             NotImplementedError,
             match="Fan out is only supported with DataFrames with 1 partition.",
         ):
-            new_df = pipeline.compute_batch()[0]
+            pipeline.compute_batch()[0]
 
     def test_pipeline_complex(self):
         """Create a complex pipeline with both `fan_out`, `repartition_after` and postprocessing and ensure that it runs end to end correctly."""

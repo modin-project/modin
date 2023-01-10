@@ -144,8 +144,8 @@ def test_fillna(data, method, axis, limit):
 
         try:
             pandas_result = pandas_df.fillna(0, method=method, axis=axis, limit=limit)
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_df.fillna(0, method=method, axis=axis, limit=limit)
         else:
             modin_result = modin_df.fillna(0, method=method, axis=axis, limit=limit)
@@ -204,6 +204,13 @@ def test_fillna_downcast():
     result = df.fillna({"a": 0}, downcast="infer")
     modin_df = pd.DataFrame(frame_data).fillna({"a": 0}, downcast="infer")
     df_equals(modin_df, result)
+
+
+def test_fillna_4660():
+    eval_general(
+        *create_test_dfs({"a": ["a"], "b": ["b"], "c": [pd.NA]}, index=["row1"]),
+        lambda df: df["c"].fillna(df["b"]),
+    )
 
 
 def test_fillna_inplace():
@@ -403,7 +410,6 @@ def test_fillna_columns(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_fillna_invalid_method(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     with pytest.raises(ValueError):
         modin_df.fillna(method="ffil")
@@ -618,8 +624,8 @@ def test_quantile(request, data, q):
 
         try:
             pandas_result = pandas_df.quantile(q, axis=1, numeric_only=False)
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_df.quantile(q, axis=1, numeric_only=False)
         else:
             modin_result = modin_df.quantile(q, axis=1, numeric_only=False)
@@ -634,8 +640,8 @@ def test_quantile(request, data, q):
 
         try:
             pandas_result = pandas_df.T.quantile(q, axis=1, numeric_only=False)
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_df.T.quantile(q, axis=1, numeric_only=False)
         else:
             modin_result = modin_df.T.quantile(q, axis=1, numeric_only=False)

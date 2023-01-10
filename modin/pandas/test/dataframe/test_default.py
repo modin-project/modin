@@ -19,7 +19,6 @@ from numpy.testing import assert_array_equal
 import io
 import warnings
 
-from modin._compat import PandasCompatVersion
 import modin.pandas as pd
 from modin.utils import (
     to_pandas,
@@ -75,20 +74,8 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
         ("mask", lambda df: {"cond": df != 0}),
         ("pct_change", None),
         ("to_xarray", None),
-        pytest.param(
-            *("flags", None),
-            marks=pytest.mark.skipif(
-                condition=PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
-                reason="pandas 1.1 does not support .flags",
-            ),
-        ),
-        pytest.param(
-            *("set_flags", lambda df: {"allows_duplicate_labels": False}),
-            marks=pytest.mark.skipif(
-                condition=PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
-                reason="pandas 1.1 does not support .set_flags()",
-            ),
-        ),
+        ("flags", None),
+        ("set_flags", lambda df: {"allows_duplicate_labels": False}),
     ],
 )
 def test_ops_defaulting_to_pandas(op, make_args):
@@ -205,7 +192,6 @@ def test_bfill(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_bool(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     with pytest.raises(ValueError):
         modin_df.bool()
@@ -224,7 +210,6 @@ def test_bool(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_boxplot(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     assert modin_df.boxplot() == to_pandas(modin_df).boxplot()
 
@@ -284,7 +269,7 @@ def test_dot(data):
 
     # Test bad dimensions
     with pytest.raises(ValueError):
-        modin_result = modin_df.dot(np.arange(col_len + 10))
+        modin_df.dot(np.arange(col_len + 10))
 
     # Test series input
     modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
@@ -300,7 +285,7 @@ def test_dot(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        modin_result = modin_df.dot(pd.Series(np.arange(col_len)))
+        modin_df.dot(pd.Series(np.arange(col_len)))
 
     # Test case when left dataframe has size (n x 1)
     # and right dataframe has size (1 x n)
@@ -331,7 +316,7 @@ def test_matmul(data):
 
     # Test bad dimensions
     with pytest.raises(ValueError):
-        modin_result = modin_df @ np.arange(col_len + 10)
+        modin_df @ np.arange(col_len + 10)
 
     # Test series input
     modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
@@ -347,7 +332,7 @@ def test_matmul(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        modin_result = modin_df @ pd.Series(np.arange(col_len))
+        modin_df @ pd.Series(np.arange(col_len))
 
 
 def test_first():
@@ -381,12 +366,15 @@ def test_info_default_param(data):
         assert modin_info[1:] == pandas_info[1:]
 
 
+# randint data covers https://github.com/modin-project/modin/issues/5137
+@pytest.mark.parametrize(
+    "data", [test_data_values[0], np.random.randint(0, 100, (10, 10))]
+)
 @pytest.mark.parametrize("verbose", [True, False])
 @pytest.mark.parametrize("max_cols", [10, 99999999])
 @pytest.mark.parametrize("memory_usage", [True, False, "deep"])
 @pytest.mark.parametrize("null_counts", [True, False])
-def test_info(verbose, max_cols, memory_usage, null_counts):
-    data = test_data_values[0]
+def test_info(data, verbose, max_cols, memory_usage, null_counts):
     with io.StringIO() as first, io.StringIO() as second:
         eval_general(
             pd.DataFrame(data),
@@ -801,13 +789,7 @@ def test_resample_specific(rule, closed, label, on, level):
         ("volume",),
         pandas.Series(["volume"]),
         pandas.Index(["volume"]),
-        pytest.param(
-            ["volume", "volume", "volume"],
-            marks=pytest.mark.skipif(
-                condition=PandasCompatVersion.CURRENT == PandasCompatVersion.PY36,
-                reason="pandas 1.1 does not support duplicate columns in resample",
-            ),
-        ),
+        ["volume", "volume", "volume"],
         ["volume", "price", "date"],
     ],
     ids=[
@@ -1037,8 +1019,8 @@ def test_truncate(data):
     after = modin_df.columns[-3]
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
@@ -1048,8 +1030,8 @@ def test_truncate(data):
     after = modin_df.columns[3]
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
@@ -1060,8 +1042,8 @@ def test_truncate(data):
     df_equals(modin_df.truncate(before, after), pandas_df.truncate(before, after))
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
@@ -1210,3 +1192,9 @@ def test_setattr_axes():
     # Check that ensure_index was called
     pandas.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
     pandas.testing.assert_index_equal(df.columns, pandas.Index([9, 10]))
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_attrs(data):
+    modin_df, pandas_df = create_test_dfs(data)
+    eval_general(modin_df, pandas_df, lambda df: df.attrs)

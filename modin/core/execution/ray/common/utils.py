@@ -34,12 +34,15 @@ from modin.config import (
     ValueSource,
 )
 from modin.error_message import ErrorMessage
+from .engine_wrapper import RayWrapper
 
 _OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO = 0.6
 # This constant should be in sync with the limit in ray, which is private,
 # not exposed to users, and not documented:
 # https://github.com/ray-project/ray/blob/4692e8d8023e789120d3f22b41ffb136b50f70ea/python/ray/_private/ray_constants.py#L57-L62
 _MAC_OBJECT_STORE_LIMIT_BYTES = 2 * 2**30
+
+_RAY_IGNORE_UNHANDLED_ERRORS_VAR = "RAY_IGNORE_UNHANDLED_ERRORS"
 
 ObjectIDType = ray.ObjectRef
 if version.parse(ray.__version__) >= version.parse("1.2.0"):
@@ -146,6 +149,14 @@ def initialize_ray(
     else:
         NPartitions._put(num_cpus)
 
+    # TODO(https://github.com/ray-project/ray/issues/28216): remove this
+    # workaround once Ray gives a better way to suppress task errors.
+    # Ideally we would not set global environment variables.
+    # If user has explicitly set _RAY_IGNORE_UNHANDLED_ERRORS_VAR, don't
+    # don't override its value.
+    if _RAY_IGNORE_UNHANDLED_ERRORS_VAR not in os.environ:
+        os.environ[_RAY_IGNORE_UNHANDLED_ERRORS_VAR] = "1"
+
 
 def _get_object_store_memory() -> Optional[int]:
     """
@@ -222,14 +233,49 @@ def deserialize(obj):
         The deserialized object.
     """
     if isinstance(obj, ObjectIDType):
-        return ray.get(obj)
-    elif isinstance(obj, (tuple, list)) and any(
-        isinstance(o, ObjectIDType) for o in obj
-    ):
-        return ray.get(list(obj))
+        return RayWrapper.materialize(obj)
+    elif isinstance(obj, (tuple, list)):
+        # Ray will error if any elements are not ObjectIDType, but we still want ray to
+        # perform batch deserialization for us -- thus, we must submit only the list elements
+        # that are ObjectIDType, deserialize them, and restore them to their correct list index
+        oid_indices, oids = [], []
+        for i, ray_id in enumerate(obj):
+            if isinstance(ray_id, ObjectIDType):
+                oid_indices.append(i)
+                oids.append(ray_id)
+        ray_result = RayWrapper.materialize(oids)
+        new_lst = list(obj[:])
+        for i, deser_item in zip(oid_indices, ray_result):
+            new_lst[i] = deser_item
+        # Check that all objects have been deserialized
+        assert not any([isinstance(o, ObjectIDType) for o in new_lst])
+        return new_lst
     elif isinstance(obj, dict) and any(
         isinstance(val, ObjectIDType) for val in obj.values()
     ):
-        return dict(zip(obj.keys(), ray.get(list(obj.values()))))
+        return dict(zip(obj.keys(), RayWrapper.materialize(list(obj.values()))))
     else:
         return obj
+
+
+def wait(obj_ids):
+    """
+    Wrap ``ray.wait`` to handle duplicate object references.
+
+    ``ray.wait`` assumes a list of unique object references: see
+    https://github.com/modin-project/modin/issues/5045
+
+    Parameters
+    ----------
+    obj_ids : List[ObjectIDType]
+        The object IDs to wait on.
+
+    Returns
+    -------
+    Tuple[List[ObjectIDType], List[ObjectIDType]]
+        A list of object IDs that are ready, and a list of object IDs remaining (this
+        is the same as for ``ray.wait``). Unlike ``ray.wait``, the order of these IDs is not
+        guaranteed.
+    """
+    unique_ids = list(set(obj_ids))
+    return ray.wait(unique_ids, num_returns=len(unique_ids))

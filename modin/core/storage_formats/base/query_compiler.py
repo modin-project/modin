@@ -33,13 +33,15 @@ from modin.core.dataframe.algebra.default2pandas import (
 from modin.error_message import ErrorMessage
 from . import doc_utils
 from modin.logging import ClassLogger
-from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
+from modin.config import StorageFormat
 
 from pandas.core.dtypes.common import is_scalar
 import pandas.core.resample
 import pandas
+from pandas._typing import IndexLabel, Suffixes
 import numpy as np
-from typing import List, Hashable
+from typing import List, Hashable, Optional
 
 
 def _get_axis(axis):
@@ -111,7 +113,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     for a list of requirements for subclassing this object.
     """
 
-    @abc.abstractmethod
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         """
         Do fallback to pandas for the passed function.
@@ -130,7 +131,20 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             The result of the `pandas_op`, converted back to ``BaseQueryCompiler``.
         """
-        pass
+        op_name = getattr(pandas_op, "__name__", str(pandas_op))
+        ErrorMessage.default_to_pandas(op_name)
+        args = try_cast_to_pandas(args)
+        kwargs = try_cast_to_pandas(kwargs)
+
+        result = pandas_op(try_cast_to_pandas(self), *args, **kwargs)
+        if isinstance(result, pandas.Series):
+            if result.name is None:
+                result.name = MODIN_UNNAMED_SERIES_LABEL
+            result = result.to_frame()
+        if isinstance(result, pandas.DataFrame):
+            return self.from_pandas(result, type(self._modin_frame))
+        else:
+            return result
 
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for
@@ -254,7 +268,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                     other = other[0]
                 ignore_index = kwargs.pop("ignore_index", None)
                 kwargs["how"] = kwargs.pop("join", None)
-                result = df.join(other, rsuffix="r_", **kwargs)
+                if (
+                    isinstance(other, (pandas.DataFrame, pandas.Series))
+                    or len(other) <= 1
+                ):
+                    kwargs["rsuffix"] = "r_"
+                result = df.join(other, **kwargs)
             if ignore_index:
                 if axis == 0:
                     result = result.reset_index(drop=True)
@@ -522,6 +541,14 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     @doc_utils.doc_binary_method(operation="multiplication", sign="*")
     def mul(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.mul)(self, other=other, **kwargs)
+
+    @doc_utils.doc_binary_method(
+        operation="multiplication", sign="*", self_on_right=True
+    )
+    def rmul(self, other, **kwargs):  # noqa: PR02
+        return BinaryDefault.register(pandas.DataFrame.rmul)(
+            self, other=other, **kwargs
+        )
 
     @doc_utils.add_refer_to("DataFrame.corr")
     def corr(self, **kwargs):  # noqa: PR02
@@ -842,6 +869,143 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.merge)(
             self, right=right, **kwargs
         )
+
+    def _get_column_as_pandas_series(self, key):
+        """
+        Get column data by label as pandas.Series.
+
+        Parameters
+        ----------
+        key : Any
+            Column label.
+
+        Returns
+        -------
+        pandas.Series
+        """
+        result = self.getitem_array([key]).to_pandas().squeeze(axis=1)
+        if not isinstance(result, pandas.Series):
+            raise RuntimeError(
+                f"Expected getting column {key} to give "
+                + f"pandas.Series, but instead got {type(result)}"
+            )
+        return result
+
+    def merge_asof(
+        self,
+        right: "BaseQueryCompiler",
+        left_on: Optional[IndexLabel] = None,
+        right_on: Optional[IndexLabel] = None,
+        left_index: bool = False,
+        right_index: bool = False,
+        left_by=None,
+        right_by=None,
+        suffixes: Suffixes = ("_x", "_y"),
+        tolerance=None,
+        allow_exact_matches: bool = True,
+        direction: str = "backward",
+    ):
+        # Pandas fallbacks for tricky cases:
+        if (
+            # No idea how this works or why it does what it does; and in fact
+            # there's a Pandas bug suggesting it's wrong:
+            # https://github.com/pandas-dev/pandas/issues/33463
+            (left_index and right_on is not None)
+            # This is the case where by is a list of columns. If we're copying lots
+            # of columns out of Pandas, maybe not worth trying our path, it's not
+            # clear it's any better:
+            or not (left_by is None or is_scalar(left_by))
+            or not (right_by is None or is_scalar(right_by))
+            # The implementation below assumes that the right index is unique
+            # because it uses merge_asof to map each position in the merged
+            # index to the label of the one right row that should be merged
+            # at that row position.
+            or not right.index.is_unique
+        ):
+            return self.default_to_pandas(
+                pandas.merge_asof,
+                right,
+                left_on=left_on,
+                right_on=right_on,
+                left_index=left_index,
+                right_index=right_index,
+                left_by=left_by,
+                right_by=right_by,
+                suffixes=suffixes,
+                tolerance=tolerance,
+                allow_exact_matches=allow_exact_matches,
+                direction=direction,
+            )
+
+        if left_on is None:
+            left_column = self.index
+        else:
+            left_column = self._get_column_as_pandas_series(left_on)
+
+        if right_on is None:
+            right_column = right.index
+        else:
+            right_column = right._get_column_as_pandas_series(right_on)
+
+        left_pandas_limited = {"on": left_column}
+        right_pandas_limited = {"on": right_column, "right_labels": right.index}
+        extra_kwargs = {}  # extra arguments to Pandas merge_asof
+
+        if left_by is not None or right_by is not None:
+            extra_kwargs["by"] = "by"
+            left_pandas_limited["by"] = self._get_column_as_pandas_series(left_by)
+            right_pandas_limited["by"] = right._get_column_as_pandas_series(right_by)
+
+        # 1. Construct Pandas DataFrames with just the 'on' and optional 'by'
+        # columns, and the index as another column.
+        left_pandas_limited = pandas.DataFrame(left_pandas_limited, index=self.index)
+        right_pandas_limited = pandas.DataFrame(right_pandas_limited)
+
+        # 2. Use Pandas' merge_asof to figure out how to map labels on left to
+        # labels on the right.
+        merged = pandas.merge_asof(
+            left_pandas_limited,
+            right_pandas_limited,
+            on="on",
+            direction=direction,
+            allow_exact_matches=allow_exact_matches,
+            tolerance=tolerance,
+            **extra_kwargs,
+        )
+        # Now merged["right_labels"] shows which labels from right map to left's index.
+
+        # 3. Re-index right using the merged["right_labels"]; at this point right
+        # should be same length and (semantically) same order as left:
+        right_subset = right.reindex(
+            axis=0, labels=pandas.Index(merged["right_labels"])
+        )
+        if not right_index:
+            right_subset = right_subset.drop(columns=[right_on])
+        if right_by is not None and left_by == right_by:
+            right_subset = right_subset.drop(columns=[right_by])
+        right_subset.index = self.index
+
+        # 4. Merge left and the new shrunken right:
+        result = self.merge(
+            right_subset,
+            left_index=True,
+            right_index=True,
+            suffixes=suffixes,
+            how="left",
+        )
+
+        # 5. Clean up to match Pandas output:
+        if left_on is not None and right_index:
+            result = result.insert(
+                # In theory this could use get_indexer_for(), but that causes an error:
+                list(result.columns).index(left_on + suffixes[0]),
+                left_on,
+                result.getitem_array([left_on + suffixes[0]]),
+            )
+        if not left_index and not right_index:
+            result = result.reset_index(drop=True)
+
+        return result
 
     @doc_utils.add_refer_to("DataFrame.join")
     def join(self, right, **kwargs):  # noqa: PR02
@@ -1320,6 +1484,27 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return SeriesDefault.register(pandas.to_numeric)(self, *args, **kwargs)
 
+    @doc_utils.add_one_column_warning
+    @doc_utils.add_refer_to("to_timedelta")
+    def to_timedelta(self, unit="ns", errors="raise"):  # noqa: PR02
+        """
+        Convert argument to timedelta.
+
+        Parameters
+        ----------
+        unit : str, default: "ns"
+            Denotes the unit of the arg for numeric arg. Defaults to "ns".
+        errors : {"ignore", "raise", "coerce"}, default: "raise"
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler with converted to timedelta values.
+        """
+        return SeriesDefault.register(pandas.to_timedelta)(
+            self, unit=unit, errors=errors
+        )
+
     # FIXME: get rid of `**kwargs` parameter (Modin issue #3108).
     @doc_utils.add_one_column_warning
     @doc_utils.add_refer_to("Series.unique")
@@ -1381,7 +1566,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     # Abstract map partitions across select indices
-    def astype(self, col_dtypes, **kwargs):  # noqa: PR02
+    def astype(self, col_dtypes, errors: str = "raise"):  # noqa: PR02
         """
         Convert columns dtypes to given dtypes.
 
@@ -1389,8 +1574,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         ----------
         col_dtypes : dict
             Map for column names and new dtypes.
-        **kwargs : dict
-            Serves the compatibility purpose. Does not affect the result.
+        errors : {'raise', 'ignore'}, default: 'raise'
+            Control raising of exceptions on invalid data for provided dtype.
+            - raise : allow exceptions to be raised
+            - ignore : suppress exceptions. On error return original object.
 
         Returns
         -------
@@ -1398,7 +1585,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             New QueryCompiler with updated dtypes.
         """
         return DataFrameDefault.register(pandas.DataFrame.astype)(
-            self, dtype=col_dtypes, **kwargs
+            self, dtype=col_dtypes, errors=errors
         )
 
     def infer_objects(self):
@@ -2175,7 +2362,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # END Abstract insert
 
     # Abstract drop
-    def drop(self, index=None, columns=None):
+    def drop(self, index=None, columns=None, errors: str = "raise"):
         """
         Drop specified rows or columns.
 
@@ -2185,6 +2372,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Labels of rows to drop.
         columns : list of labels, optional
             Labels of columns to drop.
+        errors : str, default: "raise"
+            If 'ignore', suppress error and only existing labels are dropped.
 
         Returns
         -------
@@ -2195,7 +2384,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             return self
         else:
             return DataFrameDefault.register(pandas.DataFrame.drop)(
-                self, index=index, columns=columns
+                self, index=index, columns=columns, errors=errors
             )
 
     # END drop
@@ -2479,7 +2668,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         agg_kwargs,
         drop=False,
     ):
-        return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.size)(
+        result = GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.size)(
             self,
             by=by,
             axis=axis,
@@ -2489,6 +2678,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             drop=drop,
             method="size",
         )
+        if not groupby_kwargs.get("as_index", False):
+            # Renaming 'MODIN_UNNAMED_SERIES_LABEL' to a proper name
+            result.columns = result.columns[:-1].append(pandas.Index(["size"]))
+        return result
 
     @doc_utils.add_refer_to("GroupBy.aggregate")
     def groupby_agg(
@@ -3055,7 +3248,143 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return self.index if axis == 0 else self.columns
 
-    def take_2d(self, index=None, columns=None):
+    def take_2d_labels(
+        self,
+        index,
+        columns,
+    ):
+        """
+        Take the given labels.
+
+        Parameters
+        ----------
+        index : slice, scalar, list-like, or BaseQueryCompiler
+            Labels of rows to grab.
+        columns : slice, scalar, list-like, or BaseQueryCompiler
+            Labels of columns to grab.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Subset of this QueryCompiler.
+        """
+        row_lookup, col_lookup = self.get_positions_from_labels(index, columns)
+        if isinstance(row_lookup, slice):
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=row_lookup != slice(None),
+                extra_log=f"Only None-slices are acceptable as a slice argument in masking, got: {row_lookup}",
+            )
+            row_lookup = None
+        if isinstance(col_lookup, slice):
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=col_lookup != slice(None),
+                extra_log=f"Only None-slices are acceptable as a slice argument in masking, got: {col_lookup}",
+            )
+            col_lookup = None
+        return self.take_2d_positional(row_lookup, col_lookup)
+
+    def get_positions_from_labels(self, row_loc, col_loc):
+        """
+        Compute index and column positions from their respective locators.
+
+        Inputs to this method are arguments the the pandas user could pass to loc.
+        This function will compute the corresponding index and column positions
+        that the user could equivalently pass to iloc.
+
+        Parameters
+        ----------
+        row_loc : scalar, slice, list, array or tuple
+            Row locator.
+        col_loc : scalar, slice, list, array or tuple
+            Columns locator.
+
+        Returns
+        -------
+        row_lookup : slice(None) if full axis grab, pandas.RangeIndex if repetition is detected, numpy.ndarray otherwise
+            List of index labels.
+        col_lookup : slice(None) if full axis grab, pandas.RangeIndex if repetition is detected, numpy.ndarray otherwise
+            List of columns labels.
+
+        Notes
+        -----
+        Usage of `slice(None)` as a resulting lookup is a hack to pass information about
+        full-axis grab without computing actual indices that triggers lazy computations.
+        Ideally, this API should get rid of using slices as indexers and either use a
+        common ``Indexer`` object or range and ``np.ndarray`` only.
+        """
+        from modin.pandas.indexing import (
+            is_boolean_array,
+            is_list_like,
+            is_range_like,
+            boolean_mask_to_numeric,
+        )
+
+        lookups = []
+        for axis, axis_loc in enumerate((row_loc, col_loc)):
+            if is_scalar(axis_loc):
+                axis_loc = np.array([axis_loc])
+            if isinstance(axis_loc, slice) or is_range_like(axis_loc):
+                if isinstance(axis_loc, slice) and axis_loc == slice(None):
+                    axis_lookup = axis_loc
+                else:
+                    axis_labels = self.get_axis(axis)
+                    # `slice_indexer` returns a fully-defined numeric slice for a non-fully-defined labels-based slice
+                    axis_lookup = axis_labels.slice_indexer(
+                        axis_loc.start, axis_loc.stop, axis_loc.step
+                    )
+                    # Converting negative indices to their actual positions:
+                    axis_lookup = pandas.RangeIndex(
+                        start=(
+                            axis_lookup.start
+                            if axis_lookup.start >= 0
+                            else axis_lookup.start + len(axis_labels)
+                        ),
+                        stop=(
+                            axis_lookup.stop
+                            if axis_lookup.stop >= 0
+                            else axis_lookup.stop + len(axis_labels)
+                        ),
+                        step=axis_lookup.step,
+                    )
+            elif self.has_multiindex(axis):
+                # `Index.get_locs` raises an IndexError by itself if missing labels were provided,
+                # we don't have to do missing-check for the received `axis_lookup`.
+                if isinstance(axis_loc, pandas.MultiIndex):
+                    axis_lookup = self.get_axis(axis).get_indexer_for(axis_loc)
+                else:
+                    axis_lookup = self.get_axis(axis).get_locs(axis_loc)
+            elif is_boolean_array(axis_loc):
+                axis_lookup = boolean_mask_to_numeric(axis_loc)
+            else:
+                axis_labels = self.get_axis(axis)
+                if is_list_like(axis_loc) and not isinstance(
+                    axis_loc, (np.ndarray, pandas.Index)
+                ):
+                    # `Index.get_indexer_for` works much faster with numpy arrays than with python lists,
+                    # so although we lose some time here on converting to numpy, `Index.get_indexer_for`
+                    # speedup covers the loss that we gain here.
+                    axis_loc = np.array(axis_loc, dtype=axis_labels.dtype)
+                axis_lookup = axis_labels.get_indexer_for(axis_loc)
+                # `Index.get_indexer_for` sets -1 value for missing labels, we have to verify whether
+                # there are any -1 in the received indexer to raise a KeyError here.
+                missing_mask = axis_lookup == -1
+                if missing_mask.any():
+                    missing_labels = (
+                        axis_loc[missing_mask]
+                        if is_list_like(axis_loc)
+                        # If `axis_loc` is not a list-like then we can't select certain
+                        # labels that are missing and so printing the whole indexer
+                        else axis_loc
+                    )
+                    raise KeyError(missing_labels)
+
+            if isinstance(axis_lookup, pandas.Index) and not is_range_like(axis_lookup):
+                axis_lookup = axis_lookup.values
+
+            lookups.append(axis_lookup)
+        return lookups
+
+    def take_2d_positional(self, index=None, columns=None):
         """
         Index QueryCompiler with passed keys.
 
@@ -3191,7 +3520,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # END Abstract methods for QueryCompiler
 
-    @property
+    @pandas.util.cache_readonly
     def __constructor__(self):
         """
         Get query compiler constructor.
@@ -3774,12 +4103,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, resample_kwargs, method, limit
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="first element", refer_to="first", params="_method : str"
-    )
-    def resample_first(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="first element", refer_to="first")
+    def resample_first(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.first)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
     # FIXME: This function takes Modin DataFrame via `obj` parameter,
@@ -3849,44 +4176,34 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             **kwargs,
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="last element", params="_method : str", refer_to="last"
-    )
-    def resample_last(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="last element", refer_to="last")
+    def resample_last(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.last)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="maximum value", params="_method : str", refer_to="max"
-    )
-    def resample_max(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="maximum value", refer_to="max")
+    def resample_max(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.max)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="mean value", params="_method : str", refer_to="mean"
-    )
-    def resample_mean(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="mean value", refer_to="mean")
+    def resample_mean(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.mean)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="median value", params="_method : str", refer_to="median"
-    )
-    def resample_median(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="median value", refer_to="median")
+    def resample_median(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.median)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="minimum value", params="_method : str", refer_to="min"
-    )
-    def resample_min(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="minimum value", refer_to="min")
+    def resample_min(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.min)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
     @doc_utils.doc_resample_fillna(method="'nearest'", refer_to="nearest")
@@ -3895,37 +4212,33 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, resample_kwargs, limit
         )
 
-    @doc_utils.doc_resample_reduce(
-        result="number of unique values", params="_method : str", refer_to="nunique"
-    )
-    def resample_nunique(self, resample_kwargs, _method, *args, **kwargs):
+    @doc_utils.doc_resample_reduce(result="number of unique values", refer_to="nunique")
+    def resample_nunique(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.nunique)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
     # FIXME: Query Compiler shouldn't care about differences between Series and DataFrame
     # so `resample_ohlc_df` and `resample_ohlc_ser` should be combined (Modin issue #3104).
     @doc_utils.doc_resample_agg(
         action="compute open, high, low and close values",
-        params="_method : str",
         output="labels of columns containing computed values",
         refer_to="ohlc",
     )
-    def resample_ohlc_df(self, resample_kwargs, _method, *args, **kwargs):
+    def resample_ohlc_df(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.ohlc)(
-            self, resample_kwargs, _method, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
     @doc_utils.doc_resample_agg(
         action="compute open, high, low and close values",
-        params="_method : str",
         output="labels of columns containing computed values",
         refer_to="ohlc",
     )
-    def resample_ohlc_ser(self, resample_kwargs, _method, *args, **kwargs):
+    def resample_ohlc_ser(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(
             pandas.core.resample.Resampler.ohlc, squeeze_self=True
-        )(self, resample_kwargs, _method, *args, **kwargs)
+        )(self, resample_kwargs, *args, **kwargs)
 
     @doc_utils.doc_resample_fillna(method="'pad'", refer_to="pad")
     def resample_pad(self, resample_kwargs, limit):
@@ -3966,14 +4279,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.doc_resample_reduce(
         result="product",
-        params="""
-        _method : str
-        min_count : int""",
+        params="min_count : int",
         refer_to="prod",
     )
-    def resample_prod(self, resample_kwargs, _method, min_count, *args, **kwargs):
+    def resample_prod(self, resample_kwargs, min_count, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.prod)(
-            self, resample_kwargs, _method, min_count, *args, **kwargs
+            self, resample_kwargs, min_count, *args, **kwargs
         )
 
     @doc_utils.doc_resample_reduce(
@@ -3986,12 +4297,11 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.doc_resample_reduce(
         result="standard error of the mean",
-        params="ddof : int, default: 1",
         refer_to="sem",
     )
-    def resample_sem(self, resample_kwargs, ddof=1, *args, **kwargs):
+    def resample_sem(self, resample_kwargs, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.sem)(
-            self, resample_kwargs, ddof, *args, **kwargs
+            self, resample_kwargs, *args, **kwargs
         )
 
     @doc_utils.doc_resample_reduce(
@@ -4012,14 +4322,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.doc_resample_reduce(
         result="sum",
-        params="""
-        _method : str
-        min_count : int""",
+        params="min_count : int",
         refer_to="sum",
     )
-    def resample_sum(self, resample_kwargs, _method, min_count, *args, **kwargs):
+    def resample_sum(self, resample_kwargs, min_count, *args, **kwargs):
         return ResampleDefault.register(pandas.core.resample.Resampler.sum)(
-            self, resample_kwargs, _method, min_count, *args, **kwargs
+            self, resample_kwargs, min_count, *args, **kwargs
         )
 
     def resample_transform(self, resample_kwargs, arg, *args, **kwargs):
@@ -4215,6 +4523,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     )
     def str_match(self, pat, case=True, flags=0, na=np.NaN):
         return StrDefault.register(pandas.Series.str.match)(self, pat, case, flags, na)
+
+    @doc_utils.doc_str_method(
+        refer_to="extract",
+        params="""
+        pat : str
+        flags : int, default: 0
+        expand : bool, default: True""",
+    )
+    def str_extract(self, pat, flags=0, expand=True):
+        return StrDefault.register(pandas.Series.str.extract)(self, pat, flags, expand)
 
     @doc_utils.doc_str_method(
         refer_to="normalize", params="form : {'NFC', 'NFKC', 'NFD', 'NFKD'}"
@@ -4714,7 +5032,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     prod_min_count = prod
 
     @doc_utils.add_refer_to("DataFrame.compare")
-    def compare(self, other, align_axis, keep_shape, keep_equal):
+    def compare(self, other, align_axis, keep_shape, keep_equal, result_names):
         """
         Compare data of two QueryCompilers and highlight the difference.
 
@@ -4726,6 +5044,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         align_axis : {0, 1}
         keep_shape : bool
         keep_equal : bool
+        result_names : tuple
 
         Returns
         -------
@@ -4739,6 +5058,41 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             align_axis=align_axis,
             keep_shape=keep_shape,
             keep_equal=keep_equal,
+            result_names=result_names,
         )
+
+    def repartition(self, axis=None):
+        """
+        Repartitioning QueryCompiler objects to get ideal partitions inside.
+
+        Allows to improve performance where the query compiler can't improve
+        yet by doing implicit repartitioning.
+
+        Parameters
+        ----------
+        axis : {0, 1, None}, optional
+            The axis along which the repartitioning occurs.
+            `None` is used for repartitioning along both axes.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            The repartitioned BaseQueryCompiler.
+        """
+        if StorageFormat.get() == "Hdk":
+            # Hdk uses only one partition, it makes
+            # no sense for it to repartition the dataframe.
+            return self
+
+        axes = [0, 1] if axis is None else [axis]
+
+        new_query_compiler = self
+        for _ax in axes:
+            new_query_compiler = new_query_compiler.__constructor__(
+                new_query_compiler._modin_frame.apply_full_axis(
+                    _ax, lambda df: df, keep_partitioning=False
+                )
+            )
+        return new_query_compiler
 
     # End of DataFrame methods

@@ -109,7 +109,9 @@ class FactoryDispatcher(object):
     @classmethod
     def get_factory(cls) -> factories.BaseFactory:
         """Get current factory."""
-        # mostly for testing
+        if cls.__factory is None:
+            Engine.subscribe(cls._update_factory)
+            StorageFormat.subscribe(cls._update_factory)
         return cls.__factory
 
     @classmethod
@@ -138,18 +140,16 @@ class FactoryDispatcher(object):
                 # allow missing factories in experimenal mode only
                 if hasattr(factories, "Experimental" + factory_name):
                     msg = (
-                        "{0} on {1} is only accessible through the experimental API.\nRun "
-                        + "`import modin.experimental.pandas as pd` to use {0} on {1}."
+                        "{0} is only accessible through the experimental API.\nRun "
+                        + "`import modin.experimental.pandas as pd` to use {0}."
                     )
                 else:
                     msg = (
-                        "Cannot find a factory for partition '{}' and execution engine '{}'. "
+                        "Cannot find factory {}. "
                         + "Potential reason might be incorrect environment variable value for "
                         + f"{StorageFormat.varname} or {Engine.varname}"
                     )
-                raise FactoryNotFoundError(
-                    msg.format(StorageFormat.get(), Engine.get())
-                )
+                raise FactoryNotFoundError(msg.format(factory_name))
             cls.__factory = StubFactory.set_failing_name(factory_name)
         else:
             cls.__factory.prepare()
@@ -157,152 +157,148 @@ class FactoryDispatcher(object):
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._from_pandas)
     def from_pandas(cls, df):
-        return cls.__factory._from_pandas(df)
+        return cls.get_factory()._from_pandas(df)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._from_arrow)
     def from_arrow(cls, at):
-        return cls.__factory._from_arrow(at)
+        return cls.get_factory()._from_arrow(at)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._from_non_pandas)
     def from_non_pandas(cls, *args, **kwargs):
-        return cls.__factory._from_non_pandas(*args, **kwargs)
+        return cls.get_factory()._from_non_pandas(*args, **kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._from_dataframe)
     def from_dataframe(cls, *args, **kwargs):
-        return cls.__factory._from_dataframe(*args, **kwargs)
+        return cls.get_factory()._from_dataframe(*args, **kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_parquet)
     def read_parquet(cls, **kwargs):
-        return cls.__factory._read_parquet(**kwargs)
+        return cls.get_factory()._read_parquet(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_csv)
     def read_csv(cls, **kwargs):
-        return cls.__factory._read_csv(**kwargs)
+        return cls.get_factory()._read_csv(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.ExperimentalPandasOnRayFactory._read_csv_glob)
     def read_csv_glob(cls, **kwargs):
-        return cls.__factory._read_csv_glob(**kwargs)
+        return cls.get_factory()._read_csv_glob(**kwargs)
 
     @classmethod
     @_inherit_docstrings(
         factories.ExperimentalPandasOnRayFactory._read_pickle_distributed
     )
     def read_pickle_distributed(cls, **kwargs):
-        return cls.__factory._read_pickle_distributed(**kwargs)
+        return cls.get_factory()._read_pickle_distributed(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_json)
     def read_json(cls, **kwargs):
-        return cls.__factory._read_json(**kwargs)
+        return cls.get_factory()._read_json(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_gbq)
     def read_gbq(cls, **kwargs):
-        return cls.__factory._read_gbq(**kwargs)
+        return cls.get_factory()._read_gbq(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_html)
     def read_html(cls, **kwargs):
-        return cls.__factory._read_html(**kwargs)
+        return cls.get_factory()._read_html(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_clipboard)
     def read_clipboard(cls, **kwargs):
-        return cls.__factory._read_clipboard(**kwargs)
+        return cls.get_factory()._read_clipboard(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_excel)
     def read_excel(cls, **kwargs):
-        return cls.__factory._read_excel(**kwargs)
+        return cls.get_factory()._read_excel(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_hdf)
     def read_hdf(cls, **kwargs):
-        return cls.__factory._read_hdf(**kwargs)
+        return cls.get_factory()._read_hdf(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_feather)
     def read_feather(cls, **kwargs):
-        return cls.__factory._read_feather(**kwargs)
+        return cls.get_factory()._read_feather(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_stata)
     def read_stata(cls, **kwargs):
-        return cls.__factory._read_stata(**kwargs)
+        return cls.get_factory()._read_stata(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_sas)
     def read_sas(cls, **kwargs):  # pragma: no cover
-        return cls.__factory._read_sas(**kwargs)
+        return cls.get_factory()._read_sas(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_pickle)
     def read_pickle(cls, **kwargs):
-        return cls.__factory._read_pickle(**kwargs)
+        return cls.get_factory()._read_pickle(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_sql)
     def read_sql(cls, **kwargs):
-        return cls.__factory._read_sql(**kwargs)
+        return cls.get_factory()._read_sql(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_fwf)
     def read_fwf(cls, **kwargs):
-        return cls.__factory._read_fwf(**kwargs)
+        return cls.get_factory()._read_fwf(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_sql_table)
     def read_sql_table(cls, **kwargs):
-        return cls.__factory._read_sql_table(**kwargs)
+        return cls.get_factory()._read_sql_table(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_sql_query)
     def read_sql_query(cls, **kwargs):
-        return cls.__factory._read_sql_query(**kwargs)
+        return cls.get_factory()._read_sql_query(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_spss)
     def read_spss(cls, **kwargs):
-        return cls.__factory._read_spss(**kwargs)
+        return cls.get_factory()._read_spss(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._to_sql)
     def to_sql(cls, *args, **kwargs):
-        return cls.__factory._to_sql(*args, **kwargs)
+        return cls.get_factory()._to_sql(*args, **kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._to_pickle)
     def to_pickle(cls, *args, **kwargs):
-        return cls.__factory._to_pickle(*args, **kwargs)
+        return cls.get_factory()._to_pickle(*args, **kwargs)
 
     @classmethod
     @_inherit_docstrings(
         factories.ExperimentalPandasOnRayFactory._to_pickle_distributed
     )
     def to_pickle_distributed(cls, *args, **kwargs):
-        return cls.__factory._to_pickle_distributed(*args, **kwargs)
+        return cls.get_factory()._to_pickle_distributed(*args, **kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.ExperimentalPandasOnRayFactory._read_custom_text)
     def read_custom_text(cls, **kwargs):
-        return cls.__factory._read_custom_text(**kwargs)
+        return cls.get_factory()._read_custom_text(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._to_csv)
     def to_csv(cls, *args, **kwargs):
-        return cls.__factory._to_csv(*args, **kwargs)
+        return cls.get_factory()._to_csv(*args, **kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._to_parquet)
     def to_parquet(cls, *args, **kwargs):
-        return cls.__factory._to_parquet(*args, **kwargs)
-
-
-Engine.subscribe(FactoryDispatcher._update_factory)
-StorageFormat.subscribe(FactoryDispatcher._update_factory)
+        return cls.get_factory()._to_parquet(*args, **kwargs)

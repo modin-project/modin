@@ -17,7 +17,7 @@ import io
 import os
 
 import pandas
-import ray
+from pandas.io.common import get_handle
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.ray.generic.io import RayIO
@@ -30,7 +30,6 @@ from modin.core.io import (
     SQLDispatcher,
     ExcelDispatcher,
 )
-from modin._compat.core.pd_common import get_handle as pd_get_handle
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVParser,
     PandasFWFParser,
@@ -40,7 +39,7 @@ from modin.core.storage_formats.pandas.parsers import (
     PandasSQLParser,
     PandasExcelParser,
 )
-from modin.core.execution.ray.common import RayTask, SignalActor
+from modin.core.execution.ray.common import RayWrapper, SignalActor
 from ..dataframe import PandasOnRayDataframe
 from ..partitioning import PandasOnRayDataframePartition
 
@@ -55,20 +54,22 @@ class PandasOnRayIO(RayIO):
         query_compiler_cls=PandasQueryCompiler,
         frame_cls=PandasOnRayDataframe,
     )
-    read_csv = type("", (RayTask, PandasCSVParser, CSVDispatcher), build_args).read
-    read_fwf = type("", (RayTask, PandasFWFParser, FWFDispatcher), build_args).read
-    read_json = type("", (RayTask, PandasJSONParser, JSONDispatcher), build_args).read
+    read_csv = type("", (RayWrapper, PandasCSVParser, CSVDispatcher), build_args).read
+    read_fwf = type("", (RayWrapper, PandasFWFParser, FWFDispatcher), build_args).read
+    read_json = type(
+        "", (RayWrapper, PandasJSONParser, JSONDispatcher), build_args
+    ).read
     read_parquet = type(
-        "", (RayTask, PandasParquetParser, ParquetDispatcher), build_args
+        "", (RayWrapper, PandasParquetParser, ParquetDispatcher), build_args
     ).read
     # Blocked on pandas-dev/pandas#12236. It is faster to default to pandas.
-    # read_hdf = type("", (RayTask, PandasHDFParser, HDFReader), build_args).read
+    # read_hdf = type("", (RayWrapper, PandasHDFParser, HDFReader), build_args).read
     read_feather = type(
-        "", (RayTask, PandasFeatherParser, FeatherDispatcher), build_args
+        "", (RayWrapper, PandasFeatherParser, FeatherDispatcher), build_args
     ).read
-    read_sql = type("", (RayTask, PandasSQLParser, SQLDispatcher), build_args).read
+    read_sql = type("", (RayWrapper, PandasSQLParser, SQLDispatcher), build_args).read
     read_excel = type(
-        "", (RayTask, PandasExcelParser, ExcelDispatcher), build_args
+        "", (RayWrapper, PandasExcelParser, ExcelDispatcher), build_args
     ).read
 
     @classmethod
@@ -201,10 +202,10 @@ class PandasOnRayIO(RayIO):
             csv_kwargs["path_or_buf"].close()
 
             # each process waits for its turn to write to a file
-            ray.get(signals.wait.remote(partition_idx))
+            RayWrapper.materialize(signals.wait.remote(partition_idx))
 
             # preparing to write data from the buffer to a file
-            with pd_get_handle(
+            with get_handle(
                 path_or_buf,
                 # in case when using URL in implicit text mode
                 # pandas try to open `path_or_buf` in binary mode
@@ -218,12 +219,12 @@ class PandasOnRayIO(RayIO):
                 handles.handle.write(content)
 
             # signal that the next process can start writing to the file
-            ray.get(signals.send.remote(partition_idx + 1))
+            RayWrapper.materialize(signals.send.remote(partition_idx + 1))
             # used for synchronization purposes
             return pandas.DataFrame()
 
         # signaling that the partition with id==0 can be written to the file
-        ray.get(signals.send.remote(0))
+        RayWrapper.materialize(signals.send.remote(0))
         # Ensure that the metadata is syncrhonized
         qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
@@ -236,7 +237,9 @@ class PandasOnRayIO(RayIO):
             max_retries=0,
         )
         # pending completion
-        ray.get([partition.list_of_blocks[0] for partition in result.flatten()])
+        RayWrapper.materialize(
+            [partition.list_of_blocks[0] for partition in result.flatten()]
+        )
 
     @staticmethod
     def _to_parquet_check_support(kwargs):
@@ -301,6 +304,8 @@ class PandasOnRayIO(RayIO):
             df.to_parquet(**kwargs)
             return pandas.DataFrame()
 
+        # Ensure that the metadata is synchronized
+        qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
             partitions=qc._modin_frame._partitions,
@@ -309,4 +314,6 @@ class PandasOnRayIO(RayIO):
             lengths=None,
             enumerate_partitions=True,
         )
-        ray.get([part.list_of_blocks[0] for row in result for part in row])
+        RayWrapper.materialize(
+            [part.list_of_blocks[0] for row in result for part in row]
+        )

@@ -14,13 +14,13 @@ default to pandas.
 
 .. note::
     Currently, the second column reflects implementation status for Ray and Dask engines. By default, support for a method
-    in the Omnisci engine could be treated as ``D`` unless ``Notes`` column contains additional information. Similarly,
-    by default ``Notes`` contains information about ``Ray`` and ``Dask`` engines unless ``Omnisci`` is explicitly mentioned.
+    in the HDK engine could be treated as ``D`` unless ``Notes`` column contains additional information. Similarly,
+    by default ``Notes`` contains information about ``Ray`` and ``Dask`` engines unless ``Hdk`` is explicitly mentioned.
 
 +---------------------------+---------------------------------+----------------------------------------------------+
 | Utility method            | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.concat`_              | Y                               | **Omnisci**: ``Y`` but ``sort`` and                |
+| `pd.concat`_              | Y                               | **Hdk**: ``Y`` but ``sort`` and                    |
 |                           |                                 | `ignore_index`` parameters ignored                 |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | `pd.eval`_                | Y                               |                                                    |
@@ -35,6 +35,8 @@ default to pandas.
 | `pd.to_numeric`_          | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | `pd.factorize`_           | D                               |                                                    |
++---------------------------+---------------------------------+----------------------------------------------------+
+| `pd.from_dummies`_        | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | `pd.qcut`_                | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
@@ -112,6 +114,7 @@ contributing a distributed version of any of these objects, feel free to open a
 .. _`pd.cut`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.cut.html#pandas.cut
 .. _`pd.to_numeric`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.to_numeric.html#pandas.to_numeric
 .. _`pd.factorize`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.factorize.html#pandas.factorize
+.. _`pd.from_dummies`: https://pandas.pydata.org/docs/reference/api/pandas.from_dummies.html#pandas-from-dummies
 .. _`pd.qcut`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.qcut.html#pandas.qcut
 .. _`pd.to_datetime`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.to_datetime.html#pandas.to_datetime
 .. _`pd.get_dummies`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.get_dummies.html#pandas.get_dummies

@@ -129,6 +129,7 @@ parse_dates_values_by_id = {
     "list_of_list_of_ints": [[1, 2, 3]],
     "list_of_list_of_strings_and_ints": [["year", 2, "date"]],
     "empty_list": [],
+    "dict": {"year_and_month": [1, 2], "day": ["date"]},
     "nonexistent_string_column": ["z"],
     "nonexistent_int_column": [99],
 }
@@ -280,7 +281,7 @@ join_type_values = list(join_type.values())
 # Test functions for applymap
 test_func = {
     "plus one": lambda x: x + 1,
-    "convert to string": lambda x: str(x),
+    "convert to string": str,
     "square": lambda x: x * x,
     "identity": lambda x: x,
     "return false": lambda x: False,
@@ -479,6 +480,49 @@ COMP_TO_EXT = {"gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
 time_parsing_csv_path = "modin/pandas/test/data/test_time_parsing.csv"
 
 
+class CustomIntegerForAddition:
+    def __init__(self, value: int):
+        self.value = value
+
+    def __add__(self, other):
+        return self.value + other
+
+    def __radd__(self, other):
+        return other + self.value
+
+
+class NonCommutativeMultiplyInteger:
+    """int-like class with non-commutative multiply operation.
+
+    We need to test that rmul and mul do different things even when
+    multiplication is not commutative, but almost all multiplication is
+    commutative. This class' fake multiplication overloads are not commutative
+    when you multiply an instance of this class with pandas.series, which
+    does not know how to __mul__ with this class. e.g.
+
+    NonCommutativeMultiplyInteger(2) * pd.Series(1, dtype=int) == pd.Series(2, dtype=int)
+    pd.Series(1, dtype=int) * NonCommutativeMultiplyInteger(2) == pd.Series(3, dtype=int)
+    """
+
+    def __init__(self, value: int):
+        if not isinstance(value, int):
+            raise TypeError(
+                f"must initialize with integer, but got {value} of type {type(value)}"
+            )
+        self.value = value
+
+    def __mul__(self, other):
+        # Note that we need to check other is an int, otherwise when we (left) mul
+        # this with a series, we'll just multiply self.value by the series, whereas
+        # we want to make the series do an rmul instead.
+        if not isinstance(other, int):
+            return NotImplemented
+        return self.value * other
+
+    def __rmul__(self, other):
+        return self.value * other + 1
+
+
 def categories_equals(left, right):
     assert (left.ordered and right.ordered) or (not left.ordered and not right.ordered)
     assert_extension_array_equal(left, right)
@@ -487,13 +531,12 @@ def categories_equals(left, right):
 def df_categories_equals(df1, df2):
     if not hasattr(df1, "select_dtypes"):
         if isinstance(df1, pandas.CategoricalDtype):
-            return categories_equals(df1, df2)
+            categories_equals(df1, df2)
         elif isinstance(getattr(df1, "dtype"), pandas.CategoricalDtype) and isinstance(
-            getattr(df1, "dtype"), pandas.CategoricalDtype
+            getattr(df2, "dtype"), pandas.CategoricalDtype
         ):
-            return categories_equals(df1.dtype, df2.dtype)
-        else:
-            return True
+            categories_equals(df1.dtype, df2.dtype)
+        return True
 
     df1_categorical = df1.select_dtypes(include="category")
     df2_categorical = df2.select_dtypes(include="category")
@@ -597,6 +640,13 @@ def df_equals(df1, df2):
         assert_index_equal(df1, df2)
     elif isinstance(df1, pandas.Series) and isinstance(df2, pandas.Series):
         assert_series_equal(df1, df2, check_dtype=False, check_series_type=False)
+    elif (
+        hasattr(df1, "dtype")
+        and hasattr(df2, "dtype")
+        and isinstance(df1.dtype, pandas.core.dtypes.dtypes.ExtensionDtype)
+        and isinstance(df2.dtype, pandas.core.dtypes.dtypes.ExtensionDtype)
+    ):
+        assert_extension_array_equal(df1, df2)
     elif isinstance(df1, groupby_types) and isinstance(df2, groupby_types):
         for g1, g2 in zip(df1, df2):
             assert g1[0] == g2[0]
@@ -1065,7 +1115,6 @@ def insert_lines_to_csv(
     encoding: str
         Encoding type that should be used during file reading and writing.
     """
-    cols_number = len(pandas.read_csv(csv_name, nrows=1).columns)
     if lines_type == "blank":
         lines_data = []
     elif lines_type == "bad":
@@ -1076,7 +1125,6 @@ def insert_lines_to_csv(
             f"acceptable values for  parameter are ['blank', 'bad'], actually passed {lines_type}"
         )
     lines = []
-    dialect = "excel"
     with open(csv_name, "r", encoding=encoding, newline="") as read_file:
         try:
             dialect = csv.Sniffer().sniff(read_file.read())

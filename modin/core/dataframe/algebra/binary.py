@@ -23,7 +23,7 @@ class Binary(Operator):
     """Builder class for Binary operator."""
 
     @classmethod
-    def call(cls, func, join_type="outer", labels="replace"):
+    def register(cls, func, join_type="outer", labels="replace"):
         """
         Build template binary operator.
 
@@ -86,7 +86,9 @@ class Binary(Operator):
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.broadcast_apply(
                             axis,
-                            lambda l, r: func(l, r.squeeze(), *args, **kwargs),
+                            lambda left, right: func(
+                                left, right.squeeze(), *args, **kwargs
+                            ),
                             other._modin_frame,
                             join_type=join_type,
                             labels=labels,
@@ -102,7 +104,9 @@ class Binary(Operator):
                         )
                     )
             else:
-                if isinstance(other, (list, np.ndarray, pandas.Series)):
+                # TODO: it's possible to chunk the `other` and broadcast them to partitions
+                # accordingly, in that way we will be able to use more efficient `._modin_frame.map()`
+                if isinstance(other, (dict, list, np.ndarray, pandas.Series)):
                     new_modin_frame = query_compiler._modin_frame.apply_full_axis(
                         axis,
                         lambda df: func(df, other, *args, **kwargs),

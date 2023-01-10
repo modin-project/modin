@@ -28,15 +28,23 @@ from modin.error_message import ErrorMessage
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
 
-from modin._compat.core.base_io import (
-    BaseIOCompat,
-    _doc_default_io_method,
-    _doc_returns_qc,
-    _doc_returns_qc_or_parser,
-)
+_doc_default_io_method = """
+{summary} using pandas.
+For parameters description please refer to pandas API.
+
+Returns
+-------
+{returns}
+"""
+
+_doc_returns_qc = """BaseQueryCompiler
+    QueryCompiler with read data."""
+
+_doc_returns_qc_or_parser = """BaseQueryCompiler or TextParser
+    QueryCompiler or TextParser with read data."""
 
 
-class BaseIO(BaseIOCompat):
+class BaseIO:
     """Class for basic utils and default implementation of IO functions."""
 
     query_compiler_cls: BaseQueryCompiler = None
@@ -114,7 +122,7 @@ class BaseIO(BaseIOCompat):
         summary="Load a parquet object from the file path, returning a query compiler",
         returns=_doc_returns_qc,
     )
-    def _read_parquet(cls, **kwargs):  # noqa: PR01
+    def read_parquet(cls, **kwargs):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_parquet`")
         return cls.from_pandas(
             pandas.read_parquet(
@@ -129,39 +137,20 @@ class BaseIO(BaseIOCompat):
         summary="Read a comma-separated values (CSV) file into query compiler",
         returns=_doc_returns_qc_or_parser,
     )
-    def _read_csv(
+    def read_csv(
         cls,
         filepath_or_buffer,
         **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_csv`")
-        return cls._read(filepath_or_buffer=filepath_or_buffer, **kwargs)
-
-    @classmethod
-    def _read(cls, **kwargs):
-        """
-        Read csv file into query compiler.
-
-        Parameters
-        ----------
-        **kwargs : dict
-            `read_csv` function kwargs including `filepath_or_buffer` parameter.
-
-        Returns
-        -------
-        BaseQueryCompiler
-            QueryCompiler with read data.
-        """
-        pd_obj = pandas.read_csv(**kwargs)
+        pd_obj = pandas.read_csv(filepath_or_buffer, **kwargs)
         if isinstance(pd_obj, pandas.DataFrame):
             return cls.from_pandas(pd_obj)
         if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
             # Overwriting the read method should return a Modin DataFrame for calls
             # to __next__ and get_chunk
             pd_read = pd_obj.read
-            pd_obj.read = lambda *args, **kwargs: cls.from_pandas(
-                pd_read(*args, **kwargs)
-            )
+            pd_obj.read = lambda *args, **kw: cls.from_pandas(pd_read(*args, **kw))
         return pd_obj
 
     @classmethod
@@ -171,7 +160,7 @@ class BaseIO(BaseIOCompat):
         summary="Convert a JSON string to query compiler",
         returns=_doc_returns_qc,
     )
-    def _read_json(
+    def read_json(
         cls,
         **kwargs,
     ):  # noqa: PR01
@@ -246,26 +235,29 @@ class BaseIO(BaseIOCompat):
         na_values=None,
         keep_default_na=True,
         displayed_only=True,
+        **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_html`")
-        kwargs = {
-            "io": io,
-            "match": match,
-            "flavor": flavor,
-            "header": header,
-            "index_col": index_col,
-            "skiprows": skiprows,
-            "attrs": attrs,
-            "parse_dates": parse_dates,
-            "thousands": thousands,
-            "encoding": encoding,
-            "decimal": decimal,
-            "converters": converters,
-            "na_values": na_values,
-            "keep_default_na": keep_default_na,
-            "displayed_only": displayed_only,
-        }
-        return cls.from_pandas(pandas.read_html(**kwargs)[0])
+        return cls.from_pandas(
+            pandas.read_html(
+                io=io,
+                match=match,
+                flavor=flavor,
+                header=header,
+                index_col=index_col,
+                skiprows=skiprows,
+                attrs=attrs,
+                parse_dates=parse_dates,
+                thousands=thousands,
+                encoding=encoding,
+                decimal=decimal,
+                converters=converters,
+                na_values=na_values,
+                keep_default_na=keep_default_na,
+                displayed_only=displayed_only,
+                **kwargs,
+            )[0]
+        )
 
     @classmethod
     @_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")
@@ -407,7 +399,7 @@ class BaseIO(BaseIOCompat):
         summary="Load a feather-format object from the file path into query compiler",
         returns=_doc_returns_qc,
     )
-    def _read_feather(
+    def read_feather(
         cls,
         path,
         **kwargs,
@@ -427,7 +419,7 @@ class BaseIO(BaseIOCompat):
         summary="Read Stata file into query compiler",
         returns=_doc_returns_qc,
     )
-    def _read_stata(
+    def read_stata(
         cls,
         filepath_or_buffer,
         **kwargs,
@@ -450,6 +442,7 @@ class BaseIO(BaseIOCompat):
         encoding=None,
         chunksize=None,
         iterator=False,
+        **kwargs,
     ):  # pragma: no cover # noqa: PR01
         ErrorMessage.default_to_pandas("`read_sas`")
         return cls.from_pandas(
@@ -460,6 +453,7 @@ class BaseIO(BaseIOCompat):
                 encoding=encoding,
                 chunksize=chunksize,
                 iterator=iterator,
+                **kwargs,
             )
         )
 
@@ -470,7 +464,7 @@ class BaseIO(BaseIOCompat):
         summary="Load pickled pandas object (or any object) from file into query compiler",
         returns=_doc_returns_qc,
     )
-    def _read_pickle(
+    def read_pickle(
         cls,
         filepath_or_buffer,
         **kwargs,
@@ -585,7 +579,7 @@ class BaseIO(BaseIOCompat):
         summary="Read SQL query into query compiler",
         returns=_doc_returns_qc,
     )
-    def _read_sql_query(
+    def read_sql_query(
         cls,
         sql,
         con,
@@ -649,7 +643,7 @@ class BaseIO(BaseIOCompat):
     @_inherit_docstrings(
         pandas.DataFrame.to_pickle, apilink="pandas.DataFrame.to_pickle"
     )
-    def _to_pickle(
+    def to_pickle(
         cls,
         obj: Any,
         filepath_or_buffer,

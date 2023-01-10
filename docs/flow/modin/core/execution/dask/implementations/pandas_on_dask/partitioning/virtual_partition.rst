@@ -8,7 +8,7 @@ The axis partition is a wrapper over a list of block partitions that are stored 
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.dask.implementations.pandas_on_dask.partitioning.virtual_partition.PandasOnDaskDataframeVirtualPartition
+.. autoclass:: modin.core.execution.dask.implementations.pandas_on_dask.partitioning.PandasOnDaskDataframeVirtualPartition
   :members:
 
 PandasOnDaskDataframeColumnPartition
@@ -17,7 +17,7 @@ PandasOnDaskDataframeColumnPartition
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.dask.implementations.pandas_on_dask.partitioning.virtual_partition.PandasOnDaskDataframeColumnPartition
+.. autoclass:: modin.core.execution.dask.implementations.pandas_on_dask.partitioning.PandasOnDaskDataframeColumnPartition
   :members:
 
 PandasOnDaskDataframeRowPartition
@@ -26,5 +26,5 @@ PandasOnDaskDataframeRowPartition
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.dask.implementations.pandas_on_dask.partitioning.virtual_partition.PandasOnDaskDataframeRowPartition
+.. autoclass:: modin.core.execution.dask.implementations.pandas_on_dask.partitioning.PandasOnDaskDataframeRowPartition
   :members:

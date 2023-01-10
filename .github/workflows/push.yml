@@ -28,7 +28,9 @@ jobs:
           environment-file: environment-dev.yml
           python-version: 3.8
           channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+          use-only-tar-bz2: false
       - name: Conda environment
         run: |
           conda info
@@ -76,24 +78,26 @@ jobs:
           environment-file: environment-dev.yml
           python-version: 3.8
           channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+          use-only-tar-bz2: false
       - name: Conda environment
         run: |
           conda info
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_binary.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_default.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_iter.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_reduce.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_udf.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_window.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_concat.py --execution=${{ matrix.execution }}
@@ -102,7 +106,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
       - uses: codecov/codecov-action@v2
 
-  test-omnisci:
+  test-hdk:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -110,8 +114,8 @@ jobs:
     env:
       MODIN_EXPERIMENTAL: "True"
       MODIN_ENGINE: "native"
-      MODIN_STORAGE_FORMAT: "omnisci"
-    name: Test OmniSci storage format, Python 3.8
+      MODIN_STORAGE_FORMAT: "hdk"
+    name: Test HDK storage format, Python 3.8
     steps:
       - uses: actions/checkout@v2
         with:
@@ -119,21 +123,104 @@ jobs:
       - name: Setting up Modin environment
         uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: modin_on_omnisci
-          environment-file: requirements/env_omnisci.yml
+          activate-environment: modin_on_hdk
+          environment-file: requirements/env_hdk.yml
           python-version: 3.8
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+          use-only-tar-bz2: false
       - name: Conda environment
         run: |
           conda info
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest modin/test/storage_formats/omnisci/test_internals.py
-      - run: pytest modin/experimental/core/execution/native/implementations/omnisci_on_native/test/test_dataframe.py
-      - run: pytest modin/pandas/test/test_io.py::TestCsv
-      - run: pytest modin/test/interchange/dataframe_protocol/test_general.py
-      - run: pytest modin/test/interchange/dataframe_protocol/omnisci
+      - run: python -m pytest modin/test/storage_formats/hdk/test_internals.py
+      - run: python -m pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_dataframe.py
+      - run: python -m pytest modin/pandas/test/test_io.py::TestCsv
+      - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
+      - run: python -m pytest modin/test/interchange/dataframe_protocol/hdk
+      - uses: codecov/codecov-action@v2
+
+  test-all-unidist:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      matrix:
+        python-version: ["3.8"]
+        unidist-backend: ["mpi"]
+    env:
+      MODIN_ENGINE: "Unidist"
+      UNIDIST_BACKEND: ${{matrix.unidist-backend}}
+      # Only test reading from SQL server and postgres on ubuntu for now.
+      # Eventually, we should test on Windows, too, but we will have to set up
+      # the servers differently.
+      MODIN_TEST_READ_FROM_SQL_SERVER: true
+      MODIN_TEST_READ_FROM_POSTGRES: true
+    name: test-ubuntu (engine unidist ${{matrix.unidist-backend}}, python ${{matrix.python-version}})
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('requirements/env_unidist.yml') }}
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
+          activate-environment: modin_on_unidist
+          environment-file: requirements/env_unidist.yml
+          python-version: ${{matrix.python-version}}
+          channel-priority: strict
+          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+          use-only-tar-bz2: false
+      - name: Conda environment
+        run: |
+          conda info
+          conda list
+      - name: Install HDF5
+        run: sudo apt update && sudo apt install -y libhdf5-dev
+      - name: Set up postgres
+        # Locally, specifying port 2345:5432 works, but 2345:2345 and 5432:5432 do not. This solution is from
+        # https://stackoverflow.com/questions/36415654/cant-connect-docker-postgresql-9-3
+        run: |
+          sudo docker pull postgres
+          sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
+      - run: MODIN_BENCHMARK_MODE=True mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_repartition.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_binary.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_default.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_indexing.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_iter.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_join_sort.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_map_metadata.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_reduce.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_udf.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_window.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_pickle.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_series.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_rolling.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_concat.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_groupby.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_reshape.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_general.py
+      - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
+      - run: ./.github/workflows/sql_server/set_up_sql_server.sh
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_io.py --verbose
+      - run: mpiexec -n 1 python -m pytest modin/experimental/pandas/test/test_io_exp.py
+      - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py
+      - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
+      - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
       - uses: codecov/codecov-action@v2
 
   test-all:
@@ -177,7 +264,9 @@ jobs:
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
           channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+          use-only-tar-bz2: false
       - name: Conda environment
         run: |
           conda info
@@ -190,21 +279,23 @@ jobs:
         run: |
           sudo docker pull postgres
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
+      - run: MODIN_BENCHMARK_MODE=True python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
+      - run: python -m pytest modin/pandas/test/internals/test_repartition.py
+      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_default.py
+      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
         if: matrix.engine == 'ray'
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
+      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
         if: matrix.engine == 'ray'
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_default.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_udf.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_window.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
       - run: python -m pytest -n 2 modin/pandas/test/test_concat.py
@@ -218,8 +309,8 @@ jobs:
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: python -m pytest modin/pandas/test/test_io.py
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - run: pytest modin/test/interchange/dataframe_protocol/test_general.py
-      - run: pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
+      - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
+      - run: python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
       - uses: codecov/codecov-action@v2
 
   test-windows:
@@ -253,9 +344,6 @@ jobs:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-windows
     steps:
-      - name: Limit ray memory
-        run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
-        if: matrix.engine == 'ray'
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
@@ -276,12 +364,26 @@ jobs:
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
           channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          auto-update-conda: true # this enable `use-only-tar-bz2` feature on Windows
+          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+          use-only-tar-bz2: false
       - name: Conda environment
         run: |
           conda info
           conda list
+      - name: Start local ray cluster
+        # Try a few times to start ray to work around
+        # https://github.com/modin-project/modin/issues/4562
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          command: |
+            ray start --head --port=6379 --object-store-memory=1000000000
+        if: matrix.engine == 'ray'
+      - name: Tell Modin to use existing ray cluster
+        run: echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
+        if: matrix.engine == 'ray'
       - run: python -m pytest ${{matrix.test-task}}
         if: matrix.test-task != 'modin/pandas/test/test_io.py'
       - timeout-minutes: 30
@@ -322,7 +424,9 @@ jobs:
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
           channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+          use-only-tar-bz2: false
       - name: Conda environment
         run: |
           conda info
@@ -364,7 +468,9 @@ jobs:
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
           channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+          use-only-tar-bz2: false
       - name: Conda environment
         run: |
           conda info

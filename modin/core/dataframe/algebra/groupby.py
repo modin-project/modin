@@ -26,7 +26,7 @@ class GroupByReduce(TreeReduce):
     """Builder class for GroupBy aggregation functions."""
 
     @classmethod
-    def call(cls, map_func, reduce_func=None, **call_kwds):
+    def register(cls, map_func, reduce_func=None, **call_kwds):
         """
         Build template GroupBy aggregation function.
 
@@ -80,6 +80,7 @@ class GroupByReduce(TreeReduce):
         agg_kwargs,
         other=None,
         by=None,
+        drop=False,
     ):
         """
         Execute Map phase of GroupByReduce.
@@ -108,6 +109,8 @@ class GroupByReduce(TreeReduce):
         by : level index name or list of such labels, optional
             Index levels, that is used to determine groups.
             If not specified, `other` parameter is used.
+        drop : bool, default: False
+            Indicates whether or not by-data came from the `self` frame.
 
         Returns
         -------
@@ -124,10 +127,12 @@ class GroupByReduce(TreeReduce):
         # present in the func-dict:
         apply_func = cls.try_filter_dict(map_func, df)
         if other is not None:
-            # Other is a broadcasted partition that represents 'by' columns
-            # Concatenate it with 'df' to group on its columns names
-            other = other.squeeze(axis=axis ^ 1)
-            if isinstance(other, pandas.DataFrame):
+            # Other is a broadcasted partition that represents 'by' data to group on.
+            # If 'drop' then the 'by' data came from the 'self' frame, thus
+            # inserting missed columns to the partition to group on them.
+            if drop or isinstance(
+                other := other.squeeze(axis=axis ^ 1), pandas.DataFrame
+            ):
                 df = pandas.concat(
                     [df] + [other[[o for o in other if o not in df]]],
                     axis=1,
@@ -439,6 +444,7 @@ class GroupByReduce(TreeReduce):
                     map_func=map_func,
                     agg_args=agg_args,
                     agg_kwargs=agg_kwargs,
+                    drop=drop,
                     **kwargs,
                 )
 

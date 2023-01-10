@@ -20,7 +20,7 @@ class Map(Operator):
     """Builder class for Map operator."""
 
     @classmethod
-    def call(cls, function, *call_args, **call_kwds):
+    def register(cls, function, *call_args, **call_kwds):
         """
         Build Map operator that will be performed across each partition.
 

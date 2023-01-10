@@ -16,13 +16,13 @@
 from typing import List, Hashable, Optional
 
 import numpy as np
-import ray
 
 from modin.error_message import ErrorMessage
 from modin.pandas.utils import check_both_not_none
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe import (
     PandasOnRayDataframe,
 )
+from modin.core.execution.ray.common import RayWrapper
 from ..partitioning import (
     cuDFOnRayDataframePartition,
     cuDFOnRayDataframePartitionManager,
@@ -66,8 +66,8 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
             axis is not None and axis not in [0, 1]
         )
 
-        cum_row_lengths = np.cumsum([0] + self._row_lengths)
-        cum_col_widths = np.cumsum([0] + self._column_widths)
+        cum_row_lengths = np.cumsum([0] + self.row_lengths)
+        cum_col_widths = np.cumsum([0] + self.column_widths)
 
         def apply_idx_objs(df, idx, cols, axis):
             # cudf does not support set_axis. It only supports rename with 1-to-1 mapping.
@@ -180,7 +180,7 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
                 # on the partition. Often this will be the same length as the current
                 # length, but sometimes it is different, thus the extra calculation.
                 new_row_lengths = [
-                    len(range(*idx.indices(self._row_lengths[p])))
+                    len(range(*idx.indices(self.row_lengths[p])))
                     for p, idx in row_partitions_list.items()
                 ]
                 # Use the slice to calculate the new row index
@@ -189,10 +189,8 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
                 new_row_lengths = [len(idx) for _, idx in row_partitions_list.items()]
                 new_index = self.index[sorted(row_positions)]
         else:
-            row_partitions_list = {
-                i: slice(None) for i in range(len(self._row_lengths))
-            }
-            new_row_lengths = self._row_lengths
+            row_partitions_list = {i: slice(None) for i in range(len(self.row_lengths))}
+            new_row_lengths = self.row_lengths
             new_index = self.index
 
         if col_labels is not None:
@@ -204,7 +202,7 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
                 # on the partition. Often this will be the same length as the current
                 # length, but sometimes it is different, thus the extra calculation.
                 new_col_widths = [
-                    len(range(*idx.indices(self._column_widths[p])))
+                    len(range(*idx.indices(self.column_widths[p])))
                     for p, idx in col_partitions_list.items()
                 ]
                 # Use the slice to calculate the new columns
@@ -215,7 +213,7 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
                     sum(new_col_widths),
                     len(new_columns),
                     col_positions,
-                    self._column_widths,
+                    self.column_widths,
                     col_partitions_list,
                 )
                 if self._dtypes is not None:
@@ -231,9 +229,9 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
                     new_dtypes = None
         else:
             col_partitions_list = {
-                i: slice(None) for i in range(len(self._column_widths))
+                i: slice(None) for i in range(len(self.column_widths))
             }
-            new_col_widths = self._column_widths
+            new_col_widths = self.column_widths
             new_columns = self.columns
             if self._dtypes is not None:
                 new_dtypes = self.dtypes
@@ -260,7 +258,7 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
         )
 
         shape = key_and_gpus.shape[:2]
-        keys = ray.get(key_and_gpus[:, :, 0].flatten().tolist())
+        keys = RayWrapper.materialize(key_and_gpus[:, :, 0].flatten().tolist())
         gpu_managers = key_and_gpus[:, :, 1].flatten().tolist()
         new_partitions = self._partition_mgr_cls._create_partitions(
             keys, gpu_managers

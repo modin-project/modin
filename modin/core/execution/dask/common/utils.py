@@ -15,16 +15,10 @@
 
 from modin.config import CpuCount, Memory, NPartitions
 from modin.error_message import ErrorMessage
-from modin._compat import PandasCompatVersion
 
 
 def initialize_dask():
     """Initialize Dask environment."""
-    if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-        try:
-            import pickle5  # noqa: F401
-        except ImportError:
-            raise RuntimeError("Dask usage by Modin requires pickle5 on older Python")
     from distributed.client import default_client
 
     try:

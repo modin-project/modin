@@ -27,25 +27,6 @@ class Operator(object):
         )
 
     @classmethod
-    def call(cls, func, **call_kwds):
-        """
-        Build operator that applies source function across the entire dataset.
-
-        Parameters
-        ----------
-        func : callable
-            Source function.
-        **call_kwds : kwargs
-            Kwargs that will be used for building.
-
-        Returns
-        -------
-        callable
-        """
-        raise NotImplementedError("Please implement in child class")
-
-    @classmethod
-    # FIXME: `register` is an alias for `call` method. One of them should be removed.
     def register(cls, func, **kwargs):
         """
         Build operator that applies source function across the entire dataset.
@@ -61,7 +42,7 @@ class Operator(object):
         -------
         callable
         """
-        return cls.call(func, **kwargs)
+        raise NotImplementedError("Please implement in child class")
 
     @classmethod
     def validate_axis(cls, axis: Optional[int]) -> int:

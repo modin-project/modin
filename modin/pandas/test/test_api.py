@@ -15,7 +15,6 @@ import pandas
 import inspect
 import numpy as np
 
-from modin._compat import PandasCompatVersion
 import modin.pandas as pd
 
 
@@ -25,6 +24,7 @@ def test_top_level_api_equality():
     missing_from_modin = set(pandas_dir) - set(modin_dir)
     extra_in_modin = set(modin_dir) - set(pandas_dir)
     ignore_pandas = [
+        "annotations",
         "np",
         "testing",
         "tests",
@@ -63,9 +63,6 @@ def test_top_level_api_equality():
         "warnings",
         "os",
     ]
-    if PandasCompatVersion.CURRENT == PandasCompatVersion.PY36:
-        # pandas 1.1 does not have read_xml but we define a stub
-        ignore_modin += ["read_xml"]
 
     assert not len(
         missing_from_modin - set(ignore_pandas)
@@ -168,6 +165,8 @@ def test_dataframe_api_equality():
 
     # These have to be checked manually
     allowed_different = ["to_hdf", "hist"]
+    # skip verifying .rename_axis() due to https://github.com/modin-project/modin/issues/5077
+    allowed_different.append("rename_axis")
     difference = []
 
     # Check that we don't have extra params
@@ -255,6 +254,8 @@ def test_series_api_equality():
 
     # These have to be checked manually
     allowed_different = ["to_hdf", "hist"]
+    # skip verifying .rename_axis() due to https://github.com/modin-project/modin/issues/5077
+    allowed_different.append("rename_axis")
     difference = []
 
     for m in modin_dir:
