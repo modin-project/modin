@@ -95,8 +95,8 @@ class ClientQueryCompiler(BaseQueryCompiler):
             raise value
         return value
 
-    def to_numpy(self):
-        value = self._service.to_numpy(self._id)
+    def to_numpy(self, **kwargs):
+        value = self._service.to_numpy(self._id, **kwargs)
         if isinstance(value, Exception):
             raise value
         return value
