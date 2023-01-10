@@ -46,7 +46,8 @@ class BaseSparseAccessor(ClassLogger):
         self._parent = data
         self._validate(data)
 
-    def _validate(self, data):
+    @classmethod
+    def _validate(cls, data):
         """
         Verify that `data` dtypes are compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.
 
@@ -87,7 +88,8 @@ class BaseSparseAccessor(ClassLogger):
 
 @_inherit_docstrings(pandas.core.arrays.sparse.accessor.SparseFrameAccessor)
 class SparseFrameAccessor(BaseSparseAccessor):
-    def _validate(self, data):
+    @classmethod
+    def _validate(cls, data):
         """
         Verify that `data` dtypes are compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.
 
@@ -103,7 +105,7 @@ class SparseFrameAccessor(BaseSparseAccessor):
         """
         dtypes = data.dtypes
         if not all(isinstance(t, SparseDtype) for t in dtypes):
-            raise AttributeError(self._validation_msg)
+            raise AttributeError(cls._validation_msg)
 
     @property
     def density(self):
@@ -125,7 +127,8 @@ class SparseFrameAccessor(BaseSparseAccessor):
 
 @_inherit_docstrings(pandas.core.arrays.sparse.accessor.SparseAccessor)
 class SparseAccessor(BaseSparseAccessor):
-    def _validate(self, data):
+    @classmethod
+    def _validate(cls, data):
         """
         Verify that `data` dtype is compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.
 
@@ -140,7 +143,7 @@ class SparseAccessor(BaseSparseAccessor):
             If check fails.
         """
         if not isinstance(data.dtype, SparseDtype):
-            raise AttributeError(self._validation_msg)
+            raise AttributeError(cls._validation_msg)
 
     @property
     def density(self):

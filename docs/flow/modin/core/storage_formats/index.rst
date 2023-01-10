@@ -10,7 +10,7 @@ partitions that hold ``pandas.DataFrame`` objects. Pandas is the most natural st
 since high-level DataFrame objects mirror its API, however, Modin's storage formats are not
 limited to the objects that conform to pandas API. There are formats that are able to store
 ``pyarrow.Table`` (:doc:`pyarrow storage format </flow/modin/experimental/core/storage_formats/pyarrow/index>`) or even instances of
-SQL-like databases (:doc:`OmniSci storage format </flow/modin/experimental/core/storage_formats/omnisci/index>`)
+SQL-like databases (:doc:`HDK storage format </flow/modin/experimental/core/storage_formats/hdk/index>`)
 inside Modin Dataframe's partitions.
 
 The storage format + execution engine (Ray, Dask, etc.) form the execution backend. 
@@ -54,7 +54,7 @@ whole methods can be handled at the API layer with the existing API.
 
 The query compiler is the level where Modin stops distinguishing DataFrame and Series (or column) objects.
 A Series is represented by a `1xN` query compiler, where the Series name is the column label.
-If Series is unnamed, then the label is ``"__reduced__"``. The high-level DataFrame API layer
+If Series is unnamed, then the label is ``MODIN_UNNAMED_SERIES_LABEL``, which is equal to ``"__reduced__"``. The high-level DataFrame API layer
 interprets a one-column query compiler as Series or DataFrame depending on the operation context.
 
 .. note::

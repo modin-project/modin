@@ -15,10 +15,10 @@
 
 from typing import Optional
 import pandas.core.window.rolling
-from modin.utils import _inherit_docstrings
-from modin.logging import ClassLogger
-
 from pandas.core.dtypes.common import is_list_like
+
+from modin.logging import ClassLogger
+from modin.utils import _inherit_docstrings
 
 
 @_inherit_docstrings(pandas.core.window.rolling.Window)
@@ -26,13 +26,14 @@ class Window(ClassLogger):
     def __init__(
         self,
         dataframe,
-        window,
+        window=None,
         min_periods=None,
         center=False,
         win_type=None,
         on=None,
         axis=0,
         closed=None,
+        step=None,
         method="single",
     ):
         self._dataframe = dataframe
@@ -45,6 +46,7 @@ class Window(ClassLogger):
             on,
             axis,
             closed,
+            step,
             method,
         ]
         self.axis = axis
@@ -86,15 +88,18 @@ class Rolling(ClassLogger):
     def __init__(
         self,
         dataframe,
-        window,
+        window=None,
         min_periods=None,
         center=False,
         win_type=None,
         on=None,
         axis=0,
         closed=None,
+        step=None,
         method="single",
     ):
+        if step is not None:
+            raise NotImplementedError("step parameter is not implemented yet.")
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
         self.rolling_args = [
@@ -105,6 +110,7 @@ class Rolling(ClassLogger):
             on,
             axis,
             closed,
+            step,
             method,
         ]
         self.axis = axis

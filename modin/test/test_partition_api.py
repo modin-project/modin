@@ -33,7 +33,7 @@ if Engine.get() == "Ray":
     get_func = ray.get
     FutureType = ray.ObjectRef
 elif Engine.get() == "Dask":
-    from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
+    from modin.core.execution.dask.common import DaskWrapper
     from distributed import Future
 
     put_func = lambda x: DaskWrapper.put(x)  # noqa: E731
@@ -80,7 +80,7 @@ def test_unwrap_partitions(axis, reverse_index, reverse_columns):
         for row_idx in range(expected_partitions.shape[0]):
             for col_idx in range(expected_partitions.shape[1]):
                 df_equals(
-                    get_func(expected_partitions[row_idx][col_idx]._data),
+                    get_func(expected_partitions[row_idx][col_idx].list_of_blocks[0]),
                     get_func(actual_partitions[row_idx][col_idx]),
                 )
     else:
@@ -96,7 +96,7 @@ def test_unwrap_partitions(axis, reverse_index, reverse_columns):
         actual_axis_partitions = unwrap_partitions(df, axis=axis)
         assert len(expected_axis_partitions) == len(actual_axis_partitions)
         for item_idx in range(len(expected_axis_partitions)):
-            if Engine.get() in ["Ray", "Dask"]:
+            if Engine.get() in ["Ray", "Dask", "Unidist"]:
                 df_equals(
                     get_func(expected_axis_partitions[item_idx]),
                     get_func(actual_axis_partitions[item_idx]),
@@ -130,7 +130,7 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
         if axis == 0
         else [num_cols, num_cols]
     )
-
+    futures = []
     if Engine.get() == "Ray":
         if axis is None:
             futures = [[put_func(df1), put_func(df2)]]

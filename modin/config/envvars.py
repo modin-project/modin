@@ -20,8 +20,10 @@ import warnings
 from packaging import version
 import secrets
 
+from pandas.util._decorators import doc  # type: ignore[attr-defined]
+
 from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
-from typing import Optional
+from typing import Any, Optional
 
 
 class EnvironmentVariable(Parameter, type=str, abstract=True):
@@ -75,7 +77,13 @@ class Engine(EnvironmentVariable, type=str):
     """Distribution engine to run queries by."""
 
     varname = "MODIN_ENGINE"
-    choices = ("Ray", "Dask", "Python", "Native")
+    choices = ("Ray", "Dask", "Python", "Native", "Unidist")
+
+    NOINIT_ENGINES = {
+        "Python",
+    }  # engines that don't require initialization, useful for unit tests
+
+    has_custom_engine = False
 
     @classmethod
     def _get_default(cls) -> str:
@@ -89,9 +97,12 @@ class Engine(EnvironmentVariable, type=str):
         from modin.utils import (
             MIN_RAY_VERSION,
             MIN_DASK_VERSION,
+            MIN_UNIDIST_VERSION,
         )
 
-        if IsDebug.get():
+        # If there's a custom engine, we don't need to check for any engine
+        # dependencies. Return the default "Python" engine.
+        if IsDebug.get() or cls.has_custom_engine:
             return "Python"
         try:
             import ray
@@ -122,18 +133,39 @@ class Engine(EnvironmentVariable, type=str):
                 )
             return "Dask"
         try:
-            # We import ``PyDbEngine`` from this module since correct import of ``PyDbEngine`` itself
-            # from Omnisci is located in it with all the necessary options for dlopen.
-            from modin.experimental.core.execution.native.implementations.omnisci_on_native.utils import (  # noqa
-                PyDbEngine,
+            # We import ``DbWorker`` from this module since correct import of ``DbWorker`` itself
+            # from HDK is located in it with all the necessary options for dlopen.
+            from modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker import (  # noqa
+                DbWorker,
             )
         except ImportError:
             pass
         else:
             return "Native"
+        try:
+            import unidist
+
+        except ImportError:
+            pass
+        else:
+            if version.parse(unidist.__version__) < MIN_UNIDIST_VERSION:
+                raise ImportError(
+                    "Please `pip install unidist[mpi]` to install compatible unidist on MPI "
+                    + "version "
+                    + f"(>={MIN_UNIDIST_VERSION})."
+                )
+            return "Unidist"
         raise ImportError(
             "Please refer to installation documentation page to install an engine"
         )
+
+    @classmethod
+    @doc(Parameter.add_option.__doc__)
+    def add_option(cls, choice: Any) -> Any:
+        choice = super().add_option(choice)
+        cls.NOINIT_ENGINES.add(choice)
+        cls.has_custom_engine = True
+        return choice
 
 
 class StorageFormat(EnvironmentVariable, type=str):
@@ -141,7 +173,7 @@ class StorageFormat(EnvironmentVariable, type=str):
 
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
-    choices = ("Pandas", "OmniSci", "Pyarrow", "Cudf")
+    choices = ("Pandas", "Hdk", "Pyarrow", "Cudf")
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
@@ -261,6 +293,12 @@ class DoTraceRpyc(EnvironmentVariable, type=bool):
     """Whether to trace RPyC calls (applicable for remote context)."""
 
     varname = "MODIN_TRACE_RPYC"
+
+
+class HdkFragmentSize(EnvironmentVariable, type=int):
+    """How big a fragment in HDK should be when creating a table (in rows)."""
+
+    varname = "MODIN_HDK_FRAGMENT_SIZE"
 
 
 class OmnisciFragmentSize(EnvironmentVariable, type=int):
@@ -470,15 +508,15 @@ class PersistentPickle(EnvironmentVariable, type=bool):
     default = False
 
 
-class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
+class HdkLaunchParameters(EnvironmentVariable, type=dict):
     """
-    Additional command line options for the OmniSci engine.
+    Additional command line options for the HDK engine.
 
     Please visit OmniSci documentation for the description of available parameters:
     https://docs.omnisci.com/installation-and-configuration/config-parameters#configuration-parameters-for-omniscidb
     """
 
-    varname = "MODIN_OMNISCI_LAUNCH_PARAMETERS"
+    varname = "MODIN_HDK_LAUNCH_PARAMETERS"
     default = {
         "enable_union": 1,
         "enable_columnar_output": 1,
@@ -489,7 +527,7 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
     }
 
     @classmethod
-    def get(self) -> dict:
+    def get(cls) -> dict:
         """
         Get the resulted command-line options.
 
@@ -500,12 +538,41 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
         dict
             Decoded and verified config value.
         """
+        if cls == OmnisciLaunchParameters or (
+            OmnisciLaunchParameters.varname in os.environ
+            and HdkLaunchParameters.varname not in os.environ
+        ):
+            return OmnisciLaunchParameters._get()
+        else:
+            return HdkLaunchParameters._get()
+
+    @classmethod
+    def _get(cls) -> dict:
+        """
+        Get the resulted command-line options.
+
+        Returns
+        -------
+        dict
+            Decoded and verified config value.
+        """
         custom_parameters = super().get()
-        result = self.default.copy()
+        result = cls.default.copy()
         result.update(
             {key.replace("-", "_"): value for key, value in custom_parameters.items()}
         )
         return result
+
+
+class OmnisciLaunchParameters(HdkLaunchParameters, type=dict):
+    """
+    Additional command line options for the OmniSci engine.
+
+    Please visit OmniSci documentation for the description of available parameters:
+    https://docs.omnisci.com/installation-and-configuration/config-parameters#configuration-parameters-for-omniscidb
+    """
+
+    varname = "MODIN_OMNISCI_LAUNCH_PARAMETERS"
 
 
 class MinPartitionSize(EnvironmentVariable, type=int):

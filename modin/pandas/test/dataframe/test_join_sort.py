@@ -15,10 +15,12 @@ import pytest
 import numpy as np
 import pandas
 import matplotlib
+
 import modin.pandas as pd
 from modin.utils import to_pandas
 
 from modin.pandas.test.utils import (
+    create_test_dfs,
     random_state,
     df_equals,
     arg_keys,
@@ -35,7 +37,7 @@ from modin.pandas.test.utils import (
     extra_test_parameters,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import NPartitions, Engine
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -436,14 +438,16 @@ def test_sort_index(axis, ascending, na_position):
         for df in [modin_df, pandas_df]:
             df.index = [(i - length / 2) % length for i in range(length)]
 
+    dfs = [modin_df, pandas_df]
     # Add NaNs to sorted index
-    for df in [modin_df, pandas_df]:
-        sort_index = df.axes[axis]
-        df.set_axis(
+    for idx in range(len(dfs)):
+        sort_index = dfs[idx].axes[axis]
+        dfs[idx] = dfs[idx].set_axis(
             [np.nan if i % 2 == 0 else sort_index[i] for i in range(len(sort_index))],
             axis=axis,
-            inplace=True,
+            copy=False,
         )
+    modin_df, pandas_df = dfs
 
     eval_general(
         modin_df,
@@ -617,16 +621,60 @@ def test_sort_values_with_string_index():
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.skipif(
+    Engine.get() not in ["Ray", "Dask", "Unidist"],
+    reason="We only need to test this case where sort does not default to pandas.",
+)
+@pytest.mark.parametrize("ascending", [True, False], ids=["True", "False"])
+@pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
+def test_sort_values_with_only_one_non_na_row_in_partition(ascending, na_position):
+    pandas_df = pandas.DataFrame(
+        np.random.rand(1000, 100), columns=[f"col {i}" for i in range(100)]
+    )
+    # Need to ensure that one of the partitions has all NA values except for one row
+    pandas_df.iloc[340:] = np.NaN
+    pandas_df.iloc[-1] = -4.0
+    modin_df = pd.DataFrame(pandas_df)
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.sort_values(
+            "col 3", ascending=ascending, na_position=na_position
+        ),
+    )
+
+
+@pytest.mark.skipif(
+    Engine.get() not in ["Ray", "Dask", "Unidist"],
+    reason="We only need to test this case where sort does not default to pandas.",
+)
+def test_sort_values_with_sort_key_on_partition_boundary():
+    modin_df = pd.DataFrame(
+        np.random.rand(1000, 100), columns=[f"col {i}" for i in range(100)]
+    )
+    sort_key = modin_df.columns[modin_df._query_compiler._modin_frame.column_widths[0]]
+    eval_general(modin_df, modin_df._to_pandas(), lambda df: df.sort_values(sort_key))
+
+
 def test_where():
+    columns = list("abcdefghij")
+
     frame_data = random_state.randn(100, 10)
-    pandas_df = pandas.DataFrame(frame_data, columns=list("abcdefghij"))
-    modin_df = pd.DataFrame(frame_data, columns=list("abcdefghij"))
+    modin_df, pandas_df = create_test_dfs(frame_data, columns=columns)
     pandas_cond_df = pandas_df % 5 < 2
     modin_cond_df = modin_df % 5 < 2
 
     pandas_result = pandas_df.where(pandas_cond_df, -pandas_df)
     modin_result = modin_df.where(modin_cond_df, -modin_df)
     assert all((to_pandas(modin_result) == pandas_result).all())
+
+    # Test that we choose the right values to replace when `other` == `True`
+    # everywhere.
+    other_data = np.full(shape=pandas_df.shape, fill_value=True)
+    modin_other, pandas_other = create_test_dfs(other_data, columns=columns)
+    pandas_result = pandas_df.where(pandas_cond_df, pandas_other)
+    modin_result = modin_df.where(modin_cond_df, modin_other)
+    df_equals(modin_result, pandas_result)
 
     other = pandas_df.loc[3]
     pandas_result = pandas_df.where(pandas_cond_df, other, axis=1)
@@ -641,6 +689,30 @@ def test_where():
     pandas_result = pandas_df.where(pandas_df < 2, True)
     modin_result = modin_df.where(modin_df < 2, True)
     assert all((to_pandas(modin_result) == pandas_result).all())
+
+
+def test_where_different_axis_order():
+    # Test `where` when `cond`, `df`, and `other` each have columns and index
+    # in different orders.
+    data = test_data["float_nan_data"]
+    pandas_df = pandas.DataFrame(data)
+    pandas_cond_df = pandas_df % 5 < 2
+    pandas_cond_df = pandas_cond_df.reindex(
+        columns=pandas_df.columns[::-1], index=pandas_df.index[::-1]
+    )
+    pandas_other_df = -pandas_df
+    pandas_other_df = pandas_other_df.reindex(
+        columns=pandas_df.columns[-1:].append(pandas_df.columns[:-1]),
+        index=pandas_df.index[-1:].append(pandas_df.index[:-1]),
+    )
+
+    modin_df = pd.DataFrame(pandas_df)
+    modin_cond_df = pd.DataFrame(pandas_cond_df)
+    modin_other_df = pd.DataFrame(pandas_other_df)
+
+    pandas_result = pandas_df.where(pandas_cond_df, pandas_other_df)
+    modin_result = modin_df.where(modin_cond_df, modin_other_df)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("align_axis", ["index", "columns"])

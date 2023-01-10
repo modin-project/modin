@@ -12,3 +12,19 @@
 # governing permissions and limitations under the License.
 
 """Base Modin Dataframe classes related to its partitioning and optimized for pandas on Dask execution."""
+
+from .partition import PandasOnDaskDataframePartition
+from .partition_manager import PandasOnDaskDataframePartitionManager
+from .virtual_partition import (
+    PandasOnDaskDataframeVirtualPartition,
+    PandasOnDaskDataframeColumnPartition,
+    PandasOnDaskDataframeRowPartition,
+)
+
+__all__ = [
+    "PandasOnDaskDataframePartition",
+    "PandasOnDaskDataframePartitionManager",
+    "PandasOnDaskDataframeVirtualPartition",
+    "PandasOnDaskDataframeColumnPartition",
+    "PandasOnDaskDataframeRowPartition",
+]

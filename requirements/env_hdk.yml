@@ -1,0 +1,31 @@
+name: modin_on_hdk
+channels:
+  - conda-forge
+dependencies:
+  - pandas==1.5.2
+  - pyarrow=8
+  - numpy>=1.18.5
+  - fsspec
+  - pip
+  - pytest>=6.0.1
+  - pytest-cov>=2.10.1
+  - pytest-xdist>=2.1.0
+  - coverage
+  - pygithub
+  - pyhdk==0.3
+  - s3fs>=2021.8
+  - psutil
+  - openpyxl
+  - xlrd
+  - sqlalchemy
+  - scipy
+  - xgboost>=1.7.1,<2.0.0
+  - scikit-learn-intelex
+  # code linters
+  - black
+  - flake8
+  - flake8-no-implicit-concat
+  - flake8-print
+  - pip:
+      # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
+      - numpydoc==1.1.0

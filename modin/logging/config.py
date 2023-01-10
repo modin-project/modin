@@ -141,7 +141,8 @@ def _create_logger(
 def configure_logging() -> None:
     """Configure Modin logging by setting up directory structure and formatting."""
     global __LOGGER_CONFIGURED__
-    job_id = uuid.uuid4().hex
+    current_timestamp = dt.datetime.now().strftime("%Y.%m.%d_%H-%M-%S")
+    job_id = f"{current_timestamp}_{uuid.uuid4().hex}"
 
     logger = _create_logger(
         "modin.logger.default",

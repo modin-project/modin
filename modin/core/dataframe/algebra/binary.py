@@ -23,7 +23,7 @@ class Binary(Operator):
     """Builder class for Binary operator."""
 
     @classmethod
-    def call(cls, func, join_type="outer", preserve_labels=False):
+    def register(cls, func, join_type="outer", labels="replace"):
         """
         Build template binary operator.
 
@@ -33,8 +33,9 @@ class Binary(Operator):
             Binary function to execute. Have to be able to accept at least two arguments.
         join_type : {'left', 'right', 'outer', 'inner', None}, default: 'outer'
             Type of join that will be used if indices of operands are not aligned.
-        preserve_labels : bool, default: False
-            Whether or not to force keep the axis labels of the right frame if the join occured.
+        labels : {"keep", "replace", "drop"}, default: "replace"
+            Whether keep labels from left Modin DataFrame, replace them with labels
+            from joined DataFrame or drop altogether to make them be computed lazily later.
 
         Returns
         -------
@@ -42,7 +43,9 @@ class Binary(Operator):
             Function that takes query compiler and executes binary operation.
         """
 
-        def caller(query_compiler, other, broadcast=False, *args, **kwargs):
+        def caller(
+            query_compiler, other, broadcast=False, *args, dtypes=None, **kwargs
+        ):
             """
             Apply binary `func` to passed operands.
 
@@ -58,6 +61,8 @@ class Binary(Operator):
                 at the query compiler level, so this parameter is a hint that passed from a high level API.
             *args : args,
                 Arguments that will be passed to `func`.
+            dtypes : "copy" or None, default: None
+                Whether to keep old dtypes or infer new dtypes from data.
             **kwargs : kwargs,
                 Arguments that will be passed to `func`.
 
@@ -81,31 +86,38 @@ class Binary(Operator):
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.broadcast_apply(
                             axis,
-                            lambda l, r: func(l, r.squeeze(), *args, **kwargs),
+                            lambda left, right: func(
+                                left, right.squeeze(), *args, **kwargs
+                            ),
                             other._modin_frame,
                             join_type=join_type,
-                            preserve_labels=preserve_labels,
+                            labels=labels,
+                            dtypes=dtypes,
                         )
                     )
                 else:
                     return query_compiler.__constructor__(
-                        query_compiler._modin_frame.binary_op(
+                        query_compiler._modin_frame.n_ary_op(
                             lambda x, y: func(x, y, *args, **kwargs),
-                            other._modin_frame,
+                            [other._modin_frame],
                             join_type=join_type,
                         )
                     )
             else:
-                if isinstance(other, (list, np.ndarray, pandas.Series)):
+                # TODO: it's possible to chunk the `other` and broadcast them to partitions
+                # accordingly, in that way we will be able to use more efficient `._modin_frame.map()`
+                if isinstance(other, (dict, list, np.ndarray, pandas.Series)):
                     new_modin_frame = query_compiler._modin_frame.apply_full_axis(
                         axis,
                         lambda df: func(df, other, *args, **kwargs),
                         new_index=query_compiler.index,
                         new_columns=query_compiler.columns,
+                        dtypes=dtypes,
                     )
                 else:
                     new_modin_frame = query_compiler._modin_frame.map(
-                        lambda df: func(df, other, *args, **kwargs)
+                        lambda df: func(df, other, *args, **kwargs),
+                        dtypes=dtypes,
                     )
                 return query_compiler.__constructor__(new_modin_frame)
 

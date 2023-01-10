@@ -75,9 +75,6 @@ SQL on Modin Dataframes
 
 Read about Modin Dataframe support for SQL queries in this recent `blog post`_. Check out the `Modin SQL documentation`_ as well!
 
-.. figure:: /img/modin_sql_example.png
-   :align: center
-
 Distributed XGBoost on Modin
 ----------------------------
 

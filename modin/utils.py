@@ -15,32 +15,77 @@
 
 import importlib
 import types
+from typing import (
+    Any,
+    Callable,
+    List,
+    Mapping,
+    Optional,
+    Union,
+    TypeVar,
+)
 import re
 import sys
 import json
 import codecs
 
+if sys.version_info < (3, 8):
+    from typing_extensions import Protocol, runtime_checkable
+else:
+    from typing import Protocol, runtime_checkable
+
 from textwrap import dedent, indent
-from typing import Union
 from packaging import version
 
 import pandas
 import numpy as np
 
 from pandas.util._decorators import Appender
-from pandas.util._print_versions import _get_sys_info, _get_dependency_info
+from pandas.util._print_versions import _get_sys_info, _get_dependency_info  # type: ignore[attr-defined]
 from pandas._typing import JSONSerializable
 
 from modin.config import Engine, StorageFormat, IsExperimental
 from modin._version import get_versions
 
+T = TypeVar("T")
+"""Generic type parameter"""
+
+Fn = TypeVar("Fn", bound=Callable)
+"""Function type parameter (used in decorators that don't change a function's signature)"""
+
+
+@runtime_checkable
+class SupportsPrivateToPandas(Protocol):  # noqa: PR01
+    """Structural type for objects with a ``_to_pandas`` method (note the leading underscore)."""
+
+    def _to_pandas(self) -> Any:  # noqa: GL08
+        # TODO add proper return type
+        pass
+
+
+@runtime_checkable
+class SupportsPublicToPandas(Protocol):  # noqa: PR01
+    """Structural type for objects with a ``to_pandas`` method (without a leading underscore)."""
+
+    def to_pandas(self) -> Any:  # noqa: GL08
+        pass
+
+
 MIN_RAY_VERSION = version.parse("1.4.0")
 MIN_DASK_VERSION = version.parse("2.22.0")
+MIN_UNIDIST_VERSION = version.parse("0.2.1")
 
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
 
+MODIN_UNNAMED_SERIES_LABEL = "__reduced__"
+"""
+The '__reduced__' name is used internally by the query compiler as a column name to
+represent pandas Series objects that are not explicitly assigned a name, so as to
+distinguish between an N-element series and 1xN dataframe.
+"""
 
-def _make_api_url(token):
+
+def _make_api_url(token: str) -> str:
     """
     Generate the link to pandas documentation.
 
@@ -109,7 +154,7 @@ def _get_indents(source: Union[list, str]) -> list:
     return indents
 
 
-def format_string(template: str, **kwargs) -> str:
+def format_string(template: str, **kwargs: str) -> str:
     """
     Insert passed values at the corresponding placeholders of the specified template.
 
@@ -193,7 +238,7 @@ def align_indents(source: str, target: str) -> str:
     return indent(target, " " * source_indent)
 
 
-def append_to_docstring(message: str):
+def append_to_docstring(message: str) -> Callable[[Fn], Fn]:
     """
     Create a decorator which appends passed message to the function's docstring.
 
@@ -207,7 +252,7 @@ def append_to_docstring(message: str):
     callable
     """
 
-    def decorator(func):
+    def decorator(func: Fn) -> Fn:
         to_append = align_indents(func.__doc__ or "", message)
         return Appender(to_append)(func)
 
@@ -215,8 +260,13 @@ def append_to_docstring(message: str):
 
 
 def _replace_doc(
-    source_obj, target_obj, overwrite, apilink, parent_cls=None, attr_name=None
-):
+    source_obj: object,
+    target_obj: object,
+    overwrite: bool,
+    apilink: Optional[Union[str, List[str]]],
+    parent_cls: Optional[Fn] = None,
+    attr_name: Optional[str] = None,
+) -> None:
     """
     Replace docstring in `target_obj`, possibly taking from `source_obj` and augmenting.
 
@@ -231,8 +281,8 @@ def _replace_doc(
     overwrite : bool
         Forces replacing the docstring with the one from `source_obj` even
         if `target_obj` has its own non-empty docstring.
-    apilink : str
-        If non-empty, insert the link to pandas API documentation.
+    apilink : str | List[str], optional
+        If non-empty, insert the link(s) to pandas API documentation.
         Should be the prefix part in the URL template, e.g. "pandas.DataFrame".
     parent_cls : class, optional
         If `target_obj` is an attribute of a class, `parent_cls` should be that class.
@@ -251,15 +301,14 @@ def _replace_doc(
     target_doc = target_obj.__doc__ or ""
     overwrite = overwrite or not target_doc
     doc = source_doc if overwrite else target_doc
-    apilink = [apilink] if not isinstance(apilink, list) and apilink else apilink
 
     if parent_cls and not attr_name:
         if isinstance(target_obj, property):
-            attr_name = target_obj.fget.__name__
+            attr_name = target_obj.fget.__name__  # type: ignore[union-attr]
         elif isinstance(target_obj, (staticmethod, classmethod)):
             attr_name = target_obj.__func__.__name__
         else:
-            attr_name = target_obj.__name__
+            attr_name = target_obj.__name__  # type: ignore[attr-defined]
 
     if (
         source_doc.strip()
@@ -267,14 +316,15 @@ def _replace_doc(
         and "pandas API documentation for " not in target_doc
         and (not (attr_name or "").startswith("_"))
     ):
-        links = [None] * len(apilink)
-        for i, link in enumerate(apilink):
+        apilink_l = [apilink] if not isinstance(apilink, list) and apilink else apilink
+        links = []
+        for link in apilink_l:
             if attr_name:
                 token = f"{link}.{attr_name}"
             else:
                 token = link
             url = _make_api_url(token)
-            links[i] = f"`{token} <{url}>`_"
+            links.append(f"`{token} <{url}>`_")
 
         indent_line = " " * _get_indent(doc)
         notes_section = f"\n{indent_line}Notes\n{indent_line}-----\n"
@@ -289,7 +339,8 @@ def _replace_doc(
 
     if parent_cls and isinstance(target_obj, property):
         if overwrite:
-            target_obj.fget.__doc_inherited__ = True
+            target_obj.fget.__doc_inherited__ = True  # type: ignore[union-attr]
+        assert attr_name is not None
         setattr(
             parent_cls,
             attr_name,
@@ -297,11 +348,16 @@ def _replace_doc(
         )
     else:
         if overwrite:
-            target_obj.__doc_inherited__ = True
+            target_obj.__doc_inherited__ = True  # type: ignore[attr-defined]
         target_obj.__doc__ = doc
 
 
-def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=None):
+def _inherit_docstrings(
+    parent: object,
+    excluded: List[object] = [],
+    overwrite_existing: bool = False,
+    apilink: Optional[Union[str, List[str]]] = None,
+) -> Callable[[Fn], Fn]:
     """
     Create a decorator which overwrites decorated object docstring(s).
 
@@ -313,14 +369,14 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
     ----------
     parent : object
         Parent object from which the decorated object inherits __doc__.
-    excluded : list, optional
+    excluded : list, default: []
         List of parent objects from which the class does not
         inherit docstrings.
     overwrite_existing : bool, default: False
         Allow overwriting docstrings that already exist in
         the decorated class.
-    apilink : str, default: None
-        If non-empty, insert the link to pandas API documentation.
+    apilink : str | List[str], optional
+        If non-empty, insert the link(s) to pandas API documentation.
         Should be the prefix part in the URL template, e.g. "pandas.DataFrame".
 
     Returns
@@ -335,21 +391,21 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
     which means that ancestor class attribute docstrings could also change.
     """
 
-    def _documentable_obj(obj):
+    def _documentable_obj(obj: object) -> bool:
         """Check if `obj` docstring could be patched."""
-        return (
+        return bool(
             callable(obj)
             or (isinstance(obj, property) and obj.fget)
             or (isinstance(obj, (staticmethod, classmethod)) and obj.__func__)
         )
 
-    def decorator(cls_or_func):
+    def decorator(cls_or_func: Fn) -> Fn:
         if parent not in excluded:
             _replace_doc(parent, cls_or_func, overwrite_existing, apilink)
 
         if not isinstance(cls_or_func, types.FunctionType):
             seen = set()
-            for base in cls_or_func.__mro__:
+            for base in cls_or_func.__mro__:  # type: ignore[attr-defined]
                 if base is object:
                     continue
                 for attr, obj in base.__dict__.items():
@@ -378,7 +434,8 @@ def _inherit_docstrings(parent, excluded=[], overwrite_existing=False, apilink=N
     return decorator
 
 
-def to_pandas(modin_obj):
+# TODO add proper type annotation
+def to_pandas(modin_obj: SupportsPrivateToPandas) -> Any:
     """
     Convert a Modin DataFrame/Series to a pandas DataFrame/Series.
 
@@ -395,7 +452,7 @@ def to_pandas(modin_obj):
     return modin_obj._to_pandas()
 
 
-def hashable(obj):
+def hashable(obj: bool) -> bool:
     """
     Return whether the `obj` is hashable.
 
@@ -408,6 +465,11 @@ def hashable(obj):
     -------
     bool
     """
+    # Happy path: if there's no __hash__ method, the object definitely isn't hashable
+    if not hasattr(obj, "__hash__"):
+        return False
+    # Otherwise, we may still need to check for type errors, as in the case of `hash(([],))`.
+    # (e.g. an unhashable object inside a tuple)
     try:
         hash(obj)
     except TypeError:
@@ -415,7 +477,7 @@ def hashable(obj):
     return True
 
 
-def try_cast_to_pandas(obj, squeeze=False):
+def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
     """
     Convert `obj` and all nested objects from Modin to pandas if it is possible.
 
@@ -433,19 +495,19 @@ def try_cast_to_pandas(obj, squeeze=False):
     object
         Converted object.
     """
-    if hasattr(obj, "_to_pandas"):
+    if isinstance(obj, SupportsPrivateToPandas):
         result = obj._to_pandas()
         if squeeze:
             result = result.squeeze(axis=1)
         return result
-    if hasattr(obj, "to_pandas"):
+    if isinstance(obj, SupportsPublicToPandas):
         result = obj.to_pandas()
         if squeeze:
             result = result.squeeze(axis=1)
         # Query compiler case, it doesn't have logic about convertion to Series
         if (
             isinstance(getattr(result, "name", None), str)
-            and result.name == "__reduced__"
+            and result.name == MODIN_UNNAMED_SERIES_LABEL
         ):
             result.name = None
         return result
@@ -465,7 +527,7 @@ def try_cast_to_pandas(obj, squeeze=False):
     return obj
 
 
-def wrap_into_list(*args, skipna=True):
+def wrap_into_list(*args: Any, skipna: bool = True) -> List[Any]:
     """
     Wrap a sequence of passed values in a flattened list.
 
@@ -485,7 +547,7 @@ def wrap_into_list(*args, skipna=True):
         Passed values wrapped in a list.
     """
 
-    def isnan(o):
+    def isnan(o: Any) -> bool:
         return o is None or (isinstance(o, float) and np.isnan(o))
 
     res = []
@@ -499,7 +561,7 @@ def wrap_into_list(*args, skipna=True):
     return res
 
 
-def wrap_udf_function(func):
+def wrap_udf_function(func: Callable) -> Callable:
     """
     Create a decorator that makes `func` return pandas objects instead of Modin.
 
@@ -513,7 +575,7 @@ def wrap_udf_function(func):
     callable
     """
 
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         result = func(*args, **kwargs)
         # if user accidently returns modin DataFrame or Series
         # casting it back to pandas to properly process
@@ -523,7 +585,7 @@ def wrap_udf_function(func):
     return wrapper
 
 
-def get_current_execution():
+def get_current_execution() -> str:
     """
     Return current execution name as a string.
 
@@ -535,7 +597,7 @@ def get_current_execution():
     return f"{'Experimental' if IsExperimental.get() else ''}{StorageFormat.get()}On{Engine.get()}"
 
 
-def instancer(_class):
+def instancer(_class: Callable[[], T]) -> T:
     """
     Create a dummy instance each time this is imported.
 
@@ -554,7 +616,7 @@ def instancer(_class):
     return _class()
 
 
-def import_optional_dependency(name, message):
+def import_optional_dependency(name: str, message: str) -> types.ModuleType:
     """
     Import an optional dependecy.
 
@@ -579,13 +641,13 @@ def import_optional_dependency(name, message):
         ) from None
 
 
-def _get_modin_deps_info() -> "dict[str, JSONSerializable]":
+def _get_modin_deps_info() -> Mapping[str, Optional[JSONSerializable]]:
     """
     Return Modin-specific dependencies information as a JSON serializable dictionary.
 
     Returns
     -------
-    dict[str, JSONSerializable]
+    Mapping[str, Optional[pandas.JSONSerializable]]
         The dictionary of Modin dependencies and their versions.
     """
     import modin  # delayed import so modin.__init__ is fully initialized
@@ -609,15 +671,15 @@ def _get_modin_deps_info() -> "dict[str, JSONSerializable]":
             )
 
     try:
-        # We import ``PyDbEngine`` from this module since correct import of ``PyDbEngine`` itself
-        # from Omnisci is located in it with all the necessary options for dlopen.
-        from modin.experimental.core.execution.native.implementations.omnisci_on_native.utils import (  # noqa
-            PyDbEngine,
+        # We import ``DbWorker`` from this module since correct import of ``DbWorker`` itself
+        # from HDK is located in it with all the necessary options for dlopen.
+        from modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker import (  # noqa
+            DbWorker,
         )
 
-        result["omniscidbe"] = "present"
+        result["hdk"] = "present"
     except ImportError:
-        result["omniscidbe"] = None
+        result["hdk"] = None
 
     return result
 

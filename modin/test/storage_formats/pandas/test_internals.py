@@ -18,7 +18,10 @@ from modin.pandas.test.utils import (
     df_equals,
 )
 from modin.config import NPartitions, Engine
+from modin.distributed.dataframe.pandas import from_partitions
+from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 
+import numpy as np
 import pandas
 import pytest
 
@@ -26,10 +29,10 @@ NPartitions.put(4)
 
 if Engine.get() == "Ray":
     import ray
-    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframePartition,
     )
-    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.virtual_partition import (
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframeColumnPartition,
         PandasOnRayDataframeRowPartition,
     )
@@ -39,14 +42,14 @@ if Engine.get() == "Ray":
     virtual_row_partition_class = PandasOnRayDataframeRowPartition
     put = ray.put
 elif Engine.get() == "Dask":
-    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.virtual_partition import (
+    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframeColumnPartition,
         PandasOnDaskDataframeRowPartition,
     )
-    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition import (
+    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframePartition,
     )
-    from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
+    from modin.core.execution.dask.common import DaskWrapper
 
     # initialize modin dataframe to initialize dask
     pd.DataFrame()
@@ -57,6 +60,65 @@ elif Engine.get() == "Dask":
     block_partition_class = PandasOnDaskDataframePartition
     virtual_column_partition_class = PandasOnDaskDataframeColumnPartition
     virtual_row_partition_class = PandasOnDaskDataframeRowPartition
+
+
+def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
+    """
+    Build ``modin.pandas.DataFrame`` from ``pandas.DataFrame`` according the `partitioning_scheme`.
+
+    Parameters
+    ----------
+    pandas_df : pandas.DataFrame
+    partitioning_scheme : dict[{"row_lengths", "column_widths"}] -> list of ints
+
+    Returns
+    -------
+    modin.pandas.DataFrame
+    """
+    row_partitions = split_result_of_axis_func_pandas(
+        axis=0,
+        num_splits=len(partitioning_scheme["row_lengths"]),
+        result=pandas_df,
+        length_list=partitioning_scheme["row_lengths"],
+    )
+    partitions = [
+        split_result_of_axis_func_pandas(
+            axis=1,
+            num_splits=len(partitioning_scheme["column_widths"]),
+            result=row_part,
+            length_list=partitioning_scheme["column_widths"],
+        )
+        for row_part in row_partitions
+    ]
+
+    md_df = from_partitions(
+        [[put(part) for part in row_parts] for row_parts in partitions], axis=None
+    )
+    return md_df
+
+
+def validate_partitions_cache(df):
+    """Assert that the ``PandasDataframe`` shape caches correspond to the actual partition's shapes."""
+    row_lengths = df._row_lengths_cache
+    column_widths = df._column_widths_cache
+
+    assert row_lengths is not None
+    assert column_widths is not None
+    assert df._partitions.shape[0] == len(row_lengths)
+    assert df._partitions.shape[1] == len(column_widths)
+
+    for i in range(df._partitions.shape[0]):
+        for j in range(df._partitions.shape[1]):
+            assert df._partitions[i, j].length() == row_lengths[i]
+            assert df._partitions[i, j].width() == column_widths[j]
+
+
+@pytest.fixture
+def set_num_partitions(request):
+    old_num_partitions = NPartitions.get()
+    NPartitions.put(request.param)
+    yield
+    NPartitions.put(old_num_partitions)
 
 
 def test_aligning_blocks():
@@ -96,6 +158,27 @@ def test_aligning_partitions():
     repr(modin_df2)
 
 
+@pytest.mark.parametrize("row_labels", [None, [("a", "")], ["a"]])
+@pytest.mark.parametrize("col_labels", [None, ["a1"], [("c1", "z")]])
+def test_take_2d_labels_or_positional(row_labels, col_labels):
+    kwargs = {
+        "index": [["a", "b", "c", "d"], ["", "", "x", "y"]],
+        "columns": [["a1", "b1", "c1", "d1"], ["", "", "z", "x"]],
+    }
+    md_df, pd_df = create_test_dfs(np.random.rand(4, 4), **kwargs)
+
+    _row_labels = slice(None) if row_labels is None else row_labels
+    _col_labels = slice(None) if col_labels is None else col_labels
+    pd_df = pd_df.loc[_row_labels, _col_labels]
+    modin_frame = md_df._query_compiler._modin_frame
+    new_modin_frame = modin_frame.take_2d_labels_or_positional(
+        row_labels=row_labels, col_labels=col_labels
+    )
+    md_df._query_compiler._modin_frame = new_modin_frame
+
+    df_equals(md_df, pd_df)
+
+
 @pytest.mark.parametrize("has_partitions_shape_cache", [True, False])
 @pytest.mark.parametrize("has_frame_shape_cache", [True, False])
 def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cache):
@@ -113,8 +196,8 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
 
     if has_frame_shape_cache:
         # Explicitly compute rows & columns shapes to store this info in frame's cache
-        modin_frame._row_lengths
-        modin_frame._column_widths
+        modin_frame.row_lengths
+        modin_frame.column_widths
     else:
         # Explicitly reset frame's cache
         modin_frame._row_lengths_cache = None
@@ -163,7 +246,13 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
         "large_df_plus_small_dfs",
     ],
 )
-def test_rebalance_partitions(test_type):
+@pytest.mark.parametrize(
+    "set_num_partitions",
+    [1, 4],
+    indirect=True,
+)
+def test_rebalance_partitions(test_type, set_num_partitions):
+    num_partitions = NPartitions.get()
     if test_type == "many_small_dfs":
         small_dfs = [
             pd.DataFrame(
@@ -204,8 +293,8 @@ def test_rebalance_partitions(test_type):
         col_length = 103
     large_modin_frame = large_df._query_compiler._modin_frame
     assert large_modin_frame._partitions.shape == (
-        NPartitions.get(),
-        NPartitions.get(),
+        num_partitions,
+        num_partitions,
     ), "Partitions were not rebalanced after concat."
     assert all(
         isinstance(ptn, large_modin_frame._partition_mgr_cls._column_partitions_class)
@@ -218,16 +307,16 @@ def test_rebalance_partitions(test_type):
         assert len(col) == col_length, "Partial axis partition detected."
         return col + 1
 
-    large_df = large_df.apply(col_apply_func)
-    new_large_modin_frame = large_df._query_compiler._modin_frame
-    assert new_large_modin_frame._partitions.shape == (
-        NPartitions.get(),
-        NPartitions.get(),
+    large_apply_result = large_df.apply(col_apply_func)
+    large_apply_result_frame = large_apply_result._query_compiler._modin_frame
+    assert large_apply_result_frame._partitions.shape == (
+        num_partitions,
+        num_partitions,
     ), "Partitions list shape is incorrect."
     assert all(
-        isinstance(ptn, new_large_modin_frame._partition_mgr_cls._partition_class)
-        for ptn in new_large_modin_frame._partitions.flatten()
-    ), "Partitions are not block partitioned after apply."
+        isinstance(ptn, large_apply_result_frame._partition_mgr_cls._partition_class)
+        for ptn in large_apply_result_frame._partitions.flatten()
+    ), "Partitions are not block partitioned after column-wise apply."
     large_df = pd.DataFrame(
         query_compiler=large_df._query_compiler.__constructor__(large_modin_frame)
     )
@@ -238,16 +327,27 @@ def test_rebalance_partitions(test_type):
         assert len(row) == 1000, "Partial axis partition detected."
         return row + 1
 
-    large_df = large_df.apply(row_apply_func, axis=1)
-    new_large_modin_frame = large_df._query_compiler._modin_frame
-    assert new_large_modin_frame._partitions.shape == (
-        4,
-        4,
+    large_apply_result = large_df.apply(row_apply_func, axis=1)
+    large_apply_result_frame = large_apply_result._query_compiler._modin_frame
+    assert large_apply_result_frame._partitions.shape == (
+        num_partitions,
+        num_partitions,
     ), "Partitions list shape is incorrect."
     assert all(
-        isinstance(ptn, new_large_modin_frame._partition_mgr_cls._partition_class)
-        for ptn in new_large_modin_frame._partitions.flatten()
-    ), "Partitions are not block partitioned after apply."
+        isinstance(ptn, large_apply_result_frame._partition_mgr_cls._partition_class)
+        for ptn in large_apply_result_frame._partitions.flatten()
+    ), "Partitions are not block partitioned after row-wise apply."
+
+    large_apply_result = large_df.applymap(lambda x: x)
+    large_apply_result_frame = large_apply_result._query_compiler._modin_frame
+    assert large_apply_result_frame._partitions.shape == (
+        num_partitions,
+        num_partitions,
+    ), "Partitions list shape is incorrect."
+    assert all(
+        isinstance(ptn, large_apply_result_frame._partition_mgr_cls._partition_class)
+        for ptn in large_apply_result_frame._partitions.flatten()
+    ), "Partitions are not block partitioned after element-wise apply."
 
 
 @pytest.mark.skipif(
@@ -367,3 +467,142 @@ class TestDrainVirtualPartitionCallQueue:
             level_three_virtual.to_pandas(),
             pd.DataFrame([1, 2, 3, 4], index=[0, 0, 0, 0]),
         )
+
+
+@pytest.mark.skipif(
+    Engine.get() not in ("Dask", "Ray"),
+    reason="Only Dask and Ray engines have virtual partitions.",
+)
+@pytest.mark.parametrize(
+    "virtual_partition_class",
+    (virtual_column_partition_class, virtual_row_partition_class),
+    ids=["partitions_spanning_all_columns", "partitions_spanning_all_rows"],
+)
+def test_virtual_partition_apply_not_returning_pandas_dataframe(
+    virtual_partition_class,
+):
+    # see https://github.com/modin-project/modin/issues/4811
+
+    partition = virtual_partition_class(
+        block_partition_class(put(pandas.DataFrame())), full_axis=False
+    )
+
+    apply_result = partition.apply(lambda df: 1).get()
+    assert apply_result == 1
+
+
+@pytest.mark.skipif(
+    Engine.get() != "Ray",
+    reason="Only ray.wait() does not take duplicate object refs.",
+)
+def test_virtual_partition_dup_object_ref():
+    # See https://github.com/modin-project/modin/issues/5045
+    frame_c = pd.DataFrame(np.zeros((100, 20), dtype=np.float32, order="C"))
+    frame_c = [frame_c] * 20
+    df = pd.concat(frame_c)
+    partition = df._query_compiler._modin_frame._partitions.flatten()[0]
+    obj_refs = partition.list_of_blocks
+    assert len(obj_refs) != len(
+        set(obj_refs)
+    ), "Test setup did not contain duplicate objects"
+    # The below call to wait() should not crash
+    partition.wait()
+
+
+__test_reorder_labels_cache_axis_positions = [
+    pytest.param(lambda index: None, id="no_reordering"),
+    pytest.param(lambda index: np.arange(len(index) - 1, -1, -1), id="reordering_only"),
+    pytest.param(
+        lambda index: [0, 1, 2, len(index) - 3, len(index) - 2, len(index) - 1],
+        id="projection_only",
+    ),
+    pytest.param(
+        lambda index: np.repeat(np.arange(len(index)), repeats=3), id="size_grow"
+    ),
+]
+
+
+@pytest.mark.parametrize("row_positions", __test_reorder_labels_cache_axis_positions)
+@pytest.mark.parametrize("col_positions", __test_reorder_labels_cache_axis_positions)
+@pytest.mark.parametrize(
+    "partitioning_scheme",
+    [
+        pytest.param(
+            lambda df: {
+                "row_lengths": [df.shape[0]],
+                "column_widths": [df.shape[1]],
+            },
+            id="single_partition",
+        ),
+        pytest.param(
+            lambda df: {
+                "row_lengths": [32, max(0, df.shape[0] - 32)],
+                "column_widths": [32, max(0, df.shape[1] - 32)],
+            },
+            id="two_unbalanced_partitions",
+        ),
+        pytest.param(
+            lambda df: {
+                "row_lengths": [df.shape[0] // NPartitions.get()] * NPartitions.get(),
+                "column_widths": [df.shape[1] // NPartitions.get()] * NPartitions.get(),
+            },
+            id="perfect_partitioning",
+        ),
+        pytest.param(
+            lambda df: {
+                "row_lengths": [2**i for i in range(NPartitions.get())],
+                "column_widths": [2**i for i in range(NPartitions.get())],
+            },
+            id="unbalanced_partitioning_equals_npartition",
+        ),
+        pytest.param(
+            lambda df: {
+                "row_lengths": [2] * (df.shape[0] // 2),
+                "column_widths": [2] * (df.shape[1] // 2),
+            },
+            id="unbalanced_partitioning",
+        ),
+    ],
+)
+def test_reorder_labels_cache(
+    row_positions,
+    col_positions,
+    partitioning_scheme,
+):
+    pandas_df = pandas.DataFrame(test_data_values[0])
+
+    md_df = construct_modin_df_by_scheme(pandas_df, partitioning_scheme(pandas_df))
+    md_df = md_df._query_compiler._modin_frame
+
+    result = md_df._reorder_labels(
+        row_positions(md_df.index), col_positions(md_df.columns)
+    )
+    validate_partitions_cache(result)
+
+
+def test_reorder_labels_dtypes():
+    pandas_df = pandas.DataFrame(
+        {
+            "a": [1, 2, 3, 4],
+            "b": [1.0, 2.4, 3.4, 4.5],
+            "c": ["a", "b", "c", "d"],
+            "d": pd.to_datetime([1, 2, 3, 4], unit="D"),
+        }
+    )
+
+    md_df = construct_modin_df_by_scheme(
+        pandas_df,
+        partitioning_scheme={
+            "row_lengths": [len(pandas_df)],
+            "column_widths": [
+                len(pandas_df) // 2,
+                len(pandas_df) // 2 + len(pandas_df) % 2,
+            ],
+        },
+    )
+    md_df = md_df._query_compiler._modin_frame
+
+    result = md_df._reorder_labels(
+        row_positions=None, col_positions=np.arange(len(md_df.columns) - 1, -1, -1)
+    )
+    df_equals(result.dtypes, result.to_pandas().dtypes)

@@ -18,8 +18,10 @@ import cudf
 import cupy
 import numpy as np
 import cupy as cp
+
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from pandas.core.dtypes.common import is_list_like
+from modin.core.execution.ray.common import RayWrapper
 
 
 class cuDFOnRayDataframePartition(PandasDataframePartition):
@@ -39,18 +41,6 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         Width or reference to it of wrapped ``pandas.DataFrame``.
     """
 
-    @property
-    def __constructor__(self):
-        """
-        Create a new instance of this object.
-
-        Returns
-        -------
-        cuDFOnRayDataframePartition
-            New instance of cuDF partition.
-        """
-        return type(self)
-
     def __init__(self, gpu_manager, key, length=None, width=None):
         self.gpu_manager = gpu_manager
         self.key = key
@@ -67,7 +57,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             A copy of this object.
         """
         # Shallow copy.
-        return cuDFOnRayDataframePartition(
+        return self.__constructor__(
             self.gpu_manager, self.key, self._length_cache, self._width_cache
         )
 
@@ -91,7 +81,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         """
         return gpu_manager.put.remote(pandas_dataframe)
 
-    def apply(self, func, **kwargs):
+    def apply(self, func, *args, **kwargs):
         """
         Apply `func` to this partition.
 
@@ -99,8 +89,10 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         ----------
         func : callable
             A function to apply.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
         **kwargs : dict
-            Additional keywords arguments to be passed in `func`.
+            Additional keyword arguments to be passed in `func`.
 
         Returns
         -------
@@ -108,7 +100,9 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             A reference to integer key of result
             in internal dict-storage of `self.gpu_manager`.
         """
-        return self.gpu_manager.apply.remote(self.get_key(), None, func, **kwargs)
+        return self.gpu_manager.apply.remote(
+            self.get_key(), None, func, *args, **kwargs
+        )
 
     # TODO: Check the need of this method
     def apply_result_not_dataframe(self, func, **kwargs):
@@ -133,7 +127,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             self.get_key(), func, **kwargs
         )
 
-    def add_to_apply_calls(self, func, **kwargs):
+    def add_to_apply_calls(self, func, length=None, width=None, *args, **kwargs):
         """
         Apply `func` to this partition and create new.
 
@@ -141,6 +135,12 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         ----------
         func : callable
             A function to apply.
+        length : ray.ObjectRef or int, optional
+            Length, or reference to length, of wrapped ``pandas.DataFrame``.
+        width : ray.ObjectRef or int, optional
+            Width, or reference to width, of wrapped ``pandas.DataFrame``.
+        *args : tuple
+            Positional arguments to be passed in `func`.
         **kwargs : dict
             Additional keywords arguments to be passed in `func`.
 
@@ -153,7 +153,12 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         -----
         We eagerly schedule the apply `func` and produce a new ``cuDFOnRayDataframePartition``.
         """
-        return cuDFOnRayDataframePartition(self.gpu_manager, self.apply(func, **kwargs))
+        return self.__constructor__(
+            self.gpu_manager,
+            self.apply(func, *args, **kwargs),
+            length=length,
+            width=width,
+        )
 
     @classmethod
     def preprocess_func(cls, func):
@@ -274,7 +279,11 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         -------
         int
         """
-        return ray.get(self.key) if isinstance(self.key, ray.ObjectRef) else self.key
+        return (
+            RayWrapper.materialize(self.key)
+            if isinstance(self.key, ray.ObjectRef)
+            else self.key
+        )
 
     def get_object_id(self):
         """
@@ -308,7 +317,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         -------
         pandas.DataFrame
         """
-        return ray.get(
+        return RayWrapper.materialize(
             self.gpu_manager.apply_non_persistent.remote(
                 self.get_key(), None, cudf.DataFrame.to_pandas
             )
@@ -356,7 +365,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
             self.get_key(),
             lambda x: x,
         )
-        new_key = ray.get(new_key)
+        new_key = RayWrapper.materialize(new_key)
         return self.__constructor__(self.gpu_manager, new_key)
 
     # TODO(kvu35): buggy garbage collector reference issue #43

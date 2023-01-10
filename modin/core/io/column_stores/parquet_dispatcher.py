@@ -14,13 +14,13 @@
 """Module houses `ParquetDispatcher` class, that is used for reading `.parquet` files."""
 
 import os
+import re
+import json
 
 import fsspec
-from fsspec.core import split_protocol, url_to_fs
-from fsspec.registry import get_filesystem_class
+from fsspec.core import url_to_fs
 from fsspec.spec import AbstractBufferedFile
 import numpy as np
-from pandas.io.common import is_fsspec_url
 from packaging import version
 
 from modin.core.storage_formats.pandas.utils import compute_chunksize
@@ -28,30 +28,132 @@ from modin.config import NPartitions
 
 
 from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
-from modin.utils import import_optional_dependency
+from modin.utils import _inherit_docstrings
 
 
-class ParquetDispatcher(ColumnStoreDispatcher):
-    """Class handles utils for reading `.parquet` files."""
+class ColumnStoreDataset:
+    """
+    Base class that encapsulates Parquet engine-specific details.
 
-    @classmethod
-    def get_fsspec_files(cls, path, storage_options):
+    This class exposes a set of functions that are commonly used in the
+    `read_parquet` implementation.
+
+    Attributes
+    ----------
+    path : str, path object or file-like object
+        The filepath of the parquet file in local filesystem or hdfs.
+    storage_options : dict
+        Parameters for specific storage engine.
+    _fs_path : str, path object or file-like object
+        The filepath or handle of the parquet dataset specific to the
+        filesystem implementation. E.g. for `s3://test/example`, _fs
+        would be set to S3FileSystem and _fs_path would be `test/example`.
+    _fs : Filesystem
+        Filesystem object specific to the given parquet file/dataset.
+    dataset : ParquetDataset or ParquetFile
+        Underlying dataset implementation for PyArrow and fastparquet
+        respectively.
+    _row_groups_per_file : list
+        List that contains the number of row groups for each file in the
+        given parquet dataset.
+    _files : list
+        List that contains the full paths of the parquet files in the dataset.
+    """
+
+    def __init__(self, path, storage_options):  # noqa : PR01
+        self.path = path.__fspath__() if isinstance(path, os.PathLike) else path
+        self.storage_options = storage_options
+        self._fs_path = None
+        self._fs = None
+        self.dataset = self._init_dataset()
+        self._row_groups_per_file = None
+        self._files = None
+
+    @property
+    def pandas_metadata(self):
+        """Return the pandas metadata of the dataset."""
+        raise NotImplementedError
+
+    @property
+    def columns(self):
+        """Return the list of columns in the dataset."""
+        raise NotImplementedError
+
+    @property
+    def engine(self):
+        """Return string representing what engine is being used."""
+        raise NotImplementedError
+
+    # TODO: make this cache_readonly after docstring inheritance is fixed.
+    @property
+    def files(self):
+        """Return the list of formatted file paths of the dataset."""
+        raise NotImplementedError
+
+    # TODO: make this cache_readonly after docstring inheritance is fixed.
+    @property
+    def row_groups_per_file(self):
+        """Return a list with the number of row groups per file."""
+        raise NotImplementedError
+
+    @property
+    def fs(self):
         """
-        Retrieve filesystem interface and list of files from path.
-
-        Parameters
-        ----------
-        path : str, path object or file-like object
-            Path to dataset.
-        storage_options : dict
-            Parameters for specific storage engine.
+        Return the filesystem object associated with the dataset path.
 
         Returns
         -------
-        filesystem: Any
-            Protocol implementation of registry.
-        files: list
+        filesystem
+            Filesystem object.
+        """
+        if self._fs is None:
+            if isinstance(self.path, AbstractBufferedFile):
+                self._fs = self.path.fs
+            else:
+                self._fs, self._fs_path = url_to_fs(self.path, **self.storage_options)
+        return self._fs
+
+    @property
+    def fs_path(self):
+        """
+        Return the filesystem-specific path or file handle.
+
+        Returns
+        -------
+        fs_path : str, path object or file-like object
+            String path specific to filesystem or a file handle.
+        """
+        if self._fs_path is None:
+            if isinstance(self.path, AbstractBufferedFile):
+                self._fs_path = self.path
+            else:
+                self._fs, self._fs_path = url_to_fs(self.path, **self.storage_options)
+        return self._fs_path
+
+    def to_pandas_dataframe(self, columns):
+        """
+        Read the given columns as a pandas dataframe.
+
+        Parameters
+        ----------
+        columns : list
+            List of columns that should be read from file.
+        """
+        raise NotImplementedError
+
+    def _get_files(self, files):
+        """
+        Retrieve list of formatted file names in dataset path.
+
+        Parameters
+        ----------
+        files : list
             List of files from path.
+
+        Returns
+        -------
+        fs_files : list
+            List of files from path with fs-protocol prepended.
         """
         # Older versions of fsspec doesn't support unstrip_protocol(). It
         # was only added relatively recently:
@@ -63,57 +165,191 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     return path
             return f"{protos[0]}://{path}"
 
-        if isinstance(path, AbstractBufferedFile):
-            return path.fs, [path]
-        protocol, path = split_protocol(path)
-        filesystem = get_filesystem_class(protocol)(**storage_options)
-        if filesystem.stat(path)["type"] == "directory":
-            files = []
-            for path in sorted(filesystem.find(path)):
-                if version.parse(fsspec.__version__) < version.parse("2022.5.0"):
-                    files.append(_unstrip_protocol(filesystem.protocol, path))
-                else:
-                    files.append(filesystem.unstrip_protocol(path))
-            return filesystem, files
+        if isinstance(self.path, AbstractBufferedFile):
+            return [self.path]
+        # version.parse() is expensive, so we can split this into two separate loops
+        if version.parse(fsspec.__version__) < version.parse("2022.5.0"):
+            fs_files = [_unstrip_protocol(self.fs.protocol, fpath) for fpath in files]
+        else:
+            fs_files = [self.fs.unstrip_protocol(fpath) for fpath in files]
 
-        return filesystem, [
-            _unstrip_protocol(filesystem.protocol, path)
-            if version.parse(fsspec.__version__) < version.parse("2022.5.0")
-            else filesystem.unstrip_protocol(path)
-        ]
+        return fs_files
+
+
+@_inherit_docstrings(ColumnStoreDataset)
+class PyArrowDataset(ColumnStoreDataset):
+    def _init_dataset(self):  # noqa: GL08
+        from pyarrow.parquet import ParquetDataset
+
+        return ParquetDataset(
+            self.fs_path, filesystem=self.fs, use_legacy_dataset=False
+        )
+
+    @property
+    def pandas_metadata(self):
+        return self.dataset.schema.pandas_metadata
+
+    @property
+    def columns(self):
+        return self.dataset.schema.names
+
+    @property
+    def engine(self):
+        return "pyarrow"
+
+    @property
+    def row_groups_per_file(self):
+        from pyarrow.parquet import ParquetFile
+
+        if self._row_groups_per_file is None:
+            row_groups_per_file = []
+            # Count up the total number of row groups across all files and
+            # keep track of row groups per file to use later.
+            for file in self.files:
+                with self.fs.open(file) as f:
+                    row_groups = ParquetFile(f).num_row_groups
+                    row_groups_per_file.append(row_groups)
+            self._row_groups_per_file = row_groups_per_file
+        return self._row_groups_per_file
+
+    @property
+    def files(self):
+        if self._files is None:
+            self._files = self._get_files(self.dataset.files)
+        return self._files
+
+    def to_pandas_dataframe(
+        self,
+        columns,
+    ):
+        from pyarrow.parquet import read_table
+
+        return read_table(
+            self._fs_path, columns=columns, filesystem=self.fs
+        ).to_pandas()
+
+
+@_inherit_docstrings(ColumnStoreDataset)
+class FastParquetDataset(ColumnStoreDataset):
+    def _init_dataset(self):  # noqa: GL08
+        from fastparquet import ParquetFile
+
+        return ParquetFile(self.fs_path, fs=self.fs)
+
+    @property
+    def pandas_metadata(self):
+        if "pandas" not in self.dataset.key_value_metadata:
+            return {}
+        return json.loads(self.dataset.key_value_metadata["pandas"])
+
+    @property
+    def columns(self):
+        return self.dataset.columns
+
+    @property
+    def engine(self):
+        return "fastparquet"
+
+    @property
+    def row_groups_per_file(self):
+        from fastparquet import ParquetFile
+
+        if self._row_groups_per_file is None:
+            row_groups_per_file = []
+            # Count up the total number of row groups across all files and
+            # keep track of row groups per file to use later.
+            for file in self.files:
+                with self.fs.open(file) as f:
+                    row_groups = ParquetFile(f).info["row_groups"]
+                    row_groups_per_file.append(row_groups)
+            self._row_groups_per_file = row_groups_per_file
+        return self._row_groups_per_file
+
+    @property
+    def files(self):
+        if self._files is None:
+            self._files = self._get_files(self._get_fastparquet_files())
+        return self._files
+
+    def to_pandas_dataframe(self, columns):
+        return self.dataset.to_pandas(columns=columns)
+
+    def _get_fastparquet_files(self):  # noqa: GL08
+        # fastparquet doesn't have a nice method like PyArrow, so we
+        # have to copy some of their logic here while we work on getting
+        # an easier method to get a list of valid files.
+        # See: https://github.com/dask/fastparquet/issues/795
+        if "*" in self.path:
+            files = self.fs.glob(self.path)
+        else:
+            files = [
+                f
+                for f in self.fs.find(self.path)
+                if f.endswith(".parquet") or f.endswith(".parq")
+            ]
+        return files
+
+
+class ParquetDispatcher(ColumnStoreDispatcher):
+    """Class handles utils for reading `.parquet` files."""
+
+    index_regex = re.compile(r"__index_level_\d+__")
 
     @classmethod
-    def _get_fs_and_fs_path(cls, path, storage_options):
+    def get_dataset(cls, path, engine, storage_options):
         """
-        Retrieve filesystem interface and filesystem-specific path.
+        Retrieve Parquet engine specific Dataset implementation.
 
         Parameters
         ----------
         path : str, path object or file-like object
-            Path to dataset.
+            The filepath of the parquet file in local filesystem or hdfs.
+        engine : str
+            Parquet library to use (only 'PyArrow' is supported for now).
         storage_options : dict
             Parameters for specific storage engine.
 
         Returns
         -------
-        filesystem : Any
-            Protocol implementation of registry.
-        fs_path : list
-            Filesystem's specific path.
+        Dataset
+            Either a PyArrowDataset or FastParquetDataset object.
         """
-        return (
-            url_to_fs(path, **storage_options) if is_fsspec_url(path) else (None, path)
-        )
+        if engine == "auto":
+            # We follow in concordance with pandas
+            engine_classes = [PyArrowDataset, FastParquetDataset]
+
+            error_msgs = ""
+            for engine_class in engine_classes:
+                try:
+                    return engine_class(path, storage_options)
+                except ImportError as err:
+                    error_msgs += "\n - " + str(err)
+
+            raise ImportError(
+                "Unable to find a usable engine; "
+                + "tried using: 'pyarrow', 'fastparquet'.\n"
+                + "A suitable version of "
+                + "pyarrow or fastparquet is required for parquet "
+                + "support.\n"
+                + "Trying to import the above resulted in these errors:"
+                + f"{error_msgs}"
+            )
+        elif engine == "pyarrow":
+            return PyArrowDataset(path, storage_options)
+        elif engine == "fastparquet":
+            return FastParquetDataset(path, storage_options)
+        else:
+            raise ValueError("engine must be one of 'pyarrow', 'fastparquet'")
 
     @classmethod
-    def call_deploy(cls, fname, col_partitions, storage_options, **kwargs):
+    def call_deploy(cls, dataset, col_partitions, storage_options, **kwargs):
         """
         Deploy remote tasks to the workers with passed parameters.
 
         Parameters
         ----------
-        fname : str, path object or file-like object
-            Name of the file to read.
+        dataset : Dataset
+            Dataset object of Parquet file/files.
         col_partitions : list
             List of arrays with columns names that should be read
             by each partition.
@@ -127,7 +363,6 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         List
             Array with references to the task deploy result for each partition.
         """
-        from pyarrow.parquet import ParquetFile
         from modin.core.storage_formats.pandas.parsers import ParquetFileToRead
 
         # If we don't have any columns to read, we should just return an empty
@@ -135,17 +370,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         if len(col_partitions) == 0:
             return []
 
-        filesystem, parquet_files = cls.get_fsspec_files(fname, storage_options)
-
-        row_groups_per_file = []
-        num_row_groups = 0
-        # Count up the total number of row groups across all files and
-        # keep track of row groups per file to use later.
-        for file in parquet_files:
-            with filesystem.open(file) as f:
-                row_groups = ParquetFile(f).num_row_groups
-                row_groups_per_file.append(row_groups)
-                num_row_groups += row_groups
+        row_groups_per_file = dataset.row_groups_per_file
+        num_row_groups = sum(row_groups_per_file)
+        parquet_files = dataset.files
 
         # step determines how many row groups are going to be in a partition
         step = compute_chunksize(
@@ -202,12 +429,15 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             all_partitions.append(
                 [
                     cls.deploy(
-                        cls.parse,
-                        files_for_parser=files_to_read,
-                        columns=cols,
+                        func=cls.parse,
+                        f_kwargs={
+                            "files_for_parser": files_to_read,
+                            "columns": cols,
+                            "engine": dataset.engine,
+                            "storage_options": storage_options,
+                            **kwargs,
+                        },
                         num_returns=3,
-                        storage_options=storage_options,
-                        **kwargs,
                     )
                     for cols in col_partitions
                 ]
@@ -253,20 +483,18 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         )
 
     @classmethod
-    def build_index(cls, path, partition_ids, index_columns, storage_options):
+    def build_index(cls, dataset, partition_ids, index_columns):
         """
         Compute index and its split sizes of resulting Modin DataFrame.
 
         Parameters
         ----------
-        path : Pathlike
-            Path to dataset.
+        dataset : Dataset
+            Dataset object of Parquet file/files.
         partition_ids : list
             Array with references to the partitions data.
         index_columns : list
             List of index columns specified by pandas metadata.
-        storage_options : dict
-            Parameters for specific storage engine.
 
         Returns
         -------
@@ -281,8 +509,6 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         -----
         See `build_partition` for more detail on the contents of partitions_ids.
         """
-        from pyarrow.parquet import read_table
-
         range_index = True
         column_names_to_read = []
         for column in index_columns:
@@ -298,12 +524,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         # For the second check, let us consider the case where we have an empty dataframe,
         # that has a valid index.
         if range_index or (len(partition_ids) == 0 and len(column_names_to_read) != 0):
-            fs, fs_path = cls._get_fs_and_fs_path(path, storage_options)
-            complete_index = (
-                read_table(fs_path, columns=column_names_to_read, filesystem=fs)
-                .to_pandas()
-                .index
-            )
+            complete_index = dataset.to_pandas_dataframe(
+                columns=column_names_to_read
+            ).index
         # Empty DataFrame case
         elif len(partition_ids) == 0:
             return [], False
@@ -314,14 +537,14 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         return complete_index, range_index or (len(index_columns) == 0)
 
     @classmethod
-    def build_query_compiler(cls, path, columns, index_columns, **kwargs):
+    def build_query_compiler(cls, dataset, columns, index_columns, **kwargs):
         """
         Build query compiler from deployed tasks outputs.
 
         Parameters
         ----------
-        path : str, path object or file-like object
-            Path to the file to read.
+        dataset : Dataset
+            Dataset object of Parquet file/files.
         columns : list
             List of columns that should be read from file.
         index_columns : list
@@ -336,10 +559,10 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         """
         storage_options = kwargs.pop("storage_options", {}) or {}
         col_partitions, column_widths = cls.build_columns(columns)
-        partition_ids = cls.call_deploy(path, col_partitions, storage_options, **kwargs)
-        index, sync_index = cls.build_index(
-            path, partition_ids, index_columns, storage_options
+        partition_ids = cls.call_deploy(
+            dataset, col_partitions, storage_options, **kwargs
         )
+        index, sync_index = cls.build_index(dataset, partition_ids, index_columns)
         remote_parts = cls.build_partition(partition_ids, column_widths)
         if len(partition_ids) > 0:
             row_lengths = [part.length() for part in remote_parts.T[0]]
@@ -366,8 +589,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ----------
         path : str, path object or file-like object
             The filepath of the parquet file in local filesystem or hdfs.
-        engine : str
-            Parquet library to use (only 'PyArrow' is supported for now).
+        engine : {"auto", "pyarrow", "fastparquet"}
+            Parquet library to use.
         columns : list
             If not None, only these columns will be read from the file.
         **kwargs : dict
@@ -383,25 +606,28 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
         """
-        import_optional_dependency(
-            "pyarrow",
-            "pyarrow is required to read parquet files.",
-        )
-        from pyarrow.parquet import ParquetDataset
-        from modin.pandas.io import PQ_INDEX_REGEX
-
-        if isinstance(path, str) and os.path.isdir(path):
+        if isinstance(path, str):
+            if os.path.isdir(path):
+                path_generator = os.walk(path)
+            else:
+                storage_options = kwargs.get("storage_options")
+                if storage_options is not None:
+                    fs, fs_path = url_to_fs(path, **storage_options)
+                else:
+                    fs, fs_path = url_to_fs(path)
+                path_generator = fs.walk(fs_path)
             partitioned_columns = set()
             # We do a tree walk of the path directory because partitioned
             # parquet directories have a unique column at each directory level.
             # Thus, we can use os.walk(), which does a dfs search, to walk
             # through the different columns that the data is partitioned on
-            for (_, dir_names, files) in os.walk(path):
+            for (_, dir_names, files) in path_generator:
                 if dir_names:
                     partitioned_columns.add(dir_names[0].split("=")[0])
                 if files:
                     # Metadata files, git files, .DSStore
-                    if files[0][0] == ".":
+                    # TODO: fix conditional for column partitioning, see issue #4637
+                    if len(files[0]) > 0 and files[0][0] == ".":
                         continue
                     break
             partitioned_columns = list(partitioned_columns)
@@ -413,20 +639,19 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     reason="Mixed partitioning columns in Parquet",
                     **kwargs,
                 )
-        # url_to_fs returns the fs and path formatted for the specific fs
-        fs, fs_path = cls._get_fs_and_fs_path(path, kwargs.get("storage_options") or {})
-        dataset = ParquetDataset(fs_path, filesystem=fs, use_legacy_dataset=False)
+
+        dataset = cls.get_dataset(path, engine, kwargs.get("storage_options") or {})
         index_columns = (
-            dataset.schema.pandas_metadata.get("index_columns", [])
-            if dataset.schema.pandas_metadata
+            dataset.pandas_metadata.get("index_columns", [])
+            if dataset.pandas_metadata
             else []
         )
         # If we have columns as None, then we default to reading in all the columns
-        column_names = dataset.schema.names if not columns else columns
+        column_names = columns if columns else dataset.columns
         columns = [
             c
             for c in column_names
-            if c not in index_columns and not PQ_INDEX_REGEX.match(c)
+            if c not in index_columns and not cls.index_regex.match(c)
         ]
 
-        return cls.build_query_compiler(path, columns, index_columns, **kwargs)
+        return cls.build_query_compiler(dataset, columns, index_columns, **kwargs)

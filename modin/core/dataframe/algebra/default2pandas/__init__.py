@@ -18,7 +18,6 @@ from .datetime import DateTimeDefault
 from .series import SeriesDefault
 from .str import StrDefault
 from .binary import BinaryDefault
-from .any import AnyDefault
 from .resample import ResampleDefault
 from .rolling import RollingDefault
 from .default import DefaultMethod
@@ -31,7 +30,6 @@ __all__ = [
     "SeriesDefault",
     "StrDefault",
     "BinaryDefault",
-    "AnyDefault",
     "ResampleDefault",
     "RollingDefault",
     "DefaultMethod",

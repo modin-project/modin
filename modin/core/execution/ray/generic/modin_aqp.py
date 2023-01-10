@@ -51,7 +51,12 @@ def call_progress_bar(result_parts, line_no):
     except AttributeError:
         return
     pbar_id = str(cell_no) + "-" + str(line_no)
-    futures = [x._data for row in result_parts for x in row]
+    futures = [
+        block
+        for row in result_parts
+        for partition in row
+        for block in partition.list_of_blocks
+    ]
     bar_format = (
         "{l_bar}{bar}{r_bar}"
         if "DEBUG_PROGRESS_BAR" in os.environ

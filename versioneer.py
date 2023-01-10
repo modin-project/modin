@@ -1700,8 +1700,8 @@ def do_setup():
     try:
         cfg = get_config_from_root(root)
     except (EnvironmentError, configparser.NoSectionError,
-            configparser.NoOptionError) as e:
-        if isinstance(e, (EnvironmentError, configparser.NoSectionError)):
+            configparser.NoOptionError) as err:
+        if isinstance(err, (EnvironmentError, configparser.NoSectionError)):
             print("Adding sample versioneer config to setup.cfg",
                   file=sys.stderr)
             with open(os.path.join(root, "setup.cfg"), "a") as f:
