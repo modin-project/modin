@@ -1782,7 +1782,7 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         Convert Series to {label -> value} dict or dict-like object.
         """
-        return self._default_to_pandas("to_dict", into=into)
+        return self.__query_compiler__.series_to_dict(into)
 
     def _to_frame(self, name: "Hashable") -> "DataFrame":  # noqa: PR01, RT01, D200
         """
@@ -1803,7 +1803,7 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         Return a list of the values.
         """
-        return self._default_to_pandas(pandas.Series.to_list)
+        return self.__query_compiler__.to_list()
 
     def to_numpy(
         self, dtype=None, copy=False, na_value=no_default, **kwargs
@@ -1895,9 +1895,7 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         Truncate a Series before and after some index value.
         """
-        return self._default_to_pandas(
-            pandas.Series.truncate, before=before, after=after, axis=axis, copy=copy
-        )
+        return self.__constructor__(self.__query_compiler__.truncate(before, after, axis, copy))
 
     def unique(self):  # noqa: RT01, D200
         """
@@ -1966,8 +1964,11 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         Replace values where the condition is False.
         """
+        # TODO: probably need to remove this conversion to pandas
         if isinstance(other, Series):
             other = to_pandas(other)
+        # TODO: add error checking like for dataframe where, then forward to
+        # same query compiler method
         return self._default_to_pandas(
             pandas.Series.where,
             cond,

@@ -20,6 +20,7 @@ from pandas.core.computation.parsing import tokenize_string
 
 from typing import Any
 
+
 class ClientQueryCompiler(BaseQueryCompiler):
     @classmethod
     def set_server_connection(cls, conn):
@@ -480,7 +481,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         if other_is_qc:
             other = other._id
         return self.__constructor__(
-            self._service.ewm_cov(self._id, other, other_is_qc, *args, **kwargs)
+            self._service.expanding_cov(self._id, other, other_is_qc, *args, **kwargs)
         )
 
     def expanding_corr(self, other=None, *args, **kwargs):
@@ -488,7 +489,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         if other_is_qc:
             other = other._id
         return self.__constructor__(
-            self._service.ewm_corr(self._id, other, other_is_qc, *args, **kwargs)
+            self._service.expanding_corr(self._id, other, other_is_qc, *args, **kwargs)
         )
 
     def mask(self, cond, other=np.nan, *args, **kwargs):
@@ -605,6 +606,7 @@ _BINARY_FORWARDING_METHODS = frozenset(
         "divmod",
         "reindex_like",
         "rdivmod",
+        "corrwith" "merge_ordered",
     }
 )
 
@@ -730,6 +732,10 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "str_startswith",
         "str_strip",
         "str_zfill",
+        "str_casefold",
+        "str_getdummies",
+        "str_extract",
+        "str_extractall",
         "is_monotonic_increasing",
         "is_monotonic_decreasing",
         "idxmax",
@@ -751,6 +757,15 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "expanding_std",
         "expanding_count",
         "expanding_sem",
+        "expanding_count",
+        "expanding_median",
+        "expanding_var",
+        "expanding_skew",
+        "expanding_kurt",
+        "expanding_apply",
+        "expanding_aggregate",
+        "expanding_quantile",
+        "expanding_rank",
         "explode",
         "first_valid_index",
         "infer_objects",
@@ -849,21 +864,6 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "ewm_sum",
         "ewm_std",
         "ewm_var",
-        "expanding_count",
-        "expanding_sum",
-        "expanding_mean",
-        "expanding_median",
-        "expanding_var",
-        "expanding_std",
-        "expanding_min",
-        "expanding_max",
-        "expanding_skew",
-        "expanding_kurt",
-        "expanding_apply",
-        "expanding_aggregate",
-        "expanding_quantile",
-        "expanding_sem",
-        "expanding_rank",
         "pct_change",
         "sizeof",
         "argsort",
@@ -875,6 +875,12 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "nlargest",
         "nsmallest",
         "swaplevel",
+        "dataframe_to_dict",
+        "series_to_dict",
+        "to_list",
+        "truncate",
+        "lookup",
+        "wide_to_long",
     }
 )
 
