@@ -167,6 +167,23 @@ def merge_asof(
         raise ValueError(
             "can not merge DataFrame with instance of type {}".format(type(right))
         )
+    return DataFrame(
+        query_compiler=left._query_compiler.merge_asof(
+            right._query_compiler,
+            on=on,
+            left_on=left_on,
+            right_on=right_on,
+            left_index=left_index,
+            right_index=right_index,
+            by=by,
+            left_by=left_by,
+            right_by=right_by,
+            suffixes=suffixes,
+            tolerance=tolerance,
+            allow_exact_matches=allow_exact_matches,
+            direction=direction,
+        )
+    )
     ErrorMessage.default_to_pandas("`merge_asof`")
 
     # As of Pandas 1.2 these should raise an error; before that it did
