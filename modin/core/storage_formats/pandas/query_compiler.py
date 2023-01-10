@@ -473,7 +473,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         dtypes = self._precompute_dtypes_common_cast(other, broadcast)
         return Binary.register(
             pandas.DataFrame.add,
-        )(self, other, dtypes=dtypes, *args, **kwargs)
+        )(self, other, dtypes=dtypes, broadcast=broadcast, *args, **kwargs)
 
     def eq(self, other, broadcast=False, *args, **kwargs):
         dtypes = self._precompute_dtypes_boolean(other, broadcast)
