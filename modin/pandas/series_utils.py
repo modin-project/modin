@@ -136,7 +136,7 @@ class StringMethods(ClassLogger):
         self._query_compiler = series._query_compiler
 
     def casefold(self):
-        return self._default_to_pandas(pandas.Series.str.casefold)
+        return Series(query_compiler=self._query_compiler.str_casefold())
 
     def cat(self, others=None, sep=None, na_rep=None, join=None):
         if isinstance(others, Series):
@@ -150,6 +150,7 @@ class StringMethods(ClassLogger):
 
     def split(self, pat=None, n=-1, expand=False):
         from .dataframe import DataFrame
+
         if not pat and pat is not None:
             raise ValueError("split() requires a non-empty pattern match.")
 
@@ -168,6 +169,7 @@ class StringMethods(ClassLogger):
 
     def rsplit(self, pat=None, n=-1, expand=False):
         from .dataframe import DataFrame
+
         if not pat and pat is not None:
             raise ValueError("rsplit() requires a non-empty pattern match.")
 
@@ -193,7 +195,7 @@ class StringMethods(ClassLogger):
         return Series(query_compiler=self._query_compiler.str_join(sep))
 
     def get_dummies(self, sep="|"):
-        return self._default_to_pandas(pandas.Series.str.get_dummies, sep=sep)
+        return Series(query_compiler=self._query_compiler.str_get_dummies(sep))
 
     def contains(self, pat, case=True, flags=0, na=np.NaN, regex=True):
         if pat is None and not case:
@@ -306,12 +308,12 @@ class StringMethods(ClassLogger):
                     pat, flags=flags, expand=expand
                 )
             )
-        return self._default_to_pandas(
-            pandas.Series.str.extract, pat, flags=flags, expand=expand
+        return Series(
+            query_compiler=self._query_compiler.str_extract(pat, flags, expand)
         )
 
     def extractall(self, pat, flags=0):
-        return self._default_to_pandas(pandas.Series.str.extractall, pat, flags=flags)
+        return Series(query_compiler=self._query_compiler.str_extractall(pat, flags))
 
     def len(self):
         return Series(query_compiler=self._query_compiler.str_len())
@@ -328,17 +330,9 @@ class StringMethods(ClassLogger):
     def partition(self, sep=" ", expand=True):
         if sep is not None and len(sep) == 0:
             raise ValueError("empty separator")
-
-        if expand:
-            return self._default_to_pandas(
-                pandas.Series.str.partition, sep=sep, expand=expand
-            )
-        else:
-            return Series(
-                query_compiler=self._query_compiler.str_partition(
-                    sep=sep, expand=expand
-                )
-            )
+        return Series(
+            query_compiler=self._query_compiler.str_partition(sep=sep, expand=expand)
+        )
 
     def repeat(self, repeats):
         return Series(query_compiler=self._query_compiler.str_repeat(repeats))
@@ -346,17 +340,11 @@ class StringMethods(ClassLogger):
     def rpartition(self, sep=" ", expand=True):
         if sep is not None and len(sep) == 0:
             raise ValueError("empty separator")
-
-        if expand:
-            return self._default_to_pandas(
-                pandas.Series.str.rpartition, sep=sep, expand=expand
+        return Series(
+            query_compiler=self._query_compiler.str_rpartition(
+                sep=sep, expand=expand
             )
-        else:
-            return Series(
-                query_compiler=self._query_compiler.str_rpartition(
-                    sep=sep, expand=expand
-                )
-            )
+        )
 
     def lower(self):
         return Series(query_compiler=self._query_compiler.str_lower())
