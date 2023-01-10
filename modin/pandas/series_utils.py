@@ -142,7 +142,7 @@ class StringMethods(ClassLogger):
         return Series
 
     def casefold(self):
-        return self._default_to_pandas(pandas.Series.str.casefold)
+        return self._Series(query_compiler=self._query_compiler.str_casefold())
 
     def cat(self, others=None, sep=None, na_rep=None, join="left"):
         if isinstance(others, self._Series):
@@ -206,7 +206,7 @@ class StringMethods(ClassLogger):
         return self._Series(query_compiler=self._query_compiler.str_join(sep))
 
     def get_dummies(self, sep="|"):
-        return self._default_to_pandas(pandas.Series.str.get_dummies, sep=sep)
+        return self._Series(query_compiler=self._query_compiler.str_get_dummies(sep))
 
     def contains(self, pat, case=True, flags=0, na=None, regex=True):
         if pat is None and not case:
@@ -342,7 +342,9 @@ class StringMethods(ClassLogger):
         )
 
     def extractall(self, pat, flags=0):
-        return self._default_to_pandas(pandas.Series.str.extractall, pat, flags=flags)
+        return self._Series(
+            query_compiler=self._query_compiler.str_extractall(pat, flags)
+        )
 
     def len(self):
         return self._Series(query_compiler=self._query_compiler.str_len())
