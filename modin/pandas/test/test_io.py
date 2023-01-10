@@ -335,7 +335,6 @@ class TestCsv:
 
         eval_io(
             fn_name="read_csv",
-            check_exception_type=None,  # issue #2320
             raising_exceptions=None,
             check_kwargs_callable=not callable(converters),
             # read_csv kwargs
@@ -421,7 +420,6 @@ class TestCsv:
                     )
             eval_io(
                 fn_name="read_csv",
-                check_exception_type=None,  # issue #2320
                 raising_exceptions=None,
                 check_kwargs_callable=not callable(skiprows),
                 # read_csv kwargs
@@ -449,7 +447,6 @@ class TestCsv:
 
         eval_io(
             fn_name="read_csv",
-            check_exception_type=None,  # issue #2320
             raising_exceptions=None,
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_yes_no"],
@@ -739,7 +736,6 @@ class TestCsv:
                 )
 
             eval_io(
-                check_exception_type=None,  # issue #2320
                 raising_exceptions=None,
                 fn_name="read_csv",
                 # read_csv kwargs
