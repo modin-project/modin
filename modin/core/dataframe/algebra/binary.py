@@ -161,8 +161,8 @@ class Binary(Operator):
                     )
                 else:
                     if (
-                        other.dtypes is not None
-                        and query_compiler.dtypes is not None
+                        other._modin_frame._dtypes is not None
+                        and query_compiler._modin_frame._dtypes is not None
                         and other.is_series_like is False
                     ):
                         if how_compute_dtypes == "bool":
