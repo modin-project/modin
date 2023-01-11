@@ -364,7 +364,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         is_qc = isinstance(values, (DataFrame, Series))
         if is_qc:
             values = values._query_compiler._id
-        return self._service.isin(self._id, values, is_qc)
+        return self.__constructor__(self._service.isin(self._id, values, is_qc))
 
     def where(self, cond, other, **kwargs):
         cond_is_qc = isinstance(cond, type(self))
