@@ -15,9 +15,36 @@
 
 import numpy as np
 import pandas
-from modin.utils import int_to_float64
 
 from .operator import Operator
+
+
+def int_to_float64(dtype: np.dtype) -> np.dtype:
+    """
+    Check if a datatype is a variant of integer.
+
+    If dtype is integer function returns float64 datatype if not returns the
+    argument datatype itself
+
+    Parameters
+    ----------
+    dtype : np.dtype
+        NumPy datatype.
+
+    Returns
+    -------
+    dtype : np.dtype
+        Returns float64 for all int datatypes or returns the datatype itself
+        for other types.
+
+    Notes
+    -----
+    Used to precompute datatype in case of division in pandas
+    """
+    if dtype in np.sctypes["int"] + np.sctypes["uint"]:
+        return np.dtype(np.float64)
+    else:
+        return dtype
 
 
 # To precompute datatypes for binary operations which follow pandas find_common_type
