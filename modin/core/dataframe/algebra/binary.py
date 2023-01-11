@@ -15,9 +15,59 @@
 
 import numpy as np
 import pandas
-from modin.utils import int_to_float64, compute_dtypes_common_cast
+from modin.utils import int_to_float64
 
 from .operator import Operator
+
+
+# To precompute datatypes for binary operations which follow pandas find_common_type
+def compute_dtypes_common_cast(first, second) -> np.dtype:
+    """
+    Precompute data types for those binary operations by finding common type between operands.
+
+    Parameters
+    ----------
+    first : PandasQueryCompiler
+        Operand dataframe for which the binary operation would be performed later.
+    second : PandasQueryCompiler
+        Operand dataframe for which the binary operation would be performed later.
+
+    Returns
+    -------
+    dtypes
+        The pandas series with precomputed dtypes.
+    """
+    dtypes_first = dict(zip(first.columns, first.dtypes))
+    dtypes_second = dict(zip(second.columns, second.dtypes))
+    columns_first = set(first.columns)
+    columns_second = set(second.columns)
+    common_columns = columns_first.intersection(columns_second)
+    mismatch_columns = columns_first.union(columns_second) - common_columns
+    # If one columns dont match the result of the non matching column would be nan.
+    nan_dtype = np.dtype(type(np.nan))
+    dtypes = pandas.Series(
+        [
+            pandas.core.dtypes.cast.find_common_type(
+                [
+                    dtypes_first[x],
+                    dtypes_second[x],
+                ]
+            )
+            for x in common_columns
+        ],
+        index=common_columns,
+    )
+    dtypes = pandas.concat(
+        [
+            dtypes,
+            pandas.Series(
+                [nan_dtype] * (len(mismatch_columns)),
+                index=mismatch_columns,
+            ),
+        ]
+    )
+    dtypes = dtypes.sort_index()
+    return dtypes
 
 
 class Binary(Operator):
