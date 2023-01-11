@@ -242,20 +242,21 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
         if by is not None:
             mapped_partitions = cls.broadcast_apply(
-                axis, map_func, left=partitions, right=by, other_name="other"
+                map_func, axis=axis, left=partitions, right=by, other_name="other"
             )
         else:
             mapped_partitions = cls.map_partitions(partitions, map_func)
         return cls.map_axis_partitions(
-            axis, mapped_partitions, reduce_func, enumerate_partitions=True
+            mapped_partitions, reduce_func, axis=axis, enumerate_partitions=True
         )
 
     @classmethod
     @wait_computations_if_benchmark_mode
     def broadcast_apply_select_indices(
         cls,
-        axis,
         apply_func,
+        *,
+        axis,
         left,
         right,
         left_indices,
@@ -267,10 +268,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
         Parameters
         ----------
-        axis : {0, 1}
-            Axis to apply and broadcast over.
         apply_func : callable
             Function to apply.
+        axis : {0, 1}
+            Axis to apply and broadcast over.
         left : NumPy 2D array
             Left partitions.
         right : NumPy 2D array
@@ -332,16 +333,16 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def broadcast_apply(cls, axis, apply_func, left, right, other_name="right"):
+    def broadcast_apply(cls, apply_func, *, axis, left, right, other_name="right"):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` function.
 
         Parameters
         ----------
-        axis : {0, 1}
-            Axis to apply and broadcast over.
         apply_func : callable
             Function to apply.
+        axis : {0, 1}
+            Axis to apply and broadcast over.
         left : np.ndarray
             NumPy array of left partitions.
         right : np.ndarray
@@ -390,8 +391,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
     @wait_computations_if_benchmark_mode
     def broadcast_axis_partitions(
         cls,
-        axis,
         apply_func,
+        *,
+        axis,
         left,
         right,
         keep_partitioning=False,
@@ -405,10 +407,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
         Parameters
         ----------
-        axis : {0, 1}
-            Axis to apply and broadcast over.
         apply_func : callable
             Function to apply.
+        axis : {0, 1}
+            Axis to apply and broadcast over.
         left : NumPy 2D array
             Left partitions.
         right : NumPy 2D array
@@ -529,9 +531,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
     @classmethod
     def map_axis_partitions(
         cls,
-        axis,
         partitions,
         map_func,
+        *,
+        axis,
         keep_partitioning=False,
         lengths=None,
         enumerate_partitions=False,
@@ -542,12 +545,12 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
         Parameters
         ----------
-        axis : {0, 1}
-            Axis to perform the map across (0 - index, 1 - columns).
         partitions : NumPy 2D array
             Partitions of Modin Frame.
         map_func : callable
             Function to apply.
+        axis : {0, 1}
+            Axis to perform the map across (0 - index, 1 - columns).
         keep_partitioning : bool, default: False
             Whether to keep partitioning for Modin Frame.
             Setting it to True stops data shuffling between partitions.
@@ -963,19 +966,19 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
     @classmethod
     @wait_computations_if_benchmark_mode
     def apply_func_to_select_indices(
-        cls, axis, partitions, func, indices, keep_remaining=False
+        cls, partitions, func, *, axis, indices, keep_remaining=False
     ):
         """
         Apply a function to select indices.
 
         Parameters
         ----------
-        axis : {0, 1}
-            Axis to apply the `func` over.
         partitions : np.ndarray
             The partitions to which the `func` will apply.
         func : callable
             The function to apply to these indices of partitions.
+        axis : {0, 1}
+            Axis to apply the `func` over.
         indices : dict
             The indices to apply the function to.
         keep_remaining : bool, default: False
@@ -1077,19 +1080,19 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
     @classmethod
     @wait_computations_if_benchmark_mode
     def apply_func_to_select_indices_along_full_axis(
-        cls, axis, partitions, func, indices, keep_remaining=False
+        cls, partitions, func, *, axis, indices, keep_remaining=False
     ):
         """
         Apply a function to a select subset of full columns/rows.
 
         Parameters
         ----------
-        axis : {0, 1}
-            The axis to apply the function over.
         partitions : np.ndarray
             The partitions to which the `func` will apply.
         func : callable
             The function to apply.
+        axis : {0, 1}
+            The axis to apply the function over.
         indices : list-like
             The global indices to apply the func to.
         keep_remaining : bool, default: False
@@ -1195,6 +1198,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         cls,
         partitions,
         func,
+        *,
         row_partitions_list,
         col_partitions_list,
         item_to_distribute=no_default,
