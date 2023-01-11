@@ -160,7 +160,11 @@ class Binary(Operator):
                         )
                     )
                 else:
-                    if other.dtypes is not None and query_compiler.dtypes is not None:
+                    if (
+                        other.dtypes is not None
+                        and query_compiler.dtypes is not None
+                        and other.is_series_like is False
+                    ):
                         if how_compute_dtypes == "bool":
                             dtypes = pandas.Series([bool] * len(other.dtypes))
                         if how_compute_dtypes == "common_cast":
