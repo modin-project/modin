@@ -476,10 +476,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )(self, other, dtypes=dtypes, broadcast=broadcast, *args, **kwargs)
 
     def eq(self, other, broadcast=False, *args, **kwargs):
-        dtypes = self._precompute_dtypes_boolean(other, broadcast)
+        if "dtypes" not in kwargs:
+            kwargs["dtypes"] = self._precompute_dtypes_boolean(other, broadcast)
         return Binary.register(
             pandas.DataFrame.eq,
-        )(self, other, dtypes=dtypes, *args, **kwargs)
+        )(self, other, broadcast=broadcast, *args, **kwargs)
 
     # Binary operations (e.g. add, sub)
     # These operations require two DataFrames and will change the shape of the
