@@ -15,7 +15,7 @@
 
 import numpy as np
 import pandas
-from modin.utils import int_to_float64
+from modin.utils import int_to_float64, compute_dtypes_common_cast
 
 from .operator import Operator
 
@@ -29,8 +29,7 @@ class Binary(Operator):
         func,
         join_type="outer",
         labels="replace",
-        precompute_dtypes=False,
-        result_dtype_is_bool=False,
+        how_compute_dtypes=None,
     ):
         """
         Build template binary operator.
@@ -44,11 +43,13 @@ class Binary(Operator):
         labels : {"keep", "replace", "drop"}, default: "replace"
             Whether keep labels from left Modin DataFrame, replace them with labels
             from joined DataFrame or drop altogether to make them be computed lazily later.
-        precompute_dtypes : bool, default: False
-            Whether datatypes should be precomputed in the method using common cast methods.
-        result_dtype_is_bool : bool, default: False
-            If the operation returns a result with all boolean data types.
-
+        how_compute_dtypes : {"common_cast", "float","bool", None}, default: None
+            How dtypes should be computed.
+            If "common_cast" casts to common dtype of operand columns.
+            If "float" performs type casting by finding common dtype, if the common dtype is any of the
+            integer types perform type casting to float. Used in case of truediv.
+            If "bool" dtypes would be a boolean series with same size as that of operands.
+            If ``None`` do not infer new dtypes (they will be computed manually once accessed).
 
         Returns
         -------
@@ -110,48 +111,13 @@ class Binary(Operator):
                     )
                 else:
                     if other.dtypes is not None and query_compiler.dtypes is not None:
-                        if result_dtype_is_bool:
+                        if how_compute_dtypes == "bool":
                             dtypes = pandas.Series([bool] * len(other.dtypes))
-                        elif precompute_dtypes:
-                            dtypes_query_compiler = dict(
-                                zip(query_compiler.columns, query_compiler.dtypes)
-                            )
-                            dtypes_other = dict(zip(other.columns, other.dtypes))
-                            columns_query_compiler = set(query_compiler.columns)
-                            columns_other = set(other.columns)
-                            common_columns = columns_query_compiler.intersection(
-                                columns_other
-                            )
-                            mismatch_columns = (
-                                    columns_query_compiler.union(columns_other)
-                                    - common_columns
-                            )
-                            # If columns don't match the result of the non-matching column would be nan.
-                            nan_dtype = np.dtype(type(np.nan))
-                            dtypes = pandas.Series(
-                                [
-                                    pandas.core.dtypes.cast.find_common_type(
-                                        [
-                                            dtypes_query_compiler[x],
-                                            dtypes_other[x],
-                                        ]
-                                    )
-                                    for x in common_columns
-                                ],
-                                index=common_columns,
-                            )
-                            dtypes = pandas.concat(
-                                [
-                                    dtypes,
-                                    pandas.Series(
-                                        [nan_dtype] * (len(mismatch_columns)),
-                                        index=mismatch_columns,
-                                    ),
-                                ]
-                            )
-                            if func.__name__ == "truediv":
-                                dtypes = dtypes.apply(int_to_float64)
-
+                        if how_compute_dtypes == "common_cast":
+                            dtypes = compute_dtypes_common_cast(query_compiler, other)
+                        elif how_compute_dtypes == "float":
+                            dtypes = compute_dtypes_common_cast(query_compiler, other)
+                            dtypes = dtypes.apply(int_to_float64)
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.n_ary_op(
                             lambda x, y: func(x, y, *args, **kwargs),
@@ -160,6 +126,7 @@ class Binary(Operator):
                             dtypes=dtypes,
                         )
                     )
+
             else:
                 # TODO: it's possible to chunk the `other` and broadcast them to partitions
                 # accordingly, in that way we will be able to use more efficient `._modin_frame.map()`
