@@ -60,3 +60,7 @@ jupyter notebook
 ```
 
 Navigate to a concrete notebook (for example, to the `execution/pandas_on_ray/local/exercise_1.ipynb`).
+
+**Note:** Since there are some specifics regarding the run of jupyter notebooks with the `Unidist` engine,
+refer to [PandasOnUnidist](https://github.com/modin-project/modin/examples/tutorial/jupyter/execution/pandas_on_unidist/README.md) document
+to get more information on the matter.
