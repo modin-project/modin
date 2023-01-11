@@ -119,27 +119,33 @@ class Binary(Operator):
                             dtypes_other = dict(zip(other.columns, other.dtypes))
                             columns_query_compiler = set(query_compiler.columns)
                             columns_other = set(other.columns)
+                            common_columns = columns_query_compiler.intersection(
+                                columns_other
+                            )
+                            mismatch_columns = (
+                                    columns_query_compiler.union(columns_other)
+                                    - common_columns
+                            )
                             # If columns don't match the result of the non-matching column would be nan.
                             nan_dtype = np.dtype(type(np.nan))
                             dtypes = pandas.Series(
                                 [
                                     pandas.core.dtypes.cast.find_common_type(
                                         [
-                                            dtypes_query_compiler.get(x, nan_dtype),
+                                            dtypes_query_compiler[x],
                                             dtypes_other[x],
                                         ]
                                     )
-                                    for x in columns_query_compiler
+                                    for x in common_columns
                                 ],
-                                index=columns_query_compiler,
+                                index=common_columns,
                             )
                             dtypes = pandas.concat(
                                 [
                                     dtypes,
                                     pandas.Series(
-                                        [nan_dtype]
-                                        * (len(columns_other - columns_query_compiler)),
-                                        index=columns_other - columns_query_compiler,
+                                        [nan_dtype] * (len(mismatch_columns)),
+                                        index=mismatch_columns,
                                     ),
                                 ]
                             )
