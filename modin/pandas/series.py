@@ -1925,15 +1925,21 @@ class Series(BasePandasDataset):
         """
         Return the NumPy ndarray representing the values in this Series or Index.
         """
-        return (
-            super(Series, self)
-            .to_numpy(
-                dtype=dtype,
-                copy=copy,
-                na_value=na_value,
+        from modin.config import ExperimentalNumPyAPI
+        if not ExperimentalNumPyAPI.get():
+            return (
+                super(Series, self)
+                .to_numpy(
+                    dtype=dtype,
+                    copy=copy,
+                    na_value=na_value,
+                )
+                .flatten()
             )
-            .flatten()
-        )
+        else:
+            from ..numpy.arr import array
+
+            return array(_query_compiler=self._query_compiler, _ndim=1)
 
     tolist = to_list
 

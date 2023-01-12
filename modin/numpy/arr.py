@@ -1,5 +1,20 @@
+# Licensed to Modin Development Team under one or more contributor license agreements.
+# See the NOTICE file distributed with this work for additional information regarding
+# copyright ownership.  The Modin Development Team licenses this file to you under the
+# Apache License, Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
+# ANY KIND, either express or implied. See the License for the specific language
+# governing permissions and limitations under the License.
+
 import numpy
 
+from pandas.core.dtypes.common import is_list_like
+from modin.error_message import ErrorMessage
 
 class array(object):
     def __init__(
@@ -12,26 +27,33 @@ class array(object):
         subok=False,
         ndmin=0,
         like=None,
-        query_compiler=None,
+        _query_compiler=None,
+        _ndim=None,
     ):
-        if query_compiler is not None:
-            self._query_compiler = query_compiler
-        elif isinstance(object, list):
+        if _query_compiler is not None:
+            self._query_compiler = _query_compiler
+            self._ndim = _ndim
+        elif is_list_like(object) and not is_list_like(object[0]):
             import modin.pandas as pd
 
             qc = pd.DataFrame(object)._query_compiler
             self._query_compiler = qc
+            self._ndim = 1
         else:
+            expected_kwargs = {"dtype":None, "copy":True,"order":"K","subok":False,"ndmin":0,"like":None}
+            rcvd_kwargs = {"dtype":dtype, "copy":copy,"order":order,"subok":subok,"ndmin":ndmin,"like":like}
+            for key, value in rcvd_kwargs.copy().items():
+                if value == expected_kwargs[key]:
+                    rcvd_kwargs.pop(key)
             arr = numpy.array(
                 object,
-                dtype=dtype,
-                copy=copy,
-                order=order,
-                subok=subok,
-                ndmin=ndmin,
-                like=like,
+                **rcvd_kwargs
             )
-            pass
+            self._ndim = len(arr.shape)
+            if self._ndim > 2:
+                ErrorMessage.not_implemented("NumPy arrays with dimensions higher than 2 are not yet supported.")
+            import modin.pandas as pd
+            self._query_compiler = pd.DataFrame(object)._query_compiler
 
     def _absolute(
         self,
@@ -43,7 +65,7 @@ class array(object):
         subok=True,
     ):
         result = self._query_compiler.abs()
-        return array(query_compiler=result)
+        return array(_query_compiler=result)
 
     def _add(
         self,
@@ -55,8 +77,9 @@ class array(object):
         dtype=None,
         subok=True,
     ):
-        result = self._query_compiler.add(x2._query_compiler)
-        return array(query_compiler=result)
+        broadcast = self._ndim != x2._ndim
+        result = self._query_compiler.add(x2._query_compiler, broadcast=broadcast)
+        return array(_query_compiler=result)
 
     def _divide(
         self,
@@ -69,7 +92,7 @@ class array(object):
         subok=True,
     ):
         result = self._query_compiler.truediv(x2._query_compiler)
-        return array(query_compiler=result)
+        return array(_query_compiler=result)
 
     def _float_power(
         self,
@@ -82,7 +105,7 @@ class array(object):
         subok=True,
     ):
         result = self._query_compiler.add(x2._query_compiler)
-        return array(query_compiler=result)
+        return array(_query_compiler=result)
 
     def _floor_divide(
         self,
@@ -95,7 +118,7 @@ class array(object):
         subok=True,
     ):
         result = self._query_compiler.floordiv(x2._query_compiler)
-        return array(query_compiler=result)
+        return array(_query_compiler=result)
 
     def _power(
         self,
@@ -108,16 +131,16 @@ class array(object):
         subok=True,
     ):
         result = self._query_compiler.pow(x2._query_compiler)
-        return array(query_compiler=result)
+        return array(_query_compiler=result)
 
     def _prod(self, axis=None, out=None, keepdims=None, where=None):
         print("Series?", self._query_compiler.is_series_like())
         if axis is None:
             result = self._query_compiler.prod(axis=0).prod(axis=1)
-            return array(query_compiler=result)
+            return array(_query_compiler=result)
         else:
             result = self._query_compiler.prod(axis=axis)
-            return array(query_compiler=result)
+            return array(_query_compiler=result)
 
     def _multiply(
         self,
@@ -130,7 +153,7 @@ class array(object):
         subok=True,
     ):
         result = self._query_compiler.mul(x2._query_compiler)
-        return array(query_compiler=result)
+        return array(_query_compiler=result)
 
     def _remainder(
         self,
@@ -143,7 +166,7 @@ class array(object):
         subok=True,
     ):
         result = self._query_compiler.mod(x2._query_compiler)
-        return array(query_compiler=result)
+        return array(_query_compiler=result)
 
     def _subtract(
         self,
@@ -156,7 +179,7 @@ class array(object):
         subok=True,
     ):
         result = self._query_compiler.sub(x2._query_compiler)
-        return array(query_compiler=result)
+        return array(_query_compiler=result)
 
     def _sum(
         self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None
@@ -167,9 +190,11 @@ class array(object):
         if out is not None:
             out._query_compiler = result
             return
-        return array(query_compiler=result)
+        return array(_query_compiler=result)
 
     def _get_shape(self):
+        if self._ndim == 1:
+            return (len(self._query_compiler.columns),)
         return (len(self._query_compiler.index), len(self._query_compiler.columns))
 
     def _set_shape(self, new_shape):
@@ -211,4 +236,7 @@ class array(object):
     shape = property(_get_shape, _set_shape)
 
     def __repr__(self):
-        return repr(self._query_compiler.to_numpy())
+        arr = self._query_compiler.to_numpy()
+        if self._ndim == 1:
+            arr = arr.flatten()
+        return repr(arr)

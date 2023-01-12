@@ -3238,9 +3238,17 @@ class BasePandasDataset(ClassLogger):
         """
         Convert the `BasePandasDataset` to a NumPy array.
         """
-        from ..numpy.arr import array
+        from modin.config import ExperimentalNumPyAPI
+        if ExperimentalNumPyAPI.get():
+            from ..numpy.arr import array
 
-        return array(query_compiler=self._query_compiler)
+            return array(_query_compiler=self._query_compiler, _ndim=2)
+        
+        return self._query_compiler.to_numpy(
+            dtype=dtype,
+            copy=copy,
+            na_value=na_value,
+        )
 
     # TODO(williamma12): When this gets implemented, have the series one call this.
     def to_period(

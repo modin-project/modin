@@ -627,6 +627,11 @@ class TestReadFromPostgres(EnvironmentVariable, type=bool):
     varname = "MODIN_TEST_READ_FROM_POSTGRES"
     default = False
 
+class ExperimentalNumPyAPI(EnvironmentVariable, type=bool):
+    """Set to true to use Modin's experimental NumPy API."""
+
+    varname = "MODIN_EXPERIMENTAL_NUMPY_API"
+    default = False
 
 class ReadSqlEngine(EnvironmentVariable, type=str):
     """Engine to run `read_sql`."""
