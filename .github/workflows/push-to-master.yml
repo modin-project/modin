@@ -55,6 +55,7 @@ jobs:
           python -m pytest modin/pandas/test/dataframe/test_udf.py
           python -m pytest modin/pandas/test/dataframe/test_window.py
           python -m pytest modin/pandas/test/test_series.py
+          python -m pytest modin/numpy/test/test_array.py
           python -m pytest modin/pandas/test/test_rolling.py
           python -m pytest modin/pandas/test/test_concat.py
           python -m pytest modin/pandas/test/test_groupby.py
@@ -121,6 +122,7 @@ jobs:
           - modin/pandas/test/dataframe/test_window.py
           - modin/pandas/test/dataframe/test_pickle.py
           - modin/pandas/test/test_series.py
+          - modin/numpy/test/test_array.py
           - modin/pandas/test/test_rolling.py
           - modin/pandas/test/test_concat.py
           - modin/pandas/test/test_groupby.py

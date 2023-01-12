@@ -16,6 +16,7 @@ import numpy
 from pandas.core.dtypes.common import is_list_like
 from modin.error_message import ErrorMessage
 
+
 class array(object):
     def __init__(
         self,
@@ -40,19 +41,33 @@ class array(object):
             self._query_compiler = qc
             self._ndim = 1
         else:
-            expected_kwargs = {"dtype":None, "copy":True,"order":"K","subok":False,"ndmin":0,"like":None}
-            rcvd_kwargs = {"dtype":dtype, "copy":copy,"order":order,"subok":subok,"ndmin":ndmin,"like":like}
+            expected_kwargs = {
+                "dtype": None,
+                "copy": True,
+                "order": "K",
+                "subok": False,
+                "ndmin": 0,
+                "like": None,
+            }
+            rcvd_kwargs = {
+                "dtype": dtype,
+                "copy": copy,
+                "order": order,
+                "subok": subok,
+                "ndmin": ndmin,
+                "like": like,
+            }
             for key, value in rcvd_kwargs.copy().items():
                 if value == expected_kwargs[key]:
                     rcvd_kwargs.pop(key)
-            arr = numpy.array(
-                object,
-                **rcvd_kwargs
-            )
+            arr = numpy.array(object, **rcvd_kwargs)
             self._ndim = len(arr.shape)
             if self._ndim > 2:
-                ErrorMessage.not_implemented("NumPy arrays with dimensions higher than 2 are not yet supported.")
+                ErrorMessage.not_implemented(
+                    "NumPy arrays with dimensions higher than 2 are not yet supported."
+                )
             import modin.pandas as pd
+
             self._query_compiler = pd.DataFrame(arr)._query_compiler
 
     def _absolute(
@@ -66,11 +81,11 @@ class array(object):
     ):
         result = self._query_compiler.abs()
         return array(_query_compiler=result, _ndim=self._ndim)
-    
+
     __abs__ = _absolute
-    
+
     def _binary_op(self, other):
-        broadcast = (self._ndim != other._ndim)
+        broadcast = self._ndim != other._ndim
         if broadcast:
             # In this case, we have a 1D object doing a binary op with a 2D object
             caller = self if self._ndim == 2 else other
@@ -85,15 +100,20 @@ class array(object):
                     matched_dimension = 0
                 elif self.shape[1] == other.shape[1]:
                     matched_dimension = 1
-                if not matched_dimension is None:
-                    if self.shape[matched_dimension ^ 1] == 1 or other.shape[matched_dimension ^ 1] == 1:
+                if matched_dimension is not None:
+                    if (
+                        self.shape[matched_dimension ^ 1] == 1
+                        or other.shape[matched_dimension ^ 1] == 1
+                    ):
                         # caller = self if other.shape[matched_dimension ^ 1] == 1 else other
                         # callee = other if other.shape[matched_dimension ^ 1] == 1 else self
-                        return (self, other, self._ndim, {"broadcast":True, "axis":1})
+                        return (self, other, self._ndim, {"broadcast": True, "axis": 1})
                 else:
-                    raise ValueError(f"operands could not be broadcast together with shapes {self.shape} {other.shape}")
+                    raise ValueError(
+                        f"operands could not be broadcast together with shapes {self.shape} {other.shape}"
+                    )
             else:
-                return (self, other, self._ndim, {"broadcast":False})
+                return (self, other, self._ndim, {"broadcast": False})
 
     def _add(
         self,
@@ -128,7 +148,7 @@ class array(object):
         return array(_query_compiler=result, _ndim=new_ndim)
 
     __truediv__ = _divide
-    
+
     def _float_power(
         self,
         x2,
@@ -139,7 +159,7 @@ class array(object):
         dtype=None,
         subok=True,
     ):
-       pass
+        pass
 
     def _floor_divide(
         self,
@@ -159,7 +179,7 @@ class array(object):
         if any(callee._query_compiler.eq(0).to_pandas()):
             result = result.replace(numpy.inf, 0)
         return array(_query_compiler=result, _ndim=new_ndim)
-    
+
     __floordiv__ = _floor_divide
 
     def _power(
@@ -178,7 +198,7 @@ class array(object):
             pass
         result = caller._query_compiler.pow(callee._query_compiler, **kwargs)
         return array(_query_compiler=result, _ndim=new_ndim)
-    
+
     __pow__ = _power
 
     def _prod(self, axis=None, out=None, keepdims=None, where=None):
@@ -241,12 +261,12 @@ class array(object):
         if caller != self:
             result = result.rsub(0)
         return array(_query_compiler=result, _ndim=new_ndim)
-    
+
     __sub__ = _subtract
 
     def _sum(
         self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None
-    ):            
+    ):
         result = self._query_compiler.sum(axis=axis)
         if dtype is not None:
             result = result.astype(dtype)
@@ -254,7 +274,7 @@ class array(object):
             out._query_compiler = result
             return
         if axis is None:
-            return 
+            return
         else:
             new_ndim = self._ndim - 1
         return array(_query_compiler=result, _ndim=new_ndim)
@@ -305,7 +325,7 @@ class array(object):
 
     def __repr__(self):
         return repr(self._to_numpy())
-    
+
     def _to_numpy(self):
         arr = self._query_compiler.to_numpy()
         if self._ndim == 1:
