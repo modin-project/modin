@@ -19,7 +19,7 @@ import pandas
 from .operator import Operator
 
 
-def int_to_float64(dtype: np.dtype) -> np.dtype:
+def coerce_int_to_float64(dtype: np.dtype) -> np.dtype:
     """
     Coerce dtype to float64 if it is a variant of integer.
 
@@ -62,6 +62,10 @@ def compute_dtypes_common_cast(first, second) -> np.dtype:
     -------
     dtypes
         The pandas series with precomputed dtypes.
+
+     Notes
+    -----
+     The dtypes of the operands are supposed to be known.
     """
     dtypes_first = dict(zip(first.columns, first._modin_frame._dtypes))
     dtypes_second = dict(zip(second.columns, second._modin_frame._dtypes))
@@ -190,17 +194,16 @@ class Binary(Operator):
                     if (
                         other._modin_frame._dtypes is not None
                         and query_compiler._modin_frame._dtypes is not None
-                        and other.is_series_like is False
                     ):
                         if how_compute_dtypes == "bool":
                             dtypes = pandas.Series(
-                                [bool] * len(other._modin_frame._dtypes)
+                                [np.dtype(bool)] * len(other._modin_frame._dtypes)
                             )
                         if how_compute_dtypes == "common_cast":
                             dtypes = compute_dtypes_common_cast(query_compiler, other)
                         elif how_compute_dtypes == "float":
                             dtypes = compute_dtypes_common_cast(query_compiler, other)
-                            dtypes = dtypes.apply(int_to_float64)
+                            dtypes = dtypes.apply(coerce_int_to_float64)
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.n_ary_op(
                             lambda x, y: func(x, y, *args, **kwargs),
