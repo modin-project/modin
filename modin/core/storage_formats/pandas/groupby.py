@@ -35,10 +35,10 @@ class GroupbyReduceImpl:
         -------
         (map_fn: Union[callable, str], reduce_fn: Union[callable, str], default2pandas_fn: callable)
         """
-        impl = cls._groupby_reduce_impls.get(agg_name)
-        if impl:
-            return impl
-        raise KeyError(f"Have no implementation for {agg_name}.")
+        try:
+            return cls._groupby_reduce_impls[agg_name]
+        except KeyError:
+            raise KeyError(f"Have no implementation for {agg_name}.")
 
     @classmethod
     def has_impl_for(cls, agg_func):
@@ -65,9 +65,9 @@ class GroupbyReduceImpl:
         return True
 
     @classmethod
-    def register_impl(cls, agg_name):
+    def build_qc_method(cls, agg_name):
         """
-        Register a MapReduce implemented query compiler method for the specified groupby aggregation.
+        Build a MapReduce implemented query compiler method for the specified groupby aggregation.
 
         Parameters
         ----------

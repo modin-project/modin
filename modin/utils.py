@@ -753,7 +753,7 @@ def show_versions(as_json: Union[str, bool] = False) -> None:
 
 def walk_aggregation_dict(
     agg_dict: AggFuncTypeDict,
-) -> Iterator[Tuple[IndexLabel, AggFuncTypeBase, Union[None, str], bool]]:
+) -> Iterator[Tuple[IndexLabel, AggFuncTypeBase, Optional[str], bool]]:
     """
     Walk over an aggregation dictionary.
 
@@ -763,7 +763,7 @@ def walk_aggregation_dict(
 
     Yields
     ------
-    (col: IndexLabel, func: AggFuncTypeBase, func_name: Union[None, str], col_renaming_required: bool)
+    (col: IndexLabel, func: AggFuncTypeBase, func_name: Optional[str], col_renaming_required: bool)
         Yield an aggregation function with its metadata:
             - `col`: column name to apply the function.
             - `func`: aggregation function to apply to the column.
@@ -774,7 +774,7 @@ def walk_aggregation_dict(
 
     def walk(
         key: IndexLabel, value: AggFuncType, depth: int = 0
-    ) -> Iterator[Tuple[IndexLabel, AggFuncTypeBase, Union[None, str], bool]]:
+    ) -> Iterator[Tuple[IndexLabel, AggFuncTypeBase, Optional[str], bool]]:
         col_renaming_required = bool(depth)
 
         if isinstance(value, (list, tuple)):

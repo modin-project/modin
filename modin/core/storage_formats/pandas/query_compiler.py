@@ -2584,14 +2584,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             by = internal_qc + by[len(internal_by) :]
         return by, internal_by
 
-    groupby_all = GroupbyReduceImpl.register_impl("all")
-    groupby_any = GroupbyReduceImpl.register_impl("any")
-    groupby_count = GroupbyReduceImpl.register_impl("count")
-    groupby_max = GroupbyReduceImpl.register_impl("max")
-    groupby_min = GroupbyReduceImpl.register_impl("min")
-    groupby_prod = GroupbyReduceImpl.register_impl("prod")
-    groupby_sum = GroupbyReduceImpl.register_impl("sum")
-    groupby_skew = GroupbyReduceImpl.register_impl("skew")
+    groupby_all = GroupbyReduceImpl.build_qc_method("all")
+    groupby_any = GroupbyReduceImpl.build_qc_method("any")
+    groupby_count = GroupbyReduceImpl.build_qc_method("count")
+    groupby_max = GroupbyReduceImpl.build_qc_method("max")
+    groupby_min = GroupbyReduceImpl.build_qc_method("min")
+    groupby_prod = GroupbyReduceImpl.build_qc_method("prod")
+    groupby_sum = GroupbyReduceImpl.build_qc_method("sum")
+    groupby_skew = GroupbyReduceImpl.build_qc_method("skew")
 
     def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
         _, internal_by = self._groupby_internal_columns(by, drop)
@@ -2625,7 +2625,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             else self
         )
 
-        result = GroupbyReduceImpl.register_impl("mean")(
+        result = GroupbyReduceImpl.build_qc_method("mean")(
             query_compiler=qc_with_converted_datetime_cols,
             by=by,
             axis=axis,

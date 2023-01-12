@@ -41,7 +41,7 @@ class GroupByReduce(TreeReduce):
     _GROUPBY_REDUCE_IMPL_FLAG : str
         Attribute indicating that a callable should be treated as an
         implementation for one of the Map-Reduce phases rather than an
-        arbitrary aggregation. Note: this attribute should consider being private.
+        arbitrary aggregation. Note: this attribute should be considered private.
     """
 
     ID_LEVEL_NAME = "__ID_LEVEL_NAME__"
@@ -57,9 +57,10 @@ class GroupByReduce(TreeReduce):
         Parameters
         ----------
         map_func : str, dict or callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
-            Function to apply to the `GroupByObject` at the map phase.
+            Function to apply to the `GroupByObject` at the map phase. If ``str`` was passed it will
+            be treated as a DataFrameGroupBy's method name.
         reduce_func : str, dict or callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame, optional
-            Function to apply to the `GroupByObject` at the reduce phase. If not specified
+            Function to apply to the ``DataFrameGroupBy`` at the reduce phase. If not specified
             will be set the same as 'map_func'.
         **call_kwds : kwargs
             Kwargs that will be passed to the returned function.
@@ -427,7 +428,9 @@ class GroupByReduce(TreeReduce):
         grp_has_id_level = df.columns.names[0] == cls.ID_LEVEL_NAME
         # The 'id' level prevents us from a lookup for the original
         # partition's columns. So dropping the level.
-        partition_columns = df.columns.droplevel(0) if grp_has_id_level else df.columns
+        partition_columns = frozenset(
+            df.columns.droplevel(0) if grp_has_id_level else df.columns
+        )
 
         partition_dict = {k: v for k, v in agg_func.items() if k in partition_columns}
         return cls._build_callable_for_dict(
@@ -465,16 +468,18 @@ class GroupByReduce(TreeReduce):
         ):
             # Filter dictionary
             dict_to_add = (
-                external_aggs if cls.is_external_aggregation(func) else native_aggs
+                external_aggs if cls.is_registered_implementation(func) else native_aggs
             )
 
             new_value = func if func_name is None else (func_name, func)
             old_value = dict_to_add.get(col)
 
             if old_value is not None:
-                assert isinstance(
-                    old_value, list
-                ), f"`{col_renaming_required=}` must be `True` when multiple aggregations per columns is specified."
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=not isinstance(old_value, list),
+                    extra_log="Expected for all aggregation values to be a list when at least "
+                    + f"one column has multiple aggregations. Got: {old_value} {type(old_value)}",
+                )
                 old_value.append(new_value)
             else:
                 dict_to_add[col] = [new_value] if col_renaming_required else new_value
@@ -514,19 +519,20 @@ class GroupByReduce(TreeReduce):
             ):
                 if grp_has_id_level:
                     cols_without_ids = grp_obj.obj.columns.droplevel(0)
-                    col_pos = (
+                    if isinstance(cols_without_ids, pandas.MultiIndex):
                         # We may have multiple columns matching the `col` in
                         # a MultiIndex case, that's why use `.get_locs` here
-                        cols_without_ids.get_locs(col)
-                        if isinstance(cols_without_ids, pandas.MultiIndex)
+                        col_pos = cols_without_ids.get_locs(col)
+                    else:
                         # `pandas.Index` doesn't have `.get_locs` method
-                        else cols_without_ids.get_loc(col)
-                    )
+                        col_pos = cols_without_ids.get_loc(col)
                     agg_key = grp_obj.obj.columns[col_pos]
                 else:
                     agg_key = [col]
 
                 result = func(grp_obj[agg_key])
+                # The `func` may have discarded an ID-level if there were any.
+                # So checking for this again.
                 result_has_id_level = result.columns.names[0] == cls.ID_LEVEL_NAME
                 insert_id_levels |= result_has_id_level
 
@@ -557,10 +563,10 @@ class GroupByReduce(TreeReduce):
             if insert_id_levels:
                 # As long as any `result` has an id-level we have to insert the level
                 # into every `result` so the number of levels matches
-                for idx in range(len(external_results)):
-                    if external_results[idx].columns.names[0] != cls.ID_LEVEL_NAME:
+                for idx, ext_result in enumerate(external_results):
+                    if ext_result.columns.names[0] != cls.ID_LEVEL_NAME:
                         external_results[idx] = pandas.concat(
-                            [external_results[idx]],
+                            [ext_result],
                             keys=[cls.ID_LEVEL_NAME],
                             names=[cls.ID_LEVEL_NAME],
                             axis=1,
@@ -589,7 +595,7 @@ class GroupByReduce(TreeReduce):
         return aggregate_on_dict
 
     @classmethod
-    def is_external_aggregation(cls, func):
+    def is_registered_implementation(cls, func):
         """
         Check whether the passed `func` was registered as a Map-Reduce implementation.
 
