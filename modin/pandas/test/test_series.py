@@ -396,16 +396,14 @@ def test___gt__(data):
     inter_df_math_helper(modin_series, pandas_series, "__gt__")
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___int__(data):
-    modin_series, pandas_series = create_test_series(data)
-    try:
-        pandas_result = int(pandas_series[0])
-    except Exception as err:
-        with pytest.raises(type(err)):
-            int(modin_series[0])
-    else:
-        assert int(modin_series[0]) == pandas_result
+@pytest.mark.parametrize("count_elements", [0, 1, 10])
+def test___int__(count_elements):
+    eval_general(*create_test_series([1.5] * count_elements), int)
+
+
+@pytest.mark.parametrize("count_elements", [0, 1, 10])
+def test___float__(count_elements):
+    eval_general(*create_test_series([1] * count_elements), float)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
