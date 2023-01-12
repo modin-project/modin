@@ -21,10 +21,10 @@ from .operator import Operator
 
 def int_to_float64(dtype: np.dtype) -> np.dtype:
     """
-    Check if a datatype is a variant of integer.
+    Coerce dtype to float64 if it is a variant of integer.
 
-    If dtype is integer function returns float64 datatype if not returns the
-    argument datatype itself
+    If dtype is integer, function returns float64 datatype.
+    If not, returns the datatype argument itself.
 
     Parameters
     ----------
@@ -39,7 +39,7 @@ def int_to_float64(dtype: np.dtype) -> np.dtype:
 
     Notes
     -----
-    Used to precompute datatype in case of division in pandas
+    Used to precompute datatype in case of division in pandas.
     """
     if dtype in np.sctypes["int"] + np.sctypes["uint"]:
         return np.dtype(np.float64)
@@ -47,17 +47,16 @@ def int_to_float64(dtype: np.dtype) -> np.dtype:
         return dtype
 
 
-# To precompute datatypes for binary operations which follow pandas find_common_type
 def compute_dtypes_common_cast(first, second) -> np.dtype:
     """
-    Precompute data types for those binary operations by finding common type between operands.
+    Precompute data types for binary operations by finding common type between operands.
 
     Parameters
     ----------
     first : PandasQueryCompiler
-        Operand dataframe for which the binary operation would be performed later.
+        First operand for which the binary operation would be performed later.
     second : PandasQueryCompiler
-        Operand dataframe for which the binary operation would be performed later.
+        Second operand for which the binary operation would be performed later.
 
     Returns
     -------
@@ -70,7 +69,7 @@ def compute_dtypes_common_cast(first, second) -> np.dtype:
     columns_second = set(second.columns)
     common_columns = columns_first.intersection(columns_second)
     mismatch_columns = columns_first.union(columns_second) - common_columns
-    # If one columns dont match the result of the non matching column would be nan.
+    # If at least one column doesn't match, the result of the non matching column would be nan.
     nan_dtype = np.dtype(type(np.nan))
     dtypes = pandas.Series(
         [
@@ -120,13 +119,14 @@ class Binary(Operator):
         labels : {"keep", "replace", "drop"}, default: "replace"
             Whether keep labels from left Modin DataFrame, replace them with labels
             from joined DataFrame or drop altogether to make them be computed lazily later.
-        how_compute_dtypes : {"common_cast", "float","bool", None}, default: None
-            How dtypes should be computed.
-            If "common_cast" casts to common dtype of operand columns.
-            If "float" performs type casting by finding common dtype, if the common dtype is any of the
-            integer types perform type casting to float. Used in case of truediv.
-            If "bool" dtypes would be a boolean series with same size as that of operands.
-            If ``None`` do not infer new dtypes (they will be computed manually once accessed).
+        infer_dtypes : {"common_cast", "float","bool", None}, default: None
+            How dtypes should be inferred.
+                * If "common_cast", casts to common dtype of operand columns.
+                * If "float", performs type casting by finding common dtype.
+                   If the common dtype is any of the integer types, perform type casting to float.
+                   Used in case of truediv.
+                * If "bool", dtypes would be a boolean series with same size as that of operands.
+                * If ``None``, do not infer new dtypes (they will be computed manually once accessed).
 
         Returns
         -------
