@@ -86,7 +86,9 @@ class Binary(Operator):
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.broadcast_apply(
                             axis,
-                            lambda l, r: func(l, r.squeeze(), *args, **kwargs),
+                            lambda left, right: func(
+                                left, right.squeeze(), *args, **kwargs
+                            ),
                             other._modin_frame,
                             join_type=join_type,
                             labels=labels,

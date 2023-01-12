@@ -247,25 +247,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def __init__(self, modin_frame):
         self._modin_frame = modin_frame
 
-    def default_to_pandas(self, pandas_op, *args, **kwargs):
-        op_name = getattr(pandas_op, "__name__", str(pandas_op))
-        ErrorMessage.default_to_pandas(op_name)
-        args = (a.to_pandas() if isinstance(a, type(self)) else a for a in args)
-        kwargs = {
-            k: v.to_pandas if isinstance(v, type(self)) else v
-            for k, v in kwargs.items()
-        }
-
-        result = pandas_op(self.to_pandas(), *args, **kwargs)
-        if isinstance(result, pandas.Series):
-            if result.name is None:
-                result.name = MODIN_UNNAMED_SERIES_LABEL
-            result = result.to_frame()
-        if isinstance(result, pandas.DataFrame):
-            return self.from_pandas(result, type(self._modin_frame))
-        else:
-            return result
-
     @property
     def lazy_execution(self):
         """
@@ -1945,8 +1926,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
                 else:
                     # Value is a DataFrame type object
-                    def fillna_builder(df, r):
-                        return df.fillna(value=r, **kwargs)
+                    def fillna_builder(df, right):
+                        return df.fillna(value=right, **kwargs)
 
                     new_modin_frame = self._modin_frame.broadcast_apply(
                         0, fillna_builder, value._modin_frame
@@ -2716,6 +2697,67 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         return result
 
+    def groupby_skew(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
+        def map_skew(dfgb, *args, **kwargs):
+            df = dfgb.obj
+            by_cols = dfgb.exclusions
+            cols_to_agg = df.columns.difference(by_cols)
+
+            df_pow2 = pandas.concat([df[by_cols], df[cols_to_agg] ** 2], axis=1)
+            df_pow3 = pandas.concat([df[by_cols], df[cols_to_agg] ** 3], axis=1)
+
+            return pandas.concat(
+                [
+                    dfgb.count(*args, **kwargs),
+                    dfgb.sum(*args, **kwargs),
+                    df_pow2.groupby(dfgb.keys, **groupby_kwargs).sum(*args, **kwargs),
+                    df_pow3.groupby(dfgb.keys, **groupby_kwargs).sum(*args, **kwargs),
+                ],
+                copy=False,
+                axis=1,
+            )
+
+        def reduce_skew(dfgb, *args, **kwargs):
+            df = dfgb.sum(*args, **kwargs)
+            chunk_size = df.shape[1] // 4
+
+            count = df.iloc[:, :chunk_size]
+            # s = sum(x)
+            s = df.iloc[:, chunk_size : chunk_size * 2]
+            # s2 = sum(x^2)
+            s2 = df.iloc[:, chunk_size * 2 : chunk_size * 3]
+            # s3 = sum(x^3)
+            s3 = df.iloc[:, chunk_size * 3 : chunk_size * 4]
+
+            # mean = sum(x) / count
+            m = s / count
+
+            # m2 = sum( (x - m)^ 2) = sum(x^2 - 2*x*m + m^2)
+            m2 = s2 - 2 * m * s + count * (m**2)
+
+            # m3 = sum( (x - m)^ 3) = sum(x^3 - 3*x^2*m + 3*x*m^2 - m^3)
+            m3 = s3 - 3 * m * s2 + 3 * s * (m**2) - count * (m**3)
+
+            # The equation for the 'skew' was taken directly from pandas:
+            # https://github.com/pandas-dev/pandas/blob/8dab54d6573f7186ff0c3b6364d5e4dd635ff3e7/pandas/core/nanops.py#L1226
+            skew_res = (count * (count - 1) ** 0.5 / (count - 2)) * (m3 / m2**1.5)
+            return skew_res
+
+        result = GroupByReduce.register(
+            map_skew,
+            reduce_skew,
+            default_to_pandas_func=lambda dfgb, **kwargs: dfgb.skew(**kwargs),
+        )(
+            query_compiler=self,
+            by=by,
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+        return result
+
     def _groupby_dict_reduce(
         self,
         by,
@@ -3336,7 +3378,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(
             self._modin_frame.broadcast_apply_full_axis(
                 0,
-                lambda l, r: pandas.DataFrame.compare(l, other=r, **kwargs),
+                lambda left, right: pandas.DataFrame.compare(
+                    left, other=right, **kwargs
+                ),
                 other._modin_frame,
             )
         )

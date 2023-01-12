@@ -50,17 +50,17 @@ dependencies:
   # when we use collective instead of rabit.
   - xgboost>=1.7.1,<2.0.0
   - tqdm
+  # code linters
+  - black
+  - flake8
+  - flake8-no-implicit-concat
+  - flake8-print
   - pip:
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
       # no conda package for windows so we install it with pip
       - connectorx>=0.2.6a4
-      - black
-      # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
-      - flake8<5
-      - flake8-no-implicit-concat
-      - flake8-print
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
       - numpydoc==1.1.0
       # experimental version of fuzzydata requires at least 0.0.6 to successfully resolve all dependencies

@@ -193,7 +193,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of ``ray.ObjectRef``-s.
         """
-        return deploy_ray_func.options(
+        return _deploy_ray_func.options(
             num_returns=(num_splits if lengths is None else len(lengths)) * 4,
             **({"max_retries": max_retries} if max_retries is not None else {}),
         ).remote(
@@ -249,7 +249,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of ``ray.ObjectRef``-s.
         """
-        return deploy_ray_func.options(num_returns=num_splits * 4).remote(
+        return _deploy_ray_func.options(num_returns=num_splits * 4).remote(
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
             func,
@@ -327,8 +327,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         Notes
         -----
         In older versions of Modin, ``args`` was passed internally as ``kwargs["args"]``, and
-        deserialization was handled in a special case in ``deploy_ray_func``, making control flow
-        difficult to follow. All deserialization is still handled in ``deploy_ray_func``, but
+        deserialization was handled in a special case in ``_deploy_ray_func``, making control flow
+        difficult to follow. All deserialization is still handled in ``_deploy_ray_func``, but
         in a more direct fashion.
         """
         if not self.full_axis:
@@ -518,7 +518,7 @@ class PandasOnRayDataframeRowPartition(PandasOnRayDataframeVirtualPartition):
 
 
 @ray.remote
-def deploy_ray_func(
+def _deploy_ray_func(
     deployer, axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs
 ):  # pragma: no cover
     """

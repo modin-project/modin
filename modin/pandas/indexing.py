@@ -233,11 +233,6 @@ Location based indexing can only have [integer, integer slice (START point is
 INCLUDED, END point is EXCLUDED), listlike of integers, boolean array] types.
 """
 
-_VIEW_IS_COPY_WARNING = """
-Modin is making a copy of of the DataFrame. This behavior diverges from Pandas.
-This will be fixed in future releases.
-"""
-
 
 def _compute_ndim(row_loc, col_loc):
     """

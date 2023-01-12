@@ -420,7 +420,14 @@ class Series(BasePandasDataset):
         )
         if len(self) == 0:
             return "Series([], {}{}{}".format(freq_str, name_str, dtype_str)
-        return temp_str.rsplit("\n", 1)[0] + "\n{}{}{}{}".format(
+        maxsplit = 1
+        if (
+            isinstance(temp_df, pandas.Series)
+            and temp_df.name is not None
+            and temp_df.dtype == "category"
+        ):
+            maxsplit = 2
+        return temp_str.rsplit("\n", maxsplit)[0] + "\n{}{}{}{}".format(
             freq_str, name_str, len_str, dtype_str
         )
 
@@ -484,7 +491,17 @@ class Series(BasePandasDataset):
         """
         Return Series as ndarray or ndarray-like depending on the dtype.
         """
-        return self.to_numpy()
+        import modin.pandas as pd
+
+        if isinstance(
+            self.dtype, pandas.core.dtypes.dtypes.ExtensionDtype
+        ) and not isinstance(self.dtype, pd.CategoricalDtype):
+            return self._default_to_pandas("values")
+
+        data = self.to_numpy()
+        if isinstance(self.dtype, pd.CategoricalDtype):
+            data = pd.Categorical(data, dtype=self.dtype)
+        return data
 
     def add(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
         """
@@ -510,13 +527,17 @@ class Series(BasePandasDataset):
         """
         Prefix labels with string `prefix`.
         """
-        return Series(query_compiler=self._query_compiler.add_prefix(prefix, axis=0))
+        return self.__constructor__(
+            query_compiler=self._query_compiler.add_prefix(prefix, axis=0)
+        )
 
     def add_suffix(self, suffix):  # noqa: PR01, RT01, D200
         """
         Suffix labels with string `suffix`.
         """
-        return Series(query_compiler=self._query_compiler.add_suffix(suffix, axis=0))
+        return self.__constructor__(
+            query_compiler=self._query_compiler.add_suffix(suffix, axis=0)
+        )
 
     def append(
         self, to_append, ignore_index=False, verify_integrity=False
@@ -592,7 +613,7 @@ class Series(BasePandasDataset):
         if len(query_compiler.columns) > 1:
             return DataFrame(query_compiler=query_compiler)
         else:
-            return Series(query_compiler=query_compiler)
+            return self.__constructor__(query_compiler=query_compiler)
 
     def aggregate(self, func=None, axis=0, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
@@ -687,7 +708,7 @@ class Series(BasePandasDataset):
 
             result = DataFrame(query_compiler=result)
         elif return_type == "Series":
-            result = Series(query_compiler=result)
+            result = self.__constructor__(query_compiler=result)
             if result.name == self.index[0]:
                 result.name = None
         elif isinstance(result, type(self._query_compiler)):
@@ -1353,7 +1374,9 @@ class Series(BasePandasDataset):
         """
         Return the smallest `n` elements.
         """
-        return Series(query_compiler=self._query_compiler.nsmallest(n=n, keep=keep))
+        return self.__constructor__(
+            query_compiler=self._query_compiler.nsmallest(n=n, keep=keep)
+        )
 
     def slice_shift(self, periods=1, axis=0):  # noqa: PR01, RT01, D200
         """
@@ -1364,7 +1387,7 @@ class Series(BasePandasDataset):
 
         if axis == "index" or axis == 0:
             if abs(periods) >= len(self.index):
-                return Series(dtype=self.dtype)
+                return self.__constructor__(dtype=self.dtype)
             else:
                 new_df = self.iloc[:-periods] if periods > 0 else self.iloc[-periods:]
                 new_df.index = (
@@ -2032,7 +2055,7 @@ class Series(BasePandasDataset):
         Modify Series in place using values from passed Series.
         """
         if not isinstance(other, Series):
-            other = Series(other)
+            other = self.__constructor__(other)
         query_compiler = self._query_compiler.series_update(other._query_compiler)
         self._update_inplace(new_query_compiler=query_compiler)
 
@@ -2045,7 +2068,7 @@ class Series(BasePandasDataset):
         if bins is not None:
             # Potentially we could implement `cut` function from pandas API, which
             # bins values into intervals, and then we can just count them as regular values.
-            # TODO #1333: new_self = Series(pd.cut(self, bins, include_lowest=True), dtype="interval")
+            # TODO #1333: new_self = self.__constructor__(pd.cut(self, bins, include_lowest=True), dtype="interval")
             return self._default_to_pandas(
                 pandas.Series.value_counts,
                 normalize=normalize,
@@ -2427,7 +2450,7 @@ class Series(BasePandasDataset):
             or type(new_query_compiler) in self._query_compiler.__class__.__bases__
         ), "Invalid Query Compiler object: {}".format(type(new_query_compiler))
         if not inplace and new_query_compiler.is_series_like():
-            return Series(query_compiler=new_query_compiler)
+            return self.__constructor__(query_compiler=new_query_compiler)
         elif not inplace:
             # This can happen with things like `reset_index` where we can add columns.
             from .dataframe import DataFrame

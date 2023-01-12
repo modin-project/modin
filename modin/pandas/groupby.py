@@ -120,11 +120,38 @@ class DataFrameGroupBy(ClassLogger):
         return len(self)
 
     def skew(self, *args, **kwargs):
-        return self._wrap_aggregation(
-            type(self._query_compiler).groupby_skew,
+        # The 'skew' aggregation is less tolerant to non-numeric columns than others
+        # (i.e. it doesn't allow numeric categoricals), thus dropping non-numeric
+        # columns here since `._wrap_aggregation(numeric_only=True, ...)` is not enough
+        if self.ndim == 2:
+            by_cols = self._internal_by
+            mask_cols = [
+                col
+                for col, dtype in self._df.dtypes.items()
+                if is_numeric_dtype(dtype) or col in by_cols
+            ]
+            if not self._df.columns.equals(mask_cols):
+                masked_df = self._df[mask_cols]
+                masked_obj = type(self)(
+                    df=masked_df,
+                    by=self._by,
+                    axis=self._axis,
+                    idx_name=self._idx_name,
+                    drop=self._drop,
+                    squeeze=self._squeeze,
+                    **self._kwargs,
+                )
+            else:
+                masked_obj = self
+        else:
+            masked_obj = self
+
+        return masked_obj._wrap_aggregation(
+            type(masked_obj._query_compiler).groupby_skew,
             agg_args=args,
             agg_kwargs=kwargs,
-            numeric_only=True,
+            # Don't want to try to drop non-numeric columns for the second time
+            numeric_only=False,
         )
 
     def ffill(self, limit=None):
@@ -132,6 +159,24 @@ class DataFrameGroupBy(ClassLogger):
 
     def sem(self, ddof=1):
         return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
+
+    def value_counts(
+        self,
+        subset=None,
+        normalize: bool = False,
+        sort: bool = True,
+        ascending: bool = False,
+        dropna: bool = True,
+    ):
+        return self._default_to_pandas(
+            lambda df: df.value_counts(
+                subset=subset,
+                normalize=normalize,
+                sort=sort,
+                ascending=ascending,
+                dropna=dropna,
+            )
+        )
 
     def mean(self, numeric_only=None):
         return self._check_index(
@@ -670,7 +715,6 @@ class DataFrameGroupBy(ClassLogger):
         if not isinstance(result, Series):
             result = result.squeeze(axis=1)
         if not self._kwargs.get("as_index") and not isinstance(result, Series):
-            result = result.rename(columns={0: "size"})
             result = (
                 result.rename(columns={MODIN_UNNAMED_SERIES_LABEL: "index"})
                 if MODIN_UNNAMED_SERIES_LABEL in result.columns
@@ -848,8 +892,8 @@ class DataFrameGroupBy(ClassLogger):
     def diff(self):
         return self._default_to_pandas(lambda df: df.diff())
 
-    def take(self, **kwargs):
-        return self._default_to_pandas(lambda df: df.take(**kwargs))
+    def take(self, *args, **kwargs):
+        return self._default_to_pandas(lambda df: df.take(*args, **kwargs))
 
     @property
     def _index(self):
@@ -1235,6 +1279,24 @@ class SeriesGroupBy(DataFrameGroupBy):
                 )
                 for k in (sorted(group_ids) if self._sort else group_ids)
             )
+
+    def value_counts(
+        self,
+        normalize: bool = False,
+        sort: bool = True,
+        ascending: bool = False,
+        bins=None,
+        dropna: bool = True,
+    ):
+        return self._default_to_pandas(
+            lambda ser: ser.value_counts(
+                normalize=normalize,
+                sort=sort,
+                ascending=ascending,
+                bins=bins,
+                dropna=dropna,
+            )
+        )
 
 
 if IsExperimental.get():

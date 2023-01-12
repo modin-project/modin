@@ -33,14 +33,15 @@ from modin.core.dataframe.algebra.default2pandas import (
 from modin.error_message import ErrorMessage
 from . import doc_utils
 from modin.logging import ClassLogger
-from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
 from modin.config import StorageFormat
 
 from pandas.core.dtypes.common import is_scalar
 import pandas.core.resample
 import pandas
+from pandas._typing import IndexLabel, Suffixes
 import numpy as np
-from typing import List, Hashable
+from typing import List, Hashable, Optional
 
 
 def _get_axis(axis):
@@ -112,7 +113,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     for a list of requirements for subclassing this object.
     """
 
-    @abc.abstractmethod
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         """
         Do fallback to pandas for the passed function.
@@ -131,7 +131,20 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             The result of the `pandas_op`, converted back to ``BaseQueryCompiler``.
         """
-        pass
+        op_name = getattr(pandas_op, "__name__", str(pandas_op))
+        ErrorMessage.default_to_pandas(op_name)
+        args = try_cast_to_pandas(args)
+        kwargs = try_cast_to_pandas(kwargs)
+
+        result = pandas_op(try_cast_to_pandas(self), *args, **kwargs)
+        if isinstance(result, pandas.Series):
+            if result.name is None:
+                result.name = MODIN_UNNAMED_SERIES_LABEL
+            result = result.to_frame()
+        if isinstance(result, pandas.DataFrame):
+            return self.from_pandas(result, type(self._modin_frame))
+        else:
+            return result
 
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for
@@ -856,6 +869,143 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.merge)(
             self, right=right, **kwargs
         )
+
+    def _get_column_as_pandas_series(self, key):
+        """
+        Get column data by label as pandas.Series.
+
+        Parameters
+        ----------
+        key : Any
+            Column label.
+
+        Returns
+        -------
+        pandas.Series
+        """
+        result = self.getitem_array([key]).to_pandas().squeeze(axis=1)
+        if not isinstance(result, pandas.Series):
+            raise RuntimeError(
+                f"Expected getting column {key} to give "
+                + f"pandas.Series, but instead got {type(result)}"
+            )
+        return result
+
+    def merge_asof(
+        self,
+        right: "BaseQueryCompiler",
+        left_on: Optional[IndexLabel] = None,
+        right_on: Optional[IndexLabel] = None,
+        left_index: bool = False,
+        right_index: bool = False,
+        left_by=None,
+        right_by=None,
+        suffixes: Suffixes = ("_x", "_y"),
+        tolerance=None,
+        allow_exact_matches: bool = True,
+        direction: str = "backward",
+    ):
+        # Pandas fallbacks for tricky cases:
+        if (
+            # No idea how this works or why it does what it does; and in fact
+            # there's a Pandas bug suggesting it's wrong:
+            # https://github.com/pandas-dev/pandas/issues/33463
+            (left_index and right_on is not None)
+            # This is the case where by is a list of columns. If we're copying lots
+            # of columns out of Pandas, maybe not worth trying our path, it's not
+            # clear it's any better:
+            or not (left_by is None or is_scalar(left_by))
+            or not (right_by is None or is_scalar(right_by))
+            # The implementation below assumes that the right index is unique
+            # because it uses merge_asof to map each position in the merged
+            # index to the label of the one right row that should be merged
+            # at that row position.
+            or not right.index.is_unique
+        ):
+            return self.default_to_pandas(
+                pandas.merge_asof,
+                right,
+                left_on=left_on,
+                right_on=right_on,
+                left_index=left_index,
+                right_index=right_index,
+                left_by=left_by,
+                right_by=right_by,
+                suffixes=suffixes,
+                tolerance=tolerance,
+                allow_exact_matches=allow_exact_matches,
+                direction=direction,
+            )
+
+        if left_on is None:
+            left_column = self.index
+        else:
+            left_column = self._get_column_as_pandas_series(left_on)
+
+        if right_on is None:
+            right_column = right.index
+        else:
+            right_column = right._get_column_as_pandas_series(right_on)
+
+        left_pandas_limited = {"on": left_column}
+        right_pandas_limited = {"on": right_column, "right_labels": right.index}
+        extra_kwargs = {}  # extra arguments to Pandas merge_asof
+
+        if left_by is not None or right_by is not None:
+            extra_kwargs["by"] = "by"
+            left_pandas_limited["by"] = self._get_column_as_pandas_series(left_by)
+            right_pandas_limited["by"] = right._get_column_as_pandas_series(right_by)
+
+        # 1. Construct Pandas DataFrames with just the 'on' and optional 'by'
+        # columns, and the index as another column.
+        left_pandas_limited = pandas.DataFrame(left_pandas_limited, index=self.index)
+        right_pandas_limited = pandas.DataFrame(right_pandas_limited)
+
+        # 2. Use Pandas' merge_asof to figure out how to map labels on left to
+        # labels on the right.
+        merged = pandas.merge_asof(
+            left_pandas_limited,
+            right_pandas_limited,
+            on="on",
+            direction=direction,
+            allow_exact_matches=allow_exact_matches,
+            tolerance=tolerance,
+            **extra_kwargs,
+        )
+        # Now merged["right_labels"] shows which labels from right map to left's index.
+
+        # 3. Re-index right using the merged["right_labels"]; at this point right
+        # should be same length and (semantically) same order as left:
+        right_subset = right.reindex(
+            axis=0, labels=pandas.Index(merged["right_labels"])
+        )
+        if not right_index:
+            right_subset = right_subset.drop(columns=[right_on])
+        if right_by is not None and left_by == right_by:
+            right_subset = right_subset.drop(columns=[right_by])
+        right_subset.index = self.index
+
+        # 4. Merge left and the new shrunken right:
+        result = self.merge(
+            right_subset,
+            left_index=True,
+            right_index=True,
+            suffixes=suffixes,
+            how="left",
+        )
+
+        # 5. Clean up to match Pandas output:
+        if left_on is not None and right_index:
+            result = result.insert(
+                # In theory this could use get_indexer_for(), but that causes an error:
+                list(result.columns).index(left_on + suffixes[0]),
+                left_on,
+                result.getitem_array([left_on + suffixes[0]]),
+            )
+        if not left_index and not right_index:
+            result = result.reset_index(drop=True)
+
+        return result
 
     @doc_utils.add_refer_to("DataFrame.join")
     def join(self, right, **kwargs):  # noqa: PR02
@@ -2518,7 +2668,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         agg_kwargs,
         drop=False,
     ):
-        return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.size)(
+        result = GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.size)(
             self,
             by=by,
             axis=axis,
@@ -2528,6 +2678,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             drop=drop,
             method="size",
         )
+        if not groupby_kwargs.get("as_index", False):
+            # Renaming 'MODIN_UNNAMED_SERIES_LABEL' to a proper name
+            result.columns = result.columns[:-1].append(pandas.Index(["size"]))
+        return result
 
     @doc_utils.add_refer_to("GroupBy.aggregate")
     def groupby_agg(

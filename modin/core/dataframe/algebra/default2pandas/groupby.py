@@ -205,7 +205,7 @@ class GroupBy:
                 and by.name in df
                 and df[by.name].equals(by)
             ):
-                by = by.name
+                by = [by.name]
             if isinstance(by, pandas.DataFrame):
                 df = pandas.concat([df] + [by[[o for o in by if o not in df]]], axis=1)
                 by = list(by.columns)
@@ -217,12 +217,12 @@ class GroupBy:
             grp = df.groupby(by, axis=axis, **groupby_kwargs)
             func = cls.get_func(agg_func, **kwargs)
             result = func(grp, *agg_args, **agg_kwargs)
+            method = kwargs.get("method")
 
             if isinstance(result, pandas.Series):
-                result = result.to_frame()
+                result = result.to_frame(MODIN_UNNAMED_SERIES_LABEL)
 
             if not as_index:
-                method = kwargs.get("method")
                 if isinstance(by, pandas.Series):
                     # 1. If `drop` is True then 'by' Series represents a column from the
                     #    source frame and so the 'by' is internal.

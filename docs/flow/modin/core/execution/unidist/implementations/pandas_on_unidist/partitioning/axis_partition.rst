@@ -8,7 +8,7 @@ a wrapper over a list of block partitions, which are stored in this class, with 
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning.virtual_partition.PandasOnUnidistDataframeVirtualPartition
+.. autoclass:: modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning.PandasOnUnidistDataframeVirtualPartition
   :members:
 
 PandasOnUnidistDataframeColumnPartition
@@ -17,7 +17,7 @@ PandasOnUnidistDataframeColumnPartition
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning.virtual_partition.PandasOnUnidistDataframeColumnPartition
+.. autoclass:: modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning.PandasOnUnidistDataframeColumnPartition
   :members:
 
 PandasOnUnidistDataframeRowPartition
@@ -26,5 +26,5 @@ PandasOnUnidistDataframeRowPartition
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning.virtual_partition.PandasOnUnidistDataframeRowPartition
+.. autoclass:: modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning.PandasOnUnidistDataframeRowPartition
   :members:

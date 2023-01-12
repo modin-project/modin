@@ -173,6 +173,22 @@ class TimeJoinStringIndex:
         execute(self.df.join(self.df_key1, on="key1", sort=sort))
 
 
+class TimeMergeDefault:
+    param_names = ["shapes", "how", "sort"]
+    params = [
+        get_benchmark_shapes("TimeMergeDefault"),
+        ["left", "inner"],
+        [True, False],
+    ]
+
+    def setup(self, shapes, how, sort):
+        self.df1 = generate_dataframe("int", *shapes[0], RAND_LOW, RAND_HIGH)
+        self.df2 = generate_dataframe("int", *shapes[1], RAND_LOW, RAND_HIGH)
+
+    def time_merge(self, shapes, how, sort):
+        execute(IMPL.merge(self.df1, self.df2, how=how, sort=sort))
+
+
 class TimeMerge:
     param_names = ["shapes", "how", "sort"]
     params = [
@@ -192,9 +208,6 @@ class TimeMerge:
                 self.df2, left_index=True, right_index=True, how=how, sort=sort
             )
         )
-
-    def time_merge_default(self, shapes, how, sort):
-        execute(IMPL.merge(self.df1, self.df2, how=how, sort=sort))
 
     def time_merge_dataframe_empty_right(self, shapes, how, sort):
         # Getting an empty dataframe using `iloc` should be very fast,
@@ -901,14 +914,14 @@ class TimeReindex:
         self.df2 = IMPL.DataFrame(
             index=range(rows), data=np.random.rand(rows, cols), columns=range(cols)
         )
-        level1 = tm.makeStringIndex(rows).values.repeat(cols)
-        level2 = np.tile(tm.makeStringIndex(cols).values, rows)
+        level1 = tm.makeStringIndex(rows // 10).values.repeat(10)
+        level2 = np.tile(tm.makeStringIndex(10).values, rows // 10)
         index = IMPL.MultiIndex.from_arrays([level1, level2])
-        self.s = IMPL.Series(np.random.randn(rows * cols), index=index)
+        self.s = IMPL.Series(np.random.randn(rows), index=index)
         self.s_subset = self.s[::2]
         self.s_subset_no_cache = self.s[::2].copy()
 
-        mi = IMPL.MultiIndex.from_product([rng, range(100)])
+        mi = IMPL.MultiIndex.from_product([rng[: len(rng) // 10], range(10)])
         self.s2 = IMPL.Series(np.random.randn(len(mi)), index=mi)
         self.s2_subset = self.s2[::2].copy()
         execute(self.df), execute(self.df2)
@@ -1182,6 +1195,80 @@ class TimeGroups:
     # returns a dict thus not calling execute
     def time_series_indices(self, shape):
         self.series.groupby(self.series).indices
+
+
+class TimeRepr:
+
+    params = [get_benchmark_shapes("TimeRepr")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        self.df = IMPL.DataFrame(np.random.randn(*shape))
+        execute(self.df)
+
+    # returns a string thus not calling execute
+    def time_repr(self, shape):
+        repr(self.df)
+
+
+class TimeMaskBool:
+
+    params = [get_benchmark_shapes("TimeMaskBool")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        self.df = IMPL.DataFrame(np.random.randn(*shape))
+        self.mask = self.df < 0
+        execute(self.df), execute(self.mask)
+
+    def time_frame_mask(self, shape):
+        execute(self.df.mask(self.mask))
+
+
+class TimeIsnull:
+
+    params = [get_benchmark_shapes("TimeIsnull")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        sample = np.array([np.nan, 1.0])
+        data = np.random.choice(sample, (shape[0], shape[1]))
+        self.df = IMPL.DataFrame(data)
+        execute(self.df)
+
+    def time_isnull(self, shape):
+        execute(IMPL.isnull(self.df))
+
+
+class TimeDropna:
+
+    params = (["all", "any"], [0, 1], get_benchmark_shapes("TimeDropna"))
+    param_names = ["how", "axis", "shape"]
+
+    def setup(self, how, axis, shape):
+        row, col = shape
+        self.df = IMPL.DataFrame(np.random.randn(row, col))
+        self.df.iloc[row // 20 : row // 10, col // 3 : col // 2] = np.nan
+        self.df["foo"] = "bar"
+        execute(self.df)
+
+    def time_dropna(self, how, axis, shape):
+        execute(self.df.dropna(how=how, axis=axis))
+
+
+class TimeEquals:
+
+    params = [get_benchmark_shapes("TimeEquals")]
+    param_names = ["shape"]
+
+    def setup(self, shape):
+        self.df = IMPL.DataFrame(np.random.randn(*shape))
+        self.df.iloc[-1, -1] = np.nan
+        execute(self.df)
+
+    # returns a boolean thus not calling execute
+    def time_frame_float_equal(self, shape):
+        self.df.equals(self.df)
 
 
 from .utils import setup  # noqa: E402, F401

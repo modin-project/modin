@@ -198,6 +198,7 @@ def test_mixed_dtypes_groupby(as_index):
         eval_sum(modin_groupby, pandas_groupby)
         eval_ngroup(modin_groupby, pandas_groupby)
         eval_nunique(modin_groupby, pandas_groupby)
+        eval_value_counts(modin_groupby, pandas_groupby)
         eval_median(modin_groupby, pandas_groupby)
         eval_general(modin_groupby, pandas_groupby, lambda df: df.head(n))
         eval_cumprod(modin_groupby, pandas_groupby)
@@ -226,7 +227,7 @@ def test_mixed_dtypes_groupby(as_index):
         eval_count(modin_groupby, pandas_groupby)
         eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n))
         eval_quantile(modin_groupby, pandas_groupby)
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.take())
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.take([0]))
         eval___getattr__(modin_groupby, pandas_groupby, "col2")
         eval_groups(modin_groupby, pandas_groupby)
 
@@ -464,7 +465,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
         )
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n))
     eval_quantile(modin_groupby, pandas_groupby)
-    eval_general(modin_groupby, pandas_groupby, lambda df: df.take())
+    eval_general(modin_groupby, pandas_groupby, lambda df: df.take([0]))
     if isinstance(by, list) and not any(
         isinstance(o, (pd.Series, pandas.Series)) for o in by
     ):
@@ -591,6 +592,7 @@ def test_single_group_row_groupby():
     eval_sum(modin_groupby, pandas_groupby)
     eval_ngroup(modin_groupby, pandas_groupby)
     eval_nunique(modin_groupby, pandas_groupby)
+    eval_value_counts(modin_groupby, pandas_groupby)
     eval_median(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.head(n))
     eval_cumprod(modin_groupby, pandas_groupby)
@@ -620,7 +622,7 @@ def test_single_group_row_groupby():
     eval_size(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n))
     eval_quantile(modin_groupby, pandas_groupby)
-    eval_general(modin_groupby, pandas_groupby, lambda df: df.take())
+    eval_general(modin_groupby, pandas_groupby, lambda df: df.take([0]))
     eval___getattr__(modin_groupby, pandas_groupby, "col2")
     eval_groups(modin_groupby, pandas_groupby)
 
@@ -709,6 +711,7 @@ def test_large_row_groupby(is_by_category):
     eval_sum(modin_groupby, pandas_groupby)
     eval_ngroup(modin_groupby, pandas_groupby)
     eval_nunique(modin_groupby, pandas_groupby)
+    eval_value_counts(modin_groupby, pandas_groupby)
     eval_median(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.head(n))
     # eval_cumprod(modin_groupby, pandas_groupby) causes overflows
@@ -738,7 +741,7 @@ def test_large_row_groupby(is_by_category):
     eval_size(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n))
     eval_quantile(modin_groupby, pandas_groupby)
-    eval_general(modin_groupby, pandas_groupby, lambda df: df.take())
+    eval_general(modin_groupby, pandas_groupby, lambda df: df.take([0]))
     eval_groups(modin_groupby, pandas_groupby)
 
 
@@ -816,6 +819,8 @@ def test_simple_col_groupby():
     # Pandas fails on this case with ValueError
     # eval_ngroup(modin_groupby, pandas_groupby)
     # eval_nunique(modin_groupby, pandas_groupby)
+    # NotImplementedError: DataFrameGroupBy.value_counts only handles axis=0
+    # eval_value_counts(modin_groupby, pandas_groupby)
     eval_median(modin_groupby, pandas_groupby)
     eval_general(
         modin_groupby,
@@ -841,7 +846,7 @@ def test_simple_col_groupby():
     eval_fillna(modin_groupby, pandas_groupby)
     eval_count(modin_groupby, pandas_groupby)
     eval_size(modin_groupby, pandas_groupby)
-    eval_general(modin_groupby, pandas_groupby, lambda df: df.take())
+    eval_general(modin_groupby, pandas_groupby, lambda df: df.take([0]))
     eval_groups(modin_groupby, pandas_groupby)
 
 
@@ -942,6 +947,7 @@ def test_series_groupby(by, as_index_series_or_dataframe):
         eval_size(modin_groupby, pandas_groupby)
         eval_ngroup(modin_groupby, pandas_groupby)
         eval_nunique(modin_groupby, pandas_groupby)
+        eval_value_counts(modin_groupby, pandas_groupby)
         eval_median(modin_groupby, pandas_groupby)
         eval_general(modin_groupby, pandas_groupby, lambda df: df.head(n))
         eval_cumprod(modin_groupby, pandas_groupby)
@@ -958,7 +964,7 @@ def test_series_groupby(by, as_index_series_or_dataframe):
         eval_count(modin_groupby, pandas_groupby)
         eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n))
         eval_quantile(modin_groupby, pandas_groupby)
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.take())
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.take([0]))
         eval_groups(modin_groupby, pandas_groupby)
 
 
@@ -1074,6 +1080,10 @@ def eval_ngroup(modin_groupby, pandas_groupby):
 
 def eval_nunique(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.nunique(), pandas_groupby.nunique())
+
+
+def eval_value_counts(modin_groupby, pandas_groupby):
+    df_equals(modin_groupby.value_counts(), pandas_groupby.value_counts())
 
 
 def eval_median(modin_groupby, pandas_groupby):
@@ -1828,18 +1838,16 @@ def test_multi_column_groupby_different_partitions(
         1.5,
         "str",
         pandas.Timestamp("2020-02-02"),
-        [None],
         [0, "str"],
-        [None, 0],
         [pandas.Timestamp("2020-02-02"), 1.5],
     ],
 )
 @pytest.mark.parametrize("as_index", [True, False])
 def test_not_str_by(by, as_index):
-    data = {f"col{i}": np.arange(5) for i in range(5)}
-    columns = pandas.Index([0, 1.5, "str", pandas.Timestamp("2020-02-02"), None])
+    columns = pandas.Index([0, 1.5, "str", pandas.Timestamp("2020-02-02")])
+    data = {col: np.arange(5) for col in columns}
+    md_df, pd_df = create_test_dfs(data)
 
-    md_df, pd_df = create_test_dfs(data, columns=columns)
     md_grp, pd_grp = (
         md_df.groupby(by, as_index=as_index),
         pd_df.groupby(by, as_index=as_index),

@@ -332,7 +332,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def broadcast_apply(cls, axis, apply_func, left, right, other_name="r"):
+    def broadcast_apply(cls, axis, apply_func, left, right, other_name="right"):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` function.
 
@@ -346,7 +346,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             NumPy array of left partitions.
         right : np.ndarray
             NumPy array of right partitions.
-        other_name : str, default: "r"
+        other_name : str, default: "right"
             Name of key-value argument for `apply_func` that
             is used to pass `right` to `apply_func`.
 
@@ -671,10 +671,16 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             axis = 1
         else:
             ErrorMessage.catch_bugs_and_request_email(True)
+
+        def is_part_empty(part):
+            return part.empty and (
+                not isinstance(part, pandas.DataFrame) or (len(part.columns) == 0)
+            )
+
         df_rows = [
             pandas.concat([part for part in row], axis=axis)
             for row in retrieved_objects
-            if not all(part.empty for part in row)
+            if not all(is_part_empty(part) for part in row)
         ]
         if len(df_rows) == 0:
             return pandas.DataFrame()
@@ -878,13 +884,22 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         ErrorMessage.catch_bugs_and_request_email(not callable(index_func))
         func = cls.preprocess_func(index_func)
         target = partitions.T if axis == 0 else partitions
-        new_idx = [idx.apply(func) for idx in target[0]] if len(target) else []
-        new_idx = cls.get_objects_from_partitions(new_idx)
-        # filter empty indexes
+        if len(target):
+            new_idx = [idx.apply(func) for idx in target[0]]
+            new_idx = cls.get_objects_from_partitions(new_idx)
+        else:
+            new_idx = [pandas.Index([])]
+
+        # filter empty indexes in case there are multiple partitions
         total_idx = list(filter(len, new_idx))
         if len(total_idx) > 0:
             # TODO FIX INFORMATION LEAK!!!!1!!1!!
             total_idx = total_idx[0].append(total_idx[1:])
+        else:
+            # Meaning that all partitions returned a zero-length index,
+            # in this case, we return an index of any partition to preserve
+            # the index's metadata
+            total_idx = new_idx[0]
         return total_idx, new_idx
 
     @classmethod
