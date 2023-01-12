@@ -398,18 +398,12 @@ def test___gt__(data):
 
 @pytest.mark.parametrize("count_elements", [0, 1, 10])
 def test___int__(count_elements):
-    eval_general(
-        *create_test_series([1.5] * count_elements),
-        lambda df: int(df),
-    )
+    eval_general(*create_test_series([1.5] * count_elements), int)
 
 
 @pytest.mark.parametrize("count_elements", [0, 1, 10])
 def test___float__(count_elements):
-    eval_general(
-        *create_test_series([1] * count_elements),
-        lambda df: float(df),
-    )
+    eval_general(*create_test_series([1] * count_elements), float)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
