@@ -27,7 +27,7 @@ from .virtual_partition import (
     PandasOnUnidistDataframeRowPartition,
 )
 from .partition import PandasOnUnidistDataframePartition
-from modin.core.execution.unidist.generic.modin_aqp import call_progress_bar
+from modin.core.execution.modin_aqp import call_progress_bar
 
 
 def progress_bar_wrapper(f):
