@@ -23,6 +23,7 @@ from pandas.core.dtypes.common import (
     is_dict_like,
     is_list_like,
 )
+from pandas.core.series import _coerce_method
 from pandas._libs.lib import no_default, NoDefault
 from pandas._typing import IndexKeyFunc, Axis
 from typing import Union, Optional, Hashable, TYPE_CHECKING, IO
@@ -271,16 +272,6 @@ class Series(BasePandasDataset):
     def __rdivmod__(self, left):
         return self.rdivmod(left)
 
-    def __float__(self):
-        """
-        Return float representation of Series.
-
-        Returns
-        -------
-        float
-        """
-        return float(self.squeeze())
-
     @_doc_binary_op(operation="integer division", bin_op="floordiv")
     def __floordiv__(self, right):
         return self.floordiv(right)
@@ -314,15 +305,8 @@ class Series(BasePandasDataset):
                 return self[key]
             raise err
 
-    def __int__(self):
-        """
-        Return integer representation of Series.
-
-        Returns
-        -------
-        int
-        """
-        return int(self.squeeze())
+    __float__ = _coerce_method(float)
+    __int__ = _coerce_method(int)
 
     def __iter__(self):
         """
