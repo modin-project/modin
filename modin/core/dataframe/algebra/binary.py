@@ -63,9 +63,9 @@ def compute_dtypes_common_cast(first, second) -> np.dtype:
     dtypes
         The pandas series with precomputed dtypes.
 
-     Notes
+    Notes
     -----
-     The dtypes of the operands are supposed to be known.
+    The dtypes of the operands are supposed to be known.
     """
     dtypes_first = dict(zip(first.columns, first._modin_frame._dtypes))
     dtypes_second = dict(zip(second.columns, second._modin_frame._dtypes))
@@ -123,7 +123,7 @@ class Binary(Operator):
         labels : {"keep", "replace", "drop"}, default: "replace"
             Whether keep labels from left Modin DataFrame, replace them with labels
             from joined DataFrame or drop altogether to make them be computed lazily later.
-        infer_dtypes : {"common_cast", "float","bool", None}, default: None
+        how_compute_dtypes : {"common_cast", "float","bool", None}, default: None
             How dtypes should be inferred.
                 * If "common_cast", casts to common dtype of operand columns.
                 * If "float", performs type casting by finding common dtype.
