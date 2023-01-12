@@ -77,9 +77,17 @@ class array(object):
         dtype=None,
         subok=True,
     ):
-        broadcast = self._ndim != x2._ndim
-        result = self._query_compiler.add(x2._query_compiler, broadcast=broadcast)
-        return array(_query_compiler=result)
+        broadcast = (self._ndim != x2._ndim)
+        if broadcast:
+            # Workaround for GH#5529.
+            caller = x2 if self._ndim == 1 else self
+            callee = self if self._ndim == 1 else x2
+            result = caller._query_compiler.add(callee._query_compiler, broadcast=True)
+            new_ndim = 2
+        else:
+            result = self._query_compiler.add(x2._query_compiler)
+            new_ndim = self._ndim
+        return array(_query_compiler=result, _ndim=new_ndim)
 
     def _divide(
         self,
