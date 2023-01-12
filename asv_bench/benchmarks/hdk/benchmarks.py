@@ -492,3 +492,6 @@ class TimeGroupByMultiColumn(BaseTimeGroupBy):
                 {col: "mean" for col in self.non_groupby_columns}
             )
         )
+
+
+from ..utils import setup  # noqa: E402, F401
