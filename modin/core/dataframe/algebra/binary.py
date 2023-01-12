@@ -64,8 +64,8 @@ def compute_dtypes_common_cast(first, second) -> np.dtype:
     dtypes
         The pandas series with precomputed dtypes.
     """
-    dtypes_first = dict(zip(first.columns, first.dtypes))
-    dtypes_second = dict(zip(second.columns, second.dtypes))
+    dtypes_first = dict(zip(first.columns, first._modin_frame._dtypes))
+    dtypes_second = dict(zip(second.columns, second._modin_frame._dtypes))
     columns_first = set(first.columns)
     columns_second = set(second.columns)
     common_columns = columns_first.intersection(columns_second)
@@ -193,7 +193,9 @@ class Binary(Operator):
                         and other.is_series_like is False
                     ):
                         if how_compute_dtypes == "bool":
-                            dtypes = pandas.Series([bool] * len(other.dtypes))
+                            dtypes = pandas.Series(
+                                [bool] * len(other._modin_frame._dtypes)
+                            )
                         if how_compute_dtypes == "common_cast":
                             dtypes = compute_dtypes_common_cast(query_compiler, other)
                         elif how_compute_dtypes == "float":
