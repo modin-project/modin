@@ -1514,8 +1514,8 @@ def test_constructor(data):
     ],
 )
 def test_constructor_dtypes(data):
-    md_df, pd_df = create_test_dfs(data)
-    df_equals(md_df, pd_df)
+    modin_df, pandas_df = create_test_dfs(data)
+    df_equals(modin_df, pandas_df)
 
 
 def test_constructor_columns_and_index():
@@ -1559,5 +1559,5 @@ def test_constructor_columns_and_index():
 
 def test_constructor_from_index():
     data = pd.Index([1, 2, 3], name="pricing_date")
-    md_df, pd_df = create_test_dfs(data)
-    df_equals(md_df, pd_df)
+    modin_df, pandas_df = create_test_dfs(data)
+    df_equals(modin_df, pandas_df)
