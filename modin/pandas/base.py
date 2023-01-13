@@ -1720,6 +1720,11 @@ class BasePandasDataset(ClassLogger):
         """
         Whether elements in `BasePandasDataset` are contained in `values`.
         """
+        # TODO: Use base._is_dataframe from upstream modin once it's available instead
+        # of doing this cylic import.
+
+        # Query compiler needs to know whether values is series or df because column
+        # names matter for df but not for series.
         from .series import Series
 
         ignore_indices = isinstance(values, Series)
