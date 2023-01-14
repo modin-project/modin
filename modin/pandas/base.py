@@ -1731,7 +1731,10 @@ class BasePandasDataset(ClassLogger):
         values = getattr(values, "_query_compiler", values)
         return self.__constructor__(
             query_compiler=self._query_compiler.isin(
-                values=values, ignore_indices=ignore_indices, **kwargs
+                values=values,
+                ignore_indices=ignore_indices,
+                self_is_series=isinstance(self, Series),
+                **kwargs,
             )
         )
 
