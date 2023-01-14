@@ -1596,7 +1596,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
         # names matter for df but not for series.
         return self.__constructor__(
             query_compiler=self._query_compiler.isin(
-                values=values, values_is_series=isinstance(values, Series)
+                values=values,
+                values_is_series=isinstance(values, Series),
+                self_is_series=isinstance(self, Series),
             )
         )
 
