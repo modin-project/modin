@@ -2108,8 +2108,8 @@ def test_mean_with_datetime(by_func):
 )
 def test_groupby_on_empty_data(modin_df_recipe):
     class ModinDfConstructor:
-        def __init__(self, recipie, df_kwargs):
-            self._recipie = recipie
+        def __init__(self, recipe, df_kwargs):
+            self._recipe = recipe
             self._mock_obj = None
             self._df_kwargs = df_kwargs
 
@@ -2144,7 +2144,7 @@ def test_groupby_on_empty_data(modin_df_recipe):
             return df
 
         def __enter__(self):
-            return getattr(self, self._recipie)()
+            return getattr(self, self._recipe)()
 
         def __exit__(self, *args, **kwargs):
             if self._mock_obj is not None:
@@ -2195,6 +2195,8 @@ def test_groupby_on_empty_data(modin_df_recipe):
         # TODO: these functions have their specific implementations in the
         # front-end that are unable to operate on empty frames and thus
         # fail on an empty lazy frame.
+        # https://github.com/modin-project/modin/issues/5505
+        # https://github.com/modin-project/modin/issues/5506
         run_test(eval_pipe, func=lambda df: df.mean())
         run_test(eval_shift)
 

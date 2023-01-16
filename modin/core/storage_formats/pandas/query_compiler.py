@@ -2897,7 +2897,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         how="axis_wise",
         drop=False,
     ):
-        # Defaulting to pandas in case of an empty frame
+        # Defaulting to pandas in case of an empty frame as we can't process it properly.
+        # Higher API level won't pass empty data here unless the frame has delayed
+        # computations. So we apparently lose some laziness here (due to index access)
+        # because of the disability to process empty groupby natively.
         if len(self.columns) == 0 or len(self.index) == 0:
             return super().groupby_agg(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop

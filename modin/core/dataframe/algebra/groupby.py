@@ -290,20 +290,24 @@ class GroupByReduce(TreeReduce):
             QueryCompiler which carries the result of GroupBy aggregation.
         """
         is_unsupported_axis = axis != 0
+        # Defaulting to pandas in case of an empty frame as we can't process it properly.
+        # Higher API level won't pass empty data here unless the frame has delayed
+        # computations. So we apparently lose some laziness here (due to index access)
+        # because of the disability to process empty groupby natively.
         is_empty_data = (
             len(query_compiler.columns) == 0 or len(query_compiler.index) == 0
         )
-        is_grouping_on_external_grouper = (
+        is_grouping_using_by_arg = (
             groupby_kwargs.get("level", None) is None and by is not None
         )
-        is_unsupported_external_grouper = isinstance(by, pandas.Grouper) or (
+        is_unsupported_by_arg = isinstance(by, pandas.Grouper) or (
             not hashable(by) and not isinstance(by, type(query_compiler))
         )
 
         if (
             is_unsupported_axis
             or is_empty_data
-            or (is_grouping_on_external_grouper and is_unsupported_external_grouper)
+            or (is_grouping_using_by_arg and is_unsupported_by_arg)
         ):
             if default_to_pandas_func is None:
                 default_to_pandas_func = (
