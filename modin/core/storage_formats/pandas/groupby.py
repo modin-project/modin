@@ -15,17 +15,17 @@
 
 import pandas
 
-from modin.utils import hashable, walk_aggregation_dict
+from modin.utils import hashable
 from modin.core.dataframe.algebra import GroupByReduce
 
 
 class GroupbyReduceImpl:
-    """Provide MapReduce implementations for certain groupby aggregations."""
+    """Provide TreeReduce implementations for certain groupby aggregations."""
 
     @classmethod
     def get_impl(cls, agg_name):
         """
-        Get MapReduce implementations for the specified `agg_name`.
+        Get TreeReduce implementations for the specified `agg_name`.
 
         Parameters
         ----------
@@ -43,7 +43,7 @@ class GroupbyReduceImpl:
     @classmethod
     def has_impl_for(cls, agg_func):
         """
-        Check whether the class has MapReduce implementation for the specified `agg_func`.
+        Check whether the class has TreeReduce implementation for the specified `agg_func`.
 
         Parameters
         ----------
@@ -58,6 +58,8 @@ class GroupbyReduceImpl:
         if not isinstance(agg_func, dict):
             return False
 
+        from modin.pandas.utils import walk_aggregation_dict
+
         for _, func, _, _ in walk_aggregation_dict(agg_func):
             if func not in cls._groupby_reduce_impls:
                 return False
@@ -67,7 +69,7 @@ class GroupbyReduceImpl:
     @classmethod
     def build_qc_method(cls, agg_name):
         """
-        Build a MapReduce implemented query compiler method for the specified groupby aggregation.
+        Build a TreeReduce implemented query compiler method for the specified groupby aggregation.
 
         Parameters
         ----------
@@ -85,7 +87,7 @@ class GroupbyReduceImpl:
     @staticmethod
     def _build_skew_impl():
         """
-        Build MapReduce implementation for 'skew' groupby aggregation.
+        Build TreeReduce implementation for 'skew' groupby aggregation.
 
         Returns
         -------
@@ -149,7 +151,7 @@ class GroupbyReduceImpl:
     @staticmethod
     def _build_mean_impl():
         """
-        Build MapReduce implementation for 'mean' groupby aggregation.
+        Build TreeReduce implementation for 'mean' groupby aggregation.
 
         Returns
         -------

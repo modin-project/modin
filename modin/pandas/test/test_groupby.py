@@ -37,7 +37,7 @@ from .utils import (
     test_data,
     test_data_values,
     modin_df_almost_equals_pandas,
-    try_almost_equals_compare,
+    try_modin_df_almost_equals_compare,
     generate_multiindex,
     test_groupby_data,
     dict_equals,
@@ -1856,7 +1856,7 @@ def test_multi_column_groupby_different_partitions(
         # 'skew' and 'mean' results are not 100% equal to pandas as they use
         # different formulas and so precision errors come into play. Thus
         # using a custom comparator that allows slight numeric deviations.
-        comparator=try_almost_equals_compare,
+        comparator=try_modin_df_almost_equals_compare,
     )
     eval___getitem__(md_grp, pd_grp, md_df.columns[1])
     eval___getitem__(md_grp, pd_grp, [md_df.columns[1], md_df.columns[2]])

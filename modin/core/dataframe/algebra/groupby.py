@@ -21,7 +21,6 @@ from modin.utils import (
     try_cast_to_pandas,
     hashable,
     MODIN_UNNAMED_SERIES_LABEL,
-    walk_aggregation_dict,
 )
 from modin.error_message import ErrorMessage
 
@@ -40,7 +39,7 @@ class GroupByReduce(TreeReduce):
         columns in the ``ID_LEVEL_NAME`` level. Duplicated names are not allowed.
     _GROUPBY_REDUCE_IMPL_FLAG : str
         Attribute indicating that a callable should be treated as an
-        implementation for one of the Map-Reduce phases rather than an
+        implementation for one of the TreeReduce phases rather than an
         arbitrary aggregation. Note: this attribute should be considered private.
     """
 
@@ -95,7 +94,7 @@ class GroupByReduce(TreeReduce):
     @classmethod
     def register_implementation(cls, map_func, reduce_func):
         """
-        Register callables to be recognized as an implementations of map-reduce phases.
+        Register callables to be recognized as an implementations of tree-reduce phases.
 
         Parameters
         ----------
@@ -459,6 +458,8 @@ class GroupByReduce(TreeReduce):
         -------
         callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
         """
+        from modin.pandas.utils import walk_aggregation_dict
+
         external_aggs = {}
         native_aggs = {}
 
@@ -482,6 +483,11 @@ class GroupByReduce(TreeReduce):
                 )
                 old_value.append(new_value)
             else:
+                # Pandas knows that it has to modify the resulting columns if it meets
+                # a function wrapped into a list. Renaming is required if either a new
+                # column name was explicitly specified, or multiple functions were
+                # specified per one column, or if any other column in the aggregation
+                # is going to be renamed.
                 dict_to_add[col] = [new_value] if col_renaming_required else new_value
 
             # Construct resulting columns
@@ -597,7 +603,7 @@ class GroupByReduce(TreeReduce):
     @classmethod
     def is_registered_implementation(cls, func):
         """
-        Check whether the passed `func` was registered as a Map-Reduce implementation.
+        Check whether the passed `func` was registered as a TreeReduce implementation.
 
         Parameters
         ----------

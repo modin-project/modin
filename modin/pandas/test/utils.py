@@ -690,7 +690,7 @@ def modin_df_almost_equals_pandas(modin_df, pandas_df):
     )
 
 
-def try_almost_equals_compare(df1, df2):
+def try_modin_df_almost_equals_compare(df1, df2):
     """Compare two dataframes as nearly equal if possible, otherwise compare as completely equal."""
     # `modin_df_almost_equals_pandas` is numeric-only comparator
     dtypes1, dtypes2 = map(

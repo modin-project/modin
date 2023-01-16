@@ -13,7 +13,15 @@
 
 """Implement utils for pandas component."""
 
+from typing import Iterator, Tuple, Optional
+
 from pandas.util._decorators import doc
+from pandas._typing import (
+    AggFuncType,
+    AggFuncTypeBase,
+    AggFuncTypeDict,
+    IndexLabel,
+)
 import pandas
 import numpy as np
 
@@ -339,6 +347,53 @@ def broadcast_item(
             f"could not broadcast input array from shape {from_shape} into shape "
             + f"{to_shape}"
         )
+
+
+def walk_aggregation_dict(
+    agg_dict: AggFuncTypeDict,
+) -> Iterator[Tuple[IndexLabel, AggFuncTypeBase, Optional[str], bool]]:
+    """
+    Walk over an aggregation dictionary.
+
+    Parameters
+    ----------
+    agg_dict : AggFuncTypeDict
+
+    Yields
+    ------
+    (col: IndexLabel, func: AggFuncTypeBase, func_name: Optional[str], col_renaming_required: bool)
+        Yield an aggregation function with its metadata:
+            - `col`: column name to apply the function.
+            - `func`: aggregation function to apply to the column.
+            - `func_name`: custom function name that was specified in the dict.
+            - `col_renaming_required`: whether it's required to rename the
+                `col` into ``(col, func_name)``.
+    """
+
+    def walk(
+        key: IndexLabel, value: AggFuncType, depth: int = 0
+    ) -> Iterator[Tuple[IndexLabel, AggFuncTypeBase, Optional[str], bool]]:
+        col_renaming_required = bool(depth)
+
+        if isinstance(value, (list, tuple)):
+            if depth == 0:
+                for val in value:
+                    yield from walk(key, val, depth + 1)
+            elif depth == 1:
+                if len(value) != 2:
+                    raise ValueError(
+                        f"Incorrect rename format. Renamer must consist of exactly two elements, got {len(value)=}."
+                    )
+                func_name, func = value
+                yield key, func, func_name, col_renaming_required
+            else:
+                # pandas doesn't support this as well
+                raise NotImplementedError("Nested renaming is not supported.")
+        else:
+            yield key, value, None, col_renaming_required
+
+    for key, value in agg_dict.items():
+        yield from walk(key, value)
 
 
 def _doc_binary_op(operation, bin_op, left="Series", right="right", returns="Series"):
