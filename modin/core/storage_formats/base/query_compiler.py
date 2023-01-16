@@ -33,7 +33,7 @@ from modin.core.dataframe.algebra.default2pandas import (
 from modin.error_message import ErrorMessage
 from . import doc_utils
 from modin.logging import ClassLogger
-from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
 from modin.config import StorageFormat
 
 from pandas.core.dtypes.common import is_scalar
@@ -113,7 +113,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     for a list of requirements for subclassing this object.
     """
 
-    @abc.abstractmethod
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         """
         Do fallback to pandas for the passed function.
@@ -132,7 +131,20 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             The result of the `pandas_op`, converted back to ``BaseQueryCompiler``.
         """
-        pass
+        op_name = getattr(pandas_op, "__name__", str(pandas_op))
+        ErrorMessage.default_to_pandas(op_name)
+        args = try_cast_to_pandas(args)
+        kwargs = try_cast_to_pandas(kwargs)
+
+        result = pandas_op(try_cast_to_pandas(self), *args, **kwargs)
+        if isinstance(result, pandas.Series):
+            if result.name is None:
+                result.name = MODIN_UNNAMED_SERIES_LABEL
+            result = result.to_frame()
+        if isinstance(result, pandas.DataFrame):
+            return self.from_pandas(result, type(self._modin_frame))
+        else:
+            return result
 
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for

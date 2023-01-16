@@ -40,7 +40,7 @@ def concatenate(dfs):
         columns = [df.iloc[:, i] for df in dfs]
         union = union_categoricals(columns)
         for df in dfs:
-            df.iloc[:, i] = pandas.Categorical(
-                df.iloc[:, i], categories=union.categories
+            df.isetitem(
+                i, pandas.Categorical(df.iloc[:, i], categories=union.categories)
             )
     return pandas.concat(dfs)

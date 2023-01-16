@@ -967,7 +967,6 @@ class PandasDataframe(ClassLogger):
             A PandasDataframe with new columns from index labels.
         """
         new_row_labels = pandas.RangeIndex(len(self.index))
-
         if self.index.nlevels > 1:
             level_names = [
                 self.index.names[i]
@@ -983,6 +982,11 @@ class PandasDataframe(ClassLogger):
                 if "index" not in self.columns
                 else "level_{}".format(0)
             ]
+        new_dtypes = None
+        if self._dtypes is not None:
+            names = tuple(level_names) if len(level_names) > 1 else level_names[0]
+            new_dtypes = self.index.to_frame(name=names).dtypes
+            new_dtypes = pandas.concat([new_dtypes, self._dtypes])
 
         # We will also use the `new_column_names` in the calculation of the internal metadata, so this is a
         # lightweight way of ensuring the metadata matches.
@@ -1040,6 +1044,7 @@ class PandasDataframe(ClassLogger):
             new_columns,
             row_lengths=self._row_lengths_cache,
             column_widths=new_column_widths,
+            dtypes=new_dtypes,
         )
         # Set flag for propagating deferred row labels across dataframe partitions
         result.synchronize_labels(axis=0)

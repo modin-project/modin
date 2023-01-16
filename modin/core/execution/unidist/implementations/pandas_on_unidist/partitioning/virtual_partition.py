@@ -193,7 +193,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of ``unidist.ObjectRef``-s.
         """
-        return deploy_unidist_func.options(
+        return _deploy_unidist_func.options(
             num_returns=(num_splits if lengths is None else len(lengths)) * 4,
             **({"max_retries": max_retries} if max_retries is not None else {}),
         ).remote(
@@ -249,7 +249,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of ``unidist.ObjectRef``-s.
         """
-        return deploy_unidist_func.options(num_returns=num_splits * 4).remote(
+        return _deploy_unidist_func.options(num_returns=num_splits * 4).remote(
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
             func,
@@ -507,7 +507,7 @@ class PandasOnUnidistDataframeRowPartition(PandasOnUnidistDataframeVirtualPartit
 
 
 @unidist.remote
-def deploy_unidist_func(
+def _deploy_unidist_func(
     deployer, axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs
 ):  # pragma: no cover
     """
