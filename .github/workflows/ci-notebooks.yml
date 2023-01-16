@@ -86,4 +86,4 @@ jobs:
       - run: |
           flake8 --enable=T examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
           flake8 --enable=T examples/tutorial/jupyter/execution/test/utils.py
-      - run: pytest examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
+      - run: python -m pytest examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
