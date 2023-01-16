@@ -627,7 +627,7 @@ jobs:
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_io.py --verbose
       - run: mpiexec -n 1 python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py
+      - run: pip install "dfsql>=0.4.2" "pyparsing" && mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
       - uses: codecov/codecov-action@v2
@@ -720,7 +720,7 @@ jobs:
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && pytest modin/experimental/sql/test/test_sql.py
+      - run: pip install "dfsql>=0.4.2" "pyparsing" && pytest modin/experimental/sql/test/test_sql.py
       - run: pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
       - uses: codecov/codecov-action@v2

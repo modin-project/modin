@@ -109,7 +109,7 @@ class Binary(Operator):
         func,
         join_type="outer",
         labels="replace",
-        how_compute_dtypes=None,
+        infer_dtypes=None,
     ):
         """
         Build template binary operator.
@@ -123,12 +123,12 @@ class Binary(Operator):
         labels : {"keep", "replace", "drop"}, default: "replace"
             Whether keep labels from left Modin DataFrame, replace them with labels
             from joined DataFrame or drop altogether to make them be computed lazily later.
-        how_compute_dtypes : {"common_cast", "float","bool", None}, default: None
+        infer_dtypes : {"common_cast", "float","bool", None}, default: None
             How dtypes should be inferred.
                 * If "common_cast", casts to common dtype of operand columns.
                 * If "float", performs type casting by finding common dtype.
-                   If the common dtype is any of the integer types, perform type casting to float.
-                   Used in case of truediv.
+                  If the common dtype is any of the integer types, perform type casting to float.
+                  Used in case of truediv.
                 * If "bool", dtypes would be a boolean series with same size as that of operands.
                 * If ``None``, do not infer new dtypes (they will be computed manually once accessed).
 
@@ -195,13 +195,13 @@ class Binary(Operator):
                         other._modin_frame._dtypes is not None
                         and query_compiler._modin_frame._dtypes is not None
                     ):
-                        if how_compute_dtypes == "bool":
+                        if infer_dtypes == "bool":
                             dtypes = pandas.Series(
                                 [np.dtype(bool)] * len(other._modin_frame._dtypes)
                             )
-                        if how_compute_dtypes == "common_cast":
+                        if infer_dtypes == "common_cast":
                             dtypes = compute_dtypes_common_cast(query_compiler, other)
-                        elif how_compute_dtypes == "float":
+                        elif infer_dtypes == "float":
                             dtypes = compute_dtypes_common_cast(query_compiler, other)
                             dtypes = dtypes.apply(coerce_int_to_float64)
                     return query_compiler.__constructor__(
