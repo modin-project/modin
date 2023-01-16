@@ -151,7 +151,7 @@ class Binary(Operator):
         labels : {"keep", "replace", "drop"}, default: "replace"
             Whether keep labels from left Modin DataFrame, replace them with labels
             from joined DataFrame or drop altogether to make them be computed lazily later.
-        infer_dtypes : {"common_cast", "float","bool", None}, default: None
+        infer_dtypes : {"common_cast", "float", "bool", None}, default: None
             How dtypes should be inferred.
                 * If "common_cast", casts to common dtype of operand columns.
                 * If "float", performs type casting by finding common dtype.
@@ -238,7 +238,6 @@ class Binary(Operator):
                             dtypes=dtypes,
                         )
                     )
-
             else:
                 # TODO: it's possible to chunk the `other` and broadcast them to partitions
                 # accordingly, in that way we will be able to use more efficient `._modin_frame.map()`
