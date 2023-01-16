@@ -640,7 +640,12 @@ def df_equals(df1, df2):
         assert_index_equal(df1, df2)
     elif isinstance(df1, pandas.Series) and isinstance(df2, pandas.Series):
         assert_series_equal(df1, df2, check_dtype=False, check_series_type=False)
-    elif isinstance(df1, pandas.Categorical) and isinstance(df2, pandas.Categorical):
+    elif (
+        hasattr(df1, "dtype")
+        and hasattr(df2, "dtype")
+        and isinstance(df1.dtype, pandas.core.dtypes.dtypes.ExtensionDtype)
+        and isinstance(df2.dtype, pandas.core.dtypes.dtypes.ExtensionDtype)
+    ):
         assert_extension_array_equal(df1, df2)
     elif isinstance(df1, groupby_types) and isinstance(df2, groupby_types):
         for g1, g2 in zip(df1, df2):
