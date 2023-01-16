@@ -100,6 +100,34 @@ def compute_dtypes_common_cast(first, second) -> np.dtype:
     return dtypes
 
 
+def compute_dtypes_boolean(first, second) -> np.dtype:
+    """
+    Precompute data types for boolean operations.
+
+    Parameters
+    ----------
+    first : PandasQueryCompiler
+        First operand for which the binary operation would be performed later.
+    second : PandasQueryCompiler
+        Second operand for which the binary operation would be performed later.
+
+    Returns
+    -------
+    dtypes
+        The pandas series with precomputed dtypes.
+
+    Notes
+    -----
+    Finds a union of columns and finds dtypes for all these columns.
+    """
+    columns_first = set(first.columns)
+    columns_second = set(second.columns)
+    columns_union = columns_first.union(columns_second)
+    dtypes = pandas.Series([np.dtype(bool)] * len(columns_union), index=columns_union)
+    dtypes = dtypes.sort_index()
+    return dtypes
+
+
 class Binary(Operator):
     """Builder class for Binary operator."""
 
@@ -196,9 +224,7 @@ class Binary(Operator):
                         and query_compiler._modin_frame._dtypes is not None
                     ):
                         if infer_dtypes == "bool":
-                            dtypes = pandas.Series(
-                                [np.dtype(bool)] * len(other._modin_frame._dtypes)
-                            )
+                            dtypes = compute_dtypes_boolean(query_compiler, other)
                         if infer_dtypes == "common_cast":
                             dtypes = compute_dtypes_common_cast(query_compiler, other)
                         elif infer_dtypes == "float":
