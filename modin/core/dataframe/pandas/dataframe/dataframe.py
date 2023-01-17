@@ -3230,13 +3230,16 @@ class PandasDataframe(ClassLogger):
         if df.empty:
             df = pandas.DataFrame(columns=self.columns, index=self.index)
         else:
-            for axis in [0, 1]:
-                ErrorMessage.catch_bugs_and_request_email(
-                    not df.axes[axis].equals(self.axes[axis]),
-                    f"Internal and external indices on axis {axis} do not match.",
-                )
-            df.index = self.index
-            df.columns = self.columns
+            if self._index_cache is not None and self._columns_cache is not None:
+                # no need to check external and internal axes since in that case
+                # external axes will be computed from internal partitions
+                for axis in [0, 1]:
+                    ErrorMessage.catch_bugs_and_request_email(
+                        not df.axes[axis].equals(self.axes[axis]),
+                        f"Internal and external indices on axis {axis} do not match.",
+                    )
+                df.index = self.index
+                df.columns = self.columns
 
         return df
 
