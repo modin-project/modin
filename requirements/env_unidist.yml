@@ -2,6 +2,7 @@ name: modin_on_unidist
 channels:
   - conda-forge
 dependencies:
+  - unidist-mpi>=0.2.1
   - pandas==1.5.2
   - numpy>=1.18.5
   - pyarrow
@@ -51,4 +52,3 @@ dependencies:
       - connectorx>=0.2.6a4
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
       - numpydoc==1.1.0
-      - git+https://github.com/modin-project/unidist.git@master#egg=unidist[mpi]
