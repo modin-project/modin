@@ -1336,7 +1336,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
     convert_dtypes = Map.register(pandas.DataFrame.convert_dtypes)
-    invert = Map.register(pandas.DataFrame.__invert__)
+    invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isin = Map.register(pandas.DataFrame.isin, dtypes=np.bool_)
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
     _isfinite = Map.register(
