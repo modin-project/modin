@@ -58,6 +58,7 @@ class GroupbyReduceImpl:
         if not isinstance(agg_func, dict):
             return False
 
+        # We have to keep this import away from the module level to avoid circular import
         from modin.pandas.utils import walk_aggregation_dict
 
         for _, func, _, _ in walk_aggregation_dict(agg_func):

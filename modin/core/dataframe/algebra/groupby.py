@@ -464,8 +464,12 @@ class GroupByReduce(TreeReduce):
         -------
         callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
         """
+        # We have to keep this import away from the module level to avoid circular import
         from modin.pandas.utils import walk_aggregation_dict
 
+        # We now filter aggregation functions into those that could be applied natively
+        # using pandas (pandas_grp_obj.agg(**native_aggs)) and those that require
+        # special treatment (custom_aggs).
         custom_aggs = {}
         native_aggs = {}
 
@@ -479,7 +483,7 @@ class GroupByReduce(TreeReduce):
             )
 
             new_value = func if func_name is None else (func_name, func)
-            old_value = dict_to_add.get(col)
+            old_value = dict_to_add.get(col, None)
 
             if old_value is not None:
                 ErrorMessage.catch_bugs_and_request_email(
