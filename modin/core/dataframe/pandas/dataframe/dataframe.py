@@ -2187,6 +2187,7 @@ class PandasDataframe(ClassLogger):
         new_columns=None,
         dtypes=None,
         keep_partitioning=True,
+        synchronize=True,
     ):
         """
         Perform a function across an entire axis.
@@ -2210,6 +2211,8 @@ class PandasDataframe(ClassLogger):
         keep_partitioning : boolean, default: True
             The flag to keep partition boundaries for Modin Frame.
             Setting it to True disables shuffling data from one partition to another.
+        synchronize : boolean, default: True
+            Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
 
         Returns
         -------
@@ -2228,6 +2231,7 @@ class PandasDataframe(ClassLogger):
             dtypes=dtypes,
             other=None,
             keep_partitioning=keep_partitioning,
+            synchronize=synchronize,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -2619,6 +2623,7 @@ class PandasDataframe(ClassLogger):
         enumerate_partitions=False,
         dtypes=None,
         keep_partitioning=True,
+        synchronize=True,
     ):
         """
         Broadcast partitions of `other` Modin DataFrame and apply a function along full axis.
@@ -2649,6 +2654,8 @@ class PandasDataframe(ClassLogger):
         keep_partitioning : boolean, default: True
             The flag to keep partition boundaries for Modin Frame.
             Setting it to True disables shuffling data from one partition to another.
+        synchronize : boolean, default: True
+            Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
 
         Returns
         -------
@@ -2684,9 +2691,9 @@ class PandasDataframe(ClassLogger):
                 [np.dtype(dtypes)] * len(kw["columns"]), index=kw["columns"]
             )
         result = self.__constructor__(new_partitions, **kw)
-        if new_index is not None:
+        if synchronize and new_index is not None:
             result.synchronize_labels(axis=0)
-        if new_columns is not None:
+        if synchronize and new_columns is not None:
             result.synchronize_labels(axis=1)
         return result
 
