@@ -2675,15 +2675,16 @@ class PandasDataframe(ClassLogger):
             enumerate_partitions=enumerate_partitions,
             keep_partitioning=keep_partitioning,
         )
-        # Index objects for new object creation. This is shorter than if..else
-        kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
+        kw = {}
         if dtypes == "copy":
             kw["dtypes"] = self._dtypes
         elif dtypes is not None:
             kw["dtypes"] = pandas.Series(
                 [np.dtype(dtypes)] * len(kw["columns"]), index=kw["columns"]
             )
-        result = self.__constructor__(new_partitions, **kw)
+        result = self.__constructor__(
+            new_partitions, index=new_index, columns=new_columns, **kw
+        )
         if new_index is not None:
             result.synchronize_labels(axis=0)
         if new_columns is not None:
