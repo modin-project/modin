@@ -466,7 +466,7 @@ class GroupByReduce(TreeReduce):
         """
         from modin.pandas.utils import walk_aggregation_dict
 
-        external_aggs = {}
+        custom_aggs = {}
         native_aggs = {}
 
         result_columns = []
@@ -475,7 +475,7 @@ class GroupByReduce(TreeReduce):
         ):
             # Filter dictionary
             dict_to_add = (
-                external_aggs if cls.is_registered_implementation(func) else native_aggs
+                custom_aggs if cls.is_registered_implementation(func) else native_aggs
             )
 
             new_value = func if func_name is None else (func_name, func)
@@ -523,11 +523,11 @@ class GroupByReduce(TreeReduce):
             else:
                 native_agg_res = grp_obj.agg(native_aggs)
 
-            external_results = []
+            custom_results = []
             insert_id_levels = False
 
             for col, func, func_name, col_renaming_required in walk_aggregation_dict(
-                external_aggs
+                custom_aggs
             ):
                 if grp_has_id_level:
                     cols_without_ids = grp_obj.obj.columns.droplevel(0)
@@ -570,14 +570,14 @@ class GroupByReduce(TreeReduce):
                             names=[result.columns.names[0], None],
                         )
 
-                external_results.append(result)
+                custom_results.append(result)
 
             if insert_id_levels:
                 # As long as any `result` has an id-level we have to insert the level
                 # into every `result` so the number of levels matches
-                for idx, ext_result in enumerate(external_results):
+                for idx, ext_result in enumerate(custom_results):
                     if ext_result.columns.names[0] != cls.ID_LEVEL_NAME:
-                        external_results[idx] = pandas.concat(
+                        custom_results[idx] = pandas.concat(
                             [ext_result],
                             keys=[cls.ID_LEVEL_NAME],
                             names=[cls.ID_LEVEL_NAME],
@@ -596,11 +596,11 @@ class GroupByReduce(TreeReduce):
 
             native_res_part = [] if native_agg_res is None else [native_agg_res]
             result = pandas.concat(
-                [*native_res_part, *external_results], axis=1, copy=False
+                [*native_res_part, *custom_results], axis=1, copy=False
             )
 
-            # The order is naturally preserved if there's no external aggregations
-            if preserve_aggregation_order and len(external_aggs):
+            # The order is naturally preserved if there's no custom aggregations
+            if preserve_aggregation_order and len(custom_aggs):
                 result = result.reindex(result_columns, axis=1)
             return result
 
