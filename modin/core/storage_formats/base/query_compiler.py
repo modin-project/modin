@@ -1068,7 +1068,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             Transposed new QueryCompiler or self.
         """
-        if len(self.columns) != 1 or (
+        if len(self.columns) != 1 and (
             len(self.index) == 1 and self.index[0] == MODIN_UNNAMED_SERIES_LABEL
         ):
             return self.transpose()
