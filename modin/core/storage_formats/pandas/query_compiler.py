@@ -685,13 +685,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # Switch the index and columns and transpose the data within the blocks.
         return self.__constructor__(self._modin_frame.transpose())
 
-    def columnarize(self):
-        if len(self.columns) != 1 or (
-            len(self.index) == 1 and self.index[0] == MODIN_UNNAMED_SERIES_LABEL
-        ):
-            return self.transpose()
-        return self
-
     def is_series_like(self):
         return len(self.columns) == 1 or len(self.index) == 1
 

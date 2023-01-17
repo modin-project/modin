@@ -150,19 +150,31 @@ class DataFrameGroupBy(ClassLogger):
                 return self.__getitem__(key)
             raise err
 
-    def __getattribute__(self, item):
-        attr = super().__getattribute__(item)
-        if item not in _DEFAULT_BEHAVIOUR and not self._query_compiler.lazy_execution:
-            # We default to pandas on empty DataFrames. This avoids a large amount of
-            # pain in underlying implementation and returns a result immediately rather
-            # than dealing with the edge cases that empty DataFrames have.
-            if callable(attr) and self._df.empty and hasattr(self._pandas_class, item):
+    # TODO: `.__getattribute__` overriding is broken in experimental mode. We should
+    # remove this branching one it's fixed:
+    # https://github.com/modin-project/modin/issues/5536
+    if not IsExperimental.get():
 
-                def default_handler(*args, **kwargs):
-                    return self._default_to_pandas(item, *args, **kwargs)
+        def __getattribute__(self, item):
+            attr = super().__getattribute__(item)
+            if (
+                item not in _DEFAULT_BEHAVIOUR
+                and not self._query_compiler.lazy_execution
+            ):
+                # We default to pandas on empty DataFrames. This avoids a large amount of
+                # pain in underlying implementation and returns a result immediately rather
+                # than dealing with the edge cases that empty DataFrames have.
+                if (
+                    callable(attr)
+                    and self._df.empty
+                    and hasattr(self._pandas_class, item)
+                ):
 
-                return default_handler
-        return attr
+                    def default_handler(*args, **kwargs):
+                        return self._default_to_pandas(item, *args, **kwargs)
+
+                    return default_handler
+            return attr
 
     @property
     def ngroups(self):

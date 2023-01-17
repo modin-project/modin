@@ -434,6 +434,8 @@ jobs:
       run:
         shell: bash -l {0}
     env:
+      MODIN_EXPERIMENTAL: "True"
+      MODIN_ENGINE: "native"
       MODIN_STORAGE_FORMAT: "hdk"
     name: Test HDK storage format, Python 3.8
     steps:
