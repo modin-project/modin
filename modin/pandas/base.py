@@ -2393,7 +2393,8 @@ class BasePandasDataset(ClassLogger):
         # insert a dropped index into a DataFrame if these columns already
         # exist.
         if (
-            not drop
+            False  # have to avoid this check somehow
+            and not drop
             and not self._query_compiler.has_multiindex()
             and all(n in self.columns for n in ["level_0", "index"])
         ):

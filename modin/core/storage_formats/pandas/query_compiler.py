@@ -538,6 +538,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def reset_index(self, **kwargs):
+        if self._modin_frame._index_cache is None:
+            new_self = Map.register(
+                lambda df, *args, **kwargs: df.reset_index(**kwargs)
+            )(self, **kwargs)
+            return new_self
+
         allow_duplicates = kwargs.pop("allow_duplicates", no_default)
         names = kwargs.pop("names", None)
         if allow_duplicates not in (no_default, False) or names is not None:
