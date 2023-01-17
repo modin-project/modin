@@ -3230,7 +3230,9 @@ class PandasDataframe(ClassLogger):
         if df.empty:
             df = pandas.DataFrame(columns=self.columns, index=self.index)
         else:
-            for axis, public_index in enumerate([self._index_cache, self._columns_cache]):
+            for axis, public_index in enumerate(
+                [self._index_cache, self._columns_cache]
+            ):
                 # no need to check external and internal axes since in that case
                 # external axes will be computed from internal partitions
                 if public_index is not None:
@@ -3238,7 +3240,9 @@ class PandasDataframe(ClassLogger):
                         not df.axes[axis].equals(public_index),
                         f"Internal and external indices on axis {axis} do not match.",
                     )
-                    df.set_axis(axis=axis, labels=public_index, inplace=True, copy=False)
+                    df.set_axis(
+                        axis=axis, labels=public_index, inplace=True, copy=False
+                    )
 
         return df
 
