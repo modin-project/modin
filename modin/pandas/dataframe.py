@@ -170,7 +170,9 @@ class DataFrame(BasePandasDataset):
             warnings.warn(
                 "Distributing {} object. This may take some time.".format(type(data))
             )
-            if is_list_like(data) and not is_dict_like(data):
+            if isinstance(data, pandas.Index):
+                pass
+            elif is_list_like(data) and not is_dict_like(data):
                 old_dtype = getattr(data, "dtype", None)
                 values = [
                     obj._to_pandas() if isinstance(obj, Series) else obj for obj in data
