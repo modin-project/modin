@@ -839,7 +839,7 @@ class DataFrameGroupBy(ClassLogger):
         return self._check_index(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_quantile,
-                numeric_only=False,
+                numeric_only=True,
                 agg_kwargs=dict(q=q, interpolation=interpolation),
             )
         )
