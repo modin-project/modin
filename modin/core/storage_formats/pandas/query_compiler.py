@@ -460,7 +460,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return pandas.merge(left, right, **kwargs)
 
             new_self = self.__constructor__(
-                self._modin_frame.apply_full_axis(1, map_func)
+                self._modin_frame.apply_full_axis(
+                    axis=1,
+                    func=map_func,
+                    # We're going to explicitly change the shape across the 1-axis,
+                    # so we want for partitioning to adapt as well
+                    keep_partitioning=False,
+                )
             )
             is_reset_index = True
             if left_on and right_on:
