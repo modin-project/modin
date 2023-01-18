@@ -2733,7 +2733,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             # The equation for the 'skew' was taken directly from pandas:
             # https://github.com/pandas-dev/pandas/blob/8dab54d6573f7186ff0c3b6364d5e4dd635ff3e7/pandas/core/nanops.py#L1226
-            skew_res = (count * (count - 1) ** 0.5 / (count - 2)) * (m3 / m2**1.5)
+            with np.errstate(invalid="ignore", divide="ignore"):
+                skew_res = (count * (count - 1) ** 0.5 / (count - 2)) * (m3 / m2**1.5)
+
+            # Setting dummy values for invalid results in accordance with pandas
+            skew_res[m2 == 0] = 0
+            skew_res[count < 3] = np.nan
             return skew_res
 
         result = GroupByReduce.register(
