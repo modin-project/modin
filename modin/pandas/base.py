@@ -2389,25 +2389,14 @@ class BasePandasDataset(ClassLogger):
         Reset the index, or a level of it.
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
-        # Error checking for matching pandas. Pandas does not allow you to
-        # insert a dropped index into a DataFrame if these columns already
-        # exist.
-        if (
-            False  # have to avoid this check somehow
-            and not drop
-            and not self._query_compiler.has_multiindex()
-            and all(n in self.columns for n in ["level_0", "index"])
-        ):
-            raise ValueError("cannot insert level_0, already exists")
-        else:
-            new_query_compiler = self._query_compiler.reset_index(
-                drop=drop,
-                level=level,
-                col_level=col_level,
-                col_fill=col_fill,
-                allow_duplicates=allow_duplicates,
-                names=names,
-            )
+        new_query_compiler = self._query_compiler.reset_index(
+            drop=drop,
+            level=level,
+            col_level=col_level,
+            col_fill=col_fill,
+            allow_duplicates=allow_duplicates,
+            names=names,
+        )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def radd(
