@@ -382,7 +382,7 @@ def walk_aggregation_dict(
             elif depth == 1:
                 if len(value) != 2:
                     raise ValueError(
-                        f"Incorrect rename format. Renamer must consist of exactly two elements, got {len(value)=}."
+                        f"Incorrect rename format. Renamer must consist of exactly two elements, got: {len(value)}."
                     )
                 func_name, func = value
                 yield key, func, func_name, col_renaming_required

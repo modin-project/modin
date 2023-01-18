@@ -699,9 +699,8 @@ def try_modin_df_almost_equals_compare(df1, df2):
     if all(is_numeric_dtype(dtype) for dtype in dtypes1) and all(
         is_numeric_dtype(dtype) for dtype in dtypes2
     ):
-        return modin_df_almost_equals_pandas(df1, df2)
-    else:
-        return df_equals(df1, df2)
+        modin_df_almost_equals_pandas(df1, df2)
+        df_equals(df1, df2)
 
 
 def df_is_empty(df):
