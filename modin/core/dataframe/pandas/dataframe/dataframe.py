@@ -2020,12 +2020,16 @@ class PandasDataframe(ClassLogger):
         if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
             return self.copy()
         # If this df only has one row partition, we don't want to do a shuffle and sort - we can
-        # just do a full-axis sort.
-        if len(self._partitions) == 1:
+        # just do a full-axis sort. Alternatively, if the total amount of data we have is less than
+        # 3x the number of partitions we have, then our new sorting algorithm will try to upsample
+        # the data. In this case, its probably best to do a full axis sort and re-partition, since
+        # our data is probably overpartitioned.
+        if len(self._partitions) == 1 or len(self.index) < 3 * len(self._partitions):
             return self.apply_full_axis(
                 1,
                 sort_function,
             )
+
         if self.dtypes[columns[0]] == object:
             # This means we are not sorting numbers, so we need our quantiles to not try
             # arithmetic on the values.
