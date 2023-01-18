@@ -1110,7 +1110,7 @@ def test_insert(data):
         modin_df,
         pandas_df,
         col="2d list insert",
-        value=lambda df: [[1, 2] * len(df)],
+        value=lambda df: [[1, 2]] * len(df),
     )
 
     # Bad inserts
