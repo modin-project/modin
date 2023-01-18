@@ -2682,7 +2682,7 @@ class PandasDataframe(ClassLogger):
             # Replacement is not one to one, need to figure out how to save
             # this information when the columns are not known
             kw["dtypes"] = pandas.Series(
-                [np.dtype(dtypes)] * new_columns, index=new_columns
+                [np.dtype(dtypes)] * len(new_columns), index=new_columns
             )
         result = self.__constructor__(
             new_partitions, index=new_index, columns=new_columns, **kw
