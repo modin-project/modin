@@ -3240,6 +3240,9 @@ class PandasDataframe(ClassLogger):
                         not df.axes[axis].equals(external_index),
                         f"Internal and external indices on axis {axis} do not match.",
                     )
+                    # have to do this in order to assign some potentially missing metadata,
+                    # the ones that were set to the external index but were never propagated
+                    # into the internal ones
                     df.set_axis(
                         axis=axis, labels=external_index, inplace=True, copy=False
                     )
