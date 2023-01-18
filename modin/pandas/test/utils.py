@@ -700,6 +700,7 @@ def try_modin_df_almost_equals_compare(df1, df2):
         is_numeric_dtype(dtype) for dtype in dtypes2
     ):
         modin_df_almost_equals_pandas(df1, df2)
+    else:
         df_equals(df1, df2)
 
 
