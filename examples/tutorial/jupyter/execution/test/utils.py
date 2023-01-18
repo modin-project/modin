@@ -11,11 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import os
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 
 test_dataset_path = "taxi.csv"
-ep = ExecutePreprocessor(timeout=600, kernel_name="python3")
+kernel_name = os.environ["MODIN_KERNEL_NAME"] if "MODIN_KERNEL_NAME" in os.environ else None
+ep = ExecutePreprocessor(timeout=600, kernel_name=kernel_name if kernel_name else "python3")
 
 download_taxi_dataset = f"""import os
 import urllib.request

@@ -80,13 +80,13 @@ jobs:
           conda info
           conda list
         if: matrix.execution == 'hdk_on_native'
+      # setup kernel configuration for mpi execution
+      - run: bash examples/tutorial/jupyter/execution/${{ matrix.execution }}/setup_kernel.sh
+        if: matrix.execution == 'pandas_on_unidist'
       - run: |
           black --check --diff examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
           black --check --diff examples/tutorial/jupyter/execution/test/utils.py
       - run: |
           flake8 --enable=T examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
           flake8 --enable=T examples/tutorial/jupyter/execution/test/utils.py
-      - run: pytest examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
-        if: matrix.execution != 'pandas_on_unidist'
-      - run: mpiexec -n 1 pytest examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
-        if: matrix.execution == 'pandas_on_unidist'
+      - run: python -m pytest examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
