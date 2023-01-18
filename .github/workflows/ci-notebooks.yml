@@ -83,6 +83,7 @@ jobs:
       # setup kernel configuration for mpi execution
       - run: bash examples/tutorial/jupyter/execution/${{ matrix.execution }}/setup_kernel.sh
         if: matrix.execution == 'pandas_on_unidist'
+      - run: jupyter kernelspec list
       - run: |
           black --check --diff examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
           black --check --diff examples/tutorial/jupyter/execution/test/utils.py
