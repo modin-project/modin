@@ -2678,9 +2678,11 @@ class PandasDataframe(ClassLogger):
         kw = {}
         if dtypes == "copy":
             kw["dtypes"] = self._dtypes
-        elif dtypes is not None:
+        elif dtypes is not None and new_columns is not None:
+            # Replacement is not one to one, need to figure out how to save
+            # this information when the columns are not known
             kw["dtypes"] = pandas.Series(
-                [np.dtype(dtypes)] * len(kw["columns"]), index=kw["columns"]
+                [np.dtype(dtypes)] * new_columns, index=new_columns
             )
         result = self.__constructor__(
             new_partitions, index=new_index, columns=new_columns, **kw
