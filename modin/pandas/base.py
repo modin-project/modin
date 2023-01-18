@@ -1588,8 +1588,18 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Whether elements in `BasePandasDataset` are contained in `values`.
         """
+        # TODO: Use base._is_dataframe from upstream modin once it's available instead
+        # of doing this cylic import.
+        from .dataframe import Series
+
+        # Query compiler needs to know whether values is series or df because column
+        # names matter for df but not for series.
         return self.__constructor__(
-            query_compiler=self._query_compiler.isin(values=values)
+            query_compiler=self._query_compiler.isin(
+                values=values,
+                values_is_series=isinstance(values, Series),
+                self_is_series=isinstance(self, Series),
+            )
         )
 
     def isna(self):  # noqa: RT01, D200

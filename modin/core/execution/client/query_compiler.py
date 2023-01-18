@@ -356,15 +356,19 @@ class ClientQueryCompiler(BaseQueryCompiler):
         if lower_is_qc:
             lower = lower._id
 
-    def isin(self, values):
+    def isin(self, values, values_is_series: bool, self_is_series: bool):
         # isin is unusal because it passes API layer objects to query compiler
         # instead of converting them to query compiler objects (Modin issue #3106)
-        from modin.pandas import Dataframe, Series
+        from modin.pandas import DataFrame, Series
 
-        is_qc = isinstance(values, (Dataframe, Series))
+        is_qc = isinstance(values, (DataFrame, Series))
         if is_qc:
             values = values._query_compiler._id
-        return self._service.isin(self._id, values, is_qc)
+        return self.__constructor__(
+            self._service.isin(
+                self._id, values, is_qc, values_is_series, self_is_series
+            )
+        )
 
     def where(self, cond, other, **kwargs):
         cond_is_qc = isinstance(cond, type(self))
