@@ -831,6 +831,8 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.hist())
 
     def quantile(self, q=0.5, interpolation="linear"):
+        # TODO: pandas 1.5 now supports numeric_only as an argument
+        # TODO: handle list-like cases properly
         if is_list_like(q):
             return self._default_to_pandas(
                 lambda df: df.quantile(q=q, interpolation=interpolation)
