@@ -12,7 +12,7 @@ dependencies:
   - pytest-xdist>=2.1.0
   - coverage
   - pygithub
-  - pyhdk==0.3
+  - pyhdk==0.3.1
   - s3fs>=2021.8
   - psutil
   - openpyxl
