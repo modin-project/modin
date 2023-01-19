@@ -2656,6 +2656,8 @@ class PandasDataframe(ClassLogger):
             Setting it to True disables shuffling data from one partition to another.
         synchronize : boolean, default: True
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
+            This could be used when you're certain that the indices in partitions are equal to
+            the provided hints in order to save time on syncing them.
 
         Returns
         -------
