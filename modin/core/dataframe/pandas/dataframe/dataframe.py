@@ -2815,7 +2815,12 @@ class PandasDataframe(ClassLogger):
 
     @lazy_metadata_decorator(apply_axis="both")
     def n_ary_op(
-        self, op, right_frames: list, join_type="outer", copartition_along_columns=True
+        self,
+        op,
+        right_frames: list,
+        join_type="outer",
+        copartition_along_columns=True,
+        dtypes=None,
     ):
         """
         Perform an n-opary operation by joining with other Modin DataFrame(s).
@@ -2831,6 +2836,9 @@ class PandasDataframe(ClassLogger):
         copartition_along_columns : bool, default: True
             Whether to perform copartitioning along columns or not.
             For some ops this isn't needed (e.g., `fillna`).
+        dtypes : series, default: None
+            Dtypes of the resultant dataframe, this argument will be
+            received if the resultant dtypes of n-opary operation is precomputed.
 
         Returns
         -------
@@ -2885,6 +2893,7 @@ class PandasDataframe(ClassLogger):
             joined_columns,
             row_lengths,
             column_widths,
+            dtypes,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -3221,13 +3230,22 @@ class PandasDataframe(ClassLogger):
         if df.empty:
             df = pandas.DataFrame(columns=self.columns, index=self.index)
         else:
-            for axis in [0, 1]:
-                ErrorMessage.catch_bugs_and_request_email(
-                    not df.axes[axis].equals(self.axes[axis]),
-                    f"Internal and external indices on axis {axis} do not match.",
-                )
-            df.index = self.index
-            df.columns = self.columns
+            for axis, external_index in enumerate(
+                [self._index_cache, self._columns_cache]
+            ):
+                # no need to check external and internal axes since in that case
+                # external axes will be computed from internal partitions
+                if external_index is not None:
+                    ErrorMessage.catch_bugs_and_request_email(
+                        not df.axes[axis].equals(external_index),
+                        f"Internal and external indices on axis {axis} do not match.",
+                    )
+                    # have to do this in order to assign some potentially missing metadata,
+                    # the ones that were set to the external index but were never propagated
+                    # into the internal ones
+                    df.set_axis(
+                        axis=axis, labels=external_index, inplace=True, copy=False
+                    )
 
         return df
 

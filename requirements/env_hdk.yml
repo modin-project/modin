@@ -2,7 +2,7 @@ name: modin_on_hdk
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.5.2
+  - pandas==1.5.3
   - pyarrow=8
   - numpy>=1.18.5
   - fsspec
@@ -12,7 +12,7 @@ dependencies:
   - pytest-xdist>=2.1.0
   - coverage
   - pygithub
-  - pyhdk==0.3
+  - pyhdk==0.3.1
   - s3fs>=2021.8
   - psutil
   - openpyxl

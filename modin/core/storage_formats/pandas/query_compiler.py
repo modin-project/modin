@@ -374,34 +374,34 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
 
-    add = Binary.register(pandas.DataFrame.add)
-    combine = Binary.register(pandas.DataFrame.combine)
-    combine_first = Binary.register(pandas.DataFrame.combine_first)
-    eq = Binary.register(pandas.DataFrame.eq)
-    floordiv = Binary.register(pandas.DataFrame.floordiv)
-    ge = Binary.register(pandas.DataFrame.ge)
-    gt = Binary.register(pandas.DataFrame.gt)
-    le = Binary.register(pandas.DataFrame.le)
-    lt = Binary.register(pandas.DataFrame.lt)
-    mod = Binary.register(pandas.DataFrame.mod)
-    mul = Binary.register(pandas.DataFrame.mul)
-    rmul = Binary.register(pandas.DataFrame.rmul)
-    ne = Binary.register(pandas.DataFrame.ne)
-    pow = Binary.register(pandas.DataFrame.pow)
-    radd = Binary.register(pandas.DataFrame.radd)
-    rfloordiv = Binary.register(pandas.DataFrame.rfloordiv)
-    rmod = Binary.register(pandas.DataFrame.rmod)
-    rpow = Binary.register(pandas.DataFrame.rpow)
-    rsub = Binary.register(pandas.DataFrame.rsub)
-    rtruediv = Binary.register(pandas.DataFrame.rtruediv)
-    sub = Binary.register(pandas.DataFrame.sub)
-    truediv = Binary.register(pandas.DataFrame.truediv)
-    __and__ = Binary.register(pandas.DataFrame.__and__)
-    __or__ = Binary.register(pandas.DataFrame.__or__)
-    __rand__ = Binary.register(pandas.DataFrame.__rand__)
-    __ror__ = Binary.register(pandas.DataFrame.__ror__)
-    __rxor__ = Binary.register(pandas.DataFrame.__rxor__)
-    __xor__ = Binary.register(pandas.DataFrame.__xor__)
+    add = Binary.register(pandas.DataFrame.add, infer_dtypes="common_cast")
+    combine = Binary.register(pandas.DataFrame.combine, infer_dtypes="common_cast")
+    combine_first = Binary.register(pandas.DataFrame.combine_first, infer_dtypes="bool")
+    eq = Binary.register(pandas.DataFrame.eq, infer_dtypes="bool")
+    floordiv = Binary.register(pandas.DataFrame.floordiv, infer_dtypes="common_cast")
+    ge = Binary.register(pandas.DataFrame.ge, infer_dtypes="bool")
+    gt = Binary.register(pandas.DataFrame.gt, infer_dtypes="bool")
+    le = Binary.register(pandas.DataFrame.le, infer_dtypes="bool")
+    lt = Binary.register(pandas.DataFrame.lt, infer_dtypes="bool")
+    mod = Binary.register(pandas.DataFrame.mod, infer_dtypes="common_cast")
+    mul = Binary.register(pandas.DataFrame.mul, infer_dtypes="common_cast")
+    rmul = Binary.register(pandas.DataFrame.rmul, infer_dtypes="common_cast")
+    ne = Binary.register(pandas.DataFrame.ne, infer_dtypes="bool")
+    pow = Binary.register(pandas.DataFrame.pow, infer_dtypes="common_cast")
+    radd = Binary.register(pandas.DataFrame.radd, infer_dtypes="common_cast")
+    rfloordiv = Binary.register(pandas.DataFrame.rfloordiv, infer_dtypes="common_cast")
+    rmod = Binary.register(pandas.DataFrame.rmod, infer_dtypes="common_cast")
+    rpow = Binary.register(pandas.DataFrame.rpow, infer_dtypes="common_cast")
+    rsub = Binary.register(pandas.DataFrame.rsub, infer_dtypes="common_cast")
+    rtruediv = Binary.register(pandas.DataFrame.rtruediv, infer_dtypes="float")
+    sub = Binary.register(pandas.DataFrame.sub, infer_dtypes="common_cast")
+    truediv = Binary.register(pandas.DataFrame.truediv, infer_dtypes="float")
+    __and__ = Binary.register(pandas.DataFrame.__and__, infer_dtypes="bool")
+    __or__ = Binary.register(pandas.DataFrame.__or__, infer_dtypes="bool")
+    __rand__ = Binary.register(pandas.DataFrame.__rand__, infer_dtypes="bool")
+    __ror__ = Binary.register(pandas.DataFrame.__ror__, infer_dtypes="bool")
+    __rxor__ = Binary.register(pandas.DataFrame.__rxor__, infer_dtypes="bool")
+    __xor__ = Binary.register(pandas.DataFrame.__xor__, infer_dtypes="bool")
     df_update = Binary.register(
         copy_df_for_func(pandas.DataFrame.update, display_name="update"),
         join_type="left",
@@ -1335,7 +1335,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
     convert_dtypes = Map.register(pandas.DataFrame.convert_dtypes)
-    invert = Map.register(pandas.DataFrame.__invert__)
+    invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isin = Map.register(pandas.DataFrame.isin, dtypes=np.bool_)
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
     _isfinite = Map.register(
@@ -2356,11 +2356,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if isinstance(value, type(self)):
             value.columns = [column]
             return self.insert_item(axis=1, loc=loc, value=value, how=None)
-
-        if is_list_like(value) and not isinstance(value, np.ndarray):
-            value = np.array(value)
-        elif is_scalar(value):
-            value = [value] * len(self.index)
 
         def insert(df, internal_indices=[]):
             """
