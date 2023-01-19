@@ -1106,6 +1106,12 @@ def test_insert(data):
         col="Different indices",
         value=lambda df: df[[df.columns[0]]].set_index(df.index[::-1]),
     )
+    eval_insert(
+        modin_df,
+        pandas_df,
+        col="2d list insert",
+        value=lambda df: [[1, 2]] * len(df),
+    )
 
     # Bad inserts
     eval_insert(modin_df, pandas_df, col="Bad Column", value=lambda df: df)
