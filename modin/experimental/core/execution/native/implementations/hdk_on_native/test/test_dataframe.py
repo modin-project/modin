@@ -2028,6 +2028,27 @@ class TestBadData:
             with ForceHdkImport(md_df):
                 pass
 
+    def test_uint_serialization(self):
+        # Tests for CalciteSerializer.serialize_literal()
+        df = pd.DataFrame({"A": [np.nan, 1]})
+        assert df.fillna(np.uint8(255)).sum()[0] == 256
+        assert df.fillna(np.uint16(65535)).sum()[0] == 65536
+        assert df.fillna(np.uint32(4_294_967_295)).sum()[0] == 4_294_967_296
+        assert (
+            df.fillna(np.uint64(9_223_372_036_854_775_806)).sum()[0]
+            == 9_223_372_036_854_775_807
+        )
+
+        # Tests for CalciteSerializer.serialize_dtype()
+        df = pd.DataFrame({"A": [255, 1]})
+        assert df.astype(np.uint8).sum()[0] == 256
+        df = pd.DataFrame({"A": [65535, 1]})
+        assert df.astype(np.uint16).sum()[0] == 65536
+        df = pd.DataFrame({"A": [4_294_967_295, 1]})
+        assert df.astype(np.uint32).sum()[0] == 4_294_967_296
+        df = pd.DataFrame({"A": [9_223_372_036_854_775_806, 1]})
+        assert df.astype(np.uint64).sum()[0] == 9_223_372_036_854_775_807
+
 
 class TestDropna:
     data = {
