@@ -1533,9 +1533,18 @@ def test_reset_index_with_named_index(index_levels_names_max_levels):
         else "NAME_OF_INDEX"
     )
     modin_df.index.name = pandas_df.index.name = index_name
+    modin_df._query_compiler._modin_frame.synchronize_labels(axis=0)
+    modin_df._query_compiler._modin_frame._propagate_index_objs(axis=0)
+    modin_df._query_compiler._modin_frame._index_cache = None
     df_equals(modin_df, pandas_df)
+    modin_df._query_compiler._modin_frame.synchronize_labels(axis=0)
+    modin_df._query_compiler._modin_frame._propagate_index_objs(axis=0)
+    modin_df._query_compiler._modin_frame._index_cache = None
     df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
 
+    modin_df._query_compiler._modin_frame.synchronize_labels(axis=0)
+    modin_df._query_compiler._modin_frame._propagate_index_objs(axis=0)
+    modin_df._query_compiler._modin_frame._index_cache = None
     modin_df.reset_index(drop=True, inplace=True)
     pandas_df.reset_index(drop=True, inplace=True)
     df_equals(modin_df, pandas_df)
@@ -1543,6 +1552,9 @@ def test_reset_index_with_named_index(index_levels_names_max_levels):
     modin_df = pd.DataFrame(test_data_values[0])
     pandas_df = pandas.DataFrame(test_data_values[0])
     modin_df.index.name = pandas_df.index.name = index_name
+    modin_df._query_compiler._modin_frame.synchronize_labels(axis=0)
+    modin_df._query_compiler._modin_frame._propagate_index_objs(axis=0)
+    modin_df._query_compiler._modin_frame._index_cache = None
     df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
 
 

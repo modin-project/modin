@@ -539,12 +539,31 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def reset_index(self, **kwargs):
         if self._modin_frame._index_cache is None:
+
+            def _reset(df, partition_idx):
+                _kw = dict(kwargs)
+                if partition_idx != 0:
+                    _kw["drop"] = True
+                return df.reset_index(**_kw)
+
             return self.__constructor__(
-                self._modin_frame.apply_full_axis(
-                    axis=0, func=lambda df: df.reset_index(**kwargs)
+                self._modin_frame.broadcast_apply_full_axis(
+                    axis=0,
+                    func=_reset,
+                    other=None,
+                    enumerate_partitions=True,
                 )
             )
 
+        # Error checking for matching pandas. Pandas does not allow you to
+        # insert a dropped index into a DataFrame if these columns already
+        # exist.
+        if (
+            not kwargs["drop"]
+            and not self.has_multiindex()
+            and all(n in self.columns for n in ["level_0", "index"])
+        ):
+            raise ValueError("cannot insert level_0, already exists")
         allow_duplicates = kwargs.pop("allow_duplicates", no_default)
         names = kwargs.pop("names", None)
         if allow_duplicates not in (no_default, False) or names is not None:
