@@ -47,14 +47,14 @@ def test_repartition(axis, dtype):
 
     if dtype == "DataFrame":
         results = {
-            None: ([4, 0, 0, 0], [3, 0, 0, 0]),
-            0: ([4, 0, 0, 0], [2, 1]),
-            1: ([2, 2], [3, 0, 0, 0]),
+            None: ([4], [3]),
+            0: ([4], [2, 1]),
+            1: ([2, 2], [3]),
         }
     else:
         results = {
-            None: ([4, 0, 0, 0], [1]),
-            0: ([4, 0, 0, 0], [1]),
+            None: ([4], [1]),
+            0: ([4], [1]),
             1: ([2, 2], [1]),
         }
     # in some cases empty partitions aren't filtered so it's better to use

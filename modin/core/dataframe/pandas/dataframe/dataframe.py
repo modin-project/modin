@@ -2694,6 +2694,22 @@ class PandasDataframe(ClassLogger):
             kw["dtypes"] = pandas.Series(
                 [np.dtype(dtypes)] * len(kw["columns"]), index=kw["columns"]
             )
+
+        if not keep_partitioning:
+            if kw["row_lengths"] is None:
+                if new_index is not None and axis == 0:
+                    kw["row_lengths"] = get_length_list(
+                        axis_len=len(new_index), num_splits=new_partitions.shape[0]
+                    )
+                elif axis == 1:
+                    kw["row_lengths"] = self._row_lengths_cache
+            if kw["column_widths"] is None:
+                if new_columns is not None and axis == 1:
+                    kw["column_widths"] = get_length_list(
+                        axis_len=len(new_columns), num_splits=new_partitions.shape[1]
+                    )
+                elif axis == 0:
+                    kw["column_widths"] = self._column_widths_cache
         result = self.__constructor__(new_partitions, **kw)
         if synchronize and new_index is not None:
             result.synchronize_labels(axis=0)
