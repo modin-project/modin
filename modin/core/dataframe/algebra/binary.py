@@ -167,7 +167,13 @@ class Binary(Operator):
         """
 
         def caller(
-            query_compiler, other, broadcast=False, *args, dtypes=None, **kwargs
+            query_compiler,
+            other,
+            broadcast=False,
+            *args,
+            dtypes=None,
+            copy_dtypes=False,
+            **kwargs
         ):
             """
             Apply binary `func` to passed operands.
@@ -184,8 +190,14 @@ class Binary(Operator):
                 at the query compiler level, so this parameter is a hint that passed from a high level API.
             *args : args,
                 Arguments that will be passed to `func`.
-            dtypes : "copy" or None, default: None
-                Whether to keep old dtypes or infer new dtypes from data.
+            dtypes : pandas.Series or scalar type, optional
+                The data types for the result. This is an optimization
+                because there are functions that always result in a particular data
+                type, and this allows us to avoid (re)computing it.
+                If the argument is a scalar type, then that type is assigned to each result column.
+            copy_dtypes : bool, default False
+                If True, the dtypes of the resulting dataframe are copied from the original,
+                and the ``dtypes`` argument is ignored.
             **kwargs : kwargs,
                 Arguments that will be passed to `func`.
 
@@ -216,6 +228,7 @@ class Binary(Operator):
                             join_type=join_type,
                             labels=labels,
                             dtypes=dtypes,
+                            copy_dtypes=copy_dtypes,
                         )
                     )
                 else:
@@ -248,11 +261,13 @@ class Binary(Operator):
                         new_index=query_compiler.index,
                         new_columns=query_compiler.columns,
                         dtypes=dtypes,
+                        copy_dtypes=copy_dtypes,
                     )
                 else:
                     new_modin_frame = query_compiler._modin_frame.map(
                         lambda df: func(df, other, *args, **kwargs),
                         dtypes=dtypes,
+                        copy_dtypes=copy_dtypes,
                     )
                 return query_compiler.__constructor__(new_modin_frame)
 
