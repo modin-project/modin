@@ -21,4 +21,4 @@ if __name__ == "__main__":
     dest = kernelspec.install(
         kernel_name=kernel_name, display_name=display_name, prefix=sys.prefix
     )
-    print(f"Installed kernelspec {kernel_name} in {dest}")
+    print(f"Installed kernelspec {kernel_name} in {dest}")  # noqa: T201

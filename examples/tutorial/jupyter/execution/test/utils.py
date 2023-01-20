@@ -11,16 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
 import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 
 test_dataset_path = "taxi.csv"
-# the kernel name "python3mpi" must match the one
-# that is set up in `examples/tutorial/jupyter/execution/pandas_on_unidist/setup_kernel.py`
-# for `Unidist` engine
-kernel_name = "python3" if cfg.Engine.get() != "Unidist" else "python3mpi"
-ep = ExecutePreprocessor(timeout=600, kernel_name=kernel_name)
+ep = ExecutePreprocessor(timeout=600, kernel_name="python3")
 
 download_taxi_dataset = f"""import os
 import urllib.request
@@ -28,6 +23,19 @@ if not os.path.exists("{test_dataset_path}"):
     url_path = "https://modin-datasets.s3.amazonaws.com/testing/yellow_tripdata_2015-01.csv"
     urllib.request.urlretrieve(url_path, "{test_dataset_path}")
     """
+
+
+def change_kernel(kernel_name):
+    """
+    Allow to use custom kernel
+
+    Parameters
+    ----------
+    kernel_name : str
+        The name of the required kernel configuration to use.
+    """
+    global ep
+    ep = ExecutePreprocessor(timeout=600, kernel_name=kernel_name)
 
 
 def _execute_notebook(notebook):
