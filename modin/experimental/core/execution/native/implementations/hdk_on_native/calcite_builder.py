@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 """Module provides ``CalciteBuilder`` class."""
-
+from .dataframe.utils import ROWID_COL_NAME
 from .expr import (
     InputRefExpr,
     LiteralExpr,
@@ -397,7 +397,7 @@ class CalciteBuilder:
             if frame in self.replacements:
                 return self.replacements[frame].index(col) + offs
 
-            if col == "__rowid__":
+            if col == ROWID_COL_NAME:
                 if not isinstance(self.frame_to_node[frame], CalciteScanNode):
                     raise NotImplementedError(
                         "rowid can be accessed in materialized frames only"
@@ -854,7 +854,7 @@ class CalciteBuilder:
         frame = op.input[0]
 
         # select rows by rowid
-        rowid_col = self._ref(frame, "__rowid__")
+        rowid_col = self._ref(frame, ROWID_COL_NAME)
         condition = build_row_idx_filter_expr(op.row_positions, rowid_col)
         self._push(CalciteFilterNode(condition))
 

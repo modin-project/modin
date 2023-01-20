@@ -487,6 +487,7 @@ jobs:
       - run: python -m pytest modin/pandas/test/dataframe/test_reduce.py
       - run: python -m pytest modin/pandas/test/dataframe/test_join_sort.py
       - run: python -m pytest modin/pandas/test/test_general.py
+      - run: python -m pytest modin/pandas/test/dataframe/test_indexing.py
       - run: python examples/docker/modin-hdk/census-hdk.py examples/data/census_1k.csv -no-ml
       - run: python examples/docker/modin-hdk/nyc-taxi-hdk.py examples/data/nyc-taxi_1k.csv
       - run: |

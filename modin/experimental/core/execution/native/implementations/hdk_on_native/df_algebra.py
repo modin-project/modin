@@ -14,6 +14,8 @@
 """Module provides classes for lazy DataFrame algebra operations."""
 
 import abc
+
+from .dataframe.utils import ROWID_COL_NAME
 from .expr import InputRefExpr
 from collections import OrderedDict
 
@@ -54,7 +56,7 @@ class TransformMapper:
         BaseExpr
             Translated expression.
         """
-        if col == "__rowid__":
+        if col == ROWID_COL_NAME:
             return self._op.input[0].ref(col)
         return self._op.exprs[col]
 

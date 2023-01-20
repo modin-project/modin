@@ -20,6 +20,7 @@ import numpy as np
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
+from ..dataframe.utils import encode_col_name, IDX_COL_NAME
 from ..partitioning.partition import HdkOnNativeDataframePartition
 from ..db_worker import DbWorker
 from ..calcite_builder import CalciteBuilder
@@ -58,7 +59,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         return 1
 
     @classmethod
-    def from_pandas(cls, df, return_dims=False):
+    def from_pandas(cls, df, return_dims=False, encode_col_names=True):
         """
         Create ``HdkOnNativeDataframe`` from ``pandas.DataFrame``.
 
@@ -68,6 +69,8 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
             Source frame.
         return_dims : bool, default: False
             Include resulting dimensions into the returned value.
+        encode_col_names : bool, default: True
+            Encode column names.
 
         Returns
         -------
@@ -106,10 +109,12 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         else:
             # Since we already have arrow table, putting it into partitions instead
             # of pandas frame, to skip that phase when we will be putting our frame to HDK
-            return cls.from_arrow(at, return_dims, unsupported_cols)
+            return cls.from_arrow(at, return_dims, unsupported_cols, encode_col_names)
 
     @classmethod
-    def from_arrow(cls, at, return_dims=False, unsupported_cols=None):
+    def from_arrow(
+        cls, at, return_dims=False, unsupported_cols=None, encode_col_names=True
+    ):
         """
         Build frame from Arrow table.
 
@@ -122,6 +127,8 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         unsupported_cols : list of str, optional
             List of columns holding unsupported data. If None then
             check all columns to compute the list.
+        encode_col_names : bool, default: True
+            Encode column names.
 
         Returns
         -------
@@ -129,9 +136,20 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
             Tuple holding array of partitions, list of columns with unsupported
             data and optionally partitions' dimensions.
         """
-        put_func = cls._partition_class.put_arrow
+        if encode_col_names:
+            encode_col_names = False
+            encoded_names = []
+            for n in at.column_names:
+                encoded_name = encode_col_name(n)
+                encoded_names.append(encoded_name)
+                if n != encoded_name:
+                    encode_col_names = True
+            encoded_at = at.rename_columns(encoded_names) if encode_col_names else at
+        else:
+            encoded_at = at
 
-        parts = [[put_func(at)]]
+        put_func = cls._partition_class.put_arrow
+        parts = [[put_func(encoded_at)]]
         if unsupported_cols is None:
             _, unsupported_cols = cls._get_unsupported_cols(at)
 
@@ -300,7 +318,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         res = np.empty((1, 1), dtype=np.dtype(object))
         # workaround for https://github.com/modin-project/modin/issues/1851
         if DoUseCalcite.get():
-            at = at.rename_columns(["F_" + str(c) for c in columns])
+            at = at.rename_columns([encode_col_name(c) for c in columns])
         res[0][0] = cls._partition_class.put_arrow(at)
 
         return res
@@ -341,7 +359,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         -------
         str
         """
-        if col.startswith("__index__"):
+        if col.startswith(IDX_COL_NAME):
             return None
         return col
 
