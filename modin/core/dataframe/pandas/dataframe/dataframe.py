@@ -2678,7 +2678,7 @@ class PandasDataframe(ClassLogger):
         kw = {}
         if dtypes == "copy":
             kw["dtypes"] = self._dtypes
-        elif dtypes is not None and new_columns is not None:
+        elif dtypes is not None:
             columns = new_columns if new_columns is not None else self.columns
             kw["dtypes"] = pandas.Series(
                 [np.dtype(dtypes)] * len(columns), index=columns
