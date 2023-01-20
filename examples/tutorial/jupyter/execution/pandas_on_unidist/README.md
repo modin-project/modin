@@ -13,7 +13,7 @@ MPI is not reliable yet to work in interactive environment such as jupyter noteb
 For example, if you are experiencing the error `The kernel appears to have died. It will restart automatically.`,
 you may want to modify `kernel.json` in order to fix the problem.
 
-For simplicity, a Linux user can use the `setup_kernel.sh` script to install kernel with MPI. Otherwise, you need to follow these steps:
+For simplicity, the `setup_kernel.py` script may be runned to install kernel with MPI. Otherwise, you need to follow these steps:
 
 1. First, what you should do is locate `kernel.json` file with `jupyter kernelspec list` command. It should generally be like this.
 

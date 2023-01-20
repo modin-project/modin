@@ -81,7 +81,7 @@ jobs:
           conda list
         if: matrix.execution == 'hdk_on_native'
       # setup kernel configuration for mpi execution
-      - run: bash examples/tutorial/jupyter/execution/${{ matrix.execution }}/setup_kernel.sh
+      - run: python examples/tutorial/jupyter/execution/${{ matrix.execution }}/setup_kernel.py
         if: matrix.execution == 'pandas_on_unidist'
       - run: jupyter kernelspec list
       - run: |
