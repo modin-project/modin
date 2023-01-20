@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 import pytest
-import numpy as np
 
 import modin.pandas as pd
 from modin.config import NPartitions
@@ -47,22 +46,15 @@ def test_repartition(axis, dtype):
 
     if dtype == "DataFrame":
         results = {
-            None: ([4], [3]),
-            0: ([4], [2, 1]),
-            1: ([2, 2], [3]),
+            None: (1, 1),
+            0: (1, 2),
+            1: (2, 1),
         }
     else:
         results = {
-            None: ([4], [1]),
-            0: ([4], [1]),
-            1: ([2, 2], [1]),
+            None: (1, 1),
+            0: (1, 1),
+            1: (2, 1),
         }
-    # in some cases empty partitions aren't filtered so it's better to use
-    # `row_lengths` and `column_widths` to check the result of repartitioning
-    # than `._partitions.shape`.
-    assert np.array_equal(
-        obj._query_compiler._modin_frame.row_lengths, results[axis][0]
-    )
-    assert np.array_equal(
-        obj._query_compiler._modin_frame.column_widths, results[axis][1]
-    )
+
+    assert obj._query_compiler._modin_frame._partitions.shape == results[axis]
