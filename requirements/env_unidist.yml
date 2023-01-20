@@ -37,7 +37,7 @@ dependencies:
   - psycopg2
   - mypy
   - pandas-stubs
-  - fastparquet
+  - fastparquet<2023.1.0
   # for release script
   - pygit2
   - pip:
