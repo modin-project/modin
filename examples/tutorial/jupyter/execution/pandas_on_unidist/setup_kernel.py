@@ -1,10 +1,11 @@
 import sys
 from ipykernel import kernelspec
 
+
 default_make_ipkernel_cmd = kernelspec.make_ipkernel_cmd
 
 
-def new_make_ipkernel_cmd(
+def custom_make_ipkernel_cmd(
     mod="ipykernel_launcher", executable=None, extra_arguments=None
 ):
     mpi_arguments = ["mpiexec", "-n", "1"]
@@ -12,7 +13,7 @@ def new_make_ipkernel_cmd(
     return mpi_arguments + arguments
 
 
-kernelspec.make_ipkernel_cmd = new_make_ipkernel_cmd
+kernelspec.make_ipkernel_cmd = custom_make_ipkernel_cmd
 
 if __name__ == "__main__":
     kernel_name = "python3mpi"

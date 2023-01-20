@@ -20,8 +20,6 @@ MODIN_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), *[".." for _ in range(6)])
 )
 sys.path.insert(0, MODIN_DIR)
-# set kernel name for mpi execution
-os.environ["MODIN_KERNEL_NAME"] = "python3mpi"
 from examples.tutorial.jupyter.execution.test.utils import (  # noqa: E402
     _replace_str,
     _execute_notebook,

@@ -16,12 +16,11 @@ import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 
 test_dataset_path = "taxi.csv"
-kernel_name = (
-    os.environ["MODIN_KERNEL_NAME"] if "MODIN_KERNEL_NAME" in os.environ else None
-)
-ep = ExecutePreprocessor(
-    timeout=600, kernel_name=kernel_name if kernel_name else "python3"
-)
+# the kernel name "python3mpi" must match the one
+# that is set up in `examples/tutorial/jupyter/execution/pandas_on_unidist/setup_kernel.py`
+# for `Unidist` engine
+kernel_name = "python3" if cfg.Engine.get() != "Unidist" else "python3mpi"
+ep = ExecutePreprocessor(timeout=600, kernel_name=kernel_name)
 
 download_taxi_dataset = f"""import os
 import urllib.request
