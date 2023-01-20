@@ -2679,9 +2679,13 @@ class PandasDataframe(ClassLogger):
         if dtypes == "copy":
             kw["dtypes"] = self._dtypes
         elif dtypes is not None:
-            columns = new_columns if new_columns is not None else self.columns
+            if new_columns is None:
+                (
+                    new_columns,
+                    kw["column_widths"],
+                ) = self._compute_axis_labels_and_lengths(1, new_partitions)
             kw["dtypes"] = pandas.Series(
-                [np.dtype(dtypes)] * len(columns), index=columns
+                [np.dtype(dtypes)] * len(new_columns), index=new_columns
             )
         result = self.__constructor__(
             new_partitions, index=new_index, columns=new_columns, **kw
