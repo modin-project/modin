@@ -91,26 +91,26 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             self._is_debug(log) and log.debug(
                 f"SUBMIT::_apply_list_of_funcs::{self._identity}"
             )
-            futures = DaskWrapper.deploy(
+            result, length, width, ip = DaskWrapper.deploy(
                 func=apply_list_of_funcs,
                 f_args=(call_queue, self._data),
-                num_returns=2,
+                num_returns=4,
                 pure=False,
             )
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this improves performance a bit.
             func, f_args, f_kwargs = call_queue[0]
-            futures = DaskWrapper.deploy(
+            result, length, width, ip = DaskWrapper.deploy(
                 func=apply_func,
                 f_args=(self._data, func, *f_args),
                 f_kwargs=f_kwargs,
-                num_returns=2,
+                num_returns=4,
                 pure=False,
             )
             self._is_debug(log) and log.debug(f"SUBMIT::_apply_func::{self._identity}")
         self._is_debug(log) and log.debug(f"EXIT::Partition.apply::{self._identity}")
-        return self.__constructor__(futures[0], ip=futures[1])
+        return self.__constructor__(result, length, width, ip)
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
@@ -125,10 +125,10 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             self._is_debug(log) and log.debug(
                 f"SUBMIT::_apply_list_of_funcs::{self._identity}"
             )
-            futures = DaskWrapper.deploy(
+            self._data, new_length, new_width, self._ip_cache = DaskWrapper.deploy(
                 func=apply_list_of_funcs,
                 f_args=(call_queue, self._data),
-                num_returns=2,
+                num_returns=4,
                 pure=False,
             )
         else:
@@ -136,19 +136,24 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             # this improves performance a bit.
             func, f_args, f_kwargs = call_queue[0]
             self._is_debug(log) and log.debug(f"SUBMIT::_apply_func::{self._identity}")
-            futures = DaskWrapper.deploy(
+            self._data, new_length, new_width, self._ip_cache = DaskWrapper.deploy(
                 func=apply_func,
                 f_args=(self._data, func, *f_args),
                 f_kwargs=f_kwargs,
-                num_returns=2,
+                num_returns=4,
                 pure=False,
             )
-        self._data = futures[0]
-        self._ip_cache = futures[1]
         self._is_debug(log) and log.debug(
             f"EXIT::Partition.drain_call_queue::{self._identity}"
         )
         self.call_queue = []
+
+        # GH#4732 if we already have evaluated width/length cached as ints,
+        #  don't overwrite that cache with non-evaluated values.
+        if not isinstance(self._length_cache, int):
+            self._length_cache = new_length
+        if not isinstance(self._width_cache, int):
+            self._width_cache = new_width
 
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
@@ -332,7 +337,12 @@ def apply_func(partition, func, *args, **kwargs):
     destructuring it causes a performance penalty.
     """
     result = func(partition, *args, **kwargs)
-    return result, get_ip()
+    return (
+        result,
+        len(result) if hasattr(result, "__len__") else 0,
+        len(result.columns) if hasattr(result, "columns") else 0,
+        get_ip(),
+    )
 
 
 def apply_list_of_funcs(call_queue, partition):
@@ -355,4 +365,9 @@ def apply_list_of_funcs(call_queue, partition):
     """
     for func, f_args, f_kwargs in call_queue:
         partition = func(partition, *f_args, **f_kwargs)
-    return partition, get_ip()
+    return (
+        partition,
+        len(partition) if hasattr(partition, "__len__") else 0,
+        len(partition.columns) if hasattr(partition, "columns") else 0,
+        get_ip(),
+    )
