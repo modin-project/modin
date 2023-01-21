@@ -239,6 +239,11 @@ class Expanding(ExpandingCompat):
         self.expanding_args = expanding_args
         self.axis = axis
 
+    def aggregate(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_aggregate(
+                self.axis, self.expanding_args, *args, **kwargs)
+        )
     def sum(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.expanding_sum(
