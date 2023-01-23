@@ -3279,9 +3279,7 @@ class PandasDataframe(ClassLogger):
                     # have to do this in order to assign some potentially missing metadata,
                     # the ones that were set to the external index but were never propagated
                     # into the internal ones
-                    df.set_axis(
-                        axis=axis, labels=external_index, inplace=True, copy=False
-                    )
+                    df = df.set_axis(axis=axis, labels=external_index, copy=False)
 
         return df
 
