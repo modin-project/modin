@@ -917,6 +917,7 @@ _GROUPBY_FORWARDING_METHODS = frozenset(
         "cummin",
         "cumprod",
         "std",
+        "sem",
         "rank",
         "nunique",
         "median",
