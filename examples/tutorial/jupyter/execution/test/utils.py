@@ -15,8 +15,6 @@ import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 
 test_dataset_path = "taxi.csv"
-ep = ExecutePreprocessor(timeout=600, kernel_name="python3")
-
 download_taxi_dataset = f"""import os
 import urllib.request
 if not os.path.exists("{test_dataset_path}"):
@@ -25,17 +23,61 @@ if not os.path.exists("{test_dataset_path}"):
     """
 
 
+def get_execute_preprocessor(kernel_name):
+    """
+    Return execute preprocessor by kernel name.
+
+    Parameters
+    ----------
+    kernel_name : str
+        Existing kernel name.
+
+    Returns
+    -------
+    nbconvert.preprocessors.ExecutePreprocessor
+        Execute processor entity.
+    """
+    return ExecutePreprocessor(timeout=600, kernel_name=kernel_name)
+
+
+_actual_execute_preprocessors_name = "python3"
+
+_execute_preprocessors_dict = {
+    _actual_execute_preprocessors_name: get_execute_preprocessor(
+        _actual_execute_preprocessors_name
+    )
+}
+
+
+def get_actual_execute_preprocessor():
+    """
+    Return an actual execute preprocessor.
+
+    Returns
+    -------
+    nbconvert.preprocessors.ExecutePreprocessor
+        An actual execute preprocessor.
+    """
+    if _actual_execute_preprocessors_name not in _execute_preprocessors_dict:
+        _execute_preprocessors_dict[
+            _actual_execute_preprocessors_name
+        ] = get_execute_preprocessor(_actual_execute_preprocessors_name)
+
+    return _execute_preprocessors_dict[_actual_execute_preprocessors_name]
+
+
 def change_kernel(kernel_name):
     """
-    Allow to use custom kernel
+    Allow to use custom kernel.
 
     Parameters
     ----------
     kernel_name : str
         The name of the required kernel configuration to use.
     """
-    global ep
-    ep = ExecutePreprocessor(timeout=600, kernel_name=kernel_name)
+    global _actual_execute_preprocessors_name
+    _actual_execute_preprocessors_name = kernel_name
+    _execute_preprocessors_dict[kernel_name] = get_execute_preprocessor(kernel_name)
 
 
 def _execute_notebook(notebook):
@@ -48,6 +90,7 @@ def _execute_notebook(notebook):
         File-like object or path to the notebook to execute.
     """
     nb = nbformat.read(notebook, as_version=nbformat.NO_CONVERT)
+    ep = get_actual_execute_preprocessor()
     ep.preprocess(nb)
 
 
