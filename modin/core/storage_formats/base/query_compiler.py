@@ -2758,6 +2758,28 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_groupby_method(
+        action="compute standard error", result="standard error", refer_to="sem"
+    )
+    def groupby_sem(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="sem",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
         action="compute numerical rank", result="numerical rank", refer_to="rank"
     )
     def groupby_rank(
@@ -4237,7 +4259,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         join : {'left', 'right', 'outer', 'inner'}, default: 'left'""",
     )
     def str_cat(self, others=None, sep=None, na_rep=None, join="left"):
-        return StrDefault.register(pandas.Series.str.cat)(self, others, sep, na_rep, join)
+        return StrDefault.register(pandas.Series.str.cat)(
+            self, others, sep, na_rep, join
+        )
 
     @doc_utils.doc_str_method(
         refer_to="center",
@@ -4312,7 +4336,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         na : object, default: None""",
     )
     def str_fullmatch(self, pat, case=True, flags=0, na=None):
-        return StrDefault.register(pandas.Series.str.fullmatch)(self, pat, case, flags, na)
+        return StrDefault.register(pandas.Series.str.fullmatch)(
+            self, pat, case, flags, na
+        )
 
     @doc_utils.doc_str_method(refer_to="get", params="i : int")
     def str_get(self, i):
@@ -4829,6 +4855,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return RollingDefault.register(pandas.core.window.expanding.Expanding.max)(
             self, expanding_args, *args, **kwargs
         )
+
     def expanding_mean(self, fold_axis, expanding_args, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.expanding.Expanding.mean)(
             self, expanding_args, *args, **kwargs
