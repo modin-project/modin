@@ -2216,3 +2216,27 @@ def test_groupby_on_empty_data(modin_df_recipe):
     # https://github.com/modin-project/modin/issues/5441
     # run_test(eval_transform, func=lambda df: df.mean())
     # run_test(eval_std)
+
+
+def test_skew_corner_cases():
+    """
+    This test was inspired by https://github.com/modin-project/modin/issues/5545.
+
+    The test verifies that modin acts exactly as pandas when the input data is
+    bad for the 'skew' and so some components of the 'skew' formula appears to be invalid:
+        ``(count * (count - 1) ** 0.5 / (count - 2)) * (m3 / m2**1.5)``
+    """
+    # When 'm2 == m3 == 0' thus causing 0 / 0 division in the second multiplier.
+    # Note: mX = 'sum((col - mean(col)) ^ x)'
+    modin_df, pandas_df = create_test_dfs({"col0": [1, 1, 1], "col1": [10, 10, 10]})
+    eval_general(modin_df, pandas_df, lambda df: df.groupby("col0").skew())
+
+    # When 'count < 3' thus causing dividing by zero in the first multiplier
+    # Note: count = group_size
+    modin_df, pandas_df = create_test_dfs({"col0": [1, 1], "col1": [1, 2]})
+    eval_general(modin_df, pandas_df, lambda df: df.groupby("col0").skew())
+
+    # When 'count < 3' and 'm3 / m2 != 0'. The case comes from:
+    # https://github.com/modin-project/modin/issues/5545
+    modin_df, pandas_df = create_test_dfs({"col0": [1, 1], "col1": [171, 137]})
+    eval_general(modin_df, pandas_df, lambda df: df.groupby("col0").skew())

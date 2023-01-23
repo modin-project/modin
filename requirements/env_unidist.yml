@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - unidist-mpi>=0.2.1
-  - pandas==1.5.2
+  - pandas==1.5.3
   - numpy>=1.18.5
   - pyarrow
   - fsspec
@@ -37,7 +37,7 @@ dependencies:
   - psycopg2
   - mypy
   - pandas-stubs
-  - fastparquet
+  - fastparquet<2023.1.0
   - tqdm
   # for release script
   - pygit2

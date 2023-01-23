@@ -2187,6 +2187,7 @@ class PandasDataframe(ClassLogger):
         new_columns=None,
         dtypes=None,
         keep_partitioning=True,
+        sync_labels=True,
     ):
         """
         Perform a function across an entire axis.
@@ -2210,6 +2211,10 @@ class PandasDataframe(ClassLogger):
         keep_partitioning : boolean, default: True
             The flag to keep partition boundaries for Modin Frame.
             Setting it to True disables shuffling data from one partition to another.
+        sync_labels : boolean, default: True
+            Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
+            This could be used when you're certain that the indices in partitions are equal to
+            the provided hints in order to save time on syncing them.
 
         Returns
         -------
@@ -2228,6 +2233,7 @@ class PandasDataframe(ClassLogger):
             dtypes=dtypes,
             other=None,
             keep_partitioning=keep_partitioning,
+            sync_labels=sync_labels,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -2619,6 +2625,7 @@ class PandasDataframe(ClassLogger):
         enumerate_partitions=False,
         dtypes=None,
         keep_partitioning=True,
+        sync_labels=True,
     ):
         """
         Broadcast partitions of `other` Modin DataFrame and apply a function along full axis.
@@ -2649,6 +2656,10 @@ class PandasDataframe(ClassLogger):
         keep_partitioning : boolean, default: True
             The flag to keep partition boundaries for Modin Frame.
             Setting it to True disables shuffling data from one partition to another.
+        sync_labels : boolean, default: True
+            Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
+            This could be used when you're certain that the indices in partitions are equal to
+            the provided hints in order to save time on syncing them.
 
         Returns
         -------
@@ -2687,12 +2698,37 @@ class PandasDataframe(ClassLogger):
             kw["dtypes"] = pandas.Series(
                 [np.dtype(dtypes)] * len(new_columns), index=new_columns
             )
+
+        if not keep_partitioning:
+            if kw["row_lengths"] is None and new_index is not None:
+                if axis == 0:
+                    kw["row_lengths"] = get_length_list(
+                        axis_len=len(new_index), num_splits=new_partitions.shape[0]
+                    )
+                elif (
+                    axis == 1
+                    and self._row_lengths_cache is not None
+                    and len(new_index) == sum(self._row_lengths_cache)
+                ):
+                    kw["row_lengths"] = self._row_lengths_cache
+            if kw["column_widths"] is None and new_columns is not None:
+                if axis == 1:
+                    kw["column_widths"] = get_length_list(
+                        axis_len=len(new_columns),
+                        num_splits=new_partitions.shape[1],
+                    )
+                elif (
+                    axis == 0
+                    and self._column_widths_cache is not None
+                    and len(new_columns) == sum(self._column_widths_cache)
+                ):
+                    kw["column_widths"] = self._column_widths_cache
         result = self.__constructor__(
             new_partitions, index=new_index, columns=new_columns, **kw
         )
-        if new_index is not None:
+        if sync_labels and new_index is not None:
             result.synchronize_labels(axis=0)
-        if new_columns is not None:
+        if sync_labels and new_columns is not None:
             result.synchronize_labels(axis=1)
         return result
 
@@ -3236,13 +3272,22 @@ class PandasDataframe(ClassLogger):
         if df.empty:
             df = pandas.DataFrame(columns=self.columns, index=self.index)
         else:
-            for axis in [0, 1]:
-                ErrorMessage.catch_bugs_and_request_email(
-                    not df.axes[axis].equals(self.axes[axis]),
-                    f"Internal and external indices on axis {axis} do not match.",
-                )
-            df.index = self.index
-            df.columns = self.columns
+            for axis, external_index in enumerate(
+                [self._index_cache, self._columns_cache]
+            ):
+                # no need to check external and internal axes since in that case
+                # external axes will be computed from internal partitions
+                if external_index is not None:
+                    ErrorMessage.catch_bugs_and_request_email(
+                        not df.axes[axis].equals(external_index),
+                        f"Internal and external indices on axis {axis} do not match.",
+                    )
+                    # have to do this in order to assign some potentially missing metadata,
+                    # the ones that were set to the external index but were never propagated
+                    # into the internal ones
+                    df.set_axis(
+                        axis=axis, labels=external_index, inplace=True, copy=False
+                    )
 
         return df
 

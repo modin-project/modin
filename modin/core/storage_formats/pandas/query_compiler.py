@@ -460,7 +460,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return pandas.merge(left, right, **kwargs)
 
             new_self = self.__constructor__(
-                self._modin_frame.apply_full_axis(1, map_func)
+                self._modin_frame.apply_full_axis(
+                    axis=1,
+                    func=map_func,
+                    # We're going to explicitly change the shape across the 1-axis,
+                    # so we want for partitioning to adapt as well
+                    keep_partitioning=False,
+                )
             )
             is_reset_index = True
             if left_on and right_on:
@@ -505,7 +511,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return pandas.DataFrame.join(left, right, **kwargs)
 
             new_self = self.__constructor__(
-                self._modin_frame.apply_full_axis(1, map_func)
+                self._modin_frame.apply_full_axis(
+                    axis=1,
+                    func=map_func,
+                    # We're going to explicitly change the shape across the 1-axis,
+                    # so we want for partitioning to adapt as well
+                    keep_partitioning=False,
+                )
             )
             return new_self.sort_rows_by_column_values(on) if sort else new_self
         else:
@@ -1336,7 +1348,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
     convert_dtypes = Map.register(pandas.DataFrame.convert_dtypes)
-    invert = Map.register(pandas.DataFrame.__invert__)
+    invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isin = Map.register(pandas.DataFrame.isin, dtypes=np.bool_)
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
     _isfinite = Map.register(
@@ -2358,11 +2370,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             value.columns = [column]
             return self.insert_item(axis=1, loc=loc, value=value, how=None)
 
-        if is_list_like(value) and not isinstance(value, np.ndarray):
-            value = np.array(value)
-        elif is_scalar(value):
-            value = [value] * len(self.index)
-
         def insert(df, internal_indices=[]):
             """
             Insert new column to the partition.
@@ -2733,7 +2740,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             # The equation for the 'skew' was taken directly from pandas:
             # https://github.com/pandas-dev/pandas/blob/8dab54d6573f7186ff0c3b6364d5e4dd635ff3e7/pandas/core/nanops.py#L1226
-            skew_res = (count * (count - 1) ** 0.5 / (count - 2)) * (m3 / m2**1.5)
+            with np.errstate(invalid="ignore", divide="ignore"):
+                skew_res = (count * (count - 1) ** 0.5 / (count - 2)) * (m3 / m2**1.5)
+
+            # Setting dummy values for invalid results in accordance with pandas
+            skew_res[m2 == 0] = 0
+            skew_res[count < 3] = np.nan
             return skew_res
 
         result = GroupByReduce.register(
