@@ -242,10 +242,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
     ----------
     modin_frame : PandasDataframe
         Modin Frame to query with the compiled queries.
+    shape_hint : {"row", "column", None}, default: None
+        Shape hint for frames known to be a column or a row, otherwise None.
     """
 
-    def __init__(self, modin_frame):
+    def __init__(self, modin_frame, shape_hint=None):
         self._modin_frame = modin_frame
+        self._shape_hint = shape_hint
 
     @property
     def lazy_execution(self):
@@ -2227,7 +2230,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.getitem_column_array(key)
 
     def getitem_column_array(self, key, numeric=False):
-        # Convert to list for type checking
+        shape_hint = "column" if len(key) == 1 else None
         if numeric:
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_positions=key
@@ -2236,7 +2239,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_labels=key
             )
-        return self.__constructor__(new_modin_frame)
+        return self.__constructor__(new_modin_frame, shape_hint)
 
     def getitem_row_array(self, key):
         return self.__constructor__(

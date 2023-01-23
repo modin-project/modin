@@ -152,6 +152,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # treated differently.
 
     lazy_execution = False
+    _shape_hint = None
 
     # Metadata modification abstract methods
     def add_prefix(self, prefix, axis=1):
@@ -1068,7 +1069,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             Transposed new QueryCompiler or self.
         """
-        if len(self.columns) != 1 and (
+        if self._shape_hint == "column":
+            return self
+
+        if len(self.columns) != 1 or (
             len(self.index) == 1 and self.index[0] == MODIN_UNNAMED_SERIES_LABEL
         ):
             return self.transpose()
