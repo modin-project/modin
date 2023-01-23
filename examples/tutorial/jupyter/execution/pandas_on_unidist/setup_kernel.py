@@ -28,7 +28,7 @@ def custom_make_ipkernel_cmd(*args, **kwargs):
         Additional positional arguments to be passed in `default_make_ipkernel_cmd`.
     **kwargs : dict
         Additional keyword arguments to be passed in `default_make_ipkernel_cmd`.
-    
+
     Returns
     -------
     array

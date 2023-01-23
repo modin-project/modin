@@ -26,6 +26,7 @@ if not os.path.exists("{test_dataset_path}"):
 # Default kernel name for ``ExecutePreprocessor`` to be created
 _default_kernel_name = "python3"
 
+
 def set_kernel(kernel_name):
     """
     Set custom kernel for ``ExecutePreprocessor`` to be created.
@@ -47,7 +48,7 @@ def make_execute_preprocessor():
     -------
     nbconvert.preprocessors.ExecutePreprocessor
         Execute processor entity.
-    
+
     Notes
     -----
     Note that `_default_kernel_name` can be changed for the concrete executions
