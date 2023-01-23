@@ -896,6 +896,7 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "truncate",
         "lookup",
         "wide_to_long",
+        "between_time",
     }
 )
 
