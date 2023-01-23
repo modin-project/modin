@@ -2686,7 +2686,7 @@ class PandasDataframe(ClassLogger):
             enumerate_partitions=enumerate_partitions,
             keep_partitioning=keep_partitioning,
         )
-        kw = {}
+        kw = {"row_lengths": None, "column_widths": None}
         if dtypes == "copy":
             kw["dtypes"] = self._dtypes
         elif dtypes is not None:
