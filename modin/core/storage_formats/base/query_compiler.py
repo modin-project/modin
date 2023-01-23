@@ -2976,6 +2976,28 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_groupby_method(
+        action="compute standard error", result="standard error", refer_to="sem"
+    )
+    def groupby_sem(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="sem",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
         action="compute numerical rank", result="numerical rank", refer_to="rank"
     )
     def groupby_rank(
