@@ -131,7 +131,11 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
         return self._default_to_pandas(lambda df: df.ffill(limit=limit))
 
     def sem(self, ddof=1):
-        return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_sem,
+            agg_kwargs=dict(ddof=ddof),
+            numeric_only=True,
+        )
 
     def mean(self, numeric_only=None):
         return self._check_index(
@@ -551,7 +555,8 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                 agg_func=func,
                 agg_args=args,
                 agg_kwargs=kwargs,
-                how="axis_wise")
+                how="axis_wise",
+            )
         elif callable(func):
             return self._check_index(
                 self._wrap_aggregation(
@@ -1186,6 +1191,7 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
                 *args,
                 **kwargs,
             )
+
         return self._df._default_to_pandas(groupby_on_multiple_columns, *args, **kwargs)
 
 
