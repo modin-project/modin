@@ -20,12 +20,19 @@ default_make_ipkernel_cmd = kernelspec.make_ipkernel_cmd
 
 def custom_make_ipkernel_cmd(*args, **kwargs):
     """
-    Build modifyied Popen command list for launching an IPython kernel with mpi.
+    Build modified Popen command list for launching an IPython kernel with MPI.
 
+    Parameters
+    ----------
+    *args : iterable
+        Additional positional arguments to be passed in `default_make_ipkernel_cmd`.
+    **kwargs : dict
+        Additional keyword arguments to be passed in `default_make_ipkernel_cmd`.
+    
     Returns
     -------
     array
-        A Popen command list
+        A Popen command list.
 
     Notes
     -----

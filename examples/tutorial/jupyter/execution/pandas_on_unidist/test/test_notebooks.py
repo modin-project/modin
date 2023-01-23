@@ -25,13 +25,13 @@ from examples.tutorial.jupyter.execution.test.utils import (  # noqa: E402
     _execute_notebook,
     test_dataset_path,
     download_taxi_dataset,
-    change_kernel,
+    set_kernel,
 )
 
 # the kernel name "python3mpi" must match the one
 # that is set up in `examples/tutorial/jupyter/execution/pandas_on_unidist/setup_kernel.py`
 # for `Unidist` engine
-change_kernel(kernel_name="python3mpi")
+set_kernel(kernel_name="python3mpi")
 
 local_notebooks_dir = "examples/tutorial/jupyter/execution/pandas_on_unidist/local"
 

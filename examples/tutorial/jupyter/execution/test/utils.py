@@ -23,61 +23,37 @@ if not os.path.exists("{test_dataset_path}"):
     """
 
 
-def get_execute_preprocessor(kernel_name):
+# Default kernel name for ``ExecutePreprocessor`` to be created
+_default_kernel_name = "python3"
+
+def set_kernel(kernel_name):
     """
-    Return execute preprocessor by kernel name.
+    Set custom kernel for ``ExecutePreprocessor`` to be created.
 
     Parameters
     ----------
     kernel_name : str
-        Existing kernel name.
+        Kernel name.
+    """
+    global _default_kernel_name
+    _default_kernel_name = kernel_name
+
+
+def make_execute_preprocessor():
+    """
+    Make ``ExecutePreprocessor`` with the `_default_kernel_name`.
 
     Returns
     -------
     nbconvert.preprocessors.ExecutePreprocessor
         Execute processor entity.
+    
+    Notes
+    -----
+    Note that `_default_kernel_name` can be changed for the concrete executions
+    (e.g., ``PandasOnUnidist`` with MPI backend).
     """
-    return ExecutePreprocessor(timeout=600, kernel_name=kernel_name)
-
-
-_actual_execute_preprocessors_name = "python3"
-
-_execute_preprocessors_dict = {
-    _actual_execute_preprocessors_name: get_execute_preprocessor(
-        _actual_execute_preprocessors_name
-    )
-}
-
-
-def get_actual_execute_preprocessor():
-    """
-    Return an actual execute preprocessor.
-
-    Returns
-    -------
-    nbconvert.preprocessors.ExecutePreprocessor
-        An actual execute preprocessor.
-    """
-    if _actual_execute_preprocessors_name not in _execute_preprocessors_dict:
-        _execute_preprocessors_dict[
-            _actual_execute_preprocessors_name
-        ] = get_execute_preprocessor(_actual_execute_preprocessors_name)
-
-    return _execute_preprocessors_dict[_actual_execute_preprocessors_name]
-
-
-def change_kernel(kernel_name):
-    """
-    Allow to use custom kernel.
-
-    Parameters
-    ----------
-    kernel_name : str
-        The name of the required kernel configuration to use.
-    """
-    global _actual_execute_preprocessors_name
-    _actual_execute_preprocessors_name = kernel_name
-    _execute_preprocessors_dict[kernel_name] = get_execute_preprocessor(kernel_name)
+    return ExecutePreprocessor(timeout=600, kernel_name=_default_kernel_name)
 
 
 def _execute_notebook(notebook):
@@ -90,7 +66,7 @@ def _execute_notebook(notebook):
         File-like object or path to the notebook to execute.
     """
     nb = nbformat.read(notebook, as_version=nbformat.NO_CONVERT)
-    ep = get_actual_execute_preprocessor()
+    ep = make_execute_preprocessor()
     ep.preprocess(nb)
 
 
