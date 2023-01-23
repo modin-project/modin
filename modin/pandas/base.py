@@ -36,9 +36,9 @@ from pandas.util._validators import (
     validate_percentile,
     validate_bool_kwarg,
     validate_ascending,
+    validate_inclusive,
 )
-from pandas._libs.lib import NoDefault
-from pandas._libs.lib import no_default
+from pandas._libs.lib import no_default, NoDefault
 from pandas._typing import (
     IndexKeyFunc,
     StorageOptions,
@@ -992,10 +992,14 @@ class BasePandasDataset(ClassLogger):
         """
         Select values at particular time of day (e.g., 9:30AM).
         """
-        axis = self._get_axis_number(axis)
-        idx = self.index if axis == 0 else self.columns
-        indexer = pandas.Series(index=idx).at_time(time, asof=asof).index
-        return self.loc[indexer] if axis == 0 else self.loc[:, indexer]
+        # TODO: before merging with master, add a base query compiler at_time that
+        # does the old implementation of indexing with a pandas series.
+        if asof:
+            # pandas raises NotImplementedError for asof=True, so we do, too.
+            raise NotImplementedError("'asof' argument is not supported")
+        return self.between_time(
+            start_time=time, end_time=time, inclusive="both", axis=axis
+        )
 
     @_inherit_docstrings(
         pandas.DataFrame.between_time, apilink="pandas.DataFrame.between_time"
@@ -1009,20 +1013,48 @@ class BasePandasDataset(ClassLogger):
         inclusive: "str | None" = None,
         axis=None,
     ):  # noqa: PR01, RT01, D200
-        axis = self._get_axis_number(axis)
-        idx = self.index if axis == 0 else self.columns
-        indexer = (
-            pandas.Series(index=idx)
-            .between_time(
-                start_time,
-                end_time,
-                include_start=include_start,
-                include_end=include_end,
-                inclusive=inclusive,
-            )
-            .index
+        # TODO: before merging with master, add a base query compiler between_time that
+        # does the old implementation of indexing with a pandas series.
+
+        old_include_arg_used = (include_start is not no_default) or (
+            include_end is not no_default
         )
-        return self.loc[indexer] if axis == 0 else self.loc[:, indexer]
+
+        if old_include_arg_used and inclusive is not None:
+            raise ValueError(
+                "Deprecated arguments `include_start` and `include_end` "
+                "cannot be passed if `inclusive` has been given."
+            )
+        elif old_include_arg_used:
+            warnings.warn(
+                "`include_start` and `include_end` are deprecated in "
+                "favour of `inclusive`.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            left = True if isinstance(include_start, NoDefault) else include_start
+            right = True if isinstance(include_end, NoDefault) else include_end
+
+            inc_dict = {
+                (True, True): "both",
+                (True, False): "left",
+                (False, True): "right",
+                (False, False): "neither",
+            }
+            inclusive = inc_dict[(left, right)]
+        elif inclusive is None:
+            # On arg removal inclusive can default to "both"
+            inclusive = "both"
+        left_inclusive, right_inclusive = validate_inclusive(inclusive)
+        return self._create_or_update_from_compiler(
+            self._query_compiler.between_time(
+                pandas.core.tools.times.to_time(start_time),
+                pandas.core.tools.times.to_time(end_time),
+                include_start=left_inclusive,
+                include_end=right_inclusive,
+                axis=self._get_axis_number(axis),
+            )
+        )
 
     def bfill(
         self, axis=None, inplace=False, limit=None, downcast=None
