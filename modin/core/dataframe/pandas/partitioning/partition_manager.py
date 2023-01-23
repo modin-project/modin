@@ -441,6 +441,14 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         else:
             num_splits = NPartitions.get()
         preprocessed_map_func = cls.preprocess_func(apply_func)
+
+        give_columns = kwargs.pop("give_columns", False)
+        if give_columns:
+            index_func = lambda df: df.columns  # noqa: E731
+            func = cls.preprocess_func(index_func)
+            new_idx = [idx.apply(func) for idx in left[0]]
+            columns_idx = [index._data for index in new_idx]
+
         left_partitions = cls.axis_partition(left, axis)
         right_partitions = None if right is None else cls.axis_partition(right, axis)
         # For mapping across the entire axis, we don't maintain partitioning because we
@@ -462,6 +470,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             [
                 left_partitions[i].apply(
                     preprocessed_map_func,
+                    *(columns_idx if give_columns else []),
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
                     **kwargs,

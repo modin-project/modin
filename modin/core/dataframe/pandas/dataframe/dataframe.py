@@ -2619,6 +2619,7 @@ class PandasDataframe(ClassLogger):
         enumerate_partitions=False,
         dtypes=None,
         keep_partitioning=True,
+        give_columns=False,
     ):
         """
         Broadcast partitions of `other` Modin DataFrame and apply a function along full axis.
@@ -2674,6 +2675,7 @@ class PandasDataframe(ClassLogger):
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
             keep_partitioning=keep_partitioning,
+            give_columns=give_columns,
         )
         # Index objects for new object creation. This is shorter than if..else
         kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)

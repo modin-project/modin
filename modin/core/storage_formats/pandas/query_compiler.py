@@ -540,11 +540,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def reset_index(self, **kwargs):
         if self._modin_frame._index_cache is None:
 
-            def _reset(df, partition_idx):
+            def _reset(df, *columns_idx, partition_idx):
                 _kw = dict(kwargs)
+                if len(columns_idx) > 1 and partition_idx == 0:
+                    idx = columns_idx[0].append(columns_idx[1:])
+                    cols = (
+                        pandas.DataFrame(index=df.index, columns=idx)
+                        .reset_index(**kwargs)
+                        .columns
+                    )
+                    len_new_cols = len(cols) - len(idx)
+
                 if partition_idx != 0:
                     _kw["drop"] = True
-                return df.reset_index(**_kw)
+                res = df.reset_index(**_kw)
+                if len(columns_idx) > 1 and partition_idx == 0:
+                    res.columns = cols[: len(columns_idx[0]) + len_new_cols]
+                return res
 
             return self.__constructor__(
                 self._modin_frame.broadcast_apply_full_axis(
@@ -552,6 +564,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     func=_reset,
                     other=None,
                     enumerate_partitions=True,
+                    give_columns=True,
                 )
             )
 
