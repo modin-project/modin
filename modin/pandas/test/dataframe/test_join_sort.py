@@ -37,7 +37,7 @@ from modin.pandas.test.utils import (
     extra_test_parameters,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions, Engine
+from modin.config import NPartitions, Engine, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -526,10 +526,28 @@ def test_sort_values(
     if ascending is None and key is not None:
         pytest.skip("Pandas bug #41318")
 
+    # If index is preserved, it could be sorted differently from Pandas.
+    # The order of NA rows, sorted by HDK, is different (but still valid)
+    # from Pandas. To make the index identical to Pandas, we add the
+    # index names to 'by'.
+    by_index_names = (
+        []
+        if StorageFormat.get() == "Hdk"
+        and not ignore_index
+        and key is None
+        and (axis == 0 or axis == "rows")
+        else None
+    )
     if "multiindex" in by:
         index = generate_multiindex(len(data[list(data.keys())[0]]), nlevels=2)
         columns = generate_multiindex(len(data.keys()), nlevels=2)
         data = {columns[ind]: data[key] for ind, key in enumerate(data)}
+        if by_index_names is not None:
+            by_index_names.extend(index.names)
+    elif by_index_names is not None:
+        index = pd.RangeIndex(0, len(next(iter(data.values()))), name="test_idx")
+        columns = None
+        by_index_names.append(index.name)
     else:
         index = None
         columns = None
@@ -552,6 +570,9 @@ def test_sort_values(
             by_list.append(index.names[int(b[len("multiindex_level") :])])
         else:
             raise Exception('Unknown "by" specifier:' + b)
+
+    if by_index_names is not None:
+        by_list.extend(by_index_names)
 
     # Create "ascending" list
     if ascending in ["list_first_True", "list_first_False"]:

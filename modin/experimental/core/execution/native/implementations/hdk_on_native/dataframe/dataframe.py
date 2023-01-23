@@ -853,6 +853,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
+        _check_join_supported(how)
         how = JoinType(how)
         assert (
             left_on is not None and right_on is not None
@@ -861,11 +862,16 @@ class HdkOnNativeDataframe(PandasDataframe):
             right_on
         ), "'left_on' and 'right_on' lengths don't match"
 
-        for col in left_on:
-            assert col in self.columns, f"'left_on' references unknown column {col}"
-        for col in right_on:
-            assert col in other.columns, f"'right_on' references unknown column {col}"
+        def validate(what, df, col_names):
+            df_cols = df.columns
+            for col in col_names:
+                if col not in df_cols:
+                    if col in df.index.names:
+                        raise NotImplementedError("Merge by index")
+                    raise ValueError(f"'{what}' references unknown column {col}")
 
+        validate("left_on", self, left_on)
+        validate("right_on", other, right_on)
         new_columns = []
         new_dtypes = []
         exprs = OrderedDict()
@@ -1290,9 +1296,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
-        if how == "outer":
-            raise NotImplementedError("outer join is not supported in HDK engine")
-
+        _check_join_supported(how)
         lhs = self._maybe_materialize_rowid()
         reset_index_names = False
         for rhs in other_modin_frames:
@@ -1618,9 +1622,16 @@ class HdkOnNativeDataframe(PandasDataframe):
         if na_position != "first" and na_position != "last":
             raise ValueError(f"Unsupported na_position value '{na_position}'")
 
+        base = self
+
+        # If index is preserved and we have no index columns then we
+        # need to create one using __rowid__ virtual column.
+        if not ignore_index and base._index_cols is None:
+            base = base._materialize_rowid()
+
         if not isinstance(columns, list):
             columns = [columns]
-        columns = [self._find_index_or_col(col) for col in columns]
+        columns = [base._find_index_or_col(col) for col in columns]
 
         if isinstance(ascending, list):
             if len(ascending) != len(columns):
@@ -1634,14 +1645,12 @@ class HdkOnNativeDataframe(PandasDataframe):
             # If index is ignored then we might need to drop some columns.
             # At the same time some of dropped index columns can be used
             # for sorting and should be droped after sorting is done.
-            if self._index_cols is not None:
-                base = self
-
+            if base._index_cols is not None:
                 drop_index_cols_before = [
-                    col for col in self._index_cols if col not in columns
+                    col for col in base._index_cols if col not in columns
                 ]
                 drop_index_cols_after = [
-                    col for col in self._index_cols if col in columns
+                    col for col in base._index_cols if col in columns
                 ]
                 if not drop_index_cols_after:
                     drop_index_cols_after = None
@@ -1655,57 +1664,50 @@ class HdkOnNativeDataframe(PandasDataframe):
                         exprs[col] = base.ref(col)
                     for col in base.columns:
                         exprs[col] = base.ref(col)
-                    base = self.__constructor__(
+                    base = base.__constructor__(
                         columns=base.columns,
-                        dtypes=self._dtypes_for_exprs(exprs),
+                        dtypes=base._dtypes_for_exprs(exprs),
                         op=TransformNode(base, exprs),
                         index_cols=index_cols,
-                        force_execution_mode=self._force_execution_mode,
+                        force_execution_mode=base._force_execution_mode,
                     )
 
-                base = self.__constructor__(
+                base = base.__constructor__(
                     columns=base.columns,
                     dtypes=base._dtypes,
                     op=SortNode(base, columns, ascending, na_position),
                     index_cols=base._index_cols,
-                    force_execution_mode=self._force_execution_mode,
+                    force_execution_mode=base._force_execution_mode,
                 )
 
                 if drop_index_cols_after:
                     exprs = OrderedDict()
                     for col in base.columns:
                         exprs[col] = base.ref(col)
-                    base = self.__constructor__(
+                    base = base.__constructor__(
                         columns=base.columns,
-                        dtypes=self._dtypes_for_exprs(exprs),
+                        dtypes=base._dtypes_for_exprs(exprs),
                         op=TransformNode(base, exprs),
                         index_cols=None,
-                        force_execution_mode=self._force_execution_mode,
+                        force_execution_mode=base._force_execution_mode,
                     )
 
                 return base
             else:
-                return self.__constructor__(
-                    columns=self.columns,
-                    dtypes=self._dtypes,
-                    op=SortNode(self, columns, ascending, na_position),
+                return base.__constructor__(
+                    columns=base.columns,
+                    dtypes=base._dtypes,
+                    op=SortNode(base, columns, ascending, na_position),
                     index_cols=None,
-                    force_execution_mode=self._force_execution_mode,
+                    force_execution_mode=base._force_execution_mode,
                 )
         else:
-            base = self
-
-            # If index is preserved and we have no index columns then we
-            # need to create one using __rowid__ virtual column.
-            if self._index_cols is None:
-                base = base._materialize_rowid()
-
-            return self.__constructor__(
+            return base.__constructor__(
                 columns=base.columns,
                 dtypes=base._dtypes,
                 op=SortNode(base, columns, ascending, na_position),
                 index_cols=base._index_cols,
-                force_execution_mode=self._force_execution_mode,
+                force_execution_mode=base._force_execution_mode,
             )
 
     def filter(self, key):
@@ -1802,15 +1804,17 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
+        name = None if self._index_cache is None else self._index_cache.name
+        name = "__index__" if name is None else self._mangle_index_names([name])[0]
         exprs = OrderedDict()
-        exprs["__index__"] = self.ref("__rowid__")
+        exprs[name] = self.ref("__rowid__")
         for col in self._table_cols:
             exprs[col] = self.ref(col)
         return self.__constructor__(
             columns=self.columns,
             dtypes=self._dtypes_for_exprs(exprs),
             op=TransformNode(self, exprs),
-            index_cols=["__index__"],
+            index_cols=[name],
             uses_rowid=True,
             force_execution_mode=self._force_execution_mode,
         )
@@ -2814,3 +2818,8 @@ class HdkOnNativeDataframe(PandasDataframe):
             and index.min() == 0
             and index.max() == len(index) - 1
         )
+
+
+def _check_join_supported(type):  # noqa: GL08
+    if type not in ("inner", "left"):
+        raise NotImplementedError(f"{type} join is not supported by the HDK engine")
