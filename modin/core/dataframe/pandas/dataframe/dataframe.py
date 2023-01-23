@@ -2187,7 +2187,7 @@ class PandasDataframe(ClassLogger):
         new_columns=None,
         dtypes=None,
         keep_partitioning=True,
-        synchronize=True,
+        sync_labels=True,
     ):
         """
         Perform a function across an entire axis.
@@ -2211,7 +2211,7 @@ class PandasDataframe(ClassLogger):
         keep_partitioning : boolean, default: True
             The flag to keep partition boundaries for Modin Frame.
             Setting it to True disables shuffling data from one partition to another.
-        synchronize : boolean, default: True
+        sync_labels : boolean, default: True
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to
             the provided hints in order to save time on syncing them.
@@ -2233,7 +2233,7 @@ class PandasDataframe(ClassLogger):
             dtypes=dtypes,
             other=None,
             keep_partitioning=keep_partitioning,
-            synchronize=synchronize,
+            sync_labels=sync_labels,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -2625,7 +2625,7 @@ class PandasDataframe(ClassLogger):
         enumerate_partitions=False,
         dtypes=None,
         keep_partitioning=True,
-        synchronize=True,
+        sync_labels=True,
     ):
         """
         Broadcast partitions of `other` Modin DataFrame and apply a function along full axis.
@@ -2656,7 +2656,7 @@ class PandasDataframe(ClassLogger):
         keep_partitioning : boolean, default: True
             The flag to keep partition boundaries for Modin Frame.
             Setting it to True disables shuffling data from one partition to another.
-        synchronize : boolean, default: True
+        sync_labels : boolean, default: True
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to
             the provided hints in order to save time on syncing them.
@@ -2696,35 +2696,33 @@ class PandasDataframe(ClassLogger):
             )
 
         if not keep_partitioning:
-            if kw["row_lengths"] is None:
-                if new_index is not None:
-                    if axis == 0:
-                        kw["row_lengths"] = get_length_list(
-                            axis_len=len(new_index), num_splits=new_partitions.shape[0]
-                        )
-                    elif (
-                        axis == 1
-                        and self._row_lengths_cache is not None
-                        and len(new_index) == sum(self._row_lengths_cache)
-                    ):
-                        kw["row_lengths"] = self._row_lengths_cache
-            if kw["column_widths"] is None:
-                if new_columns is not None:
-                    if axis == 1:
-                        kw["column_widths"] = get_length_list(
-                            axis_len=len(new_columns),
-                            num_splits=new_partitions.shape[1],
-                        )
-                    elif (
-                        axis == 0
-                        and self._column_widths_cache is not None
-                        and len(new_columns) == sum(self._column_widths_cache)
-                    ):
-                        kw["column_widths"] = self._column_widths_cache
+            if kw["row_lengths"] is None and new_index is not None:
+                if axis == 0:
+                    kw["row_lengths"] = get_length_list(
+                        axis_len=len(new_index), num_splits=new_partitions.shape[0]
+                    )
+                elif (
+                    axis == 1
+                    and self._row_lengths_cache is not None
+                    and len(new_index) == sum(self._row_lengths_cache)
+                ):
+                    kw["row_lengths"] = self._row_lengths_cache
+            if kw["column_widths"] is None and new_columns is not None:
+                if axis == 1:
+                    kw["column_widths"] = get_length_list(
+                        axis_len=len(new_columns),
+                        num_splits=new_partitions.shape[1],
+                    )
+                elif (
+                    axis == 0
+                    and self._column_widths_cache is not None
+                    and len(new_columns) == sum(self._column_widths_cache)
+                ):
+                    kw["column_widths"] = self._column_widths_cache
         result = self.__constructor__(new_partitions, **kw)
-        if synchronize and new_index is not None:
+        if sync_labels and new_index is not None:
             result.synchronize_labels(axis=0)
-        if synchronize and new_columns is not None:
+        if sync_labels and new_columns is not None:
             result.synchronize_labels(axis=1)
         return result
 

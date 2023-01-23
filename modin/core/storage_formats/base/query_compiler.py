@@ -5095,7 +5095,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                     new_index=self._modin_frame._index_cache,
                     new_columns=self._modin_frame._columns_cache,
                     keep_partitioning=False,
-                    synchronize=False,
+                    sync_labels=False,
                 )
             )
         return new_query_compiler
