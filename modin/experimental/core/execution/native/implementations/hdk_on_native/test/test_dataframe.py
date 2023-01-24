@@ -2061,6 +2061,19 @@ class TestBadData:
         df = pd.DataFrame({"A": [np.iinfo(np.int64).max - 1, 1]})
         assert df.astype(np.uint64).sum()[0] == np.iinfo(np.int64).max
 
+    def test_mean_sum(self):
+        all_codes = np.typecodes["All"]
+        exclude_codes = np.typecodes["Datetime"] + np.typecodes["Complex"] + "gSUVO"
+        supported_codes = set(all_codes) - set(exclude_codes)
+
+        def test(df, dtype_code, operation, **kwargs):
+            df = type(df)({"A": [0, 1], "B": [1, 0]}, dtype=np.dtype(dtype_code))
+            return getattr(df, operation)()
+
+        for c in supported_codes:
+            run_and_compare(test, data={}, dtype_code=c, operation="sum")
+            run_and_compare(test, data={}, dtype_code=c, operation="mean")
+
 
 class TestDropna:
     data = {

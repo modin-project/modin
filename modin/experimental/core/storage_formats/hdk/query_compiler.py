@@ -399,9 +399,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             raise NotImplementedError(
                 f"HDK's sum does not support such set of parameters: min_count={min_count}."
             )
+        _check_int_or_float("sum", self.dtypes)
         return self._agg("sum", **kwargs)
 
     def mean(self, **kwargs):
+        _check_int_or_float("mean", self.dtypes)
         return self._agg("mean", **kwargs)
 
     def nunique(self, axis=0, dropna=True):
@@ -793,3 +795,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     @property
     def dtypes(self):
         return self._modin_frame.dtypes
+
+
+def _check_int_or_float(op, dtypes):  # noqa: GL08
+    codes = "bBhHiIlLqQpPfd"
+    for t in dtypes:
+        if t.char not in codes:
+            raise NotImplementedError(f"Operation '{op}' on type '{t.name}'")
