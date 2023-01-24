@@ -106,6 +106,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         Whether underlying execution engine is designed to be executed in a lazy mode only.
         If True, such QueryCompiler will be handled differently at the front-end in order
         to reduce execution triggering as much as possible.
+    _shape_hint : {"row", "column", None}, default: None
+        Shape hint for frames known to be a column or a row, otherwise None.
 
     Notes
     -----
