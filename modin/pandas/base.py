@@ -3429,7 +3429,7 @@ class BasePandasDataset(ClassLogger):
         else:
             new_labels = self.axes[axis].tz_convert(tz)
         obj = self.copy() if copy else self
-        return obj.set_axis(new_labels, axis, inplace=False, copy=copy)
+        return obj.set_axis(new_labels, axis, copy=copy)
 
     def tz_localize(
         self, tz, axis=0, level=None, copy=True, ambiguous="raise", nonexistent="raise"
@@ -3450,7 +3450,7 @@ class BasePandasDataset(ClassLogger):
             )
             .index
         )
-        return self.set_axis(new_labels, axis, inplace=False, copy=copy)
+        return self.set_axis(new_labels, axis, copy=copy)
 
     # TODO: uncomment the following lines when #3331 issue will be closed
     # @prepend_to_notes(
