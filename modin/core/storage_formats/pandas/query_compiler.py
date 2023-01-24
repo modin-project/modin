@@ -2239,7 +2239,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_labels=key
             )
-        return self.__constructor__(new_modin_frame, shape_hint)
+        return self.__constructor__(new_modin_frame, shape_hint=shape_hint)
 
     def getitem_row_array(self, key):
         return self.__constructor__(
