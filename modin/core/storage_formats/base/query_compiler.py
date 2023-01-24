@@ -106,6 +106,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         Whether underlying execution engine is designed to be executed in a lazy mode only.
         If True, such QueryCompiler will be handled differently at the front-end in order
         to reduce execution triggering as much as possible.
+    _shape_hint : {"row", "column", None}, default: None
+        Shape hint for frames known to be a column or a row, otherwise None.
 
     Notes
     -----
@@ -152,6 +154,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # treated differently.
 
     lazy_execution = False
+    _shape_hint = None
 
     # Metadata modification abstract methods
     def add_prefix(self, prefix, axis=1):
@@ -1068,6 +1071,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             Transposed new QueryCompiler or self.
         """
+        if self._shape_hint == "column":
+            return self
+
         if len(self.columns) != 1 or (
             len(self.index) == 1 and self.index[0] == MODIN_UNNAMED_SERIES_LABEL
         ):
