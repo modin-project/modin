@@ -564,7 +564,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     func=_reset,
                     other=None,
                     enumerate_partitions=True,
-                    give_columns=True,
+                    pass_cols_to_partitions=True,
                 )
             )
 

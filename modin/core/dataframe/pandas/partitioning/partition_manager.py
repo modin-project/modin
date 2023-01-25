@@ -398,6 +398,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         apply_indices=None,
         enumerate_partitions=False,
         lengths=None,
+        pass_cols_to_partitions=False,
         **kwargs,
     ):
         """
@@ -423,6 +424,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
         lengths : list of ints, default: None
             The list of lengths to shuffle the object.
+        pass_cols_to_partitions : bool, default: False
+            Whether pass columns into applied `func` or not.
+            Note that `func` must be able to obtain `*columns` arg.
         **kwargs : dict
             Additional options that could be used by different engines.
 
@@ -442,8 +446,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             num_splits = NPartitions.get()
         preprocessed_map_func = cls.preprocess_func(apply_func)
 
-        give_columns = kwargs.pop("give_columns", False)
-        if give_columns:
+        if pass_cols_to_partitions:
             column_func = lambda df: df.columns  # noqa: E731
             func = cls.preprocess_func(column_func)
             partition_cols = [part.apply(func) for part in left[0]]
@@ -470,7 +473,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             [
                 left_partitions[i].apply(
                     preprocessed_map_func,
-                    *(column_refs if give_columns else []),
+                    *(column_refs if pass_cols_to_partitions else []),
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
                     **kwargs,

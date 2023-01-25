@@ -2626,7 +2626,7 @@ class PandasDataframe(ClassLogger):
         dtypes=None,
         keep_partitioning=True,
         sync_labels=True,
-        give_columns=False,
+        pass_cols_to_partitions=False,
     ):
         """
         Broadcast partitions of `other` Modin DataFrame and apply a function along full axis.
@@ -2661,6 +2661,9 @@ class PandasDataframe(ClassLogger):
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to
             the provided hints in order to save time on syncing them.
+        pass_cols_to_partitions : bool, default: False
+            Whether pass columns into applied `func` or not.
+            Note that `func` must be able to obtain `*columns` arg.
 
         Returns
         -------
@@ -2686,7 +2689,7 @@ class PandasDataframe(ClassLogger):
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
             keep_partitioning=keep_partitioning,
-            give_columns=give_columns,
+            pass_cols_to_partitions=pass_cols_to_partitions,
         )
         # Index objects for new object creation. This is shorter than if..else
         kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
