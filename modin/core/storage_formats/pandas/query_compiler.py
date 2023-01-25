@@ -540,7 +540,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def reset_index(self, **kwargs):
         if self._modin_frame._index_cache is None:
 
-            def _reset(df, *columns_idx, partition_idx):
+            def _reset(df, *columns, partition_idx):
                 _kw = dict(kwargs)
                 if len(columns_idx) > 1 and partition_idx == 0:
                     old_cols = columns[0].append(columns[1:])
