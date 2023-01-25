@@ -693,12 +693,10 @@ def modin_df_almost_equals_pandas(modin_df, pandas_df):
 def try_modin_df_almost_equals_compare(df1, df2):
     """Compare two dataframes as nearly equal if possible, otherwise compare as completely equal."""
     # `modin_df_almost_equals_pandas` is numeric-only comparator
-    dtypes1, dtypes2 = map(
-        lambda df: dtype if is_list_like(dtype := df.dtypes) else [dtype], (df1, df2)
-    )
-    if all(is_numeric_dtype(dtype) for dtype in dtypes1) and all(
-        is_numeric_dtype(dtype) for dtype in dtypes2
-    ):
+    dtypes1, dtypes2 = [
+        dtype if is_list_like(dtype := df.dtypes) else [dtype] for df in (df1, df2)
+    ]
+    if all(map(is_numeric_dtype, dtypes1)) and all(map(is_numeric_dtype, dtypes2)):
         modin_df_almost_equals_pandas(df1, df2)
     else:
         df_equals(df1, df2)
