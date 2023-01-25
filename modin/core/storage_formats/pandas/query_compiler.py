@@ -543,20 +543,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def _reset(df, *columns_idx, partition_idx):
                 _kw = dict(kwargs)
                 if len(columns_idx) > 1 and partition_idx == 0:
-                    idx = columns_idx[0].append(columns_idx[1:])
-                    cols = (
-                        pandas.DataFrame(index=df.index, columns=idx)
+                    old_cols = columns[0].append(columns[1:])
+                    new_cols = (
+                        pandas.DataFrame(index=df.index, columns=old_cols)
                         .reset_index(**kwargs)
                         .columns
                     )
-                    len_new_cols = len(cols) - len(idx)
+                    cols_diff_len = len(new_cols) - len(old_cols)
 
                 if partition_idx != 0:
                     _kw["drop"] = True
-                res = df.reset_index(**_kw)
-                if len(columns_idx) > 1 and partition_idx == 0:
-                    res.columns = cols[: len(columns_idx[0]) + len_new_cols]
-                return res
+                result = df.reset_index(**_kw)
+                if len(columns) > 1 and partition_idx == 0:
+                    result.columns = new_cols[: len(columns[0]) + cols_diff_len]
+                return result
 
             return self.__constructor__(
                 self._modin_frame.broadcast_apply_full_axis(
