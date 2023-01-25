@@ -419,7 +419,6 @@ def walk_aggregation_dict(
             - `col_renaming_required`: whether it's required to rename the
                 `col` into ``(col, func_name)``.
     """
-
     for key, value in agg_dict.items():
         yield from _walk_aggregation_func(key, value)
 

@@ -328,7 +328,7 @@ class GroupByReduce(TreeReduce):
         # Defaulting to pandas in case of an empty frame as we can't process it properly.
         # Higher API level won't pass empty data here unless the frame has delayed
         # computations. So we apparently lose some laziness here (due to index access)
-        # because of the disability to process empty groupby natively.
+        # because of the inability to process empty groupby natively.
         is_empty_data = (
             len(query_compiler.columns) == 0 or len(query_compiler.index) == 0
         )
