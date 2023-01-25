@@ -398,7 +398,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         apply_indices=None,
         enumerate_partitions=False,
         lengths=None,
-        pass_cols_to_partitions=False,
+        apply_func_args=None,
         **kwargs,
     ):
         """
@@ -424,9 +424,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
         lengths : list of ints, default: None
             The list of lengths to shuffle the object.
-        pass_cols_to_partitions : bool, default: False
-            Whether pass columns into applied `func` or not.
-            Note that `func` must be able to obtain `*columns` arg.
+        apply_func_args : bool, optional
+            Whether pass extra args to `func` or not.
+            Note that `func` must be able to obtain `df, *args`.
         **kwargs : dict
             Additional options that could be used by different engines.
 
@@ -445,12 +445,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         else:
             num_splits = NPartitions.get()
         preprocessed_map_func = cls.preprocess_func(apply_func)
-
-        if pass_cols_to_partitions:
-            column_func = lambda df: df.columns  # noqa: E731
-            func = cls.preprocess_func(column_func)
-            partition_cols = [part.apply(func) for part in left[0]]
-            column_refs = [col.list_of_blocks[0] for col in partition_cols]
 
         left_partitions = cls.axis_partition(left, axis)
         right_partitions = None if right is None else cls.axis_partition(right, axis)
@@ -473,7 +467,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             [
                 left_partitions[i].apply(
                     preprocessed_map_func,
-                    *(column_refs if pass_cols_to_partitions else []),
+                    *(apply_func_args if apply_func_args else []),
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
                     **kwargs,
@@ -865,7 +859,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             partition.wait()
 
     @classmethod
-    def get_indices(cls, axis, partitions, index_func=None):
+    def get_indices(cls, axis, partitions, index_func=None, materialize=True):
         """
         Get the internal indices stored in the partitions.
 
@@ -877,13 +871,16 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             NumPy array with PandasDataframePartition's.
         index_func : callable, default: None
             The function to be used to extract the indices.
+        materialize : bool, default: True
+            Whether materialize indices or not.
 
         Returns
         -------
-        pandas.Index
-            A pandas Index object.
-        list of pandas.Index
+        pandas.Index or None
+            A pandas Index object. None if `materialize==False`.
+        list of pandas.Index or list of futures
             The list of internal indices for each partition.
+            The list of futures if `materialize==False`.
 
         Notes
         -----
@@ -898,6 +895,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         target = partitions.T if axis == 0 else partitions
         if len(target):
             new_idx = [idx.apply(func) for idx in target[0]]
+            if not materialize:
+                refs = [part_of_index.list_of_blocks[0] for part_of_index in new_idx]
+                return None, refs
             new_idx = cls.get_objects_from_partitions(new_idx)
         else:
             new_idx = [pandas.Index([])]

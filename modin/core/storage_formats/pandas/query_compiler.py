@@ -545,7 +545,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             def _reset(df, *columns, partition_idx):
                 _kw = dict(kwargs)
-                if len(columns) > 1 and partition_idx == 0:
+                if len(columns) > 0 and partition_idx == 0:
                     old_cols = columns[0].append(columns[1:])
                     new_cols = (
                         pandas.DataFrame(index=df.index, columns=old_cols)
@@ -557,8 +557,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 if partition_idx != 0:
                     _kw["drop"] = True
                 result = df.reset_index(**_kw)
-                if len(columns) > 1 and partition_idx == 0:
-                    result.columns = new_cols[: len(columns[0]) + cols_diff_len]
+                if len(columns) > 0 and partition_idx == 0:
+                    result.columns = new_cols[: len(df.columns) + cols_diff_len]
                 return result
 
             return self.__constructor__(

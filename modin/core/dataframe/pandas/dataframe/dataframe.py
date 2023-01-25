@@ -2681,6 +2681,18 @@ class PandasDataframe(ClassLogger):
                 axis ^ 1, numeric_indices
             ).keys()
 
+        apply_func_args = None
+        if pass_cols_to_partitions:
+            apply_func_args = (
+                self._columns_cache
+                if self._columns_cache is not None
+                else self._partition_mgr_cls.get_indices(
+                    axis=1,
+                    partitions=self._partitions,
+                    materialize=False,
+                )[1],
+            )
+
         new_partitions = self._partition_mgr_cls.broadcast_axis_partitions(
             axis=axis,
             left=self._partitions,
@@ -2689,7 +2701,7 @@ class PandasDataframe(ClassLogger):
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
             keep_partitioning=keep_partitioning,
-            pass_cols_to_partitions=pass_cols_to_partitions,
+            apply_func_args=apply_func_args,
         )
         kw = {"row_lengths": None, "column_widths": None}
         if dtypes == "copy":
