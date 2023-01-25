@@ -3170,6 +3170,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             to_group = self.drop(columns=unique_keys)
 
         keys_columns = self.getitem_column_array(unique_keys)
+        len_values = len(values)
+        if len_values == 0:
+            len_values = len(self.columns.drop(unique_keys))
 
         def applyier(df, other):
             """
@@ -3203,6 +3206,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 sort=sort,
             )
 
+            # if only one value is specified, removing level that maps
+            # columns from `values` to the actual values
+            if len(index) > 0 and len_values == 1 and result.columns.nlevels > 1:
+                result.columns = result.columns.droplevel(int(margins))
+
             # in that case Pandas transposes the result of `pivot_table`,
             # transposing it back to be consistent with column axis values along
             # different partitions
@@ -3220,14 +3228,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # transposing the result again, to be consistent with Pandas result
         if len(index) == 0 and len(columns) > 0:
             result = result.transpose()
-
-        if len(values) == 0:
-            values = self.columns.drop(unique_keys)
-
-        # if only one value is specified, removing level that maps
-        # columns from `values` to the actual values
-        if len(index) > 0 and len(values) == 1 and result.columns.nlevels > 1:
-            result.columns = result.columns.droplevel(int(margins))
 
         return result
 
