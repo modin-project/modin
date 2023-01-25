@@ -2663,7 +2663,7 @@ class PandasDataframe(ClassLogger):
             the provided hints in order to save time on syncing them.
         pass_cols_to_partitions : bool, default: False
             Whether pass columns into applied `func` or not.
-            Note that `func` must be able to obtain `*columns` arg.
+            Note that `func` must be able to obtain `df, *columns`.
 
         Returns
         -------

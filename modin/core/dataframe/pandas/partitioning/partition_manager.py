@@ -445,7 +445,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         else:
             num_splits = NPartitions.get()
         preprocessed_map_func = cls.preprocess_func(apply_func)
-
         left_partitions = cls.axis_partition(left, axis)
         right_partitions = None if right is None else cls.axis_partition(right, axis)
         # For mapping across the entire axis, we don't maintain partitioning because we
