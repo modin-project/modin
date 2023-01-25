@@ -2031,23 +2031,36 @@ class TestBadData:
     def test_uint_serialization(self):
         # Tests for CalciteSerializer.serialize_literal()
         df = pd.DataFrame({"A": [np.nan, 1]})
-        assert df.fillna(np.uint8(255)).sum()[0] == 256
-        assert df.fillna(np.uint16(65535)).sum()[0] == 65536
-        assert df.fillna(np.uint32(4_294_967_295)).sum()[0] == 4_294_967_296
         assert (
-            df.fillna(np.uint64(9_223_372_036_854_775_806)).sum()[0]
-            == 9_223_372_036_854_775_807
+            df.fillna(np.uint8(np.iinfo(np.uint8).max)).sum()[0]
+            == np.iinfo(np.uint8).max + 1
+        )
+        assert (
+            df.fillna(np.uint16(np.iinfo(np.uint16).max)).sum()[0]
+            == np.iinfo(np.uint16).max + 1
+        )
+        assert (
+            df.fillna(np.uint32(np.iinfo(np.uint32).max)).sum()[0]
+            == np.iinfo(np.uint32).max + 1
+        )
+        # HDK represents 'uint64' as 'int64' internally due to a lack of support
+        # for unsigned ints, that's why using 'int64.max' here
+        assert (
+            df.fillna(np.uint64(np.iinfo(np.int64).max - 1)).sum()[0]
+            == np.iinfo(np.int64).max
         )
 
         # Tests for CalciteSerializer.serialize_dtype()
-        df = pd.DataFrame({"A": [255, 1]})
-        assert df.astype(np.uint8).sum()[0] == 256
-        df = pd.DataFrame({"A": [65535, 1]})
-        assert df.astype(np.uint16).sum()[0] == 65536
-        df = pd.DataFrame({"A": [4_294_967_295, 1]})
-        assert df.astype(np.uint32).sum()[0] == 4_294_967_296
-        df = pd.DataFrame({"A": [9_223_372_036_854_775_806, 1]})
-        assert df.astype(np.uint64).sum()[0] == 9_223_372_036_854_775_807
+        df = pd.DataFrame({"A": [np.iinfo(np.uint8).max, 1]})
+        assert df.astype(np.uint8).sum()[0] == np.iinfo(np.uint8).max + 1
+        df = pd.DataFrame({"A": [np.iinfo(np.uint16).max, 1]})
+        assert df.astype(np.uint16).sum()[0] == np.iinfo(np.uint16).max + 1
+        df = pd.DataFrame({"A": [np.iinfo(np.uint32).max, 1]})
+        assert df.astype(np.uint32).sum()[0] == np.iinfo(np.uint32).max + 1
+        # HDK represents 'uint64' as 'int64' internally due to a lack of support
+        # for unsigned ints, that's why using 'int64.max' here
+        df = pd.DataFrame({"A": [np.iinfo(np.int64).max - 1, 1]})
+        assert df.astype(np.uint64).sum()[0] == np.iinfo(np.int64).max
 
 
 class TestDropna:
