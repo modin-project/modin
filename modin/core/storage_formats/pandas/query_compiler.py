@@ -542,7 +542,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             def _reset(df, *columns, partition_idx):
                 _kw = dict(kwargs)
-                if len(columns_idx) > 1 and partition_idx == 0:
+                if len(columns) > 1 and partition_idx == 0:
                     old_cols = columns[0].append(columns[1:])
                     new_cols = (
                         pandas.DataFrame(index=df.index, columns=old_cols)
