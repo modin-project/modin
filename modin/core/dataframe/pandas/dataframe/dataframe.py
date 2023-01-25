@@ -2684,13 +2684,13 @@ class PandasDataframe(ClassLogger):
         apply_func_args = None
         if pass_cols_to_partitions:
             apply_func_args = (
-                self._columns_cache
+                [self._columns_cache]
                 if self._columns_cache is not None
                 else self._partition_mgr_cls.get_indices(
                     axis=1,
                     partitions=self._partitions,
                     materialize=False,
-                )[1],
+                )[1]
             )
 
         new_partitions = self._partition_mgr_cls.broadcast_axis_partitions(
