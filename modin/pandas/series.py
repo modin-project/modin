@@ -1246,9 +1246,9 @@ class Series(SeriesCompat, BasePandasDataset):
             raise NotImplementedError(
                 "Series.nlargest is not implemented for empty Series."
             )
-        return DataFrame(
+        return Series(
             query_compiler=self._query_compiler.nlargest(
-                n, [self._query_compiler.columns[0]], keep
+                n=n, columns=self.name, keep=keep
             )
         )
 
@@ -1258,11 +1258,11 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         if len(self._query_compiler.columns) == 0:
             raise NotImplementedError(
-                "Series.nlargest is not implemented for empty Series."
+                "Series.nsmallest is not implemented for empty Series."
             )
-        return DataFrame(
+        return Series(
             query_compiler=self._query_compiler.nsmallest(
-                n, [self._query_compiler.columns[0]], keep
+                n=n, columns=self.name, keep=keep
             )
         )
 
