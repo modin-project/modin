@@ -415,9 +415,11 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             Right partitions.
         num_splits : {"auto", "keep", int}, default: "auto"
             The number of partitions to split the result into across the `axis`.
-                - "auto": Determine the number of splits automatically based on the ``modin.config`` configuration.
-                - "keep": Preserve partitioning. Setting this value stops data shuffling between partitions.
-                - int: The number of splits manually specified as an integer.
+
+            - "auto": Determine the number of splits automatically based on the ``modin.config`` configuration.
+            - "keep": Preserve partitioning. Setting this value stops data shuffling between partitions.
+            - int: The number of splits manually specified as an integer.
+
             Note that in order for the `lengths` parameter to be considered the `num_splits`
             parameter has to be "auto".
         apply_indices : list of ints, default: None
@@ -561,9 +563,11 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             Function to apply.
         num_splits : {"auto", "keep", int}, default: "auto"
             The number of partitions to split the result into across the `axis`.
-                - "auto": Determine the number of splits automatically based on the ``modin.config`` configuration.
-                - "keep": Preserve partitioning. Setting this value stops data shuffling between partitions.
-                - int: The number of splits manually specified as an integer.
+
+            - "auto": Determine the number of splits automatically based on the ``modin.config`` configuration.
+            - "keep": Preserve partitioning. Setting this value stops data shuffling between partitions.
+            - int: The number of splits manually specified as an integer.
+
             Note that in order for the `lengths` parameter to be considered the `num_splits`
             parameter has to be "auto".
         lengths : list of ints, default: None

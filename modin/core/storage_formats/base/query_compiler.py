@@ -5100,7 +5100,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                     lambda df: df,
                     new_index=self._modin_frame._index_cache,
                     new_columns=self._modin_frame._columns_cache,
-                    keep_partitioning=False,
+                    num_splits="auto",
                     sync_labels=False,
                 )
             )

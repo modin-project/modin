@@ -2210,9 +2210,10 @@ class PandasDataframe(ClassLogger):
             type, and allows us to avoid (re)computing it.
         num_splits : {"keep", "auto", int}, default: "keep"
             The number of partitions to split the result into across the `axis`.
-                - "keep": Preserve partitioning. Setting this value stops data shuffling between partitions.
-                - "auto": Determine the number of splits automatically based on the ``modin.config`` configuration.
-                - int: The number of splits manually specified as an integer.
+
+            - "keep": Preserve partitioning. Setting this value stops data shuffling between partitions.
+            - "auto": Determine the number of splits automatically based on the ``modin.config`` configuration.
+            - int: The number of splits manually specified as an integer.
         sync_labels : boolean, default: True
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to
@@ -2657,9 +2658,10 @@ class PandasDataframe(ClassLogger):
             type, and allows us to avoid (re)computing it.
         num_splits : {"keep", "auto", int}, default: "keep"
             The number of partitions to split the result into across the `axis`.
-                - "keep": Preserve partitioning. Setting this value stops data shuffling between partitions.
-                - "auto": Determine the number of splits automatically based on the ``modin.config`` configuration.
-                - int: The number of splits manually specified as an integer.
+
+            - "keep": Preserve partitioning. Setting this value stops data shuffling between partitions.
+            - "auto": Determine the number of splits automatically based on the ``modin.config`` configuration.
+            - int: The number of splits manually specified as an integer.
         sync_labels : boolean, default: True
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to

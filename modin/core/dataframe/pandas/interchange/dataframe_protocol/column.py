@@ -296,7 +296,7 @@ class PandasProtocolColumn(ProtocolColumn):
             0,
             self._col._partitions,
             lambda df: df,
-            keep_partitioning=False,
+            num_splits="auto",
             lengths=new_lengths,
         )
         new_df = self._col.__constructor__(
