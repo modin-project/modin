@@ -16,6 +16,10 @@
 
 import pandas
 from pandas.api.types import union_categoricals
+from math import ceil
+
+from modin.config import NPartitions
+from modin.core.storage_formats.pandas.utils import compute_chunksize
 
 
 def concatenate(dfs):
@@ -44,3 +48,31 @@ def concatenate(dfs):
                 i, pandas.Categorical(df.iloc[:, i], categories=union.categories)
             )
     return pandas.concat(dfs)
+
+
+def merge_partitioning(left, right, axis=1):
+    """
+    Get the number of splits across the `axis` for the two dataframes being concatenated.
+
+    Parameters
+    ----------
+    left : PandasDataframe
+    right : PandasDataframe
+    axis : int, default: 1
+
+    Returns
+    -------
+    int
+    """
+    lsplits = left._partitions.shape[axis]
+    rsplits = right._partitions.shape[axis]
+
+    lshape = left._row_lengths_cache if axis == 0 else left._column_widths_cache
+    rshape = right._row_lengths_cache if axis == 0 else right._column_widths_cache
+
+    if lshape is not None and rshape is not None:
+        res_shape = sum(lshape) + sum(rshape)
+        chunk_size = compute_chunksize(axis_len=res_shape, num_splits=NPartitions.get())
+        return ceil(res_shape / chunk_size)
+    else:
+        return min(lsplits + rsplits, NPartitions.get())

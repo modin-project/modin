@@ -60,6 +60,7 @@ from modin.core.dataframe.algebra import (
     is_reduce_function,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
+from modin.core.dataframe.pandas.utils import merge_partitioning
 from .utils import get_group_names
 
 
@@ -455,12 +456,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort = kwargs.get("sort", False)
 
         if how in ["left", "inner"] and left_index is False and right_index is False:
-            right = right.to_pandas()
+            right_pandas = right.to_pandas()
 
             kwargs["sort"] = False
 
-            def map_func(left, right=right, kwargs=kwargs):
-                return pandas.merge(left, right, **kwargs)
+            def map_func(left, right=right_pandas, kwargs=kwargs):
+                return pandas.merge(left, right_pandas, **kwargs)
 
             new_self = self.__constructor__(
                 self._modin_frame.apply_full_axis(
@@ -468,7 +469,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     func=map_func,
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
-                    keep_partitioning=False,
+                    num_splits=merge_partitioning(
+                        self._modin_frame, right._modin_frame, axis=1
+                    ),
                 )
             )
             is_reset_index = True
@@ -508,9 +511,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort = kwargs.get("sort", False)
 
         if how in ["left", "inner"]:
-            right = right.to_pandas()
+            right_pandas = right.to_pandas()
 
-            def map_func(left, right=right, kwargs=kwargs):
+            def map_func(left, right=right_pandas, kwargs=kwargs):
                 return pandas.DataFrame.join(left, right, **kwargs)
 
             new_self = self.__constructor__(
@@ -519,7 +522,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     func=map_func,
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
-                    keep_partitioning=False,
+                    num_splits=merge_partitioning(
+                        self._modin_frame, right._modin_frame, axis=1
+                    ),
                 )
             )
             return new_self.sort_rows_by_column_values(on) if sort else new_self
