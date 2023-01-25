@@ -19,7 +19,6 @@ from pandas.api.types import union_categoricals
 from math import ceil
 
 from modin.config import NPartitions
-from modin.core.storage_formats.pandas.utils import compute_chunksize
 
 
 def concatenate(dfs):
@@ -64,6 +63,9 @@ def merge_partitioning(left, right, axis=1):
     -------
     int
     """
+    # Avoiding circular imports from pandas query compiler
+    from modin.core.storage_formats.pandas.utils import compute_chunksize
+
     lsplits = left._partitions.shape[axis]
     rsplits = right._partitions.shape[axis]
 
