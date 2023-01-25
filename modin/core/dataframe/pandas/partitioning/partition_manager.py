@@ -444,10 +444,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
         give_columns = kwargs.pop("give_columns", False)
         if give_columns:
-            index_func = lambda df: df.columns  # noqa: E731
-            func = cls.preprocess_func(index_func)
-            new_idx = [idx.apply(func) for idx in left[0]]
-            columns_idx = [index._data for index in new_idx]
+            column_func = lambda df: df.columns  # noqa: E731
+            func = cls.preprocess_func(column_func)
+            partition_cols = [part.apply(func) for part in left[0]]
+            column_refs = [col.list_of_blocks[0] for col in partition_cols]
 
         left_partitions = cls.axis_partition(left, axis)
         right_partitions = None if right is None else cls.axis_partition(right, axis)
@@ -470,7 +470,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             [
                 left_partitions[i].apply(
                     preprocessed_map_func,
-                    *(columns_idx if give_columns else []),
+                    *(column_refs if give_columns else []),
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
                     **kwargs,
