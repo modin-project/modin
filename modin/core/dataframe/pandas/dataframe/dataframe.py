@@ -2691,13 +2691,17 @@ class PandasDataframe(ClassLogger):
             keep_partitioning=keep_partitioning,
             pass_cols_to_partitions=pass_cols_to_partitions,
         )
-        # Index objects for new object creation. This is shorter than if..else
-        kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
+        kw = {"row_lengths": None, "column_widths": None}
         if dtypes == "copy":
             kw["dtypes"] = self._dtypes
         elif dtypes is not None:
+            if new_columns is None:
+                (
+                    new_columns,
+                    kw["column_widths"],
+                ) = self._compute_axis_labels_and_lengths(1, new_partitions)
             kw["dtypes"] = pandas.Series(
-                [np.dtype(dtypes)] * len(kw["columns"]), index=kw["columns"]
+                [np.dtype(dtypes)] * len(new_columns), index=new_columns
             )
 
         if not keep_partitioning:
@@ -2724,7 +2728,9 @@ class PandasDataframe(ClassLogger):
                     and len(new_columns) == sum(self._column_widths_cache)
                 ):
                     kw["column_widths"] = self._column_widths_cache
-        result = self.__constructor__(new_partitions, **kw)
+        result = self.__constructor__(
+            new_partitions, index=new_index, columns=new_columns, **kw
+        )
         if sync_labels and new_index is not None:
             result.synchronize_labels(axis=0)
         if sync_labels and new_columns is not None:
@@ -3284,9 +3290,7 @@ class PandasDataframe(ClassLogger):
                     # have to do this in order to assign some potentially missing metadata,
                     # the ones that were set to the external index but were never propagated
                     # into the internal ones
-                    df.set_axis(
-                        axis=axis, labels=external_index, inplace=True, copy=False
-                    )
+                    df = df.set_axis(axis=axis, labels=external_index, copy=False)
 
         return df
 
