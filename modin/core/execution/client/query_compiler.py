@@ -624,7 +624,6 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
     {
         "abs",
         "asfreq",
-        "columnarize",
         "transpose",
         "getitem_row_array",
         "getitem_row_labels_array",
