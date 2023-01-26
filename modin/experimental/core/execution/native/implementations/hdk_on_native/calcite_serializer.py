@@ -38,7 +38,7 @@ import numpy as np
 
 
 def _warn_if_unsigned(dtype):  # noqa: GL08
-    if dtype in (np.uint8, np.uint16, np.uint32, np.uint64):
+    if np.issubdtype(dtype, np.unsignedinteger):
         ErrorMessage.single_warning(
             "HDK does not support unsigned integer types, such types will be rounded up to the signed equivalent."
         )
@@ -277,7 +277,7 @@ class CalciteSerializer:
                 "type_scale": -2147483648,
                 "type_precision": len(literal.val),
             }
-        if type(literal.val) in type(self)._INT_OPTS.keys():
+        if type(literal.val) in self._INT_OPTS.keys():
             target_type, precision = self.opts_for_int_type(type(literal.val))
             return {
                 "literal": int(literal.val),
@@ -331,7 +331,7 @@ class CalciteSerializer:
         """
         try:
             assert _warn_if_unsigned(int_type)
-            return type(self)._INT_OPTS[int_type]
+            return self._INT_OPTS[int_type]
         except KeyError:
             raise NotImplementedError(f"Unsupported integer type {int_type.__name__}")
 
@@ -350,7 +350,7 @@ class CalciteSerializer:
             Serialized data type.
         """
         assert _warn_if_unsigned(dtype)
-        return {"type": type(self)._DTYPE_STRINGS[dtype.name], "nullable": True}
+        return {"type": self._DTYPE_STRINGS[dtype.name], "nullable": True}
 
     def serialize_input_idx(self, expr):
         """
