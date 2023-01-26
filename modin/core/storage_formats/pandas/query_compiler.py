@@ -544,7 +544,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if self._modin_frame._index_cache is None:
 
             def _reset(df, *columns, partition_idx):
-                _kw = dict(kwargs)
+                kw = dict(kwargs)
                 if len(columns) > 0 and partition_idx == 0:
                     old_cols = columns[0].append(columns[1:])
                     new_cols = (
@@ -552,13 +552,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         .reset_index(**kwargs)
                         .columns
                     )
-                    cols_diff_len = len(new_cols) - len(old_cols)
+                    num_inserted_cols = len(new_cols) - len(old_cols)
 
                 if partition_idx != 0:
-                    _kw["drop"] = True
-                result = df.reset_index(**_kw)
+                    kw["drop"] = True
+                result = df.reset_index(**kw)
                 if len(columns) > 0 and partition_idx == 0:
-                    result.columns = new_cols[: len(df.columns) + cols_diff_len]
+                    result.columns = new_cols[: len(df.columns) + num_inserted_cols]
                 return result
 
             return self.__constructor__(
