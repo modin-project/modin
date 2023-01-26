@@ -543,10 +543,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def reset_index(self, **kwargs):
         if self._modin_frame._index_cache is None:
 
-            def _reset(df, *columns, partition_idx):
+            def _reset(df, *partition_columns, partition_idx):
                 kw = dict(kwargs)
-                if len(columns) > 0 and partition_idx == 0:
-                    old_cols = columns[0].append(columns[1:])
+                if (
+                    not kwargs["drop"]
+                    and len(partition_columns) > 0
+                    and partition_idx == 0
+                ):
+                    # get the columns of the whole axis
+                    old_cols = partition_columns[0].append(partition_columns[1:])
+
+                    # depending on the column names, pandas may change the index name
+                    # when setting it as a column. For example, `level_0` instead of `index`.
                     new_cols = (
                         pandas.DataFrame(index=df.index, columns=old_cols)
                         .reset_index(**kwargs)
@@ -557,7 +565,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 if partition_idx != 0:
                     kw["drop"] = True
                 result = df.reset_index(**kw)
-                if len(columns) > 0 and partition_idx == 0:
+                if (
+                    not kwargs["drop"]
+                    and len(partition_columns) > 0
+                    and partition_idx == 0
+                ):
                     result.columns = new_cols[: len(df.columns) + num_inserted_cols]
                 return result
 
@@ -567,7 +579,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     func=_reset,
                     other=None,
                     enumerate_partitions=True,
-                    pass_cols_to_partitions=True,
+                    pass_cols_to_partitions=not kwargs["drop"],
                 )
             )
 
