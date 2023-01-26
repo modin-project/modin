@@ -556,7 +556,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # depending on the column names, pandas may change the index name
                     # when setting it as a column. For example, `level_0` instead of `index`.
                     new_cols = (
-                        pandas.DataFrame(index=df.index, columns=old_cols)
+                        pandas.DataFrame(index=df.index[:1], columns=old_cols)
                         .reset_index(**kwargs)
                         .columns
                     )
