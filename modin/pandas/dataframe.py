@@ -24,7 +24,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas.core.indexes.frozen import FrozenList
 from pandas.util._validators import validate_bool_kwarg
-from pandas.io.formats.printing import pprint_thing
+from pandas.io.formats.info import DataFrameInfo
 from pandas._libs.lib import no_default, NoDefault
 from pandas._typing import (
     CompressionOptions,
@@ -1058,133 +1058,28 @@ class DataFrame(BasePandasDataset):
         """
         Print a concise summary of the ``DataFrame``.
         """
+        # for ponder, set memory_Usage to false for now.
+        memory_usage = False
 
-        def put_str(src, output_len=None, spaces=2):
-            src = str(src)
-            return src.ljust(output_len if output_len else len(src)) + " " * spaces
-
-        def format_size(num):
-            for x in ["bytes", "KB", "MB", "GB", "TB"]:
-                if num < 1024.0:
-                    return f"{num:3.1f} {x}"
-                num /= 1024.0
-            return f"{num:3.1f} PB"
-
-        output = []
-
-        type_line = str(type(self))
-        index_line = self.index._summary()
-        columns = self.columns
-        columns_len = len(columns)
-        dtypes = self.dtypes
-        dtypes_line = f"dtypes: {', '.join(['{}({})'.format(dtype, count) for dtype, count in dtypes.value_counts().items()])}"
-
-        if max_cols is None:
-            max_cols = 100
-
-        exceeds_info_cols = columns_len > max_cols
-
-        if buf is None:
-            buf = sys.stdout
-
-        if null_counts is None:
-            null_counts = not exceeds_info_cols
-
-        if verbose is None:
-            verbose = not exceeds_info_cols
-
-        if null_counts and verbose:
-            # We're gonna take items from `non_null_count` in a loop, which
-            # works kinda slow with `Modin.Series`, that's why we call `_to_pandas()` here
-            # that will be faster.
-            non_null_count = self.count()._to_pandas()
-
-        if memory_usage is None:
-            memory_usage = True
-
-        def get_header(spaces=2):
-            output = []
-            head_label = " # "
-            column_label = "Column"
-            null_label = "Non-Null Count"
-            dtype_label = "Dtype"
-            non_null_label = " non-null"
-            delimiter = "-"
-
-            lengths = {}
-            lengths["head"] = max(len(head_label), len(pprint_thing(len(columns))))
-            lengths["column"] = max(
-                len(column_label), max(len(pprint_thing(col)) for col in columns)
+        if null_counts is not None:
+            if show_counts is not None:
+                raise ValueError("null_counts used with show_counts. Use show_counts.")
+            warnings.warn(
+                "null_counts is deprecated. Use show_counts instead",
+                FutureWarning,
+                stacklevel=2,
             )
-            lengths["dtype"] = len(dtype_label)
-            dtype_spaces = (
-                max(lengths["dtype"], max(len(pprint_thing(dtype)) for dtype in dtypes))
-                - lengths["dtype"]
-            )
-
-            header = put_str(head_label, lengths["head"]) + put_str(
-                column_label, lengths["column"]
-            )
-            if null_counts:
-                lengths["null"] = max(
-                    len(null_label),
-                    max(len(pprint_thing(x)) for x in non_null_count)
-                    + len(non_null_label),
-                )
-                header += put_str(null_label, lengths["null"])
-            header += put_str(dtype_label, lengths["dtype"], spaces=dtype_spaces)
-
-            output.append(header)
-
-            delimiters = put_str(delimiter * lengths["head"]) + put_str(
-                delimiter * lengths["column"]
-            )
-            if null_counts:
-                delimiters += put_str(delimiter * lengths["null"])
-            delimiters += put_str(delimiter * lengths["dtype"], spaces=dtype_spaces)
-            output.append(delimiters)
-
-            return output, lengths
-
-        output.extend([type_line, index_line])
-
-        def verbose_repr(output):
-            columns_line = f"Data columns (total {len(columns)} columns):"
-            header, lengths = get_header()
-            output.extend([columns_line, *header])
-            for i, col in enumerate(columns):
-                i, col_s, dtype = map(pprint_thing, [i, col, dtypes[col]])
-
-                to_append = put_str(" {}".format(i), lengths["head"]) + put_str(
-                    col_s, lengths["column"]
-                )
-                if null_counts:
-                    non_null = pprint_thing(non_null_count[col])
-                    to_append += put_str(
-                        "{} non-null".format(non_null), lengths["null"]
-                    )
-                to_append += put_str(dtype, lengths["dtype"], spaces=0)
-                output.append(to_append)
-
-        def non_verbose_repr(output):
-            output.append(columns._summary(name="Columns"))
-
-        if verbose:
-            verbose_repr(output)
-        else:
-            non_verbose_repr(output)
-
-        output.append(dtypes_line)
-
-        if memory_usage:
-            deep = memory_usage == "deep"
-            mem_usage_bytes = self.memory_usage(index=True, deep=deep).sum()
-            mem_line = f"memory usage: {format_size(mem_usage_bytes)}"
-
-            output.append(mem_line)
-
-        output.append("")
-        buf.write("\n".join(output))
+            show_counts = null_counts
+        info = DataFrameInfo(
+            data=self,
+            memory_usage=memory_usage,
+        )
+        info.render(
+            buf=buf,
+            max_cols=max_cols,
+            verbose=verbose,
+            show_counts=show_counts,
+        )
 
     def insert(
         self, loc, column, value, allow_duplicates=no_default
