@@ -424,9 +424,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
         lengths : list of ints, default: None
             The list of lengths to shuffle the object.
-        apply_func_args : bool, optional
-            Whether pass extra args to `func` or not.
-            Note that `func` must be able to obtain `df, *args`.
+        apply_func_args : list-like, optional
+            Positional arguments to pass to the `func`.
         **kwargs : dict
             Additional options that could be used by different engines.
 
