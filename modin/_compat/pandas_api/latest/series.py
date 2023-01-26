@@ -17,6 +17,7 @@ from typing import IO, Hashable, TYPE_CHECKING
 
 import numpy as np
 import pandas
+from pandas.io.formats.info import SeriesInfo
 from pandas.util._validators import validate_bool_kwarg
 from pandas._libs.lib import no_default, NoDefault
 from pandas._typing import Axis
@@ -44,12 +45,12 @@ class LatestCompatibleSeries(BaseCompatibleSeries):
         memory_usage: "bool | str | None" = None,
         show_counts: "bool" = True,
     ):
-        return self._default_to_pandas(
-            pandas.Series.info,
-            verbose=verbose,
+        # Can't do memory_usage yet
+        memory_usage = False
+        return SeriesInfo(self, memory_usage).render(
             buf=buf,
             max_cols=max_cols,
-            memory_usage=memory_usage,
+            verbose=verbose,
             show_counts=show_counts,
         )
 
