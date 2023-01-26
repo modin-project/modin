@@ -42,7 +42,6 @@ def _warn_if_unsigned(dtype):  # noqa: GL08
         ErrorMessage.single_warning(
             "HDK does not support unsigned integer types, such types will be rounded up to the signed equivalent."
         )
-    return True
 
 
 class CalciteSerializer:
@@ -330,7 +329,7 @@ class CalciteSerializer:
         tuple
         """
         try:
-            assert _warn_if_unsigned(int_type)
+            _warn_if_unsigned(int_type)
             return self._INT_OPTS[int_type]
         except KeyError:
             raise NotImplementedError(f"Unsupported integer type {int_type.__name__}")
@@ -349,7 +348,7 @@ class CalciteSerializer:
         dict
             Serialized data type.
         """
-        assert _warn_if_unsigned(dtype)
+        _warn_if_unsigned(dtype)
         return {"type": self._DTYPE_STRINGS[dtype.name], "nullable": True}
 
     def serialize_input_idx(self, expr):
