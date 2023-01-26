@@ -878,7 +878,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             A pandas Index object. None if `materialize==False`.
         list of pandas.Index or list of futures
             The list of internal indices for each partition.
-            The list of futures if `materialize==False`.
+            The list of futures if `materialize==False` and `partitions` is not empty.
 
         Notes
         -----
