@@ -2113,8 +2113,12 @@ class PandasDataframe(ClassLogger):
 
         new_axes, new_lengths = [0, 0], [0, 0]
 
-        new_axes[axis.value] = self.axes[axis.value]
-        new_lengths[axis.value] = self._axes_lengths[axis.value]
+        new_axes[axis.value] = (
+            self._index_cache if axis.value == 0 else self._columns_cache
+        )
+        new_lengths[axis.value] = (
+            self._row_lengths_cache if axis.value == 0 else self._column_widths_cache
+        )
         new_axes[axis.value ^ 1], new_lengths[axis.value ^ 1] = None, None
 
         return self.__constructor__(
