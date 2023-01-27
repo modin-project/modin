@@ -262,13 +262,20 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         """
         return ray.put(func)
 
-    def length(self):
+    def length(self, materialize=True):
         """
         Get the length of the object wrapped by this partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or ray.ObjectRef
             The length of the object.
         """
         if self._length_cache is None:
@@ -278,17 +285,24 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache, self._width_cache = _get_index_and_columns.remote(
                     self._data
                 )
-        if isinstance(self._length_cache, ObjectIDType):
+        if isinstance(self._length_cache, ObjectIDType) and materialize:
             self._length_cache = RayWrapper.materialize(self._length_cache)
         return self._length_cache
 
-    def width(self):
+    def width(self, materialize=True):
         """
         Get the width of the object wrapped by the partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or ray.ObjectRef
             The width of the object.
         """
         if self._width_cache is None:
@@ -298,7 +312,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache, self._width_cache = _get_index_and_columns.remote(
                     self._data
                 )
-        if isinstance(self._width_cache, ObjectIDType):
+        if isinstance(self._width_cache, ObjectIDType) and materialize:
             self._width_cache = RayWrapper.materialize(self._width_cache)
         return self._width_cache
 

@@ -22,6 +22,7 @@ import cupy as cp
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from pandas.core.dtypes.common import is_list_like
 from modin.core.execution.ray.common import RayWrapper
+from modin.core.execution.ray.common.utils import ObjectIDType
 
 
 class cuDFOnRayDataframePartition(PandasDataframePartition):
@@ -177,7 +178,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         """
         return ray.put(func)
 
-    def length(self):
+    def length(self, materialize=True):
         """
         Get the length of the object wrapped by this partition.
 
@@ -188,9 +189,12 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         """
         if self._length_cache:
             return self._length_cache
-        return self.gpu_manager.length.remote(self.get_key())
+        self._length_cache = self.gpu_manager.length.remote(self.get_key())
+        if isinstance(self._length_cache, ObjectIDType) and materialize:
+            self._length_cache = RayWrapper.materialize(self._length_cache)
+        return self._length_cache
 
-    def width(self):
+    def width(self, materialize=True):
         """
         Get the width of the object wrapped by this partition.
 
@@ -201,7 +205,10 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         """
         if self._width_cache:
             return self._width_cache
-        return self.gpu_manager.width.remote(self.get_key())
+        self._width_cache = self.gpu_manager.width.remote(self.get_key())
+        if isinstance(self._width_cache, ObjectIDType) and materialize:
+            self._width_cache = RayWrapper.materialize(self._width_cache)
+        return self._width_cache
 
     def mask(self, row_labels, col_labels):
         """

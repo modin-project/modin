@@ -307,26 +307,40 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         return width_fn_pandas
 
-    def length(self):
+    def length(self, materialize=True):
         """
         Get the length of the object wrapped by this partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or its Future
             The length of the object.
         """
         if self._length_cache is None:
             self._length_cache = self.apply(self._length_extraction_fn()).get()
         return self._length_cache
 
-    def width(self):
+    def width(self, materialize=True):
         """
         Get the width of the object wrapped by the partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or its Future
             The width of the object.
         """
         if self._width_cache is None:

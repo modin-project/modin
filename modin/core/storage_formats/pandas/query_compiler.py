@@ -543,43 +543,33 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def reset_index(self, **kwargs):
         if self.lazy_execution:
 
-            def _reset(df, *partition_columns, partition_idx):
-                kw = dict(kwargs)
-                if (
-                    not kwargs["drop"]
-                    and len(partition_columns) > 0
-                    and partition_idx == 0
-                ):
-                    # get the columns of the whole axis
-                    old_cols = partition_columns[0].append(partition_columns[1:])
+            def _reset(df, *axis_lengths, partition_idx):
+                df = df.reset_index(**kwargs)
 
-                    # depending on the column names, pandas may change the index name
-                    # when setting it as a column. For example, `level_0` instead of `index`.
-                    new_cols = (
-                        pandas.DataFrame(index=df.index[:1], columns=old_cols)
-                        .reset_index(**kwargs)
-                        .columns
-                    )
-                    num_inserted_cols = len(new_cols) - len(old_cols)
+                if isinstance(df.index, pandas.RangeIndex):
+                    # If the resulting index is a pure RangeIndex that means that
+                    # `.reset_index` actually dropped all of the levels of the
+                    # original index and so we have to recompute it manually for each partition
+                    start = sum(axis_lengths[:partition_idx])
+                    stop = sum(axis_lengths[: partition_idx + 1])
 
-                if partition_idx != 0:
-                    kw["drop"] = True
-                result = df.reset_index(**kw)
-                if (
-                    not kwargs["drop"]
-                    and len(partition_columns) > 0
-                    and partition_idx == 0
-                ):
-                    result.columns = new_cols[: len(df.columns) + num_inserted_cols]
-                return result
+                    df.index = pandas.RangeIndex(start, stop)
+                return df
+
+            if self._modin_frame._columns_cache is not None and kwargs["drop"]:
+                new_columns = self._modin_frame._columns_cache
+            else:
+                new_columns = None
 
             return self.__constructor__(
                 self._modin_frame.broadcast_apply_full_axis(
-                    axis=0,
+                    axis=1,
                     func=_reset,
                     other=None,
                     enumerate_partitions=True,
-                    pass_cols_to_partitions=not kwargs["drop"],
+                    pass_axis_lengths_to_partitions=True,
+                    new_columns=new_columns,
+                    sync_labels=False,
                 )
             )
 

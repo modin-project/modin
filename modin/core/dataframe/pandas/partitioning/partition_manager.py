@@ -857,7 +857,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             partition.wait()
 
     @classmethod
-    def get_indices(cls, axis, partitions, index_func=None, materialize=True):
+    def get_indices(cls, axis, partitions, index_func=None):
         """
         Get the internal indices stored in the partitions.
 
@@ -869,16 +869,13 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             NumPy array with PandasDataframePartition's.
         index_func : callable, default: None
             The function to be used to extract the indices.
-        materialize : bool, default: True
-            Whether materialize indices or not.
 
         Returns
         -------
-        pandas.Index or None
-            A pandas Index object. None if `materialize==False`.
-        list of pandas.Index or list of futures
+        pandas.Index
+            A pandas Index object.
+        list of pandas.Index
             The list of internal indices for each partition.
-            The list of futures if `materialize==False` and `partitions` is not empty.
 
         Notes
         -----
@@ -893,9 +890,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         target = partitions.T if axis == 0 else partitions
         if len(target):
             new_idx = [idx.apply(func) for idx in target[0]]
-            if not materialize:
-                refs = [part_of_index.list_of_blocks[0] for part_of_index in new_idx]
-                return None, refs
             new_idx = cls.get_objects_from_partitions(new_idx)
         else:
             new_idx = [pandas.Index([])]

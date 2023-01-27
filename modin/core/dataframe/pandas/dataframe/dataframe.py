@@ -2626,7 +2626,7 @@ class PandasDataframe(ClassLogger):
         dtypes=None,
         keep_partitioning=True,
         sync_labels=True,
-        pass_cols_to_partitions=False,
+        pass_axis_lengths_to_partitions=False,
     ):
         """
         Broadcast partitions of `other` Modin DataFrame and apply a function along full axis.
@@ -2661,9 +2661,9 @@ class PandasDataframe(ClassLogger):
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to
             the provided hints in order to save time on syncing them.
-        pass_cols_to_partitions : bool, default: False
+        pass_axis_lengths_to_partitions : bool, default: False
             Whether pass columns into applied `func` or not.
-            Note that `func` must be able to obtain `df, *columns`.
+            Note that `func` must be able to obtain `df, *axis_lengths`.
 
         Returns
         -------
@@ -2682,16 +2682,21 @@ class PandasDataframe(ClassLogger):
             ).keys()
 
         apply_func_args = None
-        if pass_cols_to_partitions:
-            apply_func_args = (
-                [self._columns_cache]
-                if self._columns_cache is not None
-                else self._partition_mgr_cls.get_indices(
-                    axis=1,
-                    partitions=self._partitions,
-                    materialize=False,
-                )[1]
-            )
+        if pass_axis_lengths_to_partitions:
+            if axis == 0:
+                apply_func_args = (
+                    self._column_widths_cache
+                    if self._column_widths_cache is not None
+                    else [part.width(materialize=False) for part in self._partitions[0]]
+                )
+            else:
+                apply_func_args = (
+                    self._row_lengths_cache
+                    if self._row_lengths_cache is not None
+                    else [
+                        part.length(materialize=False) for part in self._partitions.T[0]
+                    ]
+                )
 
         new_partitions = self._partition_mgr_cls.broadcast_axis_partitions(
             axis=axis,
