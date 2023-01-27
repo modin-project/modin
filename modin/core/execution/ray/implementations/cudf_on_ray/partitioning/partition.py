@@ -182,6 +182,13 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         """
         Get the length of the object wrapped by this partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
         int or ray.ObjectRef
@@ -197,6 +204,13 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
     def width(self, materialize=True):
         """
         Get the width of the object wrapped by this partition.
+
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified may return a future of the result if it hasn't been
+            materialized yet.
 
         Returns
         -------

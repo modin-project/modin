@@ -2662,7 +2662,7 @@ class PandasDataframe(ClassLogger):
             This could be used when you're certain that the indices in partitions are equal to
             the provided hints in order to save time on syncing them.
         pass_axis_lengths_to_partitions : bool, default: False
-            Whether pass columns into applied `func` or not.
+            Whether pass partition lengths along `axis ^ 1` to the kernel `func`.
             Note that `func` must be able to obtain `df, *axis_lengths`.
 
         Returns
