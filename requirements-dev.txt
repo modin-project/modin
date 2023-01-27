@@ -3,7 +3,7 @@ numpy>=1.18.5
 dask[complete]>=2.22.0
 distributed>=2.22.0
 ray[default]>=1.13.0
-pyarrow
+pyarrow>=8.0.0
 psutil
 fsspec
 xarray
