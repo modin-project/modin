@@ -219,6 +219,18 @@ class BasePandasDataset(ClassLogger):
                     if len(self.columns) - num_cols_for_front >= 0
                     else None
                 )
+                # Scenario: num_cols = 20, len(self.columns) = 21
+                # num_cols_for_front works out to 11, num_cols_for_back works out to 11
+                # this leads to over lap in the columns between the set from the first
+                # part of the dataframe and the set from the last part of the dataframe.
+                # The last column from the front is the same as the first column
+                # from the back. This leads to specifying the same column twice and
+                # relational databases don't like it.
+                if num_cols_for_back is not None:
+                    if num_cols_for_front + num_cols_for_back > len(self.columns):
+                        num_cols_for_back -= (
+                            num_cols_for_front + num_cols_for_back - len(self.columns)
+                        )
                 col_indexer = list(range(len(self.columns))[:num_cols_for_front]) + (
                     list(range(len(self.columns))[-num_cols_for_back:])
                     if num_cols_for_back is not None
