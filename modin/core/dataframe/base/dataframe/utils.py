@@ -22,6 +22,8 @@ import pandas
 
 from enum import Enum
 from pandas.api.types import is_scalar
+from pandas._typing import IndexLabel
+from typing import cast, Dict, Iterable, List, Tuple, Union
 
 
 class Axis(Enum):  # noqa: PR01
@@ -53,7 +55,13 @@ class JoinType(Enum):  # noqa: PR01
     OUTER = "outer"
 
 
-def join_columns(left, right, left_on, right_on, suffixes):
+def join_columns(
+    left: pandas.Index,
+    right: pandas.Index,
+    left_on: Union[Iterable[IndexLabel], IndexLabel],
+    right_on: Union[Iterable[IndexLabel], IndexLabel],
+    suffixes: Tuple[str, str],
+) -> Tuple[pandas.Index, Dict[IndexLabel, IndexLabel], Dict[IndexLabel, IndexLabel]]:
     """
     Compute resulting columns for the two dataframes being merged.
 
@@ -67,7 +75,7 @@ def join_columns(left, right, left_on, right_on, suffixes):
         Column names on which the frames are joined in the left DataFrame.
     right_on : list-like or scalar
         Column names on which the frames are joined in the right DataFrame.
-    suffixes : tuple(str, str)
+    suffixes : tuple[str, str]
         A 2-length sequence containing suffixes to append to the intersected columns.
 
     Returns
@@ -76,16 +84,16 @@ def join_columns(left, right, left_on, right_on, suffixes):
         Returns columns for the resulting frame and mappings of old to new column
         names for `left` and `right` accordingly.
     """
-    if is_scalar(left_on):
-        left_on = [left_on]
-    if is_scalar(right_on):
-        right_on = [right_on]
+    left_on, right_on = map(
+        lambda x: cast(Iterable[IndexLabel], [x] if is_scalar(x) else x),
+        (left_on, right_on),
+    )
 
     left_conflicts = set(left) & (set(right) - set(right_on))
     right_conflicts = set(right) & (set(left) - set(left_on))
     conflicting_cols = left_conflicts | right_conflicts
 
-    def _get_new_name(col, suffix):
+    def _get_new_name(col: IndexLabel, suffix: str) -> IndexLabel:
         if col in conflicting_cols:
             return (
                 (f"{col[0]}{suffix}", *col[1:])
@@ -95,10 +103,10 @@ def join_columns(left, right, left_on, right_on, suffixes):
         else:
             return col
 
-    left_renamer = {}
-    right_renamer = {}
-    new_left = []
-    new_right = []
+    left_renamer: Dict[IndexLabel, IndexLabel] = {}
+    right_renamer: Dict[IndexLabel, IndexLabel] = {}
+    new_left: List[IndexLabel] = []
+    new_right: List[IndexLabel] = []
 
     for col in left:
         new_name = _get_new_name(col, suffixes[0])
@@ -111,5 +119,5 @@ def join_columns(left, right, left_on, right_on, suffixes):
             new_right.append(new_name)
             right_renamer[col] = new_name
 
-    new_columns = pandas.Index(new_left).append(pandas.Index(new_right))
+    new_columns = pandas.Index(new_left).append(pandas.Index(new_right))  # type: ignore # `Index.append` is untyped
     return new_columns, left_renamer, right_renamer
