@@ -21,7 +21,7 @@ lxml
 openpyxl
 xlrd
 matplotlib
-sqlalchemy>=1.4.0
+sqlalchemy>=1.4.0,<1.4.46
 msgpack
 pandas_gbq
 cloudpickle

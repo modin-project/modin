@@ -585,7 +585,11 @@ class PandasExcelParser(PandasParser):
             **kwargs,
         )
         pandas_df = parser.read()
-        if len(pandas_df) > 1 and pandas_df.isnull().all().all():
+        if (
+            len(pandas_df) > 1
+            and len(pandas_df.columns) != 0
+            and pandas_df.isnull().all().all()
+        ):
             # Drop NaN rows at the end of the DataFrame
             pandas_df = pandas.DataFrame(columns=pandas_df.columns)
 
