@@ -17,7 +17,7 @@ dependencies:
   - openpyxl
   - xlrd
   - matplotlib
-  - sqlalchemy>=1.4.0
+  - sqlalchemy>=1.4.0,<1.4.46
   - pandas-gbq
   - pytables
   - msgpack-python

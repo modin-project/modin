@@ -17,7 +17,7 @@ dependencies:
   - psutil
   - openpyxl
   - xlrd
-  - sqlalchemy
+  - sqlalchemy>=1.4.0,<1.4.46
   - scipy
   - xgboost>=1.7.1,<2.0.0
   - scikit-learn-intelex
