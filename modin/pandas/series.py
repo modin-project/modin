@@ -1895,7 +1895,9 @@ class Series(SeriesCompat, BasePandasDataset):
         """
         Truncate a Series before and after some index value.
         """
-        return self.__constructor__(self.__query_compiler__.truncate(before, after, axis, copy))
+        return self.__constructor__(
+            self.__query_compiler__.truncate(before, after, axis, copy)
+        )
 
     def unique(self):  # noqa: RT01, D200
         """
@@ -2334,12 +2336,15 @@ class Series(SeriesCompat, BasePandasDataset):
             Prepared `other`.
         """
         if isinstance(other, Series):
-            # NB: deep=False is important for performance bc it retains obj.index._id
-            new_self = self.copy(deep=False)
-            new_other = other.copy(deep=False)
-            if self.name == other.name:
-                new_self.name = new_other.name = self.name
-            else:
+            names_different = self.name != other.name
+            # NB: if we don't need a rename, do the interaction with shallow
+            # copies so that we preserve obj.index._id. It's fine to work
+            # with shallow copies because we'll discard the copies but keep
+            # the result after the interaction operation. We can't do a rename
+            # on shallow copies because we'll mutate the original objects.
+            new_self = self.copy(deep=names_different)
+            new_other = other.copy(deep=names_different)
+            if names_different:
                 new_self.name = new_other.name = MODIN_UNNAMED_SERIES_LABEL
         else:
             new_self = self
