@@ -3657,14 +3657,16 @@ class BasePandasDataset(ClassLogger):
         else:
             return self._getitem(key)
 
-    @_inherit_docstrings(pandas.DataFrame.xs, apilink="pandas.DataFrame.xs")
     def xs(
         self,
         key,
         axis=0,
         level=None,
         drop_level: bool = True,
-    ):
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return cross-section from the Series/DataFrame.
+        """
         axis = self._get_axis_number(axis)
         labels = self.axes[axis]
 
