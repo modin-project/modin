@@ -236,12 +236,12 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         ----------
         materialize : bool, default: True
             Whether to forcibly materialize the result into an integer. If ``False``
-            was specified may return a future of the result if it hasn't been
+            was specified, may return a future of the result if it hasn't been
             materialized yet.
 
         Returns
         -------
-        int or its Future
+        int or distributed.Future
             The length of the object.
         """
         if self._length_cache is None:
@@ -258,12 +258,12 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         ----------
         materialize : bool, default: True
             Whether to forcibly materialize the result into an integer. If ``False``
-            was specified may return a future of the result if it hasn't been
+            was specified, may return a future of the result if it hasn't been
             materialized yet.
 
         Returns
         -------
-        int or its Future
+        int or distributed.Future
             The width of the object.
         """
         if self._width_cache is None:

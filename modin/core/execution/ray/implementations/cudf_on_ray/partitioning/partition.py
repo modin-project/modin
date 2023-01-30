@@ -186,7 +186,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         ----------
         materialize : bool, default: True
             Whether to forcibly materialize the result into an integer. If ``False``
-            was specified may return a future of the result if it hasn't been
+            was specified, may return a future of the result if it hasn't been
             materialized yet.
 
         Returns
@@ -209,7 +209,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         ----------
         materialize : bool, default: True
             Whether to forcibly materialize the result into an integer. If ``False``
-            was specified may return a future of the result if it hasn't been
+            was specified, may return a future of the result if it hasn't been
             materialized yet.
 
         Returns
