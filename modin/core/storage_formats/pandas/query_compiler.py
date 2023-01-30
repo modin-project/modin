@@ -49,6 +49,7 @@ from modin.utils import (
     _inherit_docstrings,
     MODIN_UNNAMED_SERIES_LABEL,
 )
+from modin.core.dataframe.base.dataframe.utils import join_columns
 from modin.core.dataframe.algebra import (
     Fold,
     Map,
@@ -461,6 +462,33 @@ class PandasQueryCompiler(BaseQueryCompiler):
             def map_func(left, right=right, kwargs=kwargs):
                 return pandas.merge(left, right, **kwargs)
 
+            new_columns = None
+            new_dtypes = None
+            if self._modin_frame._columns_cache is not None:
+                if left_on is None and right_on is None:
+                    if on is None:
+                        on = [c for c in self.columns if c in right.columns]
+                    _left_on = on
+                    _right_on = on
+                else:
+                    _left_on, _right_on = left_on, right_on
+
+                new_columns, left_renamer, right_renamer = join_columns(
+                    self.columns,
+                    right.columns,
+                    _left_on,
+                    _right_on,
+                    kwargs.get("suffixes", ("_x", "_y")),
+                )
+
+                if self._modin_frame._dtypes is not None:
+                    new_dtypes = []
+                    for old_col in left_renamer.keys():
+                        new_dtypes.append(self.dtypes[old_col])
+                    for old_col in right_renamer.keys():
+                        new_dtypes.append(right.dtypes[old_col])
+                    new_dtypes = pandas.Series(new_dtypes, index=new_columns)
+
             new_self = self.__constructor__(
                 self._modin_frame.apply_full_axis(
                     axis=1,
@@ -468,6 +496,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
                     keep_partitioning=False,
+                    new_columns=new_columns,
+                    dtypes=new_dtypes,
+                    sync_labels=False,
                 )
             )
             is_reset_index = True

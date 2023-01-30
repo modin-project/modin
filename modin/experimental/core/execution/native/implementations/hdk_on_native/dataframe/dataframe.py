@@ -29,6 +29,7 @@ from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
 from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+from modin.core.dataframe.base.dataframe.utils import join_columns
 import pandas as pd
 from typing import List, Hashable, Optional, Tuple, Union
 
@@ -859,24 +860,19 @@ class HdkOnNativeDataframe(PandasDataframe):
         for col in right_on:
             assert col in other.columns, f"'right_on' references unknown column {col}"
 
-        new_columns = []
         new_dtypes = []
         exprs = OrderedDict()
 
-        left_conflicts = set(self.columns) & (set(other.columns) - set(right_on))
-        right_conflicts = set(other.columns) & (set(self.columns) - set(left_on))
-        conflicting_cols = left_conflicts | right_conflicts
-        for c in self.columns:
-            new_name = f"{c}{suffixes[0]}" if c in conflicting_cols else c
-            new_columns.append(new_name)
-            new_dtypes.append(self._dtypes[c])
-            exprs[new_name] = self.ref(c)
-        for c in other.columns:
-            if c not in left_on or c not in right_on:
-                new_name = f"{c}{suffixes[1]}" if c in conflicting_cols else c
-                new_columns.append(new_name)
-                new_dtypes.append(other._dtypes[c])
-                exprs[new_name] = other.ref(c)
+        new_columns, left_renamer, right_renamer = join_columns(
+            self.columns, other.columns, left_on, right_on, suffixes
+        )
+        for old_c, new_c in left_renamer.items():
+            new_dtypes.append(self._dtypes[old_c])
+            exprs[new_c] = self.ref(old_c)
+
+        for old_c, new_c in right_renamer.items():
+            new_dtypes.append(other._dtypes[old_c])
+            exprs[new_c] = other.ref(old_c)
 
         condition = self._build_equi_join_condition(other, left_on, right_on)
 
@@ -888,7 +884,6 @@ class HdkOnNativeDataframe(PandasDataframe):
             condition=condition,
         )
 
-        new_columns = Index.__new__(Index, data=new_columns)
         res = self.__constructor__(
             dtypes=new_dtypes,
             columns=new_columns,

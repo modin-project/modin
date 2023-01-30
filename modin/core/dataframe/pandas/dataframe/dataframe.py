@@ -2691,17 +2691,24 @@ class PandasDataframe(ClassLogger):
             keep_partitioning=keep_partitioning,
         )
         kw = {"row_lengths": None, "column_widths": None}
-        if dtypes == "copy":
+        if isinstance(dtypes, str) and dtypes == "copy":
             kw["dtypes"] = self._dtypes
         elif dtypes is not None:
-            if new_columns is None:
-                (
-                    new_columns,
-                    kw["column_widths"],
-                ) = self._compute_axis_labels_and_lengths(1, new_partitions)
-            kw["dtypes"] = pandas.Series(
-                [np.dtype(dtypes)] * len(new_columns), index=new_columns
-            )
+            if isinstance(dtypes, pandas.Series):
+                kw["dtypes"] = dtypes.copy()
+            else:
+                if new_columns is None:
+                    (
+                        new_columns,
+                        kw["column_widths"],
+                    ) = self._compute_axis_labels_and_lengths(1, new_partitions)
+                kw["dtypes"] = (
+                    pandas.Series(dtypes, index=new_columns)
+                    if is_list_like(dtypes)
+                    else pandas.Series(
+                        [np.dtype(dtypes)] * len(new_columns), index=new_columns
+                    )
+                )
 
         if not keep_partitioning:
             if kw["row_lengths"] is None and new_index is not None:
