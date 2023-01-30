@@ -13,6 +13,8 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
+import uuid
+
 from distributed import Future
 from distributed.utils import get_ip
 from dask.distributed import wait
@@ -40,6 +42,8 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         Call queue that needs to be executed on wrapped pandas DataFrame.
     """
 
+    execution_wrapper = DaskWrapper
+
     def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
         assert isinstance(data, Future)
         self._data = data
@@ -49,6 +53,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         self._length_cache = length
         self._width_cache = width
         self._ip_cache = ip
+        self._identity = uuid.uuid4().hex
 
     def get(self):
         """
@@ -103,40 +108,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
                 num_returns=2,
                 pure=False,
             )
-        return PandasOnDaskDataframePartition(futures[0], ip=futures[1])
-
-    def add_to_apply_calls(self, func, *args, length=None, width=None, **kwargs):
-        """
-        Add a function to the call queue.
-
-        Parameters
-        ----------
-        func : callable
-            Function to be added to the call queue.
-        *args : iterable
-            Additional positional arguments to be passed in `func`.
-        length : distributed.Future or int, optional
-            Length, or reference to length, of wrapped ``pandas.DataFrame``.
-        width : distributed.Future or int, optional
-            Width, or reference to width, of wrapped ``pandas.DataFrame``.
-        **kwargs : dict
-            Additional keyword arguments to be passed in `func`.
-
-        Returns
-        -------
-        PandasOnDaskDataframePartition
-            A new ``PandasOnDaskDataframePartition`` object.
-
-        Notes
-        -----
-        The keyword arguments are sent as a dictionary.
-        """
-        return PandasOnDaskDataframePartition(
-            self._data,
-            call_queue=self.call_queue + [[func, args, kwargs]],
-            length=length,
-            width=width,
-        )
+        return self.__constructor__(futures[0], ip=futures[1])
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
@@ -214,7 +186,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         PandasOnDaskDataframePartition
             A copy of this partition.
         """
-        return PandasOnDaskDataframePartition(
+        return self.__constructor__(
             self._data,
             length=self._length_cache,
             width=self._width_cache,
@@ -300,30 +272,6 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         if isinstance(self._ip_cache, Future):
             self._ip_cache = DaskWrapper.materialize(self._ip_cache)
         return self._ip_cache
-
-    def split(self, split_func, num_splits, *args):
-        """
-        Split the object wrapped by the partition into multiple partitions.
-
-        Parameters
-        ----------
-        split_func : Callable[pandas.DataFrame, List[Any]] -> List[pandas.DataFrame]
-            The function that will split this partition into multiple partitions. The list contains
-            pivots to split by, and will have the same dtype as the major column we are shuffling on.
-        num_splits : int
-            The number of resulting partitions (may be empty).
-        *args : List[Any]
-            Arguments to pass to ``split_func``.
-
-        Returns
-        -------
-        list
-            A list of partitions.
-        """
-        outputs = DaskWrapper.deploy(
-            split_func, [self._data] + list(args), num_returns=num_splits, pure=True
-        )
-        return [PandasOnDaskDataframePartition(output) for output in outputs]
 
 
 def apply_func(partition, func, *args, **kwargs):

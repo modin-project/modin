@@ -13,6 +13,7 @@
 
 """Module provides a partition manager class for ``HdkOnNativeDataframe`` frame."""
 
+from modin.error_message import ErrorMessage
 from modin.pandas.utils import is_scalar
 import numpy as np
 
@@ -184,13 +185,26 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                 pyarrow.lib.ArrowTypeError,
                 pyarrow.lib.ArrowInvalid,
                 ValueError,
+                TypeError,
             ) as err:
+                # The TypeError could be raised when converting a sparse data to
+                # arrow table - https://github.com/apache/arrow/pull/4497. If this
+                # is the case - fall back to pandas, otherwise - rethrow the error.
+                if type(err) == TypeError:
+                    if any([isinstance(t, pandas.SparseDtype) for t in obj.dtypes]):
+                        ErrorMessage.single_warning(
+                            "Sparse data is not currently supported!"
+                        )
+                    else:
+                        raise err
+
                 # The ValueError is raised by pyarrow in case of duplicate columns.
                 # We catch and handle this error here. If there are no duplicates
                 # (is_unique is True), then the error is caused by something different
                 # and we just rethrow it.
                 if (type(err) == ValueError) and obj.columns.is_unique:
                     raise err
+
                 regex = r"Conversion failed for column ([^\W]*)"
                 unsupported_cols = []
                 for msg in err.args:

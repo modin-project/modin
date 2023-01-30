@@ -37,7 +37,7 @@ from modin.pandas.test.utils import (
     extra_test_parameters,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import NPartitions, Engine
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -525,6 +525,41 @@ def test_sort_values_with_string_index():
     modin_df.sort_values(key, inplace=True)
     pandas_df.sort_values(key, inplace=True)
     df_equals(modin_df, pandas_df)
+
+
+@pytest.mark.skipif(
+    Engine.get() not in ["Ray", "Dask", "Unidist"],
+    reason="We only need to test this case where sort does not default to pandas.",
+)
+@pytest.mark.parametrize("ascending", [True, False], ids=["True", "False"])
+@pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
+def test_sort_values_with_only_one_non_na_row_in_partition(ascending, na_position):
+    pandas_df = pandas.DataFrame(
+        np.random.rand(1000, 100), columns=[f"col {i}" for i in range(100)]
+    )
+    # Need to ensure that one of the partitions has all NA values except for one row
+    pandas_df.iloc[340:] = np.NaN
+    pandas_df.iloc[-1] = -4.0
+    modin_df = pd.DataFrame(pandas_df)
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.sort_values(
+            "col 3", ascending=ascending, na_position=na_position
+        ),
+    )
+
+
+@pytest.mark.skipif(
+    Engine.get() not in ["Ray", "Dask", "Unidist"],
+    reason="We only need to test this case where sort does not default to pandas.",
+)
+def test_sort_values_with_sort_key_on_partition_boundary():
+    modin_df = pd.DataFrame(
+        np.random.rand(1000, 100), columns=[f"col {i}" for i in range(100)]
+    )
+    sort_key = modin_df.columns[modin_df._query_compiler._modin_frame.column_widths[0]]
+    eval_general(modin_df, modin_df._to_pandas(), lambda df: df.sort_values(sort_key))
 
 
 def test_where():

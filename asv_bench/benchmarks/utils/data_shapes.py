@@ -101,6 +101,13 @@ _DEFAULT_CONFIG_T = [
             "TimeReindexMethod",
             "TimeFillnaMethodDataframe",
             "TimeDropDuplicatesDataframe",
+            "TimeStack",
+            "TimeUnstack",
+            "TimeRepr",
+            "TimeMaskBool",
+            "TimeIsnull",
+            "TimeDropna",
+            "TimeEquals",
             # IO benchmarks
             "TimeReadCsvSkiprows",
             "TimeReadCsvTrueFalseValues",
@@ -117,6 +124,7 @@ _DEFAULT_CONFIG_T = [
             # Pandas storage format benchmarks
             "TimeJoin",
             "TimeMerge",
+            "TimeMergeDefault",
             "TimeConcat",
             "TimeAppend",
             "TimeBinaryOp",
@@ -128,6 +136,7 @@ _DEFAULT_CONFIG_T = [
         [
             # Pandas storage format benchmarks
             "TimeFillnaSeries",
+            "TimeGroups",
             "TimeIndexingNumericSeries",
             "TimeFillnaMethodSeries",
             "TimeDatetimeAccessor",
@@ -183,9 +192,28 @@ DEFAULT_CONFIG["MergeCategoricals"] = (
 DEFAULT_CONFIG["TimeJoinStringIndex"] = (
     [[100_000, 64]] if ASV_DATASET_SIZE == "big" else [[1_000, 4]]
 )
+DEFAULT_CONFIG["TimeReplace"] = (
+    [[10_000, 2]] if ASV_DATASET_SIZE == "big" else [[1_000, 2]]
+)
 for config in (_DEFAULT_CONFIG_T, _DEFAULT_HDK_CONFIG_T):
     for _shape, _names in config:
         DEFAULT_CONFIG.update({_name: _shape for _name in _names})
+
+# Correct shapes in the case when the operation ended with a timeout error
+if ASV_DATASET_SIZE == "big":
+    DEFAULT_CONFIG["TimeMergeDefault"] = [
+        [[1000, 1000], [1000, 1000]],
+        [[500_000, 20], [1_000_000, 10]],
+    ]
+    DEFAULT_CONFIG["TimeLevelAlign"] = [
+        [[2500, 2500], [2500, 2500]],
+        [[250_000, 20], [500_000, 10]],
+    ]
+    DEFAULT_CONFIG["TimeStack"] = [
+        [1500, 1500],
+        [100_000, 10],
+    ]
+    DEFAULT_CONFIG["TimeUnstack"] = DEFAULT_CONFIG["TimeStack"]
 
 CONFIG_FROM_FILE = None
 

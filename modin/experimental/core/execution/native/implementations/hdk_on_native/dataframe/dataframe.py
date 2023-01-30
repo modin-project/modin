@@ -21,6 +21,7 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
 from modin.experimental.core.storage_formats.hdk.query_compiler import (
     DFAlgQueryCompiler,
 )
+from .utils import LazyProxyCategoricalDtype
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 
 from pandas.core.indexes.api import ensure_index, Index, MultiIndex, RangeIndex
@@ -185,6 +186,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         assert len(dtypes) == len(
             self._table_cols
         ), f"unaligned dtypes ({dtypes}) and table columns ({self._table_cols})"
+
         if isinstance(dtypes, list):
             if self._index_cols is not None:
                 # Table stores both index and data columns but those are accessed
@@ -214,12 +216,17 @@ class HdkOnNativeDataframe(PandasDataframe):
         if self._has_arrow_table() and self._partitions.size > 0:
             assert self._partitions.size == 1
             table = self._partitions[0][0].get()
-            if len(table) > 0 and table.column_names[0] != f"F_{self._table_cols[0]}":
-                new_names = [f"F_{col}" for col in table.column_names]
-                new_table = table.rename_columns(new_names)
+            column_names = table.column_names
+            if len(table) > 0 and column_names[0] != f"F_{self._table_cols[0]}":
+                column_names = [f"F_{col}" for col in column_names]
+                table = table.rename_columns(column_names)
                 self._partitions[0][
                     0
-                ] = self._partition_mgr_cls._partition_class.put_arrow(new_table)
+                ] = self._partition_mgr_cls._partition_class.put_arrow(table)
+
+            for i, t in enumerate(dtypes):
+                if isinstance(t, LazyProxyCategoricalDtype):
+                    dtypes[i] = t._new(table, column_names[i])
 
         self._uses_rowid = uses_rowid
         self._force_execution_mode = force_execution_mode
@@ -2508,10 +2515,13 @@ class HdkOnNativeDataframe(PandasDataframe):
             new_columns = pd.Index(data=at.column_names, dtype="O")
             new_index = pd.RangeIndex(at.num_rows)
 
-        new_dtypes = pd.Series(
-            [cls._arrow_type_to_dtype(col.type) for col in at.columns],
-            index=at.column_names,
-        )
+        new_dtypes = []
+
+        for col in at.columns:
+            if pyarrow.types.is_dictionary(col.type):
+                new_dtypes.append(LazyProxyCategoricalDtype(at, col._name))
+            else:
+                new_dtypes.append(cls._arrow_type_to_dtype(col.type))
 
         if len(unsupported_cols) > 0:
             ErrorMessage.single_warning(
@@ -2525,7 +2535,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             columns=new_columns,
             row_lengths=new_lengths,
             column_widths=new_widths,
-            dtypes=new_dtypes,
+            dtypes=pd.Series(data=new_dtypes, index=at.column_names),
             index_cols=index_cols,
             has_unsupported_data=len(unsupported_cols) > 0,
         )
@@ -2548,7 +2558,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             return True
         if isinstance(index, pd.RangeIndex):
             return index.start == 0 and index.step == 1
-        if not isinstance(index, pd.Int64Index):
+        if not (isinstance(index, pd.Index) and index.dtype == np.int64):
             return False
         return (
             index.is_monotonic_increasing

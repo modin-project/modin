@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        execution: [pandas_on_ray, pandas_on_dask, hdk_on_native]
+        execution: [pandas_on_ray, pandas_on_dask, pandas_on_unidist, hdk_on_native]
     steps:
       - uses: actions/checkout@v2
         with:
@@ -70,8 +70,7 @@ jobs:
       # install test dependencies
       # NOTE: If you are changing the set of packages installed here, make sure that
       # the dev requirements match them.
-      # TODO: remove pin when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
-      - run: pip install pytest pytest-cov black "flake8<5" flake8-print flake8-no-implicit-concat
+      - run: pip install pytest pytest-cov black flake8 flake8-print flake8-no-implicit-concat
         if: matrix.execution != 'hdk_on_native'
       - run: pip install flake8-print jupyter nbformat nbconvert
         if: matrix.execution == 'hdk_on_native'
@@ -81,10 +80,14 @@ jobs:
           conda info
           conda list
         if: matrix.execution == 'hdk_on_native'
+      # setup kernel configuration for `pandas_on_unidist` execution with mpi backend
+      - run: python examples/tutorial/jupyter/execution/${{ matrix.execution }}/setup_kernel.py
+        if: matrix.execution == 'pandas_on_unidist'
+      - run: jupyter kernelspec list
       - run: |
           black --check --diff examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
           black --check --diff examples/tutorial/jupyter/execution/test/utils.py
       - run: |
           flake8 --enable=T examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
           flake8 --enable=T examples/tutorial/jupyter/execution/test/utils.py
-      - run: pytest examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
+      - run: python -m pytest examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py

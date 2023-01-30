@@ -27,9 +27,9 @@ from modin.pandas.test.utils import (
     df_equals,
     test_data_values,
     test_data_keys,
-    create_test_dfs,
     test_data,
 )
+from modin.pandas.utils import SET_DATAFRAME_ATTRIBUTE_WARNING
 from modin.config import NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
@@ -232,6 +232,14 @@ def test___repr__():
     assert repr(pandas_df) == repr(modin_df)
 
 
+def test___repr__does_not_raise_attribute_column_warning():
+    # See https://github.com/modin-project/modin/issues/5380
+    df = pd.DataFrame([1])
+    with warnings.catch_warnings():
+        warnings.filterwarnings(action="error", message=SET_DATAFRAME_ATTRIBUTE_WARNING)
+        repr(df)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_inplace_series_ops(data):
     pandas_df = pandas.DataFrame(data)
@@ -294,16 +302,14 @@ def test___setattr__mutating_column():
     # and adds the provided list as a new attribute and not a column.
     with pytest.warns(
         UserWarning,
-        match="Modin doesn't allow columns to be created via a new attribute name - see "
-        + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
+        match=SET_DATAFRAME_ATTRIBUTE_WARNING,
     ):
         modin_df.col1 = [4]
 
     with warnings.catch_warnings():
         warnings.filterwarnings(
             action="error",
-            message="Modin doesn't allow columns to be created via a new attribute name - see "
-            + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access",
+            message=SET_DATAFRAME_ATTRIBUTE_WARNING,
         )
         modin_df.col1 = [5]
         modin_df.new_attr = 6
@@ -331,70 +337,3 @@ def test_isin(data):
     modin_result = modin_df.isin(val)
 
     df_equals(modin_result, pandas_result)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_constructor(data):
-    pandas_df = pandas.DataFrame(data)
-    modin_df = pd.DataFrame(data)
-    df_equals(pandas_df, modin_df)
-
-    pandas_df = pandas.DataFrame({k: pandas.Series(v) for k, v in data.items()})
-    modin_df = pd.DataFrame({k: pd.Series(v) for k, v in data.items()})
-    df_equals(pandas_df, modin_df)
-
-
-@pytest.mark.parametrize(
-    "data",
-    [
-        np.arange(1, 10000, dtype=np.float32),
-        [
-            pd.Series([1, 2, 3], dtype="int32"),
-            pandas.Series([4, 5, 6], dtype="int64"),
-            np.array([7, 8, 9], dtype=np.float32),
-        ],
-        pandas.Categorical([1, 2, 3, 4, 5]),
-    ],
-)
-def test_constructor_dtypes(data):
-    md_df, pd_df = create_test_dfs(data)
-    df_equals(md_df, pd_df)
-
-
-def test_constructor_columns_and_index():
-    modin_df = pd.DataFrame(
-        [[1, 1, 10], [2, 4, 20], [3, 7, 30]],
-        index=[1, 2, 3],
-        columns=["id", "max_speed", "health"],
-    )
-    pandas_df = pandas.DataFrame(
-        [[1, 1, 10], [2, 4, 20], [3, 7, 30]],
-        index=[1, 2, 3],
-        columns=["id", "max_speed", "health"],
-    )
-    df_equals(modin_df, pandas_df)
-    df_equals(pd.DataFrame(modin_df), pandas.DataFrame(pandas_df))
-    df_equals(
-        pd.DataFrame(modin_df, columns=["max_speed", "health"]),
-        pandas.DataFrame(pandas_df, columns=["max_speed", "health"]),
-    )
-    df_equals(
-        pd.DataFrame(modin_df, index=[1, 2]),
-        pandas.DataFrame(pandas_df, index=[1, 2]),
-    )
-    df_equals(
-        pd.DataFrame(modin_df, index=[1, 2], columns=["health"]),
-        pandas.DataFrame(pandas_df, index=[1, 2], columns=["health"]),
-    )
-    df_equals(
-        pd.DataFrame(modin_df.iloc[:, 0], index=[1, 2, 3]),
-        pandas.DataFrame(pandas_df.iloc[:, 0], index=[1, 2, 3]),
-    )
-    df_equals(
-        pd.DataFrame(modin_df.iloc[:, 0], columns=["NO_EXIST"]),
-        pandas.DataFrame(pandas_df.iloc[:, 0], columns=["NO_EXIST"]),
-    )
-    with pytest.raises(NotImplementedError):
-        pd.DataFrame(modin_df, index=[1, 2, 99999])
-    with pytest.raises(NotImplementedError):
-        pd.DataFrame(modin_df, columns=["NO_EXIST"])

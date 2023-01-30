@@ -11,13 +11,19 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""The module for working with displaying progress bars for Ray engine."""
+"""
+The module for working with displaying progress bars for Modin execution engines.
 
-import ray
+Modin Automatic Query Progress (AQP).
+"""
+
 import os
 import time
 import threading
 import warnings
+
+from modin.config import Engine
+
 
 progress_bars = {}
 bar_lock = threading.Lock()
@@ -31,7 +37,7 @@ def call_progress_bar(result_parts, line_no):
 
     Parameters
     ----------
-    result_parts : list of list of ray.ObjectRef
+    result_parts : list of list of object refs (futures)
         Objects which are being computed for which progress is requested.
     line_no : int
         Line number in the call stack which we're displaying progress for.
@@ -50,7 +56,7 @@ def call_progress_bar(result_parts, line_no):
     # No progress bar is supported in that case.
     except AttributeError:
         return
-    pbar_id = str(cell_no) + "-" + str(line_no)
+    pbar_id = f"{cell_no}-{line_no}"
     futures = [
         block
         for row in result_parts
@@ -84,8 +90,19 @@ def call_progress_bar(result_parts, line_no):
     bar_lock.release()
 
     threading.Thread(target=_show_time_updates, args=(progress_bars[pbar_id],)).start()
+
+    modin_engine = Engine.get()
+    if modin_engine == "Ray":
+        from ray import wait
+    elif modin_engine == "Unidist":
+        from unidist import wait
+    else:
+        raise NotImplementedError(
+            f"ProgressBar feature is not supported for {modin_engine} engine."
+        )
+
     for i in range(1, len(futures) + 1):
-        ray.wait(futures, num_returns=i)
+        wait(futures, num_returns=i)
         progress_bars[pbar_id].update(1)
         progress_bars[pbar_id].refresh()
     if progress_bars[pbar_id].n == progress_bars[pbar_id].total:

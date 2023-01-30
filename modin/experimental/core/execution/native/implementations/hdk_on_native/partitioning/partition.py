@@ -111,9 +111,7 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
         HdkOnNativeDataframePartition
             The new partition.
         """
-        return HdkOnNativeDataframePartition(
-            pandas_df=obj.copy(), length=len(obj.index), width=len(obj.columns)
-        )
+        return cls(pandas_df=obj.copy(), length=len(obj.index), width=len(obj.columns))
 
     def wait(self):
         """
@@ -143,7 +141,7 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
         HdkOnNativeDataframePartition
             The new partition.
         """
-        return HdkOnNativeDataframePartition(
+        return cls(
             arrow_table=obj,
             length=len(obj),
             width=len(obj.columns),

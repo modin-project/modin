@@ -3,9 +3,9 @@ channels:
   - conda-forge
 dependencies:
   - unidist-mpi>=0.2.1
-  - pandas==1.5.2
+  - pandas==1.5.3
   - numpy>=1.18.5
-  - pyarrow>=4.0.1
+  - pyarrow
   - fsspec
   - xarray
   - Jinja2
@@ -17,7 +17,7 @@ dependencies:
   - openpyxl
   - xlrd
   - matplotlib
-  - sqlalchemy>=1.4.0
+  - sqlalchemy>=1.4.0,<1.4.46
   - pandas-gbq
   - pytables
   - msgpack-python
@@ -37,18 +37,18 @@ dependencies:
   - psycopg2
   - mypy
   - pandas-stubs
-  - fastparquet
+  - fastparquet<2023.1.0
+  - tqdm
   # for release script
   - pygit2
+  # code linters
+  - black
+  - flake8
+  - flake8-no-implicit-concat
+  - flake8-print
   - pip:
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
-      - tqdm
       - connectorx>=0.2.6a4
-      - black
-      # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
-      - flake8<5
-      - flake8-no-implicit-concat
-      - flake8-print
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
       - numpydoc==1.1.0

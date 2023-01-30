@@ -43,6 +43,8 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         Call queue that needs to be executed on wrapped ``pandas.DataFrame``.
     """
 
+    execution_wrapper = UnidistWrapper
+
     def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
         assert unidist.is_object_ref(data)
         self._data = data
@@ -115,41 +117,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             result, length, width, ip = _apply_func.remote(data, func, *args, **kwargs)
             logger.debug(f"SUBMIT::_apply_func::{self._identity}")
         logger.debug(f"EXIT::Partition.apply::{self._identity}")
-        return PandasOnUnidistDataframePartition(result, length, width, ip)
-
-    def add_to_apply_calls(self, func, *args, length=None, width=None, **kwargs):
-        """
-        Add a function to the call queue.
-
-        Parameters
-        ----------
-        func : callable or unidist.ObjectRef
-            Function to be added to the call queue.
-        *args : iterable
-            Additional positional arguments to be passed in `func`.
-        length : unidist.ObjectRef or int, optional
-            Length, or reference to length, of wrapped ``pandas.DataFrame``.
-        width : unidist.ObjectRef or int, optional
-            Width, or reference to width, of wrapped ``pandas.DataFrame``.
-        **kwargs : dict
-            Additional keyword arguments to be passed in `func`.
-
-        Returns
-        -------
-        PandasOnUnidistDataframePartition
-            A new ``PandasOnUnidistDataframePartition`` object.
-
-        Notes
-        -----
-        It does not matter if `func` is callable or an ``unidist.ObjectRef``. Unidist will
-        handle it correctly either way. The keyword arguments are sent as a dictionary.
-        """
-        return PandasOnUnidistDataframePartition(
-            self._data,
-            call_queue=self.call_queue + [[func, args, kwargs]],
-            length=length,
-            width=width,
-        )
+        return self.__constructor__(result, length, width, ip)
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
@@ -250,9 +218,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         PandasOnUnidistDataframePartition
             A new ``PandasOnUnidistDataframePartition`` object.
         """
-        return PandasOnUnidistDataframePartition(
-            unidist.put(obj), len(obj.index), len(obj.columns)
-        )
+        return cls(unidist.put(obj), len(obj.index), len(obj.columns))
 
     @classmethod
     def preprocess_func(cls, func):
@@ -330,37 +296,6 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         if unidist.is_object_ref(self._ip_cache):
             self._ip_cache = UnidistWrapper.materialize(self._ip_cache)
         return self._ip_cache
-
-    def split(self, split_func, num_splits, *args):
-        """
-        Split the object wrapped by the partition into multiple partitions.
-
-        Parameters
-        ----------
-        split_func : Callable[pandas.DataFrame, List[Any]] -> List[pandas.DataFrame]
-            The function that will split this partition into multiple partitions. The list contains
-            pivots to split by, and will have the same dtype as the major column we are shuffling on.
-        num_splits : int
-            The number of resulting partitions, which may be empty.
-        *args : List[Any]
-            Arguments to pass to ``split_func``.
-
-        Returns
-        -------
-        list
-            A list of partitions.
-        """
-        logger = get_logger()
-        logger.debug(f"ENTER::Partition.split::{self._identity}")
-
-        @unidist.remote(num_returns=num_splits)
-        def _split_df(df, split_func, *args):  # pragma: no cover
-            return split_func(df, *args)
-
-        logger.debug(f"SUBMIT::_split_df::{self._identity}")
-        outputs = _split_df.remote(self._data, split_func, *args)
-        logger.debug(f"EXIT::Partition.split::{self._identity}")
-        return [PandasOnUnidistDataframePartition(output) for output in outputs]
 
 
 @unidist.remote(num_returns=2)

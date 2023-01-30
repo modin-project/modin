@@ -17,8 +17,8 @@ from collections.abc import Container
 import pandas
 
 from .tree_reduce import TreeReduce
-from .default2pandas.groupby import GroupBy
-from modin.utils import try_cast_to_pandas, hashable, MODIN_UNNAMED_SERIES_LABEL
+from .default2pandas.groupby import GroupBy, GroupByDefault
+from modin.utils import hashable, MODIN_UNNAMED_SERIES_LABEL
 from modin.error_message import ErrorMessage
 
 
@@ -80,6 +80,7 @@ class GroupByReduce(TreeReduce):
         agg_kwargs,
         other=None,
         by=None,
+        drop=False,
     ):
         """
         Execute Map phase of GroupByReduce.
@@ -108,6 +109,8 @@ class GroupByReduce(TreeReduce):
         by : level index name or list of such labels, optional
             Index levels, that is used to determine groups.
             If not specified, `other` parameter is used.
+        drop : bool, default: False
+            Indicates whether or not by-data came from the `self` frame.
 
         Returns
         -------
@@ -124,10 +127,12 @@ class GroupByReduce(TreeReduce):
         # present in the func-dict:
         apply_func = cls.try_filter_dict(map_func, df)
         if other is not None:
-            # Other is a broadcasted partition that represents 'by' columns
-            # Concatenate it with 'df' to group on its columns names
-            other = other.squeeze(axis=axis ^ 1)
-            if isinstance(other, pandas.DataFrame):
+            # Other is a broadcasted partition that represents 'by' data to group on.
+            # If 'drop' then the 'by' data came from the 'self' frame, thus
+            # inserting missed columns to the partition to group on them.
+            if drop or isinstance(
+                other := other.squeeze(axis=axis ^ 1), pandas.DataFrame
+            ):
                 df = pandas.concat(
                     [df] + [other[[o for o in other if o not in df]]],
                     axis=1,
@@ -284,31 +289,41 @@ class GroupByReduce(TreeReduce):
         The same type as `query_compiler`
             QueryCompiler which carries the result of GroupBy aggregation.
         """
+        is_unsupported_axis = axis != 0
+        # Defaulting to pandas in case of an empty frame as we can't process it properly.
+        # Higher API level won't pass empty data here unless the frame has delayed
+        # computations. So we apparently lose some laziness here (due to index access)
+        # because of the disability to process empty groupby natively.
+        is_empty_data = (
+            len(query_compiler.columns) == 0 or len(query_compiler.index) == 0
+        )
+        is_grouping_using_by_arg = (
+            groupby_kwargs.get("level", None) is None and by is not None
+        )
+        is_unsupported_by_arg = isinstance(by, pandas.Grouper) or (
+            not hashable(by) and not isinstance(by, type(query_compiler))
+        )
+
         if (
-            axis != 0
-            or groupby_kwargs.get("level", None) is None
-            and (
-                not (isinstance(by, (type(query_compiler))) or hashable(by))
-                or isinstance(by, pandas.Grouper)
-            )
+            is_unsupported_axis
+            or is_empty_data
+            or (is_grouping_using_by_arg and is_unsupported_by_arg)
         ):
-            by = try_cast_to_pandas(by, squeeze=True)
-            # Since 'by' may be a 2D query compiler holding columns to group by,
-            # to_pandas will also produce a pandas DataFrame containing them.
-            # So splitting 2D 'by' into a list of 1D Series using 'GroupBy.validate_by':
-            by = GroupBy.validate_by(by)
             if default_to_pandas_func is None:
                 default_to_pandas_func = (
                     (lambda grp: grp.agg(map_func))
                     if isinstance(map_func, dict)
                     else map_func
                 )
-            return query_compiler.default_to_pandas(
-                lambda df: default_to_pandas_func(
-                    df.groupby(by=by, axis=axis, **groupby_kwargs),
-                    *agg_args,
-                    **agg_kwargs,
-                )
+            default_to_pandas_func = GroupByDefault.register(default_to_pandas_func)
+            return default_to_pandas_func(
+                query_compiler,
+                by=by,
+                axis=axis,
+                groupby_kwargs=groupby_kwargs,
+                agg_args=agg_args,
+                agg_kwargs=agg_kwargs,
+                drop=drop,
             )
 
         # The bug only occurs in the case of Categorical 'by', so we might want to check whether any of
@@ -439,6 +454,7 @@ class GroupByReduce(TreeReduce):
                     map_func=map_func,
                     agg_args=agg_args,
                     agg_kwargs=agg_kwargs,
+                    drop=drop,
                     **kwargs,
                 )
 

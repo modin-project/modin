@@ -32,6 +32,11 @@ Returns
 {returns}
 """
 
+SET_DATAFRAME_ATTRIBUTE_WARNING = (
+    "Modin doesn't allow columns to be created via a new attribute name - see "
+    + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access"
+)
+
 
 def from_non_pandas(df, index, columns, dtype):
     """

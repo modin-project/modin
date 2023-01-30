@@ -146,7 +146,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         BaseQueryCompiler
             A new query compiler with imported data for further processing.
         """
-        from .sql import is_distributed, get_query_info
+        from modin.experimental.core.io.sql.utils import is_distributed, get_query_info
 
         if not is_distributed(partition_column, lower_bound, upper_bound):
             warnings.warn("Defaulting to Modin core implementation")
@@ -310,7 +310,7 @@ def _read_sql_with_offset_pandas_on_ray(
     list
         List with split read results and it's metadata (index, dtypes, etc.).
     """
-    from .sql import query_put_bounders
+    from modin.experimental.core.io.sql.utils import query_put_bounders
 
     query_with_bounders = query_put_bounders(sql, partition_column, start, end)
     pandas_df = pandas.read_sql(

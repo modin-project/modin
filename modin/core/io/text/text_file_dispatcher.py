@@ -655,6 +655,19 @@ class TextFileDispatcher(FileDispatcher):
         if read_kwargs["chunksize"] is not None:
             return (False, "`chunksize` parameter is not supported")
 
+        if read_kwargs.get("dialect") is not None:
+            return (False, "`dialect` parameter is not supported")
+
+        if read_kwargs["lineterminator"] is not None:
+            return (False, "`lineterminator` parameter is not supported")
+
+        if read_kwargs["escapechar"] is not None:
+            return (False, "`escapechar` parameter is not supported")
+
+        if read_kwargs.get("skipfooter"):
+            if read_kwargs.get("nrows") or read_kwargs.get("engine") == "c":
+                return (False, "Exception is raised by pandas itself")
+
         skiprows_supported = True
         if is_list_like(skiprows_md) and skiprows_md[0] < header_size:
             skiprows_supported = False
@@ -917,7 +930,7 @@ class TextFileDispatcher(FileDispatcher):
             nrows = kwargs.get("nrows", None)
             index_range = pandas.RangeIndex(len(new_query_compiler.index))
             if is_list_like(skiprows_md):
-                new_query_compiler = new_query_compiler.take_2d(
+                new_query_compiler = new_query_compiler.take_2d_positional(
                     index=index_range.delete(skiprows_md)
                 )
             elif callable(skiprows_md):
@@ -925,7 +938,9 @@ class TextFileDispatcher(FileDispatcher):
                 if not isinstance(skip_mask, np.ndarray):
                     skip_mask = skip_mask.to_numpy("bool")
                 view_idx = index_range[~skip_mask]
-                new_query_compiler = new_query_compiler.take_2d(index=view_idx)
+                new_query_compiler = new_query_compiler.take_2d_positional(
+                    index=view_idx
+                )
             else:
                 raise TypeError(
                     f"Not acceptable type of `skiprows` parameter: {type(skiprows_md)}"
@@ -935,7 +950,7 @@ class TextFileDispatcher(FileDispatcher):
                 new_query_compiler = new_query_compiler.reset_index(drop=True)
 
             if nrows:
-                new_query_compiler = new_query_compiler.take_2d(
+                new_query_compiler = new_query_compiler.take_2d_positional(
                     pandas.RangeIndex(len(new_query_compiler.index))[:nrows]
                 )
         if index_col is None or index_col is False:

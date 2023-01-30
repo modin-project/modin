@@ -25,6 +25,7 @@ from modin.pandas.test.utils import (
     random_state,
     test_data,
 )
+from modin.test.interchange.dataframe_protocol.hdk.utils import split_df_into_chunks
 from .utils import eval_io, ForceHdkImport, set_execution_mode, run_and_compare
 from pandas.core.dtypes.common import is_list_like
 
@@ -1213,12 +1214,11 @@ class TestAgg:
                 # At the end of reduce function it does inevitable `transpose`, which
                 # is defaulting to pandas. The following logic check that `transpose` is the only
                 # function that falling back to pandas in the reduce operation flow.
-                # Another warning comes from deprecated pandas.Int64Index usage.
                 with pytest.warns(UserWarning) as warns:
                     res = getattr(df, method)()
                 assert (
-                    len(warns) == 2
-                ), f"More than two warnings were arisen: len(warns) != 2 ({len(warns)} != 2)"
+                    len(warns) == 1
+                ), f"More than one warning was arisen: len(warns) != 1 ({len(warns)} != 1)"
                 message = warns[0].message.args[0]
                 assert (
                     re.match(r".*transpose.*defaulting to pandas", message) is not None
@@ -1722,9 +1722,6 @@ class TestBinaryOp:
 
         run_and_compare(filter, data=self.cmp_data)
 
-    @pytest.mark.xfail(
-        reason="Requires fix in OmniSci: https://github.com/intel-ai/omniscidb/pull/178"
-    )
     def test_filter_empty_result(self):
         def filter(df, **kwargs):
             return df[df.a < 0]
@@ -2030,6 +2027,40 @@ class TestBadData:
         with pytest.raises(OverflowError):
             with ForceHdkImport(md_df):
                 pass
+
+    def test_uint_serialization(self):
+        # Tests for CalciteSerializer.serialize_literal()
+        df = pd.DataFrame({"A": [np.nan, 1]})
+        assert (
+            df.fillna(np.uint8(np.iinfo(np.uint8).max)).sum()[0]
+            == np.iinfo(np.uint8).max + 1
+        )
+        assert (
+            df.fillna(np.uint16(np.iinfo(np.uint16).max)).sum()[0]
+            == np.iinfo(np.uint16).max + 1
+        )
+        assert (
+            df.fillna(np.uint32(np.iinfo(np.uint32).max)).sum()[0]
+            == np.iinfo(np.uint32).max + 1
+        )
+        # HDK represents 'uint64' as 'int64' internally due to a lack of support
+        # for unsigned ints, that's why using 'int64.max' here
+        assert (
+            df.fillna(np.uint64(np.iinfo(np.int64).max - 1)).sum()[0]
+            == np.iinfo(np.int64).max
+        )
+
+        # Tests for CalciteSerializer.serialize_dtype()
+        df = pd.DataFrame({"A": [np.iinfo(np.uint8).max, 1]})
+        assert df.astype(np.uint8).sum()[0] == np.iinfo(np.uint8).max + 1
+        df = pd.DataFrame({"A": [np.iinfo(np.uint16).max, 1]})
+        assert df.astype(np.uint16).sum()[0] == np.iinfo(np.uint16).max + 1
+        df = pd.DataFrame({"A": [np.iinfo(np.uint32).max, 1]})
+        assert df.astype(np.uint32).sum()[0] == np.iinfo(np.uint32).max + 1
+        # HDK represents 'uint64' as 'int64' internally due to a lack of support
+        # for unsigned ints, that's why using 'int64.max' here
+        df = pd.DataFrame({"A": [np.iinfo(np.int64).max - 1, 1]})
+        assert df.astype(np.uint64).sum()[0] == np.iinfo(np.int64).max
 
 
 class TestDropna:
@@ -2393,10 +2424,76 @@ class TestFromArrow:
         indices = pyarrow.array([0, 1, 0, 1, 2, 0, None, 2])
         dictionary = pyarrow.array(["first", "second", "third"])
         dict_array = pyarrow.DictionaryArray.from_arrays(indices, dictionary)
-        at = pyarrow.table({"col": dict_array})
+        at = pyarrow.table(
+            {"col1": dict_array, "col2": [1, 2, 3, 4, 5, 6, 7, 8], "col3": dict_array}
+        )
         pdf = at.to_pandas()
+        nchunks = 3
+        chunks = split_df_into_chunks(pdf, nchunks)
+        at = pyarrow.concat_tables([pyarrow.Table.from_pandas(c) for c in chunks])
         mdf = from_arrow(at)
+        at = mdf._query_compiler._modin_frame._partitions[0][0].get()
+        assert len(at.column(0).chunks) == nchunks
         df_equals(mdf, pdf)
+
+        mdt = mdf.dtypes[0]
+        pdt = pdf.dtypes[0]
+        assert mdt == "category"
+        assert isinstance(mdt, pandas.CategoricalDtype)
+        assert pandas.api.types.is_categorical_dtype(mdt)
+        assert str(mdt) == str(pdt)
+
+        # Make sure the lazy proxy dtype is not materialized yet.
+        assert type(mdt) != pandas.CategoricalDtype
+        assert mdt._table is not None
+        assert mdt._new(at, at.column(0)._name) is mdt
+        assert mdt._new(at, at.column(2)._name) is not mdt
+        assert type(mdt._new(at, at.column(2)._name)) != pandas.CategoricalDtype
+
+        assert mdt == pdt
+        assert pdt == mdt
+        assert repr(mdt) == repr(pdt)
+
+        # Should be materialized now
+        assert type(mdt._new(at, at.column(2)._name)) == pandas.CategoricalDtype
+
+
+class TestSparseArray:
+    def test_sparse_series(self):
+        data = pandas.arrays.SparseArray(np.array([3, 1, 2, 3, 4, np.nan]))
+        mds = pd.Series(data)
+        pds = pandas.Series(data)
+        df_equals(mds, pds)
+
+
+class TestEmpty:
+    def test_frame_insert(self):
+        def insert(df, **kwargs):
+            df["a"] = [1, 2, 3, 4, 5]
+            return df
+
+        run_and_compare(
+            insert,
+            data=None,
+        )
+        run_and_compare(
+            insert,
+            data=None,
+            constructor_kwargs={"index": ["a", "b", "c", "d", "e"]},
+        )
+        run_and_compare(
+            insert,
+            data=None,
+            constructor_kwargs={"columns": ["a", "b", "c", "d", "e"]},
+            # Do not force lazy since setitem() defaults to pandas
+            force_lazy=False,
+        )
+
+    def test_series_getitem(self):
+        df_equals(pd.Series([])[:30], pandas.Series([])[:30])
+
+    def test_series_to_pandas(self):
+        df_equals(pd.Series([])._to_pandas(), pandas.Series([]))
 
 
 if __name__ == "__main__":

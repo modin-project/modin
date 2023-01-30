@@ -18,9 +18,11 @@ from copy import copy
 
 import pandas
 from pandas.api.types import is_scalar
+from pandas.util import cache_readonly
 
 from modin.pandas.indexing import compute_sliced_len
 from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
+from modin.logging import get_logger
 
 
 class PandasDataframePartition(ABC):  # pragma: no cover
@@ -33,6 +35,18 @@ class PandasDataframePartition(ABC):  # pragma: no cover
     _length_cache = None
     _width_cache = None
     _data = None
+
+    @cache_readonly
+    def __constructor__(self):
+        """
+        Create a new instance of this object.
+
+        Returns
+        -------
+        PandasDataframePartition
+            New instance of pandas partition.
+        """
+        return type(self)
 
     def get(self):
         """
@@ -119,7 +133,12 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         This function will be executed when `apply` is called. It will be executed
         in the order inserted; apply's func operates the last and return.
         """
-        pass
+        return self.__constructor__(
+            self._data,
+            call_queue=self.call_queue + [[func, args, kwargs]],
+            length=length,
+            width=width,
+        )
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
@@ -333,7 +352,15 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         list
             A list of partitions.
         """
-        pass
+        logger = get_logger()
+        logger.debug(f"ENTER::Partition.split::{self._identity}")
+
+        logger.debug(f"SUBMIT::_split_df::{self._identity}")
+        outputs = self.execution_wrapper.deploy(
+            split_func, [self._data] + list(args), num_returns=num_splits
+        )
+        logger.debug(f"EXIT::Partition.split::{self._identity}")
+        return [self.__constructor__(output) for output in outputs]
 
     @classmethod
     def empty(cls):

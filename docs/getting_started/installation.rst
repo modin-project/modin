@@ -207,6 +207,7 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
 
   cd modin
   pip install -e .
+  pip install -e .[all]  # will install dependencies for all engines
 
 .. _`GitHub repo`: https://github.com/modin-project/modin/tree/master
 .. _issue: https://github.com/modin-project/modin/issues
