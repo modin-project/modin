@@ -1044,6 +1044,7 @@ class TextFileDispatcher(FileDispatcher):
             column_widths, num_splits = cls._define_metadata(
                 pd_df_metadata, column_names
             )
+            read_callback_kw = None
         else:
             read_callback_kw = dict(read_callback_kw, skiprows=None)
             # `memory_map` doesn't work with file-like object so we can't use it here.
@@ -1091,9 +1092,7 @@ class TextFileDispatcher(FileDispatcher):
                 newline=newline,
                 header_size=header_size,
                 pre_reading=pre_reading,
-                read_callback_kw=None
-                if compute_metadata_before_skipping_rows
-                else read_callback_kw,
+                read_callback_kw=read_callback_kw,
             )
             if not compute_metadata_before_skipping_rows:
                 pd_df_metadata = pd_df_metadata_temp
