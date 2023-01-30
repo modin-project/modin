@@ -84,13 +84,13 @@ def join_columns(
         Returns columns for the resulting frame and mappings of old to new column
         names for `left` and `right` accordingly.
     """
-    left_on, right_on = map(
-        lambda x: cast(Iterable[IndexLabel], [x] if is_scalar(x) else x),
-        (left_on, right_on),
+    left_on = cast(Iterable[IndexLabel], [left_on] if is_scalar(left_on) else left_on)
+    right_on = cast(
+        Iterable[IndexLabel], [right_on] if is_scalar(right_on) else right_on
     )
 
-    left_conflicts = set(left) & (set(right) - set(right_on))
-    right_conflicts = set(right) & (set(left) - set(left_on))
+    left_conflicts = set(left) & (set(right) - set(right_on))  # type: ignore # set() doesn't understand IndexLabel
+    right_conflicts = set(right) & (set(left) - set(left_on))  # type: ignore # set() doesn't understand IndexLabel
     conflicting_cols = left_conflicts | right_conflicts
 
     def _get_new_name(col: IndexLabel, suffix: str) -> IndexLabel:
