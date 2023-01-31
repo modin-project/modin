@@ -249,6 +249,7 @@ class TextFileDispatcher(FileDispatcher):
             Number of rows between header and skipped rows, that should be read.
         read_callback_kw : dict, optional
             Keyword arguments for `cls.read_callback` to compute metadata if needed.
+            This option is not compatible with `pre_reading!=0`.
 
         Returns
         -------
@@ -259,6 +260,10 @@ class TextFileDispatcher(FileDispatcher):
         pandas.DataFrame
             Dataframe from which metadata can be retrieved. Can be None if `read_callback_kw=None`.
         """
+        if read_callback_kw is not None and pre_reading != 0:
+            raise ValueError(
+                f"Incompatible combination of parameters: {read_callback_kw=}, {pre_reading=}"
+            )
         read_rows_counter = 0
         outside_quotes = True
 
