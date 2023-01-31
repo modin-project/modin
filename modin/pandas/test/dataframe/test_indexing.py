@@ -1193,7 +1193,7 @@ def test_rename_issue5600():
     assert df.dtypes.keys().tolist() == ["a"]
     assert df.columns.tolist() == ["a"]
 
-    assert df_renamed.dtypes.keys() == ["new_a"]
+    assert df_renamed.dtypes.keys().tolist() == ["new_a"]
     assert df_renamed.columns.tolist() == ["new_a"]
 
 
