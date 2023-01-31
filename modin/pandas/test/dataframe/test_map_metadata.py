@@ -287,9 +287,13 @@ def test_copy(data):
 
     # pandas_df is unused but there so there won't be confusing list comprehension
     # stuff in the pytest.mark.parametrize
-    new_modin_df = modin_df.copy()
+    new_modin_df = modin_df.copy(deep=True)
 
     assert new_modin_df is not modin_df
+    assert new_modin_df.index is not modin_df.index
+    assert new_modin_df.columns is not modin_df.columns
+    assert new_modin_df.dtypes is not modin_df.dtypes
+
     if get_current_execution() != "BaseOnPython":
         assert np.array_equal(
             new_modin_df._query_compiler._modin_frame._partitions,
@@ -300,7 +304,12 @@ def test_copy(data):
 
     # Shallow copy tests
     modin_df = pd.DataFrame(data)
-    modin_df_cp = modin_df.copy(False)
+    modin_df_cp = modin_df.copy(deep=False)
+
+    assert modin_df_cp is not modin_df
+    assert modin_df_cp.index is modin_df.index
+    assert modin_df_cp.columns is modin_df.columns
+    assert modin_df_cp.dtypes is modin_df.dtypes
 
     modin_df[modin_df.columns[0]] = 0
     df_equals(modin_df, modin_df_cp)
