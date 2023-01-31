@@ -2386,23 +2386,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 keep_partitioning=False,
                 dtypes=np.dtype("O"),
             )
-            new_modin_frame = hashed_modin_frame.apply_full_axis(
-                0,
-                _compute_duplicated,
-                new_index=new_index,
-                new_columns=new_columns,
-                keep_partitioning=False,
-                dtypes=np.bool_,
-            )
         else:
-            new_modin_frame = self._modin_frame.apply_full_axis(
-                0,
-                _compute_duplicated,
-                new_index=new_index,
-                new_columns=new_columns,
-                keep_partitioning=False,
-                dtypes=np.bool_,
-            )
+            hashed_modin_frame = self._modin_frame
+        new_modin_frame = hashed_modin_frame.apply_full_axis(
+            0,
+            _compute_duplicated,
+            new_index=new_index,
+            new_columns=new_columns,
+            keep_partitioning=False,
+            dtypes=np.bool_,
+        )
         return self.__constructor__(new_modin_frame, shape_hint="column")
 
     # Insert
