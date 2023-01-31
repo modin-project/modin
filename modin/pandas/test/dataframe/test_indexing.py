@@ -1251,15 +1251,12 @@ def test_reindex_multiindex():
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.parametrize("use_get_indices", [False, True])
 @pytest.mark.parametrize("test_async_reset_index", [False, True])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_reset_index(data, test_async_reset_index, use_get_indices):
+def test_reset_index(data, test_async_reset_index):
     modin_df, pandas_df = create_test_dfs(data)
     if test_async_reset_index:
         modin_df._query_compiler._modin_frame._index_cache = None
-        if use_get_indices:
-            modin_df._query_compiler._modin_frame._columns_cache = None
     modin_result = modin_df.reset_index(inplace=False)
     pandas_result = pandas_df.reset_index(inplace=False)
     df_equals(modin_result, pandas_result)
@@ -1268,8 +1265,6 @@ def test_reset_index(data, test_async_reset_index, use_get_indices):
     pd_df_cp = pandas_df.copy()
     if test_async_reset_index:
         modin_df._query_compiler._modin_frame._index_cache = None
-        if use_get_indices:
-            modin_df._query_compiler._modin_frame._columns_cache = None
     modin_df_cp.reset_index(inplace=True)
     pd_df_cp.reset_index(inplace=True)
     df_equals(modin_df_cp, pd_df_cp)
