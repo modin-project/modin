@@ -198,7 +198,13 @@ Poor performance of the first operation with Modin on Ray engine
 
 There might be cases when the first operation with Modin on Ray engine is much slower than the subsequent calls of the operation.
 That happens because Ray workers may not be fully set up yet to perform computation after initialization of the engine
-with ``ray.init(runtime_env={'env_vars': {'__MODIN_AUTOIMPORT_PANDAS__': '1'}})``.
+with ``ray.init(runtime_env={'env_vars': {'__MODIN_AUTOIMPORT_PANDAS__': '1'}})``, which is the default behavior of Modin on Ray engine
+if Ray has not been initialised yet. Modin intentionaly initializes Ray this way to import ``pandas`` in workers
+once Python interpreter is started in them so that to avoid a race condition in Ray between the import thread and the thread executing the code.
+
+..
+      See more details on why we started using ``ray.init(runtime_env={'env_vars': {'__MODIN_AUTOIMPORT_PANDAS__': '1'}})` in
+      https://github.com/modin-project/modin/pull/4603.
 
 .. code-block:: python
 
@@ -253,7 +259,7 @@ So far there is no a solution to fix or work around the problem rather than not 
 However, this may lead to other problem regarding a race condition in Ray between the import thread and the thread executing the code.
 So for now we just highlight the problem in hope of a future fix in Ray itself.
 
-Also, it is worth noting that every distributed engine by its nature has a little overhead for the first operation being call,
+Also, it is worth noting that every distributed engine by its nature has a little overhead for the first operation being called,
 which may be important for microbenchmarks. What you likely want to do is warm up worker processes
 either by excluding the time of the first iteration from your measurements or execute a simple function in workers to fully set up them.
 
