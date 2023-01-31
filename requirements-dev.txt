@@ -1,4 +1,4 @@
-pandas==1.5.2
+pandas==1.5.3
 numpy>=1.18.5
 dask[complete]>=2.22.0
 distributed>=2.22.0
@@ -21,7 +21,7 @@ lxml
 openpyxl
 xlrd
 matplotlib
-sqlalchemy>=1.4.0
+sqlalchemy>=1.4.0,<1.4.46
 msgpack
 pandas_gbq
 cloudpickle
@@ -48,7 +48,7 @@ fuzzydata>=0.0.6
 # Mypy 0.990 doesn't work: https://github.com/modin-project/modin/issues/5206
 mypy!=0.990
 pandas-stubs
-fastparquet
+fastparquet<2023.1.0
 # for release script
 PyGithub
 pygit2

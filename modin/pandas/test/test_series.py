@@ -396,16 +396,14 @@ def test___gt__(data):
     inter_df_math_helper(modin_series, pandas_series, "__gt__")
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___int__(data):
-    modin_series, pandas_series = create_test_series(data)
-    try:
-        pandas_result = int(pandas_series[0])
-    except Exception as err:
-        with pytest.raises(type(err)):
-            int(modin_series[0])
-    else:
-        assert int(modin_series[0]) == pandas_result
+@pytest.mark.parametrize("count_elements", [0, 1, 10])
+def test___int__(count_elements):
+    eval_general(*create_test_series([1.5] * count_elements), int)
+
+
+@pytest.mark.parametrize("count_elements", [0, 1, 10])
+def test___float__(count_elements):
+    eval_general(*create_test_series([1] * count_elements), float)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -527,6 +525,13 @@ def test___repr__(name, dt_index, data):
         df_equals(modin_series.index, pandas_series.index)
     else:
         assert repr(modin_series) == repr(pandas_series)
+
+
+def test___repr__4186():
+    modin_series, pandas_series = create_test_series(
+        ["a", "b", "c", "a"], dtype="category"
+    )
+    assert repr(modin_series) == repr(pandas_series)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3622,6 +3627,16 @@ def test_values_non_numeric():
     pandas_series = pandas_series.astype("category")
 
     df_equals(modin_series.values, pandas_series.values)
+
+
+def test_values_ea():
+    data = pandas.arrays.SparseArray(np.arange(10, dtype="int64"))
+    modin_series, pandas_series = create_test_series(data)
+    modin_values = modin_series.values
+    pandas_values = pandas_series.values
+
+    assert modin_values.dtype == pandas_values.dtype
+    df_equals(modin_values, pandas_values)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

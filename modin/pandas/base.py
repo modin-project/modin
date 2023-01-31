@@ -85,6 +85,7 @@ _DEFAULT_BEHAVIOUR = {
     "name",
     "dtypes",
     "dtype",
+    "groupby",
     "_get_name",
     "_set_name",
     "_default_to_pandas",
@@ -476,7 +477,11 @@ class BasePandasDataset(ClassLogger):
             # it is a DataFrame, Series, etc.) as a pandas object. The outer `getattr`
             # will get the operation (`op`) from the pandas version of the class and run
             # it on the object after we have converted it to pandas.
-            result = getattr(self._pandas_class, op)(pandas_obj, *args, **kwargs)
+            attr = getattr(self._pandas_class, op)
+            if isinstance(attr, property):
+                result = getattr(pandas_obj, op)
+            else:
+                result = attr(pandas_obj, *args, **kwargs)
         else:
             ErrorMessage.catch_bugs_and_request_email(
                 failure_condition=True,
@@ -3424,7 +3429,7 @@ class BasePandasDataset(ClassLogger):
         else:
             new_labels = self.axes[axis].tz_convert(tz)
         obj = self.copy() if copy else self
-        return obj.set_axis(new_labels, axis, inplace=False, copy=copy)
+        return obj.set_axis(new_labels, axis, copy=copy)
 
     def tz_localize(
         self, tz, axis=0, level=None, copy=True, ambiguous="raise", nonexistent="raise"
@@ -3445,7 +3450,7 @@ class BasePandasDataset(ClassLogger):
             )
             .index
         )
-        return self.set_axis(new_labels, axis, inplace=False, copy=copy)
+        return self.set_axis(new_labels, axis, copy=copy)
 
     # TODO: uncomment the following lines when #3331 issue will be closed
     # @prepend_to_notes(

@@ -672,6 +672,19 @@ class TextFileDispatcher(FileDispatcher):
         if read_kwargs["chunksize"] is not None:
             return (False, "`chunksize` parameter is not supported")
 
+        if read_kwargs.get("dialect") is not None:
+            return (False, "`dialect` parameter is not supported")
+
+        if read_kwargs["lineterminator"] is not None:
+            return (False, "`lineterminator` parameter is not supported")
+
+        if read_kwargs["escapechar"] is not None:
+            return (False, "`escapechar` parameter is not supported")
+
+        if read_kwargs.get("skipfooter"):
+            if read_kwargs.get("nrows") or read_kwargs.get("engine") == "c":
+                return (False, "Exception is raised by pandas itself")
+
         skiprows_supported = True
         if is_list_like(skiprows_md) and skiprows_md[0] < header_size:
             skiprows_supported = False

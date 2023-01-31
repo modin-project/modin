@@ -41,8 +41,43 @@ from .series import Series
 from .utils import is_label
 
 
+_DEFAULT_BEHAVIOUR = {
+    "__class__",
+    "__getitem__",
+    "__init__",
+    "__iter__",
+    "_as_index",
+    "_axis",
+    "_by",
+    "_check_index",
+    "_check_index_name",
+    "_columns",
+    "_compute_index_grouped",
+    "_default_to_pandas",
+    "_df",
+    "_drop",
+    "_groups_cache",
+    "_idx_name",
+    "_index",
+    "_indices_cache",
+    "_internal_by",
+    "_internal_by_cache",
+    "_is_multi_by",
+    "_iter",
+    "_kwargs",
+    "_level",
+    "_pandas_class",
+    "_query_compiler",
+    "_sort",
+    "_squeeze",
+    "_wrap_aggregation",
+}
+
+
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
 class DataFrameGroupBy(ClassLogger):
+    _pandas_class = pandas.core.groupby.DataFrameGroupBy
+
     def __init__(
         self,
         df,
@@ -114,6 +149,32 @@ class DataFrameGroupBy(ClassLogger):
             if key in self._columns:
                 return self.__getitem__(key)
             raise err
+
+    # TODO: `.__getattribute__` overriding is broken in experimental mode. We should
+    # remove this branching one it's fixed:
+    # https://github.com/modin-project/modin/issues/5536
+    if not IsExperimental.get():
+
+        def __getattribute__(self, item):
+            attr = super().__getattribute__(item)
+            if (
+                item not in _DEFAULT_BEHAVIOUR
+                and not self._query_compiler.lazy_execution
+            ):
+                # We default to pandas on empty DataFrames. This avoids a large amount of
+                # pain in underlying implementation and returns a result immediately rather
+                # than dealing with the edge cases that empty DataFrames have.
+                if (
+                    callable(attr)
+                    and self._df.empty
+                    and hasattr(self._pandas_class, item)
+                ):
+
+                    def default_handler(*args, **kwargs):
+                        return self._default_to_pandas(item, *args, **kwargs)
+
+                    return default_handler
+            return attr
 
     @property
     def ngroups(self):
@@ -1184,7 +1245,7 @@ class DataFrameGroupBy(ClassLogger):
 
         Parameters
         ----------
-        f : callable
+        f : callable or str
             The function to apply to each group.
         *args : list
             Extra positional arguments to pass to `f`.
@@ -1214,19 +1275,28 @@ class DataFrameGroupBy(ClassLogger):
         by = GroupBy.validate_by(by)
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
-            return f(
-                df.groupby(
-                    by=by, axis=self._axis, squeeze=self._squeeze, **self._kwargs
-                ),
-                *args,
-                **kwargs,
+            groupby_obj = df.groupby(
+                by=by, axis=self._axis, squeeze=self._squeeze, **self._kwargs
             )
+
+            if callable(f):
+                return f(groupby_obj, *args, **kwargs)
+            else:
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=not isinstance(f, str)
+                )
+                attribute = getattr(groupby_obj, f)
+                if callable(attribute):
+                    return attribute(*args, **kwargs)
+                return attribute
 
         return self._df._default_to_pandas(groupby_on_multiple_columns, *args, **kwargs)
 
 
 @_inherit_docstrings(pandas.core.groupby.SeriesGroupBy)
 class SeriesGroupBy(DataFrameGroupBy):
+    _pandas_class = pandas.core.groupby.SeriesGroupBy
+
     @property
     def ndim(self):
         """

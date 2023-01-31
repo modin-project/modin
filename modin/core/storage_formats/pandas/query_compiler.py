@@ -242,10 +242,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
     ----------
     modin_frame : PandasDataframe
         Modin Frame to query with the compiled queries.
+    shape_hint : {"row", "column", None}, default: None
+        Shape hint for frames known to be a column or a row, otherwise None.
     """
 
-    def __init__(self, modin_frame):
+    def __init__(self, modin_frame, shape_hint=None):
         self._modin_frame = modin_frame
+        self._shape_hint = shape_hint
 
     @property
     def lazy_execution(self):
@@ -375,34 +378,34 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
 
-    add = Binary.register(pandas.DataFrame.add)
-    combine = Binary.register(pandas.DataFrame.combine)
-    combine_first = Binary.register(pandas.DataFrame.combine_first)
-    eq = Binary.register(pandas.DataFrame.eq)
-    floordiv = Binary.register(pandas.DataFrame.floordiv)
-    ge = Binary.register(pandas.DataFrame.ge)
-    gt = Binary.register(pandas.DataFrame.gt)
-    le = Binary.register(pandas.DataFrame.le)
-    lt = Binary.register(pandas.DataFrame.lt)
-    mod = Binary.register(pandas.DataFrame.mod)
-    mul = Binary.register(pandas.DataFrame.mul)
-    rmul = Binary.register(pandas.DataFrame.rmul)
-    ne = Binary.register(pandas.DataFrame.ne)
-    pow = Binary.register(pandas.DataFrame.pow)
-    radd = Binary.register(pandas.DataFrame.radd)
-    rfloordiv = Binary.register(pandas.DataFrame.rfloordiv)
-    rmod = Binary.register(pandas.DataFrame.rmod)
-    rpow = Binary.register(pandas.DataFrame.rpow)
-    rsub = Binary.register(pandas.DataFrame.rsub)
-    rtruediv = Binary.register(pandas.DataFrame.rtruediv)
-    sub = Binary.register(pandas.DataFrame.sub)
-    truediv = Binary.register(pandas.DataFrame.truediv)
-    __and__ = Binary.register(pandas.DataFrame.__and__)
-    __or__ = Binary.register(pandas.DataFrame.__or__)
-    __rand__ = Binary.register(pandas.DataFrame.__rand__)
-    __ror__ = Binary.register(pandas.DataFrame.__ror__)
-    __rxor__ = Binary.register(pandas.DataFrame.__rxor__)
-    __xor__ = Binary.register(pandas.DataFrame.__xor__)
+    add = Binary.register(pandas.DataFrame.add, infer_dtypes="common_cast")
+    combine = Binary.register(pandas.DataFrame.combine, infer_dtypes="common_cast")
+    combine_first = Binary.register(pandas.DataFrame.combine_first, infer_dtypes="bool")
+    eq = Binary.register(pandas.DataFrame.eq, infer_dtypes="bool")
+    floordiv = Binary.register(pandas.DataFrame.floordiv, infer_dtypes="common_cast")
+    ge = Binary.register(pandas.DataFrame.ge, infer_dtypes="bool")
+    gt = Binary.register(pandas.DataFrame.gt, infer_dtypes="bool")
+    le = Binary.register(pandas.DataFrame.le, infer_dtypes="bool")
+    lt = Binary.register(pandas.DataFrame.lt, infer_dtypes="bool")
+    mod = Binary.register(pandas.DataFrame.mod, infer_dtypes="common_cast")
+    mul = Binary.register(pandas.DataFrame.mul, infer_dtypes="common_cast")
+    rmul = Binary.register(pandas.DataFrame.rmul, infer_dtypes="common_cast")
+    ne = Binary.register(pandas.DataFrame.ne, infer_dtypes="bool")
+    pow = Binary.register(pandas.DataFrame.pow, infer_dtypes="common_cast")
+    radd = Binary.register(pandas.DataFrame.radd, infer_dtypes="common_cast")
+    rfloordiv = Binary.register(pandas.DataFrame.rfloordiv, infer_dtypes="common_cast")
+    rmod = Binary.register(pandas.DataFrame.rmod, infer_dtypes="common_cast")
+    rpow = Binary.register(pandas.DataFrame.rpow, infer_dtypes="common_cast")
+    rsub = Binary.register(pandas.DataFrame.rsub, infer_dtypes="common_cast")
+    rtruediv = Binary.register(pandas.DataFrame.rtruediv, infer_dtypes="float")
+    sub = Binary.register(pandas.DataFrame.sub, infer_dtypes="common_cast")
+    truediv = Binary.register(pandas.DataFrame.truediv, infer_dtypes="float")
+    __and__ = Binary.register(pandas.DataFrame.__and__, infer_dtypes="bool")
+    __or__ = Binary.register(pandas.DataFrame.__or__, infer_dtypes="bool")
+    __rand__ = Binary.register(pandas.DataFrame.__rand__, infer_dtypes="bool")
+    __ror__ = Binary.register(pandas.DataFrame.__ror__, infer_dtypes="bool")
+    __rxor__ = Binary.register(pandas.DataFrame.__rxor__, infer_dtypes="bool")
+    __xor__ = Binary.register(pandas.DataFrame.__xor__, infer_dtypes="bool")
     df_update = Binary.register(
         copy_df_for_func(pandas.DataFrame.update, display_name="update"),
         join_type="left",
@@ -460,7 +463,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return pandas.merge(left, right, **kwargs)
 
             new_self = self.__constructor__(
-                self._modin_frame.apply_full_axis(1, map_func)
+                self._modin_frame.apply_full_axis(
+                    axis=1,
+                    func=map_func,
+                    # We're going to explicitly change the shape across the 1-axis,
+                    # so we want for partitioning to adapt as well
+                    keep_partitioning=False,
+                )
             )
             is_reset_index = True
             if left_on and right_on:
@@ -505,7 +514,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return pandas.DataFrame.join(left, right, **kwargs)
 
             new_self = self.__constructor__(
-                self._modin_frame.apply_full_axis(1, map_func)
+                self._modin_frame.apply_full_axis(
+                    axis=1,
+                    func=map_func,
+                    # We're going to explicitly change the shape across the 1-axis,
+                    # so we want for partitioning to adapt as well
+                    keep_partitioning=False,
+                )
             )
             return new_self.sort_rows_by_column_values(on) if sort else new_self
         else:
@@ -685,13 +700,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def transpose(self, *args, **kwargs):
         # Switch the index and columns and transpose the data within the blocks.
         return self.__constructor__(self._modin_frame.transpose())
-
-    def columnarize(self):
-        if len(self.columns) != 1 or (
-            len(self.index) == 1 and self.index[0] == MODIN_UNNAMED_SERIES_LABEL
-        ):
-            return self.transpose()
-        return self
 
     def is_series_like(self):
         return len(self.columns) == 1 or len(self.index) == 1
@@ -1343,7 +1351,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
     convert_dtypes = Map.register(pandas.DataFrame.convert_dtypes)
-    invert = Map.register(pandas.DataFrame.__invert__)
+    invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isin = Map.register(pandas.DataFrame.isin, dtypes=np.bool_)
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
     _isfinite = Map.register(
@@ -2222,7 +2230,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.getitem_column_array(key)
 
     def getitem_column_array(self, key, numeric=False):
-        # Convert to list for type checking
+        shape_hint = "column" if len(key) == 1 else None
         if numeric:
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_positions=key
@@ -2231,7 +2239,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_labels=key
             )
-        return self.__constructor__(new_modin_frame)
+        return self.__constructor__(new_modin_frame, shape_hint=shape_hint)
 
     def getitem_row_array(self, key):
         return self.__constructor__(
@@ -2364,11 +2372,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if isinstance(value, type(self)):
             value.columns = [column]
             return self.insert_item(axis=1, loc=loc, value=value, how=None)
-
-        if is_list_like(value) and not isinstance(value, np.ndarray):
-            value = np.array(value)
-        elif is_scalar(value):
-            value = [value] * len(self.index)
 
         def insert(df, internal_indices=[]):
             """
@@ -2740,7 +2743,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             # The equation for the 'skew' was taken directly from pandas:
             # https://github.com/pandas-dev/pandas/blob/8dab54d6573f7186ff0c3b6364d5e4dd635ff3e7/pandas/core/nanops.py#L1226
-            skew_res = (count * (count - 1) ** 0.5 / (count - 2)) * (m3 / m2**1.5)
+            with np.errstate(invalid="ignore", divide="ignore"):
+                skew_res = (count * (count - 1) ** 0.5 / (count - 2)) * (m3 / m2**1.5)
+
+            # Setting dummy values for invalid results in accordance with pandas
+            skew_res[m2 == 0] = 0
+            skew_res[count < 3] = np.nan
             return skew_res
 
         result = GroupByReduce.register(
@@ -2878,6 +2886,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
         how="axis_wise",
         drop=False,
     ):
+        # Defaulting to pandas in case of an empty frame as we can't process it properly.
+        # Higher API level won't pass empty data here unless the frame has delayed
+        # computations. So we apparently lose some laziness here (due to index access)
+        # because of the disability to process empty groupby natively.
+        if len(self.columns) == 0 or len(self.index) == 0:
+            return super().groupby_agg(
+                by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
+            )
+
         if isinstance(agg_func, dict) and all(
             is_reduce_function(x) for x in agg_func.values()
         ):
@@ -3153,6 +3170,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             to_group = self.drop(columns=unique_keys)
 
         keys_columns = self.getitem_column_array(unique_keys)
+        len_values = len(values)
+        if len_values == 0:
+            len_values = len(self.columns.drop(unique_keys))
 
         def applyier(df, other):
             """
@@ -3186,6 +3206,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 sort=sort,
             )
 
+            # if only one value is specified, removing level that maps
+            # columns from `values` to the actual values
+            if len(index) > 0 and len_values == 1 and result.columns.nlevels > 1:
+                result.columns = result.columns.droplevel(int(margins))
+
             # in that case Pandas transposes the result of `pivot_table`,
             # transposing it back to be consistent with column axis values along
             # different partitions
@@ -3203,14 +3228,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # transposing the result again, to be consistent with Pandas result
         if len(index) == 0 and len(columns) > 0:
             result = result.transpose()
-
-        if len(values) == 0:
-            values = self.columns.drop(unique_keys)
-
-        # if only one value is specified, removing level that maps
-        # columns from `values` to the actual values
-        if len(index) > 0 and len(values) == 1 and result.columns.nlevels > 1:
-            result.columns = result.columns.droplevel(int(margins))
 
         return result
 
