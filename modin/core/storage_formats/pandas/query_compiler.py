@@ -567,9 +567,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     func=_reset,
                     other=None,
                     enumerate_partitions=True,
-                    pass_axis_lengths_to_partitions=True,
                     new_columns=new_columns,
                     sync_labels=False,
+                    pass_axis_lengths_to_partitions=True,
                 )
             )
 

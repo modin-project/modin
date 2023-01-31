@@ -2192,6 +2192,7 @@ class PandasDataframe(ClassLogger):
         dtypes=None,
         keep_partitioning=True,
         sync_labels=True,
+        pass_axis_lengths_to_partitions=False,
     ):
         """
         Perform a function across an entire axis.
@@ -2219,6 +2220,9 @@ class PandasDataframe(ClassLogger):
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to
             the provided hints in order to save time on syncing them.
+        pass_axis_lengths_to_partitions : bool, default: False
+            Whether pass partition lengths along `axis ^ 1` to the kernel `func`.
+            Note that `func` must be able to obtain `df, *axis_lengths`.
 
         Returns
         -------
@@ -2238,6 +2242,7 @@ class PandasDataframe(ClassLogger):
             other=None,
             keep_partitioning=keep_partitioning,
             sync_labels=sync_labels,
+            pass_axis_lengths_to_partitions=pass_axis_lengths_to_partitions,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
