@@ -1716,11 +1716,19 @@ def test_xs():
     df = df.set_index(["class", "animal", "locomotion"])
 
     result = df.xs("mammal")
-    expected = df.loc["mammal"]
+    expected = df._to_pandas().xs("mammal")
+    df_equals(result, expected)
+
+    result = df.xs("cat", level=1)
+    expected = df._to_pandas().xs("cat", level=1)
+    df_equals(result, expected)
+
+    result = df.xs("cat", level=1, drop_level=False)
+    expected = df._to_pandas().xs("cat", level=1, drop_level=False)
     df_equals(result, expected)
 
     result = df.xs("num_legs", axis=1)
-    expected = df["num_legs"]
+    expected = df._to_pandas().xs("num_legs", axis=1)
     df_equals(result, expected)
 
 
