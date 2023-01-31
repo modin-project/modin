@@ -253,6 +253,10 @@ So far there is no a solution to fix or work around the problem rather than not 
 However, this may lead to other problem regarding a race condition in Ray between the import thread and the thread executing the code.
 So for now we just highlight the problem in hope of a future fix in Ray itself.
 
+Also, it is worth noting that every distributed engine by its nature has a little overhead for the first operation being call,
+which may be important for microbenchmarks. What you likely want to do is warm up worker processes
+either by excluding the time of the first iteration from your measurements or execute a simple function in workers to fully set up them.
+
 Common errors
 -------------
 
