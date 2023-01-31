@@ -1708,6 +1708,11 @@ def test_xs():
         "locomotion": ["walks", "walks", "flies", "walks"],
     }
     df = pd.DataFrame(data=d)
+
+    # to make several partitions
+    df = pd.concat([df, df], axis=0)
+    df = df.join(df, rsuffix="_y")
+
     df = df.set_index(["class", "animal", "locomotion"])
 
     result = df.xs("mammal")
