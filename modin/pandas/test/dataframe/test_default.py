@@ -660,7 +660,10 @@ def test_replace():
 @pytest.mark.parametrize("rule", ["5T", pandas.offsets.Hour()])
 @pytest.mark.parametrize("axis", [0])
 def test_resampler(rule, axis):
-    data, index, = (
+    (
+        data,
+        index,
+    ) = (
         test_data_resample["data"],
         test_data_resample["index"],
     )
@@ -689,7 +692,10 @@ def test_resampler(rule, axis):
     ],
 )
 def test_resampler_functions(rule, axis, method):
-    data, index, = (
+    (
+        data,
+        index,
+    ) = (
         test_data_resample["data"],
         test_data_resample["index"],
     )
@@ -715,7 +721,10 @@ def test_resampler_functions(rule, axis, method):
     ],
 )
 def test_resampler_functions_with_arg(rule, axis, method_arg):
-    data, index, = (
+    (
+        data,
+        index,
+    ) = (
         test_data_resample["data"],
         test_data_resample["index"],
     )
@@ -737,7 +746,10 @@ def test_resampler_functions_with_arg(rule, axis, method_arg):
 @pytest.mark.parametrize("on", [None, "DateColumn"])
 @pytest.mark.parametrize("level", [None, 1])
 def test_resample_specific(rule, closed, label, on, level):
-    data, index, = (
+    (
+        data,
+        index,
+    ) = (
         test_data_resample["data"],
         test_data_resample["index"],
     )
