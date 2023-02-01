@@ -313,6 +313,13 @@ class StringMethods(ClassLogger):
         )
 
     def extract(self, pat, flags=0, expand=True):
+        import re
+        n = re.compile(pat).groups
+        if expand or n > 1:
+            from .dataframe import DataFrame
+            return DataFrame(
+                query_compiler=self._query_compiler.str_extract(pat, flags, expand)
+            )
         return Series(
             query_compiler=self._query_compiler.str_extract(pat, flags, expand)
         )
