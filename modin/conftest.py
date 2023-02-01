@@ -424,7 +424,6 @@ def create_fixture(file_type):
 
 
 for file_type in ("json", "html", "excel", "feather", "stata", "hdf", "pickle", "fwf"):
-
     fixture = create_fixture(file_type)
     fixture.__name__ = f"make_{file_type}_file"
     globals()[fixture.__name__] = pytest.fixture(fixture)

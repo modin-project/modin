@@ -870,7 +870,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # This will happen with Arrow buffer read-only errors. We don't want to copy
                     # all the time, so this will try to fast-path the code first.
                     val = op(resampled_val, *args, **kwargs)
-                except (ValueError):
+                except ValueError:
                     resampled_val = df.copy().resample(**resample_kwargs)
                     val = op(resampled_val, *args, **kwargs)
             else:
@@ -1943,7 +1943,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         elif isinstance(value, dict):
             if squeeze_self:
-
                 # For Series dict works along the index.
                 def fillna(df):
                     return pandas.DataFrame(
@@ -1951,7 +1950,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
 
             else:
-
                 # For DataFrames dict works along columns, all columns have to be present.
                 def fillna(df):
                     func_dict = {
