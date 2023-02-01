@@ -350,7 +350,11 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
         )
 
     def first(self, **kwargs):
-        return self._default_to_pandas(lambda df: df.first(**kwargs))
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_first,
+            agg_kwargs=dict(**kwargs),
+            numeric_only=False,
+        )
 
     def backfill(self, limit=None):
         return self.bfill(limit)
@@ -606,7 +610,11 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
     agg = aggregate
 
     def last(self, **kwargs):
-        return self._default_to_pandas(lambda df: df.last(**kwargs))
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_last,
+            agg_kwargs=dict(**kwargs),
+            numeric_only=False,
+        )
 
     def mad(self, **kwargs):
         return self._default_to_pandas(lambda df: df.mad(**kwargs))
