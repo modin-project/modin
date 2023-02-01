@@ -155,10 +155,10 @@ class ColumnStoreDataset:
         fs_files : list
             List of files from path with fs-protocol prepended.
         """
-
         # Older versions of fsspec doesn't support unstrip_protocol(). It
         # was only added relatively recently:
         # https://github.com/fsspec/filesystem_spec/pull/828
+
         def _unstrip_protocol(protocol, path):
             protos = (protocol,) if isinstance(protocol, str) else protocol
             for protocol in protos:
