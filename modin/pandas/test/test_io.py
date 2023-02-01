@@ -324,7 +324,6 @@ class TestCsv:
         converters,
         skipfooter,
     ):
-
         if dtype:
             dtype = {
                 col: "object"
@@ -335,7 +334,6 @@ class TestCsv:
 
         eval_io(
             fn_name="read_csv",
-            check_exception_type=None,  # issue #2320
             raising_exceptions=None,
             check_kwargs_callable=not callable(converters),
             # read_csv kwargs
@@ -421,7 +419,6 @@ class TestCsv:
                     )
             eval_io(
                 fn_name="read_csv",
-                check_exception_type=None,  # issue #2320
                 raising_exceptions=None,
                 check_kwargs_callable=not callable(skiprows),
                 # read_csv kwargs
@@ -449,7 +446,6 @@ class TestCsv:
 
         eval_io(
             fn_name="read_csv",
-            check_exception_type=None,  # issue #2320
             raising_exceptions=None,
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_yes_no"],
@@ -705,7 +701,7 @@ class TestCsv:
     @pytest.mark.parametrize("decimal", [".", "_"])
     @pytest.mark.parametrize("lineterminator", [None, "x", "\n"])
     @pytest.mark.parametrize("escapechar", [None, "d", "x"])
-    @pytest.mark.parametrize("dialect", ["test_csv_dialect", None])
+    @pytest.mark.parametrize("dialect", ["test_csv_dialect", "use_dialect_name", None])
     def test_read_csv_file_format(
         self,
         make_csv_file,
@@ -715,17 +711,6 @@ class TestCsv:
         escapechar,
         dialect,
     ):
-        if Engine.get() != "Python" and lineterminator == "x":
-            pytest.xfail("read_csv with Ray engine outputs empty frame - issue #2493")
-        elif Engine.get() != "Python" and escapechar:
-            pytest.xfail(
-                "read_csv with Ray engine fails with some 'escapechar' parameters - issue #2494"
-            )
-        elif Engine.get() != "Python" and dialect:
-            pytest.xfail(
-                "read_csv with Ray engine fails with `dialect` parameter - issue #2508"
-            )
-
         with ensure_clean(".csv") as unique_filename:
             if dialect:
                 test_csv_dialect_params = {
@@ -736,7 +721,9 @@ class TestCsv:
                     "quoting": csv.QUOTE_ALL,
                 }
                 csv.register_dialect(dialect, **test_csv_dialect_params)
-                dialect = csv.get_dialect(dialect)
+                if dialect != "use_dialect_name":
+                    # otherwise try with dialect name instead of `_csv.Dialect` object
+                    dialect = csv.get_dialect(dialect)
                 make_csv_file(filename=unique_filename, **test_csv_dialect_params)
             else:
                 make_csv_file(
@@ -748,7 +735,6 @@ class TestCsv:
                 )
 
             eval_io(
-                check_exception_type=None,  # issue #2320
                 raising_exceptions=None,
                 fn_name="read_csv",
                 # read_csv kwargs
@@ -1114,7 +1100,6 @@ class TestCsv:
         )
 
     def test_read_csv_wrong_path(self):
-
         raising_exceptions = [e for e in io_ops_bad_exc if e != FileNotFoundError]
 
         eval_io(
@@ -1928,10 +1913,6 @@ class TestExcel:
 
             assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
 
-    @pytest.mark.xfail(
-        Engine.get() != "Python",
-        reason="Test fails because of issue 3305",
-    )
     @check_file_leaks
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",

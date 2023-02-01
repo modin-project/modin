@@ -24,7 +24,7 @@ import typing
 import re
 
 from modin.config import Engine
-from modin.utils import _inherit_docstrings
+from modin.utils import _inherit_docstrings, get_current_execution
 from modin.core.io import BaseIO
 from pandas.util._decorators import doc
 
@@ -502,18 +502,6 @@ class ExperimentalBaseFactory(BaseFactory):
                 del kwargs["max_sessions"]
         return cls.io_cls.read_sql(**kwargs)
 
-
-@doc(_doc_factory_class, execution_name="experimental PandasOnRay")
-class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
-    @classmethod
-    @doc(_doc_factory_prepare_method, io_module_name="``ExperimentalPandasOnRayIO``")
-    def prepare(cls):
-        from modin.experimental.core.execution.ray.implementations.pandas_on_ray.io import (
-            ExperimentalPandasOnRayIO,
-        )
-
-        cls.io_cls = ExperimentalPandasOnRayIO
-
     @classmethod
     @doc(
         _doc_io_method_raw_template,
@@ -521,6 +509,12 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
         params=_doc_io_method_kwargs_params,
     )
     def _read_csv_glob(cls, **kwargs):
+        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
+        current_execution = get_current_execution()
+        if current_execution not in supported_execution:
+            raise NotImplementedError(
+                f"`_read_csv_glob()` is not implemented for {current_execution} execution."
+            )
         return cls.io_cls.read_csv_glob(**kwargs)
 
     @classmethod
@@ -530,6 +524,12 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
         params=_doc_io_method_kwargs_params,
     )
     def _read_pickle_distributed(cls, **kwargs):
+        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
+        current_execution = get_current_execution()
+        if current_execution not in supported_execution:
+            raise NotImplementedError(
+                f"`_read_pickle_distributed()` is not implemented for {current_execution} execution."
+            )
         return cls.io_cls.read_pickle_distributed(**kwargs)
 
     @classmethod
@@ -539,6 +539,12 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
         params=_doc_io_method_kwargs_params,
     )
     def _read_custom_text(cls, **kwargs):
+        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
+        current_execution = get_current_execution()
+        if current_execution not in supported_execution:
+            raise NotImplementedError(
+                f"`_read_custom_text()` is not implemented for {current_execution} execution."
+            )
         return cls.io_cls.read_custom_text(**kwargs)
 
     @classmethod
@@ -553,7 +559,25 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
         **kwargs : kwargs
             Arguments to the writer method.
         """
+        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
+        current_execution = get_current_execution()
+        if current_execution not in supported_execution:
+            raise NotImplementedError(
+                f"`_to_pickle_distributed()` is not implemented for {current_execution} execution."
+            )
         return cls.io_cls.to_pickle_distributed(*args, **kwargs)
+
+
+@doc(_doc_factory_class, execution_name="experimental PandasOnRay")
+class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
+    @classmethod
+    @doc(_doc_factory_prepare_method, io_module_name="``ExperimentalPandasOnRayIO``")
+    def prepare(cls):
+        from modin.experimental.core.execution.ray.implementations.pandas_on_ray.io import (
+            ExperimentalPandasOnRayIO,
+        )
+
+        cls.io_cls = ExperimentalPandasOnRayIO
 
 
 @doc(_doc_factory_class, execution_name="experimental PandasOnDask")
@@ -728,44 +752,3 @@ class ExperimentalPandasOnUnidistFactory(
         )
 
         cls.io_cls = ExperimentalPandasOnUnidistIO
-
-    @classmethod
-    @doc(
-        _doc_io_method_raw_template,
-        source="CSV files",
-        params=_doc_io_method_kwargs_params,
-    )
-    def _read_csv_glob(cls, **kwargs):
-        return cls.io_cls.read_csv_glob(**kwargs)
-
-    @classmethod
-    @doc(
-        _doc_io_method_raw_template,
-        source="Pickle files",
-        params=_doc_io_method_kwargs_params,
-    )
-    def _read_pickle_distributed(cls, **kwargs):
-        return cls.io_cls.read_pickle_distributed(**kwargs)
-
-    @classmethod
-    @doc(
-        _doc_io_method_raw_template,
-        source="Custom text files",
-        params=_doc_io_method_kwargs_params,
-    )
-    def _read_custom_text(cls, **kwargs):
-        return cls.io_cls.read_custom_text(**kwargs)
-
-    @classmethod
-    def _to_pickle_distributed(cls, *args, **kwargs):
-        """
-        Distributed pickle query compiler object.
-
-        Parameters
-        ----------
-        *args : args
-            Arguments to the writer method.
-        **kwargs : kwargs
-            Arguments to the writer method.
-        """
-        return cls.io_cls.to_pickle_distributed(*args, **kwargs)

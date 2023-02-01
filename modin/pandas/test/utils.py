@@ -23,7 +23,7 @@ from pandas.testing import (
     assert_index_equal,
     assert_extension_array_equal,
 )
-from pandas.core.dtypes.common import is_list_like
+from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
 from modin.config import MinPartitionSize, NPartitions
 import modin.pandas as pd
 from modin.utils import to_pandas, try_cast_to_pandas
@@ -640,7 +640,12 @@ def df_equals(df1, df2):
         assert_index_equal(df1, df2)
     elif isinstance(df1, pandas.Series) and isinstance(df2, pandas.Series):
         assert_series_equal(df1, df2, check_dtype=False, check_series_type=False)
-    elif isinstance(df1, pandas.Categorical) and isinstance(df2, pandas.Categorical):
+    elif (
+        hasattr(df1, "dtype")
+        and hasattr(df2, "dtype")
+        and isinstance(df1.dtype, pandas.core.dtypes.dtypes.ExtensionDtype)
+        and isinstance(df2.dtype, pandas.core.dtypes.dtypes.ExtensionDtype)
+    ):
         assert_extension_array_equal(df1, df2)
     elif isinstance(df1, groupby_types) and isinstance(df2, groupby_types):
         for g1, g2 in zip(df1, df2):
@@ -683,6 +688,18 @@ def modin_df_almost_equals_pandas(modin_df, pandas_df):
         or diff_max < 0.0001
         or (all(modin_df.isna().all()) and all(pandas_df.isna().all()))
     )
+
+
+def try_modin_df_almost_equals_compare(df1, df2):
+    """Compare two dataframes as nearly equal if possible, otherwise compare as completely equal."""
+    # `modin_df_almost_equals_pandas` is numeric-only comparator
+    dtypes1, dtypes2 = [
+        dtype if is_list_like(dtype := df.dtypes) else [dtype] for df in (df1, df2)
+    ]
+    if all(map(is_numeric_dtype, dtypes1)) and all(map(is_numeric_dtype, dtypes2)):
+        modin_df_almost_equals_pandas(df1, df2)
+    else:
+        df_equals(df1, df2)
 
 
 def df_is_empty(df):

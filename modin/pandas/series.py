@@ -23,6 +23,7 @@ from pandas.core.dtypes.common import (
     is_dict_like,
     is_list_like,
 )
+from pandas.core.series import _coerce_method
 from pandas._libs.lib import no_default, NoDefault
 from pandas._typing import IndexKeyFunc, Axis
 from typing import Union, Optional, Hashable, TYPE_CHECKING, IO
@@ -271,16 +272,6 @@ class Series(BasePandasDataset):
     def __rdivmod__(self, left):
         return self.rdivmod(left)
 
-    def __float__(self):
-        """
-        Return float representation of Series.
-
-        Returns
-        -------
-        float
-        """
-        return float(self.squeeze())
-
     @_doc_binary_op(operation="integer division", bin_op="floordiv")
     def __floordiv__(self, right):
         return self.floordiv(right)
@@ -314,15 +305,8 @@ class Series(BasePandasDataset):
                 return self[key]
             raise err
 
-    def __int__(self):
-        """
-        Return integer representation of Series.
-
-        Returns
-        -------
-        int
-        """
-        return int(self.squeeze())
+    __float__ = _coerce_method(float)
+    __int__ = _coerce_method(int)
 
     def __iter__(self):
         """
@@ -420,7 +404,14 @@ class Series(BasePandasDataset):
         )
         if len(self) == 0:
             return "Series([], {}{}{}".format(freq_str, name_str, dtype_str)
-        return temp_str.rsplit("\n", 1)[0] + "\n{}{}{}{}".format(
+        maxsplit = 1
+        if (
+            isinstance(temp_df, pandas.Series)
+            and temp_df.name is not None
+            and temp_df.dtype == "category"
+        ):
+            maxsplit = 2
+        return temp_str.rsplit("\n", maxsplit)[0] + "\n{}{}{}{}".format(
             freq_str, name_str, len_str, dtype_str
         )
 
@@ -485,6 +476,11 @@ class Series(BasePandasDataset):
         Return Series as ndarray or ndarray-like depending on the dtype.
         """
         import modin.pandas as pd
+
+        if isinstance(
+            self.dtype, pandas.core.dtypes.dtypes.ExtensionDtype
+        ) and not isinstance(self.dtype, pd.CategoricalDtype):
+            return self._default_to_pandas("values")
 
         data = self.to_numpy()
         if isinstance(self.dtype, pd.CategoricalDtype):

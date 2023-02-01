@@ -56,11 +56,10 @@ from modin.core.dataframe.algebra import (
     Reduce,
     Binary,
     GroupByReduce,
-    groupby_reduce_functions,
-    is_reduce_function,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
 from .utils import get_group_names
+from .groupby import GroupbyReduceImpl
 
 
 def _get_axis(axis):
@@ -242,10 +241,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
     ----------
     modin_frame : PandasDataframe
         Modin Frame to query with the compiled queries.
+    shape_hint : {"row", "column", None}, default: None
+        Shape hint for frames known to be a column or a row, otherwise None.
     """
 
-    def __init__(self, modin_frame):
+    def __init__(self, modin_frame, shape_hint=None):
         self._modin_frame = modin_frame
+        self._shape_hint = shape_hint
 
     @property
     def lazy_execution(self):
@@ -375,34 +377,34 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
 
-    add = Binary.register(pandas.DataFrame.add)
-    combine = Binary.register(pandas.DataFrame.combine)
-    combine_first = Binary.register(pandas.DataFrame.combine_first)
-    eq = Binary.register(pandas.DataFrame.eq)
-    floordiv = Binary.register(pandas.DataFrame.floordiv)
-    ge = Binary.register(pandas.DataFrame.ge)
-    gt = Binary.register(pandas.DataFrame.gt)
-    le = Binary.register(pandas.DataFrame.le)
-    lt = Binary.register(pandas.DataFrame.lt)
-    mod = Binary.register(pandas.DataFrame.mod)
-    mul = Binary.register(pandas.DataFrame.mul)
-    rmul = Binary.register(pandas.DataFrame.rmul)
-    ne = Binary.register(pandas.DataFrame.ne)
-    pow = Binary.register(pandas.DataFrame.pow)
-    radd = Binary.register(pandas.DataFrame.radd)
-    rfloordiv = Binary.register(pandas.DataFrame.rfloordiv)
-    rmod = Binary.register(pandas.DataFrame.rmod)
-    rpow = Binary.register(pandas.DataFrame.rpow)
-    rsub = Binary.register(pandas.DataFrame.rsub)
-    rtruediv = Binary.register(pandas.DataFrame.rtruediv)
-    sub = Binary.register(pandas.DataFrame.sub)
-    truediv = Binary.register(pandas.DataFrame.truediv)
-    __and__ = Binary.register(pandas.DataFrame.__and__)
-    __or__ = Binary.register(pandas.DataFrame.__or__)
-    __rand__ = Binary.register(pandas.DataFrame.__rand__)
-    __ror__ = Binary.register(pandas.DataFrame.__ror__)
-    __rxor__ = Binary.register(pandas.DataFrame.__rxor__)
-    __xor__ = Binary.register(pandas.DataFrame.__xor__)
+    add = Binary.register(pandas.DataFrame.add, infer_dtypes="common_cast")
+    combine = Binary.register(pandas.DataFrame.combine, infer_dtypes="common_cast")
+    combine_first = Binary.register(pandas.DataFrame.combine_first, infer_dtypes="bool")
+    eq = Binary.register(pandas.DataFrame.eq, infer_dtypes="bool")
+    floordiv = Binary.register(pandas.DataFrame.floordiv, infer_dtypes="common_cast")
+    ge = Binary.register(pandas.DataFrame.ge, infer_dtypes="bool")
+    gt = Binary.register(pandas.DataFrame.gt, infer_dtypes="bool")
+    le = Binary.register(pandas.DataFrame.le, infer_dtypes="bool")
+    lt = Binary.register(pandas.DataFrame.lt, infer_dtypes="bool")
+    mod = Binary.register(pandas.DataFrame.mod, infer_dtypes="common_cast")
+    mul = Binary.register(pandas.DataFrame.mul, infer_dtypes="common_cast")
+    rmul = Binary.register(pandas.DataFrame.rmul, infer_dtypes="common_cast")
+    ne = Binary.register(pandas.DataFrame.ne, infer_dtypes="bool")
+    pow = Binary.register(pandas.DataFrame.pow, infer_dtypes="common_cast")
+    radd = Binary.register(pandas.DataFrame.radd, infer_dtypes="common_cast")
+    rfloordiv = Binary.register(pandas.DataFrame.rfloordiv, infer_dtypes="common_cast")
+    rmod = Binary.register(pandas.DataFrame.rmod, infer_dtypes="common_cast")
+    rpow = Binary.register(pandas.DataFrame.rpow, infer_dtypes="common_cast")
+    rsub = Binary.register(pandas.DataFrame.rsub, infer_dtypes="common_cast")
+    rtruediv = Binary.register(pandas.DataFrame.rtruediv, infer_dtypes="float")
+    sub = Binary.register(pandas.DataFrame.sub, infer_dtypes="common_cast")
+    truediv = Binary.register(pandas.DataFrame.truediv, infer_dtypes="float")
+    __and__ = Binary.register(pandas.DataFrame.__and__, infer_dtypes="bool")
+    __or__ = Binary.register(pandas.DataFrame.__or__, infer_dtypes="bool")
+    __rand__ = Binary.register(pandas.DataFrame.__rand__, infer_dtypes="bool")
+    __ror__ = Binary.register(pandas.DataFrame.__ror__, infer_dtypes="bool")
+    __rxor__ = Binary.register(pandas.DataFrame.__rxor__, infer_dtypes="bool")
+    __xor__ = Binary.register(pandas.DataFrame.__xor__, infer_dtypes="bool")
     df_update = Binary.register(
         copy_df_for_func(pandas.DataFrame.update, display_name="update"),
         join_type="left",
@@ -460,7 +462,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return pandas.merge(left, right, **kwargs)
 
             new_self = self.__constructor__(
-                self._modin_frame.apply_full_axis(1, map_func)
+                self._modin_frame.apply_full_axis(
+                    axis=1,
+                    func=map_func,
+                    # We're going to explicitly change the shape across the 1-axis,
+                    # so we want for partitioning to adapt as well
+                    keep_partitioning=False,
+                )
             )
             is_reset_index = True
             if left_on and right_on:
@@ -505,7 +513,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return pandas.DataFrame.join(left, right, **kwargs)
 
             new_self = self.__constructor__(
-                self._modin_frame.apply_full_axis(1, map_func)
+                self._modin_frame.apply_full_axis(
+                    axis=1,
+                    func=map_func,
+                    # We're going to explicitly change the shape across the 1-axis,
+                    # so we want for partitioning to adapt as well
+                    keep_partitioning=False,
+                )
             )
             return new_self.sort_rows_by_column_values(on) if sort else new_self
         else:
@@ -686,13 +700,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # Switch the index and columns and transpose the data within the blocks.
         return self.__constructor__(self._modin_frame.transpose())
 
-    def columnarize(self):
-        if len(self.columns) != 1 or (
-            len(self.index) == 1 and self.index[0] == MODIN_UNNAMED_SERIES_LABEL
-        ):
-            return self.transpose()
-        return self
-
     def is_series_like(self):
         return len(self.columns) == 1 or len(self.index) == 1
 
@@ -863,7 +870,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # This will happen with Arrow buffer read-only errors. We don't want to copy
                     # all the time, so this will try to fast-path the code first.
                     val = op(resampled_val, *args, **kwargs)
-                except (ValueError):
+                except ValueError:
                     resampled_val = df.copy().resample(**resample_kwargs)
                     val = op(resampled_val, *args, **kwargs)
             else:
@@ -1343,7 +1350,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
     convert_dtypes = Map.register(pandas.DataFrame.convert_dtypes)
-    invert = Map.register(pandas.DataFrame.__invert__)
+    invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isin = Map.register(pandas.DataFrame.isin, dtypes=np.bool_)
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
     _isfinite = Map.register(
@@ -1936,7 +1943,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         elif isinstance(value, dict):
             if squeeze_self:
-
                 # For Series dict works along the index.
                 def fillna(df):
                     return pandas.DataFrame(
@@ -1944,7 +1950,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
 
             else:
-
                 # For DataFrames dict works along columns, all columns have to be present.
                 def fillna(df):
                     func_dict = {
@@ -2222,7 +2227,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.getitem_column_array(key)
 
     def getitem_column_array(self, key, numeric=False):
-        # Convert to list for type checking
+        shape_hint = "column" if len(key) == 1 else None
         if numeric:
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_positions=key
@@ -2231,7 +2236,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_labels=key
             )
-        return self.__constructor__(new_modin_frame)
+        return self.__constructor__(new_modin_frame, shape_hint=shape_hint)
 
     def getitem_row_array(self, key):
         return self.__constructor__(
@@ -2364,11 +2369,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if isinstance(value, type(self)):
             value.columns = [column]
             return self.insert_item(axis=1, loc=loc, value=value, how=None)
-
-        if is_list_like(value) and not isinstance(value, np.ndarray):
-            value = np.array(value)
-        elif is_scalar(value):
-            value = [value] * len(self.index)
 
         def insert(df, internal_indices=[]):
             """
@@ -2585,13 +2585,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             by = internal_qc + by[len(internal_by) :]
         return by, internal_by
 
-    groupby_all = GroupByReduce.register("all")
-    groupby_any = GroupByReduce.register("any")
-    groupby_count = GroupByReduce.register("count")
-    groupby_max = GroupByReduce.register("max")
-    groupby_min = GroupByReduce.register("min")
-    groupby_prod = GroupByReduce.register("prod")
-    groupby_sum = GroupByReduce.register("sum")
+    groupby_all = GroupbyReduceImpl.build_qc_method("all")
+    groupby_any = GroupbyReduceImpl.build_qc_method("any")
+    groupby_count = GroupbyReduceImpl.build_qc_method("count")
+    groupby_max = GroupbyReduceImpl.build_qc_method("max")
+    groupby_min = GroupbyReduceImpl.build_qc_method("min")
+    groupby_prod = GroupbyReduceImpl.build_qc_method("prod")
+    groupby_sum = GroupbyReduceImpl.build_qc_method("sum")
+    groupby_skew = GroupbyReduceImpl.build_qc_method("skew")
 
     def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
         _, internal_by = self._groupby_internal_columns(by, drop)
@@ -2625,36 +2626,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             else self
         )
 
-        def _groupby_mean_reduce(dfgb, **kwargs):
-            """
-            Compute mean value in each group using sums/counts values within reduce phase.
-
-            Parameters
-            ----------
-            dfgb : pandas.DataFrameGroupBy
-                GroupBy object for column-partition.
-            **kwargs : dict
-                Additional keyword parameters to be passed in ``pandas.DataFrameGroupBy.sum``.
-
-            Returns
-            -------
-            pandas.DataFrame
-                A pandas Dataframe with mean values in each column of each group.
-            """
-            sums_counts_df = dfgb.sum(**kwargs)
-            sum_df = sums_counts_df.iloc[:, : len(sums_counts_df.columns) // 2]
-            count_df = sums_counts_df.iloc[:, len(sums_counts_df.columns) // 2 :]
-            return sum_df / count_df
-
-        result = GroupByReduce.register(
-            lambda dfgb, **kwargs: pandas.concat(
-                [dfgb.sum(**kwargs), dfgb.count()],
-                axis=1,
-                copy=False,
-            ),
-            _groupby_mean_reduce,
-            default_to_pandas_func=lambda dfgb, **kwargs: dfgb.mean(**kwargs),
-        )(
+        result = GroupbyReduceImpl.build_qc_method("mean")(
             query_compiler=qc_with_converted_datetime_cols,
             by=by,
             axis=axis,
@@ -2695,67 +2667,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             result.columns = (
                 result.columns[:-1].droplevel(-1).append(pandas.Index(["size"]))
             )
-        return result
-
-    def groupby_skew(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
-        def map_skew(dfgb, *args, **kwargs):
-            df = dfgb.obj
-            by_cols = dfgb.exclusions
-            cols_to_agg = df.columns.difference(by_cols)
-
-            df_pow2 = pandas.concat([df[by_cols], df[cols_to_agg] ** 2], axis=1)
-            df_pow3 = pandas.concat([df[by_cols], df[cols_to_agg] ** 3], axis=1)
-
-            return pandas.concat(
-                [
-                    dfgb.count(*args, **kwargs),
-                    dfgb.sum(*args, **kwargs),
-                    df_pow2.groupby(dfgb.keys, **groupby_kwargs).sum(*args, **kwargs),
-                    df_pow3.groupby(dfgb.keys, **groupby_kwargs).sum(*args, **kwargs),
-                ],
-                copy=False,
-                axis=1,
-            )
-
-        def reduce_skew(dfgb, *args, **kwargs):
-            df = dfgb.sum(*args, **kwargs)
-            chunk_size = df.shape[1] // 4
-
-            count = df.iloc[:, :chunk_size]
-            # s = sum(x)
-            s = df.iloc[:, chunk_size : chunk_size * 2]
-            # s2 = sum(x^2)
-            s2 = df.iloc[:, chunk_size * 2 : chunk_size * 3]
-            # s3 = sum(x^3)
-            s3 = df.iloc[:, chunk_size * 3 : chunk_size * 4]
-
-            # mean = sum(x) / count
-            m = s / count
-
-            # m2 = sum( (x - m)^ 2) = sum(x^2 - 2*x*m + m^2)
-            m2 = s2 - 2 * m * s + count * (m**2)
-
-            # m3 = sum( (x - m)^ 3) = sum(x^3 - 3*x^2*m + 3*x*m^2 - m^3)
-            m3 = s3 - 3 * m * s2 + 3 * s * (m**2) - count * (m**3)
-
-            # The equation for the 'skew' was taken directly from pandas:
-            # https://github.com/pandas-dev/pandas/blob/8dab54d6573f7186ff0c3b6364d5e4dd635ff3e7/pandas/core/nanops.py#L1226
-            skew_res = (count * (count - 1) ** 0.5 / (count - 2)) * (m3 / m2**1.5)
-            return skew_res
-
-        result = GroupByReduce.register(
-            map_skew,
-            reduce_skew,
-            default_to_pandas_func=lambda dfgb, **kwargs: dfgb.skew(**kwargs),
-        )(
-            query_compiler=self,
-            by=by,
-            axis=axis,
-            groupby_kwargs=groupby_kwargs,
-            agg_args=agg_args,
-            agg_kwargs=agg_kwargs,
-            drop=drop,
-        )
         return result
 
     def _groupby_dict_reduce(
@@ -2806,13 +2717,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         map_dict = {}
         reduce_dict = {}
+        kwargs.setdefault(
+            "default_to_pandas_func",
+            lambda grp, *args, **kwargs: grp.agg(agg_func, *args, **kwargs),
+        )
+
         rename_columns = any(
             not isinstance(fn, str) and isinstance(fn, Iterable)
             for fn in agg_func.values()
         )
         for col, col_funcs in agg_func.items():
             if not rename_columns:
-                map_dict[col], reduce_dict[col] = groupby_reduce_functions[col_funcs]
+                map_dict[col], reduce_dict[col], _ = GroupbyReduceImpl.get_impl(
+                    col_funcs
+                )
                 continue
 
             if isinstance(col_funcs, str):
@@ -2827,13 +2745,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 else:
                     raise TypeError
 
-                map_fns.append((new_col_name, groupby_reduce_functions[func][0]))
+                map_fn, reduce_fn, _ = GroupbyReduceImpl.get_impl(func)
+
+                map_fns.append((new_col_name, map_fn))
                 reduced_col_name = (
                     (*col, new_col_name)
                     if isinstance(col, tuple)
                     else (col, new_col_name)
                 )
-                reduce_dict[reduced_col_name] = groupby_reduce_functions[func][1]
+                reduce_dict[reduced_col_name] = reduce_fn
             map_dict[col] = map_fns
         return GroupByReduce.register(map_dict, reduce_dict, **kwargs)(
             query_compiler=self,
@@ -2878,9 +2798,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
         how="axis_wise",
         drop=False,
     ):
-        if isinstance(agg_func, dict) and all(
-            is_reduce_function(x) for x in agg_func.values()
-        ):
+        # Defaulting to pandas in case of an empty frame as we can't process it properly.
+        # Higher API level won't pass empty data here unless the frame has delayed
+        # computations. So we apparently lose some laziness here (due to index access)
+        # because of the inability to process empty groupby natively.
+        if len(self.columns) == 0 or len(self.index) == 0:
+            return super().groupby_agg(
+                by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
+            )
+
+        if isinstance(agg_func, dict) and GroupbyReduceImpl.has_impl_for(agg_func):
             return self._groupby_dict_reduce(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, drop
             )
@@ -2934,7 +2861,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # We have to filter func-dict BEFORE inserting broadcasted 'by' columns
             # to avoid multiple aggregation results for 'by' cols in case they're
             # present in the func-dict:
-            partition_agg_func = GroupByReduce.try_filter_dict(agg_func, df)
+            partition_agg_func = GroupByReduce.get_callable(agg_func, df)
 
             internal_by_cols = pandas.Index([])
             missed_by_cols = pandas.Index([])
@@ -3153,6 +3080,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             to_group = self.drop(columns=unique_keys)
 
         keys_columns = self.getitem_column_array(unique_keys)
+        len_values = len(values)
+        if len_values == 0:
+            len_values = len(self.columns.drop(unique_keys))
 
         def applyier(df, other):
             """
@@ -3186,6 +3116,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 sort=sort,
             )
 
+            # if only one value is specified, removing level that maps
+            # columns from `values` to the actual values
+            if len(index) > 0 and len_values == 1 and result.columns.nlevels > 1:
+                result.columns = result.columns.droplevel(int(margins))
+
             # in that case Pandas transposes the result of `pivot_table`,
             # transposing it back to be consistent with column axis values along
             # different partitions
@@ -3203,14 +3138,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # transposing the result again, to be consistent with Pandas result
         if len(index) == 0 and len(columns) > 0:
             result = result.transpose()
-
-        if len(values) == 0:
-            values = self.columns.drop(unique_keys)
-
-        # if only one value is specified, removing level that maps
-        # columns from `values` to the actual values
-        if len(index) > 0 and len(values) == 1 and result.columns.nlevels > 1:
-            result.columns = result.columns.droplevel(int(margins))
 
         return result
 
