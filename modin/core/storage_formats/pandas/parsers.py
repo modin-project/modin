@@ -790,7 +790,6 @@ read_sql_engine : str
     Underlying engine ('pandas' or 'connectorx') used for fetching query result.""",
     )
     def parse(sql, con, index_col, read_sql_engine, **kwargs):
-
         enable_cx = False
         if read_sql_engine == "Connectorx":
             try:

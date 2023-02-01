@@ -292,7 +292,6 @@ class TestCSV:
         parse_dates,
         names,
     ):
-
         parse_dates_unsupported = isinstance(parse_dates, dict) or (
             isinstance(parse_dates, list)
             and any(not isinstance(date, str) for date in parse_dates)
