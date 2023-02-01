@@ -2204,8 +2204,9 @@ def test_loc(data):
     data = np.arange(100)
     modin_series = pd.Series(data, index=index).sort_index()
     pandas_series = pandas.Series(data, index=index).sort_index()
-    modin_result = modin_series.loc[(slice(None), 1)]
-    pandas_result = pandas_series.loc[(slice(None), 1)]
+    # Using 'noqa' below as 'black' and 'flake8' can't agree on whether to keep a whitespace after the ','
+    modin_result = modin_series.loc[(slice(None), 1),]  # noqa E231
+    pandas_result = pandas_series.loc[(slice(None), 1),]  # noqa E231
     df_equals(modin_result, pandas_result)
 
 
