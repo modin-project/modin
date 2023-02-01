@@ -15,7 +15,7 @@ dependencies:
   - pyhdk==0.3.1
   - s3fs>=2021.8
   - psutil
-  - openpyxl
+  - openpyxl<3.1.0
   - xlrd
   - sqlalchemy>=1.4.0,<1.4.46
   - scipy
