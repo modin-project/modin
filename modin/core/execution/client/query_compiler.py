@@ -243,6 +243,21 @@ class ClientQueryCompiler(BaseQueryCompiler):
             )
         )
 
+    def groupby_prod(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.__constructor__(
+            self._service.groupby_prod(
+                self._id, by._id, axis, groupby_kwargs, agg_args, agg_kwargs, drop
+            )
+        )
+
     def groupby_count(
         self,
         by,
