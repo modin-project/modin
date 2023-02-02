@@ -274,11 +274,7 @@ def _read(**kwargs) -> DataFrame:
     Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    try:
-        pd_obj = FactoryDispatcher.read_csv_glob(**kwargs)
-    except AttributeError:
-        raise AttributeError(f"read_csv_glob() isn't implemented for {Engine.get()}")
-
+    pd_obj = FactoryDispatcher.read_csv_glob(**kwargs)
     # This happens when `read_csv` returns a TextFileReader object for iterating through
     if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
         reader = pd_obj.read
