@@ -518,7 +518,10 @@ class GroupByReduce(TreeReduce):
             elif grp_has_id_level:
                 # Adding the 'id' level to the aggregation keys so they match `grp_obj` columns
                 native_aggs_modified = {
-                    (cls.ID_LEVEL_NAME, *key): value
+                    (
+                        cls.ID_LEVEL_NAME,
+                        *(key if isinstance(key, tuple) else (key,)),
+                    ): value
                     for key, value in native_aggs.items()
                 }
                 native_agg_res = grp_obj.agg(native_aggs_modified)
