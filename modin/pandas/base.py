@@ -17,6 +17,7 @@ import numpy as np
 import pandas
 from pandas.compat import numpy as numpy_compat
 from pandas.core.common import count_not_none, pipe
+from pandas.core.describe import refine_percentiles
 from pandas.core.dtypes.common import (
     is_list_like,
     is_dict_like,
@@ -50,6 +51,7 @@ from pandas._typing import (
     TimedeltaConvertibleTypes,
     TimestampConvertibleTypes,
     RandomState,
+    npt,
 )
 import pickle as pkl
 import re
@@ -1232,54 +1234,33 @@ class BasePandasDataset(ClassLogger):
         """
         Generate descriptive statistics.
         """
-        if include is not None and (isinstance(include, np.dtype) or include != "all"):
-            if not is_list_like(include):
-                include = [include]
-            include = [pandas_dtype(i) if i != np.number else i for i in include]
-            if not any(
-                (isinstance(inc, np.dtype) and inc == d)
-                or (
-                    not isinstance(inc, np.dtype)
-                    and inc.__subclasscheck__(getattr(np, d.__str__()))
-                )
-                for d in self._get_dtypes()
-                for inc in include
-            ):
-                # This is the error that pandas throws.
-                raise ValueError("No objects to concatenate")
-        if exclude is not None:
-            if not is_list_like(exclude):
-                exclude = [exclude]
-            exclude = [pandas_dtype(e) if e != np.number else e for e in exclude]
-            if all(
-                (isinstance(exc, np.dtype) and exc == d)
-                or (
-                    not isinstance(exc, np.dtype)
-                    and exc.__subclasscheck__(getattr(np, d.__str__()))
-                )
-                for d in self._get_dtypes()
-                for exc in exclude
-            ):
-                # This is the error that pandas throws.
-                raise ValueError("No objects to concatenate")
-        if percentiles is not None:
-            # explicit conversion of `percentiles` to list
-            percentiles = list(percentiles)
-
-            # get them all to be in [0, 1]
-            validate_percentile(percentiles)
-
-            # median should always be included
-            if 0.5 not in percentiles:
-                percentiles.append(0.5)
-            percentiles = np.asarray(percentiles)
+        # copied from pandas.core.describe.describe_ndframe
+        percentiles = refine_percentiles(percentiles)
+        data = self
+        if (include is None) and (exclude is None):
+            # when some numerics are found, keep only numerics
+            default_include: list[npt.DTypeLike] = [np.number]
+            if datetime_is_numeric:
+                default_include.append("datetime")
+            data = self.select_dtypes(include=default_include)
+            if len(data.columns) == 0:
+                data = self
+        elif include == "all":
+            if exclude is not None:
+                msg = "exclude must be None when include is 'all'"
+                raise ValueError(msg)
+            data = self
         else:
-            percentiles = np.array([0.25, 0.5, 0.75])
-        return self.__constructor__(
-            query_compiler=self._query_compiler.describe(
-                percentiles=percentiles,
+            data = self.select_dtypes(
                 include=include,
                 exclude=exclude,
+            )
+        if data.empty:
+            # Match pandas error from concatenting empty list of series descriptions.
+            raise ValueError("No objects to concatenate")
+        return self.__constructor__(
+            query_compiler=data._query_compiler.describe(
+                percentiles=percentiles,
                 datetime_is_numeric=datetime_is_numeric,
             )
         )
