@@ -27,21 +27,11 @@ from .utils import (
     test_data_values,
     test_data_keys,
     df_equals,
-    assert_index_equal,
     sort_index_for_equal_values,
     eval_general,
-    default_to_pandas_ignore_string,
     bool_arg_values,
     bool_arg_keys,
 )
-
-
-# Our configuration in pytest.ini requires that we explicitly catch all
-# instances of defaulting to pandas, but some test modules, like this one,
-# have too many such instances.
-# TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
-# of defaulting to pandas.
-pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 @contextlib.contextmanager
@@ -743,16 +733,15 @@ def test_qcut(retbins):
     pandas_series = pandas.Series(range(10))
     modin_series = pd.Series(range(10))
     pandas_result = pandas.qcut(pandas_series, 4, retbins=retbins)
-    modin_result = pd.qcut(modin_series, 4, retbins=retbins)
+    with warns_that_defaulting_to_pandas():
+        modin_result = pd.qcut(modin_series, 4, retbins=retbins)
     if retbins:
         df_equals(modin_result[0], pandas_result[0])
-        assert_index_equal(
-            modin_result[0].cat.categories, pandas_result[0].cat.categories
-        )
+        df_equals(modin_result[0].cat.categories, pandas_result[0].cat.categories)
         assert_array_equal(modin_result[1], pandas_result[1])
     else:
         df_equals(modin_result, pandas_result)
-        assert_index_equal(modin_result.cat.categories, pandas_result.cat.categories)
+        df_equals(modin_result.cat.categories, pandas_result.cat.categories)
 
 
 @pytest.mark.parametrize(
