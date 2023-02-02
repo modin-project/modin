@@ -74,15 +74,15 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         build_args,
     )._read
 
-    _read_sql_with_offset_pandas_on_ray = None
+    __read_sql_with_offset_pandas_on_ray = None
 
     @property
-    def read_sql_with_offset_pandas_on_ray(self):
-        if self._read_sql_with_offset_pandas_on_ray is None:
+    def _read_sql_with_offset_pandas_on_ray(self):
+        if self.__read_sql_with_offset_pandas_on_ray is None:
             from modin.experimental.core.io.sql.utils import read_sql_with_offset
 
-            self._read_sql_with_offset_pandas_on_ray = ray.remote(read_sql_with_offset)
-        return self._read_sql_with_offset_pandas_on_ray
+            self.__read_sql_with_offset_pandas_on_ray = ray.remote(read_sql_with_offset)
+        return self.__read_sql_with_offset_pandas_on_ray
 
     @classmethod
     def read_sql(
@@ -187,7 +187,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
                 size = min_size
             start = end + 1
             end = start + size - 1
-            partition_id = cls.read_sql_with_offset_pandas_on_ray.options(
+            partition_id = cls._read_sql_with_offset_pandas_on_ray.options(
                 num_returns=num_splits + 1
             ).remote(
                 partition_column,
