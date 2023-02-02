@@ -82,7 +82,7 @@ class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
     __read_sql_with_offset_pandas_on_unidist = None
 
     @property
-    def _read_sql_with_offset_pandas_on_unidist(self):
+    def _read_sql_with_offset_pandas_on_unidist(self):  # noqa: GL08
         if self.__read_sql_with_offset_pandas_on_unidist is None:
             from modin.experimental.core.io.sql.utils import read_sql_with_offset
 

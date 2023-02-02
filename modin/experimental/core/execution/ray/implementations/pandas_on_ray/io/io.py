@@ -77,7 +77,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
     __read_sql_with_offset_pandas_on_ray = None
 
     @property
-    def _read_sql_with_offset_pandas_on_ray(self):
+    def _read_sql_with_offset_pandas_on_ray(self):  # noqa: GL08
         if self.__read_sql_with_offset_pandas_on_ray is None:
             from modin.experimental.core.io.sql.utils import read_sql_with_offset
 
