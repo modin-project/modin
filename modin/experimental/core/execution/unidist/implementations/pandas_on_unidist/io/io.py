@@ -24,7 +24,6 @@ import warnings
 import unidist
 
 from modin.core.storage_formats.pandas.parsers import (
-    _split_result_for_readers,
     PandasCSVGlobParser,
     PandasPickleExperimentalParser,
     CustomTextExperimentalParser,
@@ -46,6 +45,7 @@ from modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning
 )
 from modin.core.execution.unidist.common import UnidistWrapper
 from modin.config import NPartitions
+from modin.experimental.core.io.sql.utils import read_sql_with_offset
 
 
 class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
@@ -249,84 +249,4 @@ class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
         result.to_pandas()
 
 
-# unidist functions are not detected by codecov (thus pragma: no cover)
-@unidist.remote
-def _read_sql_with_offset_pandas_on_unidist(
-    partition_column,
-    start,
-    end,
-    num_splits,
-    sql,
-    con,
-    index_col=None,
-    coerce_float=True,
-    params=None,
-    parse_dates=None,
-    columns=None,
-    chunksize=None,
-):  # pragma: no cover
-    """
-    Read a chunk of SQL query or table into a pandas DataFrame using unidist task.
-
-    Parameters
-    ----------
-    partition_column : str
-        Column name used for data partitioning between the workers.
-    start : int
-        Lowest value to request from the `partition_column`.
-    end : int
-        Highest value to request from the `partition_column`.
-    num_splits : int
-        The number of partitions to split the column into.
-    sql : str or SQLAlchemy Selectable (select or text object)
-        SQL query to be executed or a table name.
-    con : SQLAlchemy connectable or str
-        Connection to database (sqlite3 connections are not supported).
-    index_col : str or list of str, optional
-        Column(s) to set as index(MultiIndex).
-    coerce_float : bool, default: True
-        Attempts to convert values of non-string, non-numeric objects
-        (like decimal.Decimal) to floating point, useful for SQL result sets.
-    params : list, tuple or dict, optional
-        List of parameters to pass to ``execute`` method. The syntax used
-        to pass parameters is database driver dependent. Check your
-        database driver documentation for which of the five syntax styles,
-        described in PEP 249's paramstyle, is supported.
-    parse_dates : list or dict, optional
-        The behavior is as follows:
-
-        - List of column names to parse as dates.
-        - Dict of `{column_name: format string}` where format string is
-          strftime compatible in case of parsing string times, or is one of
-          (D, s, ns, ms, us) in case of parsing integer timestamps.
-        - Dict of `{column_name: arg dict}`, where the arg dict corresponds
-          to the keyword arguments of ``pandas.to_datetime``
-          Especially useful with databases without native Datetime support,
-          such as SQLite.
-    columns : list, optional
-        List of column names to select from SQL table (only used when reading a
-        table).
-    chunksize : int, optional
-        If specified, return an iterator where `chunksize` is the number of rows
-        to include in each chunk.
-
-    Returns
-    -------
-    list
-        List with split read results and it's metadata (index, dtypes, etc.).
-    """
-    from modin.experimental.core.io.sql.utils import query_put_bounders
-
-    query_with_bounders = query_put_bounders(sql, partition_column, start, end)
-    pandas_df = pandas.read_sql(
-        query_with_bounders,
-        con,
-        index_col=index_col,
-        coerce_float=coerce_float,
-        params=params,
-        parse_dates=parse_dates,
-        columns=columns,
-        chunksize=chunksize,
-    )
-    index = len(pandas_df)
-    return _split_result_for_readers(1, num_splits, pandas_df) + [index]
+_read_sql_with_offset_pandas_on_unidist = unidist.remote(read_sql_with_offset)
