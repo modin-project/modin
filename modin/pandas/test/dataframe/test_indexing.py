@@ -1183,6 +1183,20 @@ def test_rename_axis_inplace():
     df_equals(modin_result, result)
 
 
+def test_rename_issue5600():
+    # Check the issue for more details
+    # https://github.com/modin-project/modin/issues/5600
+    df = pd.DataFrame({"a": [1, 2]})
+    df_renamed = df.rename(columns={"a": "new_a"}, copy=True, inplace=False)
+
+    # Check that the source frame was untouched
+    assert df.dtypes.keys().tolist() == ["a"]
+    assert df.columns.tolist() == ["a"]
+
+    assert df_renamed.dtypes.keys().tolist() == ["new_a"]
+    assert df_renamed.columns.tolist() == ["new_a"]
+
+
 def test_reorder_levels():
     data = np.random.randint(1, 100, 12)
     modin_df = pd.DataFrame(

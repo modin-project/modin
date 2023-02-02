@@ -1170,7 +1170,7 @@ class PandasDataframe(ClassLogger):
             self._columns_cache.copy() if self._columns_cache is not None else None,
             self._row_lengths_cache,
             self._column_widths_cache,
-            self._dtypes,
+            self._dtypes.copy() if self._dtypes is not None else None,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
