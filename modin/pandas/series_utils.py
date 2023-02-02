@@ -141,8 +141,11 @@ class StringMethods(ClassLogger):
     def cat(self, others=None, sep=None, na_rep=None, join=None):
         if isinstance(others, Series):
             others = others._to_pandas()
-        return self._default_to_pandas(
-            pandas.Series.str.cat, others=others, sep=sep, na_rep=na_rep, join=join
+        data = Series(query_compiler=self._query_compiler)
+        return data._reduce_dimension(
+            self._query_compiler.str_cat(
+                others=others, sep=sep, na_rep=na_rep, join=join
+            )
         )
 
     def decode(self, encoding, errors="strict"):
@@ -307,7 +310,10 @@ class StringMethods(ClassLogger):
         )
 
     def extract(self, pat, flags=0, expand=True):
-        if expand:
+        import re
+
+        n = re.compile(pat).groups
+        if expand or n > 1:
             from .dataframe import DataFrame
 
             return DataFrame(
@@ -337,9 +343,21 @@ class StringMethods(ClassLogger):
     def partition(self, sep=" ", expand=True):
         if sep is not None and len(sep) == 0:
             raise ValueError("empty separator")
-        return Series(
-            query_compiler=self._query_compiler.str_partition(sep=sep, expand=expand)
-        )
+
+        if expand:
+            from .dataframe import DataFrame
+
+            return DataFrame(
+                query_compiler=self._query_compiler.str_partition(
+                    sep=sep, expand=expand
+                )
+            )
+        else:
+            return Series(
+                query_compiler=self._query_compiler.str_partition(
+                    sep=sep, expand=expand
+                )
+            )
 
     def removeprefix(self, prefix):
         return Series(query_compiler=self._query_compiler.str_removeprefix(prefix))
@@ -353,11 +371,21 @@ class StringMethods(ClassLogger):
     def rpartition(self, sep=" ", expand=True):
         if sep is not None and len(sep) == 0:
             raise ValueError("empty separator")
-        return Series(
-            query_compiler=self._query_compiler.str_rpartition(
-                sep=sep, expand=expand
+
+        if expand:
+            from .dataframe import DataFrame
+
+            return DataFrame(
+                query_compiler=self._query_compiler.str_rpartition(
+                    sep=sep, expand=expand
+                )
             )
-        )
+        else:
+            return Series(
+                query_compiler=self._query_compiler.str_rpartition(
+                    sep=sep, expand=expand
+                )
+            )
 
     def lower(self):
         return Series(query_compiler=self._query_compiler.str_lower())
