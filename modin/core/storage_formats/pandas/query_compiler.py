@@ -458,6 +458,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             kwargs["sort"] = False
 
+            # Want to ensure that these are python lists
+            if left_on is not None and right_on is not None:
+                left_on = list(left_on) if is_list_like(left_on) else [left_on]
+                right_on = list(right_on) if is_list_like(right_on) else [right_on]
+            elif on is not None:
+                on = list(on) if is_list_like(on) else [on]
+
             def map_func(left, right=right, kwargs=kwargs):
                 return pandas.merge(left, right, **kwargs)
 
@@ -470,34 +477,53 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     keep_partitioning=False,
                 )
             )
-            is_reset_index = True
-            if left_on and right_on:
-                left_on = left_on if is_list_like(left_on) else [left_on]
-                right_on = right_on if is_list_like(right_on) else [right_on]
-                is_reset_index = (
-                    False
-                    if any(o in new_self.index.names for o in left_on)
-                    and any(o in right.index.names for o in right_on)
-                    else True
-                )
-                if sort:
-                    new_self = (
-                        new_self.sort_rows_by_column_values(left_on.append(right_on))
-                        if is_reset_index
-                        else new_self.sort_index(axis=0, level=left_on.append(right_on))
+
+            # Here we want to understand whether we're joining on a column or on an index level.
+            # It's cool if indexes are already materialized so we can easily check that, if not
+            # it's fine too, we can also decide that by columns, which tend to be already
+            # materialized quite often compared to the indexes.
+            keep_index = False
+            if self._modin_frame._index_cache is not None:
+                if left_on is not None and right_on is not None:
+                    keep_index = any(
+                        o in self.index.names
+                        and o in right_on
+                        and o in right.index.names
+                        for o in left_on
                     )
-            if on:
-                on = on if is_list_like(on) else [on]
-                is_reset_index = not any(
-                    o in new_self.index.names and o in right.index.names for o in on
-                )
-                if sort:
-                    new_self = (
-                        new_self.sort_rows_by_column_values(on)
-                        if is_reset_index
-                        else new_self.sort_index(axis=0, level=on)
+                elif on is not None:
+                    keep_index = any(
+                        o in self.index.names and o in right.index.names for o in on
                     )
-            return new_self.reset_index(drop=True) if is_reset_index else new_self
+            else:
+                # Have to trigger columns materialization. Hope they're already available at this point.
+                if left_on is not None and right_on is not None:
+                    keep_index = any(
+                        o not in right.columns
+                        and o in left_on
+                        and o not in self.columns
+                        for o in right_on
+                    )
+                elif on is not None:
+                    keep_index = any(
+                        o not in right.columns and o not in self.columns for o in on
+                    )
+
+            if sort:
+                if left_on is not None and right_on is not None:
+                    new_self = (
+                        new_self.sort_index(axis=0, level=left_on + right_on)
+                        if keep_index
+                        else new_self.sort_rows_by_column_values(left_on + right_on)
+                    )
+                elif on is not None:
+                    new_self = (
+                        new_self.sort_index(axis=0, level=on)
+                        if keep_index
+                        else new_self.sort_rows_by_column_values(on)
+                    )
+
+            return new_self if keep_index else new_self.reset_index(drop=True)
         else:
             return self.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
 

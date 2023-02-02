@@ -329,6 +329,75 @@ def test_merge(test_data, test_data2):
         modin_df.merge("Non-valid type")
 
 
+@pytest.mark.parametrize("has_index_cache", [True, False])
+def test_merge_on_index(has_index_cache):
+    modin_df1, pandas_df1 = create_test_dfs(
+        {
+            "idx_key1": [1, 2, 3, 4],
+            "idx_key2": [2, 3, 4, 5],
+            "idx_key3": [3, 4, 5, 6],
+            "data_col1": [10, 2, 3, 4],
+            "col_key1": [3, 4, 5, 6],
+            "col_key2": [3, 4, 5, 6],
+        }
+    )
+
+    modin_df1 = modin_df1.set_index(["idx_key1", "idx_key2"])
+    pandas_df1 = pandas_df1.set_index(["idx_key1", "idx_key2"])
+
+    modin_df2, pandas_df2 = create_test_dfs(
+        {
+            "idx_key1": [4, 3, 2, 1],
+            "idx_key2": [5, 4, 3, 2],
+            "idx_key3": [6, 5, 4, 3],
+            "data_col2": [10, 2, 3, 4],
+            "col_key1": [6, 5, 4, 3],
+            "col_key2": [6, 5, 4, 3],
+        }
+    )
+
+    modin_df2 = modin_df2.set_index(["idx_key2", "idx_key3"])
+    pandas_df2 = pandas_df2.set_index(["idx_key2", "idx_key3"])
+
+    def setup_cache():
+        if has_index_cache:
+            modin_df1.index  # triggering index materialization
+            modin_df2.index
+            assert modin_df1._query_compiler._modin_frame._index_cache is not None
+            assert modin_df2._query_compiler._modin_frame._index_cache is not None
+        else:
+            # Propagate deferred indices to partitions
+            modin_df1._query_compiler._modin_frame._propagate_index_objs(axis=0)
+            modin_df1._query_compiler._modin_frame._index_cache = None
+            modin_df2._query_compiler._modin_frame._propagate_index_objs(axis=0)
+            modin_df2._query_compiler._modin_frame._index_cache = None
+
+    for on in (
+        ["col_key1", "idx_key1"],
+        ["col_key1", "idx_key2"],
+        ["col_key1", "idx_key3"],
+        ["idx_key1"],
+        ["idx_key2"],
+        ["idx_key3"],
+    ):
+        setup_cache()
+        res = modin_df1.merge(modin_df2, on=on)
+        ref = pandas_df1.merge(pandas_df2, on=on)
+        df_equals(res, ref)
+
+    for left_on, right_on in (
+        (["idx_key1"], ["col_key1"]),
+        (["col_key1"], ["idx_key3"]),
+        (["idx_key1"], ["idx_key3"]),
+        (["idx_key2"], ["idx_key2"]),
+        (["col_key1", "idx_key2"], ["col_key2", "idx_key2"]),
+    ):
+        setup_cache()
+        res = modin_df1.merge(modin_df2, left_on=left_on, right_on=right_on)
+        ref = pandas_df1.merge(pandas_df2, left_on=left_on, right_on=right_on)
+        df_equals(res, ref)
+
+
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize(
     "ascending", bool_arg_values, ids=arg_keys("ascending", bool_arg_keys)
