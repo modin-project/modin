@@ -743,6 +743,11 @@ def test_qcut(retbins):
         df_equals(modin_result, pandas_result)
         df_equals(modin_result.cat.categories, pandas_result.cat.categories)
 
+    # test case for fallback to pandas, taken from pandas docs
+    pandas_result = pandas.qcut(range(5), 4)
+    modin_result = pd.qcut(range(5), 4)
+    df_equals(modin_result, pandas_result)
+
 
 @pytest.mark.parametrize(
     "data", [test_data_values[0], []], ids=["test_data_values[0]", "[]"]
