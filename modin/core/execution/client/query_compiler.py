@@ -911,6 +911,7 @@ _GROUPBY_FORWARDING_METHODS = frozenset(
         "any",
         "size",
         "skew",
+        "cumcount",
         "cumsum",
         "cummax",
         "cummin",
