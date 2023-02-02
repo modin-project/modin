@@ -509,7 +509,11 @@ class ExperimentalBaseFactory(BaseFactory):
         params=_doc_io_method_kwargs_params,
     )
     def _read_csv_glob(cls, **kwargs):
-        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
+        supported_execution = (
+            "ExperimentalPandasOnRay",
+            "ExperimentalPandasOnUnidist",
+            "ExperimentalPandasOnDask",
+        )
         current_execution = get_current_execution()
         if current_execution not in supported_execution:
             raise NotImplementedError(
@@ -524,7 +528,11 @@ class ExperimentalBaseFactory(BaseFactory):
         params=_doc_io_method_kwargs_params,
     )
     def _read_pickle_distributed(cls, **kwargs):
-        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
+        supported_execution = (
+            "ExperimentalPandasOnRay",
+            "ExperimentalPandasOnUnidist",
+            "ExperimentalPandasOnDask",
+        )
         current_execution = get_current_execution()
         if current_execution not in supported_execution:
             raise NotImplementedError(
@@ -539,7 +547,11 @@ class ExperimentalBaseFactory(BaseFactory):
         params=_doc_io_method_kwargs_params,
     )
     def _read_custom_text(cls, **kwargs):
-        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
+        supported_execution = (
+            "ExperimentalPandasOnRay",
+            "ExperimentalPandasOnUnidist",
+            "ExperimentalPandasOnDask",
+        )
         current_execution = get_current_execution()
         if current_execution not in supported_execution:
             raise NotImplementedError(
@@ -559,7 +571,11 @@ class ExperimentalBaseFactory(BaseFactory):
         **kwargs : kwargs
             Arguments to the writer method.
         """
-        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
+        supported_execution = (
+            "ExperimentalPandasOnRay",
+            "ExperimentalPandasOnUnidist",
+            "ExperimentalPandasOnDask",
+        )
         current_execution = get_current_execution()
         if current_execution not in supported_execution:
             raise NotImplementedError(
@@ -590,47 +606,6 @@ class ExperimentalPandasOnDaskFactory(ExperimentalBaseFactory, PandasOnDaskFacto
         )
 
         cls.io_cls = ExperimentalPandasOnDaskIO
-
-    @classmethod
-    @doc(
-        _doc_io_method_raw_template,
-        source="CSV files",
-        params=_doc_io_method_kwargs_params,
-    )
-    def _read_csv_glob(cls, **kwargs):
-        return cls.io_cls.read_csv_glob(**kwargs)
-
-    @classmethod
-    @doc(
-        _doc_io_method_raw_template,
-        source="Pickle files",
-        params=_doc_io_method_kwargs_params,
-    )
-    def _read_pickle_distributed(cls, **kwargs):
-        return cls.io_cls.read_pickle_distributed(**kwargs)
-
-    @classmethod
-    @doc(
-        _doc_io_method_raw_template,
-        source="Custom text files",
-        params=_doc_io_method_kwargs_params,
-    )
-    def _read_custom_text(cls, **kwargs):
-        return cls.io_cls.read_custom_text(**kwargs)
-
-    @classmethod
-    def _to_pickle_distributed(cls, *args, **kwargs):
-        """
-        Distributed pickle query compiler object.
-
-        Parameters
-        ----------
-        *args : args
-            Arguments to the writer method.
-        **kwargs : kwargs
-            Arguments to the writer method.
-        """
-        return cls.io_cls.to_pickle_distributed(*args, **kwargs)
 
 
 @doc(_doc_factory_class, execution_name="experimental PandasOnPython")
