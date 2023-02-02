@@ -1949,6 +1949,7 @@ class Series(BasePandasDataset):
         Return the NumPy ndarray representing the values in this Series or Index.
         """
         from modin.config import ExperimentalNumPyAPI
+
         if not ExperimentalNumPyAPI.get():
             return (
                 super(Series, self)

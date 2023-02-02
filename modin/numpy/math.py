@@ -11,19 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import numpy
-
 
 def absolute(
     x, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x, "_absolute"):
-        return x._absolute(
+    if hasattr(x, "absolute"):
+        return x.absolute(
             out=out, where=where, casting=casting, order=order, dtype=dtype, subok=subok
         )
-    return numpy.absolute(
-        x, out=out, where=where, casting=casting, order=order, dtype=dtype, subok=subok
-    )
 
 
 abs = absolute
@@ -32,8 +27,8 @@ abs = absolute
 def add(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "_add"):
-        return x1._add(
+    if hasattr(x1, "add"):
+        return x1.add(
             x2,
             out=out,
             where=where,
@@ -42,29 +37,18 @@ def add(
             dtype=dtype,
             subok=subok,
         )
-    return numpy.add(
-        x1,
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
 
 
 def all(a, axis=None, out=None, keepdims=None, where=None):
-    if hasattr(a, "_all"):
-        return a._all(axis=axis, out=out, keepdims=keepdims, where=where)
-    return numpy.all(a, axis=axis, out=out, keepdims=keepdims, where=where)
+    if hasattr(a, "all"):
+        return a.all(axis=axis, out=out, keepdims=keepdims, where=where)
 
 
 def divide(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "_divide"):
-        return x1._divide(
+    if hasattr(x1, "divide"):
+        return x1.divide(
             x2,
             out=out,
             where=where,
@@ -73,23 +57,13 @@ def divide(
             dtype=dtype,
             subok=subok,
         )
-    return numpy.divide(
-        x1,
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
 
 
 def float_power(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "_float_power"):
-        return x1._float_power(
+    if hasattr(x1, "float_power"):
+        return x1.float_power(
             x2,
             out=out,
             where=where,
@@ -98,23 +72,13 @@ def float_power(
             dtype=dtype,
             subok=subok,
         )
-    return numpy.float_power(
-        x1,
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
 
 
 def floor_divide(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "_floor_divide"):
-        return x1._floor_divide(
+    if hasattr(x1, "floor_divide"):
+        return x1.floor_divide(
             x2,
             out=out,
             where=where,
@@ -123,23 +87,13 @@ def floor_divide(
             dtype=dtype,
             subok=subok,
         )
-    return numpy.floor_divide(
-        x1,
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
 
 
 def power(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "_power"):
-        return x1._power(
+    if hasattr(x1, "power"):
+        return x1.power(
             x2,
             out=out,
             where=where,
@@ -148,29 +102,18 @@ def power(
             dtype=dtype,
             subok=subok,
         )
-    return numpy.power(
-        x1,
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
 
 
 def prod(a, axis=None, out=None, keepdims=None, where=None):
-    if hasattr(a, "_prod"):
-        return a._prod(axis=axis, out=out, keepdims=keepdims, where=where)
-    return numpy.prod(a, axis=axis, out=out, keepdims=keepdims, where=where)
+    if hasattr(a, "prod"):
+        return a.prod(axis=axis, out=out, keepdims=keepdims, where=where)
 
 
 def multiply(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "_multiply"):
-        return x1._multiply(
+    if hasattr(x1, "multiply"):
+        return x1.multiply(
             x2,
             out=out,
             where=where,
@@ -179,23 +122,13 @@ def multiply(
             dtype=dtype,
             subok=subok,
         )
-    return numpy.multiply(
-        x1,
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
 
 
 def remainder(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "_remainder"):
-        return x1._remainder(
+    if hasattr(x1, "remainder"):
+        return x1.remainder(
             x2,
             out=out,
             where=where,
@@ -204,16 +137,6 @@ def remainder(
             dtype=dtype,
             subok=subok,
         )
-    return numpy.remainder(
-        x1,
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
 
 
 mod = remainder
@@ -222,8 +145,8 @@ mod = remainder
 def subtract(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "_subtract"):
-        return x1._subtract(
+    if hasattr(x1, "subtract"):
+        return x1.subtract(
             x2,
             out=out,
             where=where,
@@ -232,30 +155,18 @@ def subtract(
             dtype=dtype,
             subok=subok,
         )
-    return numpy.subtract(
-        x1,
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
 
 
 def sum(arr, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None):
-    if hasattr(arr, "_sum"):
-        return arr._sum(axis)
-    else:
-        return numpy.sum(arr)
+    if hasattr(arr, "sum"):
+        return arr.sum(axis)
 
 
 def true_divide(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "_divide"):
-        return x1._divide(
+    if hasattr(x1, "divide"):
+        return x1.divide(
             x2,
             out=out,
             where=where,
@@ -264,13 +175,8 @@ def true_divide(
             dtype=dtype,
             subok=subok,
         )
-    return numpy.divide(
-        x1,
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
+
+
+def ravel(arr, order="C"):
+    if hasattr(arr, "flatten"):
+        return arr.flatten(order)

@@ -3243,11 +3243,12 @@ class BasePandasDataset(ClassLogger):
         Convert the `BasePandasDataset` to a NumPy array.
         """
         from modin.config import ExperimentalNumPyAPI
+
         if ExperimentalNumPyAPI.get():
             from ..numpy.arr import array
 
             return array(_query_compiler=self._query_compiler, _ndim=2)
-        
+
         return self._query_compiler.to_numpy(
             dtype=dtype,
             copy=copy,
