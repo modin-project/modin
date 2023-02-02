@@ -45,7 +45,6 @@ from modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning
 )
 from modin.core.execution.unidist.common import UnidistWrapper
 from modin.config import NPartitions
-from modin.experimental.core.io.sql.utils import read_sql_with_offset
 
 
 class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
@@ -79,6 +78,18 @@ class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
         ),
         build_args,
     )._read
+
+    _read_sql_with_offset_pandas_on_unidist = None
+
+    @property
+    def read_sql_with_offset_pandas_on_unidist(self):
+        if self._read_sql_with_offset_pandas_on_unidist is None:
+            from modin.experimental.core.io.sql.utils import read_sql_with_offset
+
+            self._read_sql_with_offset_pandas_on_unidist = unidist.remote(
+                read_sql_with_offset
+            )
+        return self._read_sql_with_offset_pandas_on_unidist
 
     @classmethod
     def read_sql(
@@ -183,7 +194,7 @@ class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
                 size = min_size
             start = end + 1
             end = start + size - 1
-            partition_id = _read_sql_with_offset_pandas_on_unidist.options(
+            partition_id = cls.read_sql_with_offset_pandas_on_unidist.options(
                 num_returns=num_splits + 1
             ).remote(
                 partition_column,
@@ -247,6 +258,3 @@ class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
             1, func, other=None, new_index=[], new_columns=[], enumerate_partitions=True
         )
         result.to_pandas()
-
-
-_read_sql_with_offset_pandas_on_unidist = unidist.remote(read_sql_with_offset)

@@ -44,7 +44,6 @@ from modin.core.execution.dask.implementations.pandas_on_dask.partitioning impor
 )
 from modin.core.execution.dask.common import DaskWrapper
 from modin.config import NPartitions
-from modin.experimental.core.io.sql.utils import read_sql_with_offset
 
 
 class ExperimentalPandasOnDaskIO(PandasOnDaskIO):
@@ -146,7 +145,11 @@ class ExperimentalPandasOnDaskIO(PandasOnDaskIO):
         BaseQueryCompiler
             A new query compiler with imported data for further processing.
         """
-        from modin.experimental.core.io.sql.utils import is_distributed, get_query_info
+        from modin.experimental.core.io.sql.utils import (
+            is_distributed,
+            get_query_info,
+            read_sql_with_offset,
+        )
 
         if not is_distributed(partition_column, lower_bound, upper_bound):
             warnings.warn("Defaulting to Modin core implementation")
