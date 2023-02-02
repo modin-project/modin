@@ -2640,6 +2640,30 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_groupby_method(
+        action="compute cumulative count",
+        result="count of all the previous values",
+        refer_to="cumcount",
+    )
+    def groupby_cumcount(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="cumcount",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
         action="compute cumulative sum",
         result="sum of all the previous values",
         refer_to="cumsum",
