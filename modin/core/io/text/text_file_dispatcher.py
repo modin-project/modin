@@ -1077,17 +1077,6 @@ class TextFileDispatcher(FileDispatcher):
             read_callback_kw.pop("storage_options", None)
             read_callback_kw.pop("compression", None)
 
-        # kwargs that will be passed to the workers
-        partition_kwargs = dict(
-            kwargs,
-            fname=filepath_or_buffer_md,
-            header_size=0 if use_inferred_column_names else header_size,
-            header="infer" if use_inferred_column_names else header,
-            skipfooter=0,
-            skiprows=None,
-            nrows=None,
-            compression=compression_infered,
-        )
         with OpenFile(
             filepath_or_buffer_md,
             "rb",
@@ -1119,8 +1108,19 @@ class TextFileDispatcher(FileDispatcher):
 
         column_names = pd_df_metadata.columns
         column_widths, num_splits = cls._define_metadata(pd_df_metadata, column_names)
-        partition_kwargs["num_splits"] = num_splits
-        partition_kwargs["names"] = column_names if use_inferred_column_names else names
+        # kwargs that will be passed to the workers
+        partition_kwargs = dict(
+            kwargs,
+            fname=filepath_or_buffer_md,
+            num_splits=num_splits,
+            header_size=0 if use_inferred_column_names else header_size,
+            names=column_names if use_inferred_column_names else names,
+            header="infer" if use_inferred_column_names else header,
+            skipfooter=0,
+            skiprows=None,
+            nrows=None,
+            compression=compression_infered,
+        )
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
             splits, callback=cls.read_callback, **partition_kwargs
         )
