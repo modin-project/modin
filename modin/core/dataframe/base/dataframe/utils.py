@@ -22,7 +22,7 @@ import pandas
 from pandas.api.types import is_scalar
 from pandas._typing import IndexLabel
 from enum import Enum
-from typing import cast, Dict, Iterable, List, Tuple, Union
+from typing import cast, Dict, List, Tuple, Sequence
 
 
 class Axis(Enum):  # noqa: PR01
@@ -89,9 +89,10 @@ def join_columns(
         Raised when one of the keys to join is an index level, pandas behaviour is really
         complicated in this case, so we're not supporting this case for now.
     """
-    left_on = cast(Iterable[IndexLabel], [left_on] if is_scalar(left_on) else left_on)
+    # using `cast` to make `mypy` acknowledged that the variable now ensured to be `Sequence[IndexLabel]`
+    left_on = cast(Sequence[IndexLabel], [left_on] if is_scalar(left_on) else left_on)
     right_on = cast(
-        Iterable[IndexLabel], [right_on] if is_scalar(right_on) else right_on
+        Sequence[IndexLabel], [right_on] if is_scalar(right_on) else right_on
     )
 
     if any(col not in left for col in left_on) or any(
@@ -101,8 +102,8 @@ def join_columns(
             "Cases, where one of the keys to join is an index level, are not yet supported."
         )
 
-    left_conflicts = set(left) & (set(right) - set(right_on))  # type: ignore # set() doesn't understand IndexLabel
-    right_conflicts = set(right) & (set(left) - set(left_on))  # type: ignore # set() doesn't understand IndexLabel
+    left_conflicts = set(left) & (set(right) - set(right_on))
+    right_conflicts = set(right) & (set(left) - set(left_on))
     conflicting_cols = left_conflicts | right_conflicts
 
     def _get_new_name(col: IndexLabel, suffix: str) -> IndexLabel:
@@ -117,8 +118,8 @@ def join_columns(
 
     left_renamer: Dict[IndexLabel, IndexLabel] = {}
     right_renamer: Dict[IndexLabel, IndexLabel] = {}
-    new_left: List[IndexLabel] = []
-    new_right: List[IndexLabel] = []
+    new_left: List = []
+    new_right: List = []
 
     for col in left:
         new_name = _get_new_name(col, suffixes[0])
@@ -131,5 +132,5 @@ def join_columns(
             new_right.append(new_name)
             right_renamer[col] = new_name
 
-    new_columns = pandas.Index(new_left).append(pandas.Index(new_right))  # type: ignore # `Index.append` is untyped
+    new_columns = pandas.Index(new_left + new_right)
     return new_columns, left_renamer, right_renamer

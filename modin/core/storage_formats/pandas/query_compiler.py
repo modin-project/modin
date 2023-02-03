@@ -33,7 +33,7 @@ from pandas.core.dtypes.common import (
     is_datetime64_any_dtype,
     is_bool_dtype,
 )
-from pandas.errors import DataError
+from pandas.errors import DataError, MergeError
 from pandas._libs.lib import no_default
 from collections.abc import Iterable
 from typing import List, Hashable
@@ -468,9 +468,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 if left_on is None and right_on is None:
                     if on is None:
                         on = [c for c in self.columns if c in right.columns]
-                    _left_on = on
-                    _right_on = on
+                    _left_on, _right_on = on, on
                 else:
+                    if left_on is None or right_on is None:
+                        raise MergeError(
+                            "Must either pass only 'on' or 'left_on' and 'right_on', not combination of them."
+                        )
                     _left_on, _right_on = left_on, right_on
 
                 try:
