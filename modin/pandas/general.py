@@ -271,6 +271,25 @@ def to_numeric(arg, errors="raise", downcast=None):  # noqa: PR01, RT01, D200
     return arg._to_numeric(errors=errors, downcast=downcast)
 
 
+@_inherit_docstrings(pandas.qcut, apilink="pandas.qcut")
+@enable_logging
+def qcut(
+    x, q, labels=None, retbins=False, precision=3, duplicates="raise"
+):  # noqa: PR01, RT01, D200
+    """
+    Quantile-based discretization function.
+    """
+    kwargs = {
+        "labels": labels,
+        "retbins": retbins,
+        "precision": precision,
+        "duplicates": duplicates,
+    }
+    if not isinstance(x, Series):
+        return pandas.qcut(x, q, **kwargs)
+    return x._qcut(q, **kwargs)
+
+
 @_inherit_docstrings(pandas.unique, apilink="pandas.unique")
 @enable_logging
 def unique(values):  # noqa: PR01, RT01, D200

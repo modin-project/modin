@@ -2289,6 +2289,12 @@ class Series(BasePandasDataset):
             query_compiler=self._query_compiler.to_numeric(**kwargs)
         )
 
+    def _qcut(self, q, **kwargs):  # noqa: PR01, RT01, D200
+        """
+        Quantile-based discretization function.
+        """
+        return self._default_to_pandas(pandas.qcut, q, **kwargs)
+
     def _reduce_dimension(self, query_compiler):
         """
         Try to reduce the dimension of data from the `query_compiler`.
