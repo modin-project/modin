@@ -83,11 +83,24 @@ def join_columns(
     pandas.Index, dict[IndexLabel -> IndexLabel], dict[IndexLabel -> IndexLabel]
         Returns columns for the resulting frame and mappings of old to new column
         names for `left` and `right` accordingly.
+
+    Raises
+    ------
+    NotImplementedError
+        Raised when one of the keys to join is an index level. Pandas behaviour is really
+        complicated in this case, so we're not supporting this case for now.
     """
     left_on = cast(Iterable[IndexLabel], [left_on] if is_scalar(left_on) else left_on)
     right_on = cast(
         Iterable[IndexLabel], [right_on] if is_scalar(right_on) else right_on
     )
+
+    if any(col not in left for col in left_on) or any(
+        col not in right for col in right_on
+    ):
+        raise NotImplementedError(
+            "Cases, where one of the keys to join is an index level, are not yet supported."
+        )
 
     left_conflicts = set(left) & (set(right) - set(right_on))  # type: ignore # set() doesn't understand IndexLabel
     right_conflicts = set(right) & (set(left) - set(left_on))  # type: ignore # set() doesn't understand IndexLabel
