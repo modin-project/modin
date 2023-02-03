@@ -14,7 +14,7 @@
 
 from math import prod
 import numpy
-from pandas.core.dtypes.common import is_list_like
+from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
 from pandas.api.types import is_scalar
 from inspect import signature
 
@@ -28,6 +28,15 @@ from modin.core.dataframe.algebra import (
 
 
 _INTEROPERABLE_TYPES = (pd.DataFrame, pd.Series)
+
+
+def try_convert_from_interoperable_type(obj):
+    if isinstance(obj, _INTEROPERABLE_TYPES):
+        obj = array(
+            _query_compiler=obj._query_compiler,
+            _ndim=2 if isinstance(obj, pd.DataFrame) else 1,
+        )
+    return obj
 
 
 class array(object):
@@ -60,7 +69,8 @@ class array(object):
             self._query_compiler = _query_compiler
             self._ndim = _ndim
         elif is_list_like(object) and not is_list_like(object[0]):
-            self._query_compiler = pd.Series(object)._query_compiler
+            series = pd.Series(object)
+            self._query_compiler = series._query_compiler
             self._ndim = 1
         else:
             target_kwargs = {
@@ -100,12 +110,9 @@ class array(object):
         if supported_array_layer:
             args = []
             for input in inputs:
+                input = try_convert_from_interoperable_type(input)
                 if not (isinstance(input, array) or is_scalar(input)):
-                    if isinstance(input, _INTEROPERABLE_TYPES):
-                        ndim = 2 if isinstance(input, pd.DataFrame) else 1
-                        input = array(_query_compiler=input._query_compiler, _ndim=ndim)
-                    else:
-                        input = array(input)
+                    input = array(input)
                 args += [input]
             function = (
                 getattr(args[0], ufunc_name)
@@ -175,12 +182,9 @@ class array(object):
             return array(output)
         args = []
         for input in inputs:
+            input = try_convert_from_interoperable_type(input)
             if not (isinstance(input, array) or is_scalar(input)):
-                if isinstance(input, _INTEROPERABLE_TYPES):
-                    ndim = 2 if isinstance(input, pd.DataFrame) else 1
-                    input = array(_query_compiler=input._query_compiler, _ndim=ndim)
-                else:
-                    input = array(input)
+                input = array(input)
             args += [
                 input._query_compiler if hasattr(input, "_query_compiler") else input
             ]
@@ -189,7 +193,91 @@ class array(object):
     def __array_function__(self, func, types, args, kwargs):
         if func.__name__ == "ravel":
             return self.flatten()
+        if func.__name__ == "where":
+            return self.where(*list(args)[1:])
         return NotImplemented
+
+    def where(self, x=None, y=None):
+        if x is None and y is None:
+            ErrorMessage.single_warning(
+                f"np.where method with only condition specified is not yet supported in Modin. Defaulting to NumPy."
+            )
+            condition = self._to_numpy()
+            return array(numpy.where(condition))
+        x, y = try_convert_from_interoperable_type(
+            x
+        ), try_convert_from_interoperable_type(y)
+        if not (
+            (isinstance(x, array) or is_scalar(x))
+            and (isinstance(y, array) or is_scalar(y))
+        ):
+            raise ValueError(
+                "np.where requires x and y to either be np.arrays or scalars."
+            )
+        if is_scalar(x) and is_scalar(y):
+            ErrorMessage.single_warning(
+                "np.where not supported when both x and y are scalars. Defaulting to NumPy."
+            )
+            return array(numpy.where(self._query_compiler.to_pandas(), x, y))
+        if is_scalar(x) and not is_scalar(y):
+            if self._ndim < y._ndim:
+                if not self.shape[0] == y.shape[1]:
+                    raise ValueError(
+                        f"operands could not be broadcast together with shapes {self.shape} {y.shape}"
+                    )
+                ErrorMessage.single_warning(
+                    "np.where method where condition must be broadcast is not yet available in Modin. Defaulting to NumPy."
+                )
+                return array(numpy.where(self._to_numpy(), x, y._to_numpy()))
+            elif self._ndim == y._ndim:
+                if not self.shape == y.shape:
+                    raise ValueError(
+                        f"operands could not be broadcast together with shapes {self.shape} {y.shape}"
+                    )
+                return array(
+                    _query_compiler=y._query_compiler.where((~self)._query_compiler, x),
+                    _ndim=y._ndim,
+                )
+            else:
+                ErrorMessage.single_warning(
+                    "np.where method with broadcast is not yet available in Modin. Defaulting to NumPy."
+                )
+                return numpy.where(self._to_numpy(), x, y._to_numpy())
+        if not is_scalar(x) and is_scalar(y):
+            if self._ndim < x._ndim:
+                if not self.shape[0] == x.shape[1]:
+                    raise ValueError(
+                        f"operands could not be broadcast together with shapes {self.shape} {x.shape}"
+                    )
+                ErrorMessage.single_warning(
+                    "np.where method where condition must be broadcast is not yet available in Modin. Defaulting to NumPy."
+                )
+                return array(numpy.where(self._to_numpy(), x._to_numpy(), y))
+            elif self._ndim == x._ndim:
+                if not self.shape == x.shape:
+                    raise ValueError(
+                        f"operands could not be broadcast together with shapes {self.shape} {x.shape}"
+                    )
+                return array(
+                    _query_compiler=x._query_compiler.where(self._query_compiler, y),
+                    _ndim=x._ndim,
+                )
+            else:
+                ErrorMessage.single_warning(
+                    "np.where method with broadcast is not yet available in Modin. Defaulting to NumPy."
+                )
+                return array(numpy.where(self._to_numpy(), x._to_numpy(), y))
+        if not (x.shape == y.shape and y.shape == self.shape):
+            ErrorMessage.single_warning(
+                "np.where method with broadcast is not yet available in Modin. Defaulting to NumPy."
+            )
+            return array(numpy.where(self._to_numpy(), x._to_numpy(), y._to_numpy()))
+        return array(
+            _query_compiler=x._query_compiler.where(
+                self._query_compiler, y._query_compiler
+            ),
+            _ndim=self._ndim,
+        )
 
     def __abs__(
         self,
@@ -205,15 +293,25 @@ class array(object):
 
     absolute = __abs__
 
+    def __invert__(self):
+        """
+        Apply bitwise inverse to each element of the `BasePandasDataset`.
+
+        Returns
+        -------
+        BasePandasDataset
+            New BasePandasDataset containing bitwise inverse to each value.
+        """
+        if not is_numeric_dtype(self.dtype):
+            raise TypeError(f"bad operand type for unary ~: '{self.dtype}'")
+        return array(_query_compiler=self._query_compiler.invert(), _ndim=self._ndim)
+
     def _binary_op(self, other):
+        other = try_convert_from_interoperable_type(other)
         if not isinstance(other, array):
-            if isinstance(other, _INTEROPERABLE_TYPES):
-                ndim = 2 if isinstance(other, pd.DataFrame) else 1
-                other = array(_query_compiler=other._query_compiler, _ndim=ndim)
-            else:
-                raise TypeError(
-                    f"Unsupported operand type(s) for divide: '{type(self)}' and '{type(other)}'"
-                )
+            raise TypeError(
+                f"Unsupported operand type(s): '{type(self)}' and '{type(other)}'"
+            )
         broadcast = self._ndim != other._ndim
         if broadcast:
             # In this case, we have a 1D object doing a binary op with a 2D object
@@ -247,6 +345,72 @@ class array(object):
             else:
                 return (self, other, self._ndim, {"broadcast": False})
 
+    def __ge__(self, x2):
+        if is_scalar(x2):
+            return array(_query_compiler=self._query_compiler.ge(x2), _ndim=self._ndim)
+        caller, callee, new_ndim, kwargs = self._binary_op(x2)
+        if caller._query_compiler != self._query_compiler:
+            # In this case, we are doing an operation that looks like this 1D_object >= 2D_object.
+            # For Modin to broadcast directly, we have to swap it so that the operation is actually
+            # 2D_object <= 1D_object.
+            result = caller._query_compiler.le(callee._query_compiler, **kwargs)
+        else:
+            result = caller._query_compiler.ge(callee._query_compiler, **kwargs)
+        return array(_query_compiler=result, _ndim=new_ndim)
+
+    def __gt__(self, x2):
+        if is_scalar(x2):
+            return array(_query_compiler=self._query_compiler.gt(x2), _ndim=self._ndim)
+        caller, callee, new_ndim, kwargs = self._binary_op(x2)
+        if caller._query_compiler != self._query_compiler:
+            # In this case, we are doing an operation that looks like this 1D_object > 2D_object.
+            # For Modin to broadcast directly, we hiave to swap it so that the operation is actually
+            # 2D_object < 1D_object.
+            result = caller._query_compiler.lt(callee._query_compiler, **kwargs)
+        else:
+            result = caller._query_compiler.gt(callee._query_compiler, **kwargs)
+        return array(_query_compiler=result, _ndim=new_ndim)
+
+    def __le__(self, x2):
+        if is_scalar(x2):
+            return array(_query_compiler=self._query_compiler.le(x2), _ndim=self._ndim)
+        caller, callee, new_ndim, kwargs = self._binary_op(x2)
+        if caller._query_compiler != self._query_compiler:
+            # In this case, we are doing an operation that looks like this 1D_object <= 2D_object.
+            # For Modin to broadcast directly, we have to swap it so that the operation is actually
+            # 2D_object >= 1D_object.
+            result = caller._query_compiler.ge(callee._query_compiler, **kwargs)
+        else:
+            result = caller._query_compiler.le(callee._query_compiler, **kwargs)
+        return array(_query_compiler=result, _ndim=new_ndim)
+
+    def __lt__(self, x2):
+        if is_scalar(x2):
+            return array(_query_compiler=self._query_compiler.lt(x2), _ndim=self._ndim)
+        caller, callee, new_ndim, kwargs = self._binary_op(x2)
+        if caller._query_compiler != self._query_compiler:
+            # In this case, we are doing an operation that looks like this 1D_object < 2D_object.
+            # For Modin to broadcast directly, we have to swap it so that the operation is actually
+            # 2D_object > 1D_object.
+            result = caller._query_compiler.gt(callee._query_compiler, **kwargs)
+        else:
+            result = caller._query_compiler.lt(callee._query_compiler, **kwargs)
+        return array(_query_compiler=result, _ndim=new_ndim)
+
+    def __eq__(self, x2):
+        if is_scalar(x2):
+            return array(_query_compiler=self._query_compiler.eq(x2), _ndim=self._ndim)
+        caller, callee, new_ndim, kwargs = self._binary_op(x2)
+        result = caller._query_compiler.eq(callee._query_compiler, **kwargs)
+        return array(_query_compiler=result, _ndim=new_ndim)
+
+    def __ne__(self, x2):
+        if is_scalar(x2):
+            return array(_query_compiler=self._query_compiler.ne(x2), _ndim=self._ndim)
+        caller, callee, new_ndim, kwargs = self._binary_op(x2)
+        result = caller._query_compiler.ne(callee._query_compiler, **kwargs)
+        return array(_query_compiler=result, _ndim=new_ndim)
+
     def __add__(
         self,
         x2,
@@ -273,7 +437,7 @@ class array(object):
         dtype=None,
         subok=True,
     ):
-        return self._add(x2, out, where, casting, order, dtype, subok)
+        return self.add(x2, out, where, casting, order, dtype, subok)
 
     def divide(
         self,
@@ -290,7 +454,7 @@ class array(object):
                 _query_compiler=self._query_compiler.truediv(x2), _ndim=self._ndim
             )
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
-        if caller != self:
+        if caller._query_compiler != self._query_compiler:
             # In this case, we are doing an operation that looks like this 1D_object/2D_object.
             # For Modin to broadcast directly, we have to swap it so that the operation is actually
             # 2D_object.rtruediv(1D_object).
@@ -316,7 +480,7 @@ class array(object):
                 _query_compiler=self._query_compiler.rtruediv(x2), _ndim=self._ndim
             )
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
-        if caller != self:
+        if caller._query_compiler != self._query_compiler:
             result = caller._query_compiler.truediv(callee._query_compiler, **kwargs)
         else:
             result = caller._query_compiler.rtruediv(callee._query_compiler, **kwargs)
@@ -340,7 +504,7 @@ class array(object):
                 result = result.replace(numpy.inf, 0).replace(numpy.NINF, 0)
             return array(_query_compiler=result, _ndim=self._ndim)
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
-        if caller != self:
+        if caller._query_compiler != self._query_compiler:
             # Modin does not correctly support broadcasting when the caller of the function is
             # a Series (1D), and the operand is a Dataframe (2D). We cannot workaround this using
             # commutativity, and `rfloordiv` also works incorrectly. GH#5529
@@ -369,7 +533,7 @@ class array(object):
         if is_scalar(x2):
             return array(_query_compiler=self._query_compiler.pow(x2), _ndim=self._ndim)
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
-        if caller != self:
+        if caller._query_compiler != self._query_compiler:
             # Modin does not correctly support broadcasting when the caller of the function is
             # a Series (1D), and the operand is a Dataframe (2D). We cannot workaround this using
             # commutativity, and `rpow` also works incorrectly. GH#5529
@@ -419,7 +583,7 @@ class array(object):
         dtype=None,
         subok=True,
     ):
-        return self._multiply(x2, out, where, casting, order, dtype, subok)
+        return self.multiply(x2, out, where, casting, order, dtype, subok)
 
     def remainder(
         self,
@@ -441,7 +605,7 @@ class array(object):
                 result._query_compiler = result._query_compiler.replace(numpy.NaN, 0)
             return result
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
-        if caller != self:
+        if caller._query_compiler != self._query_compiler:
             # Modin does not correctly support broadcasting when the caller of the function is
             # a Series (1D), and the operand is a Dataframe (2D). We cannot workaround this using
             # commutativity, and `rmod` also works incorrectly. GH#5529
@@ -470,7 +634,7 @@ class array(object):
         if is_scalar(x2):
             return array(_query_compiler=self._query_compiler.sub(x2), _ndim=self._ndim)
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
-        if caller != self:
+        if caller._query_compiler != self._query_compiler:
             # In this case, we are doing an operation that looks like this 1D_object - 2D_object.
             # For Modin to broadcast directly, we have to swap it so that the operation is actually
             # 2D_object.rsub(1D_object).
@@ -496,7 +660,7 @@ class array(object):
                 _query_compiler=self._query_compiler.rsub(x2), _ndim=self._ndim
             )
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
-        if caller != self:
+        if caller._query_compiler != self._query_compiler:
             # In this case, we are doing an operation that looks like this 1D_object - 2D_object.
             # For Modin to broadcast directly, we have to swap it so that the operation is actually
             # 2D_object.sub(1D_object).
@@ -561,6 +725,21 @@ class array(object):
             )
 
     shape = property(_get_shape, _set_shape)
+
+    def transpose(self, *args, **kwargs):
+        if self._ndim == 1:
+            return self
+        return array(_query_compiler=self._query_compiler.transpose(), _ndim=self._ndim)
+
+    T = property(transpose)
+
+    @property
+    def dtype(self):
+        dtype = self._query_compiler.dtypes
+        if self._ndim == 1:
+            return dtype[0]
+        else:
+            return numpy.result_type(dtype.values)
 
     def __repr__(self):
         return repr(self._to_numpy())

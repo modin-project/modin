@@ -180,3 +180,14 @@ def true_divide(
 def ravel(arr, order="C"):
     if hasattr(arr, "flatten"):
         return arr.flatten(order)
+
+
+# def where(condition, *, x=None, y=None):
+#     condition = condition(self) if callable else condition
+#     if not isinstance(condition, array):
+#         if isinstance(condition, _INTEROPERABLE_TYPES):
+#             condition = array(_query_compiler=condition._query_compiler, _ndim = 2 if isinstance(condition, pd.DataFrame) else 1)
+#         elif is_list_like(condition):
+#             condition = array(condition)
+#     if not (is_scalar(condition) or isinstance(condition, (bool, array))):
+#         raise ValueError(f"np.where does not support conditionals of type {type(condition)}")
