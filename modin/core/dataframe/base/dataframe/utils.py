@@ -87,7 +87,7 @@ def join_columns(
     Raises
     ------
     NotImplementedError
-        Raised when one of the keys to join is an index level. Pandas behaviour is really
+        Raised when one of the keys to join is an index level, pandas behaviour is really
         complicated in this case, so we're not supporting this case for now.
     """
     left_on = cast(Iterable[IndexLabel], [left_on] if is_scalar(left_on) else left_on)
