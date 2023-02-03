@@ -1045,15 +1045,17 @@ class TextFileDispatcher(FileDispatcher):
             names, skiprows, kwargs["skipfooter"], usecols
         )
 
-        compute_metadata_before_skipping_rows = (
-            # basic supported case: isinstance(skiprows, int)
-            not isinstance(skiprows, int)
-            # complex cases
-            or (usecols is not None and skiprows is not None)
-            or pre_reading != 0
+        # Computing metadata simultaneously with skipping rows allows us to not
+        # do extra work and improve performance for certain cases, as otherwise,
+        # it would require double re-reading of skipped rows in order to retrieve metadata.
+        can_compute_metadata_while_skipping_rows = (
+            # basic supported case: isinstance(skiprows, int) without any additional params
+            isinstance(skiprows, int)
+            and (usecols is None or skiprows is None)
+            and pre_reading == 0
         )
         read_callback_kw = dict(kwargs, nrows=1, skipfooter=0, index_col=index_col)
-        if compute_metadata_before_skipping_rows:
+        if not can_compute_metadata_while_skipping_rows:
             pd_df_metadata = cls.read_callback(
                 filepath_or_buffer_md,
                 **read_callback_kw,
@@ -1112,7 +1114,7 @@ class TextFileDispatcher(FileDispatcher):
                 pre_reading=pre_reading,
                 read_callback_kw=read_callback_kw,
             )
-            if not compute_metadata_before_skipping_rows:
+            if can_compute_metadata_while_skipping_rows:
                 pd_df_metadata = pd_df_metadata_temp
 
         column_names = pd_df_metadata.columns
