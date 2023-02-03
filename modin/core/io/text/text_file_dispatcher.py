@@ -257,7 +257,7 @@ class TextFileDispatcher(FileDispatcher):
             List with the next elements:
                 int : partition start read byte
                 int : partition end read byte
-        pandas.DataFrame
+        pandas.DataFrame or None
             Dataframe from which metadata can be retrieved. Can be None if `read_callback_kw=None`.
         """
         if read_callback_kw is not None and pre_reading != 0:
