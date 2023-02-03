@@ -79,17 +79,15 @@ class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
         build_args,
     )._read
 
-    __read_sql_with_offset_pandas_on_unidist = None
+    __read_sql_with_offset = None
 
-    @property
-    def _read_sql_with_offset_pandas_on_unidist(self):  # noqa: GL08
-        if self.__read_sql_with_offset_pandas_on_unidist is None:
+    @classmethod
+    def _read_sql_with_offset(cls):  # noqa: GL08
+        if cls.__read_sql_with_offset is None:
             from modin.experimental.core.io.sql.utils import read_sql_with_offset
 
-            self.__read_sql_with_offset_pandas_on_unidist = unidist.remote(
-                read_sql_with_offset
-            )
-        return self.__read_sql_with_offset_pandas_on_unidist
+            cls.__read_sql_with_offset = unidist.remote(read_sql_with_offset)
+        return cls.__read_sql_with_offset
 
     @classmethod
     def read_sql(
@@ -194,21 +192,23 @@ class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
                 size = min_size
             start = end + 1
             end = start + size - 1
-            partition_id = cls._read_sql_with_offset_pandas_on_unidist.options(
-                num_returns=num_splits + 1
-            ).remote(
-                partition_column,
-                start,
-                end,
-                num_splits,
-                query,
-                con,
-                index_col,
-                coerce_float,
-                params,
-                parse_dates,
-                columns,
-                chunksize,
+            partition_id = (
+                cls._read_sql_with_offset()
+                .options(num_returns=num_splits + 1)
+                .remote(
+                    partition_column,
+                    start,
+                    end,
+                    num_splits,
+                    query,
+                    con,
+                    index_col,
+                    coerce_float,
+                    params,
+                    parse_dates,
+                    columns,
+                    chunksize,
+                )
             )
             partition_ids.append(
                 [PandasOnUnidistDataframePartition(obj) for obj in partition_id[:-1]]
