@@ -19,10 +19,9 @@ JoinType is an enum that represents the `join_type` or `how` argument for the jo
 """
 
 import pandas
-
-from enum import Enum
 from pandas.api.types import is_scalar
 from pandas._typing import IndexLabel
+from enum import Enum
 from typing import cast, Dict, Iterable, List, Tuple, Union
 
 
@@ -58,8 +57,8 @@ class JoinType(Enum):  # noqa: PR01
 def join_columns(
     left: pandas.Index,
     right: pandas.Index,
-    left_on: Union[Iterable[IndexLabel], IndexLabel],
-    right_on: Union[Iterable[IndexLabel], IndexLabel],
+    left_on: IndexLabel,
+    right_on: IndexLabel,
     suffixes: Tuple[str, str],
 ) -> Tuple[pandas.Index, Dict[IndexLabel, IndexLabel], Dict[IndexLabel, IndexLabel]]:
     """
