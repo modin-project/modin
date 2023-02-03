@@ -605,3 +605,42 @@ def test_reorder_labels_dtypes():
         row_positions=None, col_positions=np.arange(len(md_df.columns) - 1, -1, -1)
     )
     df_equals(result.dtypes, result.to_pandas().dtypes)
+
+
+@pytest.mark.parametrize("set_num_partitions", [2], indirect=True)
+def test_repartitioning(set_num_partitions):
+    """
+    This test verifies that 'keep_partitioning=False' doesn't actually preserve partitioning.
+
+    For more details see: https://github.com/modin-project/modin/issues/5621
+    """
+    assert NPartitions.get() == 2
+
+    pandas_df = pandas.DataFrame(
+        {"a": [1, 1, 2, 2], "b": [3, 4, 5, 6], "c": [1, 2, 3, 4], "d": [4, 5, 6, 7]}
+    )
+
+    modin_df = construct_modin_df_by_scheme(
+        pandas_df=pandas.DataFrame(
+            {"a": [1, 1, 2, 2], "b": [3, 4, 5, 6], "c": [1, 2, 3, 4], "d": [4, 5, 6, 7]}
+        ),
+        partitioning_scheme={"row_lengths": [4], "column_widths": [2, 2]},
+    )
+
+    md_df = modin_df._query_compiler._modin_frame
+
+    assert md_df._partitions.shape == (1, 2)
+    assert md_df.column_widths == [2, 2]
+
+    res = md_df.apply_full_axis(
+        axis=1,
+        func=lambda df: df,
+        keep_partitioning=False,
+        new_index=[0, 1, 2, 3],
+        new_columns=["a", "b", "c", "d"],
+    )
+
+    assert res._partitions.shape == (1, 1)
+    assert res.column_widths == [4]
+    df_equals(res._partitions[0, 0].to_pandas(), pandas_df)
+    df_equals(res.to_pandas(), pandas_df)

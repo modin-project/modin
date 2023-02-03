@@ -450,6 +450,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         kw = {
             "num_splits": num_splits,
             "other_axis_partition": right_partitions,
+            "maintain_partitioning": keep_partitioning,
         }
         if lengths:
             kw["lengths"] = lengths
