@@ -41,6 +41,78 @@ def try_convert_from_interoperable_type(obj):
     return obj
 
 
+def check_kwargs(order="C", subok=True, keepdims=None, casting="same_kind", where=True):
+    if order not in ["K", "C"]:
+        ErrorMessage.single_warning(
+            "Array order besides 'C' is not currently supported in Modin. Defaulting to 'C' order."
+        )
+    if not subok:
+        ErrorMessage.single_warning(
+            "Subclassing types is not currently supported in Modin. Defaulting to the same base dtype."
+        )
+    if keepdims:
+        ErrorMessage.single_warning(
+            "Modin does not yet support broadcasting between nested 1D arrays and 2D arrays."
+        )
+    if casting != "same_kind":
+        ErrorMessage.single_warning(
+            "Modin does not yet support the `casting` argument."
+        )
+    if not where and where is not None:
+        # TODO(RehanSD): Remove this once indexing is merged.
+        raise NotImplementedError(
+            "Modin currently does not support the `where` parameter."
+        )
+
+
+def check_how_broadcast_to_output(arr_in: "array", arr_out: "array"):
+    if not isinstance(arr_out, array):
+        raise TypeError("return arrays must be of modin.numpy.array type.")
+    if arr_out._ndim == arr_in._ndim and arr_out.shape != arr_in.shape:
+        raise ValueError(
+            f"non-broadcastable output operand with shape {arr_out.shape} doesn't match the broadcast shape {arr_in.shape}"
+        )
+    elif arr_out._ndim == arr_in._ndim:
+        return "broadcastable"
+    elif arr_out._ndim == 1:
+        if prod(arr_in.shape) == arr_out.shape[0]:
+            return "flatten"
+        else:
+            raise ValueError(
+                f"non-broadcastable output operand with shape {arr_out.shape} doesn't match the broadcast shape {arr_in.shape}"
+            )
+    elif arr_in._ndim == 1:
+        if prod(arr_out.shape) == arr_in.shape[0]:
+            return "reshape"
+        else:
+            raise ValueError(
+                f"non-broadcastable output operand with shape {arr_out.shape} doesn't match the broadcast shape {arr_in.shape}"
+            )
+
+
+def fix_dtypes_and_determine_return(query_compiler_in, _ndim, dtype=None, out=None):
+    if dtype is not None:
+        query_compiler_in = query_compiler_in.astype(
+            {col_name: dtype for col_name in query_compiler_in.columns}
+        )
+    result = array(_query_compiler=query_compiler_in, _ndim=_ndim)
+    if out is not None:
+        out = try_convert_from_interoperable_type(out)
+        broadcast_method = check_how_broadcast_to_output(result, out)
+        result._query_compiler = result._query_compiler.astype(
+            {col_name: out.dtype for col_name in result._query_compiler}
+        )
+        if broadcast_method == "broadcastable":
+            out._query_compiler = result._query_compiler
+        elif broadcast_method == "flatten":
+            out._query_compiler = result.flatten()._query_compiler
+        else:
+            # TODO(RehanSD): Replace this when reshape is implemented.
+            raise NotImplementedError("Reshape is currently not supported in Modin.")
+        return out
+    return result
+
+
 class array(object):
     """
     Modin distributed representation of ``numpy.array``.
@@ -155,7 +227,9 @@ class array(object):
                 out_ndim = len(inputs[0].shape)
             else:
                 new_ufunc = Binary.register(ufunc)
-                out_ndim = max([len(inp.shape) for inp in inputs])
+                out_ndim = max(
+                    [len(inp.shape) for inp in inputs if hasattr(inp, "shape")]
+                )
         elif method == "reduce":
             new_ufunc = Reduce.register(ufunc, axis=kwargs.get("axis", None))
             if kwargs.get("axis", None) is None:
@@ -193,16 +267,23 @@ class array(object):
         return array(_query_compiler=new_ufunc(*args, **kwargs), _ndim=out_ndim)
 
     def __array_function__(self, func, types, args, kwargs):
-        if func.__name__ == "ravel":
-            return self.flatten()
-        if func.__name__ == "where":
-            return self.where(*list(args)[1:])
-        return NotImplemented
+        from . import array_creation as creation, array_shaping as shaping, math
+
+        modin_func = None
+        if hasattr(math, func):
+            modin_func = getattr(math, func)
+        elif hasattr(shaping, func):
+            modin_func = getattr(shaping, func)
+        elif hasattr(creation, func):
+            modin_func = getattr(creation, func)
+        if modin_func is None:
+            return NotImplemented
+        return modin_func(*args, **kwargs)
 
     def where(self, x=None, y=None):
         if x is None and y is None:
             ErrorMessage.single_warning(
-                f"np.where method with only condition specified is not yet supported in Modin. Defaulting to NumPy."
+                "np.where method with only condition specified is not yet supported in Modin. Defaulting to NumPy."
             )
             condition = self._to_numpy()
             return array(numpy.where(condition))
@@ -281,6 +362,100 @@ class array(object):
             _ndim=self._ndim,
         )
 
+    def max(
+        self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None
+    ):
+        check_kwargs(keepdims=keepdims, where=where)
+        if self._ndim == 1:
+            if axis == 1:
+                raise numpy.AxisError(1, 1)
+            result = self._query_compiler.max(axis=0)
+            if keepdims:
+                if initial is not None and result.lt(initial):
+                    result = pd.Series([initial])._query_compiler
+                return fix_dtypes_and_determine_return(result, 1, dtype, out)
+            if initial is not None:
+                result = max(result.to_numpy()[0, 0], initial)
+            else:
+                result = result.to_numpy()[0, 0]
+            return result
+        if axis is None:
+            result = self.flatten().max(
+                axis=axis,
+                dtype=dtype,
+                out=out,
+                keepdims=None,
+                initial=initial,
+                where=where,
+            )
+            if keepdims:
+                result._ndim = self._ndim
+            return result
+        result = self._query_compiler.max(axis=axis)
+        new_ndim = self._ndim - 1 if not keepdims else self._ndim
+        if new_ndim == 0:
+            if initial is not None:
+                result = max(result.to_numpy()[0, 0], initial)
+            else:
+                result = result.to_numpy()[0, 0]
+            return result
+        intermediate = fix_dtypes_and_determine_return(
+            result.transpose(), new_ndim, dtype, out
+        )
+        if initial is not None:
+            intermediate._query_compiler = (intermediate > initial).where(
+                intermediate, initial
+            )
+        else:
+            return intermediate
+
+    def min(
+        self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None
+    ):
+        check_kwargs(keepdims=keepdims, where=where)
+        if self._ndim == 1:
+            if axis == 1:
+                raise numpy.AxisError(1, 1)
+            result = self._query_compiler.min(axis=0)
+            if keepdims:
+                if initial is not None and result.lt(initial):
+                    result = pd.Series([initial])._query_compiler
+                return fix_dtypes_and_determine_return(result, 1, dtype, out)
+            if initial is not None:
+                result = min(result.to_numpy()[0, 0], initial)
+            else:
+                result = result.to_numpy()[0, 0]
+            return result
+        if axis is None:
+            result = self.flatten().min(
+                axis=axis,
+                dtype=dtype,
+                out=out,
+                keepdims=None,
+                initial=initial,
+                where=where,
+            )
+            if keepdims:
+                result._ndim = self._ndim
+            return result
+        result = self._query_compiler.min(axis=axis)
+        new_ndim = self._ndim - 1 if not keepdims else self._ndim
+        if new_ndim == 0:
+            if initial is not None:
+                result = min(result.to_numpy()[0, 0], initial)
+            else:
+                result = result.to_numpy()[0, 0]
+            return result
+        intermediate = fix_dtypes_and_determine_return(
+            result.transpose(), new_ndim, dtype, out
+        )
+        if initial is not None:
+            intermediate._query_compiler = (intermediate < initial).where(
+                intermediate, initial
+            )
+        else:
+            return intermediate
+
     def __abs__(
         self,
         out=None,
@@ -290,7 +465,27 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        check_kwargs(order=order, casting=casting, subok=subok, where=where)
         result = self._query_compiler.abs()
+        if dtype is not None:
+            result = result.astype({col_name: dtype for col_name in result.columns})
+        if out is not None:
+            out = try_convert_from_interoperable_type(out)
+            broadcast_method = check_how_broadcast_to_output(self, out)
+            if broadcast_method == "broadcastable":
+                out._query_compiler = result
+                return out
+            elif broadcast_method == "flatten":
+                out._query_compiler = (
+                    array(_query_compiler=result, _ndim=self._ndim)
+                    .flatten()
+                    ._query_compiler
+                )
+            else:
+                # TODO(RehanSD): Replace this when reshape is implemented.
+                raise NotImplementedError(
+                    "Reshape is currently not supported in Modin."
+                )
         return array(_query_compiler=result, _ndim=self._ndim)
 
     absolute = __abs__
@@ -413,6 +608,28 @@ class array(object):
         result = caller._query_compiler.ne(callee._query_compiler, **kwargs)
         return array(_query_compiler=result, _ndim=new_ndim)
 
+    def mean(self, axis=None, dtype=None, out=None, keepdims=None, *, where=None):
+        check_kwargs(keepdims=keepdims, where=where)
+        if self._ndim == 1:
+            if axis == 1:
+                raise numpy.AxisError(1, 1)
+            result = self._query_compiler.mean(axis=0)
+            if keepdims:
+                return fix_dtypes_and_determine_return(result, 1, dtype, out)
+            return result.to_numpy()[0, 0]
+        if axis is None:
+            result = self.flatten().mean(
+                axis=axis, dtype=dtype, out=out, keepdims=None, where=where
+            )
+            if keepdims:
+                result._ndim = self._ndim
+            return result
+        result = self._query_compiler.mean(axis=axis)
+        new_ndim = self._ndim - 1 if not keepdims else self._ndim
+        if new_ndim == 0:
+            return result.to_numpy()[0, 0]
+        return fix_dtypes_and_determine_return(result.transpose(), new_ndim, dtype, out)
+
     def __add__(
         self,
         x2,
@@ -423,11 +640,13 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
-            return array(_query_compiler=self._query_compiler.add(x2), _ndim=self._ndim)
+            result = self._query_compiler.add(x2)
+            return fix_dtypes_and_determine_return(result, self._ndim, dtype, out)
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
         result = caller._query_compiler.add(callee._query_compiler, **kwargs)
-        return array(_query_compiler=result, _ndim=new_ndim)
+        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out)
 
     def __radd__(
         self,
@@ -439,7 +658,7 @@ class array(object):
         dtype=None,
         subok=True,
     ):
-        return self.add(x2, out, where, casting, order, dtype, subok)
+        return self.__add__(x2, out, where, casting, order, dtype, subok)
 
     def divide(
         self,
@@ -451,9 +670,10 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
-            return array(
-                _query_compiler=self._query_compiler.truediv(x2), _ndim=self._ndim
+            return fix_dtypes_and_determine_return(
+                self._query_compiler.truediv(x2), self._ndim, dtype, out
             )
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
         if caller._query_compiler != self._query_compiler:
@@ -463,7 +683,7 @@ class array(object):
             result = caller._query_compiler.rtruediv(callee._query_compiler, **kwargs)
         else:
             result = caller._query_compiler.truediv(callee._query_compiler, **kwargs)
-        return array(_query_compiler=result, _ndim=new_ndim)
+        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out)
 
     __truediv__ = divide
 
@@ -477,16 +697,17 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
-            return array(
-                _query_compiler=self._query_compiler.rtruediv(x2), _ndim=self._ndim
+            return fix_dtypes_and_determine_return(
+                self._query_compiler.rtruediv(x2), self._ndim, dtype, out
             )
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
         if caller._query_compiler != self._query_compiler:
             result = caller._query_compiler.truediv(callee._query_compiler, **kwargs)
         else:
             result = caller._query_compiler.rtruediv(callee._query_compiler, **kwargs)
-        return array(_query_compiler=result, _ndim=new_ndim)
+        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out)
 
     def floor_divide(
         self,
@@ -498,13 +719,14 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
             result = self._query_compiler.floordiv(x2)
             if x2 == 0:
                 # NumPy's floor_divide by 0 works differently from pandas', so we need to fix
                 # the output.
                 result = result.replace(numpy.inf, 0).replace(numpy.NINF, 0)
-            return array(_query_compiler=result, _ndim=self._ndim)
+            return fix_dtypes_and_determine_return(result, self._ndim, dtype, out)
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
         if caller._query_compiler != self._query_compiler:
             # Modin does not correctly support broadcasting when the caller of the function is
@@ -518,7 +740,7 @@ class array(object):
             # NumPy's floor_divide by 0 works differently from pandas', so we need to fix
             # the output.
             result = result.replace(numpy.inf, 0).replace(numpy.NINF, 0)
-        return array(_query_compiler=result, _ndim=new_ndim)
+        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out)
 
     __floordiv__ = floor_divide
 
@@ -532,8 +754,11 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
-            return array(_query_compiler=self._query_compiler.pow(x2), _ndim=self._ndim)
+            return fix_dtypes_and_determine_return(
+                self._query_compiler.pow(x2), self._ndim, dtype, out
+            )
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
         if caller._query_compiler != self._query_compiler:
             # Modin does not correctly support broadcasting when the caller of the function is
@@ -543,19 +768,42 @@ class array(object):
                 "Using power with broadcast is not currently available in Modin."
             )
         result = caller._query_compiler.pow(callee._query_compiler, **kwargs)
-        return array(_query_compiler=result, _ndim=new_ndim)
+        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out)
 
     __pow__ = power
 
-    def prod(self, axis=None, out=None, keepdims=None, where=None):
-        if axis is None:
-            result = self._query_compiler.prod(axis=0).prod(axis=1)
+    def prod(
+        self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None
+    ):
+        check_kwargs(keepdims=keepdims, where=where)
+        if self._ndim == 1:
+            if axis == 1:
+                raise numpy.AxisError(1, 1)
+            result = self._query_compiler.prod(axis=0)
+            if initial is not None:
+                result = result.mul(initial)
+            if keepdims:
+                return fix_dtypes_and_determine_return(result, 1, dtype, out)
             return result.to_numpy()[0, 0]
-        else:
-            result = self._query_compiler.prod(axis=axis)
-            if self._ndim == 1:
-                return result.to_numpy()[0, 0]
-            return array(_query_compiler=result, _ndim=1)
+        if axis is None:
+            result = self.flatten().prod(
+                axis=axis,
+                dtype=dtype,
+                out=out,
+                keepdims=None,
+                initial=initial,
+                where=where,
+            )
+            if keepdims:
+                result._ndim = self._ndim
+            return result
+        result = self._query_compiler.prod(axis=axis)
+        if initial is not None:
+            result = result.mul(initial)
+        new_ndim = self._ndim - 1 if not keepdims else self._ndim
+        if new_ndim == 0:
+            return result.to_numpy()[0, 0]
+        return fix_dtypes_and_determine_return(result.transpose(), new_ndim, dtype, out)
 
     def multiply(
         self,
@@ -567,11 +815,14 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
-            return array(_query_compiler=self._query_compiler.mul(x2), _ndim=self._ndim)
+            return fix_dtypes_and_determine_return(
+                self._query_compiler.mul(x2), self._ndim, dtype, out
+            )
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
         result = caller._query_compiler.mul(callee._query_compiler, **kwargs)
-        return array(_query_compiler=result, _ndim=new_ndim)
+        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out)
 
     __mul__ = multiply
 
@@ -597,15 +848,14 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
-            result = array(
-                _query_compiler=self._query_compiler.mod(x2), _ndim=self._ndim
-            )
+            result = self._query_compiler.mod(x2)
             if x2 == 0:
                 # NumPy's remainder by 0 works differently from pandas', so we need to fix
                 # the output.
-                result._query_compiler = result._query_compiler.replace(numpy.NaN, 0)
-            return result
+                result = result.replace(numpy.NaN, 0)
+            return fix_dtypes_and_determine_return(result, self._ndim, dtype, out)
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
         if caller._query_compiler != self._query_compiler:
             # Modin does not correctly support broadcasting when the caller of the function is
@@ -619,7 +869,7 @@ class array(object):
             # NumPy's floor_divide by 0 works differently from pandas', so we need to fix
             # the output.
             result = result.replace(numpy.NaN, 0)
-        return array(_query_compiler=result, _ndim=new_ndim)
+        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out)
 
     __mod__ = remainder
 
@@ -633,8 +883,11 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
-            return array(_query_compiler=self._query_compiler.sub(x2), _ndim=self._ndim)
+            return fix_dtypes_and_determine_return(
+                self._query_compiler.sub(x2), self._ndim, dtype, out
+            )
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
         if caller._query_compiler != self._query_compiler:
             # In this case, we are doing an operation that looks like this 1D_object - 2D_object.
@@ -643,7 +896,7 @@ class array(object):
             result = caller._query_compiler.rsub(callee._query_compiler, **kwargs)
         else:
             result = caller._query_compiler.sub(callee._query_compiler, **kwargs)
-        return array(_query_compiler=result, _ndim=new_ndim)
+        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out)
 
     __sub__ = subtract
 
@@ -657,9 +910,10 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
-            return array(
-                _query_compiler=self._query_compiler.rsub(x2), _ndim=self._ndim
+            return fix_dtypes_and_determine_return(
+                self._query_compiler.rsub(x2), self._ndim, dtype, out
             )
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
         if caller._query_compiler != self._query_compiler:
@@ -669,20 +923,43 @@ class array(object):
             result = caller._query_compiler.sub(callee._query_compiler, **kwargs)
         else:
             result = caller._query_compiler.rsub(callee._query_compiler, **kwargs)
-        return array(_query_compiler=result, _ndim=new_ndim)
+        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out)
 
     def sum(
         self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None
     ):
-        result = self._query_compiler.sum(axis=axis)
-        new_ndim = self._ndim - 1
-        if axis is None or new_ndim == 0:
+        check_kwargs(keepdims=keepdims, where=where)
+        if self._ndim == 1:
+            if axis == 1:
+                raise numpy.AxisError(1, 1)
+            result = self._query_compiler.sum(axis=0)
+            if initial is not None:
+                result = result.add(initial)
+            if keepdims:
+                return fix_dtypes_and_determine_return(result, 1, dtype, out)
             return result.to_numpy()[0, 0]
-        if dtype is not None:
-            result = result.astype(dtype)
-        return array(_query_compiler=result, _ndim=new_ndim)
+        if axis is None:
+            result = self.flatten().sum(
+                axis=axis,
+                dtype=dtype,
+                out=out,
+                keepdims=keepdims,
+                initial=initial,
+                where=where,
+            )
+            if keepdims:
+                result._ndim = self._ndim
+            return result
+        result = self._query_compiler.sum(axis=axis)
+        if initial is not None:
+            result = result.add(initial)
+        new_ndim = self._ndim - 1 if not keepdims else self._ndim
+        if new_ndim == 0:
+            return result.to_numpy()[0, 0]
+        return fix_dtypes_and_determine_return(result.transpose(), new_ndim, dtype, out)
 
     def flatten(self, order="C"):
+        check_kwargs(order=order)
         qcs = [
             self._query_compiler.getitem_row_array([index_val]).reset_index(drop=True)
             for index_val in self._query_compiler.index[1:]
@@ -693,6 +970,7 @@ class array(object):
             .concat(1, qcs, ignore_index=True)
         )
         new_query_compiler.columns = range(len(new_query_compiler.columns))
+        new_query_compiler = new_query_compiler.transpose()
         new_ndim = 1
         return array(_query_compiler=new_query_compiler, _ndim=new_ndim)
 
@@ -728,7 +1006,7 @@ class array(object):
 
     shape = property(_get_shape, _set_shape)
 
-    def transpose(self, *args, **kwargs):
+    def transpose(self):
         if self._ndim == 1:
             return self
         return array(_query_compiler=self._query_compiler.transpose(), _ndim=self._ndim)
@@ -742,6 +1020,20 @@ class array(object):
             return dtype[0]
         else:
             return numpy.result_type(dtype.values)
+
+    def astype(self, dtype, order="K", casting="unsafe", subok=True, copy=True):
+        if casting != "unsafe":
+            raise ValueError(
+                "Modin does not support `astype` with `casting != unsafe`."
+            )
+        check_kwargs(order=order, subok=subok)
+        result = self._query_compiler.astype(
+            {col_name: dtype for col_name in self._query_compiler.columns}
+        )
+        if copy:
+            self._query_compiler = result
+            return self
+        return array(_query_compiler=result, _ndim=self._ndim)
 
     def __repr__(self):
         return repr(self._to_numpy())

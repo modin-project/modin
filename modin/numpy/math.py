@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import numpy
+
 
 def absolute(
     x, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
@@ -37,11 +39,6 @@ def add(
             dtype=dtype,
             subok=subok,
         )
-
-
-def all(a, axis=None, out=None, keepdims=None, where=None):
-    if hasattr(a, "all"):
-        return a.all(axis=axis, out=out, keepdims=keepdims, where=where)
 
 
 def divide(
@@ -177,17 +174,34 @@ def true_divide(
         )
 
 
-def ravel(arr, order="C"):
-    if hasattr(arr, "flatten"):
-        return arr.flatten(order)
+def mean(x1, axis=None, dtype=None, out=None, keepdims=None, *, where=None):
+    if hasattr(x1, "mean"):
+        return x1.mean(axis=axis, dtype=dtype, out=out, keepdims=keepdims, where=where)
 
 
-# def where(condition, *, x=None, y=None):
-#     condition = condition(self) if callable else condition
-#     if not isinstance(condition, array):
-#         if isinstance(condition, _INTEROPERABLE_TYPES):
-#             condition = array(_query_compiler=condition._query_compiler, _ndim = 2 if isinstance(condition, pd.DataFrame) else 1)
-#         elif is_list_like(condition):
-#             condition = array(condition)
-#     if not (is_scalar(condition) or isinstance(condition, (bool, array))):
-#         raise ValueError(f"np.where does not support conditionals of type {type(condition)}")
+# Maximum and minimum are ufunc's in NumPy, which means that our array's __array_ufunc__
+# implementation will automatically handle this, so we can just use NumPy's maximum/minimum
+# since that will route to our array's ufunc.
+maximum = numpy.maximum
+
+minimum = numpy.minimum
+
+
+def amax(x1, axis=None, out=None, keepdims=None, initial=None, where=None):
+    if hasattr(x1, "max"):
+        return x1.max(
+            axis=axis, out=out, keepdims=keepdims, initial=initial, where=where
+        )
+
+
+max = amax
+
+
+def amin(x1, axis=None, out=None, keepdims=None, initial=None, where=None):
+    if hasattr(x1, "min"):
+        return x1.min(
+            axis=axis, out=out, keepdims=keepdims, initial=initial, where=where
+        )
+
+
+min = amin
