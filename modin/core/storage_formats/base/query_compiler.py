@@ -5183,6 +5183,8 @@ def _create_idx_wrapper(idx_cls):
     if cached is not None:
         return cached
 
+    from modin.pandas.indexing import is_list_like
+
     def __new__(cls, *args, **kwargs):
         cls = cls.__bases__[0]
         return cls.__new__(cls, *args, **kwargs)
@@ -5223,7 +5225,7 @@ def _create_idx_wrapper(idx_cls):
                 if isinstance(idx, pandas.MultiIndex):
                     qc.set_index_names(names)
                 else:
-                    if isinstance(names, list):
+                    if is_list_like(names):
                         assert len(names) == 1
                         names = names[0]
                     qc.set_index_name(names)
