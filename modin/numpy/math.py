@@ -29,8 +29,8 @@ abs = absolute
 def add(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "add"):
-        return x1.add(
+    if hasattr(x1, "__add__"):
+        return x1.__add__(
             x2,
             out=out,
             where=where,

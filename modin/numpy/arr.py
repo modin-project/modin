@@ -100,7 +100,7 @@ def fix_dtypes_and_determine_return(query_compiler_in, _ndim, dtype=None, out=No
         out = try_convert_from_interoperable_type(out)
         broadcast_method = check_how_broadcast_to_output(result, out)
         result._query_compiler = result._query_compiler.astype(
-            {col_name: out.dtype for col_name in result._query_compiler}
+            {col_name: out.dtype for col_name in result._query_compiler.columns}
         )
         if broadcast_method == "broadcastable":
             out._query_compiler = result._query_compiler
