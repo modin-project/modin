@@ -125,7 +125,6 @@ def test_scalar_arithmetic(size):
         (modin_arr - scalar)._to_numpy(), numpy_arr - scalar, err_msg="__sub__ failed."
     )
 
-@pytest.mark.filterwarnings("ignore:Distributing <class")
 @pytest.mark.parametrize("size", [100, (2, 100), (100, 2), (1, 100), (100, 1)])
 def test_array_ufunc(size):
     # Test ufunc.__call__
@@ -144,3 +143,24 @@ def test_array_ufunc(size):
     assert numpy_result == modin_result
     # We do not test ufunc.reduce and ufunc.accumulate, since these require a binary reduce
     # operation that Modin does not currently support.
+
+@pytest.mark.parametrize("size", [100, (2, 100), (100, 2), (1, 100), (100, 1)])
+def test_array_function(size):
+    numpy_arr = numpy.random.randint(-100, 100, size=size)
+    modin_arr = np.array(numpy_arr)
+    # Test from array shaping
+    modin_result = numpy.ravel(modin_arr)._to_numpy()
+    numpy_result = numpy.ravel(numpy_arr)
+    numpy.testing.assert_array_equal(modin_result, numpy_result)
+    # Test from array creation
+    modin_result = numpy.zeros_like(modin_arr)._to_numpy()
+    numpy_result = numpy.zeros_like(numpy_arr)
+    numpy.testing.assert_array_equal(modin_result, numpy_result)
+    # Test from math
+    modin_result = numpy.sum(modin_arr)
+    numpy_result = numpy.sum(numpy_arr)
+    assert numpy_result == modin_result
+
+# def test_array_where():
+#     numpy_flat_arr = numpy.random.randint(-100, 100, size=100)
+#     modin_flat_arr = np.array(numpy_flat_arr)

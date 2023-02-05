@@ -309,14 +309,14 @@ class array(object):
 
     def __array_function__(self, func, types, args, kwargs):
         from . import array_creation as creation, array_shaping as shaping, math
-
+        func_name = func.__name__
         modin_func = None
-        if hasattr(math, func):
-            modin_func = getattr(math, func)
-        elif hasattr(shaping, func):
-            modin_func = getattr(shaping, func)
-        elif hasattr(creation, func):
-            modin_func = getattr(creation, func)
+        if hasattr(math, func_name):
+            modin_func = getattr(math, func_name)
+        elif hasattr(shaping, func_name):
+            modin_func = getattr(shaping, func_name)
+        elif hasattr(creation, func_name):
+            modin_func = getattr(creation, func_name)
         if modin_func is None:
             return NotImplemented
         return modin_func(*args, **kwargs)
