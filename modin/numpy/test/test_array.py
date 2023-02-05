@@ -13,6 +13,7 @@
 
 import numpy
 import pytest
+import warnings
 import modin.numpy as np
 
 
@@ -68,7 +69,7 @@ def test_basic_arithmetic_with_broadcast(operand1shape, operand2shape, operator)
 
 
 @pytest.mark.parametrize("operator", ["__pow__", "__floordiv__", "__mod__"])
-def test_complex_arithmetic(operator):
+def test_arithmetic(operator):
     """Test of operators that do not yet support broadcasting"""
     for size, textdim in ((100, "1D"), ((10, 10), "2D")):
         operand1 = numpy.random.randint(-100, 100, size=size)
@@ -123,3 +124,23 @@ def test_scalar_arithmetic(size):
     numpy.testing.assert_array_equal(
         (modin_arr - scalar)._to_numpy(), numpy_arr - scalar, err_msg="__sub__ failed."
     )
+
+@pytest.mark.filterwarnings("ignore:Distributing <class")
+@pytest.mark.parametrize("size", [100, (2, 100), (100, 2), (1, 100), (100, 1)])
+def test_array_ufunc(size):
+    # Test ufunc.__call__
+    numpy_arr = numpy.random.randint(-100, 100, size=size)
+    modin_arr = np.array(numpy_arr)
+    modin_result = numpy.sign(modin_arr)._to_numpy()
+    numpy_result = numpy.sign(numpy_arr)
+    numpy.testing.assert_array_equal(modin_result, numpy_result)
+    # Test ufunc that we have support for.
+    modin_result = numpy.add(modin_arr, modin_arr)._to_numpy()
+    numpy_result = numpy.add(numpy_arr, numpy_arr)
+    numpy.testing.assert_array_equal(modin_result, numpy_result)
+    # Test ufunc that we have support for, but method that we do not implement.
+    modin_result = numpy.add.reduce(modin_arr)
+    numpy_result = numpy.add.reduce(numpy_arr)
+    assert numpy_result == modin_result
+    # We do not test ufunc.reduce and ufunc.accumulate, since these require a binary reduce
+    # operation that Modin does not currently support.

@@ -236,10 +236,10 @@ class array(object):
                 [
                     param
                     for param in signature(function).parameters.values()
-                    if param.kind == param.POSITIONAL_ONLY
+                    if param.default == param.empty
                 ]
             )
-            if len_expected_arguments == len(args):
+            if len_expected_arguments == (len(args) - 1) and method == "__call__":
                 return function(*tuple(args[1:]), **kwargs)
             else:
                 ErrorMessage.single_warning(
@@ -254,7 +254,7 @@ class array(object):
                     if isinstance(input, pd.Series):
                         input = input._query_compiler.to_numpy().flatten()
                     args += [input]
-                output = args[0].__array_ufunc__(ufunc, method, *args, **kwargs)
+                output = self._to_numpy().__array_ufunc__(ufunc, method, *args, **kwargs)
                 if is_scalar(output):
                     return output
                 return array(output)
@@ -270,13 +270,15 @@ class array(object):
                     [len(inp.shape) for inp in inputs if hasattr(inp, "shape")]
                 )
         elif method == "reduce":
-            new_ufunc = Reduce.register(ufunc, axis=kwargs.get("axis", None))
+            if len(inputs) == 1:
+                new_ufunc = Reduce.register(ufunc, axis=kwargs.get("axis", None))
             if kwargs.get("axis", None) is None:
                 out_ndim = 0
             else:
                 out_ndim = len(inputs[0].shape) - 1
         elif method == "accumulate":
-            new_ufunc = Reduce.register(ufunc, axis=None)
+            if len(inputs) == 1:
+                new_ufunc = Reduce.register(ufunc, axis=None)
             out_ndim = 0
         if new_ufunc is None:
             ErrorMessage.single_warning(
@@ -291,7 +293,7 @@ class array(object):
                 if isinstance(input, pd.Series):
                     input = input._query_compiler.to_numpy().flatten()
                 args += [input]
-            output = ufunc(*args, **kwargs)
+            output = self._to_numpy().__array_ufunc__(ufunc, method, *args, **kwargs)
             if is_scalar(output):
                 return output
             return array(output)
@@ -796,7 +798,7 @@ class array(object):
                 "Using floor_divide with broadcast is not currently available in Modin."
             )
         result = caller._query_compiler.floordiv(callee._query_compiler, **kwargs)
-        if any(callee._query_compiler.eq(0).any()):
+        if callee._query_compiler.eq(0).any():
             # NumPy's floor_divide by 0 works differently from pandas', so we need to fix
             # the output.
             result = result.replace(numpy.inf, 0).replace(numpy.NINF, 0)
@@ -929,7 +931,7 @@ class array(object):
                 "Using remainder with broadcast is not currently available in Modin."
             )
         result = caller._query_compiler.mod(callee._query_compiler, **kwargs)
-        if any(callee._query_compiler.eq(0).any()):
+        if callee._query_compiler.eq(0).any():
             # NumPy's floor_divide by 0 works differently from pandas', so we need to fix
             # the output.
             result = result.replace(numpy.NaN, 0)
