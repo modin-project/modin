@@ -342,7 +342,7 @@ class array(object):
             ErrorMessage.single_warning(
                 "np.where not supported when both x and y are scalars. Defaulting to NumPy."
             )
-            return array(numpy.where(self._query_compiler.to_pandas(), x, y))
+            return array(numpy.where(self._to_numpy(), x, y))
         if is_scalar(x) and not is_scalar(y):
             if self._ndim < y._ndim:
                 if not self.shape[0] == y.shape[1]:
