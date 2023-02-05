@@ -254,7 +254,9 @@ class array(object):
                     if isinstance(input, pd.Series):
                         input = input._query_compiler.to_numpy().flatten()
                     args += [input]
-                output = self._to_numpy().__array_ufunc__(ufunc, method, *args, **kwargs)
+                output = self._to_numpy().__array_ufunc__(
+                    ufunc, method, *args, **kwargs
+                )
                 if is_scalar(output):
                     return output
                 return array(output)
@@ -309,6 +311,7 @@ class array(object):
 
     def __array_function__(self, func, types, args, kwargs):
         from . import array_creation as creation, array_shaping as shaping, math
+
         func_name = func.__name__
         modin_func = None
         if hasattr(math, func_name):
@@ -785,7 +788,11 @@ class array(object):
             if x2 == 0:
                 # NumPy's floor_divide by 0 works differently from pandas', so we need to fix
                 # the output.
-                result = result.replace(numpy.inf, 0).replace(numpy.NINF, 0)
+                result = (
+                    result.replace(numpy.inf, 0)
+                    .replace(numpy.NINF, 0)
+                    .replace(numpy.nan, 0)
+                )
             return fix_dtypes_and_determine_return(
                 result, self._ndim, dtype, out, where
             )
@@ -802,6 +809,7 @@ class array(object):
             # NumPy's floor_divide by 0 works differently from pandas', so we need to fix
             # the output.
             result = result.replace(numpy.inf, 0).replace(numpy.NINF, 0)
+        result = result.replace(numpy.nan, 0)
         return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
 
     __floordiv__ = floor_divide
@@ -1099,8 +1107,7 @@ class array(object):
         result = self._query_compiler.astype(
             {col_name: dtype for col_name in self._query_compiler.columns}
         )
-        if copy:
-            self._query_compiler = result
+        if not copy and subok and numpy.issubdtype(self.dtype, dtype):
             return self
         return array(_query_compiler=result, _ndim=self._ndim)
 
