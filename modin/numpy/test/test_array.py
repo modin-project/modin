@@ -90,36 +90,36 @@ def test_scalar_arithmetic(size):
     modin_arr = np.array(numpy_arr)
     scalar = numpy.random.randint(1, 100)
     numpy.testing.assert_array_equal(
-        (scalar * modin_arr)._to_numpy(), scalar * numpy_arr, err_msg=f"__mul__ failed."
+        (scalar * modin_arr)._to_numpy(), scalar * numpy_arr, err_msg="__mul__ failed."
     )
     numpy.testing.assert_array_equal(
         (modin_arr * scalar)._to_numpy(),
         scalar * numpy_arr,
-        err_msg=f"__rmul__ failed.",
+        err_msg="__rmul__ failed.",
     )
     numpy.testing.assert_array_equal(
         (scalar / modin_arr)._to_numpy(),
         scalar / numpy_arr,
-        err_msg=f"__rtruediv__ failed.",
+        err_msg="__rtruediv__ failed.",
     )
     numpy.testing.assert_array_equal(
         (modin_arr / scalar)._to_numpy(),
         numpy_arr / scalar,
-        err_msg=f"__truediv__ failed.",
+        err_msg="__truediv__ failed.",
     )
     numpy.testing.assert_array_equal(
         (scalar + modin_arr)._to_numpy(),
         scalar + numpy_arr,
-        err_msg=f"__radd__ failed.",
+        err_msg="__radd__ failed.",
     )
     numpy.testing.assert_array_equal(
-        (modin_arr + scalar)._to_numpy(), scalar + numpy_arr, err_msg=f"__add__ failed."
+        (modin_arr + scalar)._to_numpy(), scalar + numpy_arr, err_msg="__add__ failed."
     )
     numpy.testing.assert_array_equal(
         (scalar - modin_arr)._to_numpy(),
         scalar - numpy_arr,
-        err_msg=f"__rsub__ failed.",
+        err_msg="__rsub__ failed.",
     )
     numpy.testing.assert_array_equal(
-        (modin_arr - scalar)._to_numpy(), numpy_arr - scalar, err_msg=f"__sub__ failed."
+        (modin_arr - scalar)._to_numpy(), numpy_arr - scalar, err_msg="__sub__ failed."
     )

@@ -38,7 +38,7 @@ def shape(a):
 def transpose(a, axes=None):
     if axes is not None:
         raise NotImplementedError(
-            f"Modin does not support arrays higher than 2-dimensions. Please use `transpose` with `axis=None` on a 2-dimensional or lower object."
+            "Modin does not support arrays higher than 2-dimensions. Please use `transpose` with `axis=None` on a 2-dimensional or lower object."
         )
     if hasattr(a, "transpose"):
         return a.transpose()
