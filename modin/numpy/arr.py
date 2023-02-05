@@ -113,6 +113,17 @@ def fix_dtypes_and_determine_return(query_compiler_in, _ndim, dtype=None, out=No
     return result
 
 
+def find_common_dtype(dtypes):
+    if len(dtypes) == 1:
+        return dtypes[0]
+    elif len(dtypes) == 2:
+        return numpy.promote_types(*dtypes)
+    midpoint = len(dtypes) // 2
+    return numpy.promote_types(
+        find_common_dtype(dtypes[:midpoint]), find_common_dtype(dtypes[midpoint:])
+    )
+
+
 class array(object):
     """
     Modin distributed representation of ``numpy.array``.
@@ -142,10 +153,14 @@ class array(object):
         if _query_compiler is not None:
             self._query_compiler = _query_compiler
             self._ndim = _ndim
+            new_dtype = find_common_dtype(
+                numpy.unique(self._query_compiler.dtypes.values)
+            )
         elif is_list_like(object) and not is_list_like(object[0]):
             series = pd.Series(object)
             self._query_compiler = series._query_compiler
             self._ndim = 1
+            new_dtype = self._query_compiler.dtypes.values[0]
         else:
             target_kwargs = {
                 "dtype": None,
@@ -168,6 +183,7 @@ class array(object):
                 )
 
             self._query_compiler = pd.DataFrame(arr)._query_compiler
+            new_dtype = arr.dtype
         # These two lines are necessary so that our query compiler does not keep track of indices
         # and try to map like indices to like indices. (e.g. if we multiply two arrays that used
         # to be dataframes, and the dataframes had the same column names but ordered differently
@@ -175,6 +191,10 @@ class array(object):
         # than pair columns with the same name and multiply them.)
         self._query_compiler = self._query_compiler.reset_index(drop=True)
         self._query_compiler.columns = range(len(self._query_compiler.columns))
+        new_dtype = new_dtype if dtype is None else dtype
+        self._query_compiler = self._query_compiler.astype(
+            {col_name: new_dtype for col_name in self._query_compiler.columns}
+        )
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         ufunc_name = ufunc.__name__
@@ -1019,7 +1039,7 @@ class array(object):
         if self._ndim == 1:
             return dtype[0]
         else:
-            return numpy.result_type(dtype.values)
+            return find_common_dtype(dtype.values)
 
     def astype(self, dtype, order="K", casting="unsafe", subok=True, copy=True):
         if casting != "unsafe":
