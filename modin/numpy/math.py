@@ -101,7 +101,7 @@ def power(
         )
 
 
-def prod(a, axis=None, out=None, keepdims=None, where=None):
+def prod(a, axis=None, out=None, keepdims=None, where=True):
     if hasattr(a, "prod"):
         return a.prod(axis=axis, out=out, keepdims=keepdims, where=where)
 
@@ -154,7 +154,7 @@ def subtract(
         )
 
 
-def sum(arr, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None):
+def sum(arr, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=True):
     if hasattr(arr, "sum"):
         return arr.sum(axis)
 
@@ -174,7 +174,7 @@ def true_divide(
         )
 
 
-def mean(x1, axis=None, dtype=None, out=None, keepdims=None, *, where=None):
+def mean(x1, axis=None, dtype=None, out=None, keepdims=None, *, where=True):
     if hasattr(x1, "mean"):
         return x1.mean(axis=axis, dtype=dtype, out=out, keepdims=keepdims, where=where)
 
@@ -187,7 +187,7 @@ maximum = numpy.maximum
 minimum = numpy.minimum
 
 
-def amax(x1, axis=None, out=None, keepdims=None, initial=None, where=None):
+def amax(x1, axis=None, out=None, keepdims=None, initial=None, where=True):
     if hasattr(x1, "max"):
         return x1.max(
             axis=axis, out=out, keepdims=keepdims, initial=initial, where=where
@@ -197,7 +197,7 @@ def amax(x1, axis=None, out=None, keepdims=None, initial=None, where=None):
 max = amax
 
 
-def amin(x1, axis=None, out=None, keepdims=None, initial=None, where=None):
+def amin(x1, axis=None, out=None, keepdims=None, initial=None, where=True):
     if hasattr(x1, "min"):
         return x1.min(
             axis=axis, out=out, keepdims=keepdims, initial=initial, where=where

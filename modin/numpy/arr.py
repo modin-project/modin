@@ -383,16 +383,22 @@ class array(object):
         )
 
     def max(
-        self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None
+        self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=True
     ):
         check_kwargs(keepdims=keepdims, where=where)
+        if initial is None and where is not True:
+            raise ValueError(
+                "reduction operation 'maximum' does not have an identity, so to use a where mask one has to specify 'initial'"
+            )
         if self._ndim == 1:
             if axis == 1:
                 raise numpy.AxisError(1, 1)
             result = self._query_compiler.max(axis=0)
             if keepdims:
                 if initial is not None and result.lt(initial):
-                    result = pd.Series([initial])._query_compiler
+                    result = array(
+                        _query_compiler=pd.Series([initial])._query_compiler, _ndim=1
+                    )
                 return fix_dtypes_and_determine_return(result, 1, dtype, out)
             if initial is not None:
                 result = max(result.to_numpy()[0, 0], initial)
@@ -409,7 +415,7 @@ class array(object):
                 where=where,
             )
             if keepdims:
-                result._ndim = self._ndim
+                return array(numpy.array([[result]]))
             return result
         result = self._query_compiler.max(axis=axis)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
@@ -419,9 +425,9 @@ class array(object):
             else:
                 result = result.to_numpy()[0, 0]
             return result
-        intermediate = fix_dtypes_and_determine_return(
-            result.transpose(), new_ndim, dtype, out
-        )
+        if not keepdims and axis != 1:
+            result = result.transpose()
+        intermediate = fix_dtypes_and_determine_return(result, new_ndim, dtype, out)
         if initial is not None:
             intermediate._query_compiler = (intermediate > initial).where(
                 intermediate, initial
@@ -430,16 +436,22 @@ class array(object):
             return intermediate
 
     def min(
-        self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None
+        self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=True
     ):
         check_kwargs(keepdims=keepdims, where=where)
+        if initial is None and where is not True:
+            raise ValueError(
+                "reduction operation 'minimum' does not have an identity, so to use a where mask one has to specify 'initial'"
+            )
         if self._ndim == 1:
             if axis == 1:
                 raise numpy.AxisError(1, 1)
             result = self._query_compiler.min(axis=0)
             if keepdims:
                 if initial is not None and result.lt(initial):
-                    result = pd.Series([initial])._query_compiler
+                    result = array(
+                        _query_compiler=pd.Series([initial])._query_compiler, _ndim=1
+                    )
                 return fix_dtypes_and_determine_return(result, 1, dtype, out)
             if initial is not None:
                 result = min(result.to_numpy()[0, 0], initial)
@@ -456,6 +468,7 @@ class array(object):
                 where=where,
             )
             if keepdims:
+                result = array(numpy.array([[result]]))
                 result._ndim = self._ndim
             return result
         result = self._query_compiler.min(axis=axis)
@@ -465,9 +478,14 @@ class array(object):
                 result = min(result.to_numpy()[0, 0], initial)
             else:
                 result = result.to_numpy()[0, 0]
-            return result
+            return result if where else initial
+        if not keepdims and axis != 1:
+            result = result.transpose()
         intermediate = fix_dtypes_and_determine_return(
-            result.transpose(), new_ndim, dtype, out
+            result,
+            new_ndim,
+            dtype,
+            out,
         )
         if initial is not None:
             intermediate._query_compiler = (intermediate < initial).where(
@@ -628,7 +646,7 @@ class array(object):
         result = caller._query_compiler.ne(callee._query_compiler, **kwargs)
         return array(_query_compiler=result, _ndim=new_ndim)
 
-    def mean(self, axis=None, dtype=None, out=None, keepdims=None, *, where=None):
+    def mean(self, axis=None, dtype=None, out=None, keepdims=None, *, where=True):
         check_kwargs(keepdims=keepdims, where=where)
         if self._ndim == 1:
             if axis == 1:
@@ -642,13 +660,15 @@ class array(object):
                 axis=axis, dtype=dtype, out=out, keepdims=None, where=where
             )
             if keepdims:
-                result._ndim = self._ndim
+                result = array(numpy.array([[result]]))
             return result
         result = self._query_compiler.mean(axis=axis)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
             return result.to_numpy()[0, 0]
-        return fix_dtypes_and_determine_return(result.transpose(), new_ndim, dtype, out)
+        if not keepdims and axis != 1:
+            result = result.transpose()
+        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out)
 
     def __add__(
         self,
@@ -793,7 +813,7 @@ class array(object):
     __pow__ = power
 
     def prod(
-        self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None
+        self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=True
     ):
         check_kwargs(keepdims=keepdims, where=where)
         if self._ndim == 1:
@@ -815,7 +835,7 @@ class array(object):
                 where=where,
             )
             if keepdims:
-                result._ndim = self._ndim
+                result = array(numpy.array([[result]]))
             return result
         result = self._query_compiler.prod(axis=axis)
         if initial is not None:
@@ -823,7 +843,9 @@ class array(object):
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
             return result.to_numpy()[0, 0]
-        return fix_dtypes_and_determine_return(result.transpose(), new_ndim, dtype, out)
+        if not keepdims and axis != 1:
+            result = result.transpose()
+        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out)
 
     def multiply(
         self,
@@ -946,7 +968,7 @@ class array(object):
         return fix_dtypes_and_determine_return(result, new_ndim, dtype, out)
 
     def sum(
-        self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None
+        self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=True
     ):
         check_kwargs(keepdims=keepdims, where=where)
         if self._ndim == 1:
@@ -968,6 +990,7 @@ class array(object):
                 where=where,
             )
             if keepdims:
+                result = array(numpy.array([[result]]))
                 result._ndim = self._ndim
             return result
         result = self._query_compiler.sum(axis=axis)
@@ -976,7 +999,9 @@ class array(object):
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
             return result.to_numpy()[0, 0]
-        return fix_dtypes_and_determine_return(result.transpose(), new_ndim, dtype, out)
+        if not keepdims and axis != 1:
+            result = result.transpose()
+        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out)
 
     def flatten(self, order="C"):
         check_kwargs(order=order)
