@@ -541,6 +541,38 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def reset_index(self, **kwargs):
+        if self.lazy_execution:
+
+            def _reset(df, *axis_lengths, partition_idx):
+                df = df.reset_index(**kwargs)
+
+                if isinstance(df.index, pandas.RangeIndex):
+                    # If the resulting index is a pure RangeIndex that means that
+                    # `.reset_index` actually dropped all of the levels of the
+                    # original index and so we have to recompute it manually for each partition
+                    start = sum(axis_lengths[:partition_idx])
+                    stop = sum(axis_lengths[: partition_idx + 1])
+
+                    df.index = pandas.RangeIndex(start, stop)
+                return df
+
+            if self._modin_frame._columns_cache is not None and kwargs["drop"]:
+                new_columns = self._modin_frame._columns_cache
+            else:
+                new_columns = None
+
+            return self.__constructor__(
+                self._modin_frame.broadcast_apply_full_axis(
+                    axis=1,
+                    func=_reset,
+                    other=None,
+                    enumerate_partitions=True,
+                    new_columns=new_columns,
+                    sync_labels=False,
+                    pass_axis_lengths_to_partitions=True,
+                )
+            )
+
         allow_duplicates = kwargs.pop("allow_duplicates", no_default)
         names = kwargs.pop("names", None)
         if allow_duplicates not in (no_default, False) or names is not None:

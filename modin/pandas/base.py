@@ -2395,19 +2395,19 @@ class BasePandasDataset(ClassLogger):
         # exist.
         if (
             not drop
+            and not self._query_compiler.lazy_execution
             and not self._query_compiler.has_multiindex()
             and all(n in self.columns for n in ["level_0", "index"])
         ):
             raise ValueError("cannot insert level_0, already exists")
-        else:
-            new_query_compiler = self._query_compiler.reset_index(
-                drop=drop,
-                level=level,
-                col_level=col_level,
-                col_fill=col_fill,
-                allow_duplicates=allow_duplicates,
-                names=names,
-            )
+        new_query_compiler = self._query_compiler.reset_index(
+            drop=drop,
+            level=level,
+            col_level=col_level,
+            col_fill=col_fill,
+            allow_duplicates=allow_duplicates,
+            names=names,
+        )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def radd(

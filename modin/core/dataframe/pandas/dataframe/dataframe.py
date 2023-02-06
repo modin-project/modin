@@ -2192,6 +2192,7 @@ class PandasDataframe(ClassLogger):
         dtypes=None,
         keep_partitioning=True,
         sync_labels=True,
+        pass_axis_lengths_to_partitions=False,
     ):
         """
         Perform a function across an entire axis.
@@ -2219,6 +2220,9 @@ class PandasDataframe(ClassLogger):
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to
             the provided hints in order to save time on syncing them.
+        pass_axis_lengths_to_partitions : bool, default: False
+            Whether pass partition lengths along `axis ^ 1` to the kernel `func`.
+            Note that `func` must be able to obtain `df, *axis_lengths`.
 
         Returns
         -------
@@ -2238,6 +2242,7 @@ class PandasDataframe(ClassLogger):
             other=None,
             keep_partitioning=keep_partitioning,
             sync_labels=sync_labels,
+            pass_axis_lengths_to_partitions=pass_axis_lengths_to_partitions,
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -2630,6 +2635,7 @@ class PandasDataframe(ClassLogger):
         dtypes=None,
         keep_partitioning=True,
         sync_labels=True,
+        pass_axis_lengths_to_partitions=False,
     ):
         """
         Broadcast partitions of `other` Modin DataFrame and apply a function along full axis.
@@ -2664,6 +2670,9 @@ class PandasDataframe(ClassLogger):
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to
             the provided hints in order to save time on syncing them.
+        pass_axis_lengths_to_partitions : bool, default: False
+            Whether pass partition lengths along `axis ^ 1` to the kernel `func`.
+            Note that `func` must be able to obtain `df, *axis_lengths`.
 
         Returns
         -------
@@ -2681,6 +2690,23 @@ class PandasDataframe(ClassLogger):
                 axis ^ 1, numeric_indices
             ).keys()
 
+        apply_func_args = None
+        if pass_axis_lengths_to_partitions:
+            if axis == 0:
+                apply_func_args = (
+                    self._column_widths_cache
+                    if self._column_widths_cache is not None
+                    else [part.width(materialize=False) for part in self._partitions[0]]
+                )
+            else:
+                apply_func_args = (
+                    self._row_lengths_cache
+                    if self._row_lengths_cache is not None
+                    else [
+                        part.length(materialize=False) for part in self._partitions.T[0]
+                    ]
+                )
+
         new_partitions = self._partition_mgr_cls.broadcast_axis_partitions(
             axis=axis,
             left=self._partitions,
@@ -2689,6 +2715,7 @@ class PandasDataframe(ClassLogger):
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
             keep_partitioning=keep_partitioning,
+            apply_func_args=apply_func_args,
         )
         kw = {"row_lengths": None, "column_widths": None}
         if dtypes == "copy":
