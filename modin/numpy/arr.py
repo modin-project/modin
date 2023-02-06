@@ -122,7 +122,7 @@ def fix_dtypes_and_determine_return(
     if isinstance(where, array) and out is None:
         from array_creation import zeros_like
 
-        out = zeros_like(result).astype(out_dtype)
+        out = zeros_like(result).astype(dtype if dtype is not None else result.dtype)
         out._query_compiler = where.where(result, out)._query_compiler
         return out
     elif not where:
