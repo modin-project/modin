@@ -711,10 +711,10 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
       - run: python -m pytest -n 2 modin/pandas/test/test_concat.py
-      - run: python -m pytest -n 2 modin/numpy/test/test_array.py
         if: matrix.engine == 'python'
       - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
         if: matrix.engine != 'python'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array.py
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
