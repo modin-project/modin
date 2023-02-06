@@ -784,10 +784,15 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        operand_dtype = (
+            self.dtype
+            if not isinstance(x2, array)
+            else find_common_dtype([self.dtype, x2.dtype])
+        )
         out_dtype = (
             dtype
             if dtype is not None
-            else (out.dtype if out is not None else self.dtype)
+            else (out.dtype if out is not None else operand_dtype)
         )
         check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
@@ -829,10 +834,15 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        operand_dtype = (
+            self.dtype
+            if not isinstance(x2, array)
+            else find_common_dtype([self.dtype, x2.dtype])
+        )
         out_dtype = (
             dtype
             if dtype is not None
-            else (out.dtype if out is not None else self.dtype)
+            else (out.dtype if out is not None else operand_dtype)
         )
         check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
@@ -873,10 +883,15 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        operand_dtype = (
+            self.dtype
+            if not isinstance(x2, array)
+            else find_common_dtype([self.dtype, x2.dtype])
+        )
         out_dtype = (
             dtype
             if dtype is not None
-            else (out.dtype if out is not None else self.dtype)
+            else (out.dtype if out is not None else operand_dtype)
         )
         check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
@@ -912,23 +927,28 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        operand_dtype = (
+            self.dtype
+            if not isinstance(x2, array)
+            else find_common_dtype([self.dtype, x2.dtype])
+        )
         out_dtype = (
             dtype
             if dtype is not None
-            else (out.dtype if out is not None else self.dtype)
+            else (out.dtype if out is not None else operand_dtype)
         )
         check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
             result = self._query_compiler.astype(
                 {col_name: out_dtype for col_name in self._query_compiler.columns}
             ).floordiv(x2)
-            if x2 == 0:
+            if x2 == 0 and numpy.issubdtype(out_dtype, numpy.integer):
                 # NumPy's floor_divide by 0 works differently from pandas', so we need to fix
                 # the output.
                 result = (
                     result.replace(numpy.inf, 0)
                     .replace(numpy.NINF, 0)
-                    .replace(numpy.nan, 0)
+                    .where(self._query_compiler.ne(0), 0)
                 )
             return fix_dtypes_and_determine_return(
                 result, self._ndim, dtype, out, where
@@ -948,11 +968,16 @@ class array(object):
                 "Using floor_divide with broadcast is not currently available in Modin."
             )
         result = caller_qc.floordiv(callee_qc, **kwargs)
-        if callee._query_compiler.eq(0).any():
+        if callee._query_compiler.eq(0).any() and numpy.issubdtype(
+            out_dtype, numpy.integer
+        ):
             # NumPy's floor_divide by 0 works differently from pandas', so we need to fix
             # the output.
-            result = result.replace(numpy.inf, 0).replace(numpy.NINF, 0)
-        result = result.replace(numpy.nan, 0)
+            result = (
+                result.replace(numpy.inf, 0)
+                .replace(numpy.NINF, 0)
+                .where(callee_qc.ne(0), 0)
+            )
         return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
 
     __floordiv__ = floor_divide
@@ -967,10 +992,15 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        operand_dtype = (
+            self.dtype
+            if not isinstance(x2, array)
+            else find_common_dtype([self.dtype, x2.dtype])
+        )
         out_dtype = (
             dtype
             if dtype is not None
-            else (out.dtype if out is not None else self.dtype)
+            else (out.dtype if out is not None else operand_dtype)
         )
         check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
@@ -1094,10 +1124,15 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        operand_dtype = (
+            self.dtype
+            if not isinstance(x2, array)
+            else find_common_dtype([self.dtype, x2.dtype])
+        )
         out_dtype = (
             dtype
             if dtype is not None
-            else (out.dtype if out is not None else self.dtype)
+            else (out.dtype if out is not None else operand_dtype)
         )
         check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
@@ -1144,17 +1179,22 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        operand_dtype = (
+            self.dtype
+            if not isinstance(x2, array)
+            else find_common_dtype([self.dtype, x2.dtype])
+        )
         out_dtype = (
             dtype
             if dtype is not None
-            else (out.dtype if out is not None else self.dtype)
+            else (out.dtype if out is not None else operand_dtype)
         )
         check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
             result = self._query_compiler.astype(
                 {col_name: out_dtype for col_name in self._query_compiler.columns}
             ).mod(x2)
-            if x2 == 0:
+            if x2 == 0 and numpy.issubdtype(out_dtype, numpy.integer):
                 # NumPy's remainder by 0 works differently from pandas', so we need to fix
                 # the output.
                 result = result.replace(numpy.NaN, 0)
@@ -1176,7 +1216,9 @@ class array(object):
             {col_name: out_dtype for col_name in callee._query_compiler.columns}
         )
         result = caller_qc.mod(callee_qc, **kwargs)
-        if callee._query_compiler.eq(0).any():
+        if callee._query_compiler.eq(0).any() and numpy.issubdtype(
+            out_dtype, numpy.integer
+        ):
             # NumPy's floor_divide by 0 works differently from pandas', so we need to fix
             # the output.
             result = result.replace(numpy.NaN, 0)
@@ -1194,10 +1236,15 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        operand_dtype = (
+            self.dtype
+            if not isinstance(x2, array)
+            else find_common_dtype([self.dtype, x2.dtype])
+        )
         out_dtype = (
             dtype
             if dtype is not None
-            else (out.dtype if out is not None else self.dtype)
+            else (out.dtype if out is not None else operand_dtype)
         )
         check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):
@@ -1238,10 +1285,15 @@ class array(object):
         dtype=None,
         subok=True,
     ):
+        operand_dtype = (
+            self.dtype
+            if not isinstance(x2, array)
+            else find_common_dtype([self.dtype, x2.dtype])
+        )
         out_dtype = (
             dtype
             if dtype is not None
-            else (out.dtype if out is not None else self.dtype)
+            else (out.dtype if out is not None else operand_dtype)
         )
         check_kwargs(order=order, subok=subok, casting=casting, where=where)
         if is_scalar(x2):

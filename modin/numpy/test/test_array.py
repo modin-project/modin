@@ -100,6 +100,22 @@ def test_arithmetic(operator):
         )
 
 
+def test_arithmetic_nans_and_zeros():
+    numpy_arr1 = numpy.array([[1, 0, 3], [numpy.nan, 0, numpy.nan]])
+    numpy_arr2 = numpy.array([1, 0, 0])
+    numpy.testing.assert_array_equal(
+        numpy_arr1 // numpy_arr2,
+        (np.array(numpy_arr1) // np.array(numpy_arr2))._to_numpy(),
+    )
+    numpy.testing.assert_array_equal(
+        numpy.array([0]) // 0, (np.array([0]) // 0)._to_numpy()
+    )
+    numpy.testing.assert_array_equal(
+        numpy.array([0], dtype=numpy.float64) // 0,
+        (np.array([0], dtype=numpy.float64) // 0)._to_numpy(),
+    )
+
+
 @pytest.mark.parametrize("size", [100, (2, 100), (100, 2), (1, 100), (100, 1)])
 def test_scalar_arithmetic(size):
     numpy_arr = numpy.random.randint(-100, 100, size=size)
