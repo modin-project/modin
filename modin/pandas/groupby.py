@@ -898,7 +898,13 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def head(self, n=5):
-        return self._default_to_pandas(lambda df: df.head(n))
+        return self._check_index(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_head, 
+                agg_kwargs=dict(n=n), 
+                numeric_only=False
+            )
+        )
 
     def cumprod(self, axis=0, *args, **kwargs):
         return self._check_index_name(
@@ -978,7 +984,13 @@ class DataFrameGroupBy(ClassLogger):
         return result
 
     def tail(self, n=5):
-        return self._default_to_pandas(lambda df: df.tail(n))
+        return self._check_index(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_tail, 
+                agg_kwargs=dict(n=n), 
+                numeric_only=False
+            )
+        )
 
     # expanding and rolling are unique cases and need to likely be handled
     # separately. They do not appear to be commonly used.
