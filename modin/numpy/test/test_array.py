@@ -618,7 +618,7 @@ def test_prod():
     numpy_result = numpy_arr.prod(axis=0, where=False, initial=4, out=numpy_out)
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
     numpy.testing.assert_array_equal(modin_out._to_numpy(), numpy_out)
-    numpy_arr = numpy.random.randint(-5, 5, size=(20, 20))
+    numpy_arr = numpy.random.randint(-100, 100, size=(20, 20))
     modin_arr = np.array(numpy_arr)
     numpy_out = numpy.ones(20)
     modin_out = np.array(numpy_out)
