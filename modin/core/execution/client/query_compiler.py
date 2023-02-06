@@ -933,6 +933,8 @@ _GROUPBY_FORWARDING_METHODS = frozenset(
         "cummax",
         "cummin",
         "cumprod",
+        "head",
+        "tail",
         "std",
         "sem",
         "rank",
