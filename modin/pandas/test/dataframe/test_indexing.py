@@ -294,16 +294,28 @@ def test_indexing_duplicate_axis(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_set_index(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    modin_result = modin_df.set_index([modin_df.index, modin_df.columns[0]])
-    pandas_result = pandas_df.set_index([pandas_df.index, pandas_df.columns[0]])
-    df_equals(modin_result, pandas_result)
-
-    # test for the case from https://github.com/modin-project/modin/issues/4308
-    eval_general(modin_df, pandas_df, lambda df: df.set_index("inexistent_col"))
+@pytest.mark.parametrize(
+    "key_func",
+    [
+        # test for the case from https://github.com/modin-project/modin/issues/4308
+        "non_existing_column",
+        lambda df: df.columns[0],
+        lambda df: df.index,
+        lambda df: [df.index, df.columns[0]],
+        lambda df: pandas.Series(list(range(len(df.index))))
+        if isinstance(df, pandas.DataFrame)
+        else pd.Series(list(range(len(df)))),
+    ],
+    ids=[
+        "non_existing_column",
+        "first_column_name",
+        "original_index",
+        "list_of_index_and_first_column_name",
+        "series_of_integers",
+    ],
+)
+def test_set_index(data, key_func):
+    eval_general(*create_test_dfs(data), lambda df: df.set_index(key_func(df)))
 
 
 @pytest.mark.parametrize("index", ["a", ["a", ("b", "")]])

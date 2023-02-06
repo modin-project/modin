@@ -2080,7 +2080,9 @@ class DataFrame(BasePandasDataset):
             else:
                 frame = self.copy()
             if not all(
-                isinstance(col, (pandas.Index, Series, np.ndarray, list, Iterator))
+                isinstance(
+                    col, (pandas.Index, pandas.Series, np.ndarray, list, Iterator)
+                )
                 for col in keys
             ):
                 if drop:
