@@ -314,8 +314,22 @@ def test_indexing_duplicate_axis(data):
         "series_of_integers",
     ],
 )
-def test_set_index(data, key_func):
-    eval_general(*create_test_dfs(data), lambda df: df.set_index(key_func(df)))
+@pytest.mark.parametrize(
+    "drop_kwargs",
+    [{"drop": True}, {"drop": False}, {}],
+    ids=["drop_True", "drop_False", "no_drop_param"],
+)
+def test_set_index(data, key_func, drop_kwargs, request):
+    if (
+        "list_of_index_and_first_column_name" in request.node.name
+        and "drop_False" in request.node.name
+    ):
+        pytest.xfail(
+            reason="KeyError: https://github.com/modin-project/modin/issues/5636"
+        )
+    eval_general(
+        *create_test_dfs(data), lambda df: df.set_index(key_func(df), **drop_kwargs)
+    )
 
 
 @pytest.mark.parametrize("index", ["a", ["a", ("b", "")]])
