@@ -298,6 +298,9 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - run: python -m pytest -n 2 modin/numpy/test/test_array.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_creation.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_arithmetic.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_axis_functions.py
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
       - run: python -m pytest -n 2 modin/pandas/test/test_concat.py
         if: matrix.engine == 'python'
@@ -336,6 +339,9 @@ jobs:
           - modin/pandas/test/dataframe/test_pickle.py
           - modin/pandas/test/test_series.py
           - modin/numpy/test/test_array.py
+          - modin/numpy/test/test_array_creation.py
+          - modin/numpy/test/test_array_arithmetic.py
+          - modin/numpy/test/test_array_axis_functions.py
           - modin/pandas/test/test_rolling.py
           - modin/pandas/test/test_concat.py
           - modin/pandas/test/test_groupby.py

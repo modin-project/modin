@@ -12,7 +12,9 @@
 # governing permissions and limitations under the License.
 
 """Module houses array creation methods for Modin's NumPy API."""
+
 import numpy
+
 from modin.error_message import ErrorMessage
 from .arr import array
 

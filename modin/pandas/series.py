@@ -500,6 +500,10 @@ class Series(BasePandasDataset):
 
         data = self.to_numpy()
         if isinstance(self.dtype, pd.CategoricalDtype):
+            from modin.config import ExperimentalNumPyAPI
+
+            if ExperimentalNumPyAPI.get():
+                data = data._to_numpy()
             data = pd.Categorical(data, dtype=self.dtype)
         return data
 

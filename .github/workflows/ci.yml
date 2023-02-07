@@ -624,6 +624,9 @@ jobs:
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_reshape.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_general.py
       - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_creation.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_arithmetic.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_axis_functions.py
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_io.py --verbose
@@ -715,6 +718,9 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
         if: matrix.engine != 'python'
       - run: python -m pytest -n 2 modin/numpy/test/test_array.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_creation.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_arithmetic.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_axis_functions.py
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
@@ -845,6 +851,9 @@ jobs:
           - modin/pandas/test/test_general.py
           - modin/pandas/test/test_io.py
           - modin/numpy/test/test_array.py
+          - modin/numpy/test/test_array_creation.py
+          - modin/numpy/test/test_array_axis_functions.py
+          - modin/numpy/test/test_array_arithmetic.py
     env:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-windows
