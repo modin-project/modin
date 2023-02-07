@@ -202,13 +202,13 @@ def test_array_where():
         UserWarning, match="np.where method with only condition specified"
     ):
         warnings.filterwarnings("ignore", message="Distributing")
-        modin_flat_arr.where()
+        (modin_flat_arr <= 0).where()
     with pytest.raises(ValueError, match="np.where requires x and y"):
-        modin_flat_arr.where(x=["Should Fail."])
+        (modin_flat_arr <= 0).where(x=["Should Fail."])
     with pytest.warns(UserWarning, match="np.where not supported when both x and y"):
         warnings.filterwarnings("ignore", message="Distributing")
-        modin_result = modin_flat_arr.where(x=4, y=5)
-    numpy_result = numpy.where(numpy_flat_arr, 4, 5)
+        modin_result = (modin_flat_arr <= 0).where(x=4, y=5)
+    numpy_result = numpy.where(numpy_flat_arr <= 0, 4, 5)
     numpy.testing.assert_array_equal(numpy_result, modin_result._to_numpy())
     modin_flat_bool_arr = modin_flat_arr <= 0
     numpy_flat_bool_arr = numpy_flat_arr <= 0

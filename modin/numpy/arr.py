@@ -135,7 +135,12 @@ def fix_dtypes_and_determine_return(
 def find_common_dtype(dtypes):
     if len(dtypes) == 1:
         return dtypes[0]
-    return numpy.common_type(dtypes, [])
+    elif len(dtypes) == 2:
+        return numpy.promote_types(*dtypes)
+    midpoint = len(dtypes) // 2
+    return numpy.promote_types(
+        find_common_dtype(dtypes[:midpoint]), find_common_dtype(dtypes[midpoint:])
+    )
 
 
 class array(object):
