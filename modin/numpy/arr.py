@@ -178,7 +178,7 @@ class array(object):
             assert arr.ndim in (
                 1,
                 2,
-            ), "Modin.NumPy currently only supports 1D and 2D objects."
+            ), "modin.numpy currently only supports 1D and 2D objects."
             self._ndim = len(arr.shape)
             if self._ndim > 2:
                 ErrorMessage.not_implemented(
