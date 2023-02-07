@@ -32,6 +32,8 @@ from pandas.core.common import is_bool_indexer
 from pandas.core.dtypes.common import is_list_like
 from functools import wraps
 
+import numpy as np
+
 
 def is_inoperable(value):
     """
@@ -797,8 +799,12 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self._modin_frame.dtypes
 
 
+_SUPPORTED_NUM_TYPE_CODES = set(np.typecodes["AllInteger"] + np.typecodes["Float"]) - {
+    np.dtype(np.float16).char
+}
+
+
 def _check_int_or_float(op, dtypes):  # noqa: GL08
-    codes = "bBhHiIlLqQpPfd"
     for t in dtypes:
-        if t.char not in codes:
+        if t.char not in _SUPPORTED_NUM_TYPE_CODES:
             raise NotImplementedError(f"Operation '{op}' on type '{t.name}'")
