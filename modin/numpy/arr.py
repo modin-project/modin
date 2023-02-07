@@ -70,29 +70,13 @@ def check_kwargs(order="C", subok=True, keepdims=None, casting="same_kind", wher
         )
 
 
-def check_how_broadcast_to_output(arr_in: "array", arr_out: "array"):
+def check_can_broadcast_to_output(arr_in: "array", arr_out: "array"):
     if not isinstance(arr_out, array):
         raise TypeError("return arrays must be of modin.numpy.array type.")
     if arr_out._ndim == arr_in._ndim and arr_out.shape != arr_in.shape:
         raise ValueError(
             f"non-broadcastable output operand with shape {arr_out.shape} doesn't match the broadcast shape {arr_in.shape}"
         )
-    elif arr_out._ndim == arr_in._ndim:
-        return "broadcastable"
-    if arr_out._ndim == 1:
-        if prod(arr_in.shape) == arr_out.shape[0]:
-            return "flatten"
-        else:
-            raise ValueError(
-                f"non-broadcastable output operand with shape {arr_out.shape} doesn't match the broadcast shape {arr_in.shape}"
-            )
-    if arr_in._ndim == 1:
-        if prod(arr_out.shape) == arr_in.shape[0]:
-            return "reshape"
-        else:
-            raise ValueError(
-                f"non-broadcastable output operand with shape {arr_out.shape} doesn't match the broadcast shape {arr_in.shape}"
-            )
 
 
 def fix_dtypes_and_determine_return(
@@ -105,15 +89,10 @@ def fix_dtypes_and_determine_return(
     result = array(_query_compiler=query_compiler_in, _ndim=_ndim)
     if out is not None:
         out = try_convert_from_interoperable_type(out)
-        broadcast_method = check_how_broadcast_to_output(result, out)
+        check_can_broadcast_to_output(result, out)
         result._query_compiler = result._query_compiler.astype(
             {col_name: out.dtype for col_name in result._query_compiler.columns}
         )
-        if broadcast_method == "flatten":
-            result = result.flatten()
-        elif broadcast_method != "broadcastable":
-            # TODO(RehanSD): Replace this when reshape is implemented.
-            raise NotImplementedError("Reshape is currently not supported in Modin.")
         if isinstance(where, array):
             out._query_compiler = where.where(result, out)._query_compiler
         elif where:
@@ -590,21 +569,9 @@ class array(object):
             result = result.astype({col_name: dtype for col_name in result.columns})
         if out is not None:
             out = try_convert_from_interoperable_type(out)
-            broadcast_method = check_how_broadcast_to_output(self, out)
-            if broadcast_method == "broadcastable":
-                out._query_compiler = result
-                return out
-            elif broadcast_method == "flatten":
-                out._query_compiler = (
-                    array(_query_compiler=result, _ndim=self._ndim)
-                    .flatten()
-                    ._query_compiler
-                )
-            else:
-                # TODO(RehanSD): Replace this when reshape is implemented.
-                raise NotImplementedError(
-                    "Reshape is currently not supported in Modin."
-                )
+            check_can_broadcast_to_output(self, out)
+            out._query_compiler = result
+            return out
         return array(_query_compiler=result, _ndim=self._ndim)
 
     absolute = __abs__
