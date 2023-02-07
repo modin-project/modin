@@ -13,14 +13,29 @@
 
 import numpy
 
+from .arr import array
+from modin.error_message import ErrorMessage
+
 
 def absolute(
     x, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x, "absolute"):
-        return x.absolute(
-            out=out, where=where, casting=casting, order=order, dtype=dtype, subok=subok
+    if not isinstance(x, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for absolute, not {type(x)}. Defaulting to NumPy."
         )
+        return numpy.absolute(
+            x,
+            out=out,
+            where=where,
+            casting=casting,
+            order=order,
+            dtype=dtype,
+            subok=subok,
+        )
+    return x.absolute(
+        out=out, where=where, casting=casting, order=order, dtype=dtype, subok=subok
+    )
 
 
 abs = absolute
@@ -29,8 +44,12 @@ abs = absolute
 def add(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "__add__"):
-        return x1.__add__(
+    if not isinstance(x1, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for add, not {type(x1)}. Defaulting to NumPy."
+        )
+        return numpy.add(
+            x1,
             x2,
             out=out,
             where=where,
@@ -39,13 +58,26 @@ def add(
             dtype=dtype,
             subok=subok,
         )
+    return x1.__add__(
+        x2,
+        out=out,
+        where=where,
+        casting=casting,
+        order=order,
+        dtype=dtype,
+        subok=subok,
+    )
 
 
 def divide(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "divide"):
-        return x1.divide(
+    if not isinstance(x1, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for divide, not {type(x1)}. Defaulting to NumPy."
+        )
+        return numpy.divide(
+            x1,
             x2,
             out=out,
             where=where,
@@ -54,13 +86,26 @@ def divide(
             dtype=dtype,
             subok=subok,
         )
+    return x1.divide(
+        x2,
+        out=out,
+        where=where,
+        casting=casting,
+        order=order,
+        dtype=dtype,
+        subok=subok,
+    )
 
 
 def float_power(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "float_power"):
-        return x1.float_power(
+    if not isinstance(x1, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for float_power, not {type(x1)}. Defaulting to NumPy."
+        )
+        return numpy.float_power(
+            x1,
             x2,
             out=out,
             where=where,
@@ -69,13 +114,26 @@ def float_power(
             dtype=dtype,
             subok=subok,
         )
+    return x1.float_power(
+        x2,
+        out=out,
+        where=where,
+        casting=casting,
+        order=order,
+        dtype=dtype,
+        subok=subok,
+    )
 
 
 def floor_divide(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "floor_divide"):
-        return x1.floor_divide(
+    if not isinstance(x1, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for floor_divide, not {type(x1)}. Defaulting to NumPy."
+        )
+        return numpy.floor_divide(
+            x1,
             x2,
             out=out,
             where=where,
@@ -84,13 +142,26 @@ def floor_divide(
             dtype=dtype,
             subok=subok,
         )
+    return x1.floor_divide(
+        x2,
+        out=out,
+        where=where,
+        casting=casting,
+        order=order,
+        dtype=dtype,
+        subok=subok,
+    )
 
 
 def power(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "power"):
-        return x1.power(
+    if not isinstance(x1, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for power, not {type(x1)}. Defaulting to NumPy."
+        )
+        return numpy.power(
+            x1,
             x2,
             out=out,
             where=where,
@@ -99,18 +170,45 @@ def power(
             dtype=dtype,
             subok=subok,
         )
+    return x1.power(
+        x2,
+        out=out,
+        where=where,
+        casting=casting,
+        order=order,
+        dtype=dtype,
+        subok=subok,
+    )
 
 
-def prod(a, axis=None, out=None, keepdims=None, where=True):
-    if hasattr(a, "prod"):
-        return a.prod(axis=axis, out=out, keepdims=keepdims, where=where)
+def prod(a, axis=None, out=None, keepdims=None, where=True, dtype=None, initial=None):
+    if not isinstance(a, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for prod, not {type(a)}. Defaulting to NumPy."
+        )
+        return numpy.prod(
+            a,
+            axis=axis,
+            out=out,
+            keepdims=keepdims,
+            where=where,
+            dtype=dtype,
+            initial=initial,
+        )
+    return a.prod(
+        axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype, initial=initial
+    )
 
 
 def multiply(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "multiply"):
-        return x1.multiply(
+    if not isinstance(x1, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for multiply, not {type(x1)}. Defaulting to NumPy."
+        )
+        return numpy.multiply(
+            x1,
             x2,
             out=out,
             where=where,
@@ -119,13 +217,26 @@ def multiply(
             dtype=dtype,
             subok=subok,
         )
+    return x1.multiply(
+        x2,
+        out=out,
+        where=where,
+        casting=casting,
+        order=order,
+        dtype=dtype,
+        subok=subok,
+    )
 
 
 def remainder(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "remainder"):
-        return x1.remainder(
+    if not isinstance(x1, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for remainder, not {type(x1)}. Defaulting to NumPy."
+        )
+        return numpy.remainder(
+            x1,
             x2,
             out=out,
             where=where,
@@ -134,6 +245,15 @@ def remainder(
             dtype=dtype,
             subok=subok,
         )
+    return x1.remainder(
+        x2,
+        out=out,
+        where=where,
+        casting=casting,
+        order=order,
+        dtype=dtype,
+        subok=subok,
+    )
 
 
 mod = remainder
@@ -142,8 +262,12 @@ mod = remainder
 def subtract(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "subtract"):
-        return x1.subtract(
+    if not isinstance(x1, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for power, not {type(x1)}. Defaulting to NumPy."
+        )
+        return numpy.subtract(
+            x1,
             x2,
             out=out,
             where=where,
@@ -152,18 +276,45 @@ def subtract(
             dtype=dtype,
             subok=subok,
         )
+    return x1.subtract(
+        x2,
+        out=out,
+        where=where,
+        casting=casting,
+        order=order,
+        dtype=dtype,
+        subok=subok,
+    )
 
 
 def sum(arr, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=True):
-    if hasattr(arr, "sum"):
-        return arr.sum(axis)
+    if not isinstance(arr, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for sum, not {type(arr)}. Defaulting to NumPy."
+        )
+        return numpy.sum(
+            arr,
+            axis=axis,
+            out=out,
+            keepdims=keepdims,
+            where=where,
+            dtype=dtype,
+            initial=initial,
+        )
+    return arr.sum(
+        axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype, initial=initial
+    )
 
 
 def true_divide(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if hasattr(x1, "divide"):
-        return x1.divide(
+    if not isinstance(x1, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for true_divide, not {type(x1)}. Defaulting to NumPy."
+        )
+        return numpy.true_divide(
+            x1,
             x2,
             out=out,
             where=where,
@@ -172,11 +323,26 @@ def true_divide(
             dtype=dtype,
             subok=subok,
         )
+    return x1.divide(
+        x2,
+        out=out,
+        where=where,
+        casting=casting,
+        order=order,
+        dtype=dtype,
+        subok=subok,
+    )
 
 
 def mean(x1, axis=None, dtype=None, out=None, keepdims=None, *, where=True):
-    if hasattr(x1, "mean"):
-        return x1.mean(axis=axis, dtype=dtype, out=out, keepdims=keepdims, where=where)
+    if not isinstance(x1, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for mean, not {type(x1)}. Defaulting to NumPy."
+        )
+        return numpy.mean(
+            x1, axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype
+        )
+    return x1.mean(axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype)
 
 
 # Maximum and minimum are ufunc's in NumPy, which means that our array's __array_ufunc__
@@ -188,20 +354,28 @@ minimum = numpy.minimum
 
 
 def amax(x1, axis=None, out=None, keepdims=None, initial=None, where=True):
-    if hasattr(x1, "max"):
-        return x1.max(
-            axis=axis, out=out, keepdims=keepdims, initial=initial, where=where
+    if not isinstance(x1, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for amax, not {type(x1)}. Defaulting to NumPy."
         )
+        return numpy.amax(
+            x1, axis=axis, out=out, keepdims=keepdims, initial=initial, where=where
+        )
+    return x1.max(axis=axis, out=out, keepdims=keepdims, initial=initial, where=where)
 
 
 max = amax
 
 
 def amin(x1, axis=None, out=None, keepdims=None, initial=None, where=True):
-    if hasattr(x1, "min"):
-        return x1.min(
-            axis=axis, out=out, keepdims=keepdims, initial=initial, where=where
+    if not isinstance(x1, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for amin, not {type(x1)}. Defaulting to NumPy."
         )
+        return numpy.amin(
+            x1, axis=axis, out=out, keepdims=keepdims, initial=initial, where=where
+        )
+    return x1.min(axis=axis, out=out, keepdims=keepdims, initial=initial, where=where)
 
 
 min = amin

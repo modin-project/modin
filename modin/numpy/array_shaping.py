@@ -12,36 +12,42 @@
 # governing permissions and limitations under the License.
 
 """Module houses array shaping methods for Modin's NumPy API."""
+import numpy
+
 from modin.error_message import ErrorMessage
+from .arr import array
 
 
 def ravel(a, order="C"):
+    if not isinstance(a, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for ravel, not {type(a)}. Defaulting to NumPy."
+        )
+        return numpy.ravel(a, order=order)
     if order != "C":
         ErrorMessage.single_warning(
             "Array order besides 'C' is not currently supported in Modin. Defaulting to 'C' order."
         )
-    if hasattr(a, "flatten"):
-        return a.flatten(order)
-    raise NotImplementedError(
-        f"Object of type {type(a)} does not have a flatten method to use for raveling."
-    )
+    return a.flatten(order)
 
 
 def shape(a):
-    if hasattr(a, "shape"):
-        return a.shape
-    raise NotImplementedError(
-        f"Object of type {type(a)} does not have a shape property."
-    )
+    if not isinstance(a, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for shape, not {type(a)}. Defaulting to NumPy."
+        )
+        return numpy.shape(a)
+    return a.shape
 
 
 def transpose(a, axes=None):
+    if not isinstance(a, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for transpose, not {type(a)}. Defaulting to NumPy."
+        )
+        return numpy.transpose(a, axes=axes)
     if axes is not None:
         raise NotImplementedError(
             "Modin does not support arrays higher than 2-dimensions. Please use `transpose` with `axis=None` on a 2-dimensional or lower object."
         )
-    if hasattr(a, "transpose"):
-        return a.transpose()
-    raise NotImplementedError(
-        f"Object of type {type(a)} does not have a transpose method."
-    )
+    return a.transpose()

@@ -79,14 +79,14 @@ def check_how_broadcast_to_output(arr_in: "array", arr_out: "array"):
         )
     elif arr_out._ndim == arr_in._ndim:
         return "broadcastable"
-    elif arr_out._ndim == 1:
+    if arr_out._ndim == 1:
         if prod(arr_in.shape) == arr_out.shape[0]:
             return "flatten"
         else:
             raise ValueError(
                 f"non-broadcastable output operand with shape {arr_out.shape} doesn't match the broadcast shape {arr_in.shape}"
             )
-    elif arr_in._ndim == 1:
+    if arr_in._ndim == 1:
         if prod(arr_out.shape) == arr_in.shape[0]:
             return "reshape"
         else:
@@ -135,12 +135,7 @@ def fix_dtypes_and_determine_return(
 def find_common_dtype(dtypes):
     if len(dtypes) == 1:
         return dtypes[0]
-    elif len(dtypes) == 2:
-        return numpy.promote_types(*dtypes)
-    midpoint = len(dtypes) // 2
-    return numpy.promote_types(
-        find_common_dtype(dtypes[:midpoint]), find_common_dtype(dtypes[midpoint:])
-    )
+    return numpy.common_type(dtypes, [])
 
 
 class array(object):
@@ -329,6 +324,10 @@ class array(object):
         return modin_func(*args, **kwargs)
 
     def where(self, x=None, y=None):
+        if not is_bool_dtype(self.dtype):
+            raise NotImplementedError(
+                "Modin currently only supports where on condition arrays with boolean dtype."
+            )
         if x is None and y is None:
             ErrorMessage.single_warning(
                 "np.where method with only condition specified is not yet supported in Modin. Defaulting to NumPy."

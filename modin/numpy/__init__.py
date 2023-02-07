@@ -68,9 +68,9 @@ from .constants import (
 
 
 def where(condition, x=None, y=None):
-    if condition:
+    if condition is True:
         return x
-    if not condition:
+    if condition is False:
         return y
     if hasattr(condition, "where"):
         return condition.where(x=x, y=y)

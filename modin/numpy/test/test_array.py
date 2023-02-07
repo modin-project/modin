@@ -277,7 +277,7 @@ def test_max():
     numpy_result = numpy_arr.max(initial=0, where=False)
     assert modin_result == numpy_result
     with pytest.raises(ValueError):
-        modin_result = modin_arr.max(out=modin_arr, keepdims=True)
+        modin_arr.max(out=modin_arr, keepdims=True)
     modin_out = np.array([[1]])
     numpy_out = modin_out._to_numpy()
     modin_result = modin_arr.max(out=modin_out, keepdims=True)
@@ -364,7 +364,7 @@ def test_min():
     numpy_result = numpy_arr.min(initial=0, where=False)
     assert modin_result == numpy_result
     with pytest.raises(ValueError):
-        modin_result = modin_arr.min(out=modin_arr, keepdims=True)
+        modin_arr.min(out=modin_arr, keepdims=True)
     modin_out = np.array([[1]])
     numpy_out = modin_out._to_numpy()
     modin_result = modin_arr.min(out=modin_out, keepdims=True)
@@ -451,7 +451,7 @@ def test_sum():
     numpy_result = numpy_arr.sum(initial=0, where=False)
     assert modin_result == numpy_result
     with pytest.raises(ValueError):
-        modin_result = modin_arr.sum(out=modin_arr, keepdims=True)
+        modin_arr.sum(out=modin_arr, keepdims=True)
     modin_out = np.array([[1]])
     numpy_out = modin_out._to_numpy()
     modin_result = modin_arr.sum(out=modin_out, keepdims=True)
@@ -532,7 +532,7 @@ def test_mean():
     numpy_result = numpy_arr.mean()
     assert modin_result == numpy_result
     with pytest.raises(ValueError):
-        modin_result = modin_arr.mean(out=modin_arr, keepdims=True)
+        modin_arr.mean(out=modin_arr, keepdims=True)
     modin_out = np.array([[1]])
     numpy_out = modin_out._to_numpy()
     modin_result = modin_arr.mean(out=modin_out, keepdims=True)
@@ -616,7 +616,7 @@ def test_prod():
     numpy_result = numpy_arr.prod(initial=0, where=False)
     assert modin_result == numpy_result
     with pytest.raises(ValueError):
-        modin_result = modin_arr.prod(out=modin_arr, keepdims=True)
+        modin_arr.prod(out=modin_arr, keepdims=True)
     modin_out = np.array([[1]])
     numpy_out = modin_out._to_numpy()
     modin_result = modin_arr.prod(out=modin_out, keepdims=True)

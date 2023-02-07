@@ -31,12 +31,22 @@ def _create_array(dtype, shape, order, subok, numpy_method):
 
 
 def zeros_like(a, dtype=None, order="K", subok=True, shape=None):
+    if not isinstance(a, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for zeros_like, not {type(a)}. Defaulting to NumPy."
+        )
+        return numpy.zeros_like(a, dtype=dtype, order=order, subok=subok, shape=shape)
     dtype = a.dtype if dtype is None else dtype
     shape = a.shape if shape is None else shape
     return _create_array(dtype, shape, order, subok, "zeros")
 
 
 def ones_like(a, dtype=None, order="K", subok=True, shape=None):
+    if not isinstance(a, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for ones_like, not {type(a)}. Defaulting to NumPy."
+        )
+        return numpy.ones_like(a, dtype=dtype, order=order, subok=subok, shape=shape)
     dtype = a.dtype if dtype is None else dtype
     shape = a.shape if shape is None else shape
     return _create_array(dtype, shape, order, subok, "ones")
