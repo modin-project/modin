@@ -863,55 +863,81 @@ class HdkOnNativeDataframe(PandasDataframe):
         ), "'left_on' and 'right_on' lengths don't match"
 
         def validate(what, df, col_names):
-            df_cols = df.columns
-            for col in col_names:
-                if col not in df_cols:
-                    if col in df.index.names:
-                        raise NotImplementedError("Merge by index")
-                    raise ValueError(f"'{what}' references unknown column {col}")
+            cols = df.columns
+            idx_cols = []
+            for i, col in enumerate(col_names):
+                if col not in cols:
+                    if ((idx := df._index_cols) is not None) and (
+                        (mangled := df._mangle_index_names([col])[0]) in idx
+                    ):
+                        col_names[i] = mangled
+                        idx_cols.append(mangled)
+                    elif ((idx := df._index_cache) is not None) and (col in idx.names):
+                        col_names[i] = df._mangle_index_names([col])[0]
+                        idx_cols.append(col_names[i])
+                        df = df._maybe_materialize_rowid()
+                    else:
+                        raise ValueError(f"'{what}' references unknown column {col}")
+            return df, col_names, idx_cols
 
-        validate("left_on", self, left_on)
-        validate("right_on", other, right_on)
-        new_columns = []
+        left, left_on, left_idx = validate("left_on", self, left_on)
+        right, right_on, right_idx = validate("right_on", other, right_on)
         new_dtypes = []
+        new_columns = []
+        index_cols = None
         exprs = OrderedDict()
 
-        left_conflicts = set(self.columns) & (set(other.columns) - set(right_on))
-        right_conflicts = set(other.columns) & (set(self.columns) - set(left_on))
+        if (
+            (len(left_idx) != 0)
+            and (len(left_idx) == len(right_idx))
+            and (left_idx == right_idx)
+            and all(left._dtypes[n] == right._dtypes[n] for n in left_idx)
+        ):
+            index_cols = left_idx
+            for col in index_cols:
+                exprs[left._index_name(col)] = left.ref(col)
+                new_dtypes.append(left._dtypes[col])
+
+        left_conflicts = set(left.columns) & (set(right.columns) - set(right_on))
+        right_conflicts = set(right.columns) & (set(left.columns) - set(left_on))
         conflicting_cols = left_conflicts | right_conflicts
-        for c in self.columns:
+        for c in left.columns:
             new_name = f"{c}{suffixes[0]}" if c in conflicting_cols else c
             new_columns.append(new_name)
-            new_dtypes.append(self._dtypes[c])
-            exprs[new_name] = self.ref(c)
-        for c in other.columns:
+            new_dtypes.append(left._dtypes[c])
+            exprs[new_name] = left.ref(c)
+        for c in right.columns:
             if c not in left_on or c not in right_on:
                 new_name = f"{c}{suffixes[1]}" if c in conflicting_cols else c
                 new_columns.append(new_name)
-                new_dtypes.append(other._dtypes[c])
-                exprs[new_name] = other.ref(c)
+                new_dtypes.append(right._dtypes[c])
+                exprs[new_name] = right.ref(c)
 
-        condition = self._build_equi_join_condition(other, left_on, right_on)
+        condition = left._build_equi_join_condition(right, left_on, right_on)
 
         op = JoinNode(
-            self,
-            other,
+            left,
+            right,
             how=how.value,
             exprs=exprs,
             condition=condition,
         )
 
         new_columns = Index.__new__(Index, data=new_columns)
-        res = self.__constructor__(
+        res = left.__constructor__(
             dtypes=new_dtypes,
             columns=new_columns,
+            index_cols=index_cols,
             op=op,
             force_execution_mode=self._force_execution_mode,
         )
 
         if sort:
             res = res.sort_rows(
-                left_on, ascending=True, ignore_index=True, na_position="last"
+                left_on,
+                ascending=True,
+                ignore_index=(index_cols is None),
+                na_position="last",
             )
 
         return res
