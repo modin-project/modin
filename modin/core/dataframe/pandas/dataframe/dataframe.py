@@ -204,7 +204,11 @@ class PandasDataframe(ClassLogger):
         self._dtypes = dtypes
 
         self._validate_axes_lengths()
-        self._filter_empties(compute_metadata=False)
+        if all(obj is not None for obj in (index, columns, row_lengths, column_widths)):
+            compute_metadata = True
+        else:
+            compute_metadata = False
+        self._filter_empties(compute_metadata=compute_metadata)
 
     def _validate_axes_lengths(self):
         """Validate that labels are split correctly if split is known."""
@@ -2211,6 +2215,8 @@ class PandasDataframe(ClassLogger):
         func,
         new_index=None,
         new_columns=None,
+        new_row_lengths=None,
+        new_column_widths=None,
         apply_indices=None,
         enumerate_partitions: bool = False,
         dtypes=None,
@@ -2233,6 +2239,12 @@ class PandasDataframe(ClassLogger):
         new_columns : list-like, optional
             The columns of the result. We may know this in
             advance, and if not provided it must be computed.
+        new_row_lengths : list, optional
+            The length of each partition in the rows. The "height" of
+            each of the block partitions. Is computed if not provided.
+        new_column_widths : list, optional
+            The width of each partition in the columns. The "width" of
+            each of the block partitions. Is computed if not provided.
         apply_indices : list-like, default: None
             Indices of `axis ^ 1` to apply function over.
         enumerate_partitions : bool, default: False
@@ -2267,6 +2279,8 @@ class PandasDataframe(ClassLogger):
             func=func,
             new_index=new_index,
             new_columns=new_columns,
+            new_row_lengths=new_row_lengths,
+            new_column_widths=new_column_widths,
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
             dtypes=dtypes,
@@ -2661,6 +2675,8 @@ class PandasDataframe(ClassLogger):
         other,
         new_index=None,
         new_columns=None,
+        new_row_lengths=None,
+        new_column_widths=None,
         apply_indices=None,
         enumerate_partitions=False,
         dtypes=None,
@@ -2685,6 +2701,12 @@ class PandasDataframe(ClassLogger):
         new_columns : list-like, optional
             Columns of the result. We may know this in
             advance, and if not provided it must be computed.
+        new_row_lengths : list, optional
+            The length of each partition in the rows. The "height" of
+            each of the block partitions. Is computed if not provided.
+        new_column_widths : list, optional
+            The width of each partition in the columns. The "width" of
+            each of the block partitions. Is computed if not provided.
         apply_indices : list-like, default: None
             Indices of `axis ^ 1` to apply function over.
         enumerate_partitions : bool, default: False
@@ -2748,23 +2770,23 @@ class PandasDataframe(ClassLogger):
             keep_partitioning=keep_partitioning,
             apply_func_args=apply_func_args,
         )
-        kw = {"row_lengths": None, "column_widths": None}
+        new_dtypes = None
         if dtypes == "copy":
-            kw["dtypes"] = self._dtypes
+            new_dtypes = self._dtypes
         elif dtypes is not None:
             if new_columns is None:
                 (
                     new_columns,
-                    kw["column_widths"],
+                    new_column_widths,
                 ) = self._compute_axis_labels_and_lengths(1, new_partitions)
-            kw["dtypes"] = pandas.Series(
+            new_dtypes = pandas.Series(
                 [np.dtype(dtypes)] * len(new_columns), index=new_columns
             )
 
         if not keep_partitioning:
-            if kw["row_lengths"] is None and new_index is not None:
+            if new_row_lengths is None and new_index is not None:
                 if axis == 0:
-                    kw["row_lengths"] = get_length_list(
+                    new_row_lengths = get_length_list(
                         axis_len=len(new_index), num_splits=new_partitions.shape[0]
                     )
                 elif (
@@ -2772,10 +2794,10 @@ class PandasDataframe(ClassLogger):
                     and self._row_lengths_cache is not None
                     and len(new_index) == sum(self._row_lengths_cache)
                 ):
-                    kw["row_lengths"] = self._row_lengths_cache
-            if kw["column_widths"] is None and new_columns is not None:
+                    new_row_lengths = self._row_lengths_cache
+            if new_column_widths is None and new_columns is not None:
                 if axis == 1:
-                    kw["column_widths"] = get_length_list(
+                    new_column_widths = get_length_list(
                         axis_len=len(new_columns),
                         num_splits=new_partitions.shape[1],
                     )
@@ -2784,9 +2806,15 @@ class PandasDataframe(ClassLogger):
                     and self._column_widths_cache is not None
                     and len(new_columns) == sum(self._column_widths_cache)
                 ):
-                    kw["column_widths"] = self._column_widths_cache
+                    new_column_widths = self._column_widths_cache
+
         result = self.__constructor__(
-            new_partitions, index=new_index, columns=new_columns, **kw
+            new_partitions,
+            index=new_index,
+            columns=new_columns,
+            row_lengths=new_row_lengths,
+            column_widths=new_column_widths,
+            dtypes=new_dtypes,
         )
         if sync_labels and new_index is not None:
             result.synchronize_labels(axis=0)

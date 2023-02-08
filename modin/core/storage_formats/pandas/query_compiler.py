@@ -2485,14 +2485,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         new_index = self._modin_frame._index_cache
         new_columns = [MODIN_UNNAMED_SERIES_LABEL]
-        if len(self.columns) > 1:
-            # if the number of columns we are checking for duplicates is larger than 1,
-            # we must hash them to generate a single value that can be compared across rows.
+        new_row_lengths = self._modin_frame._row_lengths_cache
+        new_column_widths = [1]
+        if len(self._modin_frame.column_widths) > 1:
+            # if the number of columns (or column partitions) we are checking for duplicates is larger than 1,
+            # we must first hash them to generate a single value that can be compared across rows.
             hashed_modin_frame = self._modin_frame.apply_full_axis(
                 1,
                 _compute_hash,
                 new_index=new_index,
                 new_columns=new_columns,
+                new_row_lengths=new_row_lengths,
+                new_column_widths=new_column_widths,
                 keep_partitioning=False,
                 dtypes=np.dtype("O"),
             )
@@ -2503,6 +2507,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             _compute_duplicated,
             new_index=new_index,
             new_columns=new_columns,
+            new_row_lengths=new_row_lengths,
+            new_column_widths=new_column_widths,
             keep_partitioning=False,
             dtypes=np.bool_,
         )
