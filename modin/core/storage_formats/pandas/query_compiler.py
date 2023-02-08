@@ -2417,7 +2417,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 _compute_hash,
                 new_index=new_index,
                 new_columns=new_columns,
-                keep_partitioning=False,
+                num_splits="auto",
                 dtypes=np.dtype("O"),
             )
         else:
@@ -2427,7 +2427,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             _compute_duplicated,
             new_index=new_index,
             new_columns=new_columns,
-            keep_partitioning=False,
+            num_splits="auto",
             dtypes=np.bool_,
         )
         return self.__constructor__(new_modin_frame, shape_hint="column")
