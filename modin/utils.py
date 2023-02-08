@@ -15,7 +15,7 @@
 
 import importlib
 import types
-from typing import Any, Callable, List, Mapping, Optional, Union, TypeVar, overload
+from typing import Any, Callable, List, Mapping, Optional, Union, TypeVar
 import re
 import sys
 import json
@@ -469,7 +469,7 @@ def to_numpy(
     Parameters
     ----------
     modin_obj : modin.DataFrame, modin.Series, modin.numpy.array
-        The modin distributed object to convert.
+        The Modin distributed object to convert.
 
     Returns
     -------
