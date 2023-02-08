@@ -103,7 +103,8 @@ def modify_config(request):
     old_values = {}
 
     for key, value in values.items():
-        old_values[key] = key.put(value)
+        old_values[key] = key.get()
+        key.put(value)
 
     yield  # waiting for the test to be completed
     # restoring old parameters
@@ -621,7 +622,6 @@ def test_reorder_labels_dtypes():
     df_equals(result.dtypes, result.to_pandas().dtypes)
 
 
-@pytest.mark.parametrize("modify_config", [{NPartitions: 4, MinPartitionSize: 32}])
 @pytest.mark.parametrize(
     "left_partitioning, right_partitioning, ref_with_cache_available, ref_with_no_cache",
     # Note: this test takes into consideration that `MinPartitionSize == 32` and `NPartitions == 4`
@@ -658,6 +658,9 @@ def test_reorder_labels_dtypes():
         ),
     ],
 )
+@pytest.mark.parametrize(
+    "modify_config", [{NPartitions: 4, MinPartitionSize: 32}], indirect=True
+)
 def test_merge_partitioning(
     left_partitioning,
     right_partitioning,
@@ -667,24 +670,59 @@ def test_merge_partitioning(
 ):
     from modin.core.dataframe.pandas.utils import merge_partitioning
 
-    left_df = pandas.DataFrame([np.arange(sum(left_partitioning))])
-    right_df = pandas.DataFrame([np.arange(sum(right_partitioning))])
+    left_df = pandas.DataFrame(
+        [np.arange(sum(left_partitioning)) for _ in range(sum(left_partitioning))]
+    )
+    right_df = pandas.DataFrame(
+        [np.arange(sum(right_partitioning)) for _ in range(sum(right_partitioning))]
+    )
 
     left = construct_modin_df_by_scheme(
-        left_df, {"row_lengths": [1], "column_widths": left_partitioning}
+        left_df, {"row_lengths": left_partitioning, "column_widths": left_partitioning}
     )._query_compiler._modin_frame
     right = construct_modin_df_by_scheme(
-        right_df, {"row_lengths": [1], "column_widths": right_partitioning}
+        right_df,
+        {"row_lengths": right_partitioning, "column_widths": right_partitioning},
     )._query_compiler._modin_frame
 
-    assert left.column_widths == left_partitioning
-    assert right.column_widths == right_partitioning
+    assert left.row_lengths == left.column_widths == left_partitioning
+    assert right.row_lengths == right.column_widths == right_partitioning
+
+    res = merge_partitioning(left, right, axis=0)
+    assert res == ref_with_cache_available
 
     res = merge_partitioning(left, right, axis=1)
     assert res == ref_with_cache_available
 
-    left._column_widths_cache = None
-    right._column_widths_cache = None
+    (
+        left._row_lengths_cache,
+        left._column_widths_cache,
+        right._row_lengths_cache,
+        right._column_widths_cache,
+    ) = [None] * 4
+
+    res = merge_partitioning(left, right, axis=0)
+    assert res == ref_with_no_cache
+    # Verifying that no computations are being triggered
+    assert all(
+        cache is None
+        for cache in (
+            left._row_lengths_cache,
+            left._column_widths_cache,
+            right._row_lengths_cache,
+            right._column_widths_cache,
+        )
+    )
 
     res = merge_partitioning(left, right, axis=1)
     assert res == ref_with_no_cache
+    # Verifying that no computations are being triggered
+    assert all(
+        cache is None
+        for cache in (
+            left._row_lengths_cache,
+            left._column_widths_cache,
+            right._row_lengths_cache,
+            right._column_widths_cache,
+        )
+    )
