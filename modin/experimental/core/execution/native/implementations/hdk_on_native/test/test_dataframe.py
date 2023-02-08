@@ -18,6 +18,8 @@ import pyarrow
 import pytest
 import re
 
+from pandas._testing import ensure_clean
+
 from modin.config import StorageFormat
 from modin.pandas.test.utils import (
     io_ops_bad_exc,
@@ -345,6 +347,32 @@ class TestCSV:
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             usecols=usecols,
         )
+
+    @pytest.mark.parametrize(
+        "cols",
+        [
+            "c1,c2,c3",
+            "c1,c1,c2",
+            "c1,c1,c1.1,c1.2,c1",
+            "c1,c1,c1,c1.1,c1.2,c1.3",
+            "c1.1,c1.2,c1.3,c1,c1,c1",
+            "c1.1,c1,c1.2,c1,c1.3,c1",
+            "c1,c1.1,c1,c1.2,c1,c1.3",
+            "c1,c1,c1.1,c1.1,c1.2,c2",
+            "c1,c1,c1.1,c1.1,c1.2,c1.2,c2",
+            "c1.1,c1.1,c1,c1,c1.2,c1.2,c2",
+            "c1.1,c1,c1.1,c1,c1.1,c1.2,c1.2,c2",
+        ],
+    )
+    def test_read_csv_duplicate_cols(self, cols):
+        def test(df, lib, **kwargs):
+            data = f"{cols}\n"
+            with ensure_clean(".csv") as fname:
+                with open(fname, "w") as f:
+                    f.write(data)
+                return lib.read_csv(fname)
+
+        run_and_compare(test, data={})
 
 
 class TestMasks:
