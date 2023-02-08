@@ -1962,6 +1962,23 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return DataFrameDefault.register(pandas.DataFrame.dropna)(self, **kwargs)
 
+    @doc_utils.add_refer_to("DataFrame.duplicated")
+    def duplicated(self, **kwargs):
+        """
+        Return boolean Series denoting duplicate rows.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments to be passed in to `pandas.DataFrame.duplicated`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler containing boolean Series denoting duplicate rows.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.duplicated)(self, **kwargs)
+
     @doc_utils.add_refer_to("DataFrame.nlargest")
     def nlargest(self, n=5, columns=None, keep="first"):
         """

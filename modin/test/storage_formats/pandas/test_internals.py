@@ -458,7 +458,6 @@ class TestDrainVirtualPartitionCallQueue:
     def test_virtual_partition_call_queues_at_three_levels(
         self, axis, virtual_partition_class
     ):
-
         block = block_partition_class(put(pandas.DataFrame([1])))
         level_one_virtual = virtual_partition_class([block], full_axis=False)
         level_one_virtual = level_one_virtual.add_to_apply_calls(

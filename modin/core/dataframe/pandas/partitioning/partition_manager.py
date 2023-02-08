@@ -398,6 +398,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         apply_indices=None,
         enumerate_partitions=False,
         lengths=None,
+        apply_func_args=None,
         **kwargs,
     ):
         """
@@ -431,6 +432,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             The list of lengths to shuffle the object.
             Note that in order for the `lengths` parameter to be considered the `num_splits`
             parameter has to be "auto".
+        apply_func_args : list-like, optional
+            Positional arguments to pass to the `func`.
         **kwargs : dict
             Additional options that could be used by different engines.
 
@@ -475,6 +478,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             [
                 left_partitions[i].apply(
                     preprocessed_map_func,
+                    *(apply_func_args if apply_func_args else []),
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
                     **kwargs,

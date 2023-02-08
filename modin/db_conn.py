@@ -136,7 +136,7 @@ class ModinDatabaseConnection:
         """
         # This query looks odd, but it works in both PostgreSQL and Microsoft
         # SQL, which doesn't let you use a "limit" clause to select 0 rows.
-        return f"SELECT * FROM ({query}) AS _ WHERE 1 = 0"
+        return f"SELECT * FROM ({query}) AS _MODIN_COUNT_QUERY WHERE 1 = 0"
 
     def row_count_query(self, query: str) -> str:
         """
@@ -151,7 +151,7 @@ class ModinDatabaseConnection:
         -------
         str
         """
-        return f"SELECT COUNT(*) FROM ({query}) AS _"
+        return f"SELECT COUNT(*) FROM ({query}) AS _MODIN_COUNT_QUERY"
 
     def partition_query(self, query: str, limit: int, offset: int) -> str:
         """
@@ -172,9 +172,10 @@ class ModinDatabaseConnection:
         """
         return (
             (
-                f"SELECT * FROM ({query}) AS _ ORDER BY(SELECT NULL)"
+                f"SELECT * FROM ({query}) AS _MODIN_COUNT_QUERY ORDER BY(SELECT NULL)"
                 + f" OFFSET {offset} ROWS FETCH NEXT {limit} ROWS ONLY"
             )
             if self._dialect_is_microsoft_sql()
-            else f"SELECT * FROM ({query}) AS _ LIMIT {limit} OFFSET {offset}"
+            else f"SELECT * FROM ({query}) AS _MODIN_COUNT_QUERY LIMIT "
+            + f"{limit} OFFSET {offset}"
         )

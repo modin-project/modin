@@ -1384,18 +1384,19 @@ class BasePandasDataset(ClassLogger):
         Return `BasePandasDataset` with duplicate rows removed.
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
-        subset = kwargs.get("subset", None)
         ignore_index = kwargs.get("ignore_index", False)
+        subset = kwargs.get("subset", None)
         if subset is not None:
             if is_list_like(subset):
                 if not isinstance(subset, list):
                     subset = list(subset)
             else:
                 subset = [subset]
-            duplicates = self.duplicated(keep=keep, subset=subset)
+            df = self[subset]
         else:
-            duplicates = self.duplicated(keep=keep)
-        result = self[~duplicates]
+            df = self
+        duplicated = df.duplicated(keep=keep)
+        result = self[~duplicated]
         if ignore_index:
             result.index = pandas.RangeIndex(stop=len(result))
         if inplace:
@@ -2394,19 +2395,19 @@ class BasePandasDataset(ClassLogger):
         # exist.
         if (
             not drop
+            and not self._query_compiler.lazy_execution
             and not self._query_compiler.has_multiindex()
             and all(n in self.columns for n in ["level_0", "index"])
         ):
             raise ValueError("cannot insert level_0, already exists")
-        else:
-            new_query_compiler = self._query_compiler.reset_index(
-                drop=drop,
-                level=level,
-                col_level=col_level,
-                col_fill=col_fill,
-                allow_duplicates=allow_duplicates,
-                names=names,
-            )
+        new_query_compiler = self._query_compiler.reset_index(
+            drop=drop,
+            level=level,
+            col_level=col_level,
+            col_fill=col_fill,
+            allow_duplicates=allow_duplicates,
+            names=names,
+        )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def radd(

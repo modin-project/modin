@@ -334,19 +334,10 @@ class DataFrame(BasePandasDataset):
         """
         Return boolean ``Series`` denoting duplicate rows.
         """
-        import hashlib
-
         df = self[subset] if subset is not None else self
-        # if the number of columns we are checking for duplicates is larger than 1, we must
-        # hash them to generate a single value that can be compared across rows.
-        if len(df.columns) > 1:
-            hashed = df.apply(
-                lambda s: hashlib.new("md5", str(tuple(s)).encode()).hexdigest(), axis=1
-            ).to_frame()
-        else:
-            hashed = df
-        duplicates = hashed.apply(lambda s: s.duplicated(keep=keep)).squeeze(axis=1)
-        # remove Series name which was assigned automatically by .apply
+        new_qc = df._query_compiler.duplicated(keep=keep)
+        duplicates = self._reduce_dimension(new_qc)
+        # remove Series name which was assigned automatically by .apply in QC
         duplicates.name = None
         return duplicates
 

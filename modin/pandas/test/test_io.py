@@ -324,7 +324,6 @@ class TestCsv:
         converters,
         skipfooter,
     ):
-
         if dtype:
             dtype = {
                 col: "object"
@@ -1101,7 +1100,6 @@ class TestCsv:
         )
 
     def test_read_csv_wrong_path(self):
-
         raising_exceptions = [e for e in io_ops_bad_exc if e != FileNotFoundError]
 
         eval_io(
@@ -1915,10 +1913,6 @@ class TestExcel:
 
             assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
 
-    @pytest.mark.xfail(
-        Engine.get() != "Python",
-        reason="Test fails because of issue 3305",
-    )
     @check_file_leaks
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",

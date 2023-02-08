@@ -38,6 +38,7 @@ from .utils import (
     test_data,
     test_data_values,
     modin_df_almost_equals_pandas,
+    try_modin_df_almost_equals_compare,
     generate_multiindex,
     test_groupby_data,
     dict_equals,
@@ -45,6 +46,7 @@ from .utils import (
     default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
+
 
 NPartitions.put(4)
 
@@ -1784,8 +1786,68 @@ def test_unknown_groupby(columns):
         pytest.param(
             lambda grp: grp.agg(
                 {
-                    list(test_data_values[0].keys())[1]: (max, min, sum),
-                    list(test_data_values[0].keys())[-1]: (sum, min, max),
+                    list(test_data_values[0].keys())[1]: [
+                        ("new_sum", "sum"),
+                        ("new_mean", "mean"),
+                    ],
+                    list(test_data_values[0].keys())[-2]: "skew",
+                }
+            ),
+            id="renaming_aggs_at_different_partitions",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: [
+                        ("new_sum", "sum"),
+                        ("new_mean", "mean"),
+                    ],
+                    list(test_data_values[0].keys())[2]: "skew",
+                }
+            ),
+            id="renaming_aggs_at_same_partition",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: "mean",
+                    list(test_data_values[0].keys())[-2]: "skew",
+                }
+            ),
+            id="custom_aggs_at_different_partitions",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: "mean",
+                    list(test_data_values[0].keys())[2]: "skew",
+                }
+            ),
+            id="custom_aggs_at_same_partition",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: "mean",
+                    list(test_data_values[0].keys())[-2]: "sum",
+                }
+            ),
+            id="native_and_custom_aggs_at_different_partitions",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: "mean",
+                    list(test_data_values[0].keys())[2]: "sum",
+                }
+            ),
+            id="native_and_custom_aggs_at_same_partition",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: (max, "mean", sum),
+                    list(test_data_values[0].keys())[-1]: (sum, "skew", max),
                 }
             ),
             id="Agg_and_by_intersection_TreeReduce_implementation",
@@ -1827,7 +1889,15 @@ def test_multi_column_groupby_different_partitions(
         md_df.groupby(by, as_index=as_index),
         pd_df.groupby(by, as_index=as_index),
     )
-    eval_general(md_grp, pd_grp, func_to_apply)
+    eval_general(
+        md_grp,
+        pd_grp,
+        func_to_apply,
+        # 'skew' and 'mean' results are not 100% equal to pandas as they use
+        # different formulas and so precision errors come into play. Thus
+        # using a custom comparator that allows slight numeric deviations.
+        comparator=try_modin_df_almost_equals_compare,
+    )
     eval___getitem__(md_grp, pd_grp, md_df.columns[1])
     eval___getitem__(md_grp, pd_grp, [md_df.columns[1], md_df.columns[2]])
 

@@ -18,10 +18,10 @@ pytest-cov
 pytest-xdist
 feather-format
 lxml
-openpyxl
+openpyxl<3.1.0
 xlrd
 matplotlib
-sqlalchemy>=1.4.0
+sqlalchemy>=1.4.0,<1.4.46
 msgpack
 pandas_gbq
 cloudpickle

@@ -38,6 +38,7 @@ from pandas._libs.lib import no_default
 from collections.abc import Iterable
 from typing import List, Hashable
 import warnings
+import hashlib
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.config import Engine
@@ -56,12 +57,11 @@ from modin.core.dataframe.algebra import (
     Reduce,
     Binary,
     GroupByReduce,
-    groupby_reduce_functions,
-    is_reduce_function,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
 from modin.core.dataframe.pandas.utils import merge_partitioning
 from .utils import get_group_names
+from .groupby import GroupbyReduceImpl
 
 
 def _get_axis(axis):
@@ -546,6 +546,38 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def reset_index(self, **kwargs):
+        if self.lazy_execution:
+
+            def _reset(df, *axis_lengths, partition_idx):
+                df = df.reset_index(**kwargs)
+
+                if isinstance(df.index, pandas.RangeIndex):
+                    # If the resulting index is a pure RangeIndex that means that
+                    # `.reset_index` actually dropped all of the levels of the
+                    # original index and so we have to recompute it manually for each partition
+                    start = sum(axis_lengths[:partition_idx])
+                    stop = sum(axis_lengths[: partition_idx + 1])
+
+                    df.index = pandas.RangeIndex(start, stop)
+                return df
+
+            if self._modin_frame._columns_cache is not None and kwargs["drop"]:
+                new_columns = self._modin_frame._columns_cache
+            else:
+                new_columns = None
+
+            return self.__constructor__(
+                self._modin_frame.broadcast_apply_full_axis(
+                    axis=1,
+                    func=_reset,
+                    other=None,
+                    enumerate_partitions=True,
+                    new_columns=new_columns,
+                    sync_labels=False,
+                    pass_axis_lengths_to_partitions=True,
+                )
+            )
+
         allow_duplicates = kwargs.pop("allow_duplicates", no_default)
         names = kwargs.pop("names", None)
         if allow_duplicates not in (no_default, False) or names is not None:
@@ -876,7 +908,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # This will happen with Arrow buffer read-only errors. We don't want to copy
                     # all the time, so this will try to fast-path the code first.
                     val = op(resampled_val, *args, **kwargs)
-                except (ValueError):
+                except ValueError:
                     resampled_val = df.copy().resample(**resample_kwargs)
                     val = op(resampled_val, *args, **kwargs)
             else:
@@ -1949,7 +1981,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         elif isinstance(value, dict):
             if squeeze_self:
-
                 # For Series dict works along the index.
                 def fillna(df):
                     return pandas.DataFrame(
@@ -1957,7 +1988,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
 
             else:
-
                 # For DataFrames dict works along columns, all columns have to be present.
                 def fillna(df):
                     func_dict = {
@@ -2368,6 +2398,40 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Drop/Dropna
 
+    def duplicated(self, **kwargs):
+        def _compute_hash(df):
+            return df.apply(
+                lambda s: hashlib.new("md5", str(tuple(s)).encode()).hexdigest(), axis=1
+            ).to_frame()
+
+        def _compute_duplicated(df):
+            return df.duplicated(**kwargs).to_frame()
+
+        new_index = self._modin_frame._index_cache
+        new_columns = [MODIN_UNNAMED_SERIES_LABEL]
+        if len(self.columns) > 1:
+            # if the number of columns we are checking for duplicates is larger than 1,
+            # we must hash them to generate a single value that can be compared across rows.
+            hashed_modin_frame = self._modin_frame.apply_full_axis(
+                1,
+                _compute_hash,
+                new_index=new_index,
+                new_columns=new_columns,
+                keep_partitioning=False,
+                dtypes=np.dtype("O"),
+            )
+        else:
+            hashed_modin_frame = self._modin_frame
+        new_modin_frame = hashed_modin_frame.apply_full_axis(
+            0,
+            _compute_duplicated,
+            new_index=new_index,
+            new_columns=new_columns,
+            keep_partitioning=False,
+            dtypes=np.bool_,
+        )
+        return self.__constructor__(new_modin_frame, shape_hint="column")
+
     # Insert
     # This method changes the shape of the resulting data. In Pandas, this
     # operation is always inplace, but this object is immutable, so we just
@@ -2593,13 +2657,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             by = internal_qc + by[len(internal_by) :]
         return by, internal_by
 
-    groupby_all = GroupByReduce.register("all")
-    groupby_any = GroupByReduce.register("any")
-    groupby_count = GroupByReduce.register("count")
-    groupby_max = GroupByReduce.register("max")
-    groupby_min = GroupByReduce.register("min")
-    groupby_prod = GroupByReduce.register("prod")
-    groupby_sum = GroupByReduce.register("sum")
+    groupby_all = GroupbyReduceImpl.build_qc_method("all")
+    groupby_any = GroupbyReduceImpl.build_qc_method("any")
+    groupby_count = GroupbyReduceImpl.build_qc_method("count")
+    groupby_max = GroupbyReduceImpl.build_qc_method("max")
+    groupby_min = GroupbyReduceImpl.build_qc_method("min")
+    groupby_prod = GroupbyReduceImpl.build_qc_method("prod")
+    groupby_sum = GroupbyReduceImpl.build_qc_method("sum")
+    groupby_skew = GroupbyReduceImpl.build_qc_method("skew")
 
     def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
         _, internal_by = self._groupby_internal_columns(by, drop)
@@ -2633,36 +2698,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             else self
         )
 
-        def _groupby_mean_reduce(dfgb, **kwargs):
-            """
-            Compute mean value in each group using sums/counts values within reduce phase.
-
-            Parameters
-            ----------
-            dfgb : pandas.DataFrameGroupBy
-                GroupBy object for column-partition.
-            **kwargs : dict
-                Additional keyword parameters to be passed in ``pandas.DataFrameGroupBy.sum``.
-
-            Returns
-            -------
-            pandas.DataFrame
-                A pandas Dataframe with mean values in each column of each group.
-            """
-            sums_counts_df = dfgb.sum(**kwargs)
-            sum_df = sums_counts_df.iloc[:, : len(sums_counts_df.columns) // 2]
-            count_df = sums_counts_df.iloc[:, len(sums_counts_df.columns) // 2 :]
-            return sum_df / count_df
-
-        result = GroupByReduce.register(
-            lambda dfgb, **kwargs: pandas.concat(
-                [dfgb.sum(**kwargs), dfgb.count()],
-                axis=1,
-                copy=False,
-            ),
-            _groupby_mean_reduce,
-            default_to_pandas_func=lambda dfgb, **kwargs: dfgb.mean(**kwargs),
-        )(
+        result = GroupbyReduceImpl.build_qc_method("mean")(
             query_compiler=qc_with_converted_datetime_cols,
             by=by,
             axis=axis,
@@ -2703,72 +2739,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             result.columns = (
                 result.columns[:-1].droplevel(-1).append(pandas.Index(["size"]))
             )
-        return result
-
-    def groupby_skew(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
-        def map_skew(dfgb, *args, **kwargs):
-            df = dfgb.obj
-            by_cols = dfgb.exclusions
-            cols_to_agg = df.columns.difference(by_cols)
-
-            df_pow2 = pandas.concat([df[by_cols], df[cols_to_agg] ** 2], axis=1)
-            df_pow3 = pandas.concat([df[by_cols], df[cols_to_agg] ** 3], axis=1)
-
-            return pandas.concat(
-                [
-                    dfgb.count(*args, **kwargs),
-                    dfgb.sum(*args, **kwargs),
-                    df_pow2.groupby(dfgb.keys, **groupby_kwargs).sum(*args, **kwargs),
-                    df_pow3.groupby(dfgb.keys, **groupby_kwargs).sum(*args, **kwargs),
-                ],
-                copy=False,
-                axis=1,
-            )
-
-        def reduce_skew(dfgb, *args, **kwargs):
-            df = dfgb.sum(*args, **kwargs)
-            chunk_size = df.shape[1] // 4
-
-            count = df.iloc[:, :chunk_size]
-            # s = sum(x)
-            s = df.iloc[:, chunk_size : chunk_size * 2]
-            # s2 = sum(x^2)
-            s2 = df.iloc[:, chunk_size * 2 : chunk_size * 3]
-            # s3 = sum(x^3)
-            s3 = df.iloc[:, chunk_size * 3 : chunk_size * 4]
-
-            # mean = sum(x) / count
-            m = s / count
-
-            # m2 = sum( (x - m)^ 2) = sum(x^2 - 2*x*m + m^2)
-            m2 = s2 - 2 * m * s + count * (m**2)
-
-            # m3 = sum( (x - m)^ 3) = sum(x^3 - 3*x^2*m + 3*x*m^2 - m^3)
-            m3 = s3 - 3 * m * s2 + 3 * s * (m**2) - count * (m**3)
-
-            # The equation for the 'skew' was taken directly from pandas:
-            # https://github.com/pandas-dev/pandas/blob/8dab54d6573f7186ff0c3b6364d5e4dd635ff3e7/pandas/core/nanops.py#L1226
-            with np.errstate(invalid="ignore", divide="ignore"):
-                skew_res = (count * (count - 1) ** 0.5 / (count - 2)) * (m3 / m2**1.5)
-
-            # Setting dummy values for invalid results in accordance with pandas
-            skew_res[m2 == 0] = 0
-            skew_res[count < 3] = np.nan
-            return skew_res
-
-        result = GroupByReduce.register(
-            map_skew,
-            reduce_skew,
-            default_to_pandas_func=lambda dfgb, **kwargs: dfgb.skew(**kwargs),
-        )(
-            query_compiler=self,
-            by=by,
-            axis=axis,
-            groupby_kwargs=groupby_kwargs,
-            agg_args=agg_args,
-            agg_kwargs=agg_kwargs,
-            drop=drop,
-        )
         return result
 
     def _groupby_dict_reduce(
@@ -2819,13 +2789,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         map_dict = {}
         reduce_dict = {}
+        kwargs.setdefault(
+            "default_to_pandas_func",
+            lambda grp, *args, **kwargs: grp.agg(agg_func, *args, **kwargs),
+        )
+
         rename_columns = any(
             not isinstance(fn, str) and isinstance(fn, Iterable)
             for fn in agg_func.values()
         )
         for col, col_funcs in agg_func.items():
             if not rename_columns:
-                map_dict[col], reduce_dict[col] = groupby_reduce_functions[col_funcs]
+                map_dict[col], reduce_dict[col], _ = GroupbyReduceImpl.get_impl(
+                    col_funcs
+                )
                 continue
 
             if isinstance(col_funcs, str):
@@ -2840,13 +2817,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 else:
                     raise TypeError
 
-                map_fns.append((new_col_name, groupby_reduce_functions[func][0]))
+                map_fn, reduce_fn, _ = GroupbyReduceImpl.get_impl(func)
+
+                map_fns.append((new_col_name, map_fn))
                 reduced_col_name = (
                     (*col, new_col_name)
                     if isinstance(col, tuple)
                     else (col, new_col_name)
                 )
-                reduce_dict[reduced_col_name] = groupby_reduce_functions[func][1]
+                reduce_dict[reduced_col_name] = reduce_fn
             map_dict[col] = map_fns
         return GroupByReduce.register(map_dict, reduce_dict, **kwargs)(
             query_compiler=self,
@@ -2894,15 +2873,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # Defaulting to pandas in case of an empty frame as we can't process it properly.
         # Higher API level won't pass empty data here unless the frame has delayed
         # computations. So we apparently lose some laziness here (due to index access)
-        # because of the disability to process empty groupby natively.
+        # because of the inability to process empty groupby natively.
         if len(self.columns) == 0 or len(self.index) == 0:
             return super().groupby_agg(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
 
-        if isinstance(agg_func, dict) and all(
-            is_reduce_function(x) for x in agg_func.values()
-        ):
+        if isinstance(agg_func, dict) and GroupbyReduceImpl.has_impl_for(agg_func):
             return self._groupby_dict_reduce(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, drop
             )
@@ -2956,7 +2933,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # We have to filter func-dict BEFORE inserting broadcasted 'by' columns
             # to avoid multiple aggregation results for 'by' cols in case they're
             # present in the func-dict:
-            partition_agg_func = GroupByReduce.try_filter_dict(agg_func, df)
+            partition_agg_func = GroupByReduce.get_callable(agg_func, df)
 
             internal_by_cols = pandas.Index([])
             missed_by_cols = pandas.Index([])
