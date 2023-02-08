@@ -1783,26 +1783,65 @@ def test_unknown_groupby(columns):
                 list(test_data_values[0].keys())[-2]: np.sum,
             }
         ),
-        lambda grp: grp.agg(
-            {
-                list(test_data_values[0].keys())[1]: [
-                    ("new_sum", "sum"),
-                    ("new_mean", "mean"),
-                ],
-                list(test_data_values[0].keys())[-2]: "skew",
-            }
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: [
+                        ("new_sum", "sum"),
+                        ("new_mean", "mean"),
+                    ],
+                    list(test_data_values[0].keys())[-2]: "skew",
+                }
+            ),
+            id="renaming_aggs_at_different_partitions",
         ),
-        lambda grp: grp.agg(
-            {
-                list(test_data_values[0].keys())[1]: "mean",
-                list(test_data_values[0].keys())[-2]: "skew",
-            }
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: [
+                        ("new_sum", "sum"),
+                        ("new_mean", "mean"),
+                    ],
+                    list(test_data_values[0].keys())[2]: "skew",
+                }
+            ),
+            id="renaming_aggs_at_same_partition",
         ),
-        lambda grp: grp.agg(
-            {
-                list(test_data_values[0].keys())[1]: "mean",
-                list(test_data_values[0].keys())[-2]: "sum",
-            }
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: "mean",
+                    list(test_data_values[0].keys())[-2]: "skew",
+                }
+            ),
+            id="custom_aggs_at_different_partitions",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: "mean",
+                    list(test_data_values[0].keys())[2]: "skew",
+                }
+            ),
+            id="custom_aggs_at_same_partition",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: "mean",
+                    list(test_data_values[0].keys())[-2]: "sum",
+                }
+            ),
+            id="native_and_custom_aggs_at_different_partitions",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: "mean",
+                    list(test_data_values[0].keys())[2]: "sum",
+                }
+            ),
+            id="native_and_custom_aggs_at_same_partition",
         ),
         pytest.param(
             lambda grp: grp.agg(
