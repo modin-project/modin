@@ -489,14 +489,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # This happens when one of the keys to join is an index level. Pandas behaviour
                     # is really complicated in this case, so we're not computing resulted columns for now.
                     pass
-
-                if self._modin_frame._dtypes is not None and new_columns is not None:
-                    new_dtypes = []
-                    for old_col in left_renamer.keys():
-                        new_dtypes.append(self.dtypes[old_col])
-                    for old_col in right_renamer.keys():
-                        new_dtypes.append(right.dtypes[old_col])
-                    new_dtypes = pandas.Series(new_dtypes, index=new_columns)
+                else:
+                    if self._modin_frame._dtypes is not None:
+                        new_dtypes = []
+                        for old_col in left_renamer.keys():
+                            new_dtypes.append(self.dtypes[old_col])
+                        for old_col in right_renamer.keys():
+                            new_dtypes.append(right.dtypes[old_col])
+                        new_dtypes = pandas.Series(new_dtypes, index=new_columns)
 
             new_self = self.__constructor__(
                 self._modin_frame.apply_full_axis(

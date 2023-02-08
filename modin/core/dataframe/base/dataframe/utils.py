@@ -127,7 +127,9 @@ def join_columns(
         left_renamer[col] = new_name
 
     for col in right:
-        if col not in left_on or col not in right_on:
+        # If we're joining on the column that exists in both frames then it was already
+        # taken from the 'left', don't want to take it again from the 'right'.
+        if not (col in left_on and col in right_on):
             new_name = _get_new_name(col, suffixes[1])
             new_right.append(new_name)
             right_renamer[col] = new_name
