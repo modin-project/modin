@@ -149,6 +149,9 @@ class array(object):
         _query_compiler=None,
         _ndim=None,
     ):
+        ErrorMessage.single_warning(
+            "Using Modin's new NumPy API. To convert from a Modin object to a NumPy array, either turn off the ExperimentalNumPyAPI flag, or use `modin.utils.to_numpy`."
+        )
         if _query_compiler is not None:
             self._query_compiler = _query_compiler
             self._ndim = _ndim

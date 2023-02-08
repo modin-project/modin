@@ -460,43 +460,9 @@ def to_pandas(modin_obj: SupportsPrivateToPandas) -> Any:
     return modin_obj._to_pandas()
 
 
-@overload
-def to_numpy(modin_obj: SupportsPrivateToNumPy) -> Any:
-    """
-    Convert a Modin array to a NumPy array.
-
-    Parameters
-    ----------
-    modin_obj : modin.numpy.array
-        The Modin array to convert.
-
-    Returns
-    -------
-    numpy.array
-        Converted object with type depending on input.
-    """
-    ...
-
-
-@overload
-def to_numpy(modin_obj: SupportsPublicToNumPy) -> Any:
-    """
-    Convert a Modin DataFrame/Series to a NumPy array.
-
-    Parameters
-    ----------
-    modin_obj : modin.DataFrame, modin.Series
-        The Modin DataFrame/Series to convert.
-
-    Returns
-    -------
-    numpy.array
-        Converted object with type depending on input.
-    """
-    ...
-
-
-def to_numpy(modin_obj: Union[SupportsPrivateToNumPy, SupportsPublicToNumPy]) -> Any:
+def to_numpy(
+    modin_obj: Union[SupportsPrivateToNumPy, SupportsPublicToNumPy]
+) -> np.ndarray:
     """
     Convert a Modin object to a NumPy array.
 
