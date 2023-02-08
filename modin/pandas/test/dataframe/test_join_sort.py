@@ -388,9 +388,11 @@ def test_merge_on_index():
         ["idx_key2"],
         ["idx_key3"],
     ):
-        res = modin_df1.merge(modin_df2, on=on)
-        ref = pandas_df1.merge(pandas_df2, on=on)
-        df_equals(res, ref)
+        eval_general(
+            (modin_df1, modin_df2),
+            (pandas_df1, pandas_df2),
+            lambda dfs: dfs[0].merge(dfs[1], on=on),
+        )
 
     for left_on, right_on in (
         (["idx_key1"], ["col_key1"]),
@@ -399,9 +401,11 @@ def test_merge_on_index():
         (["idx_key2"], ["idx_key2"]),
         (["col_key1", "idx_key2"], ["col_key2", "idx_key2"]),
     ):
-        res = modin_df1.merge(modin_df2, left_on=left_on, right_on=right_on)
-        ref = pandas_df1.merge(pandas_df2, left_on=left_on, right_on=right_on)
-        df_equals(res, ref)
+        eval_general(
+            (modin_df1, modin_df2),
+            (pandas_df1, pandas_df2),
+            lambda dfs: dfs[0].merge(dfs[1], left_on=left_on, right_on=right_on),
+        )
 
 
 @pytest.mark.parametrize("axis", [0, 1])
