@@ -239,7 +239,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             return pandas.DataFrame()
 
         result = qc._modin_frame.apply_full_axis(
-            1, func, other=None, new_index=[], new_columns=[], enumerate_partitions=True
+            1, func, new_index=[], new_columns=[], enumerate_partitions=True
         )
         result.to_pandas()
 
