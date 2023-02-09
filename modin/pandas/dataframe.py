@@ -50,6 +50,7 @@ from modin.utils import (
     to_pandas,
     hashable,
     MODIN_UNNAMED_SERIES_LABEL,
+    try_cast_to_pandas,
 )
 from modin.config import Engine, IsExperimental, PersistentPickle
 from .utils import (
@@ -2079,13 +2080,9 @@ class DataFrame(BasePandasDataset):
                 frame = self
             else:
                 frame = self.copy()
-            if not all(
-                isinstance(col, (pandas.Index, Series, np.ndarray, list, Iterator))
-                for col in keys
-            ):
-                if drop:
-                    keys = [frame.pop(k) if not is_list_like(k) else k for k in keys]
-                keys = [k._to_pandas() if isinstance(k, Series) else k for k in keys]
+            if drop:
+                keys = [k if is_list_like(k) else frame.pop(k) for k in keys]
+            keys = try_cast_to_pandas(keys)
             # These are single-threaded objects, so we might as well let pandas do the
             # calculation so that it matches.
             frame.index = (
