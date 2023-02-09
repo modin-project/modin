@@ -346,9 +346,11 @@ def test_merge_with_mi_columns():
         }
     )
 
-    res = modin_df1.merge(modin_df2, on=[("col0", "a")])
-    ref = pandas_df1.merge(pandas_df2, on=[("col0", "a")])
-    df_equals(res, ref)
+    eval_general(
+        (modin_df1, modin_df2),
+        (pandas_df1, pandas_df2),
+        lambda dfs: dfs[0].merge(dfs[1], on=[("col0", "a")]),
+    )
 
 
 @pytest.mark.parametrize("has_index_cache", [True, False])
