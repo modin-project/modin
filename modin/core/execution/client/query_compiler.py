@@ -935,6 +935,7 @@ _GROUPBY_FORWARDING_METHODS = frozenset(
         "cumprod",
         "head",
         "tail",
+        "nth",
         "std",
         "sem",
         "rank",
