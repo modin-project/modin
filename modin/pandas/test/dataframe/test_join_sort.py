@@ -391,9 +391,10 @@ def test_merge_on_index(has_index_cache):
             assert modin_df2._query_compiler._modin_frame._index_cache is not None
         else:
             # Propagate deferred indices to partitions
-            modin_df1._query_compiler._modin_frame._propagate_index_objs(axis=0)
+            if hasattr(modin_df1._query_compiler._modin_frame, "_propagate_index_objs"):
+                modin_df1._query_compiler._modin_frame._propagate_index_objs(axis=0)
+                modin_df2._query_compiler._modin_frame._propagate_index_objs(axis=0)
             modin_df1._query_compiler._modin_frame._index_cache = None
-            modin_df2._query_compiler._modin_frame._propagate_index_objs(axis=0)
             modin_df2._query_compiler._modin_frame._index_cache = None
 
     for on in (
