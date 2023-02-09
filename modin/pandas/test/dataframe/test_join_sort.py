@@ -351,7 +351,8 @@ def test_merge_with_mi_columns():
     df_equals(res, ref)
 
 
-def test_merge_on_index():
+@pytest.mark.parametrize("has_index_cache", [True, False])
+def test_merge_on_index(has_index_cache):
     modin_df1, pandas_df1 = create_test_dfs(
         {
             "idx_key1": [1, 2, 3, 4],
@@ -380,6 +381,19 @@ def test_merge_on_index():
     modin_df2 = modin_df2.set_index(["idx_key2", "idx_key3"])
     pandas_df2 = pandas_df2.set_index(["idx_key2", "idx_key3"])
 
+    def setup_cache():
+        if has_index_cache:
+            modin_df1.index  # triggering index materialization
+            modin_df2.index
+            assert modin_df1._query_compiler._modin_frame._index_cache is not None
+            assert modin_df2._query_compiler._modin_frame._index_cache is not None
+        else:
+            # Propagate deferred indices to partitions
+            modin_df1._query_compiler._modin_frame._propagate_index_objs(axis=0)
+            modin_df1._query_compiler._modin_frame._index_cache = None
+            modin_df2._query_compiler._modin_frame._propagate_index_objs(axis=0)
+            modin_df2._query_compiler._modin_frame._index_cache = None
+
     for on in (
         ["col_key1", "idx_key1"],
         ["col_key1", "idx_key2"],
@@ -388,6 +402,7 @@ def test_merge_on_index():
         ["idx_key2"],
         ["idx_key3"],
     ):
+        setup_cache()
         eval_general(
             (modin_df1, modin_df2),
             (pandas_df1, pandas_df2),
@@ -401,6 +416,7 @@ def test_merge_on_index():
         (["idx_key2"], ["idx_key2"]),
         (["col_key1", "idx_key2"], ["col_key2", "idx_key2"]),
     ):
+        setup_cache()
         eval_general(
             (modin_df1, modin_df2),
             (pandas_df1, pandas_df2),
