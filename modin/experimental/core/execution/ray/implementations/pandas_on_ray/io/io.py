@@ -238,7 +238,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             df.to_pickle(**kwargs)
             return pandas.DataFrame()
 
-        result = qc._modin_frame.broadcast_apply_full_axis(
+        result = qc._modin_frame.apply_full_axis(
             1, func, other=None, new_index=[], new_columns=[], enumerate_partitions=True
         )
         result.to_pandas()
