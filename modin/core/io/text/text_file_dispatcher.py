@@ -277,6 +277,7 @@ class TextFileDispatcher(FileDispatcher):
 
         file_size = cls.file_size(f)
 
+        pd_df_metadata = None
         if pre_reading:
             rows_skipper(header_size)
             pre_reading_start = f.tell()
@@ -296,20 +297,18 @@ class TextFileDispatcher(FileDispatcher):
             # add outside_quotes
             if is_quoting and not outside_quotes:
                 warnings.warn("File has mismatched quotes")
-
-        rows_skipper(skiprows)
-        start = f.tell()
-
-        pd_df_metadata = None
-        if read_callback_kw:
-            # For correct behavior, if we want to avoid double skipping rows,
-            # we need to get metadata after skipping.
-            pd_df_metadata = cls.read_callback(f, **read_callback_kw)
-            f.seek(start)
-        if not pre_reading:
+            rows_skipper(skiprows)
+        else:
+            rows_skipper(skiprows)
+            if read_callback_kw:
+                start = f.tell()
+                # For correct behavior, if we want to avoid double skipping rows,
+                # we need to get metadata after skipping.
+                pd_df_metadata = cls.read_callback(f, **read_callback_kw)
+                f.seek(start)
             rows_skipper(header_size)
-        start = f.tell()
 
+        start = f.tell()
         if nrows:
             partition_size = max(1, num_partitions, nrows // num_partitions)
             while f.tell() < file_size and read_rows_counter < nrows:
