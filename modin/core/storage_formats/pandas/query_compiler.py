@@ -588,10 +588,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 new_columns = None
 
             return self.__constructor__(
-                self._modin_frame.broadcast_apply_full_axis(
+                self._modin_frame.apply_full_axis(
                     axis=1,
                     func=_reset,
-                    other=None,
                     enumerate_partitions=True,
                     new_columns=new_columns,
                     sync_labels=False,

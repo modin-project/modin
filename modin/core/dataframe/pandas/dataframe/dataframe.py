@@ -2189,6 +2189,8 @@ class PandasDataframe(ClassLogger):
         func,
         new_index=None,
         new_columns=None,
+        apply_indices=None,
+        enumerate_partitions: bool = False,
         dtypes=None,
         keep_partitioning=True,
         sync_labels=True,
@@ -2209,6 +2211,11 @@ class PandasDataframe(ClassLogger):
         new_columns : list-like, optional
             The columns of the result. We may know this in
             advance, and if not provided it must be computed.
+        apply_indices : list-like, default: None
+            Indices of `axis ^ 1` to apply function over.
+        enumerate_partitions : bool, default: False
+            Whether pass partition index into applied `func` or not.
+            Note that `func` must be able to obtain `partition_idx` kwarg.
         dtypes : list-like, optional
             The data types of the result. This is an optimization
             because there are functions that always result in a particular data
@@ -2238,6 +2245,8 @@ class PandasDataframe(ClassLogger):
             func=func,
             new_index=new_index,
             new_columns=new_columns,
+            apply_indices=apply_indices,
+            enumerate_partitions=enumerate_partitions,
             dtypes=dtypes,
             other=None,
             keep_partitioning=keep_partitioning,
