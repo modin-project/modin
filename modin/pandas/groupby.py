@@ -18,7 +18,7 @@ import pandas
 from pandas.core.apply import reconstruct_func
 from pandas.errors import SpecificationError
 import pandas.core.groupby
-from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
+from pandas.core.dtypes.common import is_list_like, is_numeric_dtype, is_integer
 from pandas._libs.lib import no_default
 import pandas.core.common as com
 from types import BuiltinFunctionType
@@ -272,7 +272,28 @@ class DataFrameGroupBy(ClassLogger):
         return result
 
     def nth(self, n, dropna=None):
-        return self._default_to_pandas(lambda df: df.nth(n, dropna=dropna))
+        # TODO: what we really should do is create a GroupByNthSelector to mimic
+        # pandas behavior and then implement some of these methods there.
+        # Adapted error checking from pandas
+        if dropna:
+            if not is_integer(n):
+                raise ValueError("dropna option only supported for an integer argument")
+
+            if dropna not in ["any", "all"]:
+                # Note: when agg-ing picker doesn't raise this, just returns NaN
+                raise ValueError(
+                    "For a DataFrame or Series groupby.nth, dropna must be "
+                    "either None, 'any' or 'all', "
+                    f"(was passed {dropna})."
+                )
+    
+        return self._check_index(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_nth,
+                numeric_only=False,
+                agg_kwargs=dict(n=n, dropna=dropna),
+            )
+        )
 
     def cumsum(self, axis=0, *args, **kwargs):
         return self._check_index_name(

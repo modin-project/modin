@@ -3035,6 +3035,77 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             drop=drop,
         )
 
+    @doc_utils.doc_groupby_method(
+        action="get first n values of a group",
+        result="first n values of a group",
+        refer_to="head",
+    )
+    def groupby_head(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="head",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get last n values in group",
+        result="last n values",
+        refer_to="tail",
+    )
+    def groupby_tail(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="tail",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+    
+    @doc_utils.doc_groupby_method(
+        action="get nth value in group",
+        result="nth value",
+        refer_to="nth",
+    )
+    def groupby_nth(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="nth",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
     # END Manual Partitioning methods
 
     @doc_utils.add_refer_to("DataFrame.unstack")
