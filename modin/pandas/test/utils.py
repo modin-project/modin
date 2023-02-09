@@ -682,7 +682,7 @@ def assert_index_equal(left, right, **kwargs):
     pandas.testing.assert_index_equal(left, right, **kwargs)
 
     def get_type(idx):
-        cls = getattr(left, "__modin_idx_type__", type(left))
+        cls = getattr(left, "__modin_idx_type__", type(idx))
         return cls.__bases__[0] if cls.__module__.startswith("modin") else cls
 
     left_type = get_type(left)

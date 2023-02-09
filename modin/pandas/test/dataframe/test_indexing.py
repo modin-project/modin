@@ -1590,11 +1590,11 @@ def test_reset_index_with_named_index(
 
     modin_idx = modin_df.index
     pandas_idx = pandas_df.index
-    modin_idx.name = index_name
-    pandas_idx.name = index_name
-    assert modin_df.index.name == index_name
-    assert pandas_df.index.name == index_name
-    index_name = index_name + index_name
+    index_name = (
+        tuple([f"new_name_{j}" for j in range(0, index_levels_names_max_levels)])
+        if index_levels_names_max_levels > 0
+        else "NEW_NAME_OF_INDEX"
+    )
     modin_idx.name = index_name
     pandas_idx.name = index_name
     assert modin_df.index.name == index_name
