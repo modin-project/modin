@@ -1476,19 +1476,35 @@ class SeriesGroupBy(DataFrameGroupBy):
     def is_monotonic_increasing(self):
         return self._default_to_pandas(lambda ser: ser.is_monotonic_increasing)
 
-    def nlargest(self, n: int = 5, keep: str = "first") -> Series:
-        return self._default_to_pandas(lambda ser: ser.nlargest(n=n, keep=keep))
-
-    def nsmallest(self, n: int = 5, keep: str = "first") -> Series:
-        return self._default_to_pandas(lambda ser: ser.nsmallest(n=n, keep=keep))
-
-    def unique(self):
-        return self._default_to_pandas(lambda ser: ser.unique())
-
     @property
     def dtype(self):
         return self._default_to_pandas(lambda ser: ser.dtype)
 
+    def unique(self):
+        return self._check_index(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_unique,
+                numeric_only=False,
+            )
+        )
+
+    def nlargest(self, n=5, keep="first"):
+        return self._check_index(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_nlargest,
+                agg_kwargs=dict(n=n, keep=keep),
+                numeric_only=True,
+            )
+        )
+
+    def nsmallest(self, n=5, keep="first"):
+        return self._check_index(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_nsmallest,
+                agg_kwargs=dict(n=n, keep=keep),
+                numeric_only=True,
+            )
+        )
 
 if IsExperimental.get():
     from modin.experimental.cloud.meta_magic import make_wrapped_class
