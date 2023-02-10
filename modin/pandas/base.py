@@ -3708,6 +3708,7 @@ class BasePandasDataset(ClassLogger):
         else:
             index = self.index
 
+        new_index = None
         if isinstance(index, pandas.MultiIndex):
             loc, new_index = index._get_loc_level(key, level=0)
             if not drop_level:
@@ -3745,6 +3746,10 @@ class BasePandasDataset(ClassLogger):
             result = self.iloc[:, loc]
         else:
             result = self.iloc[loc]
+            if new_index is None:
+                raise RuntimeError(
+                    "`new_index` variable shouldn't be equal to None here, something went wrong."
+                )
             result.index = new_index
 
         # Note: pandas does result._set_is_copy here
