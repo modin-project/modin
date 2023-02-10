@@ -1103,6 +1103,10 @@ class PandasDataframe(ClassLogger):
         """
         new_dtypes = self._dtypes
         if row_positions is not None:
+            # We want to preserve the frame's partitioning so passing in ``keep_partitioning=True``
+            # in order to use the cached `row_lengths` values for the new frame.
+            # If the frame's is re-partitioned using the "standard" partitioning,
+            # then knowing that, we can compute new row lengths.
             ordered_rows = self._partition_mgr_cls.map_axis_partitions(
                 0,
                 self._partitions,
@@ -1129,6 +1133,10 @@ class PandasDataframe(ClassLogger):
             row_idx = self.index
             new_lengths = self._row_lengths_cache
         if col_positions is not None:
+            # We want to preserve the frame's partitioning so passing in ``keep_partitioning=True``
+            # in order to use the cached `column_widths` values for the new frame.
+            # If the frame's is re-partitioned using the "standard" partitioning,
+            # then knowing that, we can compute new column widths.
             ordered_cols = self._partition_mgr_cls.map_axis_partitions(
                 1,
                 ordered_rows,

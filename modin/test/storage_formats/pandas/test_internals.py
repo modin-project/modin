@@ -627,12 +627,12 @@ def test_repartitioning(set_num_partitions):
         partitioning_scheme={"row_lengths": [4], "column_widths": [2, 2]},
     )
 
-    md_df = modin_df._query_compiler._modin_frame
+    modin_frame = modin_df._query_compiler._modin_frame
 
-    assert md_df._partitions.shape == (1, 2)
-    assert md_df.column_widths == [2, 2]
+    assert modin_frame._partitions.shape == (1, 2)
+    assert modin_frame.column_widths == [2, 2]
 
-    res = md_df.apply_full_axis(
+    res = modin_frame.apply_full_axis(
         axis=1,
         func=lambda df: df,
         keep_partitioning=False,
