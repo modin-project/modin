@@ -1104,7 +1104,10 @@ class PandasDataframe(ClassLogger):
         new_dtypes = self._dtypes
         if row_positions is not None:
             ordered_rows = self._partition_mgr_cls.map_axis_partitions(
-                0, self._partitions, lambda df: df.iloc[row_positions]
+                0,
+                self._partitions,
+                lambda df: df.iloc[row_positions],
+                keep_partitioning=True,
             )
             row_idx = self.index[row_positions]
 
@@ -1127,7 +1130,10 @@ class PandasDataframe(ClassLogger):
             new_lengths = self._row_lengths_cache
         if col_positions is not None:
             ordered_cols = self._partition_mgr_cls.map_axis_partitions(
-                1, ordered_rows, lambda df: df.iloc[:, col_positions]
+                1,
+                ordered_rows,
+                lambda df: df.iloc[:, col_positions],
+                keep_partitioning=True,
             )
             col_idx = self.columns[col_positions]
             if new_dtypes is not None:
