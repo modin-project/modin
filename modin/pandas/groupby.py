@@ -1307,6 +1307,31 @@ class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
                 for k in (sorted(group_ids) if self._sort else group_ids)
             )
 
+    def unique(self):
+        return self._check_index(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_unique,
+                numeric_only=False,
+            )
+        )
+
+    def nlargest(self, n=5, keep="first"):
+        return self._check_index(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_nlargest,
+                agg_kwargs=dict(n=n, keep=keep),
+                numeric_only=True,
+            )
+        )
+
+    def nsmallest(self, n=5, keep="first"):
+        return self._check_index(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_nsmallest,
+                agg_kwargs=dict(n=n, keep=keep),
+                numeric_only=True,
+            )
+        )
 
 if IsExperimental.get():
     from modin.experimental.cloud.meta_magic import make_wrapped_class
