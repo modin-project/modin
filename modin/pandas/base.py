@@ -10,7 +10,6 @@
 # the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
-
 """Implement DataFrame/Series public API as pandas does."""
 
 import numpy as np
@@ -34,6 +33,7 @@ import pandas.core.generic
 from pandas.core.indexing import convert_to_index_sliceable
 from pandas.util._validators import validate_percentile, validate_inclusive
 from pandas._libs.lib import no_default, NoDefault
+from pandas._libs.tslibs import to_offset
 from pandas._typing import (
     IndexKeyFunc,
     TimedeltaConvertibleTypes,
@@ -1524,7 +1524,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Select initial periods of time series data based on a date offset.
         """
-        return self.loc[pandas.Series(index=self.index).first(offset).index]
+        return self._create_or_update_from_compiler(
+            self._query_compiler.first(to_offset(offset))
+        )
 
     def first_valid_index(self):  # noqa: RT01, D200
         """
@@ -1702,7 +1704,9 @@ class BasePandasDataset(BasePandasDatasetCompat):
         """
         Select final periods of time series data based on a date offset.
         """
-        return self.loc[pandas.Series(index=self.index).last(offset).index]
+        return self._create_or_update_from_compiler(
+            self._query_compiler.last(to_offset(offset))
+        )
 
     def last_valid_index(self):  # noqa: RT01, D200
         """
