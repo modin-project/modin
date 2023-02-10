@@ -483,6 +483,8 @@ class TestMultiIndex:
         pandas_idx.name = "new_name2"
         modin_idx.name = "new_name2"
         pandas_idx.name = "new_name3"
+        # On each name change, a new frame is created internally. Make sure
+        # that the new name is applied to the current frame, but not the old one.
         modin_idx.name = "new_name3"
         assert pandas_df.index is pandas_idx
         assert modin_df.index is modin_idx

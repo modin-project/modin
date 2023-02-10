@@ -17,7 +17,6 @@ import numpy as np
 import math
 import pandas
 import itertools
-
 from packaging import version
 from pandas.core.indexes.numeric import NumericIndex
 from pandas.testing import (
@@ -643,6 +642,7 @@ def df_equals(df1, df2):
     elif isinstance(df1, pandas.Series) and isinstance(df2, pandas.Series):
         assert_index_equal(df1.index, df2.index, check_exact=False)
         if version.parse(pandas.__version__) < version.parse("1.3.0"):
+            # There is no 'check_index' argument in pandas < 1.3.0
             assert_series_equal(df1, df2, check_dtype=False, check_series_type=False)
         else:
             assert_series_equal(
@@ -678,11 +678,13 @@ def df_equals(df1, df2):
 
 
 def assert_index_equal(left, right, **kwargs):
+    # If 'exact' is not False, pandas implementation of assert_index_equal()
+    # compares index classes by identity and this check fails for the index wrappers.
     kwargs["exact"] = False
     pandas.testing.assert_index_equal(left, right, **kwargs)
 
     def get_type(idx):
-        cls = getattr(left, "__modin_idx_type__", type(idx))
+        cls = getattr(idx, "__modin_idx_type__", type(idx))
         return cls.__bases__[0] if cls.__module__.startswith("modin") else cls
 
     left_type = get_type(left)
