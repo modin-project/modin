@@ -3039,7 +3039,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             agg_kwargs=agg_kwargs,
             drop=drop,
         )
-    
+
     @doc_utils.doc_groupby_method(
         action="get nth value in group",
         result="nth value",
@@ -3063,6 +3063,31 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             agg_kwargs=agg_kwargs,
             drop=drop,
         )
+
+    @doc_utils.doc_groupby_method(
+        action="get group number of each value",
+        result="group number of each value",
+        refer_to="ngroup",
+    )
+    def groupby_ngroup(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="ngroup",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
     # END Manual Partitioning methods
 
     @doc_utils.add_refer_to("DataFrame.unstack")
