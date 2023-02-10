@@ -3735,7 +3735,7 @@ class BasePandasDataset(ClassLogger):
             if self.ndim == 1:
                 # if we encounter an array-like and we only have 1 dim
                 # that means that their are list/ndarrays inside the Series!
-                # so just return them (GH 6394)
+                # so just return them (pandas GH 6394)
                 return self.iloc[loc]
 
             result = self.iloc[loc]

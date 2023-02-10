@@ -1700,36 +1700,31 @@ def test_tail(data, n):
 
 def test_xs():
     # example is based on the doctest in the upstream pandas docstring
-    d = {
+    data = {
         "num_legs": [4, 4, 2, 2],
         "num_wings": [0, 0, 2, 2],
         "class": ["mammal", "mammal", "mammal", "bird"],
         "animal": ["cat", "dog", "bat", "penguin"],
         "locomotion": ["walks", "walks", "flies", "walks"],
     }
-    df = pd.DataFrame(data=d)
+    modin_df, pandas_df = create_test_dfs(data)
 
-    # to make several partitions
-    df = pd.concat([df, df], axis=0)
-    df = df.join(df, rsuffix="_y")
+    def prepare_dataframes(df):
+        # to make several partitions (only for Modin dataframe)
+        df = (pd if isinstance(df, pd.DataFrame) else pandas).concat([df, df], axis=0)
+        # looks like pandas is sorting the index whereas modin is not, performing a join operation.
+        df = df.reset_index(drop=True)
+        df = df.join(df, rsuffix="_y")
+        return df.set_index(["class", "animal", "locomotion"])
 
-    df = df.set_index(["class", "animal", "locomotion"])
-
-    result = df.xs("mammal")
-    expected = df._to_pandas().xs("mammal")
-    df_equals(result, expected)
-
-    result = df.xs("cat", level=1)
-    expected = df._to_pandas().xs("cat", level=1)
-    df_equals(result, expected)
-
-    result = df.xs("cat", level=1, drop_level=False)
-    expected = df._to_pandas().xs("cat", level=1, drop_level=False)
-    df_equals(result, expected)
-
-    result = df.xs("num_legs", axis=1)
-    expected = df._to_pandas().xs("num_legs", axis=1)
-    df_equals(result, expected)
+    modin_df = prepare_dataframes(modin_df)
+    pandas_df = prepare_dataframes(pandas_df)
+    eval_general(modin_df, pandas_df, lambda df: df.xs("mammal"))
+    eval_general(modin_df, pandas_df, lambda df: df.xs("cat", level=1))
+    eval_general(modin_df, pandas_df, lambda df: df.xs("num_legs", axis=1))
+    eval_general(
+        modin_df, pandas_df, lambda df: df.xs("cat", level=1, drop_level=False)
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
