@@ -497,7 +497,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
                 elif on is not None:
                     keep_index = any(
-                        o in self.index.names and o in right_pandas.index.names for o in on
+                        o in self.index.names and o in right_pandas.index.names
+                        for o in on
                     )
             else:
                 # Have to trigger columns materialization. Hope they're already available at this point.
@@ -510,7 +511,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
                 elif on is not None:
                     keep_index = any(
-                        o not in right_pandas.columns and o not in self.columns for o in on
+                        o not in right_pandas.columns and o not in self.columns
+                        for o in on
                     )
 
             if sort:
