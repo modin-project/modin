@@ -2,4 +2,4 @@ comment: false
 
 codecov:
   notify:
-    after_n_builds: 55
+    after_n_builds: 100
