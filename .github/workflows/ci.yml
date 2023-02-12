@@ -950,6 +950,7 @@ jobs:
           conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pytest modin/pandas/test/test_io.py::TestCsv --verbose
+      - uses: codecov/codecov-action@v2
 
   test-spreadsheet:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -994,3 +995,4 @@ jobs:
           conda info
           conda list
       - run: python -m pytest modin/experimental/spreadsheet/test/test_general.py
+      - uses: codecov/codecov-action@v2
