@@ -5,7 +5,7 @@ dependencies:
   - pandas==1.5.3
   - numpy>=1.18.5
   - ray-default>=1.13.0
-  - pyarrow>=8.0.0
+  - pyarrow
   # workaround for https://github.com/conda/conda/issues/11744
   - grpcio!=1.45.*
   - grpcio!=1.46.*
