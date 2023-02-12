@@ -216,7 +216,12 @@ class PyArrowDataset(ColumnStoreDataset):
     @property
     def files(self):
         if self._files is None:
-            self._files = self._get_files(self.dataset.files)
+            try:
+                files = self.dataset.files
+            except AttributeError:
+                # compatibility with 4.0.1 <= pyarrow < 8.0.0
+                files = self.dataset._dataset.files
+            self._files = self._get_files(files)
         return self._files
 
     def to_pandas_dataframe(
