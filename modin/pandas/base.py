@@ -3721,12 +3721,9 @@ class BasePandasDataset(ClassLogger):
 
             if isinstance(loc, np.ndarray):
                 if loc.dtype == np.bool_:
-                    (inds,) = loc.nonzero()
-                    # Note: pandas uses self._take_with_is_copy here
-                    return self.take(inds, axis=axis)
-                else:
-                    # Note: pandas uses self._take_with_is_copy here
-                    return self.take(loc, axis=axis)
+                    (loc,) = loc.nonzero()
+                # Note: pandas uses self._take_with_is_copy here
+                return self.take(loc, axis=axis)
 
             if not is_scalar(loc):
                 new_index = index[loc]
