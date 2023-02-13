@@ -1169,7 +1169,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def window_mean(self, axis, window, window_args, *args, **kwargs):
         center = window_args[2]
-        if not center:
+        if not center and not isinstance(window, str):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis=axis, window_size=window,
@@ -1187,7 +1187,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def window_sum(self, axis, window, window_args, *args, **kwargs):
         center = window_args[2]
-        if not center:
+        if not center and not isinstance(window, str):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis=axis, window_size=window,
@@ -1205,7 +1205,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def window_var(self, axis, window, window_args, ddof, *args, **kwargs):
         center = window_args[2]
-        if not center:
+        if not center and not isinstance(window, str):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis=axis, window_size=window,
@@ -1223,7 +1223,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def window_std(self, axis, window, window_args, ddof, *args, **kwargs):
         center = window_args[2]
-        if not center:
+        if not center and not isinstance(window, str):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis=axis, window_size=window,
@@ -1239,7 +1239,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def rolling_count(self, axis, window, rolling_args):
         center = rolling_args[2]
-        if not center:
+        if not center and not isinstance(window, str):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis=axis, window_size=window,
@@ -1257,7 +1257,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def rolling_sum(self, axis, window, rolling_args, *args, **kwargs):
         center = rolling_args[2]
-        if not center:
+        if not center and not isinstance(window, str):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis=axis, window_size=window, 
@@ -1276,7 +1276,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def rolling_mean(self, axis, window, rolling_args, *args, **kwargs):
         center = rolling_args[2]
-        if not center:
+        if not center and not isinstance(window, str):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis=axis, window_size=window,
@@ -1294,7 +1294,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def rolling_median(self, axis, window, rolling_args, **kwargs):
         center = rolling_args[2]
-        if not center:
+        if not center and not isinstance(window, str):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis=axis, window_size=window,
@@ -1312,7 +1312,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def rolling_var(self, axis, window, rolling_args, ddof, *args, **kwargs):
         center = rolling_args[2]
-        if not center:
+        if not center and not isinstance(window, str):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis=axis, window_size=window,
@@ -1330,7 +1330,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def rolling_std(self, axis, window, rolling_args, ddof, *args, **kwargs):
         center = rolling_args[2]
-        if not center:
+        if not center and not isinstance(window, str):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis=axis, window_size=window, 
@@ -1348,7 +1348,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def rolling_min(self, axis, window, rolling_args, *args, **kwargs):
         center = rolling_args[2]
-        if not center:
+        if not center and not isinstance(window, str):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis=axis, window_size=window,
@@ -1366,7 +1366,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def rolling_max(self, axis, window, rolling_args, *args, **kwargs):
         center = rolling_args[2]
-        if not center:
+        if not center and not isinstance(window, str):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis=axis, window_size=window,
@@ -1376,40 +1376,43 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             return self.old_rolling_max(axis, rolling_args, *args, **kwargs)    
 
-    """
-    rolling_skew = Fold.register(
+    old_rolling_skew = Fold.register(
         lambda df, rolling_args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).skew(**kwargs)
         )
     )
-    """
 
     def rolling_skew(self, axis, window, rolling_args, **kwargs):
-        return self.__constructor__(
-            self._modin_frame.window(
-                axis=axis, window_size=window,
-                reduce_fn=lambda df : df.rolling(*rolling_args).skew(**kwargs)
+        center = rolling_args[2]
+        if not center and not isinstance(window, str):
+            return self.__constructor__(
+                self._modin_frame.window(
+                    axis=axis, window_size=window,
+                    reduce_fn=lambda df : df.rolling(*rolling_args).skew(**kwargs)
+                )
             )
-        )
+        else:
+            return self.old_rolling_skew(axis, rolling_args, **kwargs)
 
-    """
-    rolling_kurt = Fold.register(
+    old_rolling_kurt = Fold.register(
         lambda df, rolling_args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).kurt(**kwargs)
         )
     )
-    """
 
     def rolling_kurt(self, axis, window, rolling_args, **kwargs):
-        return self.__constructor__(
-            self._modin_frame.window(
-                axis=axis, window_size=window,
-                reduce_fn=lambda df : df.rolling(*rolling_args).kurt(**kwargs)
+        center = rolling_args[2]
+        if not center and not isinstance(window, str):
+            return self.__constructor__(
+                self._modin_frame.window(
+                    axis=axis, window_size=window,
+                    reduce_fn=lambda df : df.rolling(*rolling_args).kurt(**kwargs)
+                )
             )
-        )
+        else:
+            return self.old_rolling_kurt(axis, rolling_args, **kwargs)
 
-    """
-    rolling_apply = Fold.register(
+    old_rolling_apply = Fold.register(
         lambda df, rolling_args, func, raw, engine, engine_kwargs, args, kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).apply(
                 func=func,
@@ -1421,41 +1424,55 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         )
     )
-    """
 
     def rolling_apply(self, axis, window, rolling_args, func, raw, engine, engine_kwargs, args, kwargs):
-        return self.__constructor__(
-            self._modin_frame.window(
-                axis=axis, window_size=window,
-                reduce_fn=lambda df : 
-                    df.rolling(*rolling_args).apply(
-                        func=func,
-                        raw=raw,
-                        engine=engine,
-                        engine_kwargs=engine_kwargs,
-                        args=args,
-                        kwargs=kwargs,
-                    )
+        center = rolling_args[2]
+        if not center and not isinstance(window, str):
+            return self.__constructor__(
+                self._modin_frame.window(
+                    axis=axis, window_size=window,
+                    reduce_fn=lambda df : 
+                        df.rolling(*rolling_args).apply(
+                            func=func,
+                            raw=raw,
+                            engine=engine,
+                            engine_kwargs=engine_kwargs,
+                            args=args,
+                            kwargs=kwargs,
+                        )
+                )
+            ) 
+        else:
+            return self.old_rolling_apply(
+                axis, 
+                rolling_args,
+                func,
+                raw,
+                engine,
+                engine_kwargs,
+                *args,#*args if args is not None else tuple(),
+                **kwargs,#**kwargs if kwargs is not None else {},
             )
-        )    
 
-    """
-    rolling_quantile = Fold.register(
+    old_rolling_quantile = Fold.register(
         lambda df, rolling_args, quantile, interpolation, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).quantile(
                 quantile=quantile, interpolation=interpolation, **kwargs
             )
         )
     )
-    """
 
     def rolling_quantile(self, axis, window, rolling_args, quantile, interpolation, **kwargs):
-        return self.__constructor__(
-            self._modin_frame.window(
-                axis=axis, window_size=window,
-                reduce_fn=lambda df : df.rolling(*rolling_args).quantile(quantile=quantile, interpolation=interpolation, **kwargs)
+        center = rolling_args[2]
+        if not center and not isinstance(window, str):
+            return self.__constructor__(
+                self._modin_frame.window(
+                    axis=axis, window_size=window,
+                    reduce_fn=lambda df : df.rolling(*rolling_args).quantile(quantile=quantile, interpolation=interpolation, **kwargs)
+                )
             )
-        )
+        else:
+            return self.old_rolling_kurt(axis, rolling_args, quantile, interpolation, **kwargs)
 
 
     def rolling_corr(self, axis, window, rolling_args, other, pairwise, *args, **kwargs):
@@ -1466,23 +1483,27 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             )
         else:
-            """
-            return Fold.register(
+            old_rolling_corr = Fold.register(
                 lambda df: pandas.DataFrame(
                     df.rolling(*rolling_args).corr(
                         other=other, pairwise=pairwise, *args, **kwargs
                     )
                 )
-            )(self, axis)
-            """
-            return self.__constructor__(
-                self._modin_frame.window(
-                    axis=axis, window_size=window,
-                    reduce_fn=lambda df : df.rolling(*rolling_args).corr(
-                        other=other, pairwise=pairwise, *args, **kwargs
+            )
+
+            center = rolling_args[2]
+
+            if not center and not isinstance(window, str):
+                return self.__constructor__(
+                    self._modin_frame.window(
+                        axis=axis, window_size=window,
+                        reduce_fn=lambda df : df.rolling(*rolling_args).corr(
+                            other=other, pairwise=pairwise, *args, **kwargs
+                        )
                     )
                 )
-            )
+            else:
+                return old_rolling_corr(self, rolling_args, other, pairwise, *args, **kwargs)(self, axis)   
 
     def rolling_cov(self, axis, window, rolling_args, other, pairwise, ddof, **kwargs):
         if len(self.columns) > 1:
@@ -1492,23 +1513,27 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             )
         else:
-            """
-            return Fold.register(
+            old_rolling_cov = Fold.register(
                 lambda df: pandas.DataFrame(
                     df.rolling(*rolling_args).cov(
                         other=other, pairwise=pairwise, ddof=ddof, **kwargs
                     )
                 )
-            )(self, axis)
-            """
-            return self.__constructor__(
-                self._modin_frame.window(
-                    axis=axis, window_size=window,
-                    reduce_fn=lambda df : df.rolling(*rolling_args).cov(
-                        other=other, pairwise=pairwise, **kwargs
+            )#(self, axis)
+            
+            center = rolling_args[2]
+
+            if not center and not isinstance(window, str):
+                return self.__constructor__(
+                    self._modin_frame.window(
+                        axis=axis, window_size=window,
+                        reduce_fn=lambda df : df.rolling(*rolling_args).cov(
+                            other=other, pairwise=pairwise, **kwargs
+                        )
                     )
                 )
-            )
+            else:
+                return old_rolling_cov(axis, rolling_args, other, pairwise, **kwargs)    
 
     def rolling_aggregate(self, axis, window, rolling_args, func, *args, **kwargs):
         """
