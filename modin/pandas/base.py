@@ -3677,7 +3677,7 @@ class BasePandasDataset(ClassLogger):
         Return cross-section from the Series/DataFrame.
         """
         axis = self._get_axis_number(axis)
-        labels = self.axes[axis]
+        labels = self.columns if axis else self.index
 
         if isinstance(key, list):
             # deprecated in pandas, to be removed in 2.0
