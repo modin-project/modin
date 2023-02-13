@@ -1256,13 +1256,7 @@ class Series(BasePandasDataset):
         """
         Return the memory usage of the Series.
         """
-        if index:
-            result = self._reduce_dimension(
-                self._query_compiler.memory_usage(index=False, deep=deep)
-            )
-            index_value = self.index.memory_usage(deep=deep)
-            return result + index_value
-        return super(Series, self).memory_usage(index=index, deep=deep)
+        return super(Series, self).memory_usage(index=index, deep=deep).sum()
 
     def mod(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
         """
