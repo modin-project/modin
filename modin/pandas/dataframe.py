@@ -1327,12 +1327,6 @@ class DataFrame(BasePandasDataset):
         """
         Return the memory usage of each column in bytes.
         """
-        if index:
-            result = self._reduce_dimension(
-                self._query_compiler.memory_usage(index=False, deep=deep)
-            )
-            index_value = self.index.memory_usage(deep=deep)
-            return modin.pandas.concat([Series(index_value, index=["Index"]), result])
         return super(DataFrame, self).memory_usage(index=index, deep=deep)
 
     def merge(
