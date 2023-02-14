@@ -65,7 +65,7 @@ class JSONDispatcher(TextFileDispatcher):
         with OpenFile(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
             column_widths, num_splits = cls._define_metadata(empty_pd_df, columns)
             args = {"fname": path_or_buf, "num_splits": num_splits, **kwargs}
-            splits = cls.partitioned_file(
+            splits, _ = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
             )
