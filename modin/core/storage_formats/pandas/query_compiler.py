@@ -3385,7 +3385,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # Cat operations
     def cat_codes(self):
         def func(df) -> np.ndarray:
+            # `df` is supposed to be consisted of multiple partitions,
+            # which should be concatenated before applying a function.
+            # `pd.concat` doesn't preserve categorical dtype
+            # if the dfs have categorical columns
+            # so we intentionaly restore the right dtype.
+            # TODO: revert the change when https://github.com/pandas-dev/pandas/issues/51362 is fixed.
             ser = df.iloc[:, 0]
+            if ser.dtype != "category":
+                ser = ser.astype("category", copy=False)
             return ser.cat.codes
 
         res = self._modin_frame.apply_full_axis(axis=0, func=func)
