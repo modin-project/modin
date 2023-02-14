@@ -50,6 +50,9 @@ matplotlib.use("Agg")
 # have too many such instances.
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
+# Initialize env for storage format detection in @pytest.mark.*
+pd.DataFrame()
+
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_combine(data):
@@ -329,7 +332,19 @@ def test_merge(test_data, test_data2):
         modin_df.merge("Non-valid type")
 
 
-@pytest.mark.parametrize("has_index_cache", [True, False])
+@pytest.mark.parametrize(
+    "has_index_cache",
+    [
+        pytest.param(True),
+        pytest.param(
+            False,
+            marks=pytest.mark.skipif(
+                StorageFormat.get() == "Hdk",
+                reason="_propagate_index_objs is not supported by HDK",
+            ),
+        ),
+    ],
+)
 def test_merge_on_index(has_index_cache):
     modin_df1, pandas_df1 = create_test_dfs(
         {

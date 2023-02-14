@@ -854,7 +854,6 @@ class HdkOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         _check_join_supported(how)
-        how = JoinType(how)
         assert (
             left_on is not None and right_on is not None
         ), "Merge with unspecified 'left_on' or 'right_on' parameter is not supported in the engine"
@@ -864,66 +863,113 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         def validate(what, df, col_names):
             cols = df.columns
-            idx_cols = []
+            new_col_names = col_names
             for i, col in enumerate(col_names):
                 if col not in cols:
-                    if ((idx := df._index_cols) is not None) and (
-                        (mangled := df._mangle_index_names([col])[0]) in idx
-                    ):
-                        col_names[i] = mangled
-                        idx_cols.append(mangled)
-                    elif ((idx := df._index_cache) is not None) and (col in idx.names):
-                        col_names[i] = df._mangle_index_names([col])[0]
-                        idx_cols.append(col_names[i])
-                        df = df._maybe_materialize_rowid()
-                    else:
+                    new_name = None
+                    if df._index_cache is not None:
+                        for j, name in enumerate(df._index_cache):
+                            if name == col:
+                                new_name = f"__index__{j}_{name}"
+                                df = df._maybe_materialize_rowid()
+                                break
+                    if (new_name is None) and (df._index_cols is not None):
+                        for c in df._index_cols:
+                            if col == df._index_name(c):
+                                new_name = c
+                                break
+                    if new_name is None:
                         raise ValueError(f"'{what}' references unknown column {col}")
-            return df, col_names, idx_cols
+                    if new_col_names is col_names:
+                        new_col_names = col_names.copy()
+                    new_col_names[i] = new_name
+            return df, new_col_names
 
-        left, left_on, left_idx = validate("left_on", self, left_on)
-        right, right_on, right_idx = validate("right_on", other, right_on)
+        orig_left_on = left_on
+        orig_right_on = right_on
+        left, left_on = validate("left_on", self, left_on)
+        right, right_on = validate("right_on", other, right_on)
         new_dtypes = []
-        new_columns = []
-        index_cols = None
         exprs = OrderedDict()
 
-        if (
-            (len(left_idx) != 0)
-            and (len(left_idx) == len(right_idx))
-            and (left_idx == right_idx)
-            and all(left._dtypes[n] == right._dtypes[n] for n in left_idx)
-        ):
-            index_cols = left_idx
-            for col in index_cols:
-                exprs[left._index_name(col)] = left.ref(col)
-                new_dtypes.append(left._dtypes[col])
+        # Join by index
+        if (left_on is not orig_left_on) or (right_on is not orig_right_on):
 
-        left_conflicts = set(left.columns) & (set(right.columns) - set(right_on))
-        right_conflicts = set(right.columns) & (set(left.columns) - set(left_on))
-        conflicting_cols = left_conflicts | right_conflicts
-        for c in left.columns:
-            new_name = f"{c}{suffixes[0]}" if c in conflicting_cols else c
-            new_columns.append(new_name)
-            new_dtypes.append(left._dtypes[c])
-            exprs[new_name] = left.ref(c)
-        for c in right.columns:
-            if c not in left_on or c not in right_on:
-                new_name = f"{c}{suffixes[1]}" if c in conflicting_cols else c
+            def to_empty_pandas_df(df):
+                idx = df._index_cache
+                if idx is not None:
+                    idx = idx[0:1]
+                elif df._index_cols is not None:
+                    if len(df._index_cols) > 1:
+                        arrays = [[i] for i in range(len(df._index_cols))]
+                        names = [df._index_name(n) for n in df._index_cols]
+                        idx = pd.MultiIndex.from_arrays(arrays, names=names)
+                return pd.DataFrame(columns=df.columns, index=idx)
+
+            merged = to_empty_pandas_df(self).merge(
+                to_empty_pandas_df(other),
+                how=how,
+                left_on=orig_left_on,
+                right_on=orig_right_on,
+                sort=sort,
+                suffixes=suffixes,
+            )
+
+            if len(merged.index.names) == 1 and (merged.index.names[0] is None):
+                index_cols = None
+            else:
+                index_cols = left._mangle_index_names(merged.index.names)
+                for n, m in zip(merged.index.names, index_cols):
+                    df = left if m in left._dtypes else right
+                    exprs[n] = df.ref(m)
+                    new_dtypes.append(df._dtypes[m])
+
+            def append_col(df, col, col_names, sfx):
+                if (name := col) in col_names or (
+                    col.endswith(sfx) and ((name := col[0 : -len(sfx)]) in col_names)
+                ):
+                    new_dtypes.append(df._dtypes[name])
+                    exprs[col] = df.ref(name)
+                    return True
+                return False
+
+            for col in merged.columns:
+                if not append_col(
+                    left, col, left.columns, suffixes[0]
+                ) and not append_col(right, col, right.columns, suffixes[1]):
+                    raise ValueError(f"Unknown column {col}")
+
+            new_columns = merged.columns
+            sort = False
+        else:
+            index_cols = None
+            new_columns = []
+            left_conflicts = set(left.columns) & (set(right.columns) - set(right_on))
+            right_conflicts = set(right.columns) & (set(left.columns) - set(left_on))
+            conflicting_cols = left_conflicts | right_conflicts
+            for c in left.columns:
+                new_name = f"{c}{suffixes[0]}" if c in conflicting_cols else c
                 new_columns.append(new_name)
-                new_dtypes.append(right._dtypes[c])
-                exprs[new_name] = right.ref(c)
+                new_dtypes.append(left._dtypes[c])
+                exprs[new_name] = left.ref(c)
+            for c in right.columns:
+                if c not in left_on or c not in right_on:
+                    new_name = f"{c}{suffixes[1]}" if c in conflicting_cols else c
+                    new_columns.append(new_name)
+                    new_dtypes.append(right._dtypes[c])
+                    exprs[new_name] = right.ref(c)
+            new_columns = Index.__new__(Index, data=new_columns)
 
         condition = left._build_equi_join_condition(right, left_on, right_on)
 
         op = JoinNode(
             left,
             right,
-            how=how.value,
+            how=how,
             exprs=exprs,
             condition=condition,
         )
 
-        new_columns = Index.__new__(Index, data=new_columns)
         res = left.__constructor__(
             dtypes=new_dtypes,
             columns=new_columns,
@@ -934,10 +980,7 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         if sort:
             res = res.sort_rows(
-                left_on,
-                ascending=True,
-                ignore_index=(index_cols is None),
-                na_position="last",
+                left_on, ascending=True, ignore_index=True, na_position="last"
             )
 
         return res
@@ -2426,6 +2469,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         str or None
         """
+        if self._index_cache is not None:
+            return self._index_cache.name
         if self._index_cols is None:
             return None
         if len(self._index_cols) > 1:
@@ -2482,6 +2527,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         list of str
         """
+        if self._index_cache is not None:
+            return self._index_cache.names
         if self.has_multiindex():
             return self._index_cols.copy()
         return [self.get_index_name()]
