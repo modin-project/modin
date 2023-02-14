@@ -113,14 +113,6 @@ def validate_partitions_cache(df):
             assert df._partitions[i, j].width() == column_widths[j]
 
 
-@pytest.fixture
-def set_num_partitions(request):
-    old_num_partitions = NPartitions.get()
-    NPartitions.put(request.param)
-    yield
-    NPartitions.put(old_num_partitions)
-
-
 def test_aligning_blocks():
     # Test problem when modin frames have the same number of rows, but different
     # blocks (partition.list_of_blocks). See #2322 for details
