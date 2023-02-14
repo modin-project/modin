@@ -35,7 +35,13 @@ class ClientQueryCompiler(BaseQueryCompiler):
         self._id = id
 
     def _set_columns(self, new_columns):
-        self._id = self._service.rename(self._id, new_col_labels=new_columns)
+        # N.B. almost every query compiler method creates a new compiler, but index and
+        # columns are mutable properties of every query compiler, including the one
+        # we're using in our service now. The service interface allows updating columns
+        # and index in place with set_columns() and set_index(). Maybe in the future
+        # we'd want to cache service results by query compiler ID, in which case
+        # mutating a backend query compiler would not be allowed.
+        self._service.set_columns(self._id, new_columns)
         self._columns_cache = self._service.columns(self._id)
 
     def _get_columns(self):
@@ -44,7 +50,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         return self._columns_cache
 
     def _set_index(self, new_index):
-        self._id = self._service.rename(self._id, new_row_labels=new_index)
+        self._service.set_index(self._id, new_index)
 
     def _get_index(self):
         return self._service.index(self._id)
@@ -105,7 +111,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         raise NotImplementedError
 
     def copy(self):
-        return self.__constructor__(self._id)
+        return self.__constructor__(self._service.copy(self._id))
 
     def insert(self, loc, column, value):
         if isinstance(value, ClientQueryCompiler):
