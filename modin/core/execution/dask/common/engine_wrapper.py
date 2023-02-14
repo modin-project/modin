@@ -55,7 +55,7 @@ class DaskWrapper:
         remote_task_future = client.submit(func, *args, pure=pure, **kwargs)
         if num_returns != 1:
             return [
-                client.submit(lambda l, i: l[i], remote_task_future, i)
+                client.submit(lambda tup, i: tup[i], remote_task_future, i)
                 for i in range(num_returns)
             ]
         return remote_task_future

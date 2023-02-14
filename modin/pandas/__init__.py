@@ -14,7 +14,7 @@
 import pandas
 import warnings
 
-__pandas_version__ = "1.5.2"
+__pandas_version__ = "1.5.3"
 
 if pandas.__version__ != __pandas_version__:
     warnings.warn(
@@ -29,7 +29,6 @@ with warnings.catch_warnings():
         cut,
         factorize,
         test,
-        qcut,
         date_range,
         period_range,
         Index,
@@ -233,6 +232,7 @@ from .general import (
     notna,
     pivot,
     to_numeric,
+    qcut,
     to_datetime,
     unique,
     value_counts,

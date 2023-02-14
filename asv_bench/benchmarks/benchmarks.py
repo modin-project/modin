@@ -834,7 +834,6 @@ class TimeProperties:
 
 
 class TimeIndexingNumericSeries:
-
     param_names = ["shape", "dtype", "index_structure"]
     params = [
         get_benchmark_shapes("TimeIndexingNumericSeries"),
@@ -914,14 +913,14 @@ class TimeReindex:
         self.df2 = IMPL.DataFrame(
             index=range(rows), data=np.random.rand(rows, cols), columns=range(cols)
         )
-        level1 = tm.makeStringIndex(rows).values.repeat(cols)
-        level2 = np.tile(tm.makeStringIndex(cols).values, rows)
+        level1 = tm.makeStringIndex(rows // 10).values.repeat(10)
+        level2 = np.tile(tm.makeStringIndex(10).values, rows // 10)
         index = IMPL.MultiIndex.from_arrays([level1, level2])
-        self.s = IMPL.Series(np.random.randn(rows * cols), index=index)
+        self.s = IMPL.Series(np.random.randn(rows), index=index)
         self.s_subset = self.s[::2]
         self.s_subset_no_cache = self.s[::2].copy()
 
-        mi = IMPL.MultiIndex.from_product([rng, range(100)])
+        mi = IMPL.MultiIndex.from_product([rng[: len(rng) // 10], range(10)])
         self.s2 = IMPL.Series(np.random.randn(len(mi)), index=mi)
         self.s2_subset = self.s2[::2].copy()
         execute(self.df), execute(self.df2)
@@ -949,7 +948,6 @@ class TimeReindex:
 
 
 class TimeReindexMethod:
-
     params = [
         get_benchmark_shapes("TimeReindexMethod"),
         ["pad", "backfill"],
@@ -968,7 +966,6 @@ class TimeReindexMethod:
 
 
 class TimeFillnaMethodSeries:
-
     params = [get_benchmark_shapes("TimeFillnaMethodSeries"), ["pad", "backfill"]]
     param_names = ["shape", "method"]
 
@@ -988,7 +985,6 @@ class TimeFillnaMethodSeries:
 
 
 class TimeFillnaMethodDataframe:
-
     params = [get_benchmark_shapes("TimeFillnaMethodDataframe"), ["pad", "backfill"]]
     param_names = ["shape", "method"]
 
@@ -1040,7 +1036,6 @@ class TimeLevelAlign:
 
 
 class TimeDropDuplicatesDataframe:
-
     params = [get_benchmark_shapes("TimeDropDuplicatesDataframe")]
     param_names = ["shape"]
 
@@ -1068,7 +1063,6 @@ class TimeDropDuplicatesDataframe:
 
 
 class TimeDropDuplicatesSeries:
-
     params = [get_benchmark_shapes("TimeDropDuplicatesSeries")]
     param_names = ["shape"]
 
@@ -1086,7 +1080,6 @@ class TimeDropDuplicatesSeries:
 
 
 class TimeDatetimeAccessor:
-
     params = [get_benchmark_shapes("TimeDatetimeAccessor")]
     param_names = ["shape"]
 
@@ -1165,7 +1158,6 @@ class TimeUnstack(BaseReshape):
 
 
 class TimeReplace:
-
     params = [get_benchmark_shapes("TimeReplace")]
     param_names = ["shape"]
 
@@ -1180,7 +1172,6 @@ class TimeReplace:
 
 
 class TimeGroups:
-
     params = [get_benchmark_shapes("TimeGroups")]
     param_names = ["shape"]
 
@@ -1198,7 +1189,6 @@ class TimeGroups:
 
 
 class TimeRepr:
-
     params = [get_benchmark_shapes("TimeRepr")]
     param_names = ["shape"]
 
@@ -1212,7 +1202,6 @@ class TimeRepr:
 
 
 class TimeMaskBool:
-
     params = [get_benchmark_shapes("TimeMaskBool")]
     param_names = ["shape"]
 
@@ -1226,7 +1215,6 @@ class TimeMaskBool:
 
 
 class TimeIsnull:
-
     params = [get_benchmark_shapes("TimeIsnull")]
     param_names = ["shape"]
 
@@ -1241,7 +1229,6 @@ class TimeIsnull:
 
 
 class TimeDropna:
-
     params = (["all", "any"], [0, 1], get_benchmark_shapes("TimeDropna"))
     param_names = ["how", "axis", "shape"]
 
@@ -1257,7 +1244,6 @@ class TimeDropna:
 
 
 class TimeEquals:
-
     params = [get_benchmark_shapes("TimeEquals")]
     param_names = ["shape"]
 

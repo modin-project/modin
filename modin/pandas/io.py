@@ -579,7 +579,7 @@ def read_sas(
 
     return DataFrame(
         query_compiler=FactoryDispatcher.read_sas(
-            filepath_or_buffer,
+            filepath_or_buffer=filepath_or_buffer,
             format=format,
             index=index,
             encoding=encoding,

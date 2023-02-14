@@ -85,6 +85,7 @@ _DEFAULT_BEHAVIOUR = {
     "name",
     "dtypes",
     "dtype",
+    "groupby",
     "_get_name",
     "_set_name",
     "_default_to_pandas",
@@ -476,7 +477,11 @@ class BasePandasDataset(ClassLogger):
             # it is a DataFrame, Series, etc.) as a pandas object. The outer `getattr`
             # will get the operation (`op`) from the pandas version of the class and run
             # it on the object after we have converted it to pandas.
-            result = getattr(self._pandas_class, op)(pandas_obj, *args, **kwargs)
+            attr = getattr(self._pandas_class, op)
+            if isinstance(attr, property):
+                result = getattr(pandas_obj, op)
+            else:
+                result = attr(pandas_obj, *args, **kwargs)
         else:
             ErrorMessage.catch_bugs_and_request_email(
                 failure_condition=True,
@@ -1379,18 +1384,19 @@ class BasePandasDataset(ClassLogger):
         Return `BasePandasDataset` with duplicate rows removed.
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
-        subset = kwargs.get("subset", None)
         ignore_index = kwargs.get("ignore_index", False)
+        subset = kwargs.get("subset", None)
         if subset is not None:
             if is_list_like(subset):
                 if not isinstance(subset, list):
                     subset = list(subset)
             else:
                 subset = [subset]
-            duplicates = self.duplicated(keep=keep, subset=subset)
+            df = self[subset]
         else:
-            duplicates = self.duplicated(keep=keep)
-        result = self[~duplicates]
+            df = self
+        duplicated = df.duplicated(keep=keep)
+        result = self[~duplicated]
         if ignore_index:
             result.index = pandas.RangeIndex(stop=len(result))
         if inplace:
@@ -2389,19 +2395,19 @@ class BasePandasDataset(ClassLogger):
         # exist.
         if (
             not drop
+            and not self._query_compiler.lazy_execution
             and not self._query_compiler.has_multiindex()
             and all(n in self.columns for n in ["level_0", "index"])
         ):
             raise ValueError("cannot insert level_0, already exists")
-        else:
-            new_query_compiler = self._query_compiler.reset_index(
-                drop=drop,
-                level=level,
-                col_level=col_level,
-                col_fill=col_fill,
-                allow_duplicates=allow_duplicates,
-                names=names,
-            )
+        new_query_compiler = self._query_compiler.reset_index(
+            drop=drop,
+            level=level,
+            col_level=col_level,
+            col_fill=col_fill,
+            allow_duplicates=allow_duplicates,
+            names=names,
+        )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def radd(
@@ -3238,6 +3244,13 @@ class BasePandasDataset(ClassLogger):
         """
         Convert the `BasePandasDataset` to a NumPy array.
         """
+        from modin.config import ExperimentalNumPyAPI
+
+        if ExperimentalNumPyAPI.get():
+            from ..numpy.arr import array
+
+            return array(_query_compiler=self._query_compiler, _ndim=2)
+
         return self._query_compiler.to_numpy(
             dtype=dtype,
             copy=copy,
@@ -3424,7 +3437,7 @@ class BasePandasDataset(ClassLogger):
         else:
             new_labels = self.axes[axis].tz_convert(tz)
         obj = self.copy() if copy else self
-        return obj.set_axis(new_labels, axis, inplace=False, copy=copy)
+        return obj.set_axis(new_labels, axis, copy=copy)
 
     def tz_localize(
         self, tz, axis=0, level=None, copy=True, ambiguous="raise", nonexistent="raise"
@@ -3445,7 +3458,7 @@ class BasePandasDataset(ClassLogger):
             )
             .index
         )
-        return self.set_axis(new_labels, axis, inplace=False, copy=copy)
+        return self.set_axis(new_labels, axis, copy=copy)
 
     # TODO: uncomment the following lines when #3331 issue will be closed
     # @prepend_to_notes(

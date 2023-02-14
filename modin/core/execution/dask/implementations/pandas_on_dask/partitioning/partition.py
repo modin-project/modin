@@ -228,33 +228,47 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         """
         return DaskWrapper.put(func, hash=False, broadcast=True)
 
-    def length(self):
+    def length(self, materialize=True):
         """
         Get the length of the object wrapped by this partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or distributed.Future
             The length of the object.
         """
         if self._length_cache is None:
             self._length_cache = self.apply(len)._data
-        if isinstance(self._length_cache, Future):
+        if isinstance(self._length_cache, Future) and materialize:
             self._length_cache = DaskWrapper.materialize(self._length_cache)
         return self._length_cache
 
-    def width(self):
+    def width(self, materialize=True):
         """
         Get the width of the object wrapped by the partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or distributed.Future
             The width of the object.
         """
         if self._width_cache is None:
             self._width_cache = self.apply(lambda df: len(df.columns))._data
-        if isinstance(self._width_cache, Future):
+        if isinstance(self._width_cache, Future) and materialize:
             self._width_cache = DaskWrapper.materialize(self._width_cache)
         return self._width_cache
 

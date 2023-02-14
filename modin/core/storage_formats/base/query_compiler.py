@@ -33,7 +33,7 @@ from modin.core.dataframe.algebra.default2pandas import (
 from modin.error_message import ErrorMessage
 from . import doc_utils
 from modin.logging import ClassLogger
-from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
 from modin.config import StorageFormat
 
 from pandas.core.dtypes.common import is_scalar
@@ -106,6 +106,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         Whether underlying execution engine is designed to be executed in a lazy mode only.
         If True, such QueryCompiler will be handled differently at the front-end in order
         to reduce execution triggering as much as possible.
+    _shape_hint : {"row", "column", None}, default: None
+        Shape hint for frames known to be a column or a row, otherwise None.
 
     Notes
     -----
@@ -113,7 +115,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     for a list of requirements for subclassing this object.
     """
 
-    @abc.abstractmethod
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         """
         Do fallback to pandas for the passed function.
@@ -132,7 +133,20 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             The result of the `pandas_op`, converted back to ``BaseQueryCompiler``.
         """
-        pass
+        op_name = getattr(pandas_op, "__name__", str(pandas_op))
+        ErrorMessage.default_to_pandas(op_name)
+        args = try_cast_to_pandas(args)
+        kwargs = try_cast_to_pandas(kwargs)
+
+        result = pandas_op(try_cast_to_pandas(self), *args, **kwargs)
+        if isinstance(result, pandas.Series):
+            if result.name is None:
+                result.name = MODIN_UNNAMED_SERIES_LABEL
+            result = result.to_frame()
+        if isinstance(result, pandas.DataFrame):
+            return self.from_pandas(result, type(self._modin_frame))
+        else:
+            return result
 
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for
@@ -140,6 +154,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # treated differently.
 
     lazy_execution = False
+    _shape_hint = None
 
     # Metadata modification abstract methods
     def add_prefix(self, prefix, axis=1):
@@ -1056,6 +1071,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             Transposed new QueryCompiler or self.
         """
+        if self._shape_hint == "column":
+            return self
+
         if len(self.columns) != 1 or (
             len(self.index) == 1 and self.index[0] == MODIN_UNNAMED_SERIES_LABEL
         ):
@@ -1943,6 +1961,23 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             New QueryCompiler with null values dropped along given axis.
         """
         return DataFrameDefault.register(pandas.DataFrame.dropna)(self, **kwargs)
+
+    @doc_utils.add_refer_to("DataFrame.duplicated")
+    def duplicated(self, **kwargs):
+        """
+        Return boolean Series denoting duplicate rows.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments to be passed in to `pandas.DataFrame.duplicated`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler containing boolean Series denoting duplicate rows.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.duplicated)(self, **kwargs)
 
     @doc_utils.add_refer_to("DataFrame.nlargest")
     def nlargest(self, n=5, columns=None, keep="first"):
@@ -5078,7 +5113,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         for _ax in axes:
             new_query_compiler = new_query_compiler.__constructor__(
                 new_query_compiler._modin_frame.apply_full_axis(
-                    _ax, lambda df: df, keep_partitioning=False
+                    _ax,
+                    lambda df: df,
+                    new_index=self._modin_frame._index_cache,
+                    new_columns=self._modin_frame._columns_cache,
+                    keep_partitioning=False,
+                    sync_labels=False,
                 )
             )
         return new_query_compiler
