@@ -964,7 +964,7 @@ class DataFrameGroupBy(ClassLogger):
             squeeze=self._squeeze,
             **new_groupby_kwargs,
         )
-        return work_object._check_index_name(
+        return work_object._check_index(
             work_object._wrap_aggregation(
                 type(self._query_compiler).groupby_fillna,
                 numeric_only=False,
