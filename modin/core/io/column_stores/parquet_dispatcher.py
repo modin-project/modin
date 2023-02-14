@@ -219,7 +219,7 @@ class PyArrowDataset(ColumnStoreDataset):
             try:
                 files = self.dataset.files
             except AttributeError:
-                # compatibility with 4.0.1 <= pyarrow < 8.0.0
+                # compatibility at least with 3.0.0 <= pyarrow < 8.0.0
                 files = self.dataset._dataset.files
             self._files = self._get_files(files)
         return self._files
