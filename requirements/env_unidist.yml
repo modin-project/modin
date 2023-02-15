@@ -2,8 +2,8 @@ name: modin_on_unidist
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.5.3
   #- unidist-mpi>=0.2.1
+  - pandas==1.5.2
   - numpy>=1.18.5
   - pyarrow<12 # workaround for https://github.com/modin-project/modin/issues/6072
   - fsspec
