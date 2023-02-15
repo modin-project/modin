@@ -3372,15 +3372,13 @@ class BasePandasDataset(ClassLogger):
         """
         Convert tz-aware axis to target time zone.
         """
-        axis = self._get_axis_number(axis)
-        if level is not None:
-            new_labels = (
-                pandas.Series(index=self.axes[axis]).tz_convert(tz, level=level).index
-            )
-        else:
-            new_labels = self.axes[axis].tz_convert(tz)
-        obj = self.copy() if copy else self
-        return obj.set_axis(new_labels, axis, inplace=False, copy=copy)
+        # TODO(REFACTOR): original modin implementation uses index.tz_convert and
+        # set_axis(converted_index) Neither of those is implemented in the service and
+        # setting index from a DatabaseIndex is harder. We should implement those and
+        # use the original modin API layer implementation.
+        return self.__constructor__(
+            query_compiler=self._query_compiler.tz_convert(tz, axis, level, copy)
+        )
 
     def tz_localize(
         self, tz, axis=0, level=None, copy=True, ambiguous="raise", nonexistent="raise"
@@ -3388,20 +3386,13 @@ class BasePandasDataset(ClassLogger):
         """
         Localize tz-naive index of a `BasePandasDataset` to target time zone.
         """
-        axis = self._get_axis_number(axis)
-        new_labels = (
-            pandas.Series(index=self.axes[axis])
-            .tz_localize(
-                tz,
-                axis=axis,
-                level=level,
-                copy=False,
-                ambiguous=ambiguous,
-                nonexistent=nonexistent,
+        # TODO(REFACTOR): Find how to reconcile the original modin implementation with
+        # the client-service one.
+        return self.__constructor__(
+            query_compiler=self._query_compiler.tz_localize(
+                tz, axis, level, copy, ambiguous, nonexistent
             )
-            .index
         )
-        return self.set_axis(new_labels, axis, inplace=False, copy=copy)
 
     def interpolate(
         self,

@@ -923,6 +923,8 @@ _SINGLE_ID_FORWARDING_METHODS = frozenset(
         "between_time",
         "last",
         "first",
+        "tz_convert",
+        "tz_localize",
     }
 )
 
