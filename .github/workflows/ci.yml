@@ -897,10 +897,12 @@ jobs:
       - timeout-minutes: 30
         run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
+      - uses: codecov/codecov-action@v2
       - name: Stop local ray cluster
         run: ray stop
         if: matrix.engine == 'ray'
-      - uses: codecov/codecov-action@v2
+      - name: Rename conda package cache to avoid removing that is too slow on Windows
+        run: mv "${CONDA_PKGS_DIR}" "${CONDA_PKGS_DIR}_do_not_cache"
 
   test-pyarrow:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
