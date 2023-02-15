@@ -173,18 +173,19 @@ class DataFrame(BasePandasDataset):
             )
             if isinstance(data, pandas.Index):
                 pass
-            elif is_list_like(data) and not is_dict_like(data):
+            elif (
+                is_list_like(data)
+                and not is_dict_like(data)
+                and not isinstance(data, np.ndarray)
+            ):
                 old_dtype = getattr(data, "dtype", None)
                 values = [
                     obj._to_pandas() if isinstance(obj, Series) else obj for obj in data
                 ]
-                if isinstance(data, np.ndarray):
-                    data = np.array(values, dtype=old_dtype)
-                else:
-                    try:
-                        data = type(data)(values, dtype=old_dtype)
-                    except TypeError:
-                        data = values
+                try:
+                    data = type(data)(values, dtype=old_dtype)
+                except TypeError:
+                    data = values
             elif is_dict_like(data) and not isinstance(
                 data, (pandas.Series, Series, pandas.DataFrame, DataFrame)
             ):
