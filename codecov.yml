@@ -6,4 +6,4 @@ codecov:
     # then `codecov/project` and `codecov/patch` checks will not be reflected
     # among the other checks. Since this number is greater than the number of
     # reports sent from the master branch, we will no longer see codecov checks on it.
-    after_n_builds: 55
+    after_n_builds: 45
