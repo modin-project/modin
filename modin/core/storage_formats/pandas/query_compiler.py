@@ -1479,25 +1479,37 @@ class PandasQueryCompiler(BaseQueryCompiler):
         qc.columns = get_group_names(regex)
         return qc
 
-    str_replace = Map.register(_str_map("replace"), dtypes="copy")
-    str_rfind = Map.register(_str_map("rfind"), dtypes="copy")
-    str_rindex = Map.register(_str_map("rindex"), dtypes="copy")
-    str_rjust = Map.register(_str_map("rjust"), dtypes="copy")
-    str_rpartition = Map.register(_str_map("rpartition"), dtypes="copy")
-    str_rsplit = Map.register(_str_map("rsplit"), dtypes="copy")
-    str_rstrip = Map.register(_str_map("rstrip"), dtypes="copy")
-    str_slice = Map.register(_str_map("slice"), dtypes="copy")
-    str_slice_replace = Map.register(_str_map("slice_replace"), dtypes="copy")
-    str_split = Map.register(_str_map("split"), dtypes="copy")
-    str_startswith = Map.register(_str_map("startswith"), dtypes=np.bool_)
-    str_strip = Map.register(_str_map("strip"), dtypes="copy")
-    str_swapcase = Map.register(_str_map("swapcase"), dtypes="copy")
-    str_title = Map.register(_str_map("title"), dtypes="copy")
-    str_translate = Map.register(_str_map("translate"), dtypes="copy")
-    str_upper = Map.register(_str_map("upper"), dtypes="copy")
-    str_wrap = Map.register(_str_map("wrap"), dtypes="copy")
-    str_zfill = Map.register(_str_map("zfill"), dtypes="copy")
-    str___getitem__ = Map.register(_str_map("__getitem__"), dtypes="copy")
+    str_replace = Map.register(_str_map("replace"), dtypes="copy", shape_hint="column")
+    str_rfind = Map.register(_str_map("rfind"), dtypes="copy", shape_hint="column")
+    str_rindex = Map.register(_str_map("rindex"), dtypes="copy", shape_hint="column")
+    str_rjust = Map.register(_str_map("rjust"), dtypes="copy", shape_hint="column")
+    str_rpartition = Map.register(
+        _str_map("rpartition"), dtypes="copy", shape_hint="column"
+    )
+    str_rsplit = Map.register(_str_map("rsplit"), dtypes="copy", shape_hint="column")
+    str_rstrip = Map.register(_str_map("rstrip"), dtypes="copy", shape_hint="column")
+    str_slice = Map.register(_str_map("slice"), dtypes="copy", shape_hint="column")
+    str_slice_replace = Map.register(
+        _str_map("slice_replace"), dtypes="copy", shape_hint="column"
+    )
+    str_split = Map.register(_str_map("split"), dtypes="copy", shape_hint="column")
+    str_startswith = Map.register(
+        _str_map("startswith"), dtypes=np.bool_, shape_hint="column"
+    )
+    str_strip = Map.register(_str_map("strip"), dtypes="copy", shape_hint="column")
+    str_swapcase = Map.register(
+        _str_map("swapcase"), dtypes="copy", shape_hint="column"
+    )
+    str_title = Map.register(_str_map("title"), dtypes="copy", shape_hint="column")
+    str_translate = Map.register(
+        _str_map("translate"), dtypes="copy", shape_hint="column"
+    )
+    str_upper = Map.register(_str_map("upper"), dtypes="copy", shape_hint="column")
+    str_wrap = Map.register(_str_map("wrap"), dtypes="copy", shape_hint="column")
+    str_zfill = Map.register(_str_map("zfill"), dtypes="copy", shape_hint="column")
+    str___getitem__ = Map.register(
+        _str_map("__getitem__"), dtypes="copy", shape_hint="column"
+    )
 
     # END String map partitions operations
 
