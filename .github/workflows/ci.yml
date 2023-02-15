@@ -863,14 +863,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
           miniforge-variant: Mambaforge
@@ -907,6 +899,7 @@ jobs:
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
       - name: Stop local ray cluster
         run: ray stop
+        if: matrix.engine == 'ray'
       - uses: codecov/codecov-action@v2
 
   test-pyarrow:
