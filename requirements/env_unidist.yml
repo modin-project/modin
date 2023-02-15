@@ -2,8 +2,8 @@ name: modin_on_unidist
 channels:
   - conda-forge
 dependencies:
-  - unidist-mpi>=0.2.1
   - pandas==1.5.3
+  #- unidist-mpi>=0.2.1
   - numpy>=1.18.5
   - pyarrow<12 # workaround for https://github.com/modin-project/modin/issues/6072
   - fsspec
@@ -49,6 +49,7 @@ dependencies:
   - moto
   - pip:
       # Fixes breaking ipywidgets changes, but didn't release yet.
+      - unidist[mpi]@git+https://github.com/arunjose696/unidist.git@scheduling_MPI
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - connectorx>=0.2.6a4
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
