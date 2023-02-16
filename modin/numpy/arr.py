@@ -27,20 +27,7 @@ from modin.core.dataframe.algebra import (
     Binary,
 )
 
-
-_INTEROPERABLE_TYPES = (pd.DataFrame, pd.Series)
-
-
-def try_convert_from_interoperable_type(obj):
-    if isinstance(obj, _INTEROPERABLE_TYPES):
-        new_qc = obj._query_compiler.reset_index(drop=True)
-        new_qc.columns = range(len(new_qc.columns))
-        obj = array(
-            _query_compiler=new_qc,
-            _ndim=2 if isinstance(obj, pd.DataFrame) else 1,
-        )
-    return obj
-
+from .utils import try_convert_from_interoperable_type
 
 def check_kwargs(order="C", subok=True, keepdims=None, casting="same_kind", where=True):
     if order not in ["K", "C"]:
