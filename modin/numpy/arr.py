@@ -738,7 +738,8 @@ class array(object):
             if dtype is not None
             else (out.dtype if out is not None else self.dtype)
         )
-        if isinstance(where, array) and issubclass(out_dtype.type, numpy.integer):
+        out_type = out_dtype if not hasattr(out_dtype, "type") else out_dtype.type
+        if isinstance(where, array) and issubclass(out_type, numpy.integer):
             out_dtype = numpy.float64
         check_kwargs(keepdims=keepdims, where=where)
         if self._ndim == 1:
@@ -757,7 +758,7 @@ class array(object):
                     )
                 if out is not None:
                     out._query_compiler = (
-                        (numpy.ones_like(out) * numpy.nan)
+                        array(numpy.ones(out.shape) * numpy.nan)
                         .astype(out_dtype)
                         ._query_compiler
                     )
@@ -793,7 +794,7 @@ class array(object):
                     )
                 if out is not None:
                     out._query_compiler = (
-                        (numpy.ones_like(out) * numpy.nan)
+                        array(numpy.ones(out.shape) * numpy.nan)
                         .astype(out_dtype)
                         ._query_compiler
                     )
@@ -824,14 +825,19 @@ class array(object):
             result = result.transpose()
         if out is not None:
             out._query_compiler = (
-                (numpy.ones_like(out) * numpy.nan).astype(out_dtype)._query_compiler
+                array(numpy.ones(out.shape) * numpy.nan)
+                .astype(out_dtype)
+                ._query_compiler
             )
         return (
             fix_dtypes_and_determine_return(
                 result, new_ndim, dtype, out, where is not False
             )
             if where is not False or out is not None
-            else (numpy.ones_like(array(_query_compiler=result, _ndim=1)) * numpy.nan)
+            else (
+                (numpy.ones(array(_query_compiler=result, _ndim=new_ndim).shape))
+                * numpy.nan
+            )
         )
 
     def __add__(
@@ -1192,7 +1198,9 @@ class array(object):
                 result, new_ndim, dtype, out, where is not False
             )
             if where is not False or out is not None
-            else (numpy.ones_like(array(_query_compiler=result, _ndim=1)) * initial)
+            else (
+                numpy.ones_like(array(_query_compiler=result, _ndim=new_ndim)) * initial
+            )
         )
 
     def multiply(
@@ -1501,7 +1509,10 @@ class array(object):
                 result, new_ndim, dtype, out, where is not False
             )
             if where is not False or out is not None
-            else (numpy.zeros_like(array(_query_compiler=result, _ndim=1)) + initial)
+            else (
+                numpy.zeros_like(array(_query_compiler=result, _ndim=new_ndim))
+                + initial
+            )
         )
 
     def flatten(self, order="C"):
