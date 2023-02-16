@@ -408,71 +408,88 @@ class array(object):
         if self._ndim == 1:
             if axis == 1:
                 raise numpy.AxisError(1, 1)
-            result = self._query_compiler.max(axis=0)
+            if not isinstance(where, array):
+                result = self._query_compiler.max(axis=0)
+            else:
+                result = where.where(self, initial)._query_compiler.max(axis=0)
             if keepdims:
-                if initial is not None and result.lt(initial):
+                if initial is not None and result.lt(initial).any():
                     result = pd.Series([initial])._query_compiler
-                if initial is not None:
-                    if out is not None:
-                        out._query_compiler = (
-                            numpy.ones_like(out) * initial
-                        )._query_compiler
-                    else:
-                        out = array([initial]).astype(self.dtype)
+                if initial is not None and out is not None:
+                    out._query_compiler = (
+                        numpy.ones_like(out) * initial
+                    )._query_compiler
                 if out is not None and out.shape != (1,):
                     raise ValueError(
                         f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
-                return fix_dtypes_and_determine_return(result, 1, dtype, out, where)
+                return (
+                    fix_dtypes_and_determine_return(
+                        result, 1, dtype, out, (where is not False)
+                    )
+                    if where is not False or out is not None
+                    else array([initial])
+                )
             if initial is not None:
                 result = max(result.to_numpy()[0, 0], initial)
             else:
                 result = result.to_numpy()[0, 0]
-            return result if where else initial
+            return result if where is not False else initial
         if axis is None:
-            result = self.flatten().max(
-                axis=axis,
-                dtype=dtype,
-                out=out,
-                keepdims=None,
-                initial=initial,
-                where=where,
-            )
+            result = self._query_compiler
+            if isinstance(where, array):
+                result = where.where(self, initial)._query_compiler
+            result = result.max(axis=0).max(axis=1).to_numpy().flatten()[0]
+            if initial is not None:
+                result = max(result, initial)
             if keepdims:
                 if out is not None and out.shape != (1, 1):
                     raise ValueError(
-                        f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
+                        f"operand was set up as a reduction along axis 1, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
-                return fix_dtypes_and_determine_return(
-                    array(numpy.array([[result]]))._query_compiler, 2, dtype, out, where
+                if initial is not None and out is not None:
+                    out._query_compiler = (
+                        numpy.ones_like(out) * initial
+                    )._query_compiler
+                return (
+                    fix_dtypes_and_determine_return(
+                        array(numpy.array([[result]]))._query_compiler,
+                        2,
+                        dtype,
+                        out,
+                        where is not False,
+                    )
+                    if where is not False or out is not None
+                    else array([[initial]])
                 )
-            return result
-        result = self._query_compiler.max(axis=axis)
+            return result if where is not False else initial
+        result = self._query_compiler
+        if isinstance(where, array):
+            result = where.where(self, initial)._query_compiler
+        result = result.max(axis=axis)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
             if initial is not None:
                 result = max(result.to_numpy()[0, 0], initial)
             else:
                 result = result.to_numpy()[0, 0]
-            return result if where else initial
+            return result if where is not False else initial
         if not keepdims and axis != 1:
             result = result.transpose()
-        if initial is not None:
-            if out is not None:
-                out._query_compiler = (numpy.ones_like(out) * initial)._query_compiler
-            else:
-                out = (
-                    numpy.ones_like(array(_query_compiler=result, _ndim=new_ndim))
-                    * initial
-                ).astype(self.dtype)
+        if initial is not None and out is not None:
+            out._query_compiler = (numpy.ones_like(out) * initial)._query_compiler
         intermediate = fix_dtypes_and_determine_return(
-            result, new_ndim, dtype, out, where
+            result, new_ndim, dtype, out, (where is not False)
         )
         if initial is not None:
             intermediate._query_compiler = (
                 (intermediate > initial).where(intermediate, initial)._query_compiler
             )
-        return intermediate
+        return (
+            intermediate
+            if where is not False or out is not None
+            else numpy.ones_like(intermediate) * initial
+        )
 
     def min(
         self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=True
@@ -485,71 +502,88 @@ class array(object):
         if self._ndim == 1:
             if axis == 1:
                 raise numpy.AxisError(1, 1)
-            result = self._query_compiler.min(axis=0)
+            if not isinstance(where, array):
+                result = self._query_compiler.min(axis=0)
+            else:
+                result = where.where(self, initial)._query_compiler.min(axis=0)
             if keepdims:
-                if initial is not None and result.lt(initial):
+                if initial is not None and result.lt(initial).any():
                     result = pd.Series([initial])._query_compiler
-                if initial is not None:
-                    if out is not None:
-                        out._query_compiler = (
-                            numpy.ones_like(out) * initial
-                        )._query_compiler
-                    else:
-                        out = array([initial]).astype(self.dtype)
+                if initial is not None and out is not None:
+                    out._query_compiler = (
+                        numpy.ones_like(out) * initial
+                    )._query_compiler
                 if out is not None and out.shape != (1,):
                     raise ValueError(
                         f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
-                return fix_dtypes_and_determine_return(result, 1, dtype, out, where)
+                return (
+                    fix_dtypes_and_determine_return(
+                        result, 1, dtype, out, where is not False
+                    )
+                    if where is not False or out is not None
+                    else array([initial])
+                )
             if initial is not None:
                 result = min(result.to_numpy()[0, 0], initial)
             else:
                 result = result.to_numpy()[0, 0]
-            return result if where else initial
+            return result if where is not False else initial
         if axis is None:
-            result = self.flatten().min(
-                axis=axis,
-                dtype=dtype,
-                out=out,
-                keepdims=None,
-                initial=initial,
-                where=where,
-            )
+            result = self._query_compiler
+            if isinstance(where, array):
+                result = where.where(self, initial)._query_compiler
+            result = result.min(axis=0).min(axis=1).to_numpy().flatten()[0]
+            if initial is not None:
+                result = min(result, initial)
             if keepdims:
                 if out is not None and out.shape != (1, 1):
                     raise ValueError(
-                        f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
+                        f"operand was set up as a reduction along axis 1, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
-                return fix_dtypes_and_determine_return(
-                    array(numpy.array([[result]]))._query_compiler, 2, dtype, out, where
+                if initial is not None and out is not None:
+                    out._query_compiler = (
+                        numpy.ones_like(out) * initial
+                    )._query_compiler
+                return (
+                    fix_dtypes_and_determine_return(
+                        array(numpy.array([[result]]))._query_compiler,
+                        2,
+                        dtype,
+                        out,
+                        where is not False,
+                    )
+                    if where is not False or out is not None
+                    else array([[initial]])
                 )
-            return result
-        result = self._query_compiler.min(axis=axis)
+            return result if where is not False else initial
+        result = self._query_compiler
+        if isinstance(where, array):
+            result = where.where(self, initial)._query_compiler
+        result = result.min(axis=axis)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
             if initial is not None:
                 result = min(result.to_numpy()[0, 0], initial)
             else:
                 result = result.to_numpy()[0, 0]
-            return result if where else initial
+            return result if where is not False else initial
         if not keepdims and axis != 1:
             result = result.transpose()
-        if initial is not None:
-            if out is not None:
-                out._query_compiler = (numpy.ones_like(out) * initial)._query_compiler
-            else:
-                out = (
-                    numpy.ones_like(array(_query_compiler=result, _ndim=new_ndim))
-                    * initial
-                ).astype(self.dtype)
+        if initial is not None and out is not None:
+            out._query_compiler = (numpy.ones_like(out) * initial)._query_compiler
         intermediate = fix_dtypes_and_determine_return(
-            result, new_ndim, dtype, out, where
+            result, new_ndim, dtype, out, where is not False
         )
         if initial is not None:
             intermediate._query_compiler = (
                 (intermediate < initial).where(intermediate, initial)._query_compiler
             )
-        return intermediate
+        return (
+            intermediate
+            if where is not False or out is not None
+            else numpy.ones_like(intermediate) * initial
+        )
 
     def __abs__(
         self,
@@ -708,7 +742,10 @@ class array(object):
         if self._ndim == 1:
             if axis == 1:
                 raise numpy.AxisError(1, 1)
-            result = self._query_compiler.astype(
+            result = self._query_compiler
+            if isinstance(where, array):
+                result = where.where(self, numpy.nan)._query_compiler
+            result = result.astype(
                 {col_name: out_dtype for col_name in self._query_compiler.columns}
             ).mean(axis=0)
             if keepdims:
@@ -716,38 +753,84 @@ class array(object):
                     raise ValueError(
                         f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
-                return fix_dtypes_and_determine_return(result, 1, dtype, out, where)
+                if out is not None:
+                    out._query_compiler = (
+                        (numpy.ones_like(out) * numpy.nan)
+                        .astype(out_dtype)
+                        ._query_compiler
+                    )
+                return (
+                    fix_dtypes_and_determine_return(
+                        result, 1, dtype, out, where is not False
+                    )
+                    if where is not False or out is not None
+                    else array([numpy.nan], dtype=out_dtype)
+                )
             return result.to_numpy()[0, 0] if where else numpy.nan
         if axis is None:
+            result = self
+            if isinstance(where, array):
+                result = where.where(self, numpy.nan)
             result = (
-                self.flatten()
-                .astype(out_dtype)
-                .mean(axis=axis, dtype=dtype, out=out, keepdims=None, where=where)
-            )
+                numpy.array(
+                    [result._query_compiler.sum(axis=0).sum(axis=1).to_numpy()[0, 0]],
+                    dtype=out_dtype,
+                )
+                / (
+                    prod(self.shape)
+                    - result._query_compiler.isna()
+                    .sum(axis=0)
+                    .sum(axis=1)
+                    .to_numpy()[0, 0]
+                )
+            ).flatten()[0]
             if keepdims:
                 if out is not None and out.shape != (1, 1):
                     raise ValueError(
-                        f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
+                        f"operand was set up as a reduction along axis 1, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
-                return fix_dtypes_and_determine_return(
-                    array(numpy.array([[result]])).astype(out_dtype)._query_compiler,
-                    2,
-                    dtype,
-                    out,
-                    where,
+                if out is not None:
+                    out._query_compiler = (
+                        (numpy.ones_like(out) * numpy.nan)
+                        .astype(out_dtype)
+                        ._query_compiler
+                    )
+                return (
+                    fix_dtypes_and_determine_return(
+                        array(numpy.array([[result]]))
+                        .astype(out_dtype)
+                        ._query_compiler,
+                        2,
+                        dtype,
+                        out,
+                        where is not False,
+                    )
+                    if where is not False or out is not None
+                    else array([[numpy.nan]], dtype=out_dtype)
                 )
-            return result
-        result = self._query_compiler.astype(
+            return result if where is not False else numpy.nan
+        result = self._query_compiler
+        if isinstance(where, array):
+            result = where.where(self, numpy.nan)._query_compiler
+        result = result.astype(
             {col_name: out_dtype for col_name in self._query_compiler.columns}
         ).mean(axis=axis)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
-            return result.to_numpy()[0, 0] if where else numpy.nan
+            return result.to_numpy()[0, 0] if where is not False else numpy.nan
         if not keepdims and axis != 1:
             result = result.transpose()
         if out is not None:
-            out._query_compiler = (out * numpy.nan).astype(out_dtype)._query_compiler
-        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
+            out._query_compiler = (
+                (numpy.ones_like(out) * numpy.nan).astype(out_dtype)._query_compiler
+            )
+        return (
+            fix_dtypes_and_determine_return(
+                result, new_ndim, dtype, out, where is not False
+            )
+            if where is not False or out is not None
+            else (numpy.ones_like(array(_query_compiler=result, _ndim=1)) * numpy.nan)
+        )
 
     def __add__(
         self,
@@ -1020,74 +1103,95 @@ class array(object):
         if self._ndim == 1:
             if axis == 1:
                 raise numpy.AxisError(1, 1)
-            result = self._query_compiler.astype(
+            result = self._query_compiler
+            if isinstance(where, array):
+                result = where.where(self, 1)._query_compiler
+            result = result.astype(
                 {col_name: out_dtype for col_name in self._query_compiler.columns}
             ).prod(axis=0)
             if initial is not None:
                 result = result.mul(initial)
             if keepdims:
-                if initial is not None:
-                    if out is not None:
-                        out._query_compiler = (
-                            (numpy.ones_like(out) * initial)
-                            .astype(out_dtype)
-                            ._query_compiler
-                        )
-                    else:
-                        out = array([initial]).astype(out_dtype)
+                if initial is not None and out is not None:
+                    out._query_compiler = (
+                        (numpy.ones_like(out) * initial)
+                        .astype(out_dtype)
+                        ._query_compiler
+                    )
                 if out is not None and out.shape != (1,):
                     raise ValueError(
                         f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
-                return fix_dtypes_and_determine_return(result, 1, dtype, out, where)
-            return result.to_numpy()[0, 0] if where else initial
-        if axis is None:
-            result = (
-                self.flatten()
-                .astype(out_dtype)
-                .prod(
-                    axis=axis,
-                    dtype=dtype,
-                    out=out,
-                    keepdims=None,
-                    initial=initial,
-                    where=where,
+                return (
+                    fix_dtypes_and_determine_return(
+                        result, 1, dtype, out, where is not False
+                    )
+                    if where is not False or out is not None
+                    else array([initial], dtype=out_dtype)
                 )
+            return result.to_numpy()[0, 0] if where is not False else initial
+        if axis is None:
+            result = self
+            if isinstance(where, array):
+                result = where.where(self, 1)
+            result = (
+                result.astype(out_dtype)
+                ._query_compiler.prod(axis=0)
+                .prod(axis=1)
+                .to_numpy()
+                .flatten()[0]
             )
+            if initial is not None:
+                result *= initial
             if keepdims:
                 if out is not None and out.shape != (1, 1):
                     raise ValueError(
-                        f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
+                        f"operand was set up as a reduction along axis 1, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
-                return fix_dtypes_and_determine_return(
-                    array(numpy.array([[result]])).astype(out_dtype)._query_compiler,
-                    2,
-                    dtype,
-                    out,
-                    where,
+                if initial is not None and out is not None:
+                    out._query_compiler = (
+                        (numpy.ones_like(out) * initial)
+                        .astype(out_dtype)
+                        ._query_compiler
+                    )
+                return (
+                    fix_dtypes_and_determine_return(
+                        array(numpy.array([[result]]))
+                        .astype(out_dtype)
+                        ._query_compiler,
+                        2,
+                        dtype,
+                        out,
+                        where is not False,
+                    )
+                    if where is not False or out is not None
+                    else array([[initial]], dtype=out_dtype)
                 )
-            return result
-        result = self._query_compiler.astype(
+            return result if where is not False else initial
+        result = self._query_compiler
+        if isinstance(where, array):
+            result = where.where(self, 1)._query_compiler
+        result = result.astype(
             {col_name: out_dtype for col_name in self._query_compiler.columns}
         ).prod(axis=axis)
         if initial is not None:
             result = result.mul(initial)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
-            return result.to_numpy()[0, 0] if where else initial
+            return result.to_numpy()[0, 0] if where is not False else initial
         if not keepdims and axis != 1:
             result = result.transpose()
-        if initial is not None:
-            if out is not None:
-                out._query_compiler = (
-                    (numpy.ones_like(out) * initial).astype(out_dtype)._query_compiler
-                )
-            else:
-                out = (
-                    numpy.ones_like(array(_query_compiler=result, _ndim=new_ndim))
-                    * initial
-                ).astype(out_dtype)
-        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
+        if initial is not None and out is not None:
+            out._query_compiler = (
+                (numpy.ones_like(out) * initial).astype(out_dtype)._query_compiler
+            )
+        return (
+            fix_dtypes_and_determine_return(
+                result, new_ndim, dtype, out, where is not False
+            )
+            if where is not False or out is not None
+            else (numpy.ones_like(array(_query_compiler=result, _ndim=1)) * initial)
+        )
 
     def multiply(
         self,
@@ -1310,72 +1414,93 @@ class array(object):
         if self._ndim == 1:
             if axis == 1:
                 raise numpy.AxisError(1, 1)
-            result = self._query_compiler.astype(
+            result = self._query_compiler
+            if isinstance(where, array):
+                result = where.where(self, 0)._query_compiler
+            result = result.astype(
                 {col_name: out_dtype for col_name in self._query_compiler.columns}
             ).sum(axis=0)
             if initial is not None:
                 result = result.add(initial)
             if keepdims:
-                if initial is not None:
-                    if out is not None:
-                        out._query_compiler = (
-                            numpy.ones_like(out, dtype=out_dtype) * initial
-                        )._query_compiler
-                    else:
-                        out = array([initial], dtype=out_dtype)
+                if initial is not None and out is not None:
+                    out._query_compiler = (
+                        (numpy.ones_like(out, dtype=out_dtype) * initial)
+                        .astype(out_dtype)
+                        ._query_compiler
+                    )
                 if out is not None and out.shape != (1,):
                     raise ValueError(
                         f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
-                return fix_dtypes_and_determine_return(result, 1, dtype, out, where)
-            return result.to_numpy()[0, 0] if where else initial
-        if axis is None:
-            result = (
-                self.flatten()
-                .astype(out_dtype)
-                .sum(
-                    axis=axis,
-                    dtype=dtype,
-                    out=out,
-                    keepdims=None,
-                    initial=initial,
-                    where=where,
+                return (
+                    fix_dtypes_and_determine_return(
+                        result, 1, dtype, out, where is not False
+                    )
+                    if where is not False or out is not None
+                    else array([initial], dtype=out_dtype)
                 )
+            return result.to_numpy()[0, 0] if where is not False else initial
+        if axis is None:
+            result = self
+            if isinstance(where, array):
+                result = where.where(self, 0)
+            result = (
+                result.astype(out_dtype)
+                ._query_compiler.sum(axis=0)
+                .sum(axis=1)
+                .to_numpy()
+                .flatten()[0]
             )
+            if initial is not None:
+                result += initial
             if keepdims:
                 if out is not None and out.shape != (1, 1):
                     raise ValueError(
-                        f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
+                        f"operand was set up as a reduction along axis 1, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
-                return fix_dtypes_and_determine_return(
-                    array(numpy.array([[result]], dtype=out_dtype))._query_compiler,
-                    2,
-                    dtype,
-                    out,
-                    where,
+                if initial is not None and out is not None:
+                    out._query_compiler = (
+                        (numpy.ones_like(out) * initial)
+                        .astype(out_dtype)
+                        ._query_compiler
+                    )
+                return (
+                    fix_dtypes_and_determine_return(
+                        array(numpy.array([[result]], dtype=out_dtype))._query_compiler,
+                        2,
+                        dtype,
+                        out,
+                        where is not False,
+                    )
+                    if where is not False or out is not None
+                    else array([[initial]], dtype=out_dtype)
                 )
-            return result
-        result = self._query_compiler.astype(
+            return result if where is not False else initial
+        result = self._query_compiler
+        if isinstance(where, array):
+            result = where.where(self, 0)._query_compiler
+        result = result.astype(
             {col_name: out_dtype for col_name in self._query_compiler.columns}
         ).sum(axis=axis)
         if initial is not None:
             result = result.add(initial)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
-            return result.to_numpy()[0, 0] if where else initial
+            return result.to_numpy()[0, 0] if where is not False else initial
         if not keepdims and axis != 1:
             result = result.transpose()
-        if initial is not None:
-            if out is not None:
-                out._query_compiler = (
-                    (numpy.ones_like(out) * initial).astype(out_dtype)._query_compiler
-                )
-            else:
-                out = (
-                    numpy.ones_like(array(_query_compiler=result, _ndim=new_ndim))
-                    * initial
-                ).astype(out_dtype)
-        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
+        if initial is not None and out is not None:
+            out._query_compiler = (
+                (numpy.ones_like(out) * initial).astype(out_dtype)._query_compiler
+            )
+        return (
+            fix_dtypes_and_determine_return(
+                result, new_ndim, dtype, out, where is not False
+            )
+            if where is not False or out is not None
+            else (numpy.zeros_like(array(_query_compiler=result, _ndim=1)) + initial)
+        )
 
     def flatten(self, order="C"):
         check_kwargs(order=order)

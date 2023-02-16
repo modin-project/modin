@@ -102,6 +102,14 @@ def test_max():
     numpy_result = numpy_arr.max(axis=0, initial=4, out=numpy_out, where=numpy_where)
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
     numpy.testing.assert_array_equal(modin_out._to_numpy(), numpy_out)
+    numpy_arr = numpy.array([[1, 10000, 2], [3, 4, 5]])
+    modin_arr = np.array(numpy_arr)
+    numpy_mask = numpy.array([[True, False, True], [True, True, True]])
+    modin_mask = np.array(numpy_mask)
+    numpy.testing.assert_equal(
+        numpy_arr.max(where=numpy_mask, initial=5),
+        modin_arr.max(where=modin_mask, initial=5),
+    )
 
 
 def test_min():
@@ -189,6 +197,14 @@ def test_min():
     numpy_result = numpy_arr.min(axis=0, initial=4, out=numpy_out, where=numpy_where)
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
     numpy.testing.assert_array_equal(modin_out._to_numpy(), numpy_out)
+    numpy_arr = numpy.array([[1, -10000, 2], [3, 4, 5]])
+    modin_arr = np.array(numpy_arr)
+    numpy_mask = numpy.array([[True, False, True], [True, True, True]])
+    modin_mask = np.array(numpy_mask)
+    numpy.testing.assert_equal(
+        numpy_arr.max(where=numpy_mask, initial=5),
+        modin_arr.max(where=modin_mask, initial=5),
+    )
 
 
 def test_sum():
