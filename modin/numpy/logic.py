@@ -1,48 +1,46 @@
 import numpy
-import pandas
+
+from .arr import array
+from modin.error_message import ErrorMessage
 
 
-def _dispatch_unary(pandas_f, np_f, use_axis_arg=True):
-    def call(*args, **kwargs):
-        if hasattr(args[0], "_unary_op"):
-            return args[0]._unary_op(pandas_f, *args[1:], use_axis_arg=use_axis_arg, **kwargs)
-        return np_f
+def _dispatch_logic(operator_name):
+    def call(x, *args, **kwargs):
+        if not isinstance(x, array):
+            ErrorMessage.single_warning(
+                f"Modin NumPy only supports objects of modin.numpy.array types for add, not {type(x)}. Defaulting to NumPy."
+            )
+            return getattr(numpy, operator_name)(x, *args, **kwargs)
+        return getattr(x, f"_{operator_name}")(*args, **kwargs)
     return call
 
 
-def _dispatch_binary(pandas_f, np_f):
-    def call(*args, **kwargs):
-        if hasattr(args[0], "_binary_op"):
-            return args[0]._binary_op(pandas_f, *args[1:], **kwargs)
-    return call
+all = _dispatch_logic("all")
+any = _dispatch_logic("any")
+isfinite = _dispatch_logic("isfinite")
+isinf = _dispatch_logic("isinf")
+isnan = _dispatch_logic("isnan")
+isnat = _dispatch_logic("isnat")
+isneginf = _dispatch_logic("isneginf")
+isposinf = _dispatch_logic("isposinf")
+iscomplex = _dispatch_logic("iscomplex")
+isreal = _dispatch_logic("isreal")
 
 
-all = _dispatch_unary(pandas.DataFrame.all, numpy.all)
-any = _dispatch_unary(pandas.DataFrame.any, numpy.any)
-# use np operator for isfinite, isinf, etc. since there's no corresponding pandas function
-isfinite = _dispatch_unary(numpy.isfinite, numpy.isfinite, use_axis_arg=False)
-isinf = _dispatch_unary(numpy.isinf, numpy.isinf, use_axis_arg=False)
-isnan = _dispatch_unary(pandas.DataFrame.isna, numpy.isnan, use_axis_arg=False)
-isnat = _dispatch_unary(numpy.isnat, numpy.isnat, use_axis_arg=False)
-isneginf = _dispatch_unary(numpy.isneginf, numpy.isneginf, use_axis_arg=False)
-isposinf = _dispatch_unary(numpy.isposinf, numpy.isposinf, use_axis_arg=False)
-iscomplex = _dispatch_unary(numpy.iscomplex, numpy.iscomplex, use_axis_arg=False)
-isreal = _dispatch_unary(numpy.isreal, numpy.isreal, use_axis_arg=False)
-isscalar = numpy.isscalar
-# use np operator for logical operators since pandas only has bitwise ones
-logical_not = _dispatch_unary(numpy.logical_not, numpy.logical_not, use_axis_arg=False)
-logical_and = _dispatch_binary(numpy.logical_and, numpy.logical_and)
-logical_or = _dispatch_binary(numpy.logical_or, numpy.logical_or)
-logical_xor = _dispatch_binary(numpy.logical_xor, numpy.logical_xor)
-greater = _dispatch_binary(pandas.DataFrame.gt, numpy.greater)
-greater_equal = _dispatch_binary(pandas.DataFrame.ge, numpy.greater_equal)
-less = _dispatch_binary(pandas.DataFrame.lt, numpy.less)
-less_equal = _dispatch_binary(pandas.DataFrame.le, numpy.less_equal)
-equal = _dispatch_binary(pandas.DataFrame.eq, numpy.equal)
-not_equal = _dispatch_binary(pandas.DataFrame.ne, numpy.not_equal)
+def isscalar(e):
+    if isinstance(e, array):
+        return False
+    return numpy.isscalar(e)
 
 
-def array_equal(x1, x2):
-    if hasattr(x1, "_array_equal"):
-        return x1._array_equal(x2)
-    return numpy.array_equal(x1, x2)
+logical_not = _dispatch_logic("logical_not")
+logical_and = _dispatch_logic("logical_and")
+logical_or = _dispatch_logic("logical_or")
+logical_xor = _dispatch_logic("logical_xor")
+greater = _dispatch_logic("greater")
+greater_equal = _dispatch_logic("greater_equal")
+less = _dispatch_logic("less")
+less_equal = _dispatch_logic("less_equal")
+equal = _dispatch_logic("equal")
+not_equal = _dispatch_logic("not_equal")
+array_equal = _dispatch_logic("array_equal")

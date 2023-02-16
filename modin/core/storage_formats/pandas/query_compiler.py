@@ -418,6 +418,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         join_type="left",
     )
 
+    # Needed for numpy API
+    _logical_and = Binary.register(lambda df, r, *args, **kwargs: pandas.DataFrame(np.logical_and(df, r)), infer_dtypes="bool")
+    _logical_or = Binary.register(lambda df, r, *args, **kwargs: pandas.DataFrame(np.logical_or(df, r)), infer_dtypes="bool")
+    _logical_xor = Binary.register(lambda df, r, *args, **kwargs: pandas.DataFrame(np.logical_xor(df, r)), infer_dtypes="bool")
+
     def where(self, cond, other, **kwargs):
         assert isinstance(
             cond, type(self)
@@ -1447,6 +1452,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
     _isfinite = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df))
     )
+    _isinf = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isinf(df))
+    )
+    _isnat = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isnat(df))
+    )
+    _isneginf = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isneginf(df))
+    )
+    _isposinf = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isposinf(df))
+    )
+    _iscomplex = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.iscomplex(df))
+    )
+    _isreal = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isreal(df))
+    )
+    _logical_not = Map.register(np.logical_not, dtypes=np.bool_)  # Needed for numpy API
     negative = Map.register(pandas.DataFrame.__neg__)
     notna = Map.register(pandas.DataFrame.notna, dtypes=np.bool_)
     round = Map.register(pandas.DataFrame.round)
