@@ -419,9 +419,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
     )
 
     # Needed for numpy API
-    _logical_and = Binary.register(lambda df, r, *args, **kwargs: pandas.DataFrame(np.logical_and(df, r)), infer_dtypes="bool")
-    _logical_or = Binary.register(lambda df, r, *args, **kwargs: pandas.DataFrame(np.logical_or(df, r)), infer_dtypes="bool")
-    _logical_xor = Binary.register(lambda df, r, *args, **kwargs: pandas.DataFrame(np.logical_xor(df, r)), infer_dtypes="bool")
+    _logical_and = Binary.register(
+        lambda df, r, *args, **kwargs: pandas.DataFrame(np.logical_and(df, r)),
+        infer_dtypes="bool",
+    )
+    _logical_or = Binary.register(
+        lambda df, r, *args, **kwargs: pandas.DataFrame(np.logical_or(df, r)),
+        infer_dtypes="bool",
+    )
+    _logical_xor = Binary.register(
+        lambda df, r, *args, **kwargs: pandas.DataFrame(np.logical_xor(df, r)),
+        infer_dtypes="bool",
+    )
 
     def where(self, cond, other, **kwargs):
         assert isinstance(

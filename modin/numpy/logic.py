@@ -12,6 +12,7 @@ def _dispatch_logic(operator_name):
             )
             return getattr(numpy, operator_name)(x, *args, **kwargs)
         return getattr(x, f"_{operator_name}")(*args, **kwargs)
+
     return call
 
 

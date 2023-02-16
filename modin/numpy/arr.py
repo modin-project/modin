@@ -651,7 +651,18 @@ class array(object):
             else:
                 return (self, other, self._ndim, {"broadcast": False})
 
-    def _greater(self, x2, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+    def _greater(
+        self,
+        x2,
+        /,
+        out=None,
+        *,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         if is_scalar(x2):
             return array(_query_compiler=self._query_compiler.gt(x2), _ndim=self._ndim)
@@ -668,7 +679,18 @@ class array(object):
     def __gt__(self, x2):
         return self._greater(x2)
 
-    def _greater_equal(self, x2, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+    def _greater_equal(
+        self,
+        x2,
+        /,
+        out=None,
+        *,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         if is_scalar(x2):
             return array(_query_compiler=self._query_compiler.ge(x2), _ndim=self._ndim)
@@ -685,7 +707,18 @@ class array(object):
     def __ge__(self, x2):
         return self._greater_equal(x2)
 
-    def _less(self, x2, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+    def _less(
+        self,
+        x2,
+        /,
+        out=None,
+        *,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         if is_scalar(x2):
             return array(_query_compiler=self._query_compiler.lt(x2), _ndim=self._ndim)
@@ -702,7 +735,18 @@ class array(object):
     def __lt__(self, x2):
         return self._less(x2)
 
-    def _less_equal(self, x2, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+    def _less_equal(
+        self,
+        x2,
+        /,
+        out=None,
+        *,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         if is_scalar(x2):
             return array(_query_compiler=self._query_compiler.le(x2), _ndim=self._ndim)
@@ -719,25 +763,47 @@ class array(object):
     def __le__(self, x2):
         return self._less_equal(x2)
 
-    def _equal(self, x2, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+    def _equal(
+        self,
+        x2,
+        /,
+        out=None,
+        *,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         if is_scalar(x2):
             return array(_query_compiler=self._query_compiler.eq(x2), _ndim=self._ndim)
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
         result = caller._query_compiler.eq(callee._query_compiler, **kwargs)
         return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
-       
+
     def __eq__(self, x2):
         return self._equal(x2)
 
-    def _not_equal(self, x2, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+    def _not_equal(
+        self,
+        x2,
+        /,
+        out=None,
+        *,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         if is_scalar(x2):
             return array(_query_compiler=self._query_compiler.ne(x2), _ndim=self._ndim)
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
         result = caller._query_compiler.ne(callee._query_compiler, **kwargs)
         return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
-      
+
     def __ne__(self, x2):
         return self._not_equal(x2)
 
@@ -1608,22 +1674,62 @@ class array(object):
 
     _any = any
 
-    def _isfinite(self, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+    def _isfinite(
+        self,
+        /,
+        out=None,
+        *,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         result = self._query_compiler._isfinite()
         return fix_dtypes_and_determine_return(result, self._ndim, dtype, out, where)
 
-    def _isinf(self, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+    def _isinf(
+        self,
+        /,
+        out=None,
+        *,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         result = self._query_compiler._isinf()
         return fix_dtypes_and_determine_return(result, self._ndim, dtype, out, where)
 
-    def _isnan(self, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+    def _isnan(
+        self,
+        /,
+        out=None,
+        *,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         result = self._query_compiler.isna()
         return fix_dtypes_and_determine_return(result, self._ndim, dtype, out, where)
 
-    def _isnat(self, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+    def _isnat(
+        self,
+        /,
+        out=None,
+        *,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         result = self._query_compiler._isnat()
         return fix_dtypes_and_determine_return(result, self._ndim, dtype, out, where)
@@ -1644,12 +1750,24 @@ class array(object):
         result = self._query_compiler._isreal()
         return fix_dtypes_and_determine_return(result, self._ndim)
 
-    def _logical_not(self, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+    def _logical_not(
+        self,
+        /,
+        out=None,
+        *,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         result = self._query_compiler._logical_not()
         return fix_dtypes_and_determine_return(result, self._ndim, dtype, out, where)
 
-    def _logical_binop(self, qc_method_name, x2, out, where, casting, order, dtype, subok):
+    def _logical_binop(
+        self, qc_method_name, x2, out, where, casting, order, dtype, subok
+    ):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         if is_scalar(x2):
             return fix_dtypes_and_determine_return(
@@ -1670,13 +1788,39 @@ class array(object):
         # because numpy would otherwise think one of the objects is a series
         # if caller._ndim == 2 and callee._ndim == 1:
         #     callee = array(pd.DataFrame(query_compiler=callee._query_compiler).transpose())
-        result = getattr(caller._query_compiler, qc_method_name)(callee._query_compiler, **kwargs)
+        result = getattr(caller._query_compiler, qc_method_name)(
+            callee._query_compiler, **kwargs
+        )
         return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
 
-    def _logical_and(self, x2, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
-        return self._logical_binop("_logical_and", x2, out, where, casting, order, dtype, subok)
+    def _logical_and(
+        self,
+        x2,
+        /,
+        out=None,
+        *,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
+        return self._logical_binop(
+            "_logical_and", x2, out, where, casting, order, dtype, subok
+        )
 
-    def _logical_or(self, x2, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+    def _logical_or(
+        self,
+        x2,
+        /,
+        out=None,
+        *,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         if is_scalar(x2):
             return fix_dtypes_and_determine_return(
@@ -1695,7 +1839,18 @@ class array(object):
         result = caller._query_compiler._logical_or(callee._query_compiler)
         return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
 
-    def _logical_xor(self, x2, /, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+    def _logical_xor(
+        self,
+        x2,
+        /,
+        out=None,
+        *,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         if is_scalar(x2):
             return fix_dtypes_and_determine_return(

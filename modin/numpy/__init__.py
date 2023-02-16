@@ -46,7 +46,7 @@ from .logic import (
     less_equal,
     equal,
     not_equal,
-    array_equal
+    array_equal,
 )
 
 from .math import (

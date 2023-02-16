@@ -1,20 +1,20 @@
-
 import pytest
 import numpy
 
 import modin.numpy as np
 
 
-small_arr_c_2d = numpy.array([
-    [1j, 1, 0, -numpy.inf, numpy.inf, 0.5],
-    [1 + 1.1j, numpy.nan, 0, numpy.nan, 2, 0.3]
-])
+small_arr_c_2d = numpy.array(
+    [
+        [1j, 1, 0, -numpy.inf, numpy.inf, 0.5],
+        [1 + 1.1j, numpy.nan, 0, numpy.nan, 2, 0.3],
+    ]
+)
 small_arr_c_1d = numpy.array([numpy.nan, 0, -numpy.inf, numpy.inf, 5, -0.1, 1 + 1.1j])
 
-small_arr_r_2d = numpy.array([
-    [1, 0, -numpy.inf, numpy.inf, 0.5],
-    [numpy.nan, 0, numpy.nan, 2, 0.3]
-])
+small_arr_r_2d = numpy.array(
+    [[1, 0, -numpy.inf, numpy.inf, 0.5], [numpy.nan, 0, numpy.nan, 2, 0.3]]
+)
 small_arr_r_1d = numpy.array([numpy.nan, 0, -numpy.inf, numpy.inf, 5, -0.1])
 
 
@@ -31,7 +31,9 @@ def test_unary_with_axis(operand_shape, operator, axis):
     # Result may be a scalar
     if isinstance(modin_result, np.array):
         modin_result = modin_result._to_numpy()
-    numpy.testing.assert_array_equal(modin_result, numpy_result, err_msg=f"Unary operator {operator} failed.")
+    numpy.testing.assert_array_equal(
+        modin_result, numpy_result, err_msg=f"Unary operator {operator} failed."
+    )
 
 
 @pytest.mark.parametrize("data", [small_arr_c_2d, small_arr_c_1d], ids=["2D", "1D"])
@@ -84,4 +86,8 @@ def test_logical_binops(operand1_shape, operand2_shape, operator):
     numpy_result = getattr(numpy, operator)(x1, x2)
     x1, x2 = np.array(x1), np.array(x2)
     modin_result = getattr(np, operator)(x1, x2)
-    numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result, err_msg=f"Logic binary operator {operator} failed.")
+    numpy.testing.assert_array_equal(
+        modin_result._to_numpy(),
+        numpy_result,
+        err_msg=f"Logic binary operator {operator} failed.",
+    )
