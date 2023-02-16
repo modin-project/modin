@@ -738,6 +738,8 @@ class array(object):
             if dtype is not None
             else (out.dtype if out is not None else self.dtype)
         )
+        if isinstance(where, array) and issubclass(out_dtype.type, numpy.integer):
+            out_dtype = numpy.float64
         check_kwargs(keepdims=keepdims, where=where)
         if self._ndim == 1:
             if axis == 1:
