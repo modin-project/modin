@@ -46,7 +46,6 @@ from .logic import (
     less_equal,
     equal,
     not_equal,
-    array_equal,
 )
 
 from .math import (
@@ -132,7 +131,6 @@ __all__ = [  # noqa: F405
     "less_equal",
     "equal",
     "not_equal",
-    "array_equal",
     "absolute",
     "abs",
     "add",
