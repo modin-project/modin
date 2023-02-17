@@ -362,9 +362,44 @@ def mean(x1, axis=None, dtype=None, out=None, keepdims=None, *, where=True):
 # Maximum and minimum are ufunc's in NumPy, which means that our array's __array_ufunc__
 # implementation will automatically handle this, so we can just use NumPy's maximum/minimum
 # since that will route to our array's ufunc.
-maximum = numpy.maximum
+def maximum(
+    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
+):
+    x1 = try_convert_from_interoperable_type(x1)
+    if not isinstance(x1, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for maximum, not {type(x1)}. Defaulting to NumPy."
+        )
+    return numpy.maximum(
+        x1,
+        x2,
+        out=out,
+        where=where,
+        casting=casting,
+        order=order,
+        dtype=dtype,
+        subok=subok,
+    )
 
-minimum = numpy.minimum
+
+def minimum(
+    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
+):
+    x1 = try_convert_from_interoperable_type(x1)
+    if not isinstance(x1, array):
+        ErrorMessage.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for minimum, not {type(x1)}. Defaulting to NumPy."
+        )
+    return numpy.minimum(
+        x1,
+        x2,
+        out=out,
+        where=where,
+        casting=casting,
+        order=order,
+        dtype=dtype,
+        subok=subok,
+    )
 
 
 def amax(x1, axis=None, out=None, keepdims=None, initial=None, where=True):
