@@ -713,6 +713,14 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.last(**kwargs))
 
     def mad(self, **kwargs):
+        warnings.warn(
+            (
+                "The 'mad' method is deprecated and will be removed in a future version. "
+                + "To compute the same result, you may do `(df - df.mean()).abs().mean()`."
+            ),
+            FutureWarning,
+            stacklevel=2,
+        )
         return self._default_to_pandas(lambda df: df.mad(**kwargs))
 
     def rank(self, **kwargs):
