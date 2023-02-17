@@ -24,6 +24,9 @@ A Short Example Using the Google Play Store
     # read google play app store list from csv
     gstore_apps_df = pd.read_csv("https://tinyurl.com/googleplaystorecsv")
 
+    #add this code to prevent Nan value error
+    gstore_apps_df = gstore_apps_df.dropna()
+
 .. figure:: /img/modin_sql_google_play_table.png
     :align: center 
 
@@ -58,6 +61,8 @@ Let's explore a more complicated example.
 
     gstore_reviews_df = pd.read_csv("https://tinyurl.com/googleplaystoreurcsv")
 
+    #add this code to prevent Nan value error
+    gstore_apps_df = gstore_apps_df.dropna()
 
 .. figure:: /img/modin_sql_google_play_ur_table.png
     :align: center 
