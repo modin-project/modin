@@ -750,7 +750,7 @@ class array(object):
             if isinstance(where, array):
                 result = where.where(self, numpy.nan)._query_compiler
             result = result.astype(
-                {col_name: out_dtype for col_name in self._query_compiler.columns}
+                {col_name: out_dtype for col_name in result.columns}
             ).mean(axis=0)
             if keepdims:
                 if out is not None and out.shape != (1,):
@@ -1110,7 +1110,7 @@ class array(object):
             if isinstance(where, array):
                 result = where.where(self, 1)._query_compiler
             result = result.astype(
-                {col_name: out_dtype for col_name in self._query_compiler.columns}
+                {col_name: out_dtype for col_name in result.columns}
             ).prod(axis=0)
             result = result.mul(initial)
             if keepdims:
@@ -1420,7 +1420,7 @@ class array(object):
             if isinstance(where, array):
                 result = where.where(self, 0)._query_compiler
             result = result.astype(
-                {col_name: out_dtype for col_name in self._query_compiler.columns}
+                {col_name: out_dtype for col_name in result.columns}
             ).sum(axis=0)
             result = result.add(initial)
             if keepdims:
