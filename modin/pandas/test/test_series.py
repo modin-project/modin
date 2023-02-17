@@ -396,16 +396,14 @@ def test___gt__(data):
     inter_df_math_helper(modin_series, pandas_series, "__gt__")
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___int__(data):
-    modin_series, pandas_series = create_test_series(data)
-    try:
-        pandas_result = int(pandas_series[0])
-    except Exception as err:
-        with pytest.raises(type(err)):
-            int(modin_series[0])
-    else:
-        assert int(modin_series[0]) == pandas_result
+@pytest.mark.parametrize("count_elements", [0, 1, 10])
+def test___int__(count_elements):
+    eval_general(*create_test_series([1.5] * count_elements), int)
+
+
+@pytest.mark.parametrize("count_elements", [0, 1, 10])
+def test___float__(count_elements):
+    eval_general(*create_test_series([1] * count_elements), float)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -522,11 +520,18 @@ def test___repr__(name, dt_index, data):
 
     if get_current_execution() == "BaseOnPython" and data == "empty":
         # TODO: Remove this when default `dtype` of empty Series will be `object` in pandas (see #3142).
-        assert modin_series.dtype == np.object
+        assert modin_series.dtype == np.object_
         assert pandas_series.dtype == np.float64
         df_equals(modin_series.index, pandas_series.index)
     else:
         assert repr(modin_series) == repr(pandas_series)
+
+
+def test___repr__4186():
+    modin_series, pandas_series = create_test_series(
+        ["a", "b", "c", "a"], dtype="category"
+    )
+    assert repr(modin_series) == repr(pandas_series)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1426,16 +1431,16 @@ def test_describe(data):
 
     try:
         pandas_result = pandas_series.describe(
-            include=[np.timedelta64, np.datetime64, np.object, np.bool_]
+            include=[np.timedelta64, np.datetime64, np.object_, np.bool_]
         )
     except Exception as err:
         with pytest.raises(type(err)):
             modin_series.describe(
-                include=[np.timedelta64, np.datetime64, np.object, np.bool_]
+                include=[np.timedelta64, np.datetime64, np.object_, np.bool_]
             )
     else:
         modin_result = modin_series.describe(
-            include=[np.timedelta64, np.datetime64, np.object, np.bool_]
+            include=[np.timedelta64, np.datetime64, np.object_, np.bool_]
         )
         df_equals(modin_result, pandas_result)
 
@@ -1632,7 +1637,7 @@ def test_dtype_empty():
     modin_series, pandas_series = pd.Series(), pandas.Series()
     if get_current_execution() == "BaseOnPython":
         # TODO: Remove this when default `dtype` of empty Series will be `object` in pandas (see #3142).
-        assert modin_series.dtype == np.object
+        assert modin_series.dtype == np.object_
         assert pandas_series.dtype == np.float64
     else:
         assert modin_series.dtype == pandas_series.dtype
@@ -2199,12 +2204,13 @@ def test_loc(data):
     data = np.arange(100)
     modin_series = pd.Series(data, index=index).sort_index()
     pandas_series = pandas.Series(data, index=index).sort_index()
+    # Using 'fmt: skip' below as 'black' and 'flake8' can't agree on how this should be formatted
     modin_result = modin_series.loc[
         (slice(None), 1),
-    ]
+    ]  # fmt: skip
     pandas_result = pandas_series.loc[
         (slice(None), 1),
-    ]
+    ]  # fmt: skip
     df_equals(modin_result, pandas_result)
 
 
@@ -2277,7 +2283,8 @@ def test_map(data, na_values):
 
     # Index into list objects
     df_equals(
-        modin_series_lists.map(lambda l: l[0]), pandas_series_lists.map(lambda l: l[0])
+        modin_series_lists.map(lambda lst: lst[0]),
+        pandas_series_lists.map(lambda lst: lst[0]),
     )
 
 
@@ -3613,6 +3620,26 @@ def test_values(data):
     np.testing.assert_equal(modin_series.values, pandas_series.values)
 
 
+def test_values_non_numeric():
+    data = ["str{0}".format(i) for i in range(0, 10**3)]
+    modin_series, pandas_series = create_test_series(data)
+
+    modin_series = modin_series.astype("category")
+    pandas_series = pandas_series.astype("category")
+
+    df_equals(modin_series.values, pandas_series.values)
+
+
+def test_values_ea():
+    data = pandas.arrays.SparseArray(np.arange(10, dtype="int64"))
+    modin_series, pandas_series = create_test_series(data)
+    modin_values = modin_series.values
+    pandas_values = pandas_series.values
+
+    assert modin_values.dtype == pandas_values.dtype
+    df_equals(modin_values, pandas_values)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
@@ -4304,6 +4331,21 @@ def test_cat_codes(data):
     pandas_result = pandas_series.cat.codes
     modin_result = modin_series.cat.codes
     df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
+    "set_min_partition_size",
+    [1, 2],
+    ids=["four_partitions", "two_partitions"],
+    indirect=True,
+)
+def test_cat_codes_issue5650(set_min_partition_size):
+    data = {"name": ["abc", "def", "ghi", "jkl"]}
+    pandas_df = pandas.DataFrame(data)
+    pandas_df = pandas_df.astype("category")
+    modin_df = pd.DataFrame(data)
+    modin_df = modin_df.astype("category")
+    eval_general(modin_df, pandas_df, lambda df: df["name"].cat.codes)
 
 
 @pytest.mark.parametrize(

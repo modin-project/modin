@@ -29,6 +29,8 @@ from .utils import (
     df_equals,
     sort_index_for_equal_values,
     eval_general,
+    bool_arg_values,
+    bool_arg_keys,
 )
 
 
@@ -722,6 +724,28 @@ def test_to_numeric(data, errors, downcast):
     pandas_series = pandas.Series(data)
     modin_result = pd.to_numeric(modin_series, errors=errors, downcast=downcast)
     pandas_result = pandas.to_numeric(pandas_series, errors=errors, downcast=downcast)
+    df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize("retbins", bool_arg_values, ids=bool_arg_keys)
+def test_qcut(retbins):
+    # test case from https://github.com/modin-project/modin/issues/5610
+    pandas_series = pandas.Series(range(10))
+    modin_series = pd.Series(range(10))
+    pandas_result = pandas.qcut(pandas_series, 4, retbins=retbins)
+    with warns_that_defaulting_to_pandas():
+        modin_result = pd.qcut(modin_series, 4, retbins=retbins)
+    if retbins:
+        df_equals(modin_result[0], pandas_result[0])
+        df_equals(modin_result[0].cat.categories, pandas_result[0].cat.categories)
+        assert_array_equal(modin_result[1], pandas_result[1])
+    else:
+        df_equals(modin_result, pandas_result)
+        df_equals(modin_result.cat.categories, pandas_result.cat.categories)
+
+    # test case for fallback to pandas, taken from pandas docs
+    pandas_result = pandas.qcut(range(5), 4)
+    modin_result = pd.qcut(range(5), 4)
     df_equals(modin_result, pandas_result)
 
 

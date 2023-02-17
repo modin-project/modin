@@ -29,10 +29,10 @@ NPartitions.put(4)
 
 if Engine.get() == "Ray":
     import ray
-    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframePartition,
     )
-    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.virtual_partition import (
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframeColumnPartition,
         PandasOnRayDataframeRowPartition,
     )
@@ -42,11 +42,11 @@ if Engine.get() == "Ray":
     virtual_row_partition_class = PandasOnRayDataframeRowPartition
     put = ray.put
 elif Engine.get() == "Dask":
-    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.virtual_partition import (
+    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframeColumnPartition,
         PandasOnDaskDataframeRowPartition,
     )
-    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition import (
+    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframePartition,
     )
     from modin.core.execution.dask.common import DaskWrapper
@@ -111,14 +111,6 @@ def validate_partitions_cache(df):
         for j in range(df._partitions.shape[1]):
             assert df._partitions[i, j].length() == row_lengths[i]
             assert df._partitions[i, j].width() == column_widths[j]
-
-
-@pytest.fixture
-def set_num_partitions(request):
-    old_num_partitions = NPartitions.get()
-    NPartitions.put(request.param)
-    yield
-    NPartitions.put(old_num_partitions)
 
 
 def test_aligning_blocks():
@@ -444,7 +436,6 @@ class TestDrainVirtualPartitionCallQueue:
     def test_virtual_partition_call_queues_at_three_levels(
         self, axis, virtual_partition_class
     ):
-
         block = block_partition_class(put(pandas.DataFrame([1])))
         level_one_virtual = virtual_partition_class([block], full_axis=False)
         level_one_virtual = level_one_virtual.add_to_apply_calls(

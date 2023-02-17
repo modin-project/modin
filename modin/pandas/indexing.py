@@ -233,11 +233,6 @@ Location based indexing can only have [integer, integer slice (START point is
 INCLUDED, END point is EXCLUDED), listlike of integers, boolean array] types.
 """
 
-_VIEW_IS_COPY_WARNING = """
-Modin is making a copy of of the DataFrame. This behavior diverges from Pandas.
-This will be fixed in future releases.
-"""
-
 
 def _compute_ndim(row_loc, col_loc):
     """
@@ -319,10 +314,9 @@ class _LocationIndexerBase(ClassLogger):
         """
         raise NotImplementedError("Implemented by subclasses")
 
-    def _getitem_positional(
+    def _get_pandas_object_from_qc_view(
         self,
-        row_lookup,
-        col_lookup,
+        qc_view,
         row_multiindex_full_lookup: bool,
         col_multiindex_full_lookup: bool,
         row_scalar: bool,
@@ -330,29 +324,27 @@ class _LocationIndexerBase(ClassLogger):
         ndim: int,
     ):
         """
-        Retrieve dataset according to `row_lookup` and `col_lookup`.
+        Convert the query compiler view to the appropriate pandas object.
 
         Parameters
         ----------
-        row_lookup : slice(None), range or np.ndarray
-            The global row index to retrieve data from.
-        col_lookup : slice(None), range or np.ndarray
-            The global col index to retrieve data from.
+        qc_view : BaseQueryCompiler
+            Query compiler to convert.
         row_multiindex_full_lookup : bool
             See _multiindex_possibly_contains_key.__doc__.
         col_multiindex_full_lookup : bool
             See _multiindex_possibly_contains_key.__doc__.
         row_scalar : bool
-            Whether indexer for rows is scalar or not.
+            Whether indexer for rows is scalar.
         col_scalar : bool
-            Whether indexer for columns is scalar or not.
+            Whether indexer for columns is scalar.
         ndim : {0, 1, 2}
             Number of dimensions in dataset to be retrieved.
 
         Returns
         -------
         modin.pandas.DataFrame or modin.pandas.Series
-            Located dataset.
+            The pandas object with the data from the query compiler view.
 
         Notes
         -----
@@ -361,21 +353,6 @@ class _LocationIndexerBase(ClassLogger):
         Ideally, this API should get rid of using slices as indexers and either use a
         common ``Indexer`` object or range and ``np.ndarray`` only.
         """
-        if isinstance(row_lookup, slice):
-            ErrorMessage.catch_bugs_and_request_email(
-                failure_condition=row_lookup != slice(None),
-                extra_log=f"Only None-slices are acceptable as a slice argument in masking, got: {row_lookup}",
-            )
-            row_lookup = None
-        if isinstance(col_lookup, slice):
-            ErrorMessage.catch_bugs_and_request_email(
-                failure_condition=col_lookup != slice(None),
-                extra_log=f"Only None-slices are acceptable as a slice argument in masking, got: {col_lookup}",
-            )
-            col_lookup = None
-
-        qc_view = self.qc.take_2d(row_lookup, col_lookup)
-
         if ndim == 2:
             return self.df.__constructor__(query_compiler=qc_view)
         if isinstance(self.df, Series) and not row_scalar:
@@ -678,11 +655,9 @@ class _LocIndexer(_LocationIndexerBase):
         if isinstance(row_loc, Series) and is_boolean_array(row_loc):
             return self._handle_boolean_masking(row_loc, col_loc)
 
-        row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-
-        result = self._getitem_positional(
-            row_lookup,
-            col_lookup,
+        qc_view = self.qc.take_2d_labels(row_loc, col_loc)
+        result = self._get_pandas_object_from_qc_view(
+            qc_view,
             row_multiindex_full_lookup,
             col_multiindex_full_lookup,
             row_scalar,
@@ -731,7 +706,7 @@ class _LocIndexer(_LocationIndexerBase):
         # This is done for cases where the index passed in has other state, like a
         # frequency in the case of DateTimeIndex.
         if (
-            row_lookup is not None
+            row_loc is not None
             and isinstance(col_loc, slice)
             and col_loc == slice(None)
             and isinstance(key, pandas.Index)
@@ -838,7 +813,7 @@ class _LocIndexer(_LocationIndexerBase):
         item : modin.pandas.DataFrame, modin.pandas.Series or scalar
             Value that should be assigned to located dataset.
         """
-        row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
+        row_lookup, col_lookup = self.qc.get_positions_from_labels(row_loc, col_loc)
         self._setitem_positional(
             row_lookup,
             col_lookup,
@@ -930,98 +905,6 @@ class _LocIndexer(_LocationIndexerBase):
             )
         return nan_labels
 
-    def _compute_lookup(self, row_loc, col_loc):
-        """
-        Compute index and column labels from index and column locators.
-
-        Parameters
-        ----------
-        row_loc : scalar, slice, list, array or tuple
-            Row locator.
-        col_loc : scalar, slice, list, array or tuple
-            Columns locator.
-
-        Returns
-        -------
-        row_lookup : slice(None) if full axis grab, pandas.RangeIndex if repetition is detected, numpy.ndarray otherwise
-            List of index labels.
-        col_lookup : slice(None) if full axis grab, pandas.RangeIndex if repetition is detected, numpy.ndarray otherwise
-            List of columns labels.
-
-        Notes
-        -----
-        Usage of `slice(None)` as a resulting lookup is a hack to pass information about
-        full-axis grab without computing actual indices that triggers lazy computations.
-        Ideally, this API should get rid of using slices as indexers and either use a
-        common ``Indexer`` object or range and ``np.ndarray`` only.
-        """
-        lookups = []
-        for axis, axis_loc in enumerate((row_loc, col_loc)):
-            if is_scalar(axis_loc):
-                axis_loc = np.array([axis_loc])
-            if isinstance(axis_loc, slice) or is_range_like(axis_loc):
-                if isinstance(axis_loc, slice) and axis_loc == slice(None):
-                    axis_lookup = axis_loc
-                else:
-                    axis_labels = self.qc.get_axis(axis)
-                    # `slice_indexer` returns a fully-defined numeric slice for a non-fully-defined labels-based slice
-                    axis_lookup = axis_labels.slice_indexer(
-                        axis_loc.start, axis_loc.stop, axis_loc.step
-                    )
-                    # Converting negative indices to their actual positions:
-                    axis_lookup = pandas.RangeIndex(
-                        start=(
-                            axis_lookup.start
-                            if axis_lookup.start >= 0
-                            else axis_lookup.start + len(axis_labels)
-                        ),
-                        stop=(
-                            axis_lookup.stop
-                            if axis_lookup.stop >= 0
-                            else axis_lookup.stop + len(axis_labels)
-                        ),
-                        step=axis_lookup.step,
-                    )
-            elif self.qc.has_multiindex(axis):
-                # `Index.get_locs` raises an IndexError by itself if missing labels were provided,
-                # we don't have to do missing-check for the received `axis_lookup`.
-                if isinstance(axis_loc, pandas.MultiIndex):
-                    axis_lookup = self.qc.get_axis(axis).get_indexer_for(axis_loc)
-                else:
-                    axis_lookup = self.qc.get_axis(axis).get_locs(axis_loc)
-            elif is_boolean_array(axis_loc):
-                axis_lookup = boolean_mask_to_numeric(axis_loc)
-            else:
-                axis_labels = self.qc.get_axis(axis)
-                if is_list_like(axis_loc) and not isinstance(
-                    axis_loc, (np.ndarray, pandas.Index)
-                ):
-                    # `Index.get_indexer_for` works much faster with numpy arrays than with python lists,
-                    # so although we lose some time here on converting to numpy, `Index.get_indexer_for`
-                    # speedup covers the loss that we gain here.
-                    axis_loc = np.array(axis_loc, dtype=axis_labels.dtype)
-                axis_lookup = axis_labels.get_indexer_for(axis_loc)
-                # `Index.get_indexer_for` sets -1 value for missing labels, we have to verify whether
-                # there are any -1 in the received indexer to raise a KeyError here.
-                missing_mask = axis_lookup < 0
-                if missing_mask.any():
-                    missing_labels = (
-                        # Converting `axis_loc` to maskable `np.array` to not fail
-                        # on masking non-maskable list-like
-                        np.array(axis_loc)[missing_mask]
-                        if is_list_like(axis_loc)
-                        # If `axis_loc` is not a list-like then we can't select certain
-                        # labels that are missing and so printing the whole indexer
-                        else axis_loc
-                    )
-                    raise KeyError(missing_labels)
-
-            if isinstance(axis_lookup, pandas.Index) and not is_range_like(axis_lookup):
-                axis_lookup = axis_lookup.values
-
-            lookups.append(axis_lookup)
-        return lookups
-
 
 class _iLocIndexer(_LocationIndexerBase):
     """
@@ -1063,10 +946,21 @@ class _iLocIndexer(_LocationIndexerBase):
             return self._handle_boolean_masking(row_loc, col_loc)
 
         row_lookup, col_lookup = self._compute_lookup(row_loc, col_loc)
-
-        result = self._getitem_positional(
-            row_lookup,
-            col_lookup,
+        if isinstance(row_lookup, slice):
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=row_lookup != slice(None),
+                extra_log=f"Only None-slices are acceptable as a slice argument in masking, got: {row_lookup}",
+            )
+            row_lookup = None
+        if isinstance(col_lookup, slice):
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=col_lookup != slice(None),
+                extra_log=f"Only None-slices are acceptable as a slice argument in masking, got: {col_lookup}",
+            )
+            col_lookup = None
+        qc_view = self.qc.take_2d_positional(row_lookup, col_lookup)
+        result = self._get_pandas_object_from_qc_view(
+            qc_view,
             row_multiindex_full_lookup=False,
             col_multiindex_full_lookup=False,
             row_scalar=row_scalar,

@@ -85,11 +85,13 @@ _DEFAULT_BEHAVIOUR = {
     "name",
     "dtypes",
     "dtype",
+    "groupby",
     "_get_name",
     "_set_name",
     "_default_to_pandas",
     "_query_compiler",
     "_to_pandas",
+    "_repartition",
     "_build_repr_df",
     "_reduce_dimension",
     "__repr__",
@@ -475,7 +477,11 @@ class BasePandasDataset(ClassLogger):
             # it is a DataFrame, Series, etc.) as a pandas object. The outer `getattr`
             # will get the operation (`op`) from the pandas version of the class and run
             # it on the object after we have converted it to pandas.
-            result = getattr(self._pandas_class, op)(pandas_obj, *args, **kwargs)
+            attr = getattr(self._pandas_class, op)
+            if isinstance(attr, property):
+                result = getattr(pandas_obj, op)
+            else:
+                result = attr(pandas_obj, *args, **kwargs)
         else:
             ErrorMessage.catch_bugs_and_request_email(
                 failure_condition=True,
@@ -959,8 +965,12 @@ class BasePandasDataset(ClassLogger):
         # If we got a series or dict originally, dtype is a dict now. Its keys
         # must be column names.
         if isinstance(dtype, dict):
+            # avoid materializing columns in lazy mode. the query compiler
+            # will handle errors where dtype dict includes keys that are not
+            # in columns.
             if (
-                not set(dtype.keys()).issubset(set(self._query_compiler.columns))
+                not self._query_compiler.lazy_execution
+                and not set(dtype.keys()).issubset(set(self._query_compiler.columns))
                 and errors == "raise"
             ):
                 raise KeyError(
@@ -972,7 +982,7 @@ class BasePandasDataset(ClassLogger):
             # Assume that the dtype is a scalar.
             col_dtypes = {column: dtype for column in self._query_compiler.columns}
 
-        new_query_compiler = self._query_compiler.astype(col_dtypes)
+        new_query_compiler = self._query_compiler.astype(col_dtypes, errors=errors)
         return self._create_or_update_from_compiler(new_query_compiler, not copy)
 
     @property
@@ -1294,6 +1304,10 @@ class BasePandasDataset(ClassLogger):
             elif axes[axis] is not None:
                 if not is_list_like(axes[axis]):
                     axes[axis] = [axes[axis]]
+                # In case of lazy execution we should bypass these error checking components
+                # because they can force the materialization of the row or column labels.
+                if self._query_compiler.lazy_execution:
+                    continue
                 if errors == "raise":
                     non_existent = pandas.Index(axes[axis]).difference(
                         getattr(self, axis)
@@ -1309,7 +1323,7 @@ class BasePandasDataset(ClassLogger):
                         axes[axis] = None
 
         new_query_compiler = self._query_compiler.drop(
-            index=axes["index"], columns=axes["columns"]
+            index=axes["index"], columns=axes["columns"], errors=errors
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
@@ -1370,18 +1384,19 @@ class BasePandasDataset(ClassLogger):
         Return `BasePandasDataset` with duplicate rows removed.
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
-        subset = kwargs.get("subset", None)
         ignore_index = kwargs.get("ignore_index", False)
+        subset = kwargs.get("subset", None)
         if subset is not None:
             if is_list_like(subset):
                 if not isinstance(subset, list):
                     subset = list(subset)
             else:
                 subset = [subset]
-            duplicates = self.duplicated(keep=keep, subset=subset)
+            df = self[subset]
         else:
-            duplicates = self.duplicated(keep=keep)
-        result = self[~duplicates]
+            df = self
+        duplicated = df.duplicated(keep=keep)
+        result = self[~duplicated]
         if ignore_index:
             result.index = pandas.RangeIndex(stop=len(result))
         if inplace:
@@ -2380,19 +2395,19 @@ class BasePandasDataset(ClassLogger):
         # exist.
         if (
             not drop
+            and not self._query_compiler.lazy_execution
             and not self._query_compiler.has_multiindex()
             and all(n in self.columns for n in ["level_0", "index"])
         ):
             raise ValueError("cannot insert level_0, already exists")
-        else:
-            new_query_compiler = self._query_compiler.reset_index(
-                drop=drop,
-                level=level,
-                col_level=col_level,
-                col_fill=col_fill,
-                allow_duplicates=allow_duplicates,
-                names=names,
-            )
+        new_query_compiler = self._query_compiler.reset_index(
+            drop=drop,
+            level=level,
+            col_level=col_level,
+            col_fill=col_fill,
+            allow_duplicates=allow_duplicates,
+            names=names,
+        )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def radd(
@@ -3229,6 +3244,13 @@ class BasePandasDataset(ClassLogger):
         """
         Convert the `BasePandasDataset` to a NumPy array.
         """
+        from modin.config import ExperimentalNumPyAPI
+
+        if ExperimentalNumPyAPI.get():
+            from ..numpy.arr import array
+
+            return array(_query_compiler=self._query_compiler, _ndim=2)
+
         return self._query_compiler.to_numpy(
             dtype=dtype,
             copy=copy,
@@ -3415,7 +3437,7 @@ class BasePandasDataset(ClassLogger):
         else:
             new_labels = self.axes[axis].tz_convert(tz)
         obj = self.copy() if copy else self
-        return obj.set_axis(new_labels, axis, inplace=False, copy=copy)
+        return obj.set_axis(new_labels, axis, copy=copy)
 
     def tz_localize(
         self, tz, axis=0, level=None, copy=True, ambiguous="raise", nonexistent="raise"
@@ -3436,7 +3458,7 @@ class BasePandasDataset(ClassLogger):
             )
             .index
         )
-        return self.set_axis(new_labels, axis, inplace=False, copy=copy)
+        return self.set_axis(new_labels, axis, copy=copy)
 
     # TODO: uncomment the following lines when #3331 issue will be closed
     # @prepend_to_notes(
@@ -3863,6 +3885,33 @@ class BasePandasDataset(ClassLogger):
         Return a NumPy representation of the `BasePandasDataset`.
         """
         return self.to_numpy()
+
+    def _repartition(self, axis: Optional[int] = None):
+        """
+        Repartitioning Modin objects to get ideal partitions inside.
+
+        Allows to improve performance where the query compiler can't improve
+        yet by doing implicit repartitioning.
+
+        Parameters
+        ----------
+        axis : {0, 1, None}, optional
+            The axis along which the repartitioning occurs.
+            `None` is used for repartitioning along both axes.
+
+        Returns
+        -------
+        DataFrame or Series
+            The repartitioned dataframe or series, depending on the original type.
+        """
+        allowed_axis_values = (0, 1, None)
+        if axis not in allowed_axis_values:
+            raise ValueError(
+                f"Passed `axis` parameter: {axis}, but should be one of {allowed_axis_values}"
+            )
+        return self.__constructor__(
+            query_compiler=self._query_compiler.repartition(axis=axis)
+        )
 
     @disable_logging
     def __getattribute__(self, item):

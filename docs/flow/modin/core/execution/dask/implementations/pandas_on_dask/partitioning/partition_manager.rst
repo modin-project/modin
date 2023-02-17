@@ -8,5 +8,5 @@ block/row/column partitions.
 Public API
 ----------
 
-.. autoclass:: modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition_manager.PandasOnDaskDataframePartitionManager
+.. autoclass:: modin.core.execution.dask.implementations.pandas_on_dask.partitioning.PandasOnDaskDataframePartitionManager
   :members:

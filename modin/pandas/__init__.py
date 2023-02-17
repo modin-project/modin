@@ -14,7 +14,7 @@
 import pandas
 import warnings
 
-__pandas_version__ = "1.5.2"
+__pandas_version__ = "1.5.3"
 
 if pandas.__version__ != __pandas_version__:
     warnings.warn(
@@ -29,7 +29,6 @@ with warnings.catch_warnings():
         cut,
         factorize,
         test,
-        qcut,
         date_range,
         period_range,
         Index,
@@ -41,7 +40,11 @@ with warnings.catch_warnings():
         Timestamp,
         set_eng_float_format,
         options,
+        describe_option,
         set_option,
+        get_option,
+        reset_option,
+        option_context,
         NaT,
         PeriodIndex,
         Categorical,
@@ -233,6 +236,7 @@ from .general import (
     notna,
     pivot,
     to_numeric,
+    qcut,
     to_datetime,
     unique,
     value_counts,
@@ -290,7 +294,11 @@ __all__ = [  # noqa: F405
     "to_timedelta",
     "set_eng_float_format",
     "options",
+    "describe_option",
     "set_option",
+    "get_option",
+    "reset_option",
+    "option_context",
     "CategoricalIndex",
     "Timedelta",
     "Timestamp",

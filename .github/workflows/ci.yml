@@ -76,7 +76,7 @@ jobs:
           architecture: "x64"
       # The `numpydoc` version here MUST match the versions in the dev requirements files.
       - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0 xgboost
-      - run: pytest scripts/test
+      - run: python -m pytest scripts/test
       - run: pip install -e .[all]
       - run: |
           python scripts/doc_checker.py --add-ignore=D101,D102,D103,D105 --disable-numpydoc \
@@ -155,8 +155,7 @@ jobs:
           architecture: "x64"
       # NOTE: If you are changing the set of packages installed here, make sure that
       # the dev requirements match them.
-      # TODO: remove when flake8 5.x stabilizes and appears in both pip and conda-forge; see GH-#4745
-      - run: pip install "flake8<5" flake8-print flake8-no-implicit-concat
+      - run: pip install flake8 flake8-print flake8-no-implicit-concat
       # NOTE: keep the flake8 command here in sync with the pre-commit hook in
       # /contributing/pre-commit
       - run: flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py
@@ -330,6 +329,42 @@ jobs:
       - run: python -m pytest modin/test/test_logging.py
       - uses: codecov/codecov-action@v2
 
+  test-no-engine:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda_pkgs_dir
+            ~/.cache/pip
+          key:
+            ${{ runner.os }}-conda-${{ hashFiles('requirements-no-engine.yml') }}
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
+          activate-environment: modin
+          environment-file: requirements/requirements-no-engine.yml
+          python-version: 3.8
+          channel-priority: strict
+          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+          use-only-tar-bz2: false
+      - name: Conda environment
+        run: |
+          conda info
+          conda list
+      - run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py::test_add_option
+      - uses: codecov/codecov-action@v2
+
   test-defaults:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
@@ -372,18 +407,18 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
+      - run: python -m pytest modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/test/storage_formats/base/test_internals.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_binary.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_default.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_iter.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_reduce.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_udf.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_window.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_concat.py --execution=${{ matrix.execution }}
@@ -399,6 +434,8 @@ jobs:
       run:
         shell: bash -l {0}
     env:
+      MODIN_EXPERIMENTAL: "True"
+      MODIN_ENGINE: "native"
       MODIN_STORAGE_FORMAT: "hdk"
     name: Test HDK storage format, Python 3.8
     steps:
@@ -431,12 +468,13 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest modin/test/storage_formats/hdk/test_internals.py
-      - run: pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_init.py
-      - run: pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_dataframe.py
-      - run: pytest modin/pandas/test/test_io.py::TestCsv --verbose
-      - run: pytest modin/test/interchange/dataframe_protocol/test_general.py
-      - run: pytest modin/test/interchange/dataframe_protocol/hdk
+      - run: python -m pytest modin/test/storage_formats/hdk/test_internals.py
+      - run: python -m pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_init.py
+      - run: python -m pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_dataframe.py
+      - run: python -m pytest modin/pandas/test/test_io.py::TestCsv --verbose
+      - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
+      - run: python -m pytest modin/test/interchange/dataframe_protocol/hdk
+      - run: python -m pytest modin/experimental/sql/test/test_sql.py
       - run: python examples/docker/modin-hdk/census-hdk.py examples/data/census_1k.csv -no-ml
       - run: python examples/docker/modin-hdk/nyc-taxi-hdk.py examples/data/nyc-taxi_1k.csv
       - run: |
@@ -570,6 +608,7 @@ jobs:
           sudo docker pull postgres
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - run: MODIN_BENCHMARK_MODE=True mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_repartition.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_binary.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_default.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_indexing.py
@@ -586,6 +625,10 @@ jobs:
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_groupby.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_reshape.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_general.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_creation.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_arithmetic.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_axis_functions.py
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_io.py --verbose
@@ -652,29 +695,34 @@ jobs:
         run: |
           sudo docker pull postgres
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
-      - run: MODIN_BENCHMARK_MODE=True pytest modin/pandas/test/internals/test_benchmark_mode.py
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
+      - run: MODIN_BENCHMARK_MODE=True python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
+      - run: python -m pytest modin/pandas/test/internals/test_repartition.py
+      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_default.py
+      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
         if: matrix.engine == 'ray'
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
+      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
         if: matrix.engine == 'ray'
-      - run: pytest -n 2 modin/experimental/batch/test/test_pipeline.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
+      - run: python -m pytest -n 2 modin/experimental/batch/test/test_pipeline.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_default.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_udf.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_window.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
       - run: python -m pytest -n 2 modin/pandas/test/test_concat.py
         if: matrix.engine == 'python'
       - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
         if: matrix.engine != 'python'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_creation.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_arithmetic.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_axis_functions.py
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
@@ -682,9 +730,9 @@ jobs:
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && pytest modin/experimental/sql/test/test_sql.py
-      - run: pytest modin/test/interchange/dataframe_protocol/test_general.py
-      - run: pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
+      - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && python -m pytest modin/experimental/sql/test/test_sql.py
+      - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
+      - run: python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
       - uses: codecov/codecov-action@v2
 
   test-experimental:
@@ -804,6 +852,10 @@ jobs:
           - modin/pandas/test/test_reshape.py
           - modin/pandas/test/test_general.py
           - modin/pandas/test/test_io.py
+          - modin/numpy/test/test_array.py
+          - modin/numpy/test/test_array_creation.py
+          - modin/numpy/test/test_array_axis_functions.py
+          - modin/numpy/test/test_array_arithmetic.py
     env:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-windows

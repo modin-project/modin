@@ -219,6 +219,7 @@ class TextFileDispatcher(FileDispatcher):
         newline: bytes = None,
         header_size: int = 0,
         pre_reading: int = 0,
+        read_callback_kw: dict = None,
     ):
         """
         Compute chunk sizes in bytes for every partition.
@@ -246,6 +247,9 @@ class TextFileDispatcher(FileDispatcher):
             Number of rows, that occupied by header.
         pre_reading : int, default: 0
             Number of rows between header and skipped rows, that should be read.
+        read_callback_kw : dict, optional
+            Keyword arguments for `cls.read_callback` to compute metadata if needed.
+            This option is not compatible with `pre_reading!=0`.
 
         Returns
         -------
@@ -253,7 +257,13 @@ class TextFileDispatcher(FileDispatcher):
             List with the next elements:
                 int : partition start read byte
                 int : partition end read byte
+        pandas.DataFrame or None
+            Dataframe from which metadata can be retrieved. Can be None if `read_callback_kw=None`.
         """
+        if read_callback_kw is not None and pre_reading != 0:
+            raise ValueError(
+                f"Incompatible combination of parameters: {read_callback_kw=}, {pre_reading=}"
+            )
         read_rows_counter = 0
         outside_quotes = True
 
@@ -267,9 +277,9 @@ class TextFileDispatcher(FileDispatcher):
 
         file_size = cls.file_size(f)
 
-        rows_skipper(header_size)
-
+        pd_df_metadata = None
         if pre_reading:
+            rows_skipper(header_size)
             pre_reading_start = f.tell()
             outside_quotes, read_rows = cls._read_rows(
                 f,
@@ -287,11 +297,18 @@ class TextFileDispatcher(FileDispatcher):
             # add outside_quotes
             if is_quoting and not outside_quotes:
                 warnings.warn("File has mismatched quotes")
-
-        rows_skipper(skiprows)
+            rows_skipper(skiprows)
+        else:
+            rows_skipper(skiprows)
+            if read_callback_kw:
+                start = f.tell()
+                # For correct behavior, if we want to avoid double skipping rows,
+                # we need to get metadata after skipping.
+                pd_df_metadata = cls.read_callback(f, **read_callback_kw)
+                f.seek(start)
+            rows_skipper(header_size)
 
         start = f.tell()
-
         if nrows:
             partition_size = max(1, num_partitions, nrows // num_partitions)
             while f.tell() < file_size and read_rows_counter < nrows:
@@ -331,8 +348,7 @@ class TextFileDispatcher(FileDispatcher):
                 # add outside_quotes
                 if is_quoting and not outside_quotes:
                     warnings.warn("File has mismatched quotes")
-
-        return result
+        return result, pd_df_metadata
 
     @classmethod
     def _read_rows(
@@ -655,6 +671,19 @@ class TextFileDispatcher(FileDispatcher):
         if read_kwargs["chunksize"] is not None:
             return (False, "`chunksize` parameter is not supported")
 
+        if read_kwargs.get("dialect") is not None:
+            return (False, "`dialect` parameter is not supported")
+
+        if read_kwargs["lineterminator"] is not None:
+            return (False, "`lineterminator` parameter is not supported")
+
+        if read_kwargs["escapechar"] is not None:
+            return (False, "`escapechar` parameter is not supported")
+
+        if read_kwargs.get("skipfooter"):
+            if read_kwargs.get("nrows") or read_kwargs.get("engine") == "c":
+                return (False, "Exception is raised by pandas itself")
+
         skiprows_supported = True
         if is_list_like(skiprows_md) and skiprows_md[0] < header_size:
             skiprows_supported = False
@@ -917,7 +946,7 @@ class TextFileDispatcher(FileDispatcher):
             nrows = kwargs.get("nrows", None)
             index_range = pandas.RangeIndex(len(new_query_compiler.index))
             if is_list_like(skiprows_md):
-                new_query_compiler = new_query_compiler.take_2d(
+                new_query_compiler = new_query_compiler.take_2d_positional(
                     index=index_range.delete(skiprows_md)
                 )
             elif callable(skiprows_md):
@@ -925,7 +954,9 @@ class TextFileDispatcher(FileDispatcher):
                 if not isinstance(skip_mask, np.ndarray):
                     skip_mask = skip_mask.to_numpy("bool")
                 view_idx = index_range[~skip_mask]
-                new_query_compiler = new_query_compiler.take_2d(index=view_idx)
+                new_query_compiler = new_query_compiler.take_2d_positional(
+                    index=view_idx
+                )
             else:
                 raise TypeError(
                     f"Not acceptable type of `skiprows` parameter: {type(skiprows_md)}"
@@ -935,7 +966,7 @@ class TextFileDispatcher(FileDispatcher):
                 new_query_compiler = new_query_compiler.reset_index(drop=True)
 
             if nrows:
-                new_query_compiler = new_query_compiler.take_2d(
+                new_query_compiler = new_query_compiler.take_2d_positional(
                     pandas.RangeIndex(len(new_query_compiler.index))[:nrows]
                 )
         if index_col is None or index_col is False:
@@ -1008,17 +1039,74 @@ class TextFileDispatcher(FileDispatcher):
             )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE
+        usecols = kwargs["usecols"]
         use_inferred_column_names = cls._uses_inferred_column_names(
-            names, skiprows, kwargs.get("skipfooter", 0), kwargs.get("usecols", None)
+            names, skiprows, kwargs["skipfooter"], usecols
         )
 
-        pd_df_metadata = cls.read_callback(
-            filepath_or_buffer_md,
-            **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
+        # Computing metadata simultaneously with skipping rows allows us to not
+        # do extra work and improve performance for certain cases, as otherwise,
+        # it would require double re-reading of skipped rows in order to retrieve metadata.
+        can_compute_metadata_while_skipping_rows = (
+            # basic supported case: isinstance(skiprows, int) without any additional params
+            isinstance(skiprows, int)
+            and (usecols is None or skiprows is None)
+            and pre_reading == 0
         )
+        read_callback_kw = dict(kwargs, nrows=1, skipfooter=0, index_col=index_col)
+        if not can_compute_metadata_while_skipping_rows:
+            pd_df_metadata = cls.read_callback(
+                filepath_or_buffer_md,
+                **read_callback_kw,
+            )
+            column_names = pd_df_metadata.columns
+            column_widths, num_splits = cls._define_metadata(
+                pd_df_metadata, column_names
+            )
+            read_callback_kw = None
+        else:
+            read_callback_kw = dict(read_callback_kw, skiprows=None)
+            # `memory_map` doesn't work with file-like object so we can't use it here.
+            # We can definitely skip it without violating the reading logic
+            # since this parameter is intended to optimize reading.
+            # For reading a couple of lines, this is not essential.
+            read_callback_kw.pop("memory_map", None)
+            # These parameters are already used when opening file `f`,
+            # they do not need to be used again.
+            read_callback_kw.pop("storage_options", None)
+            read_callback_kw.pop("compression", None)
+
+        with OpenFile(
+            filepath_or_buffer_md,
+            "rb",
+            compression_infered,
+            **(kwargs.get("storage_options", None) or {}),
+        ) as f:
+            old_pos = f.tell()
+            fio = io.TextIOWrapper(f, encoding=encoding, newline="")
+            newline, quotechar = cls.compute_newline(
+                fio, encoding, kwargs.get("quotechar", '"')
+            )
+            f.seek(old_pos)
+
+            splits, pd_df_metadata_temp = cls.partitioned_file(
+                f,
+                num_partitions=NPartitions.get(),
+                nrows=kwargs["nrows"] if not should_handle_skiprows else None,
+                skiprows=skiprows_partitioning,
+                quotechar=quotechar,
+                is_quoting=is_quoting,
+                encoding=encoding,
+                newline=newline,
+                header_size=header_size,
+                pre_reading=pre_reading,
+                read_callback_kw=read_callback_kw,
+            )
+            if can_compute_metadata_while_skipping_rows:
+                pd_df_metadata = pd_df_metadata_temp
+
         column_names = pd_df_metadata.columns
         column_widths, num_splits = cls._define_metadata(pd_df_metadata, column_names)
-
         # kwargs that will be passed to the workers
         partition_kwargs = dict(
             kwargs,
@@ -1032,31 +1120,6 @@ class TextFileDispatcher(FileDispatcher):
             nrows=None,
             compression=compression_infered,
         )
-        with OpenFile(
-            filepath_or_buffer_md,
-            "rb",
-            compression_infered,
-            **(kwargs.get("storage_options", None) or {}),
-        ) as f:
-            old_pos = f.tell()
-            fio = io.TextIOWrapper(f, encoding=encoding, newline="")
-            newline, quotechar = cls.compute_newline(
-                fio, encoding, kwargs.get("quotechar", '"')
-            )
-            f.seek(old_pos)
-            splits = cls.partitioned_file(
-                f,
-                num_partitions=NPartitions.get(),
-                nrows=kwargs["nrows"] if not should_handle_skiprows else None,
-                skiprows=skiprows_partitioning,
-                quotechar=quotechar,
-                is_quoting=is_quoting,
-                encoding=encoding,
-                newline=newline,
-                header_size=header_size,
-                pre_reading=pre_reading,
-            )
-
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
             splits, callback=cls.read_callback, **partition_kwargs
         )

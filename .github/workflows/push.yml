@@ -87,17 +87,17 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py --execution=${{ matrix.execution }}
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_binary.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_default.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_iter.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_reduce.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_udf.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_window.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_concat.py --execution=${{ matrix.execution }}
@@ -135,11 +135,11 @@ jobs:
           conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: pytest modin/test/storage_formats/hdk/test_internals.py
-      - run: pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_dataframe.py
-      - run: pytest modin/pandas/test/test_io.py::TestCsv
-      - run: pytest modin/test/interchange/dataframe_protocol/test_general.py
-      - run: pytest modin/test/interchange/dataframe_protocol/hdk
+      - run: python -m pytest modin/test/storage_formats/hdk/test_internals.py
+      - run: python -m pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_dataframe.py
+      - run: python -m pytest modin/pandas/test/test_io.py::TestCsv
+      - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
+      - run: python -m pytest modin/test/interchange/dataframe_protocol/hdk
       - uses: codecov/codecov-action@v2
 
   test-all-unidist:
@@ -197,6 +197,7 @@ jobs:
           sudo docker pull postgres
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - run: MODIN_BENCHMARK_MODE=True mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_repartition.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_binary.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_default.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_indexing.py
@@ -278,22 +279,28 @@ jobs:
         run: |
           sudo docker pull postgres
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_default.py
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
+      - run: MODIN_BENCHMARK_MODE=True python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
+      - run: python -m pytest modin/pandas/test/internals/test_repartition.py
+      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_default.py
+      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
         if: matrix.engine == 'ray'
-      - run: pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
+      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
         if: matrix.engine == 'ray'
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_binary.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_default.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_iter.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_udf.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_window.py
-      - run: pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_default.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_udf.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_window.py
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_creation.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_arithmetic.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_axis_functions.py
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
       - run: python -m pytest -n 2 modin/pandas/test/test_concat.py
         if: matrix.engine == 'python'
@@ -306,8 +313,8 @@ jobs:
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: python -m pytest modin/pandas/test/test_io.py
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - run: pytest modin/test/interchange/dataframe_protocol/test_general.py
-      - run: pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
+      - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
+      - run: python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
       - uses: codecov/codecov-action@v2
 
   test-windows:
@@ -331,6 +338,10 @@ jobs:
           - modin/pandas/test/dataframe/test_window.py
           - modin/pandas/test/dataframe/test_pickle.py
           - modin/pandas/test/test_series.py
+          - modin/numpy/test/test_array.py
+          - modin/numpy/test/test_array_creation.py
+          - modin/numpy/test/test_array_arithmetic.py
+          - modin/numpy/test/test_array_axis_functions.py
           - modin/pandas/test/test_rolling.py
           - modin/pandas/test/test_concat.py
           - modin/pandas/test/test_groupby.py

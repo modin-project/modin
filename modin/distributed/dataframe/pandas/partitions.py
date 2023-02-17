@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframePartition,
     )
-    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning.partition import (
+    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframePartition,
     )
     from modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning.partition import (
