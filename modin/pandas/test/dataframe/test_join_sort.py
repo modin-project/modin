@@ -541,9 +541,10 @@ def test_sort_values(
     if ascending is None and key is not None:
         pytest.skip("Pandas bug #41318")
 
-    # If index is preserved, it could be sorted differently from Pandas.
+    # If index is preserved and `key` function is ``None``,
+    # it could be sorted along rows differently from pandas.
     # The order of NA rows, sorted by HDK, is different (but still valid)
-    # from Pandas. To make the index identical to Pandas, we add the
+    # from pandas. To make the index identical to pandas, we add the
     # index names to 'by'.
     by_index_names = (
         []

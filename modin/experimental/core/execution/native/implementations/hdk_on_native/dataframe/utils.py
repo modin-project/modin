@@ -78,3 +78,20 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
     def _set_categories(self, categories):  # noqa: GL08
         self._lazy_categories = categories
         self._table = None
+
+
+def check_join_supported(type: str):
+    """
+    Check if join type is supported by HDK.
+
+    Parameters
+    ----------
+    type : str
+        Join type.
+
+    Returns
+    -------
+    None
+    """
+    if type not in ("inner", "left"):
+        raise NotImplementedError(f"{type} join is not supported by the HDK engine")

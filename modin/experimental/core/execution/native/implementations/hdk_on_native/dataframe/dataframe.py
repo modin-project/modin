@@ -21,7 +21,7 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
 from modin.experimental.core.storage_formats.hdk.query_compiler import (
     DFAlgQueryCompiler,
 )
-from .utils import LazyProxyCategoricalDtype
+from .utils import LazyProxyCategoricalDtype, check_join_supported
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 
 from pandas.core.indexes.api import ensure_index, Index, MultiIndex, RangeIndex
@@ -853,7 +853,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
-        _check_join_supported(how)
+        check_join_supported(how)
         assert (
             left_on is not None and right_on is not None
         ), "Merge with unspecified 'left_on' or 'right_on' parameter is not supported in the engine"
@@ -1365,7 +1365,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
-        _check_join_supported(how)
+        check_join_supported(how)
         lhs = self._maybe_materialize_rowid()
         reset_index_names = False
         for rhs in other_modin_frames:
@@ -2891,8 +2891,3 @@ class HdkOnNativeDataframe(PandasDataframe):
             and index.min() == 0
             and index.max() == len(index) - 1
         )
-
-
-def _check_join_supported(type):  # noqa: GL08
-    if type not in ("inner", "left"):
-        raise NotImplementedError(f"{type} join is not supported by the HDK engine")
