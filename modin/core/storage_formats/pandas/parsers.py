@@ -147,11 +147,9 @@ class PandasParser(ClassLogger):
 
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
-    def generic_parse(fname, **kwargs):
+    def generic_parse(fname, start, end, kwargs, **rest_kw):
         warnings.filterwarnings("ignore")
         num_splits = kwargs.pop("num_splits", None)
-        start = kwargs.pop("start", None)
-        end = kwargs.pop("end", None)
         header_size = kwargs.pop("header_size", 0)
         encoding = kwargs.get("encoding", None)
         callback = kwargs.pop("callback")
@@ -301,8 +299,9 @@ class PandasParser(ClassLogger):
 class PandasCSVParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
-    def parse(fname, **kwargs):
-        return PandasParser.generic_parse(fname, **kwargs)
+    def parse(fname, start, end, kwargs, **rest_kw):
+        kwargs["callback"] = lambda *args, **kwargs: pandas.read_csv(*args, **kwargs)
+        return PandasParser.generic_parse(fname, start, end, kwargs, **rest_kw)
 
 
 @doc(_doc_pandas_parser_class, data_type="multiple CSV files simultaneously")
