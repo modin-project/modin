@@ -197,7 +197,10 @@ class PandasDataframe(ClassLogger):
         dtypes=None,
     ):
         self._partitions = partitions
-        self._index_cache = ensure_index(index) if index is not None else None
+        if isinstance(index, tuple):
+            self._index_cache = index
+        else:
+            self._index_cache = ensure_index(index) if index is not None else None
         self._columns_cache = ensure_index(columns) if columns is not None else None
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
@@ -363,7 +366,11 @@ class PandasDataframe(ClassLogger):
         pandas.Index
             An index object containing the row labels.
         """
-        if self._index_cache is None:
+        if isinstance(self._index_cache, tuple):
+            self._index_cache, self._row_lengths_cache = self._index_cache[0](
+                *self._index_cache[1]
+            )
+        elif self._index_cache is None:
             self._index_cache, row_lengths = self._compute_axis_labels_and_lengths(0)
             if self._row_lengths_cache is None:
                 self._row_lengths_cache = row_lengths
