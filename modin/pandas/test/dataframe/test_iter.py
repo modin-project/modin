@@ -110,31 +110,26 @@ def test___contains__(request, data):
         assert result == (key in modin_df)
 
 
-def test__options_display():
-    frame_data = random_state.randint(RAND_LOW, RAND_HIGH, size=(1000, 102))
+@pytest.mark.parametrize("expand_frame_repr", [False, True])
+@pytest.mark.parametrize("max_rows_columns", [(5, 5), (10, 10), (75, 75), (None, None)])
+def test__options_display(max_rows_columns, expand_frame_repr):
+    frame_data = random_state.randint(RAND_LOW, RAND_HIGH, size=(102, 102))
     pandas_df = pandas.DataFrame(frame_data)
     modin_df = pd.DataFrame(frame_data)
 
-    pandas.options.display.max_rows = 10
-    pandas.options.display.max_columns = 10
-    x = repr(pandas_df)
-    pd.options.display.max_rows = 5
-    pd.options.display.max_columns = 5
-    y = repr(modin_df)
-    assert x != y
-    pd.options.display.max_rows = 10
-    pd.options.display.max_columns = 10
-    y = repr(modin_df)
-    assert x == y
-
-    # test for old fixed max values
-    pandas.options.display.max_rows = 75
-    pandas.options.display.max_columns = 75
-    x = repr(pandas_df)
-    pd.options.display.max_rows = 75
-    pd.options.display.max_columns = 75
-    y = repr(modin_df)
-    assert x == y
+    context_arg = [
+        "display.max_rows",
+        max_rows_columns[0],
+        "display.max_columns",
+        max_rows_columns[1],
+        "display.expand_frame_repr",
+        expand_frame_repr,
+    ]
+    with pd.option_context(*context_arg):
+        modin_df_repr = repr(modin_df)
+    with pandas.option_context(*context_arg):
+        pandas_df_repr = repr(pandas_df)
+    assert modin_df_repr == pandas_df_repr
 
 
 def test___finalize__():

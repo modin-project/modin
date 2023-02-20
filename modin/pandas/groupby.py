@@ -13,6 +13,8 @@
 
 """Implement GroupBy public API as pandas does."""
 
+import warnings
+
 import numpy as np
 import pandas
 from pandas.core.apply import reconstruct_func
@@ -446,6 +448,14 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.first(**kwargs))
 
     def backfill(self, limit=None):
+        warnings.warn(
+            (
+                "backfill is deprecated and will be removed in a future version. "
+                + "Use bfill instead."
+            ),
+            FutureWarning,
+            stacklevel=2,
+        )
         return self.bfill(limit)
 
     _internal_by_cache = no_default
@@ -703,6 +713,14 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.last(**kwargs))
 
     def mad(self, **kwargs):
+        warnings.warn(
+            (
+                "The 'mad' method is deprecated and will be removed in a future version. "
+                + "To compute the same result, you may do `(df - df.mean()).abs().mean()`."
+            ),
+            FutureWarning,
+            stacklevel=2,
+        )
         return self._default_to_pandas(lambda df: df.mad(**kwargs))
 
     def rank(self, **kwargs):

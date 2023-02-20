@@ -23,7 +23,7 @@ from pandas.testing import (
     assert_index_equal,
     assert_extension_array_equal,
 )
-from pandas.core.dtypes.common import is_list_like
+from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
 from modin.config import MinPartitionSize, NPartitions
 import modin.pandas as pd
 from modin.utils import to_pandas, try_cast_to_pandas
@@ -688,6 +688,18 @@ def modin_df_almost_equals_pandas(modin_df, pandas_df):
         or diff_max < 0.0001
         or (all(modin_df.isna().all()) and all(pandas_df.isna().all()))
     )
+
+
+def try_modin_df_almost_equals_compare(df1, df2):
+    """Compare two dataframes as nearly equal if possible, otherwise compare as completely equal."""
+    # `modin_df_almost_equals_pandas` is numeric-only comparator
+    dtypes1, dtypes2 = [
+        dtype if is_list_like(dtype := df.dtypes) else [dtype] for df in (df1, df2)
+    ]
+    if all(map(is_numeric_dtype, dtypes1)) and all(map(is_numeric_dtype, dtypes2)):
+        modin_df_almost_equals_pandas(df1, df2)
+    else:
+        df_equals(df1, df2)
 
 
 def df_is_empty(df):

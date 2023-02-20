@@ -625,6 +625,10 @@ jobs:
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_groupby.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_reshape.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_general.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_creation.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_arithmetic.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_axis_functions.py
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_io.py --verbose
@@ -715,6 +719,10 @@ jobs:
         if: matrix.engine == 'python'
       - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
         if: matrix.engine != 'python'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_creation.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_arithmetic.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_axis_functions.py
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
@@ -844,6 +852,10 @@ jobs:
           - modin/pandas/test/test_reshape.py
           - modin/pandas/test/test_general.py
           - modin/pandas/test/test_io.py
+          - modin/numpy/test/test_array.py
+          - modin/numpy/test/test_array_creation.py
+          - modin/numpy/test/test_array_axis_functions.py
+          - modin/numpy/test/test_array_arithmetic.py
     env:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-windows
@@ -851,14 +863,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
           miniforge-variant: Mambaforge
@@ -894,6 +898,11 @@ jobs:
         run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
       - uses: codecov/codecov-action@v2
+      - name: Stop local ray cluster
+        run: ray stop
+        if: matrix.engine == 'ray'
+      - name: Rename the folder with conda packages so it won't be deleted, it's too slow on Windows.
+        run: mv "${CONDA_PKGS_DIR}" "${CONDA_PKGS_DIR}_do_not_cache"
 
   test-pyarrow:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]

@@ -398,6 +398,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         apply_indices=None,
         enumerate_partitions=False,
         lengths=None,
+        apply_func_args=None,
         **kwargs,
     ):
         """
@@ -423,6 +424,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
         lengths : list of ints, default: None
             The list of lengths to shuffle the object.
+        apply_func_args : list-like, optional
+            Positional arguments to pass to the `func`.
         **kwargs : dict
             Additional options that could be used by different engines.
 
@@ -450,6 +453,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         kw = {
             "num_splits": num_splits,
             "other_axis_partition": right_partitions,
+            "maintain_partitioning": keep_partitioning,
         }
         if lengths:
             kw["lengths"] = lengths
@@ -462,6 +466,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             [
                 left_partitions[i].apply(
                     preprocessed_map_func,
+                    *(apply_func_args if apply_func_args else []),
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
                     **kwargs,

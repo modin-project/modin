@@ -484,6 +484,10 @@ class Series(BasePandasDataset):
 
         data = self.to_numpy()
         if isinstance(self.dtype, pd.CategoricalDtype):
+            from modin.config import ExperimentalNumPyAPI
+
+            if ExperimentalNumPyAPI.get():
+                data = data._to_numpy()
             data = pd.Categorical(data, dtype=self.dtype)
         return data
 
@@ -1932,15 +1936,22 @@ class Series(BasePandasDataset):
         """
         Return the NumPy ndarray representing the values in this Series or Index.
         """
-        return (
-            super(Series, self)
-            .to_numpy(
-                dtype=dtype,
-                copy=copy,
-                na_value=na_value,
+        from modin.config import ExperimentalNumPyAPI
+
+        if not ExperimentalNumPyAPI.get():
+            return (
+                super(Series, self)
+                .to_numpy(
+                    dtype=dtype,
+                    copy=copy,
+                    na_value=na_value,
+                )
+                .flatten()
             )
-            .flatten()
-        )
+        else:
+            from ..numpy.arr import array
+
+            return array(_query_compiler=self._query_compiler, _ndim=1)
 
     tolist = to_list
 
@@ -2280,6 +2291,12 @@ class Series(BasePandasDataset):
         return self.__constructor__(
             query_compiler=self._query_compiler.to_numeric(**kwargs)
         )
+
+    def _qcut(self, q, **kwargs):  # noqa: PR01, RT01, D200
+        """
+        Quantile-based discretization function.
+        """
+        return self._default_to_pandas(pandas.qcut, q, **kwargs)
 
     def _reduce_dimension(self, query_compiler):
         """

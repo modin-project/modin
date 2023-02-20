@@ -50,6 +50,7 @@ from modin.utils import (
     to_pandas,
     hashable,
     MODIN_UNNAMED_SERIES_LABEL,
+    try_cast_to_pandas,
 )
 from modin.config import Engine, IsExperimental, PersistentPickle
 from .utils import (
@@ -172,18 +173,19 @@ class DataFrame(BasePandasDataset):
             )
             if isinstance(data, pandas.Index):
                 pass
-            elif is_list_like(data) and not is_dict_like(data):
+            elif (
+                is_list_like(data)
+                and not is_dict_like(data)
+                and not isinstance(data, np.ndarray)
+            ):
                 old_dtype = getattr(data, "dtype", None)
                 values = [
                     obj._to_pandas() if isinstance(obj, Series) else obj for obj in data
                 ]
-                if isinstance(data, np.ndarray):
-                    data = np.array(values, dtype=old_dtype)
-                else:
-                    try:
-                        data = type(data)(values, dtype=old_dtype)
-                    except TypeError:
-                        data = values
+                try:
+                    data = type(data)(values, dtype=old_dtype)
+                except TypeError:
+                    data = values
             elif is_dict_like(data) and not isinstance(
                 data, (pandas.Series, Series, pandas.DataFrame, DataFrame)
             ):
@@ -226,29 +228,8 @@ class DataFrame(BasePandasDataset):
         -------
         str
         """
-        from pandas.io.formats import console
-
-        num_rows = pandas.get_option("display.max_rows") or 10
-        num_cols = pandas.get_option("display.max_columns") or 20
-        if pandas.get_option("display.max_columns") is None and pandas.get_option(
-            "display.expand_frame_repr"
-        ):
-            width, _ = console.get_console_size()
-            width = min(width, len(self.columns))
-            col_counter = 0
-            i = 0
-            while col_counter < width:
-                col_counter += len(str(self.columns[i])) + 1
-                i += 1
-
-            num_cols = i
-            i = len(self.columns) - 1
-            col_counter = 0
-            while col_counter < width:
-                col_counter += len(str(self.columns[i])) + 1
-                i -= 1
-
-            num_cols += len(self.columns) - i
+        num_rows = pandas.get_option("display.max_rows") or len(self.index)
+        num_cols = pandas.get_option("display.max_columns") or len(self.columns)
         result = repr(self._build_repr_df(num_rows, num_cols))
         if len(self.index) > num_rows or len(self.columns) > num_cols:
             # The split here is so that we don't repr pandas row lengths.
@@ -334,19 +315,10 @@ class DataFrame(BasePandasDataset):
         """
         Return boolean ``Series`` denoting duplicate rows.
         """
-        import hashlib
-
         df = self[subset] if subset is not None else self
-        # if the number of columns we are checking for duplicates is larger than 1, we must
-        # hash them to generate a single value that can be compared across rows.
-        if len(df.columns) > 1:
-            hashed = df.apply(
-                lambda s: hashlib.new("md5", str(tuple(s)).encode()).hexdigest(), axis=1
-            ).to_frame()
-        else:
-            hashed = df
-        duplicates = hashed.apply(lambda s: s.duplicated(keep=keep)).squeeze(axis=1)
-        # remove Series name which was assigned automatically by .apply
+        new_qc = df._query_compiler.duplicated(keep=keep)
+        duplicates = self._reduce_dimension(new_qc)
+        # remove Series name which was assigned automatically by .apply in QC
         duplicates.name = None
         return duplicates
 
@@ -2088,13 +2060,9 @@ class DataFrame(BasePandasDataset):
                 frame = self
             else:
                 frame = self.copy()
-            if not all(
-                isinstance(col, (pandas.Index, Series, np.ndarray, list, Iterator))
-                for col in keys
-            ):
-                if drop:
-                    keys = [frame.pop(k) if not is_list_like(k) else k for k in keys]
-                keys = [k._to_pandas() if isinstance(k, Series) else k for k in keys]
+            if drop:
+                keys = [k if is_list_like(k) else frame.pop(k) for k in keys]
+            keys = try_cast_to_pandas(keys)
             # These are single-threaded objects, so we might as well let pandas do the
             # calculation so that it matches.
             frame.index = (
