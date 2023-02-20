@@ -1725,6 +1725,8 @@ def test_xs():
     eval_general(
         modin_df, pandas_df, lambda df: df.xs("cat", level=1, drop_level=False)
     )
+    eval_general(modin_df, pandas_df, lambda df: df.xs(("mammal", "cat")))
+    eval_general(modin_df, pandas_df, lambda df: df.xs(("mammal", "cat"), drop_level=False))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
