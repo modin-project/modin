@@ -3685,7 +3685,7 @@ class BasePandasDataset(ClassLogger):
         Return cross-section from the Series/DataFrame.
         """
         axis = self._get_axis_number(axis)
-        labels = self.axes[axis]
+        labels = self.columns if axis else self.index
 
         if isinstance(key, list):
             # deprecated in pandas, to be removed in 2.0
@@ -3729,12 +3729,9 @@ class BasePandasDataset(ClassLogger):
 
             if isinstance(loc, np.ndarray):
                 if loc.dtype == np.bool_:
-                    (inds,) = loc.nonzero()
-                    # Note: pandas uses self._take_with_is_copy here
-                    return self.take(inds, axis=axis)
-                else:
-                    # Note: pandas uses self._take_with_is_copy here
-                    return self.take(loc, axis=axis)
+                    (loc,) = loc.nonzero()
+                # Note: pandas uses self._take_with_is_copy here
+                return self.take(loc, axis=axis)
 
             if not is_scalar(loc):
                 new_index = index[loc]
