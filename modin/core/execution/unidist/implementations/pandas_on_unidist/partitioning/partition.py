@@ -54,9 +54,8 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         self._ip_cache = ip
 
         if self._is_debug:
-            logger = get_logger()
             self._identity = uuid.uuid4().hex
-            logger.debug(
+            get_logger().debug(
                 "Partition ID: {}, Height: {}, Width: {}, Node IP: {}".format(
                     self._identity,
                     str(self._length_cache),

@@ -391,5 +391,4 @@ class PandasDataframePartition(ABC):  # pragma: no cover
 
     @property
     def _is_debug(self):  # noqa: GL08
-        logger = get_logger()
-        return logger.isEnabledFor(logging.DEBUG)
+        return get_logger().isEnabledFor(logging.DEBUG)
