@@ -22,7 +22,6 @@ from modin.core.execution.ray.common import RayWrapper
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
 from modin.logging import get_logger
-import logging
 
 compute_sliced_len = ray.remote(compute_sliced_len)
 
@@ -46,11 +45,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
     """
 
     execution_wrapper = RayWrapper
-
-    @property
-    def _debug_level(self):
-        logger = get_logger()
-        return logger.isEnabledFor(logging.DEBUG)
 
     def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
         assert isinstance(data, ObjectIDType)

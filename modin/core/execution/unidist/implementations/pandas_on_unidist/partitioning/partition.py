@@ -52,17 +52,18 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         self._length_cache = length
         self._width_cache = width
         self._ip_cache = ip
-        self._identity = uuid.uuid4().hex
 
-        logger = get_logger()
-        logger.debug(
-            "Partition ID: {}, Height: {}, Width: {}, Node IP: {}".format(
-                self._identity,
-                str(self._length_cache),
-                str(self._width_cache),
-                str(self._ip_cache),
+        if self._debug_level:
+            logger = get_logger()
+            self._identity = uuid.uuid4().hex
+            logger.debug(
+                "Partition ID: {}, Height: {}, Width: {}, Node IP: {}".format(
+                    self._identity,
+                    str(self._length_cache),
+                    str(self._width_cache),
+                    str(self._ip_cache),
+                )
             )
-        )
 
     def get(self):
         """
@@ -74,11 +75,11 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             The object from the object store.
         """
         logger = get_logger()
-        logger.debug(f"ENTER::Partition.get::{self._identity}")
+        self._debug_level and logger.debug(f"ENTER::Partition.get::{self._identity}")
         if len(self.call_queue):
             self.drain_call_queue()
         result = UnidistWrapper.materialize(self._data)
-        logger.debug(f"EXIT::Partition.get::{self._identity}")
+        self._debug_level and logger.debug(f"EXIT::Partition.get::{self._identity}")
         return result
 
     def apply(self, func, *args, **kwargs):
@@ -105,30 +106,36 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         logger = get_logger()
-        logger.debug(f"ENTER::Partition.apply::{self._identity}")
+        self._debug_level and logger.debug(f"ENTER::Partition.apply::{self._identity}")
         data = self._data
         call_queue = self.call_queue + [[func, args, kwargs]]
         if len(call_queue) > 1:
-            logger.debug(f"SUBMIT::_apply_list_of_funcs::{self._identity}")
+            self._debug_level and logger.debug(
+                f"SUBMIT::_apply_list_of_funcs::{self._identity}"
+            )
             result, length, width, ip = _apply_list_of_funcs.remote(call_queue, data)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             result, length, width, ip = _apply_func.remote(data, func, *args, **kwargs)
-            logger.debug(f"SUBMIT::_apply_func::{self._identity}")
-        logger.debug(f"EXIT::Partition.apply::{self._identity}")
+            self._debug_level and logger.debug(f"SUBMIT::_apply_func::{self._identity}")
+        self._debug_level and logger.debug(f"EXIT::Partition.apply::{self._identity}")
         return self.__constructor__(result, length, width, ip)
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
         logger = get_logger()
-        logger.debug(f"ENTER::Partition.drain_call_queue::{self._identity}")
+        self._debug_level and logger.debug(
+            f"ENTER::Partition.drain_call_queue::{self._identity}"
+        )
         if len(self.call_queue) == 0:
             return
         data = self._data
         call_queue = self.call_queue
         if len(call_queue) > 1:
-            logger.debug(f"SUBMIT::_apply_list_of_funcs::{self._identity}")
+            self._debug_level and logger.debug(
+                f"SUBMIT::_apply_list_of_funcs::{self._identity}"
+            )
             (
                 self._data,
                 new_length,
@@ -139,14 +146,16 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             func, f_args, f_kwargs = call_queue[0]
-            logger.debug(f"SUBMIT::_apply_func::{self._identity}")
+            self._debug_level and logger.debug(f"SUBMIT::_apply_func::{self._identity}")
             (
                 self._data,
                 new_length,
                 new_width,
                 self._ip_cache,
             ) = _apply_func.remote(data, func, *f_args, **f_kwargs)
-        logger.debug(f"EXIT::Partition.drain_call_queue::{self._identity}")
+        self._debug_level and logger.debug(
+            f"EXIT::Partition.drain_call_queue::{self._identity}"
+        )
         self.call_queue = []
 
         # GH#4732 if we already have evaluated width/length cached as ints,
@@ -182,7 +191,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             A new ``PandasOnUnidistDataframePartition`` object.
         """
         logger = get_logger()
-        logger.debug(f"ENTER::Partition.mask::{self._identity}")
+        self._debug_level and logger.debug(f"ENTER::Partition.mask::{self._identity}")
         new_obj = super().mask(row_labels, col_labels)
         if isinstance(row_labels, slice) and unidist.is_object_ref(self._length_cache):
             if row_labels == slice(None):
@@ -200,7 +209,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
                 new_obj._width_cache = compute_sliced_len.remote(
                     col_labels, self._width_cache
                 )
-        logger.debug(f"EXIT::Partition.mask::{self._identity}")
+        self._debug_level and logger.debug(f"EXIT::Partition.mask::{self._identity}")
         return new_obj
 
     @classmethod

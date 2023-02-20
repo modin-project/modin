@@ -15,6 +15,7 @@
 
 from abc import ABC
 from copy import copy
+import logging
 
 import pandas
 from pandas.api.types import is_scalar
@@ -367,13 +368,13 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             A list of partitions.
         """
         logger = get_logger()
-        logger.debug(f"ENTER::Partition.split::{self._identity}")
+        self._debug_level and logger.debug(f"ENTER::Partition.split::{self._identity}")
 
-        logger.debug(f"SUBMIT::_split_df::{self._identity}")
+        self._debug_level and logger.debug(f"SUBMIT::_split_df::{self._identity}")
         outputs = self.execution_wrapper.deploy(
             split_func, [self._data] + list(args), num_returns=num_splits
         )
-        logger.debug(f"EXIT::Partition.split::{self._identity}")
+        self._debug_level and logger.debug(f"EXIT::Partition.split::{self._identity}")
         return [self.__constructor__(output) for output in outputs]
 
     @classmethod
@@ -387,3 +388,8 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             New `PandasDataframePartition` object.
         """
         return cls.put(pandas.DataFrame(), 0, 0)
+
+    @property
+    def _debug_level(self):
+        logger = get_logger()
+        return logger.isEnabledFor(logging.DEBUG)
