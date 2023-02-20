@@ -368,13 +368,13 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             A list of partitions.
         """
         logger = get_logger()
-        self._debug_level and logger.debug(f"ENTER::Partition.split::{self._identity}")
+        self._is_debug and logger.debug(f"ENTER::Partition.split::{self._identity}")
 
-        self._debug_level and logger.debug(f"SUBMIT::_split_df::{self._identity}")
+        self._is_debug and logger.debug(f"SUBMIT::_split_df::{self._identity}")
         outputs = self.execution_wrapper.deploy(
             split_func, [self._data] + list(args), num_returns=num_splits
         )
-        self._debug_level and logger.debug(f"EXIT::Partition.split::{self._identity}")
+        self._is_debug and logger.debug(f"EXIT::Partition.split::{self._identity}")
         return [self.__constructor__(output) for output in outputs]
 
     @classmethod
@@ -390,6 +390,6 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         return cls.put(pandas.DataFrame(), 0, 0)
 
     @property
-    def _debug_level(self):  # noqa: GL08
+    def _is_debug(self):  # noqa: GL08
         logger = get_logger()
         return logger.isEnabledFor(logging.DEBUG)
