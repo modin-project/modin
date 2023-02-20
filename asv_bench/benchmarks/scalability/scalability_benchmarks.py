@@ -68,3 +68,6 @@ class TimeToPandas:
     def time_to_pandas(self, shape, cpus):
         # to_pandas is already synchronous
         to_pandas(self.data)
+
+
+from ..utils import setup  # noqa: E402, F401
