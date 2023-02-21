@@ -1034,8 +1034,8 @@ class BasePandasDataset(ClassLogger):
                 FutureWarning,
                 stacklevel=2,
             )
-            left = True if isinstance(include_start, NoDefault) else include_start
-            right = True if isinstance(include_end, NoDefault) else include_end
+            left = True if include_start is no_default else include_start
+            right = True if include_end is no_default else include_end
 
             inc_dict = {
                 (True, True): "both",
