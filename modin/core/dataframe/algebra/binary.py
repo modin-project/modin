@@ -252,7 +252,7 @@ class Binary(Operator):
                         if (
                             len(self_columns) == 1
                             and len(other.columns) == 1
-                            and query_compiler.columns.equal(other.columns)
+                            and query_compiler.columns.equals(other.columns)
                         ):
                             shape_hint = "column"
                     return query_compiler.__constructor__(
