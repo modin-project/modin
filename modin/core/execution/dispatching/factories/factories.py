@@ -469,16 +469,6 @@ class PandasOnDaskFactory(BaseFactory):
         cls.io_cls = PandasOnDaskIO
 
 
-@doc(_doc_factory_class, execution_name="Client")
-class ClientFactory(BaseFactory):
-    @classmethod
-    @doc(_doc_factory_prepare_method, io_module_name="`Client`")
-    def prepare(cls):
-        from modin.core.execution.client.io import ClientIO
-
-        cls.io_cls = ClientIO
-
-
 @doc(_doc_abstract_factory_class, role="experimental")
 class ExperimentalBaseFactory(BaseFactory):
     @classmethod
