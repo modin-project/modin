@@ -23,8 +23,6 @@ from modin.config import NPartitions
 class CustomTextExperimentalDispatcher(TextFileDispatcher):
     """Class handles utils for reading custom text files."""
 
-    read_callback = None
-
     @classmethod
     def _read(cls, filepath_or_buffer, columns, custom_parser, **kwargs):
         r"""
