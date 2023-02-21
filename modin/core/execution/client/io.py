@@ -22,7 +22,7 @@ class ClientIO(BaseIO):
     """Factory providing methods for performing I/O operations using a given Client as the execution engine."""
 
     _server_conn = None
-    _data_conn = None
+    _data_conn = []
     query_compiler_cls = ClientQueryCompiler
 
     @classmethod
@@ -35,10 +35,14 @@ class ClientIO(BaseIO):
         conn : Any
             Connection object that implements various methods.
         """
-        cls._server_conn = conn
+        if cls._server_conn is not None:
+            if cls._server_conn != conn:
+                raise PonderReinitError("Ponder Connection already initialized.")
+        else:
+            cls._server_conn = conn
 
     @classmethod
-    def set_data_connection(cls, conn):
+    def add_data_connection(cls, conn):
         """
         Set the data connection for the I/O object.
 
@@ -47,7 +51,7 @@ class ClientIO(BaseIO):
         conn : Any
             Connection object that is implementation specific.
         """
-        cls._data_conn = conn
+        cls._data_conn.append(conn)
 
     @classmethod
     def read_csv(cls, filepath_or_buffer, **kwargs):
@@ -78,8 +82,10 @@ class ClientIO(BaseIO):
             raise ConnectionError(
                 "Missing server connection, did you initialize the connection?"
             )
+        # with pushdown - the csv file has to move to some database.  Assume for now
+        # that it is the first database the user connected to.
         return cls.query_compiler_cls(
-            cls._server_conn.read_csv(cls._data_conn, filepath_or_buffer, **kwargs)
+            cls._server_conn.read_csv(cls._data_conn[0], filepath_or_buffer, **kwargs)
         )
 
     @classmethod
@@ -109,15 +115,12 @@ class ClientIO(BaseIO):
             raise ConnectionError(
                 "Cannot connect with parameter 'auto' because connection is not set. Did you initialize it?"
             )
-        if cls._data_conn is None:
-            cls._data_conn = con
         if cls._server_conn is None:
             raise ConnectionError(
                 "Missing server connection, did you initialize the connection?"
             )
-        return cls.query_compiler_cls(
-            cls._server_conn.read_sql(sql, cls._data_conn, **kwargs)
-        )
+        cls._data_conn.append(con)
+        return cls.query_compiler_cls(cls._server_conn.read_sql(sql, con, **kwargs))
 
     @classmethod
     def to_sql(cls, qc, **kwargs):
