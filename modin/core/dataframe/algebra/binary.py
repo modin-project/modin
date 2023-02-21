@@ -15,6 +15,7 @@
 
 import numpy as np
 import pandas
+from pandas.api.types import is_scalar
 
 from .operator import Operator
 
@@ -195,6 +196,7 @@ class Binary(Operator):
                 Result of binary function.
             """
             axis = kwargs.get("axis", 0)
+            shape_hint = None
             if isinstance(other, type(query_compiler)):
                 if broadcast:
                     assert (
@@ -206,6 +208,18 @@ class Binary(Operator):
                     # column or row as a single-column Modin DataFrame
                     if axis == 1:
                         other = other.transpose()
+
+                    if (
+                        query_compiler._modin_frame._columns_cache is not None
+                        and other._modin_frame._columns_cache is not None
+                    ):
+                        if (
+                            len(query_compiler.columns) == 1
+                            and len(other.columns) == 1
+                            and len(query_compiler.columns.difference(other.columns))
+                            == 0
+                        ):
+                            shape_hint = "column"
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.broadcast_apply(
                             axis,
@@ -216,7 +230,8 @@ class Binary(Operator):
                             join_type=join_type,
                             labels=labels,
                             dtypes=dtypes,
-                        )
+                        ),
+                        shape_hint=shape_hint,
                     )
                 else:
                     if (
@@ -230,13 +245,25 @@ class Binary(Operator):
                         elif infer_dtypes == "float":
                             dtypes = compute_dtypes_common_cast(query_compiler, other)
                             dtypes = dtypes.apply(coerce_int_to_float64)
+                    if (
+                        query_compiler._modin_frame._columns_cache is not None
+                        and other._modin_frame._columns_cache is not None
+                    ):
+                        if (
+                            len(query_compiler.columns) == 1
+                            and len(other.columns) == 1
+                            and len(query_compiler.columns.difference(other.columns))
+                            == 0
+                        ):
+                            shape_hint = "column"
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.n_ary_op(
                             lambda x, y: func(x, y, *args, **kwargs),
                             [other._modin_frame],
                             join_type=join_type,
                             dtypes=dtypes,
-                        )
+                        ),
+                        shape_hint=shape_hint,
                     )
             else:
                 # TODO: it's possible to chunk the `other` and broadcast them to partitions
@@ -250,10 +277,18 @@ class Binary(Operator):
                         dtypes=dtypes,
                     )
                 else:
+                    if (
+                        query_compiler._modin_frame._columns_cache is not None
+                        and len(query_compiler.columns) == 1
+                        and is_scalar(other)
+                    ):
+                        shape_hint = "column"
                     new_modin_frame = query_compiler._modin_frame.map(
                         lambda df: func(df, other, *args, **kwargs),
                         dtypes=dtypes,
                     )
-                return query_compiler.__constructor__(new_modin_frame)
+                return query_compiler.__constructor__(
+                    new_modin_frame, shape_hint=shape_hint
+                )
 
         return caller
