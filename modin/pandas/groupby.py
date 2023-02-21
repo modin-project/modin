@@ -128,7 +128,7 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def ffill(self, limit=None):
-        return self._default_to_pandas(lambda df: df.ffill(limit=limit))
+        return self.fillna(limit=limit, method='ffill')
 
     def sem(self, ddof=1):
         return self._wrap_aggregation(
@@ -489,7 +489,7 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def bfill(self, limit=None):
-        return self._default_to_pandas(lambda df: df.bfill(limit=limit))
+        return self.fillna(limit=limit, method='bfill')
 
     def idxmin(self):
         return self._default_to_pandas(lambda df: df.idxmin())
@@ -650,7 +650,7 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.corrwith)
 
     def pad(self, limit=None):
-        return self._default_to_pandas(lambda df: df.pad(limit=limit))
+        return self.fillna(limit=limit, method='pad')
 
     def max(self, numeric_only=False, min_count=-1):
         return self._wrap_aggregation(
@@ -840,7 +840,7 @@ class DataFrameGroupBy(ClassLogger):
             squeeze=self._squeeze,
             **new_groupby_kwargs,
         )
-        return work_object._check_index(
+        return work_object._check_index_name(
             work_object._wrap_aggregation(
                 type(self._query_compiler).groupby_fillna,
                 numeric_only=False,
