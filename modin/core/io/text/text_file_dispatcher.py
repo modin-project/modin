@@ -1044,7 +1044,6 @@ class TextFileDispatcher(FileDispatcher):
         if not use_modin_impl:
             return cls.single_worker_read(
                 filepath_or_buffer,
-                callback=cls.read_callback,
                 reason=fallback_reason,
                 **kwargs,
             )
