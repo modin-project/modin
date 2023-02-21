@@ -27,17 +27,18 @@ PartitionClass = (
 )
 
 if Engine.get() == "Ray":
-    import ray
+    from modin.core.execution.ray.common import RayWrapper
+    from ray import ObjectRef
 
-    put_func = ray.put
-    get_func = ray.get
-    FutureType = ray.ObjectRef
+    put_func = RayWrapper.put
+    get_func = RayWrapper.materialize
+    FutureType = ObjectRef
 elif Engine.get() == "Dask":
     from modin.core.execution.dask.common import DaskWrapper
     from distributed import Future
 
-    put_func = lambda x: DaskWrapper.put(x)  # noqa: E731
-    get_func = lambda x: DaskWrapper.materialize(x)  # noqa: E731
+    put_func = DaskWrapper.put
+    get_func = DaskWrapper.materialize
     FutureType = Future
 elif Engine.get() == "Python":
     put_func = lambda x: x  # noqa: E731

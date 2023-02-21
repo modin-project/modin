@@ -184,7 +184,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             call_queue=self.call_queue,
         )
 
-    _iloc = ray.put(PandasDataframePartition._iloc)
+    _iloc = execution_wrapper.put(PandasDataframePartition._iloc)
 
     def mask(self, row_labels, col_labels):
         """
@@ -243,7 +243,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         PandasOnRayDataframePartition
             A new ``PandasOnRayDataframePartition`` object.
         """
-        return cls(ray.put(obj), len(obj.index), len(obj.columns))
+        return cls(cls.execution_wrapper.put(obj), len(obj.index), len(obj.columns))
 
     @classmethod
     def preprocess_func(cls, func):
@@ -260,7 +260,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         ray.ObjectRef
             A reference to `func`.
         """
-        return ray.put(func)
+        return cls.execution_wrapper.put(func)
 
     def length(self, materialize=True):
         """

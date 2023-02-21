@@ -21,12 +21,13 @@ from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
 from modin.core.execution.ray.common.utils import deserialize, wait
+from modin.core.execution.ray.common import RayWrapper
 from .partition import PandasOnRayDataframePartition
 from modin.utils import _inherit_docstrings
 
 
-_DEPLOY_AXIS_FUNC = ray.put(PandasDataframeAxisPartition.deploy_axis_func)
-_DRAIN = ray.put(PandasDataframeAxisPartition.drain)
+_DEPLOY_AXIS_FUNC = RayWrapper.put(PandasDataframeAxisPartition.deploy_axis_func)
+_DRAIN = RayWrapper.put(PandasDataframeAxisPartition.drain)
 
 
 class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
