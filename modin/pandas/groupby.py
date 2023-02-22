@@ -672,7 +672,13 @@ class DataFrameGroupBy(DataFrameGroupByCompat):
         )
 
     def get_group(self, name, obj=None):
-        return self._default_to_pandas(lambda df: df.get_group(name, obj=obj))
+        return self._check_index(
+            self._wrap_aggregation(
+                qc_method=type(self._query_compiler).groupby_get_group,
+                numeric_only=False,
+                agg_kwargs=dict(name=name, obj=obj),
+            )
+        )
 
     def __len__(self):
         return len(self.indices)
@@ -1332,6 +1338,7 @@ class SeriesGroupBy(SeriesGroupByCompat, DataFrameGroupBy):
                 numeric_only=True,
             )
         )
+
 
 if IsExperimental.get():
     from modin.experimental.cloud.meta_magic import make_wrapped_class
