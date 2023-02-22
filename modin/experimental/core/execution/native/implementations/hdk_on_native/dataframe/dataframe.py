@@ -123,8 +123,10 @@ class HdkOnNativeDataframe(PandasDataframe):
     _table_cols : list of str
         A list of all frame's columns. It includes index columns if any. Index
         columns are always in the head of the list.
-    _index_cache : pandas.Index, tuple or None
+    _index_cache : pandas.Index, callable or None
         Materialized index of the frame or None when index is not materialized.
+        If ``callable() -> (pandas.Index, list)`` type then the calculation will be
+        done in `__init__`.
     _has_unsupported_data : bool
         True for frames holding data not supported by Arrow or HDK storage format.
         Operations on such frames are not allowed and should be defaulted
@@ -165,8 +167,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         self.id = str(type(self)._next_id[0])
         type(self)._next_id[0] += 1
 
-        if isinstance(index, tuple):
-            index = index[0](*index[1])
+        if callable(index):
+            index, row_lengths = index()
         if index is not None:
             index = ensure_index(index)
         columns = ensure_index(columns)

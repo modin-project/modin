@@ -154,9 +154,11 @@ class PandasDataframe(ClassLogger):
     ----------
     partitions : np.ndarray
         A 2D NumPy array of partitions.
-    index : sequence, optional
+    index : sequence or callable, optional
         The index for the dataframe. Converted to a ``pandas.Index``.
         Is computed from partitions on demand if not specified.
+        If ``callable() -> (pandas.Index, list)`` type, then the calculation will be
+        delayed until `self.index` is called.
     columns : sequence, optional
         The columns object for the dataframe. Converted to a ``pandas.Index``.
         Is computed from partitions on demand if not specified.
@@ -197,7 +199,7 @@ class PandasDataframe(ClassLogger):
         dtypes=None,
     ):
         self._partitions = partitions
-        if isinstance(index, tuple):
+        if callable(index):
             self._index_cache = index
         else:
             self._index_cache = ensure_index(index) if index is not None else None
@@ -347,11 +349,11 @@ class PandasDataframe(ClassLogger):
 
         Returns
         -------
-        pandas.Index, tuple or None
+        pandas.Index, callable or None
             If there is an pandas.Index in the cache, then copying occurs.
         """
         idx_cache = self._index_cache
-        if idx_cache is not None and not isinstance(idx_cache, tuple):
+        if idx_cache is not None and not callable(idx_cache):
             idx_cache = idx_cache.copy()
         return idx_cache
 
@@ -371,7 +373,7 @@ class PandasDataframe(ClassLogger):
 
         Returns
         -------
-        pandas.Index, tuple or None
+        pandas.Index or None
             If there is an pandas.Index in the cache, then copying occurs.
         """
         columns_cache = self._columns_cache
@@ -414,10 +416,8 @@ class PandasDataframe(ClassLogger):
         pandas.Index
             An index object containing the row labels.
         """
-        if isinstance(self._index_cache, tuple):
-            self._index_cache, self._row_lengths_cache = self._index_cache[0](
-                *self._index_cache[1]
-            )
+        if callable(self._index_cache):
+            self._index_cache, self._row_lengths_cache = self._index_cache()
             self._index_cache = ensure_index(self._index_cache)
         elif self._index_cache is None:
             self._index_cache, row_lengths = self._compute_axis_labels_and_lengths(0)
@@ -454,7 +454,7 @@ class PandasDataframe(ClassLogger):
         if self._index_cache is None:
             self._index_cache = ensure_index(new_index)
         else:
-            if isinstance(self._index_cache, tuple):
+            if callable(self._index_cache):
                 # trigger
                 _ = self.index
                 # In the case of a tuple, we can’t wipe the cache without synchronizing it

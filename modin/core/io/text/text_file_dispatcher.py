@@ -930,7 +930,7 @@ class TextFileDispatcher(FileDispatcher):
 
         new_frame = cls.frame_cls(
             partition_ids,
-            (cls._define_index, (index_ids, index_name)),
+            lambda: cls._define_index(index_ids, index_name),
             column_names,
             None,
             column_widths,
