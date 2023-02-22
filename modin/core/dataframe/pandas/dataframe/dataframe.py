@@ -332,18 +332,48 @@ class PandasDataframe(ClassLogger):
     _columns_cache = None
 
     def has_index_cache(self):
+        """
+        Check if the index cache exists.
+
+        Returns
+        -------
+        bool
+        """
         return self._index_cache is not None
 
     def copy_index_cache(self):
+        """
+        Copy the index cache.
+
+        Returns
+        -------
+        pandas.Index, tuple or None
+            If there is an pandas.Index in the cache, then copying occurs.
+        """
         idx_cache = self._index_cache
         if idx_cache is not None and not isinstance(idx_cache, tuple):
             idx_cache = idx_cache.copy()
         return idx_cache
 
     def has_columns_cache(self):
+        """
+        Check if the columns cache exists.
+
+        Returns
+        -------
+        bool
+        """
         return self._columns_cache is not None
 
     def copy_columns_cache(self):
+        """
+        Copy the columns cache.
+
+        Returns
+        -------
+        pandas.Index, tuple or None
+            If there is an pandas.Index in the cache, then copying occurs.
+        """
         columns_cache = self._columns_cache
         if columns_cache is not None:
             columns_cache = columns_cache.copy()
