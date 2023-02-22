@@ -218,7 +218,7 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def ffill(self, limit=None):
-        return self.fillna(limit=limit, method='ffill')
+        return self.fillna(limit=limit, method="ffill")
 
     def sem(self, ddof=1):
         return self._wrap_aggregation(
@@ -605,7 +605,7 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def bfill(self, limit=None):
-        return self.fillna(limit=limit, method='bfill')
+        return self.fillna(limit=limit, method="bfill")
 
     def idxmin(self):
         return self._default_to_pandas(lambda df: df.idxmin())
@@ -774,7 +774,7 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.corrwith)
 
     def pad(self, limit=None):
-        return self.fillna(limit=limit, method='pad')
+        return self.fillna(limit=limit, method="pad")
 
     def max(self, numeric_only=False, min_count=-1):
         return self._wrap_aggregation(
@@ -791,7 +791,13 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def get_group(self, name, obj=None):
-        return self._default_to_pandas(lambda df: df.get_group(name, obj=obj))
+        return self._check_index(
+            self._wrap_aggregation(
+                qc_method=type(self._query_compiler).groupby_get_group,
+                numeric_only=False,
+                agg_kwargs=dict(name=name, obj=obj),
+            )
+        )
 
     def __len__(self):
         return len(self.indices)
