@@ -2268,6 +2268,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_modin_frame, shape_hint="column")
 
+    # END __setitem__ methods
+
     def __validate_bool_indexer(self, indexer):
         if len(indexer) != len(self.index):
             raise ValueError(
