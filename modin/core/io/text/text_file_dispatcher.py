@@ -42,10 +42,6 @@ IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
 class TextFileDispatcher(FileDispatcher):
     """Class handles utils for reading text formats files."""
 
-    # The variable allows to set a function with which one partition will be read;
-    # Used in dispatchers and parsers
-    read_callback = None
-
     @classmethod
     def get_path_or_buffer(cls, filepath_or_buffer):
         """
@@ -1033,7 +1029,6 @@ class TextFileDispatcher(FileDispatcher):
         if not use_modin_impl:
             return cls.single_worker_read(
                 filepath_or_buffer,
-                callback=cls.read_callback,
                 reason=fallback_reason,
                 **kwargs,
             )
@@ -1121,7 +1116,7 @@ class TextFileDispatcher(FileDispatcher):
             compression=compression_infered,
         )
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
-            splits, callback=cls.read_callback, **partition_kwargs
+            splits, **partition_kwargs
         )
 
         new_query_compiler = cls._get_new_qc(
