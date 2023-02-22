@@ -455,11 +455,11 @@ class PandasDataframe(ClassLogger):
             self._index_cache = ensure_index(new_index)
         else:
             if callable(self._index_cache):
-                # trigger
+                # trigger `._index_cache` computation from callable
                 _ = self.index
-                # In the case of a tuple, we can’t wipe the cache without synchronizing it
-                # with the internal index, since it is used in the case when the external
-                # index cannot be restored from the internal one.
+            # In the case of deferred index, we can’t wipe the cache without synchronizing it
+            # with the internal index. If we do this, we may lose information.
+            if self._deferred_index:
                 self._propagate_index_objs(axis=0)
             new_index = self._validate_set_axis(new_index, self._index_cache)
             self._index_cache = new_index
