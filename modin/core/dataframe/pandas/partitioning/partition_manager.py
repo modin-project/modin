@@ -445,7 +445,14 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             num_splits = NPartitions.get()
         preprocessed_map_func = cls.preprocess_func(apply_func)
         left_partitions = cls.axis_partition(left, axis)
-        right_partitions = None if right is None else cls.axis_partition(right, axis)
+        if right is None:
+            right_partitions = None
+        else:
+            right_partitions = cls.axis_partition(right, axis)
+            if len(left_partitions) != len(right_partitions):
+                raise RuntimeError(
+                    "Partitioning of the left and right frames is different."
+                )
         # For mapping across the entire axis, we don't maintain partitioning because we
         # may want to line to partitioning up with another BlockPartitions object. Since
         # we don't need to maintain the partitioning, this gives us the opportunity to
