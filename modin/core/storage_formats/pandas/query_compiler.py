@@ -2266,7 +2266,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns=self._modin_frame._columns_cache,
             keep_partitioning=False,
         )
-        return self.__constructor__(new_modin_frame, shape_hint="column")
+        return self.__constructor__(new_modin_frame)
 
     # END __setitem__ methods
 
