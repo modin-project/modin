@@ -949,6 +949,7 @@ _GROUPBY_FORWARDING_METHODS = frozenset(
         "tail",
         "nth",
         "ngroup",
+        "get_group",
         "std",
         "sem",
         "rank",
