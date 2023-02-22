@@ -184,6 +184,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             call_queue=self.call_queue,
         )
 
+    # If Ray has not been initialized yet by Modin,
+    # it will be initialized when calling `RayWrapper.put`.
     _iloc = execution_wrapper.put(PandasDataframePartition._iloc)
 
     def mask(self, row_labels, col_labels):

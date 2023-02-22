@@ -26,6 +26,8 @@ from .partition import PandasOnRayDataframePartition
 from modin.utils import _inherit_docstrings
 
 
+# If Ray has not been initialized yet by Modin,
+# it will be initialized when calling `RayWrapper.put`.
 _DEPLOY_AXIS_FUNC = RayWrapper.put(PandasDataframeAxisPartition.deploy_axis_func)
 _DRAIN = RayWrapper.put(PandasDataframeAxisPartition.drain)
 
