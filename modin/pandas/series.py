@@ -1428,7 +1428,7 @@ class Series(SeriesCompat, BasePandasDataset):
         copy = kwargs.pop("copy", True)
         limit = kwargs.pop("limit", None)
         tolerance = kwargs.pop("tolerance", None)
-        fill_value = kwargs.pop("fill_value", None)
+        fill_value = kwargs.pop("fill_value", np.nan)
         if kwargs:
             raise TypeError(
                 "reindex() got an unexpected keyword "
