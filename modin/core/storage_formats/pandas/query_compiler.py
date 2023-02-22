@@ -263,7 +263,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         bool
         """
         frame = self._modin_frame
-        return frame._index_cache is None or frame._columns_cache is None
+        return not frame.has_index_cache() or not frame.has_columns_cache()
 
     def finalize(self):
         self._modin_frame.finalize()
@@ -484,7 +484,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # it's fine too, we can also decide that by columns, which tend to be already
             # materialized quite often compared to the indexes.
             keep_index = False
-            if self._modin_frame._index_cache is not None:
+            if self._modin_frame.has_index_cache():
                 if left_on is not None and right_on is not None:
                     keep_index = any(
                         o in self.index.names
@@ -582,8 +582,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     df.index = pandas.RangeIndex(start, stop)
                 return df
 
-            if self._modin_frame._columns_cache is not None and kwargs["drop"]:
-                new_columns = self._modin_frame._columns_cache
+            if self._modin_frame.has_columns_cache() and kwargs["drop"]:
+                new_columns = self._modin_frame.copy_columns_cache()
             else:
                 new_columns = None
 
@@ -2439,7 +2439,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         def _compute_duplicated(df):
             return df.duplicated(**kwargs).to_frame()
 
-        new_index = self._modin_frame._index_cache
+        new_index = self._modin_frame.copy_index_cache()
         new_columns = [MODIN_UNNAMED_SERIES_LABEL]
         if len(self.columns) > 1:
             # if the number of columns we are checking for duplicates is larger than 1,

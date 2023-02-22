@@ -5115,8 +5115,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                 new_query_compiler._modin_frame.apply_full_axis(
                     _ax,
                     lambda df: df,
-                    new_index=self._modin_frame._index_cache,
-                    new_columns=self._modin_frame._columns_cache,
+                    new_index=self._modin_frame.copy_index_cache(),
+                    new_columns=self._modin_frame.copy_columns_cache(),
                     keep_partitioning=False,
                     sync_labels=False,
                 )

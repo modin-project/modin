@@ -218,8 +218,8 @@ class PandasDataframe(ClassLogger):
             num_rows = sum(self._row_lengths_cache)
             if num_rows > 0:
                 ErrorMessage.catch_bugs_and_request_email(
-                    num_rows != len(self._index_cache),
-                    f"Row lengths: {num_rows} != {len(self._index_cache)}",
+                    num_rows != len(self.index),
+                    f"Row lengths: {num_rows} != {len(self.index)}",
                 )
             ErrorMessage.catch_bugs_and_request_email(
                 any(val < 0 for val in self._row_lengths_cache),
@@ -232,8 +232,8 @@ class PandasDataframe(ClassLogger):
             num_columns = sum(self._column_widths_cache)
             if num_columns > 0:
                 ErrorMessage.catch_bugs_and_request_email(
-                    num_columns != len(self._columns_cache),
-                    f"Column widths: {num_columns} != {len(self._columns_cache)}",
+                    num_columns != len(self.columns),
+                    f"Column widths: {num_columns} != {len(self.columns)}",
                 )
             ErrorMessage.catch_bugs_and_request_email(
                 any(val < 0 for val in self._column_widths_cache),
@@ -331,6 +331,24 @@ class PandasDataframe(ClassLogger):
     _index_cache = None
     _columns_cache = None
 
+    def has_index_cache(self):
+        return self._index_cache is not None
+
+    def copy_index_cache(self):
+        idx_cache = self._index_cache
+        if idx_cache is not None and not isinstance(idx_cache, tuple):
+            idx_cache = idx_cache.copy()
+        return idx_cache
+
+    def has_columns_cache(self):
+        return self._columns_cache is not None
+
+    def copy_columns_cache(self):
+        columns_cache = self._columns_cache
+        if columns_cache is not None:
+            columns_cache = columns_cache.copy()
+        return columns_cache
+
     def _validate_set_axis(self, new_labels, old_labels):
         """
         Validate the possibility of replacement of old labels with the new labels.
@@ -370,6 +388,7 @@ class PandasDataframe(ClassLogger):
             self._index_cache, self._row_lengths_cache = self._index_cache[0](
                 *self._index_cache[1]
             )
+            self._index_cache = ensure_index(self._index_cache)
         elif self._index_cache is None:
             self._index_cache, row_lengths = self._compute_axis_labels_and_lengths(0)
             if self._row_lengths_cache is None:
@@ -405,6 +424,13 @@ class PandasDataframe(ClassLogger):
         if self._index_cache is None:
             self._index_cache = ensure_index(new_index)
         else:
+            if isinstance(self._index_cache, tuple):
+                # trigger
+                _ = self.index
+                # In the case of a tuple, we can’t wipe the cache without synchronizing it
+                # with the internal index, since it is used in the case when the external
+                # index cannot be restored from the internal one.
+                self._propagate_index_objs(axis=0)
             new_index = self._validate_set_axis(new_index, self._index_cache)
             self._index_cache = new_index
         self.synchronize_labels(axis=0)
@@ -476,8 +502,8 @@ class PandasDataframe(ClassLogger):
             Trigger the computations for partition sizes and labels if they're not done already.
         """
         if not compute_metadata and (
-            self._index_cache is None
-            or self._columns_cache is None
+            not self.has_index_cache()
+            or not self.has_columns_cache()
             or self._row_lengths_cache is None
             or self._column_widths_cache is None
         ):
@@ -833,7 +859,7 @@ class PandasDataframe(ClassLogger):
         else:
             row_partitions_dict = {i: slice(None) for i in range(len(self._partitions))}
             new_row_lengths = self._row_lengths_cache
-            new_index = self._index_cache
+            new_index = self.copy_index_cache()
 
         if col_positions is not None:
             sorted_col_positions = self._get_sorted_positions(col_positions)
@@ -861,7 +887,7 @@ class PandasDataframe(ClassLogger):
                 i: slice(None) for i in range(len(self._partitions.T))
             }
             new_col_widths = self._column_widths_cache
-            new_columns = self._columns_cache
+            new_columns = self.copy_columns_cache()
             new_dtypes = self._dtypes
 
         new_partitions = np.array(
@@ -1173,8 +1199,8 @@ class PandasDataframe(ClassLogger):
         """
         return self.__constructor__(
             self._partitions,
-            self._index_cache.copy() if self._index_cache is not None else None,
-            self._columns_cache.copy() if self._columns_cache is not None else None,
+            self.copy_index_cache(),
+            self.copy_columns_cache(),
             self._row_lengths_cache,
             self._column_widths_cache,
             self._dtypes.copy() if self._dtypes is not None else None,
@@ -1230,8 +1256,8 @@ class PandasDataframe(ClassLogger):
         )
         return self.__constructor__(
             new_frame,
-            self._index_cache,
-            self._columns_cache,
+            self.copy_index_cache(),
+            self.copy_columns_cache(),
             self._row_lengths_cache,
             self._column_widths_cache,
             new_dtypes,
@@ -1747,8 +1773,8 @@ class PandasDataframe(ClassLogger):
             )
         return self.__constructor__(
             new_partitions,
-            self._index_cache,
-            self._columns_cache,
+            self.copy_index_cache(),
+            self.copy_columns_cache(),
             self._row_lengths_cache,
             self._column_widths_cache,
             dtypes=dtypes,
@@ -1815,8 +1841,8 @@ class PandasDataframe(ClassLogger):
         )
         return self.__constructor__(
             new_partitions,
-            self._index_cache,
-            self._columns_cache,
+            self.copy_index_cache(),
+            self.copy_columns_cache(),
             self._row_lengths_cache,
             self._column_widths_cache,
         )
@@ -1860,8 +1886,8 @@ class PandasDataframe(ClassLogger):
         new_dtypes[col_labels] = new_cols_dtypes
         return self.__constructor__(
             self._partitions,
-            self._index_cache,
-            self._columns_cache,
+            self.copy_index_cache(),
+            self.copy_columns_cache(),
             self._row_lengths_cache,
             self._column_widths_cache,
             new_dtypes,
@@ -2121,7 +2147,7 @@ class PandasDataframe(ClassLogger):
         new_axes, new_lengths = [0, 0], [0, 0]
 
         new_axes[axis.value] = (
-            self._index_cache if axis.value == 0 else self._columns_cache
+            self.copy_index_cache() if axis.value == 0 else self.copy_columns_cache()
         )
         new_lengths[axis.value] = (
             self._row_lengths_cache if axis.value == 0 else self._column_widths_cache
@@ -2964,7 +2990,7 @@ class PandasDataframe(ClassLogger):
                 sort=True,
             )
         else:
-            joined_columns = self._columns_cache
+            joined_columns = self.copy_columns_cache()
             column_widths = self._column_widths_cache
 
         new_frame = (
@@ -3319,12 +3345,14 @@ class PandasDataframe(ClassLogger):
         if df.empty:
             df = pandas.DataFrame(columns=self.columns, index=self.index)
         else:
-            for axis, external_index in enumerate(
-                [self._index_cache, self._columns_cache]
+            for axis, have_external_index in enumerate(
+                [self.has_index_cache, self.has_columns_cache]
             ):
                 # no need to check external and internal axes since in that case
                 # external axes will be computed from internal partitions
-                if external_index is not None:
+                if have_external_index():
+                    # cache now cannot be used as replacing indexes
+                    external_index = self.columns if axis else self.index
                     ErrorMessage.catch_bugs_and_request_email(
                         not df.axes[axis].equals(external_index),
                         f"Internal and external indices on axis {axis} do not match.",
@@ -3376,8 +3404,8 @@ class PandasDataframe(ClassLogger):
             new_dtypes = None
         return self.__constructor__(
             new_partitions,
-            self._columns_cache,
-            self._index_cache,
+            self.copy_columns_cache(),
+            self.copy_index_cache(),
             self._column_widths_cache,
             self._row_lengths_cache,
             dtypes=new_dtypes,

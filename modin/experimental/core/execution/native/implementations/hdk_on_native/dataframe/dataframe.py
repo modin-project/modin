@@ -165,6 +165,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         self.id = str(type(self)._next_id[0])
         type(self)._next_id[0] += 1
 
+        if isinstance(index, tuple):
+            index = index[0](*index[1])
         if index is not None:
             index = ensure_index(index)
         columns = ensure_index(columns)
