@@ -162,7 +162,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         wait([self._data])
 
     # If unidist has not been initialized yet by Modin,
-    # unidist itself handles initialization when calling `UnidistWrapper.put`.
+    # it will be initialized when calling `UnidistWrapper.put`.
     _iloc = execution_wrapper.put(PandasDataframePartition._iloc)
 
     def mask(self, row_labels, col_labels):

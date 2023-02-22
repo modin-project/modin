@@ -93,19 +93,21 @@ class UnidistWrapper:
     @classmethod
     def put(cls, data, **kwargs):
         """
-        Put a data into the object store.
+        Put data into the object store.
 
         Parameters
         ----------
         data : object
             Data to be put.
+        **kwargs : dict
+            Additional keyword arguments (mostly for compatibility).
 
         Returns
         -------
         unidist.ObjectRef
             A reference to `data`.
         """
-        return unidist.put(data, **kwargs)
+        return unidist.put(data)
 
 
 @unidist.remote

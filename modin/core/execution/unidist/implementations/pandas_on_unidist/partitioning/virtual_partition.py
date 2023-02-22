@@ -26,7 +26,7 @@ from modin.utils import _inherit_docstrings
 
 
 # If unidist has not been initialized yet by Modin,
-# unidist itself handles initialization when calling `UnidistWrapper.put`.
+# it will be initialized when calling `UnidistWrapper.put`.
 _DEPLOY_AXIS_FUNC = UnidistWrapper.put(PandasDataframeAxisPartition.deploy_axis_func)
 _DRAIN = UnidistWrapper.put(PandasDataframeAxisPartition.drain)
 
