@@ -13,28 +13,8 @@
 
 """Module houses `CSVDispatcher` class, that is used for reading `.csv` files."""
 
-import pandas
-
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 
 
 class CSVDispatcher(TextFileDispatcher):
     """Class handles utils for reading `.csv` files."""
-
-    def read_callback(*args, **kwargs):
-        """
-        Parse data on each partition.
-
-        Parameters
-        ----------
-        *args : list
-            Positional arguments to be passed to the callback function.
-        **kwargs : dict
-            Keyword arguments to be passed to the callback function.
-
-        Returns
-        -------
-        pandas.DataFrame or pandas.io.parsers.TextParser
-            Function call result.
-        """
-        return pandas.read_csv(*args, **kwargs)

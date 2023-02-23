@@ -48,7 +48,7 @@ from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
 from pandas.util._decorators import doc
-from typing import Any
+from typing import Any, NamedTuple
 import warnings
 
 from modin.core.io.file_dispatcher import OpenFile
@@ -302,7 +302,27 @@ class PandasCSVParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
+        kwargs["callback"] = PandasCSVParser.read_callback
         return PandasParser.generic_parse(fname, **kwargs)
+
+    @staticmethod
+    def read_callback(*args, **kwargs):
+        """
+        Parse data on each partition.
+
+        Parameters
+        ----------
+        *args : list
+            Positional arguments to be passed to the callback function.
+        **kwargs : dict
+            Keyword arguments to be passed to the callback function.
+
+        Returns
+        -------
+        pandas.DataFrame or pandas.io.parsers.TextParser
+            Function call result.
+        """
+        return pandas.read_csv(*args, **kwargs)
 
 
 @doc(_doc_pandas_parser_class, data_type="multiple CSV files simultaneously")
@@ -401,7 +421,27 @@ class PandasFWFParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
+        kwargs["callback"] = PandasFWFParser.read_callback
         return PandasParser.generic_parse(fname, **kwargs)
+
+    @staticmethod
+    def read_callback(*args, **kwargs):
+        """
+        Parse data on each partition.
+
+        Parameters
+        ----------
+        *args : list
+            Positional arguments to be passed to the callback function.
+        **kwargs : dict
+            Keyword arguments to be passed to the callback function.
+
+        Returns
+        -------
+        pandas.DataFrame or pandas.io.parsers.TextFileReader
+            Function call result.
+        """
+        return pandas.read_fwf(*args, **kwargs)
 
 
 @doc(_doc_pandas_parser_class, data_type="excel files")
@@ -585,7 +625,11 @@ class PandasExcelParser(PandasParser):
             **kwargs,
         )
         pandas_df = parser.read()
-        if len(pandas_df) > 1 and pandas_df.isnull().all().all():
+        if (
+            len(pandas_df) > 1
+            and len(pandas_df.columns) != 0
+            and pandas_df.isnull().all().all()
+        ):
             # Drop NaN rows at the end of the DataFrame
             pandas_df = pandas.DataFrame(columns=pandas_df.columns)
 
@@ -642,7 +686,7 @@ class PandasJSONParser(PandasParser):
         ]
 
 
-class ParquetFileToRead:
+class ParquetFileToRead(NamedTuple):
     """
     Class to store path and row group information for parquet reads.
 
@@ -656,10 +700,9 @@ class ParquetFileToRead:
         Row group to stop read.
     """
 
-    def __init__(self, path: Any, row_group_start: int, row_group_end: int):
-        self.path: Any = path
-        self.row_group_start: int = row_group_start
-        self.row_group_end: int = row_group_end
+    path: Any
+    row_group_start: int
+    row_group_end: int
 
 
 @doc(_doc_pandas_parser_class, data_type="PARQUET data")
@@ -787,7 +830,6 @@ read_sql_engine : str
     Underlying engine ('pandas' or 'connectorx') used for fetching query result.""",
     )
     def parse(sql, con, index_col, read_sql_engine, **kwargs):
-
         enable_cx = False
         if read_sql_engine == "Connectorx":
             try:

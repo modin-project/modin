@@ -184,7 +184,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             call_queue=self.call_queue,
         )
 
-    _iloc = ray.put(PandasDataframePartition._iloc)
+    # If Ray has not been initialized yet by Modin,
+    # it will be initialized when calling `RayWrapper.put`.
+    _iloc = execution_wrapper.put(PandasDataframePartition._iloc)
 
     def mask(self, row_labels, col_labels):
         """
@@ -243,7 +245,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         PandasOnRayDataframePartition
             A new ``PandasOnRayDataframePartition`` object.
         """
-        return cls(ray.put(obj), len(obj.index), len(obj.columns))
+        return cls(cls.execution_wrapper.put(obj), len(obj.index), len(obj.columns))
 
     @classmethod
     def preprocess_func(cls, func):
@@ -260,15 +262,22 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         ray.ObjectRef
             A reference to `func`.
         """
-        return ray.put(func)
+        return cls.execution_wrapper.put(func)
 
-    def length(self):
+    def length(self, materialize=True):
         """
         Get the length of the object wrapped by this partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or ray.ObjectRef
             The length of the object.
         """
         if self._length_cache is None:
@@ -278,17 +287,24 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache, self._width_cache = _get_index_and_columns.remote(
                     self._data
                 )
-        if isinstance(self._length_cache, ObjectIDType):
+        if isinstance(self._length_cache, ObjectIDType) and materialize:
             self._length_cache = RayWrapper.materialize(self._length_cache)
         return self._length_cache
 
-    def width(self):
+    def width(self, materialize=True):
         """
         Get the width of the object wrapped by the partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or ray.ObjectRef
             The width of the object.
         """
         if self._width_cache is None:
@@ -298,7 +314,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache, self._width_cache = _get_index_and_columns.remote(
                     self._data
                 )
-        if isinstance(self._width_cache, ObjectIDType):
+        if isinstance(self._width_cache, ObjectIDType) and materialize:
             self._width_cache = RayWrapper.materialize(self._width_cache)
         return self._width_cache
 

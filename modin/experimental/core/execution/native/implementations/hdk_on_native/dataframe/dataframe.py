@@ -2558,7 +2558,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             return True
         if isinstance(index, pd.RangeIndex):
             return index.start == 0 and index.step == 1
-        if not isinstance(index, pd.Int64Index):
+        if not (isinstance(index, pd.Index) and index.dtype == np.int64):
             return False
         return (
             index.is_monotonic_increasing

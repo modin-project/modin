@@ -23,8 +23,6 @@ from modin.config import NPartitions
 class CustomTextExperimentalDispatcher(TextFileDispatcher):
     """Class handles utils for reading custom text files."""
 
-    read_callback = None
-
     @classmethod
     def _read(cls, filepath_or_buffer, columns, custom_parser, **kwargs):
         r"""
@@ -58,7 +56,7 @@ class CustomTextExperimentalDispatcher(TextFileDispatcher):
         )
 
         with OpenFile(filepath_or_buffer_md, "rb", compression_infered) as f:
-            splits = cls.partitioned_file(
+            splits, _ = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
                 is_quoting=kwargs.pop("is_quoting"),

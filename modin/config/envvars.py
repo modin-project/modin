@@ -83,6 +83,8 @@ class Engine(EnvironmentVariable, type=str):
         "Python",
     }  # engines that don't require initialization, useful for unit tests
 
+    has_custom_engine = False
+
     @classmethod
     def _get_default(cls) -> str:
         """
@@ -98,7 +100,9 @@ class Engine(EnvironmentVariable, type=str):
             MIN_UNIDIST_VERSION,
         )
 
-        if IsDebug.get():
+        # If there's a custom engine, we don't need to check for any engine
+        # dependencies. Return the default "Python" engine.
+        if IsDebug.get() or cls.has_custom_engine:
             return "Python"
         try:
             import ray
@@ -160,6 +164,7 @@ class Engine(EnvironmentVariable, type=str):
     def add_option(cls, choice: Any) -> Any:
         choice = super().add_option(choice)
         cls.NOINIT_ENGINES.add(choice)
+        cls.has_custom_engine = True
         return choice
 
 
@@ -620,6 +625,13 @@ class TestReadFromPostgres(EnvironmentVariable, type=bool):
     """Set to true to test reading from Postgres."""
 
     varname = "MODIN_TEST_READ_FROM_POSTGRES"
+    default = False
+
+
+class ExperimentalNumPyAPI(EnvironmentVariable, type=bool):
+    """Set to true to use Modin's experimental NumPy API."""
+
+    varname = "MODIN_EXPERIMENTAL_NUMPY_API"
     default = False
 
 

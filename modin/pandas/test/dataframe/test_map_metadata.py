@@ -287,20 +287,30 @@ def test_copy(data):
 
     # pandas_df is unused but there so there won't be confusing list comprehension
     # stuff in the pytest.mark.parametrize
-    new_modin_df = modin_df.copy()
+    new_modin_df = modin_df.copy(deep=True)
 
     assert new_modin_df is not modin_df
+    assert new_modin_df.index is not modin_df.index
+    assert new_modin_df.columns is not modin_df.columns
+    assert new_modin_df.dtypes is not modin_df.dtypes
+
     if get_current_execution() != "BaseOnPython":
         assert np.array_equal(
             new_modin_df._query_compiler._modin_frame._partitions,
             modin_df._query_compiler._modin_frame._partitions,
         )
-    assert new_modin_df is not modin_df
     df_equals(new_modin_df, modin_df)
 
     # Shallow copy tests
     modin_df = pd.DataFrame(data)
-    modin_df_cp = modin_df.copy(False)
+    modin_df_cp = modin_df.copy(deep=False)
+
+    assert modin_df_cp is not modin_df
+    assert modin_df_cp.index is modin_df.index
+    assert modin_df_cp.columns is modin_df.columns
+    # FIXME: we're different from pandas here as modin doesn't copy dtypes for a shallow copy
+    # https://github.com/modin-project/modin/issues/5602
+    # assert modin_df_cp.dtypes is not modin_df.dtypes
 
     modin_df[modin_df.columns[0]] = 0
     df_equals(modin_df, modin_df_cp)
@@ -1106,6 +1116,12 @@ def test_insert(data):
         col="Different indices",
         value=lambda df: df[[df.columns[0]]].set_index(df.index[::-1]),
     )
+    eval_insert(
+        modin_df,
+        pandas_df,
+        col="2d list insert",
+        value=lambda df: [[1, 2]] * len(df),
+    )
 
     # Bad inserts
     eval_insert(modin_df, pandas_df, col="Bad Column", value=lambda df: df)
@@ -1488,3 +1504,76 @@ def test_constructor_from_modin_series(get_index, get_columns, dtype):
         pandas_data, index=index, columns=columns, dtype=dtype
     )
     df_equals(new_modin, new_pandas)
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_constructor(data):
+    pandas_df = pandas.DataFrame(data)
+    modin_df = pd.DataFrame(data)
+    df_equals(pandas_df, modin_df)
+
+    pandas_df = pandas.DataFrame({k: pandas.Series(v) for k, v in data.items()})
+    modin_df = pd.DataFrame({k: pd.Series(v) for k, v in data.items()})
+    df_equals(pandas_df, modin_df)
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        np.arange(1, 10000, dtype=np.float32),
+        [
+            pd.Series([1, 2, 3], dtype="int32"),
+            pandas.Series([4, 5, 6], dtype="int64"),
+            np.array([7, 8, 9], dtype=np.float32),
+        ],
+        pandas.Categorical([1, 2, 3, 4, 5]),
+    ],
+)
+def test_constructor_dtypes(data):
+    modin_df, pandas_df = create_test_dfs(data)
+    df_equals(modin_df, pandas_df)
+
+
+def test_constructor_columns_and_index():
+    modin_df = pd.DataFrame(
+        [[1, 1, 10], [2, 4, 20], [3, 7, 30]],
+        index=[1, 2, 3],
+        columns=["id", "max_speed", "health"],
+    )
+    pandas_df = pandas.DataFrame(
+        [[1, 1, 10], [2, 4, 20], [3, 7, 30]],
+        index=[1, 2, 3],
+        columns=["id", "max_speed", "health"],
+    )
+    df_equals(modin_df, pandas_df)
+    df_equals(pd.DataFrame(modin_df), pandas.DataFrame(pandas_df))
+    df_equals(
+        pd.DataFrame(modin_df, columns=["max_speed", "health"]),
+        pandas.DataFrame(pandas_df, columns=["max_speed", "health"]),
+    )
+    df_equals(
+        pd.DataFrame(modin_df, index=[1, 2]),
+        pandas.DataFrame(pandas_df, index=[1, 2]),
+    )
+    df_equals(
+        pd.DataFrame(modin_df, index=[1, 2], columns=["health"]),
+        pandas.DataFrame(pandas_df, index=[1, 2], columns=["health"]),
+    )
+    df_equals(
+        pd.DataFrame(modin_df.iloc[:, 0], index=[1, 2, 3]),
+        pandas.DataFrame(pandas_df.iloc[:, 0], index=[1, 2, 3]),
+    )
+    df_equals(
+        pd.DataFrame(modin_df.iloc[:, 0], columns=["NO_EXIST"]),
+        pandas.DataFrame(pandas_df.iloc[:, 0], columns=["NO_EXIST"]),
+    )
+    with pytest.raises(NotImplementedError):
+        pd.DataFrame(modin_df, index=[1, 2, 99999])
+    with pytest.raises(NotImplementedError):
+        pd.DataFrame(modin_df, columns=["NO_EXIST"])
+
+
+def test_constructor_from_index():
+    data = pd.Index([1, 2, 3], name="pricing_date")
+    modin_df, pandas_df = create_test_dfs(data)
+    df_equals(modin_df, pandas_df)

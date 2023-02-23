@@ -524,12 +524,12 @@ def _train(
 
     add_as_eval_method = None
     if evals:
-        for (eval_data, method) in evals[:]:
+        for eval_data, method in evals[:]:
             if eval_data is dtrain:
                 add_as_eval_method = method
                 evals.remove((eval_data, method))
 
-        for ((eval_X, eval_y), eval_method) in evals:
+        for (eval_X, eval_y), eval_method in evals:
             # Split data across workers
             _split_data_across_actors(
                 actors,
@@ -646,8 +646,8 @@ def _predict(
     new_columns = list(range(result_num_columns))
 
     # Put common data in object store
-    booster = ray.put(booster)
-    new_columns_ref = ray.put(new_columns)
+    booster = RayWrapper.put(booster)
+    new_columns_ref = RayWrapper.put(new_columns)
 
     prediction_refs = [
         _map_predict.remote(booster, part, new_columns_ref, dmatrix_kwargs, **kwargs)
