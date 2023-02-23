@@ -28,7 +28,6 @@ import numpy as np
 import pandas
 import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
-import ray
 
 from modin.core.io.file_dispatcher import FileDispatcher, OpenFile
 from modin.core.storage_formats.pandas.utils import compute_chunksize
@@ -598,7 +597,7 @@ class TextFileDispatcher(FileDispatcher):
     @classmethod
     def get_parse_func(cls):
         if cls._parse_func is None:
-            cls._parse_func = ray.put(cls.parse)
+            cls._parse_func = cls.put(cls.parse)
         return cls._parse_func
 
     @classmethod
@@ -627,7 +626,7 @@ class TextFileDispatcher(FileDispatcher):
         index_ids = [None] * len(splits)
         dtypes_ids = [None] * len(splits)
         fname = partition_kwargs.pop("fname")
-        kw_ref = ray.put(partition_kwargs)
+        kw_ref = cls.put(partition_kwargs)
         for idx, (start, end) in enumerate(splits):
             *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
                 func=cls.get_parse_func(),

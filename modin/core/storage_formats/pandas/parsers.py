@@ -325,25 +325,6 @@ class PandasCSVParser(PandasParser):
         """
         return pandas.read_csv(*args, **kwargs)
 
-    @staticmethod
-    def read_callback(*args, **kwargs):
-        """
-        Parse data on each partition.
-
-        Parameters
-        ----------
-        *args : list
-            Positional arguments to be passed to the callback function.
-        **kwargs : dict
-            Keyword arguments to be passed to the callback function.
-
-        Returns
-        -------
-        pandas.DataFrame or pandas.io.parsers.TextParser
-            Function call result.
-        """
-        return pandas.read_csv(*args, **kwargs)
-
 
 @doc(_doc_pandas_parser_class, data_type="multiple CSV files simultaneously")
 class PandasCSVGlobParser(PandasCSVParser):
