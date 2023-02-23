@@ -252,7 +252,7 @@ class PandasParser(ClassLogger):
         return frame_dtypes
 
     @classmethod
-    def single_worker_read(cls, fname, *, reason: str, **kwargs):
+    def single_worker_read(cls, fname, *args, reason: str, **kwargs):
         """
         Perform reading by single worker (default-to-pandas implementation).
 
@@ -260,6 +260,8 @@ class PandasParser(ClassLogger):
         ----------
         fname : str, path object or file-like object
             Name of the file or file-like object to read.
+        *args : tuple
+            Positional arguments to be passed into `read_*` function.
         reason : str
             Message describing the reason for falling back to pandas.
         **kwargs : dict
@@ -276,10 +278,7 @@ class PandasParser(ClassLogger):
         """
         ErrorMessage.default_to_pandas(reason=reason)
         # Use default args for everything
-        if "start" not in kwargs:
-            pandas_frame = cls.parse(fname, None, None, kwargs)
-        else:
-            pandas_frame = cls.parse(fname, **kwargs)
+        pandas_frame = cls.parse(fname, *args, **kwargs)
         if isinstance(pandas_frame, pandas.io.parsers.TextFileReader):
             pd_read = pandas_frame.read
             pandas_frame.read = (
