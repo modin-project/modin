@@ -646,8 +646,8 @@ def _predict(
     new_columns = list(range(result_num_columns))
 
     # Put common data in object store
-    booster = ray.put(booster)
-    new_columns_ref = ray.put(new_columns)
+    booster = RayWrapper.put(booster)
+    new_columns_ref = RayWrapper.put(new_columns)
 
     prediction_refs = [
         _map_predict.remote(booster, part, new_columns_ref, dmatrix_kwargs, **kwargs)

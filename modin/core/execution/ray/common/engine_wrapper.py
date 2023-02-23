@@ -91,6 +91,25 @@ class RayWrapper:
         """
         return ray.get(obj_id)
 
+    @classmethod
+    def put(cls, data, **kwargs):
+        """
+        Store an object in the object store.
+
+        Parameters
+        ----------
+        data : object
+            The Python object to be stored.
+        **kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        ray.ObjectID
+            Ray object identifier to get the value by.
+        """
+        return ray.put(data, **kwargs)
+
 
 @ray.remote
 class SignalActor:  # pragma: no cover
