@@ -414,16 +414,18 @@ class CustomTextExperimentalParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
-        return PandasParser.generic_parse(fname, **kwargs)
+        start = kwargs.pop("start", None)
+        end = kwargs.pop("end", None)
+        return PandasParser.generic_parse(fname, start, end, kwargs)
 
 
 @doc(_doc_pandas_parser_class, data_type="tables with fixed-width formatted lines")
 class PandasFWFParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
-    def parse(fname, **kwargs):
+    def parse(fname, start, end, kwargs, **rest_kw):
         kwargs["callback"] = PandasFWFParser.read_callback
-        return PandasParser.generic_parse(fname, **kwargs)
+        return PandasParser.generic_parse(fname, start, end, kwargs, **rest_kw)
 
     @staticmethod
     def read_callback(*args, **kwargs):
