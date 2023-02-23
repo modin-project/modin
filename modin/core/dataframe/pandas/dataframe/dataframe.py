@@ -457,10 +457,6 @@ class PandasDataframe(ClassLogger):
             if callable(self._index_cache):
                 # trigger `._index_cache` computation from callable
                 _ = self.index
-            # In the case of deferred index, we can’t wipe the cache without synchronizing it
-            # with the internal index. If we do this, we may lose information.
-            if self._deferred_index:
-                self._propagate_index_objs(axis=0)
             new_index = self._validate_set_axis(new_index, self._index_cache)
             self._index_cache = new_index
         self.synchronize_labels(axis=0)
