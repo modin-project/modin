@@ -2387,6 +2387,40 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # END Abstract insert
 
+    # __setitem__ methods
+    def setitem_bool(self, row_loc, col_loc, item):
+        """
+        Set an item to the given location based on `row_loc` and `col_loc`.
+
+        Parameters
+        ----------
+        row_loc : BaseQueryCompiler
+            Query Compiler holding a Series of booleans.
+        col_loc : label
+            Column label in `self`.
+        item : scalar
+            An item to be set.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler with the inserted item.
+
+        Notes
+        -----
+        Currently, this method is only used to set a scalar to the given location.
+        """
+
+        def _set_item(df, row_loc, col_loc, item):
+            df.loc[row_loc.squeeze(axis=1), col_loc] = item
+            return df
+
+        return DataFrameDefault.register(_set_item)(
+            self, row_loc=row_loc, col_loc=col_loc, item=item
+        )
+
+    # END __setitem__ methods
+
     # Abstract drop
     def drop(self, index=None, columns=None, errors: str = "raise"):
         """

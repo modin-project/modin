@@ -2251,6 +2251,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
         labels="drop",
     )
 
+    # __setitem__ methods
+    def setitem_bool(self, row_loc, col_loc, item):
+        def _set_item(df, row_loc):
+            df = df.copy()
+            df.loc[row_loc.squeeze(axis=1), col_loc] = item
+            return df
+
+        new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
+            axis=1,
+            func=_set_item,
+            other=row_loc._modin_frame,
+            new_index=self._modin_frame._index_cache,
+            new_columns=self._modin_frame._columns_cache,
+            keep_partitioning=False,
+        )
+        return self.__constructor__(new_modin_frame)
+
+    # END __setitem__ methods
+
     def __validate_bool_indexer(self, indexer):
         if len(indexer) != len(self.index):
             raise ValueError(
