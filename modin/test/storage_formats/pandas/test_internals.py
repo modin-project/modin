@@ -28,7 +28,6 @@ import pytest
 NPartitions.put(4)
 
 if Engine.get() == "Ray":
-    import ray
     from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframePartition,
     )
@@ -36,11 +35,12 @@ if Engine.get() == "Ray":
         PandasOnRayDataframeColumnPartition,
         PandasOnRayDataframeRowPartition,
     )
+    from modin.core.execution.ray.common import RayWrapper
 
     block_partition_class = PandasOnRayDataframePartition
     virtual_column_partition_class = PandasOnRayDataframeColumnPartition
     virtual_row_partition_class = PandasOnRayDataframeRowPartition
-    put = ray.put
+    put = RayWrapper.put
 elif Engine.get() == "Dask":
     from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframeColumnPartition,

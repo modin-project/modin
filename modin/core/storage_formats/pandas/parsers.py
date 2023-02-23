@@ -302,9 +302,28 @@ class PandasParser(ClassLogger):
 class PandasCSVParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
-    def parse(fname, start, end, kwargs, **rest_kw):
+    def parse(fname, **kwargs):
         kwargs["callback"] = PandasCSVParser.read_callback
-        return PandasParser.generic_parse(fname, start, end, kwargs, **rest_kw)
+        return PandasParser.generic_parse(fname, **kwargs)
+
+    @staticmethod
+    def read_callback(*args, **kwargs):
+        """
+        Parse data on each partition.
+
+        Parameters
+        ----------
+        *args : list
+            Positional arguments to be passed to the callback function.
+        **kwargs : dict
+            Keyword arguments to be passed to the callback function.
+
+        Returns
+        -------
+        pandas.DataFrame or pandas.io.parsers.TextParser
+            Function call result.
+        """
+        return pandas.read_csv(*args, **kwargs)
 
     @staticmethod
     def read_callback(*args, **kwargs):

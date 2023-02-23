@@ -90,6 +90,25 @@ class UnidistWrapper:
         """
         return unidist.get(obj_id)
 
+    @classmethod
+    def put(cls, data, **kwargs):
+        """
+        Put data into the object store.
+
+        Parameters
+        ----------
+        data : object
+            Data to be put.
+        **kwargs : dict
+            Additional keyword arguments (mostly for compatibility).
+
+        Returns
+        -------
+        unidist.ObjectRef
+            A reference to `data`.
+        """
+        return unidist.put(data)
+
 
 @unidist.remote
 class SignalActor:  # pragma: no cover
