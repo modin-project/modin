@@ -1268,7 +1268,7 @@ class Series(BasePandasDataset):
         """
         if isinstance(arg, type(self)):
             # HACK: if we won't cast to pandas then the execution engine will try to
-            # # propagate the distributed Series to workers and most likely would have
+            # propagate the distributed Series to workers and most likely would have
             # some performance problems.
             # TODO: A better way of doing so could be passing this `arg` as a query compiler
             # and broadcast accordingly.
