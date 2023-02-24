@@ -1039,8 +1039,10 @@ class TextFileDispatcher(FileDispatcher):
         if not use_modin_impl:
             return cls.single_worker_read(
                 filepath_or_buffer,
+                None,
+                None,
+                kwargs,
                 reason=fallback_reason,
-                **kwargs,
             )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE
