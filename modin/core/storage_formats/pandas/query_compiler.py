@@ -3428,7 +3428,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return ser.cat.codes.to_frame(name=MODIN_UNNAMED_SERIES_LABEL)
 
         res = self._modin_frame.apply_full_axis(
-            axis=0, func=func, new_columns=[MODIN_UNNAMED_SERIES_LABEL]
+            axis=0,
+            func=func,
+            new_index=self._modin_frame._index_cache,
+            new_columns=[MODIN_UNNAMED_SERIES_LABEL],
+            new_row_lengths=self._modin_frame._row_lengths_cache,
+            new_column_widths=self._modin_frame._column_widths_cache,
         )
         return self.__constructor__(res, shape_hint="column")
 

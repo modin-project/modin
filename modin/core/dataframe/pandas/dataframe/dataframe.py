@@ -2199,6 +2199,8 @@ class PandasDataframe(ClassLogger):
         func,
         new_index=None,
         new_columns=None,
+        new_row_lengths=None,
+        new_column_widths=None,
         apply_indices=None,
         enumerate_partitions: bool = False,
         dtypes=None,
@@ -2221,6 +2223,12 @@ class PandasDataframe(ClassLogger):
         new_columns : list-like, optional
             The columns of the result. We may know this in
             advance, and if not provided it must be computed.
+        new_row_lengths : list, optional
+            The length of each partition in the rows. The "height" of
+            each of the block partitions. Is computed if not provided.
+        new_column_widths : list, optional
+            The width of each partition in the columns. The "width" of
+            each of the block partitions. Is computed if not provided.
         apply_indices : list-like, default: None
             Indices of `axis ^ 1` to apply function over.
         enumerate_partitions : bool, default: False
@@ -2255,6 +2263,8 @@ class PandasDataframe(ClassLogger):
             func=func,
             new_index=new_index,
             new_columns=new_columns,
+            new_row_lengths=new_row_lengths,
+            new_column_widths=new_column_widths,
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
             dtypes=dtypes,
@@ -2649,6 +2659,8 @@ class PandasDataframe(ClassLogger):
         other,
         new_index=None,
         new_columns=None,
+        new_row_lengths=None,
+        new_column_widths=None,
         apply_indices=None,
         enumerate_partitions=False,
         dtypes=None,
@@ -2673,6 +2685,12 @@ class PandasDataframe(ClassLogger):
         new_columns : list-like, optional
             Columns of the result. We may know this in
             advance, and if not provided it must be computed.
+        new_row_lengths : list, optional
+            The length of each partition in the rows. The "height" of
+            each of the block partitions. Is computed if not provided.
+        new_column_widths : list, optional
+            The width of each partition in the columns. The "width" of
+            each of the block partitions. Is computed if not provided.
         apply_indices : list-like, default: None
             Indices of `axis ^ 1` to apply function over.
         enumerate_partitions : bool, default: False
@@ -2736,7 +2754,7 @@ class PandasDataframe(ClassLogger):
             keep_partitioning=keep_partitioning,
             apply_func_args=apply_func_args,
         )
-        kw = {"row_lengths": None, "column_widths": None}
+        kw = {"row_lengths": new_row_lengths, "column_widths": new_column_widths}
         if dtypes == "copy":
             kw["dtypes"] = self._dtypes
         elif dtypes is not None:
