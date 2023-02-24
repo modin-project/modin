@@ -83,7 +83,7 @@ class CustomTextExperimentalDispatcher(TextFileDispatcher):
         )
 
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
-            splits, callback=custom_parser, **partition_kwargs
+            splits=splits, callback=custom_parser, **partition_kwargs
         )
 
         new_query_compiler = cls._get_new_qc(
