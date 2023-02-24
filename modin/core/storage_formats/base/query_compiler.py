@@ -1329,7 +1329,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     #      we should avoid leaking of the high-level objects to the query compiler level.
     #      (Modin issue #3106)
     #   2. Spread **kwargs into actual arguments (Modin issue #3108).
-    def isin(self, **kwargs):  # noqa: PR02
+    def isin(self, values, ignore_indices=False, **kwargs):  # noqa: PR02
         """
         Check for each element of `self` whether it's contained in passed `values`.
 
@@ -1337,6 +1337,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         ----------
         values : list-like, modin.pandas.Series, modin.pandas.DataFrame or dict
             Values to check elements of self in.
+        ignore_indices : bool, default: False
+            Whether to execute ``isin()`` only on an intersection of indices.
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
 
@@ -1348,8 +1350,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         # We drop `shape_hint` argument that may be passed from the API layer.
         # BaseQC doesn't need to know how to handle it.
-        kwargs.pop("shape_hint", None)
-        return DataFrameDefault.register(pandas.DataFrame.isin)(self, **kwargs)
+        shape_hint = kwargs.pop("shape_hint", None)
+        if isinstance(values, type(self)) and ignore_indices:
+            # Pandas logic is that it ignores indexing if 'values' is a 1D object
+            values = values.to_pandas().squeeze(axis=1)
+        if shape_hint == "column":
+            return SeriesDefault.register(pandas.Series.isin)(self, values, **kwargs)
+        else:
+            return DataFrameDefault.register(pandas.DataFrame.isin)(
+                self, values, **kwargs
+            )
 
     def isna(self):
         """
