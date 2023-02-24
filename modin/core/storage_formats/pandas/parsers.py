@@ -147,9 +147,11 @@ class PandasParser(ClassLogger):
 
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
-    def generic_parse(fname, start, end, kwargs, **rest_kw):
+    def generic_parse(fname, **kwargs):
         warnings.filterwarnings("ignore")
         num_splits = kwargs.pop("num_splits", None)
+        start = kwargs.pop("start", None)
+        end = kwargs.pop("end", None)
         header_size = kwargs.pop("header_size", 0)
         encoding = kwargs.get("encoding", None)
         callback = kwargs.pop("callback")
@@ -301,9 +303,10 @@ class PandasParser(ClassLogger):
 class PandasCSVParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
-    def parse(fname, start, end, kwargs, **rest_kw):
-        kwargs["callback"] = PandasCSVParser.read_callback
-        return PandasParser.generic_parse(fname, start, end, kwargs, **rest_kw)
+    def parse(fname, kwargs, **rest_kw):
+        return PandasParser.generic_parse(
+            fname, callback=PandasCSVParser.read_callback, **kwargs, **rest_kw
+        )
 
     @staticmethod
     def read_callback(*args, **kwargs):
@@ -413,18 +416,17 @@ class CustomTextExperimentalParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
-        start = kwargs.pop("start", None)
-        end = kwargs.pop("end", None)
-        return PandasParser.generic_parse(fname, start, end, kwargs)
+        return PandasParser.generic_parse(fname, **kwargs)
 
 
 @doc(_doc_pandas_parser_class, data_type="tables with fixed-width formatted lines")
 class PandasFWFParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
-    def parse(fname, start, end, kwargs, **rest_kw):
-        kwargs["callback"] = PandasFWFParser.read_callback
-        return PandasParser.generic_parse(fname, start, end, kwargs, **rest_kw)
+    def parse(fname, kwargs, **rest_kw):
+        return PandasParser.generic_parse(
+            fname, callback=PandasFWFParser.read_callback, **kwargs, **rest_kw
+        )
 
     @staticmethod
     def read_callback(*args, **kwargs):

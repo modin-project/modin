@@ -601,7 +601,9 @@ class TextFileDispatcher(FileDispatcher):
         return cls._parse_func
 
     @classmethod
-    def _launch_tasks(cls, splits: list, **partition_kwargs) -> Tuple[list, list, list]:
+    def _launch_tasks(
+        cls, *args, splits: list, **partition_kwargs
+    ) -> Tuple[list, list, list]:
         """
         Launch tasks to read partitions.
 
@@ -625,12 +627,12 @@ class TextFileDispatcher(FileDispatcher):
         partition_ids = [None] * len(splits)
         index_ids = [None] * len(splits)
         dtypes_ids = [None] * len(splits)
-        fname = partition_kwargs.pop("fname")
-        kw_ref = cls.put(partition_kwargs)
         for idx, (start, end) in enumerate(splits):
+            partition_kwargs.update({"start": start, "end": end})
             *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
                 func=cls.get_parse_func(),
-                f_args=(fname, start, end, kw_ref),
+                f_args=args,
+                f_kwargs=partition_kwargs,
                 num_returns=partition_kwargs.get("num_splits") + 2,
             )
         return partition_ids, index_ids, dtypes_ids
@@ -1039,8 +1041,6 @@ class TextFileDispatcher(FileDispatcher):
         if not use_modin_impl:
             return cls.single_worker_read(
                 filepath_or_buffer,
-                None,
-                None,
                 kwargs,
                 reason=fallback_reason,
             )
@@ -1118,7 +1118,6 @@ class TextFileDispatcher(FileDispatcher):
         partition_kwargs = dict(
             kwargs,
             fname=filepath_or_buffer_md,
-            num_splits=num_splits,
             header_size=0 if use_inferred_column_names else header_size,
             names=column_names if use_inferred_column_names else names,
             header="infer" if use_inferred_column_names else header,
@@ -1127,8 +1126,13 @@ class TextFileDispatcher(FileDispatcher):
             nrows=None,
             compression=compression_infered,
         )
+        fname = partition_kwargs.pop("fname")
+        kw_ref = cls.put(partition_kwargs)
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
-            splits, **partition_kwargs
+            fname,
+            kw_ref,
+            splits=splits,
+            num_splits=num_splits,
         )
 
         new_query_compiler = cls._get_new_qc(
