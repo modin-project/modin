@@ -637,7 +637,6 @@ _BINARY_FORWARDING_METHODS = frozenset(
         "align",
         "series_corr",
         "divmod",
-        "reindex_like",
         "rdivmod",
         "corrwith" "merge_ordered",
     }
