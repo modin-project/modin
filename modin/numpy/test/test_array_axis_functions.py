@@ -102,6 +102,14 @@ def test_max():
     numpy_result = numpy_arr.max(axis=0, initial=4, out=numpy_out, where=numpy_where)
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
     numpy.testing.assert_array_equal(modin_out._to_numpy(), numpy_out)
+    numpy_arr = numpy.array([[1, 10000, 2], [3, 4, 5]])
+    modin_arr = np.array(numpy_arr)
+    numpy_mask = numpy.array([[True, False, True], [True, True, True]])
+    modin_mask = np.array(numpy_mask)
+    numpy.testing.assert_equal(
+        numpy_arr.max(where=numpy_mask, initial=5),
+        modin_arr.max(where=modin_mask, initial=5),
+    )
 
 
 def test_min():
@@ -189,6 +197,14 @@ def test_min():
     numpy_result = numpy_arr.min(axis=0, initial=4, out=numpy_out, where=numpy_where)
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
     numpy.testing.assert_array_equal(modin_out._to_numpy(), numpy_out)
+    numpy_arr = numpy.array([[1, -10000, 2], [3, 4, 5]])
+    modin_arr = np.array(numpy_arr)
+    numpy_mask = numpy.array([[True, False, True], [True, True, True]])
+    modin_mask = np.array(numpy_mask)
+    numpy.testing.assert_equal(
+        numpy_arr.max(where=numpy_mask, initial=5),
+        modin_arr.max(where=modin_mask, initial=5),
+    )
 
 
 def test_sum():
@@ -276,6 +292,14 @@ def test_sum():
     numpy_result = numpy_arr.sum(axis=0, initial=4, out=numpy_out, where=numpy_where)
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
     numpy.testing.assert_array_equal(modin_out._to_numpy(), numpy_out)
+    numpy_where = numpy.full(400, False)
+    numpy_where[:200] = True
+    numpy.random.shuffle(numpy_where)
+    numpy_where = numpy_where.reshape((20, 20))
+    modin_where = np.array(numpy_where)
+    modin_result = modin_arr.sum(where=modin_where)
+    numpy_result = numpy_arr.sum(where=numpy_where)
+    assert modin_result == numpy_result
 
 
 def test_mean():
@@ -354,6 +378,14 @@ def test_mean():
     numpy_result = numpy_arr.mean(axis=0, out=numpy_out, where=numpy_where)
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
     numpy.testing.assert_array_equal(modin_out._to_numpy(), numpy_out)
+    numpy_where = numpy.full(400, False)
+    numpy_where[:200] = True
+    numpy.random.shuffle(numpy_where)
+    numpy_where = numpy_where.reshape((20, 20))
+    modin_where = np.array(numpy_where)
+    modin_result = modin_arr.mean(where=modin_where)
+    numpy_result = numpy_arr.mean(where=numpy_where)
+    assert modin_result == numpy_result
 
 
 def test_prod():
@@ -443,3 +475,11 @@ def test_prod():
     numpy_result = numpy_arr.prod(axis=0, initial=4, out=numpy_out, where=numpy_where)
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
     numpy.testing.assert_array_equal(modin_out._to_numpy(), numpy_out)
+    numpy_where = numpy.full(400, False)
+    numpy_where[:200] = True
+    numpy.random.shuffle(numpy_where)
+    numpy_where = numpy_where.reshape((20, 20))
+    modin_where = np.array(numpy_where)
+    modin_result = modin_arr.prod(where=modin_where)
+    numpy_result = numpy_arr.prod(where=numpy_where)
+    assert modin_result == numpy_result
