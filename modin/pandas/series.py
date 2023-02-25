@@ -2202,6 +2202,24 @@ class Series(BasePandasDataset):
 
         return StringMethods(self)
 
+    def reindex_like(
+        self: "Series",
+        other,
+        method=None,
+        copy: bool = True,
+        limit=None,
+        tolerance=None,
+    ) -> "Series":
+        # docs say "Same as calling .reindex(index=other.index, columns=other.columns,...).":
+        # https://pandas.pydata.org/pandas-docs/version/1.4/reference/api/pandas.Series.reindex_like.html
+        return self.reindex(
+            index=other.index,
+            method=method,
+            copy=copy,
+            limit=limit,
+            tolerance=tolerance,
+        )
+
     def _to_pandas(self):
         """
         Convert Modin Series to pandas Series.
