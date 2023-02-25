@@ -35,6 +35,13 @@ def test_max():
     numpy_result = numpy_arr.max(keepdims=True)
     assert modin_result.shape == numpy_result.shape
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+    numpy_arr = numpy.array([1, 10000, 2, 3, 4, 5])
+    modin_arr = np.array(numpy_arr)
+    numpy_mask = numpy.array([True, False, True, True, True, True])
+    modin_mask = np.array(numpy_mask)
+    assert numpy_arr.max(where=numpy_mask, initial=5) == modin_arr.max(
+        where=modin_mask, initial=5
+    )
     # Test 2D
     numpy_arr = numpy.random.randint(-100, 100, size=(20, 20))
     modin_arr = np.array(numpy_arr)
@@ -130,6 +137,13 @@ def test_min():
     numpy_result = numpy_arr.min(keepdims=True)
     assert modin_result.shape == numpy_result.shape
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+    numpy_arr = numpy.array([1, -10000, 2, 3, 4, 5])
+    modin_arr = np.array(numpy_arr)
+    numpy_mask = numpy.array([True, False, True, True, True, True])
+    modin_mask = np.array(numpy_mask)
+    assert numpy_arr.max(where=numpy_mask, initial=5) == modin_arr.max(
+        where=modin_mask, initial=5
+    )
     # Test 2D
     numpy_arr = numpy.random.randint(-100, 100, size=(20, 20))
     modin_arr = np.array(numpy_arr)
@@ -225,6 +239,11 @@ def test_sum():
     numpy_result = numpy_arr.sum(keepdims=True)
     assert modin_result.shape == numpy_result.shape
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+    numpy_arr = numpy.array([1, 10000, 2, 3, 4, 5])
+    modin_arr = np.array(numpy_arr)
+    numpy_mask = numpy.array([True, False, True, True, True, True])
+    modin_mask = np.array(numpy_mask)
+    assert numpy_arr.sum(where=numpy_mask) == modin_arr.sum(where=modin_mask)
     # Test 2D
     numpy_arr = numpy.random.randint(-100, 100, size=(20, 20))
     modin_arr = np.array(numpy_arr)
@@ -317,6 +336,11 @@ def test_mean():
     numpy_result = numpy_arr.mean(keepdims=True)
     assert modin_result.shape == numpy_result.shape
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+    numpy_arr = numpy.array([1, 10000, 2, 3, 4, 5])
+    modin_arr = np.array(numpy_arr)
+    numpy_mask = numpy.array([True, False, True, True, True, True])
+    modin_mask = np.array(numpy_mask)
+    assert numpy_arr.mean(where=numpy_mask) == modin_arr.mean(where=modin_mask)
     # Test 2D
     numpy_arr = numpy.random.randint(-100, 100, size=(20, 20))
     modin_arr = np.array(numpy_arr)
@@ -406,6 +430,11 @@ def test_prod():
     numpy_result = numpy_arr.prod(keepdims=True)
     assert modin_result.shape == numpy_result.shape
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+    numpy_arr = numpy.array([1, 10000, 2, 3, 4, 5])
+    modin_arr = np.array(numpy_arr)
+    numpy_mask = numpy.array([True, False, True, True, True, True])
+    modin_mask = np.array(numpy_mask)
+    assert numpy_arr.prod(where=numpy_mask) == modin_arr.prod(where=modin_mask)
     # Test 2D
     numpy_arr = numpy.random.randint(-100, 100, size=(20, 20))
     modin_arr = np.array(numpy_arr)

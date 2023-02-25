@@ -284,6 +284,8 @@ class array(object):
             ]
         out_kwarg = kwargs.get("out", None)
         if out_kwarg is not None:
+            # If `out` is a modin.numpy.array, `kwargs.get("out")` returns a 1-tuple
+            # whose only element is that array, so we need to unwrap it from the tuple.
             out_kwarg = out_kwarg[0]
         where_kwarg = kwargs.get("where", True)
         kwargs["out"] = None
