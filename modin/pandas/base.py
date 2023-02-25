@@ -2110,14 +2110,6 @@ class BasePandasDataset(BasePandasDatasetCompat):
             final_query_compiler = new_query_compiler
         return self._create_or_update_from_compiler(final_query_compiler, not copy)
 
-    def reindex_like(
-        self, other, method=None, copy=True, limit=None, tolerance=None
-    ):  # noqa: PR01, RT01, D200
-        """
-        Return an object with matching indices as `other` object.
-        """
-        return self._query_compiler.reindex_like(other, method, copy, limit, tolerance)
-
     def rename_axis(
         self, mapper=None, index=None, columns=None, axis=None, copy=True, inplace=False
     ):  # noqa: PR01, RT01, D200
