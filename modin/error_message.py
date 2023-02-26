@@ -94,6 +94,12 @@ class ErrorMessage(object):
         )
 
     @classmethod
+    def bad_type_for_numpy_op(cls, function_name, operand_type) -> None:
+        cls.single_warning(
+            f"Modin NumPy only supports objects of modin.numpy.array types for {function_name}, not {operand_type}. Defaulting to NumPy."
+        )
+
+    @classmethod
     def missmatch_with_pandas(cls, operation: str, message: str) -> None:
         get_logger().debug(
             f"Modin Warning: {operation} mismatch with pandas: {message}"

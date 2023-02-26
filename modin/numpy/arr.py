@@ -411,10 +411,10 @@ class array(object):
         if self._ndim == 1:
             if axis == 1:
                 raise numpy.AxisError(1, 1)
-            if not isinstance(where, array):
-                result = self._query_compiler.max(axis=0)
-            else:
-                result = where.where(self, initial)._query_compiler.max(axis=0)
+            result = self._query_compiler
+            if isinstance(where, array):
+                result = where.where(self, initial)._query_compiler
+            result = result.max(axis=0)
             if keepdims:
                 if initial is not None and result.lt(initial).any():
                     result = pd.Series([initial])._query_compiler
@@ -505,10 +505,10 @@ class array(object):
         if self._ndim == 1:
             if axis == 1:
                 raise numpy.AxisError(1, 1)
-            if not isinstance(where, array):
-                result = self._query_compiler.min(axis=0)
-            else:
-                result = where.where(self, initial)._query_compiler.min(axis=0)
+            result = self._query_compiler
+            if isinstance(where, array):
+                result = where.where(self, initial)._query_compiler
+            result = result.min(axis=0)
             if keepdims:
                 if initial is not None and result.lt(initial).any():
                     result = pd.Series([initial])._query_compiler
@@ -760,8 +760,8 @@ class array(object):
                         f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
                 if out is not None:
-                    out._query_compiler = array(
-                        numpy.ones(out.shape) * numpy.nan
+                    out._query_compiler = (
+                        numpy.ones_like(out) * numpy.nan
                     )._query_compiler
                 return (
                     fix_dtypes_and_determine_return(
@@ -794,8 +794,8 @@ class array(object):
                         f"operand was set up as a reduction along axis 1, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
                 if out is not None:
-                    out._query_compiler = array(
-                        numpy.ones(out.shape) * numpy.nan
+                    out._query_compiler = (
+                        numpy.ones_like(out) * numpy.nan
                     )._query_compiler
                 return (
                     fix_dtypes_and_determine_return(
@@ -823,9 +823,7 @@ class array(object):
         if not keepdims and axis != 1:
             result = result.transpose()
         if out is not None:
-            out._query_compiler = array(
-                numpy.ones(out.shape) * numpy.nan
-            )._query_compiler
+            out._query_compiler = (numpy.ones_like(out) * numpy.nan)._query_compiler
         return (
             fix_dtypes_and_determine_return(
                 result, new_ndim, dtype, out, where is not False
