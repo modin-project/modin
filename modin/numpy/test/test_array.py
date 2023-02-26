@@ -41,6 +41,28 @@ def test_dtype():
     assert modin_arr.dtype == numpy_arr.dtype
 
 
+def test_conversion():
+    import modin.pandas as pd
+    from modin.numpy.utils import try_convert_from_interoperable_type
+
+    df = pd.DataFrame(numpy.random.randint(0, 100, size=(100, 100)))
+    series = df.iloc[0]
+    df_converted = try_convert_from_interoperable_type(df)
+    assert isinstance(df_converted, np.array)
+    series_converted = try_convert_from_interoperable_type(series)
+    assert isinstance(series_converted, np.array)
+    numpy.testing.assert_array_equal(df_converted._to_numpy(), df.to_numpy())
+    numpy.testing.assert_array_equal(series_converted._to_numpy(), series.to_numpy())
+    pandas_df = df._to_pandas()
+    pandas_series = series._to_pandas()
+    pandas_converted = try_convert_from_interoperable_type(pandas_df)
+    assert isinstance(pandas_converted, type(pandas_df))
+    assert pandas_converted.equals(pandas_df)
+    pandas_converted = try_convert_from_interoperable_type(pandas_series)
+    assert isinstance(pandas_converted, type(pandas_series))
+    assert pandas_converted.equals(pandas_series)
+
+
 @pytest.mark.parametrize("size", [100, (2, 100), (100, 2), (1, 100), (100, 1)])
 def test_array_ufunc(size):
     # Test ufunc.__call__
