@@ -314,6 +314,4 @@ class PandasOnRayIO(RayIO):
             lengths=None,
             enumerate_partitions=True,
         )
-        RayWrapper.materialize(
-            [part.list_of_blocks[0] for row in result for part in row]
-        )
+        qc._modin_frame._partition_mgr_cls.get_objects_from_partitions(result.flatten())
