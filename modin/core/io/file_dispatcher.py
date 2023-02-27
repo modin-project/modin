@@ -18,14 +18,12 @@ Module houses `FileDispatcher` class.
 for direct files processing.
 """
 
-import os
-
 import fsspec
+import os
+from modin.config import StorageFormat
+from modin.logging import ClassLogger
 import numpy as np
 from pandas.io.common import is_url, is_fsspec_url
-
-from modin.logging import ClassLogger
-
 
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
 
@@ -154,6 +152,32 @@ class FileDispatcher(ClassLogger):
         postprocessing work on the resulting query_compiler object.
         """
         query_compiler = cls._read(*args, **kwargs)
+        # TODO (devin-petersohn): Make this section more general for non-pandas kernel
+        # implementations.
+        if StorageFormat.get() == "Pandas":
+            import pandas as kernel_lib
+        elif StorageFormat.get() == "Cudf":
+            import cudf as kernel_lib
+        else:
+            raise NotImplementedError("FIXME")
+
+        if (
+            True
+            and hasattr(query_compiler, "dtypes")
+            and any(
+                isinstance(t, kernel_lib.CategoricalDtype)
+                for t in query_compiler.dtypes
+            )
+        ):
+            dtypes = query_compiler.dtypes
+            return query_compiler.astype(
+                {
+                    t: dtypes[t]
+                    for t in dtypes.index
+                    if isinstance(dtypes[t], kernel_lib.CategoricalDtype)
+                },
+                kwargs.get("errors", "raise"),
+            )
         return query_compiler
 
     @classmethod
