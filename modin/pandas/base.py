@@ -1724,8 +1724,14 @@ class BasePandasDataset(ClassLogger):
         """
         Whether elements in `BasePandasDataset` are contained in `values`.
         """
+        from .series import Series
+
+        ignore_indices = isinstance(values, Series)
+        values = getattr(values, "_query_compiler", values)
         return self.__constructor__(
-            query_compiler=self._query_compiler.isin(values=values, **kwargs)
+            query_compiler=self._query_compiler.isin(
+                values=values, ignore_indices=ignore_indices, **kwargs
+            )
         )
 
     def isna(self):  # noqa: RT01, D200

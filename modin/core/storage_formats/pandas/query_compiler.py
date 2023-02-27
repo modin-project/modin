@@ -1404,12 +1404,37 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
+    def isin(self, values, ignore_indices=False, shape_hint=None):
+        if isinstance(values, type(self)):
+            # HACK: if we don't cast to pandas, then the execution engine will try to
+            # propagate the distributed Series to workers and most likely would have
+            # some performance problems.
+            # TODO: A better way of doing so could be passing this `values` as a query compiler
+            # and broadcast accordingly.
+            values = values.to_pandas()
+            if ignore_indices:
+                # Pandas logic is that it ignores indexing if 'values' is a 1D object
+                values = values.squeeze(axis=1)
+
+        def isin_func(df, values):
+            if shape_hint == "column":
+                df = df.squeeze(axis=1)
+            res = df.isin(values)
+            if isinstance(res, pandas.Series):
+                res = res.to_frame(
+                    MODIN_UNNAMED_SERIES_LABEL if res.name is None else res.name
+                )
+            return res
+
+        return Map.register(isin_func, shape_hint=shape_hint, dtypes=np.bool_)(
+            self, values
+        )
+
     abs = Map.register(pandas.DataFrame.abs, dtypes="copy")
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
     convert_dtypes = Map.register(pandas.DataFrame.convert_dtypes)
     invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
-    isin = Map.register(pandas.DataFrame.isin, dtypes=np.bool_)
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
     _isfinite = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df))
