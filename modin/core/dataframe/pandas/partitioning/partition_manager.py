@@ -430,8 +430,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
         lengths : list of ints, default: None
             The list of lengths to shuffle the object.
-            Note that passing `lengths` omits the `num_splits` parameter as the number of splits
-            will now be inferred from the number of integers present in `lengths`.
+            Note:
+                1. Passing `lengths` omits the `num_splits` parameter as the number of splits
+                will now be inferred from the number of integers present in `lengths`.
+                2. When passing lengths you must explicitly specify `keep_partitioning=False`.
         apply_func_args : list-like, optional
             Positional arguments to pass to the `func`.
         **kwargs : dict
@@ -442,6 +444,11 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         NumPy array
             An array of partition objects.
         """
+        ErrorMessage.catch_bugs_and_request_email(
+            failure_condition=keep_partitioning and lengths is not None,
+            extra_log=f"`keep_partitioning` must be set to `False` when passing `lengths`. Got: {keep_partitioning=} | {lengths=}",
+        )
+
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
         # partitions as best we can right now.
@@ -550,7 +557,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         axis,
         partitions,
         map_func,
-        keep_partitioning=True,
+        keep_partitioning=False,
         num_splits=None,
         lengths=None,
         enumerate_partitions=False,
@@ -577,8 +584,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             then the number of splits is preserved.
         lengths : list of ints, default: None
             The list of lengths to shuffle the object.
-            Note that passing `lengths` omits the `num_splits` parameter as the number of splits
-            will now be inferred from the number of integers present in `lengths`.
+            Note:
+                1. Passing `lengths` omits the `num_splits` parameter as the number of splits
+                will now be inferred from the number of integers present in `lengths`.
+                2. When passing lengths you must explicitly specify `keep_partitioning=False`.
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
