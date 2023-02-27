@@ -1486,25 +1486,37 @@ class PandasQueryCompiler(BaseQueryCompiler):
         qc.columns = get_group_names(regex)
         return qc
 
-    str_replace = Map.register(_str_map("replace"), dtypes="copy")
-    str_rfind = Map.register(_str_map("rfind"), dtypes="copy")
-    str_rindex = Map.register(_str_map("rindex"), dtypes="copy")
-    str_rjust = Map.register(_str_map("rjust"), dtypes="copy")
-    str_rpartition = Map.register(_str_map("rpartition"), dtypes="copy")
-    str_rsplit = Map.register(_str_map("rsplit"), dtypes="copy")
-    str_rstrip = Map.register(_str_map("rstrip"), dtypes="copy")
-    str_slice = Map.register(_str_map("slice"), dtypes="copy")
-    str_slice_replace = Map.register(_str_map("slice_replace"), dtypes="copy")
-    str_split = Map.register(_str_map("split"), dtypes="copy")
-    str_startswith = Map.register(_str_map("startswith"), dtypes=np.bool_)
-    str_strip = Map.register(_str_map("strip"), dtypes="copy")
-    str_swapcase = Map.register(_str_map("swapcase"), dtypes="copy")
-    str_title = Map.register(_str_map("title"), dtypes="copy")
-    str_translate = Map.register(_str_map("translate"), dtypes="copy")
-    str_upper = Map.register(_str_map("upper"), dtypes="copy")
-    str_wrap = Map.register(_str_map("wrap"), dtypes="copy")
-    str_zfill = Map.register(_str_map("zfill"), dtypes="copy")
-    str___getitem__ = Map.register(_str_map("__getitem__"), dtypes="copy")
+    str_replace = Map.register(_str_map("replace"), dtypes="copy", shape_hint="column")
+    str_rfind = Map.register(_str_map("rfind"), dtypes="copy", shape_hint="column")
+    str_rindex = Map.register(_str_map("rindex"), dtypes="copy", shape_hint="column")
+    str_rjust = Map.register(_str_map("rjust"), dtypes="copy", shape_hint="column")
+    str_rpartition = Map.register(
+        _str_map("rpartition"), dtypes="copy", shape_hint="column"
+    )
+    str_rsplit = Map.register(_str_map("rsplit"), dtypes="copy", shape_hint="column")
+    str_rstrip = Map.register(_str_map("rstrip"), dtypes="copy", shape_hint="column")
+    str_slice = Map.register(_str_map("slice"), dtypes="copy", shape_hint="column")
+    str_slice_replace = Map.register(
+        _str_map("slice_replace"), dtypes="copy", shape_hint="column"
+    )
+    str_split = Map.register(_str_map("split"), dtypes="copy", shape_hint="column")
+    str_startswith = Map.register(
+        _str_map("startswith"), dtypes=np.bool_, shape_hint="column"
+    )
+    str_strip = Map.register(_str_map("strip"), dtypes="copy", shape_hint="column")
+    str_swapcase = Map.register(
+        _str_map("swapcase"), dtypes="copy", shape_hint="column"
+    )
+    str_title = Map.register(_str_map("title"), dtypes="copy", shape_hint="column")
+    str_translate = Map.register(
+        _str_map("translate"), dtypes="copy", shape_hint="column"
+    )
+    str_upper = Map.register(_str_map("upper"), dtypes="copy", shape_hint="column")
+    str_wrap = Map.register(_str_map("wrap"), dtypes="copy", shape_hint="column")
+    str_zfill = Map.register(_str_map("zfill"), dtypes="copy", shape_hint="column")
+    str___getitem__ = Map.register(
+        _str_map("__getitem__"), dtypes="copy", shape_hint="column"
+    )
 
     # END String map partitions operations
 
@@ -2245,6 +2257,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
         join_type="left",
         labels="drop",
     )
+
+    # __setitem__ methods
+    def setitem_bool(self, row_loc, col_loc, item):
+        def _set_item(df, row_loc):
+            df = df.copy()
+            df.loc[row_loc.squeeze(axis=1), col_loc] = item
+            return df
+
+        new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
+            axis=1,
+            func=_set_item,
+            other=row_loc._modin_frame,
+            new_index=self._modin_frame._index_cache,
+            new_columns=self._modin_frame._columns_cache,
+            keep_partitioning=False,
+        )
+        return self.__constructor__(new_modin_frame)
+
+    # END __setitem__ methods
 
     def __validate_bool_indexer(self, indexer):
         if len(indexer) != len(self.index):
@@ -3392,11 +3423,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # Cat operations
     def cat_codes(self):
         def func(df) -> np.ndarray:
+            # `df` is supposed to be consisted of multiple partitions,
+            # which should be concatenated before applying a function.
+            # `pd.concat` doesn't preserve categorical dtype
+            # if the dfs have categorical columns
+            # so we intentionaly restore the right dtype.
+            # TODO: revert the change when https://github.com/pandas-dev/pandas/issues/51362 is fixed.
             ser = df.iloc[:, 0]
-            return ser.cat.codes
+            if ser.dtype != "category":
+                ser = ser.astype("category", copy=False)
+            return ser.cat.codes.to_frame(name=MODIN_UNNAMED_SERIES_LABEL)
 
-        res = self._modin_frame.apply_full_axis(axis=0, func=func)
-        return self.__constructor__(res)
+        res = self._modin_frame.apply_full_axis(
+            axis=0, func=func, new_columns=[MODIN_UNNAMED_SERIES_LABEL]
+        )
+        return self.__constructor__(res, shape_hint="column")
 
     # END Cat operations
 

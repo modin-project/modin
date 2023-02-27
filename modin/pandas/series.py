@@ -1196,6 +1196,12 @@ class Series(BasePandasDataset):
             **kwargs,
         )
 
+    def isin(self, values):  # noqa: PR01, RT01, D200
+        """
+        Whether elements in `Series` are contained in `values`.
+        """
+        return super(Series, self).isin(values, shape_hint="column")
+
     def item(self):  # noqa: RT01, D200
         """
         Return the first element of the underlying data as a Python scalar.

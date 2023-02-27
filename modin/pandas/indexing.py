@@ -813,6 +813,17 @@ class _LocIndexer(_LocationIndexerBase):
         item : modin.pandas.DataFrame, modin.pandas.Series or scalar
             Value that should be assigned to located dataset.
         """
+        if (
+            isinstance(row_loc, Series)
+            and is_boolean_array(row_loc)
+            and is_scalar(item)
+        ):
+            new_qc = self.df._query_compiler.setitem_bool(
+                row_loc._query_compiler, col_loc, item
+            )
+            self.df._update_inplace(new_qc)
+            return
+
         row_lookup, col_lookup = self.qc.get_positions_from_labels(row_loc, col_loc)
         self._setitem_positional(
             row_lookup,

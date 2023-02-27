@@ -176,7 +176,7 @@ class cuDFOnRayDataframePartition(PandasDataframePartition):
         ray.ObjectRef
             A reference to `func` in Ray object store.
         """
-        return ray.put(func)
+        return RayWrapper.put(func)
 
     def length(self, materialize=True):
         """

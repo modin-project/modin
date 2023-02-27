@@ -173,18 +173,19 @@ class DataFrame(BasePandasDataset):
             )
             if isinstance(data, pandas.Index):
                 pass
-            elif is_list_like(data) and not is_dict_like(data):
+            elif (
+                is_list_like(data)
+                and not is_dict_like(data)
+                and not isinstance(data, np.ndarray)
+            ):
                 old_dtype = getattr(data, "dtype", None)
                 values = [
                     obj._to_pandas() if isinstance(obj, Series) else obj for obj in data
                 ]
-                if isinstance(data, np.ndarray):
-                    data = np.array(values, dtype=old_dtype)
-                else:
-                    try:
-                        data = type(data)(values, dtype=old_dtype)
-                    except TypeError:
-                        data = values
+                try:
+                    data = type(data)(values, dtype=old_dtype)
+                except TypeError:
+                    data = values
             elif is_dict_like(data) and not isinstance(
                 data, (pandas.Series, Series, pandas.DataFrame, DataFrame)
             ):
@@ -227,29 +228,8 @@ class DataFrame(BasePandasDataset):
         -------
         str
         """
-        from pandas.io.formats import console
-
-        num_rows = pandas.get_option("display.max_rows") or 10
-        num_cols = pandas.get_option("display.max_columns") or 20
-        if pandas.get_option("display.max_columns") is None and pandas.get_option(
-            "display.expand_frame_repr"
-        ):
-            width, _ = console.get_console_size()
-            width = min(width, len(self.columns))
-            col_counter = 0
-            i = 0
-            while col_counter < width:
-                col_counter += len(str(self.columns[i])) + 1
-                i += 1
-
-            num_cols = i
-            i = len(self.columns) - 1
-            col_counter = 0
-            while col_counter < width:
-                col_counter += len(str(self.columns[i])) + 1
-                i -= 1
-
-            num_cols += len(self.columns) - i
+        num_rows = pandas.get_option("display.max_rows") or len(self.index)
+        num_cols = pandas.get_option("display.max_columns") or len(self.columns)
         result = repr(self._build_repr_df(num_rows, num_cols))
         if len(self.index) > num_rows or len(self.columns) > num_cols:
             # The split here is so that we don't repr pandas row lengths.
@@ -1278,6 +1258,12 @@ class DataFrame(BasePandasDataset):
             downcast=downcast,
             **kwargs,
         )
+
+    def isin(self, values):  # noqa: PR01, RT01, D200
+        """
+        Whether elements in `DataFrame` are contained in `values`.
+        """
+        return super(DataFrame, self).isin(values)
 
     def iterrows(self):  # noqa: D200
         """
@@ -2780,7 +2766,7 @@ class DataFrame(BasePandasDataset):
                 value = value.T.reshape(-1)
                 if len(self) > 0:
                     value = value[: len(self)]
-            if not isinstance(value, (Series, Categorical)):
+            if not isinstance(value, (Series, Categorical, np.ndarray)):
                 value = list(value)
 
         if not self._query_compiler.lazy_execution and len(self.index) == 0:

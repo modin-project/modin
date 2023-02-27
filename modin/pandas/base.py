@@ -1720,12 +1720,12 @@ class BasePandasDataset(ClassLogger):
             )
         )
 
-    def isin(self, values):  # noqa: PR01, RT01, D200
+    def isin(self, values, **kwargs):  # noqa: PR01, RT01, D200
         """
         Whether elements in `BasePandasDataset` are contained in `values`.
         """
         return self.__constructor__(
-            query_compiler=self._query_compiler.isin(values=values)
+            query_compiler=self._query_compiler.isin(values=values, **kwargs)
         )
 
     def isna(self):  # noqa: RT01, D200

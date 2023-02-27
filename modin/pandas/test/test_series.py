@@ -4334,6 +4334,21 @@ def test_cat_codes(data):
 
 
 @pytest.mark.parametrize(
+    "set_min_partition_size",
+    [1, 2],
+    ids=["four_partitions", "two_partitions"],
+    indirect=True,
+)
+def test_cat_codes_issue5650(set_min_partition_size):
+    data = {"name": ["abc", "def", "ghi", "jkl"]}
+    pandas_df = pandas.DataFrame(data)
+    pandas_df = pandas_df.astype("category")
+    modin_df = pd.DataFrame(data)
+    modin_df = modin_df.astype("category")
+    eval_general(modin_df, pandas_df, lambda df: df["name"].cat.codes)
+
+
+@pytest.mark.parametrize(
     "data", test_data_categorical_values, ids=test_data_categorical_keys
 )
 @pytest.mark.parametrize("inplace", [True, False])

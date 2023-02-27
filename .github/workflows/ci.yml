@@ -863,14 +863,6 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 2
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
           miniforge-variant: Mambaforge
@@ -906,6 +898,11 @@ jobs:
         run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
       - uses: codecov/codecov-action@v2
+      - name: Stop local ray cluster
+        run: ray stop
+        if: matrix.engine == 'ray'
+      - name: Rename the folder with conda packages so it won't be deleted, it's too slow on Windows.
+        run: mv "${CONDA_PKGS_DIR}" "${CONDA_PKGS_DIR}_do_not_cache"
 
   test-pyarrow:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
