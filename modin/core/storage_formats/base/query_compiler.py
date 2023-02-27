@@ -446,6 +446,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
 
+    @doc_utils.add_refer_to("DataFrame.align")
+    def align(self, other, **kwargs):
+        return DataFrameDefault.register(pandas.DataFrame.align)(
+            self, other=other, **kwargs
+        )
+
     @doc_utils.doc_binary_method(operation="addition", sign="+")
     def add(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.add)(self, other=other, **kwargs)

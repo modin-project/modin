@@ -724,15 +724,15 @@ class BasePandasDataset(ClassLogger):
         """
         return self._query_compiler.align(
             other._query_compiler,
-            join,
-            axis,
-            level,
-            copy,
-            fill_value,
-            method,
-            limit,
-            fill_axis,
-            broadcast_axis,
+            join=join,
+            axis=axis,
+            level=level,
+            copy=copy,
+            fill_value=fill_value,
+            method=method,
+            limit=limit,
+            fill_axis=fill_axis,
+            broadcast_axis=broadcast_axis,
         )
 
     def all(
