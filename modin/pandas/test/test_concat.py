@@ -23,10 +23,13 @@ from .utils import (
     generate_multiindex_dfs,
     generate_none_dfs,
     create_test_dfs,
+    default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
 
 NPartitions.put(4)
+
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 def test_df_concat():
@@ -258,4 +261,13 @@ def test_concat_inner_empty(data1, index1, data2, index2, axis):
     mdf1 = pd.DataFrame(data1, index=index1)
     mdf2 = pd.DataFrame(data2, index=index2)
     mdf = pd.concat((mdf1, mdf2), axis=axis, join="inner")
+    df_equals(pdf, mdf)
+
+
+def test_concat_empty_df_series():
+    pdf = pandas.concat((pandas.DataFrame({"A": [1, 2, 3]}), pandas.Series()))
+    mdf = pd.concat((pd.DataFrame({"A": [1, 2, 3]}), pd.Series()))
+    df_equals(pdf, mdf)
+    pdf = pandas.concat((pandas.DataFrame(), pandas.Series([1, 2, 3])))
+    mdf = pd.concat((pd.DataFrame(), pd.Series([1, 2, 3])))
     df_equals(pdf, mdf)
