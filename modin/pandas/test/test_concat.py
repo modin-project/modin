@@ -236,3 +236,26 @@ def test_sort_order(sort, join, axis):
         modin_concat,
     )
     assert list(pandas_concat.columns) == list(modin_concat.columns)
+
+
+@pytest.mark.parametrize(
+    "data1, index1, data2, index2",
+    [
+        (None, None, None, None),
+        (None, None, {"A": [1, 2, 3]}, pandas.Index([1, 2, 3], name="Test")),
+        ({"A": [1, 2, 3]}, pandas.Index([1, 2, 3], name="Test"), None, None),
+        ({"A": [1, 2, 3]}, None, None, None),
+        (None, None, {"A": [1, 2, 3]}, None),
+        (None, pandas.Index([1, 2, 3], name="Test"), None, None),
+        (None, None, None, pandas.Index([1, 2, 3], name="Test")),
+    ],
+)
+@pytest.mark.parametrize("axis", [0, 1])
+def test_concat_inner_empty(data1, index1, data2, index2, axis):
+    pdf1 = pandas.DataFrame(data1, index=index1)
+    pdf2 = pandas.DataFrame(data2, index=index2)
+    pdf = pandas.concat((pdf1, pdf2), axis=axis, join="inner")
+    mdf1 = pd.DataFrame(data1, index=index1)
+    mdf2 = pd.DataFrame(data2, index=index2)
+    mdf = pd.concat((mdf1, mdf2), axis=axis, join="inner")
+    df_equals(pdf, mdf)
