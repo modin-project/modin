@@ -17,8 +17,28 @@ import inspect
 from pandas._libs.lib import no_default, NoDefault
 from pandas.api.types import is_list_like
 from pandas.core.computation.parsing import tokenize_string
+import pickle
 
 from typing import Any
+
+
+class ClientIndexMetadataCache(object):
+    def __init__(self, index_handle):
+        self._index_handle = index_handle
+        len(self)
+
+    _len = None
+
+    def __len__(self):
+        if self._len is None:
+            self._len = pickle.loads(pickle.dumps(len(self._index_handle)))
+        return self._len
+
+    def __getattr__(self, item):
+        return getattr(self._index_handle, item)
+
+    def __repr__(self):
+        return repr(self._index_handle)
 
 
 class ClientQueryCompiler(BaseQueryCompiler):
@@ -33,6 +53,7 @@ class ClientQueryCompiler(BaseQueryCompiler):
         if isinstance(id, Exception):
             raise id
         self._id = id
+        self._get_index()
 
     def _set_columns(self, new_columns):
         # N.B. almost every query compiler method creates a new compiler, but index and
@@ -53,11 +74,14 @@ class ClientQueryCompiler(BaseQueryCompiler):
         self._service.set_index(self._id, new_index)
 
     def _get_index(self):
-        return self._service.index(self._id)
+        if self._index_cache is None:
+            self._index_cache = ClientIndexMetadataCache(self._service.index(self._id))
+        return self._index_cache
 
     columns = property(_get_columns, _set_columns)
     _columns_cache = None
     index = property(_get_index, _set_index)
+    _index_cache = None
     _dtypes_cache = None
 
     @property
