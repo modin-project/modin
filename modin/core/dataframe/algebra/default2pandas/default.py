@@ -122,8 +122,8 @@ class DefaultMethod(Operator):
             if (
                 not isinstance(result, pandas.Series)
                 and not isinstance(result, pandas.DataFrame)
-                and func != "to_numpy"
-                and func != pandas.DataFrame.to_numpy
+                and func not in ("to_numpy", pandas.DataFrame.to_numpy)
+                and func not in ("align", pandas.DataFrame.align)
             ):
                 # When applying a DatetimeProperties or TimedeltaProperties function,
                 # if we don't specify the dtype for the DataFrame, the frame might
