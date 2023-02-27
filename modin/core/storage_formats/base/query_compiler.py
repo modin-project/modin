@@ -1348,8 +1348,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Boolean mask for self of whether an element at the corresponding
             position is contained in `values`.
         """
-        # We drop `shape_hint` argument that may be passed from the API layer.
-        # BaseQC doesn't need to know how to handle it.
         shape_hint = kwargs.pop("shape_hint", None)
         if isinstance(values, type(self)) and ignore_indices:
             # Pandas logic is that it ignores indexing if 'values' is a 1D object

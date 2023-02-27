@@ -1406,8 +1406,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # These operations are operations that apply a function to every partition.
     def isin(self, values, ignore_indices=False, shape_hint=None):
         if isinstance(values, type(self)):
-            # HACK: if we won't cast to pandas then the execution engine will try to
-            # # propagate the distributed Series to workers and most likely would have
+            # HACK: if we don't cast to pandas, then the execution engine will try to
+            # propagate the distributed Series to workers and most likely would have
             # some performance problems.
             # TODO: A better way of doing so could be passing this `values` as a query compiler
             # and broadcast accordingly.

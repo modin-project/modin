@@ -336,7 +336,7 @@ def test_isin(data):
     df_equals(modin_result, pandas_result)
 
 
-def test_isin_with_modin():
+def test_isin_with_modin_objects():
     modin_df1, pandas_df1 = create_test_dfs({"a": [1, 2], "b": [3, 4]})
     modin_series, pandas_series = pd.Series([1, 4, 5, 6]), pandas.Series([1, 4, 5, 6])
 
