@@ -429,8 +429,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             Whether or not to pass partition index into `apply_func`.
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
         lengths : list of ints, default: None
-            The list of lengths to shuffle the object.
-            Note:
+            The list of lengths to shuffle the object. Note:
                 1. Passing `lengths` omits the `num_splits` parameter as the number of splits
                 will now be inferred from the number of integers present in `lengths`.
                 2. When passing lengths you must explicitly specify `keep_partitioning=False`.
@@ -583,8 +582,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             of splits will be infered automatically. If `num_splits` is None and `keep_partitioning=True`
             then the number of splits is preserved.
         lengths : list of ints, default: None
-            The list of lengths to shuffle the object.
-            Note:
+            The list of lengths to shuffle the object. Note:
                 1. Passing `lengths` omits the `num_splits` parameter as the number of splits
                 will now be inferred from the number of integers present in `lengths`.
                 2. When passing lengths you must explicitly specify `keep_partitioning=False`.
