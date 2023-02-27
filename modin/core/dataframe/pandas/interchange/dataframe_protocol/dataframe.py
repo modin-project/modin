@@ -180,7 +180,7 @@ class PandasProtocolDataframe(ProtocolDataframe):
             0,
             self._df._partitions,
             lambda df: df,
-            num_splits="auto",
+            keep_partitioning=False,
             lengths=new_lengths,
         )
         new_df = self._df.__constructor__(

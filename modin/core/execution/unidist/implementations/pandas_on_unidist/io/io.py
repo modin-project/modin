@@ -236,7 +236,7 @@ class PandasOnUnidistIO(UnidistIO):
             axis=1,
             partitions=qc._modin_frame._partitions,
             map_func=func,
-            num_splits="keep",
+            keep_partitioning=True,
             lengths=None,
             enumerate_partitions=True,
             max_retries=0,
@@ -315,7 +315,7 @@ class PandasOnUnidistIO(UnidistIO):
             axis=1,
             partitions=qc._modin_frame._partitions,
             map_func=func,
-            num_splits="keep",
+            keep_partitioning=True,
             lengths=None,
             enumerate_partitions=True,
         )

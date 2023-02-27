@@ -1814,7 +1814,7 @@ class PandasDataframe(ClassLogger):
         The data shape is not changed (length and width of the table).
         """
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis, self._partitions, func, num_splits="keep"
+            axis, self._partitions, func, keep_partitioning=True
         )
         return self.__constructor__(
             new_partitions,
@@ -2118,7 +2118,7 @@ class PandasDataframe(ClassLogger):
         ), "Axis argument to filter operator must be 0 (rows) or 1 (columns)"
 
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis.value, self._partitions, condition, num_splits="keep"
+            axis.value, self._partitions, condition, keep_partitioning=True
         )
 
         new_axes, new_lengths = [0, 0], [0, 0]
@@ -2176,7 +2176,7 @@ class PandasDataframe(ClassLogger):
         """
         axis = Axis(axis)
         partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis.value, self._partitions, func, num_splits="keep"
+            axis.value, self._partitions, func, keep_partitioning=True
         )
         if axis == Axis.COL_WISE:
             new_index, row_lengths = self._compute_axis_labels_and_lengths(
@@ -2202,7 +2202,8 @@ class PandasDataframe(ClassLogger):
         apply_indices=None,
         enumerate_partitions: bool = False,
         dtypes=None,
-        num_splits="keep",
+        keep_partitioning=True,
+        num_splits=None,
         sync_labels=True,
         pass_axis_lengths_to_partitions=False,
     ):
@@ -2230,12 +2231,14 @@ class PandasDataframe(ClassLogger):
             The data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
-        num_splits : {"keep", "auto", int}, default: "keep"
-            The number of partitions to split the result into across the `axis`.
-
-            - "keep": Preserve partitioning. Setting this value stops data shuffling between partitions.
-            - "auto": Determine the number of splits automatically based on the ``modin.config`` configuration.
-            - int: The number of splits manually specified as an integer.
+        keep_partitioning : boolean, default: True
+            The flag to keep partition boundaries for Modin Frame if possible.
+            Setting it to True disables shuffling data from one partition to another in case the resulting
+            number of splits is equal to the initial number of splits.
+        num_splits : int, optional
+            The number of partitions to split the result into across the `axis`. If None, then the number
+            of splits will be infered automatically. If `num_splits` is None and `keep_partitioning=True`
+            then the number of splits is preserved.
         sync_labels : boolean, default: True
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to
@@ -2262,6 +2265,7 @@ class PandasDataframe(ClassLogger):
             enumerate_partitions=enumerate_partitions,
             dtypes=dtypes,
             other=None,
+            keep_partitioning=keep_partitioning,
             num_splits=num_splits,
             sync_labels=sync_labels,
             pass_axis_lengths_to_partitions=pass_axis_lengths_to_partitions,
@@ -2655,7 +2659,8 @@ class PandasDataframe(ClassLogger):
         apply_indices=None,
         enumerate_partitions=False,
         dtypes=None,
-        num_splits="keep",
+        keep_partitioning=True,
+        num_splits=None,
         sync_labels=True,
         pass_axis_lengths_to_partitions=False,
     ):
@@ -2685,12 +2690,14 @@ class PandasDataframe(ClassLogger):
             Data types of the result. This is an optimization
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
-        num_splits : {"keep", "auto", int}, default: "keep"
-            The number of partitions to split the result into across the `axis`.
-
-            - "keep": Preserve partitioning. Setting this value stops data shuffling between partitions.
-            - "auto": Determine the number of splits automatically based on the ``modin.config`` configuration.
-            - int: The number of splits manually specified as an integer.
+        keep_partitioning : boolean, default: True
+            The flag to keep partition boundaries for Modin Frame if possible.
+            Setting it to True disables shuffling data from one partition to another in case the resulting
+            number of splits is equal to the initial number of splits.
+        num_splits : int, optional
+            The number of partitions to split the result into across the `axis`. If None, then the number
+            of splits will be infered automatically. If `num_splits` is None and `keep_partitioning=True`
+            then the number of splits is preserved.
         sync_labels : boolean, default: True
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to
@@ -2739,6 +2746,7 @@ class PandasDataframe(ClassLogger):
             apply_func=self._build_treereduce_func(axis, func),
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
+            keep_partitioning=keep_partitioning,
             num_splits=num_splits,
             apply_func_args=apply_func_args,
         )
@@ -2755,7 +2763,7 @@ class PandasDataframe(ClassLogger):
                 [np.dtype(dtypes)] * len(new_columns), index=new_columns
             )
 
-        if num_splits != "keep":
+        if not keep_partitioning:
             if kw["row_lengths"] is None and new_index is not None:
                 if axis == 0:
                     kw["row_lengths"] = get_length_list(

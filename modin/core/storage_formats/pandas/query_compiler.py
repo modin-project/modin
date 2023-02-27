@@ -476,6 +476,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     func=map_func,
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
+                    keep_partitioning=False,
                     num_splits=merge_partitioning(
                         self._modin_frame, right._modin_frame, axis=1
                     ),
@@ -550,6 +551,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     func=map_func,
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
+                    keep_partitioning=False,
                     num_splits=merge_partitioning(
                         self._modin_frame, right._modin_frame, axis=1
                     ),
@@ -2475,7 +2477,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 _compute_hash,
                 new_index=new_index,
                 new_columns=new_columns,
-                num_splits="auto",
+                keep_partitioning=False,
                 dtypes=np.dtype("O"),
             )
         else:
@@ -2485,7 +2487,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             _compute_duplicated,
             new_index=new_index,
             new_columns=new_columns,
-            num_splits="auto",
+            keep_partitioning=False,
             dtypes=np.bool_,
         )
         return self.__constructor__(new_modin_frame, shape_hint="column")

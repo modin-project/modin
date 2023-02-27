@@ -394,7 +394,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         apply_func,
         left,
         right,
-        num_splits="auto",
+        keep_partitioning=False,
+        num_splits=None,
         apply_indices=None,
         enumerate_partitions=False,
         lengths=None,
@@ -414,15 +415,14 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             Left partitions.
         right : NumPy 2D array
             Right partitions.
-        num_splits : {"auto", "keep", int}, default: "auto"
-            The number of partitions to split the result into across the `axis`.
-
-            - "auto": Determine the number of splits automatically based on the ``modin.config`` configuration.
-            - "keep": Preserve partitioning. Setting this value stops data shuffling between partitions.
-            - int: The number of splits manually specified as an integer.
-
-            Note that in order for the `lengths` parameter to be considered the `num_splits`
-            parameter has to be "auto".
+        keep_partitioning : boolean, default: False
+            The flag to keep partition boundaries for Modin Frame if possible.
+            Setting it to True disables shuffling data from one partition to another in case the resulting
+            number of splits is equal to the initial number of splits.
+        num_splits : int, optional
+            The number of partitions to split the result into across the `axis`. If None, then the number
+            of splits will be infered automatically. If `num_splits` is None and `keep_partitioning=True`
+            then the number of splits is preserved.
         apply_indices : list of ints, default: None
             Indices of `axis ^ 1` to apply function over.
         enumerate_partitions : bool, default: False
@@ -430,8 +430,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
         lengths : list of ints, default: None
             The list of lengths to shuffle the object.
-            Note that in order for the `lengths` parameter to be considered the `num_splits`
-            parameter has to be "auto".
+            Note that passing `lengths` omits the `num_splits` parameter as the number of splits
+            will now be inferred from the number of integers present in `lengths`.
         apply_func_args : list-like, optional
             Positional arguments to pass to the `func`.
         **kwargs : dict
@@ -445,11 +445,11 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
         # partitions as best we can right now.
-        if num_splits == "keep":
+        if keep_partitioning and num_splits is None:
             num_splits = len(left) if axis == 0 else len(left.T)
         elif lengths:
             num_splits = len(lengths)
-        elif num_splits == "auto":
+        elif num_splits is None:
             num_splits = NPartitions.get()
         else:
             ErrorMessage.catch_bugs_and_request_email(
@@ -550,7 +550,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         axis,
         partitions,
         map_func,
-        num_splits="auto",
+        keep_partitioning=True,
+        num_splits=None,
         lengths=None,
         enumerate_partitions=False,
         **kwargs,
@@ -566,19 +567,18 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             Partitions of Modin Frame.
         map_func : callable
             Function to apply.
-        num_splits : {"auto", "keep", int}, default: "auto"
-            The number of partitions to split the result into across the `axis`.
-
-            - "auto": Determine the number of splits automatically based on the ``modin.config`` configuration.
-            - "keep": Preserve partitioning. Setting this value stops data shuffling between partitions.
-            - int: The number of splits manually specified as an integer.
-
-            Note that in order for the `lengths` parameter to be considered the `num_splits`
-            parameter has to be "auto".
+        keep_partitioning : boolean, default: False
+            The flag to keep partition boundaries for Modin Frame if possible.
+            Setting it to True disables shuffling data from one partition to another in case the resulting
+            number of splits is equal to the initial number of splits.
+        num_splits : int, optional
+            The number of partitions to split the result into across the `axis`. If None, then the number
+            of splits will be infered automatically. If `num_splits` is None and `keep_partitioning=True`
+            then the number of splits is preserved.
         lengths : list of ints, default: None
-            List of lengths to shuffle the object.
-            Note that in order for the `lengths` parameter to be considered the `num_splits`
-            parameter has to be "auto".
+            The list of lengths to shuffle the object.
+            Note that passing `lengths` omits the `num_splits` parameter as the number of splits
+            will now be inferred from the number of integers present in `lengths`.
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
@@ -599,6 +599,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             axis=axis,
             left=partitions,
             apply_func=map_func,
+            keep_partitioning=keep_partitioning,
             num_splits=num_splits,
             right=None,
             lengths=lengths,
