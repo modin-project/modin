@@ -141,7 +141,7 @@ def test_min():
     modin_arr = np.array(numpy_arr)
     numpy_mask = numpy.array([True, False, True, True, True, True])
     modin_mask = np.array(numpy_mask)
-    assert numpy_arr.max(where=numpy_mask, initial=5) == modin_arr.max(
+    assert numpy_arr.min(where=numpy_mask, initial=5) == modin_arr.min(
         where=modin_mask, initial=5
     )
     # Test 2D
@@ -216,8 +216,8 @@ def test_min():
     numpy_mask = numpy.array([[True, False, True], [True, True, True]])
     modin_mask = np.array(numpy_mask)
     numpy.testing.assert_equal(
-        numpy_arr.max(where=numpy_mask, initial=5),
-        modin_arr.max(where=modin_mask, initial=5),
+        numpy_arr.min(where=numpy_mask, initial=5),
+        modin_arr.min(where=modin_mask, initial=5),
     )
 
 

@@ -334,8 +334,9 @@ def mean(x1, axis=None, dtype=None, out=None, keepdims=None, *, where=True):
 
 
 # Maximum and minimum are ufunc's in NumPy, which means that our array's __array_ufunc__
-# implementation will automatically handle this, so we can just use NumPy's maximum/minimum
-# since that will route to our array's ufunc.
+# implementation will automatically handle this. We still need the function though, so that
+# if the operands are modin.pandas objects, we can convert them to arrays, but after that
+# we can just use NumPy's maximum/minimum since that will route to our array's ufunc.
 def maximum(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
