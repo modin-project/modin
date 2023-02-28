@@ -254,13 +254,14 @@ def test_sort_order(sort, join, axis):
     ],
 )
 @pytest.mark.parametrize("axis", [0, 1])
-def test_concat_inner_empty(data1, index1, data2, index2, axis):
+@pytest.mark.parametrize("join", ["inner", "outer"])
+def test_concat_empty(data1, index1, data2, index2, axis, join):
     pdf1 = pandas.DataFrame(data1, index=index1)
     pdf2 = pandas.DataFrame(data2, index=index2)
-    pdf = pandas.concat((pdf1, pdf2), axis=axis, join="inner")
+    pdf = pandas.concat((pdf1, pdf2), axis=axis, join=join)
     mdf1 = pd.DataFrame(data1, index=index1)
     mdf2 = pd.DataFrame(data2, index=index2)
-    mdf = pd.concat((mdf1, mdf2), axis=axis, join="inner")
+    mdf = pd.concat((mdf1, mdf2), axis=axis, join=join)
     df_equals(pdf, mdf)
 
 
