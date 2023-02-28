@@ -840,6 +840,18 @@ def test_loc_iloc_slice_indexer(locator_name, slice_indexer):
     eval_general(md_df, pd_df, lambda df: getattr(df, locator_name)[slice_indexer])
 
 
+def test_loc_range_index_getitem_single_value_5702():
+    eval_general(
+        *create_test_dfs(test_data["int_data"]), lambda df: df.loc[pd.RangeIndex(99)]
+    )
+
+
+def test_loc_range_index_getitem_two_values_5702():
+    eval_general(
+        *create_test_dfs(test_data["int_data"]), lambda df: df.loc[pd.RangeIndex(99), :]
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_pop(request, data):
     modin_df = pd.DataFrame(data)

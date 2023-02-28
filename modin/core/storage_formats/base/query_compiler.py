@@ -3391,7 +3391,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         for axis, axis_loc in enumerate((row_loc, col_loc)):
             if is_scalar(axis_loc):
                 axis_loc = np.array([axis_loc])
-            if isinstance(axis_loc, slice) or is_range_like(axis_loc):
+            if isinstance(axis_loc, pandas.RangeIndex):
+                axis_lookup = axis_loc
+            elif isinstance(axis_loc, slice) or is_range_like(axis_loc):
                 if isinstance(axis_loc, slice) and axis_loc == slice(None):
                     axis_lookup = axis_loc
                 else:
