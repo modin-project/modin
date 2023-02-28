@@ -13,8 +13,6 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
-import uuid
-
 from distributed import Future
 from distributed.utils import get_ip
 from dask.distributed import wait
@@ -53,7 +51,8 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         self._length_cache = length
         self._width_cache = width
         self._ip_cache = ip
-        self._identity = uuid.uuid4().hex
+        # TODO: align with other engines
+        self._identity
 
     def get(self):
         """

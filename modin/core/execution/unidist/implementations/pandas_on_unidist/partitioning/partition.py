@@ -14,7 +14,6 @@
 """Module houses class that wraps data (block partition) and its metadata."""
 
 import unidist
-import uuid
 
 from modin.core.execution.unidist.common import UnidistWrapper
 from modin.core.execution.unidist.common.utils import deserialize, wait
@@ -54,7 +53,6 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         self._ip_cache = ip
 
         if self._is_debug:
-            self._identity = uuid.uuid4().hex
             get_logger().debug(
                 "Partition ID: {}, Height: {}, Width: {}, Node IP: {}".format(
                     self._identity,

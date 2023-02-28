@@ -16,6 +16,7 @@
 from abc import ABC
 from copy import copy
 import logging
+import uuid
 
 import pandas
 from pandas.api.types import is_scalar
@@ -35,6 +36,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
 
     _length_cache = None
     _width_cache = None
+    _identity_cache = None
     _data = None
 
     @cache_readonly
@@ -347,6 +349,13 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         if self._width_cache is None:
             self._width_cache = self.apply(self._width_extraction_fn()).get()
         return self._width_cache
+
+    @property
+    def _identity(self):  # noqa: RT01
+        """Identifier calculation on request for debug logging mode."""
+        if self._identity_cache is None:
+            self._identity_cache = uuid.uuid4().hex
+        return self._identity_cache
 
     def split(self, split_func, num_splits, *args):
         """

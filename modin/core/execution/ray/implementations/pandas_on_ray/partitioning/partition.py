@@ -15,10 +15,9 @@
 
 import ray
 from ray.util import get_node_ip_address
-import uuid
+
 from modin.core.execution.ray.common.utils import deserialize, ObjectIDType, wait
 from modin.core.execution.ray.common import RayWrapper
-
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
 from modin.logging import get_logger
@@ -57,7 +56,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         self._ip_cache = ip
 
         if self._is_debug:
-            self._identity = uuid.uuid4().hex
             get_logger().debug(
                 "Partition ID: {}, Height: {}, Width: {}, Node IP: {}".format(
                     self._identity,
