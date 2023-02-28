@@ -225,7 +225,7 @@ class PandasParser(ClassLogger):
 
         Returns
         -------
-        frame_dtypes : pandas.Series or dtype
+        frame_dtypes : pandas.Series, dtype or None
             Resulting dtype or pandas.Series where column names are used as
             index and types of columns are used as values for full resulting
             frame.
