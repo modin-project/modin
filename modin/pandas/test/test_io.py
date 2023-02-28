@@ -169,8 +169,8 @@ def parquet_eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
 
         pandas_df = pandas.read_parquet(unique_filename_pandas, engine=engine)
         modin_df = pd.read_parquet(unique_filename_modin, engine=engine)
-        # If read operations are asynchronous, then the dataframes check should be
-        # inside `ensure_clean_dir` context
+        # If read operations are asynchronous, then the dataframes
+        # check should be inside `ensure_clean_dir` context
         df_equals(pandas_df, modin_df)
 
 
@@ -1206,7 +1206,9 @@ class TestCsv:
                 df_pandas = pandas.read_csv(buffer)
                 buffer.seek(buffer_start_pos)
                 df_modin = pd.read_csv(buffer)
-        df_equals(df_modin, df_pandas)
+            # If read operations are asynchronous, then the dataframes
+            # check should be inside `ensure_clean_dir` context
+            df_equals(df_modin, df_pandas)
 
     def test_unnamed_index(self):
         def get_internal_df(df):
@@ -1291,7 +1293,9 @@ class TestCsv:
             expected_pandas_df = pandas.read_csv(unique_filename, index_col=False)
             modin_df = pd.read_csv(unique_filename, index_col=False)
             actual_pandas_df = modin_df._to_pandas()
-        df_equals(expected_pandas_df, actual_pandas_df)
+            # If read operations are asynchronous, then the dataframes
+            # check should be inside `ensure_clean_dir` context
+            df_equals(expected_pandas_df, actual_pandas_df)
 
 
 class TestTable:
@@ -1318,8 +1322,9 @@ class TestTable:
 
             pandas_df = wrapped_read_table(unique_filename, method="pandas")
             modin_df = wrapped_read_table(unique_filename, method="modin")
-
-        df_equals(modin_df, pandas_df)
+            # If read operations are asynchronous, then the dataframes
+            # check should be inside `ensure_clean_dir` context
+            df_equals(modin_df, pandas_df)
 
     def test_read_table_empty_frame(self, make_csv_file):
         with ensure_clean() as unique_filename:
@@ -1375,8 +1380,10 @@ class TestParquet:
             make_parquet_file(filename=unique_filename, nrows=nrows)
 
             parquet_df = pd.read_parquet(unique_filename, engine=engine)
-        for col in parquet_df.columns:
-            parquet_df[col]
+            # If read operations are asynchronous, then the dataframes
+            # check should be inside `ensure_clean_dir` context
+            for col in parquet_df.columns:
+                parquet_df[col]
 
     @pytest.mark.parametrize("columns", [None, ["col1"]])
     @pytest.mark.parametrize("row_group_size", [None, 100, 1000, 10_000])
@@ -1978,7 +1985,7 @@ class TestHdf:
 
             modin_df = pd.read_hdf(hdf_file, key="data/df1", mode="r")
             pandas_df = pandas.read_hdf(hdf_file, key="data/df1", mode="r")
-        df_equals(modin_df, pandas_df)
+            df_equals(modin_df, pandas_df)
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1993,7 +2000,9 @@ class TestHdf:
                 modin_df = pd.read_hdf(h, "/key")
             with pandas.HDFStore(filename) as h:
                 pandas_df = pandas.read_hdf(h, "/key")
-        df_equals(modin_df, pandas_df)
+            # If read operations are asynchronous, then the dataframes
+            # check should be inside `ensure_clean_dir` context
+            df_equals(modin_df, pandas_df)
 
 
 class TestSql:
@@ -2056,7 +2065,9 @@ class TestSql:
                     sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
                 )
             pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
-        df_equals(modin_df, pandas_df)
+            # If read operations are asynchronous, then the dataframes
+            # check should be inside `ensure_clean_dir` context
+            df_equals(modin_df, pandas_df)
 
     @pytest.mark.skipif(
         not TestReadFromSqlServer.get(),

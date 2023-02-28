@@ -311,6 +311,5 @@ class PandasOnRayIO(RayIO):
             keep_partitioning=True,
             lengths=None,
             enumerate_partitions=True,
-            max_retries=0,
         )
         qc._modin_frame._partition_mgr_cls.get_objects_from_partitions(result.flatten())
