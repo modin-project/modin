@@ -760,24 +760,13 @@ engine : str
                 context = _nullcontext(file_for_parser.path)
             else:
                 context = fsspec.open(file_for_parser.path, **storage_options)
-            try:
-                with context as f:
-                    chunk = PandasParquetParser._read_row_group_chunk(
-                        f,
-                        file_for_parser.row_group_start,
-                        file_for_parser.row_group_end,
-                        columns,
-                        engine,
-                    )
-            except FileNotFoundError:
-                from os.path import dirname
-
-                _dir = dirname(file_for_parser.path)
-                import os
-
-                all_files = list(os.walk(_dir))
-                raise ValueError(
-                    f"'{file_for_parser.path}' is missed; all file in diractory: '{all_files}'"
+            with context as f:
+                chunk = PandasParquetParser._read_row_group_chunk(
+                    f,
+                    file_for_parser.row_group_start,
+                    file_for_parser.row_group_end,
+                    columns,
+                    engine,
                 )
             chunks.append(chunk)
         df = pandas.concat(chunks)
