@@ -1793,7 +1793,7 @@ class PandasDataframe(ClassLogger):
         pass
 
     @lazy_metadata_decorator(apply_axis="both")
-    def fold(self, axis, func):
+    def fold(self, axis, func, new_columns=None):
         """
         Perform a function across an entire axis.
 
@@ -1803,6 +1803,11 @@ class PandasDataframe(ClassLogger):
             The axis to apply over.
         func : callable
             The function to apply.
+        new_columns : list-like, optional
+            The columns of the result.
+            Must be the same length as the columns' length of `self`.
+            The column labels of `self` may change during an operation so
+            we may want to pass the new column labels in (e.g., see `cat.codes`).
 
         Returns
         -------
@@ -1813,6 +1818,13 @@ class PandasDataframe(ClassLogger):
         -----
         The data shape is not changed (length and width of the table).
         """
+        if new_columns is not None:
+            if self._columns_cache is not None:
+                assert len(self._columns_cache) == len(
+                    new_columns
+                ), "The length of `new_columns` doesn't match the columns' length of `self`"
+            self._columns_cache = new_columns
+
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True
         )
@@ -2199,8 +2211,6 @@ class PandasDataframe(ClassLogger):
         func,
         new_index=None,
         new_columns=None,
-        new_row_lengths=None,
-        new_column_widths=None,
         apply_indices=None,
         enumerate_partitions: bool = False,
         dtypes=None,
@@ -2223,12 +2233,6 @@ class PandasDataframe(ClassLogger):
         new_columns : list-like, optional
             The columns of the result. We may know this in
             advance, and if not provided it must be computed.
-        new_row_lengths : list, optional
-            The length of each partition in the rows. The "height" of
-            each of the block partitions. Is computed if not provided.
-        new_column_widths : list, optional
-            The width of each partition in the columns. The "width" of
-            each of the block partitions. Is computed if not provided.
         apply_indices : list-like, default: None
             Indices of `axis ^ 1` to apply function over.
         enumerate_partitions : bool, default: False
@@ -2263,8 +2267,6 @@ class PandasDataframe(ClassLogger):
             func=func,
             new_index=new_index,
             new_columns=new_columns,
-            new_row_lengths=new_row_lengths,
-            new_column_widths=new_column_widths,
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
             dtypes=dtypes,
@@ -2659,8 +2661,6 @@ class PandasDataframe(ClassLogger):
         other,
         new_index=None,
         new_columns=None,
-        new_row_lengths=None,
-        new_column_widths=None,
         apply_indices=None,
         enumerate_partitions=False,
         dtypes=None,
@@ -2685,12 +2685,6 @@ class PandasDataframe(ClassLogger):
         new_columns : list-like, optional
             Columns of the result. We may know this in
             advance, and if not provided it must be computed.
-        new_row_lengths : list, optional
-            The length of each partition in the rows. The "height" of
-            each of the block partitions. Is computed if not provided.
-        new_column_widths : list, optional
-            The width of each partition in the columns. The "width" of
-            each of the block partitions. Is computed if not provided.
         apply_indices : list-like, default: None
             Indices of `axis ^ 1` to apply function over.
         enumerate_partitions : bool, default: False
@@ -2754,7 +2748,7 @@ class PandasDataframe(ClassLogger):
             keep_partitioning=keep_partitioning,
             apply_func_args=apply_func_args,
         )
-        kw = {"row_lengths": new_row_lengths, "column_widths": new_column_widths}
+        kw = {"row_lengths": None, "column_widths": None}
         if dtypes == "copy":
             kw["dtypes"] = self._dtypes
         elif dtypes is not None:
