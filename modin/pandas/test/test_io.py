@@ -169,7 +169,9 @@ def parquet_eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
 
         pandas_df = pandas.read_parquet(unique_filename_pandas, engine=engine)
         modin_df = pd.read_parquet(unique_filename_modin, engine=engine)
-    df_equals(pandas_df, modin_df)
+        # If read operations are asynchronous, then the dataframes check should be
+        # inside `ensure_clean_dir` context
+        df_equals(pandas_df, modin_df)
 
 
 def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
