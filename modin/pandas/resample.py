@@ -204,32 +204,16 @@ class Resampler(ClassLogger):
         )
 
     def ffill(self, limit=None):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_ffill(
-                self.resample_kwargs, limit
-            )
-        )
+        return self.fillna(method="ffill", limit=limit)
 
     def backfill(self, limit=None):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_backfill(
-                self.resample_kwargs, limit
-            )
-        )
+        return self.bfill(limit)
 
     def bfill(self, limit=None):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_bfill(
-                self.resample_kwargs, limit
-            )
-        )
+        return self.fillna(method="bfill", limit=limit)
 
     def pad(self, limit=None):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_pad(
-                self.resample_kwargs, limit
-            )
-        )
+        return self.fillna(method="ffill", limit=limit)
 
     def nearest(self, limit=None):
         return self._dataframe.__constructor__(
