@@ -420,15 +420,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Needed for numpy API
     _logical_and = Binary.register(
-        lambda df, r, *args, **kwargs: pandas.DataFrame(np.logical_and(df, r)),
+        lambda df, other, *args, **kwargs: pandas.DataFrame(np.logical_and(df, other, *args, **kwargs)),
         infer_dtypes="bool",
     )
     _logical_or = Binary.register(
-        lambda df, r, *args, **kwargs: pandas.DataFrame(np.logical_or(df, r)),
+        lambda df, other, *args, **kwargs: pandas.DataFrame(np.logical_or(df, other, *args, **kwargs)),
         infer_dtypes="bool",
     )
     _logical_xor = Binary.register(
-        lambda df, r, *args, **kwargs: pandas.DataFrame(np.logical_xor(df, r)),
+        lambda df, other, *args, **kwargs: pandas.DataFrame(np.logical_xor(df, other, *args, **kwargs)),
         infer_dtypes="bool",
     )
 
@@ -1458,6 +1458,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     convert_dtypes = Map.register(pandas.DataFrame.convert_dtypes)
     invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
+    # `dtypes` cannot be naively hinted for these functions when called by the numpy API:
+    # if `where` and `out` are specified, then some values in the resulting dataframe
+    # may retain their original values, which would not have the bool datatype
     _isfinite = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df))
     )

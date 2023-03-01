@@ -1607,11 +1607,8 @@ class array(object):
             result = result.to_numpy()[0, 0]
             return result if not where else result and where
         if axis is None:
-            result = self.flatten().all(
-                axis=axis,
-                out=out,
-                keepdims=None,
-                where=where,
+            result = self.all(axis=1, keepdims=None, where=where).all(
+                axis=0, out=out, keepdims=None, where=where
             )
             if keepdims:
                 if out is not None and out.shape != (1, 1):
@@ -1648,11 +1645,8 @@ class array(object):
             result = result.to_numpy()[0, 0]
             return result if not where else result & where
         if axis is None:
-            result = self.flatten().any(
-                axis=axis,
-                out=out,
-                keepdims=None,
-                where=where,
+            result = self.any(axis=1, keepdims=None, where=where).any(
+                axis=0, keepdims=None, where=where
             )
             if keepdims:
                 if out is not None and out.shape != (1, 1):
@@ -1780,7 +1774,7 @@ class array(object):
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
         # breakpoint()
         if caller._query_compiler != self._query_compiler:
-            # In this case, we are doing an operation that looks like this 1D_object,op(2D_object).
+            # In this case, we are doing an operation that looks like this 1D_object.op(2D_object).
             # For Modin to broadcast directly, we have to swap it so that the operation is actually
             # 2D_object.op(1D_object).
             caller, callee = callee, caller
@@ -1821,23 +1815,9 @@ class array(object):
         dtype=None,
         subok=True,
     ):
-        check_kwargs(where=where, casting=casting, order=order, subok=subok)
-        if is_scalar(x2):
-            return fix_dtypes_and_determine_return(
-                self._query_compiler._logical_or(x2),
-                self._ndim,
-                dtype,
-                out,
-                where,
-            )
-        caller, callee, new_ndim, _ = self._binary_op(x2)
-        if caller._query_compiler != self._query_compiler:
-            # In this case, we are doing an operation that looks like this 1D_object | 2D_object.
-            # For Modin to broadcast directly, we have to swap it so that the operation is actually
-            # 2D_object.or(1D_object).
-            caller, callee = callee, caller
-        result = caller._query_compiler._logical_or(callee._query_compiler)
-        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
+        return self._logical_binop(
+            "_logical_or", x2, out, where, casting, order, dtype, subok
+        )
 
     def _logical_xor(
         self,
@@ -1851,23 +1831,9 @@ class array(object):
         dtype=None,
         subok=True,
     ):
-        check_kwargs(where=where, casting=casting, order=order, subok=subok)
-        if is_scalar(x2):
-            return fix_dtypes_and_determine_return(
-                self._query_compiler._logical_xor(x2),
-                self._ndim,
-                dtype,
-                out,
-                where,
-            )
-        caller, callee, new_ndim, _ = self._binary_op(x2)
-        if caller._query_compiler != self._query_compiler:
-            # In this case, we are doing an operation that looks like this 1D_object ^ 2D_object.
-            # For Modin to broadcast directly, we have to swap it so that the operation is actually
-            # 2D_object.xor(1D_object).
-            caller, callee = callee, caller
-        result = caller._query_compiler._logical_xor(callee._query_compiler)
-        return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
+        return self._logical_binop(
+            "_logical_xor", x2, out, where, casting, order, dtype, subok
+        )
 
     def flatten(self, order="C"):
         check_kwargs(order=order)
