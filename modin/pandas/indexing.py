@@ -644,10 +644,9 @@ class _LocIndexer(_LocationIndexerBase):
             # loc['level_one_key', 'column_name']. It's possible for both to be valid
             # when we have a multiindex on axis=0, and it seems pandas uses
             # interpretation 1 if that's possible. Do the same.
+            locators = self._parse_row_and_column_locators((key, slice(None)))
             try:
-                return self._helper_for__getitem__(
-                    key, *self._parse_row_and_column_locators((key, slice(None)))
-                )
+                return self._helper_for__getitem__(key, *locators)
             except KeyError:
                 pass
         return self._helper_for__getitem__(
