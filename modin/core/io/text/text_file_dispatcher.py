@@ -909,21 +909,14 @@ class TextFileDispatcher(FileDispatcher):
             New query compiler, created from `new_frame`.
         """
         new_index, row_lengths = cls._define_index(index_ids, index_name)
+        # Compose modin partitions from `partition_ids`
+        partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
+
         # Compute dtypes by collecting and combining all of the partition dtypes. The
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column. The index is set below.
-        # dtypes = cls.get_dtypes(dtypes_ids) if len(dtypes_ids) > 0 else None
-        # Compose modin partitions from `partition_ids`
-        partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
-
-        # Set the index for the dtypes to the column names
-        """
-        if isinstance(dtypes, pandas.Series):
-            dtypes.index = column_names
-        else:
-            dtypes = pandas.Series(dtypes, index=column_names)
-        """
+        dtypes = cls.get_dtypes(dtypes_ids, column_names)
 
         new_frame = cls.frame_cls(
             partition_ids,
