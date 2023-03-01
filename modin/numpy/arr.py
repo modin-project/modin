@@ -732,7 +732,7 @@ class array(object):
                 raise numpy.AxisError(1, 1)
             target = where.where(self, numpy.nan) if isinstance(where, array) else self
             result = target._query_compiler.astype(
-                {col_name: out_dtype for col_name in result.columns}
+                {col_name: out_dtype for col_name in target._query_compiler.columns}
             ).mean(axis=0)
             if keepdims:
                 if out is not None and out.shape != (1,):
@@ -1089,8 +1089,8 @@ class array(object):
                 raise numpy.AxisError(1, 1)
             target = where.where(self, 1) if isinstance(where, array) else self
             result = target._query_compiler.astype(
-                {col_name: out_dtype for col_name in result.columns}
-            ).prod(axis=0)
+                {col_name: out_dtype for col_name in target._query_compiler.columns}
+            ).prod(axis=0, skipna=False)
             result = result.mul(initial)
             if keepdims:
                 if out is not None:
@@ -1116,8 +1116,8 @@ class array(object):
                 result = where.where(self, 1)
             result = (
                 result.astype(out_dtype)
-                ._query_compiler.prod(axis=1)
-                .prod(axis=0)
+                ._query_compiler.prod(axis=1, skipna=False)
+                .prod(axis=0, skipna=False)
                 .to_numpy()[0, 0]
             )
             result *= initial
@@ -1148,7 +1148,7 @@ class array(object):
         target = where.where(self, 1) if isinstance(where, array) else self
         result = target._query_compiler.astype(
             {col_name: out_dtype for col_name in self._query_compiler.columns}
-        ).prod(axis=axis)
+        ).prod(axis=axis, skipna=False)
         result = result.mul(initial)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
@@ -1391,8 +1391,8 @@ class array(object):
                 raise numpy.AxisError(1, 1)
             target = where.where(self, 0) if isinstance(where, array) else self
             result = target._query_compiler.astype(
-                {col_name: out_dtype for col_name in result.columns}
-            ).sum(axis=0)
+                {col_name: out_dtype for col_name in target._query_compiler.columns}
+            ).sum(axis=0, skipna=False)
             result = result.add(initial)
             if keepdims:
                 if out is not None:
@@ -1418,8 +1418,8 @@ class array(object):
                 result = where.where(self, 0)
             result = (
                 result.astype(out_dtype)
-                ._query_compiler.sum(axis=1)
-                .sum(axis=0)
+                ._query_compiler.sum(axis=1, skipna=False)
+                .sum(axis=0, skipna=False)
                 .to_numpy()[0, 0]
             )
             result += initial
@@ -1448,7 +1448,7 @@ class array(object):
         target = where.where(self, 0) if isinstance(where, array) else self
         result = target._query_compiler.astype(
             {col_name: out_dtype for col_name in self._query_compiler.columns}
-        ).sum(axis=axis)
+        ).sum(axis=axis, skipna=False)
         result = result.add(initial)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
