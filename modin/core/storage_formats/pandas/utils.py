@@ -197,9 +197,6 @@ def merge_partitioning(left, right, axis=1):
     -------
     int
     """
-    # Avoiding circular imports from pandas query compiler
-    from modin.core.storage_formats.pandas.utils import compute_chunksize
-
     lshape = left._row_lengths_cache if axis == 0 else left._column_widths_cache
     rshape = right._row_lengths_cache if axis == 0 else right._column_widths_cache
 
