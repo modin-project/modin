@@ -59,8 +59,7 @@ from modin.core.dataframe.algebra import (
     GroupByReduce,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
-from modin.core.dataframe.pandas.utils import merge_partitioning
-from .utils import get_group_names
+from .utils import get_group_names, merge_partitioning
 from .groupby import GroupbyReduceImpl
 
 

@@ -660,7 +660,7 @@ def test_merge_partitioning(
     ref_with_no_cache,
     modify_config,
 ):
-    from modin.core.dataframe.pandas.utils import merge_partitioning
+    from modin.core.storage_formats.pandas.utils import merge_partitioning
 
     left_df = pandas.DataFrame(
         [np.arange(sum(left_partitioning)) for _ in range(sum(left_partitioning))]
