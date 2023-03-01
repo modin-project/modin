@@ -166,7 +166,7 @@ class PandasDataframe(ClassLogger):
     column_widths : list, optional
         The width of each partition in the columns. The "width" of
         each of the block partitions. Is computed if not provided.
-    dtypes : pandas.Series, optional
+    dtypes : pandas.Series or callable, optional
         The data types for the dataframe columns.
     """
 
@@ -285,6 +285,15 @@ class PandasDataframe(ClassLogger):
         """
         return [self.row_lengths, self.column_widths]
 
+    def has_dtypes_cache(self):
+        return self._dtypes is not None
+
+    def copy_dtypes_cache(self):
+        dtypes_cache = self._dtypes
+        if dtypes_cache is not None and not callable(dtypes_cache):
+            dtypes_cache = dtypes_cache.copy()
+        return dtypes_cache
+
     @property
     def dtypes(self):
         """
@@ -295,7 +304,9 @@ class PandasDataframe(ClassLogger):
         pandas.Series
             A pandas Series containing the data types for this dataframe.
         """
-        if self._dtypes is None:
+        if callable(self._dtypes):
+            self._dtypes = self._dtypes()
+        elif self._dtypes is None:
             self._dtypes = self._compute_dtypes()
         return self._dtypes
 
@@ -416,8 +427,8 @@ class PandasDataframe(ClassLogger):
         else:
             new_columns = self._validate_set_axis(new_columns, self._columns_cache)
             self._columns_cache = new_columns
-            if self._dtypes is not None:
-                self._dtypes.index = new_columns
+            if self.has_dtypes_cache():
+                self.dtypes.index = new_columns
         self.synchronize_labels(axis=1)
 
     columns = property(_get_columns, _set_columns)
@@ -845,7 +856,7 @@ class PandasDataframe(ClassLogger):
                 + f"{col_positions}\n{self.column_widths}\n{col_partitions_dict}",
             )
 
-            if self._dtypes is not None:
+            if self.has_dtypes_cache():
                 new_dtypes = self.dtypes.iloc[monotonic_col_idx]
             else:
                 new_dtypes = None
@@ -855,7 +866,7 @@ class PandasDataframe(ClassLogger):
             }
             new_col_widths = self._column_widths_cache
             new_columns = self._columns_cache
-            new_dtypes = self._dtypes
+            new_dtypes = self.copy_dtypes_cache()
 
         new_partitions = np.array(
             [
@@ -983,10 +994,10 @@ class PandasDataframe(ClassLogger):
                 else "level_{}".format(0)
             ]
         new_dtypes = None
-        if self._dtypes is not None:
+        if self.has_dtypes_cache():
             names = tuple(level_names) if len(level_names) > 1 else level_names[0]
             new_dtypes = self.index.to_frame(name=names).dtypes
-            new_dtypes = pandas.concat([new_dtypes, self._dtypes])
+            new_dtypes = pandas.concat([new_dtypes, self.dtypes])
 
         # We will also use the `new_column_names` in the calculation of the internal metadata, so this is a
         # lightweight way of ensuring the metadata matches.
@@ -1101,7 +1112,9 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             A new PandasDataframe with reordered columns and/or rows.
         """
-        new_dtypes = self._dtypes
+        new_dtypes = None
+        if self.has_dtypes_cache():
+            new_dtypes = self.copy_dtypes_cache()
         if row_positions is not None:
             # We want to preserve the frame's partitioning so passing in ``keep_partitioning=True``
             # in order to use the cached `row_lengths` values for the new frame.
@@ -1142,8 +1155,8 @@ class PandasDataframe(ClassLogger):
                 keep_partitioning=True,
             )
             col_idx = self.columns[col_positions]
-            if new_dtypes is not None:
-                new_dtypes = self._dtypes.iloc[col_positions]
+            if self.has_dtypes_cache():
+                new_dtypes = self.dtypes.iloc[col_positions]
 
             if len(col_idx) != len(self.columns):
                 # The frame was re-partitioned along the 1 axis during reordering using
@@ -1180,7 +1193,7 @@ class PandasDataframe(ClassLogger):
             self._columns_cache.copy() if self._columns_cache is not None else None,
             self._row_lengths_cache,
             self._column_widths_cache,
-            self._dtypes.copy() if self._dtypes is not None else None,
+            self.copy_dtypes_cache(),
         )
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -1743,7 +1756,7 @@ class PandasDataframe(ClassLogger):
         """
         new_partitions = self._partition_mgr_cls.map_partitions(self._partitions, func)
         if dtypes == "copy":
-            dtypes = self._dtypes
+            dtypes = self.copy_dtypes_cache()
         elif dtypes is not None:
             dtypes = pandas.Series(
                 [np.dtype(dtypes)] * len(self.columns), index=self.columns
@@ -1978,7 +1991,9 @@ class PandasDataframe(ClassLogger):
             return df.rename(index=new_row_labels, columns=new_col_labels, level=level)
 
         new_parts = self._partition_mgr_cls.map_partitions(self._partitions, map_fn)
-        new_dtypes = None if self._dtypes is None else self._dtypes.set_axis(new_cols)
+        new_dtypes = None
+        if self.has_dtypes_cache():
+            new_dtypes = self.dtypes.set_axis(new_cols)
         return self.__constructor__(
             new_parts,
             new_index,
@@ -2147,7 +2162,7 @@ class PandasDataframe(ClassLogger):
             new_partitions,
             *new_axes,
             *new_lengths,
-            self._dtypes if axis == Axis.COL_WISE else None,
+            self.copy_dtypes_cache() if axis == Axis.COL_WISE else None,
         )
 
     def filter_by_types(self, types: List[Hashable]) -> "PandasDataframe":
@@ -2488,7 +2503,7 @@ class PandasDataframe(ClassLogger):
             axis, func, left_parts, right_parts
         )
         if dtypes == "copy":
-            dtypes = self._dtypes
+            dtypes = self.copy_dtypes_cache()
 
         def _pick_axis(get_axis, sizes_cache):
             if labels == "keep":
@@ -2750,7 +2765,7 @@ class PandasDataframe(ClassLogger):
         )
         kw = {"row_lengths": None, "column_widths": None}
         if dtypes == "copy":
-            kw["dtypes"] = self._dtypes
+            kw["dtypes"] = self.copy_dtypes_cache()
         elif dtypes is not None:
             if new_columns is None:
                 (
@@ -3085,7 +3100,7 @@ class PandasDataframe(ClassLogger):
         if axis == Axis.ROW_WISE:
             new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
-            all_dtypes = [frame._dtypes for frame in [self] + others]
+            all_dtypes = [frame.copy_dtypes_cache() for frame in [self] + others]
             if all(dtypes is not None for dtypes in all_dtypes):
                 new_dtypes = pandas.concat(all_dtypes, axis=1)
                 # 'nan' value will be placed in a row if a column doesn't exist in all frames;
@@ -3111,7 +3126,9 @@ class PandasDataframe(ClassLogger):
         else:
             new_columns = self.columns.append([other.columns for other in others])
             new_index = joined_index
-            if self._dtypes is not None and all(o._dtypes is not None for o in others):
+            if self.has_dtypes_cache() and all(
+                o.has_dtypes_cache() is not None for o in others
+            ):
                 new_dtypes = pandas.concat([self.dtypes] + [o.dtypes for o in others])
             # If we have already cached the width of each column in at least one
             # of the column's partitions, we can build new_widths for the new
@@ -3382,7 +3399,7 @@ class PandasDataframe(ClassLogger):
         new_partitions = self._partition_mgr_cls.lazy_map_partitions(
             self._partitions, lambda df: df.T
         ).T
-        if self._dtypes is not None:
+        if self.has_dtypes_cache():
             new_dtypes = pandas.Series(
                 np.full(len(self.index), find_common_type(self.dtypes.values)),
                 index=self.index,
