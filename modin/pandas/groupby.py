@@ -144,25 +144,22 @@ class DataFrameGroupBy(ClassLogger):
         sort: bool = True,
         ascending: bool = False,
         dropna: bool = True):
-        # dfGroupBy.value_counts is semantically
+        # dfGroupBy.value_counts nearly semantically
         # equivalent to df.value_counts([<by>, <other...>]).sort_index()
         # it returns a MultiIndex Series which needs to be converted to
-        # pandas for sort_index
-        print("BY: ",self._by, " COLS: ", self._columns.values)
+        # pandas for sort_index.
         if is_list_like(self._by):
             subset = self._by
         elif isinstance(self._by, type(self._query_compiler)):
             subset = self._by.columns.values.tolist()
-        #print(">>> BY: ",mine, " type ", type(mine) ,"COLS: ", allof, " type: ", type(allof))
         for c in self._columns.values.tolist():
             if c not in subset:
                 subset.append(c)
-        print("  SUBSET", subset)
         return self._df.value_counts(subset=subset, 
             normalize=normalize, 
             sort=sort, 
             ascending=ascending, 
-            dropna=dropna)._to_pandas().sort_index()
+            dropna=dropna)._to_pandas().sort_index(level=0, sort_remaining=False)
 
     def mean(self, numeric_only=None):
         return self._check_index(
