@@ -318,8 +318,6 @@ class DataFrame(BasePandasDataset):
         df = self[subset] if subset is not None else self
         new_qc = df._query_compiler.duplicated(keep=keep)
         duplicates = self._reduce_dimension(new_qc)
-        # remove Series name which was assigned automatically by .apply in QC
-        duplicates.name = None
         return duplicates
 
     @property
