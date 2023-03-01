@@ -150,15 +150,14 @@ class DataFrameGroupBy(ClassLogger):
         # pandas for sort_index
         print("BY: ",self._by, " COLS: ", self._columns.values)
         if is_list_like(self._by):
-            mine = self._by
-            allof = self._columns.values
-            print(">>> BY: ",mine, " COLS: ", allof)
-            subset = mine.extend(allof)
-            print("  SUBSET", subset)
-
+            subset = self._by
         elif isinstance(self._by, type(self._query_compiler)):
-            subset = self._by.columns.values
-
+            subset = self._by.columns.values.tolist()
+        #print(">>> BY: ",mine, " type ", type(mine) ,"COLS: ", allof, " type: ", type(allof))
+        for c in self._columns.values.tolist():
+            if c not in subset:
+                subset.append(c)
+        print("  SUBSET", subset)
         return self._df.value_counts(subset=subset, 
             normalize=normalize, 
             sort=sort, 
