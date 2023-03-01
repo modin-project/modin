@@ -731,8 +731,7 @@ class array(object):
             if axis == 1:
                 raise numpy.AxisError(1, 1)
             target = where.where(self, numpy.nan) if isinstance(where, array) else self
-            result = target._query_compiler
-            result = result.astype(
+            result = target._query_compiler.astype(
                 {col_name: out_dtype for col_name in result.columns}
             ).mean(axis=0)
             if keepdims:
@@ -750,6 +749,10 @@ class array(object):
                     )
                 else:
                     return array([numpy.nan], dtype=out_dtype)
+            # This is just to see if `where` is a truthy value. If `where` is an array,
+            # we would have already masked the input before computing `result`, so here
+            # we just want to ensure that `where=False` was not passed in, and if it was
+            # we return `numpy.nan`, since that is what NumPy would do.
             return result.to_numpy()[0, 0] if where else numpy.nan
         if axis is None:
             result = self
@@ -794,8 +797,7 @@ class array(object):
                     return array([[numpy.nan]], dtype=out_dtype)
             return result if where is not False else numpy.nan
         target = where.where(self, numpy.nan) if isinstance(where, array) else self
-        result = target._query_compiler
-        result = result.astype(
+        result = target._query_compiler.astype(
             {col_name: out_dtype for col_name in self._query_compiler.columns}
         ).mean(axis=axis)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
@@ -1086,8 +1088,7 @@ class array(object):
             if axis == 1:
                 raise numpy.AxisError(1, 1)
             target = where.where(self, 1) if isinstance(where, array) else self
-            result = target._query_compiler
-            result = result.astype(
+            result = target._query_compiler.astype(
                 {col_name: out_dtype for col_name in result.columns}
             ).prod(axis=0)
             result = result.mul(initial)
@@ -1145,8 +1146,7 @@ class array(object):
                     return array([[initial]], dtype=out_dtype)
             return result if where is not False else initial
         target = where.where(self, 1) if isinstance(where, array) else self
-        result = target._query_compiler
-        result = result.astype(
+        result = target._query_compiler.astype(
             {col_name: out_dtype for col_name in self._query_compiler.columns}
         ).prod(axis=axis)
         result = result.mul(initial)
@@ -1390,8 +1390,7 @@ class array(object):
             if axis == 1:
                 raise numpy.AxisError(1, 1)
             target = where.where(self, 0) if isinstance(where, array) else self
-            result = target._query_compiler
-            result = result.astype(
+            result = target._query_compiler.astype(
                 {col_name: out_dtype for col_name in result.columns}
             ).sum(axis=0)
             result = result.add(initial)
@@ -1447,8 +1446,7 @@ class array(object):
                     return array([[initial]], dtype=out_dtype)
             return result if where is not False else initial
         target = where.where(self, 0) if isinstance(where, array) else self
-        result = target._query_compiler
-        result = result.astype(
+        result = target._query_compiler.astype(
             {col_name: out_dtype for col_name in self._query_compiler.columns}
         ).sum(axis=axis)
         result = result.add(initial)
