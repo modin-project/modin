@@ -852,6 +852,16 @@ def test_loc_range_index_getitem_two_values_5702():
     )
 
 
+def test_loc_range_getitem_single_value_5702():
+    eval_general(*create_test_dfs(test_data["int_data"]), lambda df: df.loc[range(99)])
+
+
+def test_loc_range_getitem_two_values_5702():
+    eval_general(
+        *create_test_dfs(test_data["int_data"]), lambda df: df.loc[range(99), :]
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_pop(request, data):
     modin_df = pd.DataFrame(data)
