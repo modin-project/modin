@@ -420,15 +420,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Needed for numpy API
     _logical_and = Binary.register(
-        lambda df, other, *args, **kwargs: pandas.DataFrame(np.logical_and(df, other, *args, **kwargs)),
+        lambda df, other, *args, **kwargs: pandas.DataFrame(
+            np.logical_and(df, other, *args, **kwargs)
+        ),
         infer_dtypes="bool",
     )
     _logical_or = Binary.register(
-        lambda df, other, *args, **kwargs: pandas.DataFrame(np.logical_or(df, other, *args, **kwargs)),
+        lambda df, other, *args, **kwargs: pandas.DataFrame(
+            np.logical_or(df, other, *args, **kwargs)
+        ),
         infer_dtypes="bool",
     )
     _logical_xor = Binary.register(
-        lambda df, other, *args, **kwargs: pandas.DataFrame(np.logical_xor(df, other, *args, **kwargs)),
+        lambda df, other, *args, **kwargs: pandas.DataFrame(
+            np.logical_xor(df, other, *args, **kwargs)
+        ),
         infer_dtypes="bool",
     )
 

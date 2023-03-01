@@ -49,6 +49,18 @@ def test_unary_with_axis(operand_shape, operator, axis):
     )
 
 
+def test_all_any_where():
+    arr = np.array([[0, 1], [1, 0]])
+    where = np.array([[False, True], [True, False]])
+    result = arr.all(where=where)
+    # Result should be np.bool_ True, since where mask isolates the non-zero elements
+    assert result
+    where = np.array([[True, False], [False, True]])
+    result = arr.any(where=where)
+    # Result should be np.bool_ False, since mask isolates only zero elements
+    assert not result
+
+
 @pytest.mark.parametrize("data", [small_arr_c_2d, small_arr_c_1d], ids=["2D", "1D"])
 @pytest.mark.parametrize(
     "operator", ["isfinite", "isinf", "isnan", "iscomplex", "isreal"]
