@@ -3400,7 +3400,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                     axis_labels = self.get_axis(axis)
                     # `slice_indexer` returns a fully-defined numeric slice for a non-fully-defined labels-based slice
                     axis_lookup = axis_labels.slice_indexer(
-                        axis_loc.start, axis_loc.stop, axis_loc.step
+                        axis_loc.start,
+                        axis_loc.stop - (axis_loc.step or 1),
+                        axis_loc.step,
                     )
                     # Converting negative indices to their actual positions:
                     axis_lookup = pandas.RangeIndex(
