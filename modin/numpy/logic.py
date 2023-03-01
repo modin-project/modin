@@ -14,15 +14,15 @@
 import numpy
 
 from .arr import array
+from .utils import try_convert_from_interoperable_type
 from modin.error_message import ErrorMessage
 
 
 def _dispatch_logic(operator_name):
     def call(x, *args, **kwargs):
+        x = try_convert_from_interoperable_type(x)
         if not isinstance(x, array):
-            ErrorMessage.single_warning(
-                f"Modin NumPy only supports objects of modin.numpy.array types for add, not {type(x)}. Defaulting to NumPy."
-            )
+            ErrorMessage.bad_type_for_numpy_op(operator_name, type(x))
             return getattr(numpy, operator_name)(x, *args, **kwargs)
         return getattr(x, f"_{operator_name}")(*args, **kwargs)
 
