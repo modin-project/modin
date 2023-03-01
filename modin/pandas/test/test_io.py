@@ -1357,6 +1357,8 @@ class TestParquet:
             )
 
     def test_read_parquet_list_of_files_5698(self, engine, make_parquet_file):
+        if engine == "fastparquet" and os.name == "nt":
+            pytest.xfail(reason="https://github.com/pandas-dev/pandas/issues/51720")
         with ensure_clean(".parquet") as f1, ensure_clean(
             ".parquet"
         ) as f2, ensure_clean(".parquet") as f3:
