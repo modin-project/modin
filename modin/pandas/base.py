@@ -2738,7 +2738,12 @@ class BasePandasDataset(ClassLogger):
             return self.copy()
 
         return (
-            self._query_compiler.shift(periods, freq, axis, fill_value)
+            self._create_or_update_from_compiler(
+                new_query_compiler=self._query_compiler.shift(
+                    periods, freq, axis, fill_value
+                ),
+                inplace=False,
+            )
             if freq is None
             else self.tshift(periods, freq, axis, fill_value)
         )
