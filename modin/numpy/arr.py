@@ -1594,10 +1594,11 @@ class array(object):
 
     def all(self, axis=None, out=None, keepdims=None, *, where=True):
         check_kwargs(keepdims=keepdims, where=where)
+        target = where.where(self, True) if isinstance(where, array) else self
         if self._ndim == 1:
             if axis == 1:
                 raise numpy.AxisError(1, 1)
-            result = self._query_compiler.all(axis=0)
+            result = target._query_compiler.all(axis=0)
             if keepdims:
                 if out is not None and out.shape != (1,):
                     raise ValueError(
@@ -1607,10 +1608,7 @@ class array(object):
             result = result.to_numpy()[0, 0]
             return result if not where else result and where
         if axis is None:
-            target = where.where(self, True) if isinstance(where, array) else self
-            result = target.all(axis=1, keepdims=None).all(
-                axis=0, out=out, keepdims=None
-            )
+            result = target.all(axis=1, keepdims=None).all(axis=0, keepdims=None)
             if keepdims:
                 if out is not None and out.shape != (1, 1):
                     raise ValueError(
@@ -1620,7 +1618,7 @@ class array(object):
                     array(numpy.array([[result]]))._query_compiler, 2, bool, out, where
                 )
             return result
-        result = self._query_compiler.all(axis=axis)
+        result = target._query_compiler.all(axis=axis)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
             result = result.to_numpy()[0, 0]
@@ -1633,10 +1631,11 @@ class array(object):
 
     def any(self, axis=None, out=None, keepdims=None, *, where=True):
         check_kwargs(keepdims=keepdims, where=where)
+        target = where.where(self, False) if isinstance(where, array) else self
         if self._ndim == 1:
             if axis == 1:
                 raise numpy.AxisError(1, 1)
-            result = self._query_compiler.any(axis=0)
+            result = target._query_compiler.any(axis=0)
             if keepdims:
                 if out is not None and out.shape != (1,):
                     raise ValueError(
@@ -1646,7 +1645,6 @@ class array(object):
             result = result.to_numpy()[0, 0]
             return result if not where else result & where
         if axis is None:
-            target = where.where(self, False) if isinstance(where, array) else self
             result = target.any(axis=1, keepdims=None).any(axis=0, keepdims=None)
             if keepdims:
                 if out is not None and out.shape != (1, 1):
@@ -1657,7 +1655,7 @@ class array(object):
                     array(numpy.array([[result]]))._query_compiler, 2, bool, out, where
                 )
             return result
-        result = self._query_compiler.any(axis=axis)
+        result = target._query_compiler.any(axis=axis)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
             result = result.to_numpy()[0, 0]
