@@ -2744,70 +2744,16 @@ class BasePandasDataset(ClassLogger):
             # Check obvious case first
             return self.copy()
 
-        empty_frame = False
-        if axis == "index" or axis == 0:
-            if abs(periods) >= len(self.index):
-                fill_index = self.index
-                empty_frame = True
-            else:
-                fill_index = pandas.RangeIndex(start=0, stop=abs(periods), step=1)
-        else:
-            fill_index = self.index
-        from .dataframe import DataFrame
-
-        fill_columns = None
-        if isinstance(self, DataFrame):
-            if axis == "columns" or axis == 1:
-                if abs(periods) >= len(self.columns):
-                    fill_columns = self.columns
-                    empty_frame = True
-                else:
-                    fill_columns = pandas.RangeIndex(start=0, stop=abs(periods), step=1)
-            else:
-                fill_columns = self.columns
-
-        filled_df = (
-            self.__constructor__(index=fill_index, columns=fill_columns)
-            if isinstance(self, DataFrame)
-            else self.__constructor__(index=fill_index)
+        return (
+            self._create_or_update_from_compiler(
+                new_query_compiler=self._query_compiler.shift(
+                    periods, freq, axis, fill_value
+                ),
+                inplace=False,
+            )
+            if freq is None
+            else self.tshift(periods, freq, axis, fill_value)
         )
-        if fill_value is not None:
-            filled_df.fillna(fill_value, inplace=True)
-
-        if empty_frame:
-            return filled_df
-
-        if freq is None:
-            if axis == "index" or axis == 0:
-                new_frame = (
-                    pd.concat([filled_df, self.iloc[:-periods]], ignore_index=True)
-                    if periods > 0
-                    else pd.concat([self.iloc[-periods:], filled_df], ignore_index=True)
-                )
-                new_frame.index = self.index.copy()
-                if isinstance(self, DataFrame):
-                    new_frame.columns = self.columns.copy()
-                return new_frame
-            else:
-                if not isinstance(self, DataFrame):
-                    raise ValueError(
-                        f"No axis named {axis} for object type {type(self)}"
-                    )
-                res_columns = self.columns
-                from .general import concat
-
-                if periods > 0:
-                    dropped_df = self.drop(self.columns[-periods:], axis="columns")
-                    new_frame = concat([filled_df, dropped_df], axis="columns")
-                    new_frame.columns = res_columns
-                    return new_frame
-                else:
-                    dropped_df = self.drop(self.columns[:-periods], axis="columns")
-                    new_frame = concat([dropped_df, filled_df], axis="columns")
-                    new_frame.columns = res_columns
-                    return new_frame
-        else:
-            return self.tshift(periods, freq)
 
     def skew(
         self,
