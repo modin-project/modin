@@ -142,12 +142,6 @@ class array(object):
         ErrorMessage.single_warning(
             "Using Modin's new NumPy API. To convert from a Modin object to a NumPy array, either turn off the ExperimentalNumPyAPI flag, or use `modin.utils.to_numpy`."
         )
-        if isinstance(object, pd.DataFrame):
-            _query_compiler = object._query_compiler
-            _ndim = 2
-        elif isinstance(object, pd.Series):
-            _query_compiler = object._query_compiler
-            _ndim = 1
         if _query_compiler is not None:
             self._query_compiler = _query_compiler
             self._ndim = _ndim
@@ -1564,68 +1558,106 @@ class array(object):
             return self
         return array(_query_compiler=result, _ndim=self._ndim)
 
-    def __repr__(self):
-        # If we are dealing with a small array, we can just collate all the data on the
-        # head node and let numpy handle the logic to get a string representation.
-        if self.size < numpy.get_printoptions()["threshold"]:
-            return repr(self._to_numpy())
-        repr_str = ""
-        if self._ndim == 1:
-            repr_str += re.sub(
-                ", dtype=.*",
-                "",
-                repr(
-                    self._query_compiler.getitem_row_array(
-                        range(numpy.get_printoptions()["edgeitems"])
-                    )
-                    .to_numpy()
-                    .flatten()
-                ),
-            ).rstrip(")]")
-            repr_str += ", ..., "
-            repr_str += repr(
+    def _repr_1dim_obj(self):
+        repr_str = re.sub(
+            ", dtype=.*",
+            "",
+            repr(
                 self._query_compiler.getitem_row_array(
-                    range(-1, -1 * (numpy.get_printoptions()["edgeitems"] + 1), -1)
+                    range(numpy.get_printoptions()["edgeitems"])
                 )
                 .to_numpy()
-                .flatten()[::-1]
-            ).lstrip("array([")
-        elif self.shape[0] == 1:
-            repr_str += re.sub(
-                ", dtype=.*",
-                "",
-                repr(
-                    self._query_compiler.getitem_column_array(
-                        range(numpy.get_printoptions()["edgeitems"])
-                    ).to_numpy()
-                ),
-            ).rstrip(")]")
-            repr_str += ", ..., "
-            repr_str += repr(
+                .flatten()
+            ),
+        ).rstrip(")]")
+        repr_str += ", ..., "
+        repr_str += repr(
+            self._query_compiler.getitem_row_array(
+                range(-1, -1 * (numpy.get_printoptions()["edgeitems"] + 1), -1)
+            )
+            .to_numpy()
+            .flatten()[::-1]
+        ).lstrip("array([")
+        return repr_str
+
+    def _repr_1xN_obj(self):
+        repr_str = re.sub(
+            ", dtype=.*",
+            "",
+            repr(
                 self._query_compiler.getitem_column_array(
-                    list(range(-1 * numpy.get_printoptions()["edgeitems"], 0)),
-                    numeric=True,
+                    range(numpy.get_printoptions()["edgeitems"])
                 ).to_numpy()
-            ).lstrip("array([")
-        elif self.shape[1] == 1:
-            repr_str += re.sub(
-                ", dtype=.*",
-                "",
+            ),
+        ).rstrip(")]")
+        repr_str += ", ..., "
+        repr_str += repr(
+            self._query_compiler.getitem_column_array(
+                list(range(-1 * numpy.get_printoptions()["edgeitems"], 0)),
+                numeric=True,
+            ).to_numpy()
+        ).lstrip("array([")
+        return repr_str
+
+    def _repr_Nx1_obj(self):
+        repr_str = re.sub(
+            ", dtype=.*",
+            "",
+            repr(
+                self._query_compiler.getitem_row_array(
+                    range(numpy.get_printoptions()["edgeitems"])
+                ).to_numpy()
+            ),
+        ).rstrip(")]")
+        spaces = " " * 7
+        repr_str += f"],\n{spaces}...,\n{spaces}["
+        repr_str += repr(
+            self._query_compiler.getitem_row_array(
+                range(-1, -1 * (numpy.get_printoptions()["edgeitems"] + 1), -1)
+            ).to_numpy()[::-1]
+        ).lstrip("array([")
+        return repr_str
+
+    def _repr_NxN_obj(self):
+        repr_str = re.sub(
+            ", dtype=.*",
+            "",
+            re.sub(
+                "],\\n",
+                ", ...,\n",
                 repr(
-                    self._query_compiler.getitem_row_array(
-                        range(numpy.get_printoptions()["edgeitems"])
+                    self._query_compiler.take_2d_positional(
+                        range(numpy.get_printoptions()["edgeitems"]),
+                        range(numpy.get_printoptions()["edgeitems"]),
                     ).to_numpy()
                 ),
-            ).rstrip(")]")
-            spaces = " " * 7
-            repr_str += f"],\n{spaces}...,\n{spaces}["
-            repr_str += repr(
-                self._query_compiler.getitem_row_array(
-                    range(-1, -1 * (numpy.get_printoptions()["edgeitems"] + 1), -1)
-                ).to_numpy()[::-1]
-            ).lstrip("array([")
-        else:
-            repr_str += re.sub(
+            ),
+        ).rstrip(")]")
+        repr_str += ", ...,"
+        right_str = re.sub(
+            ", dtype=.*",
+            "",
+            re.sub(
+                r"\[",
+                " ",
+                repr(
+                    self._query_compiler.take_2d_positional(
+                        range(numpy.get_printoptions()["edgeitems"]),
+                        list(range(-1 * numpy.get_printoptions()["edgeitems"], 0)),
+                    ).to_numpy()
+                )
+                .replace("array([[", "")
+                .rstrip("])"),
+            ),
+        )
+        right_str = right_str.rstrip("]")
+        top_str = []
+        for l_str, r_str in zip(repr_str.split("\n"), right_str.split("\n")):
+            top_str.append(l_str + " " + r_str.lstrip())
+        top_str = "\n".join(top_str)
+        top_str += f'],\n{" "*7}...,\n'
+        left_str = (
+            re.sub(
                 ", dtype=.*",
                 "",
                 re.sub(
@@ -1633,71 +1665,47 @@ class array(object):
                     ", ...,\n",
                     repr(
                         self._query_compiler.take_2d_positional(
-                            range(numpy.get_printoptions()["edgeitems"]),
-                            range(numpy.get_printoptions()["edgeitems"]),
-                        ).to_numpy()
-                    ),
-                ),
-            ).rstrip(")]")
-            repr_str += ", ...,"
-            right_str = re.sub(
-                ", dtype=.*",
-                "",
-                re.sub(
-                    "\[",  # noqa: W605
-                    " ",
-                    repr(
-                        self._query_compiler.take_2d_positional(
-                            range(numpy.get_printoptions()["edgeitems"]),
                             list(range(-1 * numpy.get_printoptions()["edgeitems"], 0)),
+                            range(numpy.get_printoptions()["edgeitems"]),
                         ).to_numpy()
-                    )
-                    .replace("array([[", "")
-                    .rstrip("])"),
+                    ),
                 ),
             )
-            right_str = right_str.rstrip("]")
-            top_str = []
-            for l_str, r_str in zip(repr_str.split("\n"), right_str.split("\n")):
-                top_str.append(l_str + " " + r_str.lstrip())
-            top_str = "\n".join(top_str)
-            top_str += f'],\n{" "*7}...,\n'
-            left_str = (
-                re.sub(
-                    ", dtype=.*",
-                    "",
-                    re.sub(
-                        "],\\n",
-                        ", ...,\n",
-                        repr(
-                            self._query_compiler.take_2d_positional(
-                                list(
-                                    range(-1 * numpy.get_printoptions()["edgeitems"], 0)
-                                ),
-                                range(numpy.get_printoptions()["edgeitems"]),
-                            ).to_numpy()
-                        ),
-                    ),
-                )
-                .rstrip(")]")
-                .replace("array([", " " * 7)
-            )
-            left_str += ", ...,"
-            right_str = re.sub(
-                "\[",  # noqa: W605
-                " ",
-                repr(
-                    self._query_compiler.take_2d_positional(
-                        list(range(-1 * numpy.get_printoptions()["edgeitems"], 0)),
-                        list(range(-1 * numpy.get_printoptions()["edgeitems"], 0)),
-                    ).to_numpy()
-                ).replace("array([[", ""),
-            )
-            bottom_str = []
-            for l_str, r_str in zip(left_str.split("\n"), right_str.split("\n")):
-                bottom_str.append(l_str + " " + r_str.lstrip())
-            bottom_str = "\n".join(bottom_str)
-            repr_str = top_str + bottom_str
+            .rstrip(")]")
+            .replace("array([", " " * 7)
+        )
+        left_str += ", ...,"
+        right_str = re.sub(
+            r"\[",
+            " ",
+            repr(
+                self._query_compiler.take_2d_positional(
+                    list(range(-1 * numpy.get_printoptions()["edgeitems"], 0)),
+                    list(range(-1 * numpy.get_printoptions()["edgeitems"], 0)),
+                ).to_numpy()
+            ).replace("array([[", ""),
+        )
+        bottom_str = []
+        for l_str, r_str in zip(left_str.split("\n"), right_str.split("\n")):
+            bottom_str.append(l_str + " " + r_str.lstrip())
+        bottom_str = "\n".join(bottom_str)
+        repr_str = top_str + bottom_str
+        return repr_str
+
+    def __repr__(self):
+        # If we are dealing with a small array, we can just collate all the data on the
+        # head node and let numpy handle the logic to get a string representation.
+        if self.size < numpy.get_printoptions()["threshold"]:
+            return repr(self._to_numpy())
+        repr_str = ""
+        if self._ndim == 1:
+            repr_str = self._repr_1dim_obj()
+        elif self.shape[0] == 1:
+            repr_str = self._repr_1xN_obj()
+        elif self.shape[1] == 1:
+            repr_str = self._repr_Nx1_obj()
+        else:
+            repr_str = self._repr_NxN_obj()
         return repr_str
 
     def _to_numpy(self):
