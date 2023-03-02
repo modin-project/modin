@@ -2782,7 +2782,7 @@ class PandasDataframe(ClassLogger):
                         self._row_lengths_cache
                     ):
                         kw["row_lengths"] = self._row_lengths_cache
-                    elif len(new_index) == 1:
+                    elif len(new_index) == 1 and new_partitions.shape[0] == 1:
                         kw["row_lengths"] = [1]
             if kw["column_widths"] is None and new_columns is not None:
                 if axis == 1:
@@ -2795,7 +2795,7 @@ class PandasDataframe(ClassLogger):
                         new_columns
                     ) == sum(self._column_widths_cache):
                         kw["column_widths"] = self._column_widths_cache
-                    elif len(new_columns) == 1:
+                    elif len(new_columns) == 1 and new_partitions.shape[1] == 1:
                         kw["column_widths"] = [1]
 
         result = self.__constructor__(
