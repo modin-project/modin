@@ -204,13 +204,7 @@ class PandasDataframe(ClassLogger):
         self._dtypes = dtypes
 
         self._validate_axes_lengths()
-        if all(obj is not None for obj in (index, columns, row_lengths, column_widths)):
-            # this hint allows to filter empty partitions out without triggering metadata computation
-            # in order to avoid useless computation over empty partitions
-            compute_metadata = True
-        else:
-            compute_metadata = False
-        self._filter_empties(compute_metadata=compute_metadata)
+        self._filter_empties(compute_metadata=False)
 
     def _validate_axes_lengths(self):
         """Validate that labels are split correctly if split is known."""
