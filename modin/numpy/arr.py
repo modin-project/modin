@@ -141,6 +141,12 @@ class array(object):
         ErrorMessage.single_warning(
             "Using Modin's new NumPy API. To convert from a Modin object to a NumPy array, either turn off the ExperimentalNumPyAPI flag, or use `modin.utils.to_numpy`."
         )
+        if isinstance(object, pd.DataFrame):
+            _query_compiler = object._query_compiler
+            _ndim = 2
+        elif isinstance(object, pd.Series):
+            _query_compiler = object._query_compiler
+            _ndim = 1
         if _query_compiler is not None:
             self._query_compiler = _query_compiler
             self._ndim = _ndim
