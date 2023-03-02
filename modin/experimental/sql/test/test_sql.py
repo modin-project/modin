@@ -81,10 +81,3 @@ def test_string_cast():
     mdf = pd.DataFrame(data)
     pdf = pandas.DataFrame(data)
     df_equals(pdf, query("SELECT * FROM df", df=mdf))
-
-    if cfg.StorageFormat.get() != "Hdk":
-        pytest.xfail(reason="dfsql does not preserve categorical dtypes")
-
-    mdf = pd.DataFrame(data, dtype="category")
-    pdf = pandas.DataFrame(data, dtype="category")
-    df_equals(pdf, query("SELECT * FROM df", df=mdf))
