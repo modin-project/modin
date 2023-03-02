@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import pyarrow as pa
 import modin.pandas as pd
 from modin.pandas.utils import from_arrow
 from modin.experimental.core.storage_formats.hdk import DFAlgQueryCompiler
@@ -66,7 +67,14 @@ def hdk_query(query: str, **kwargs) -> pd.DataFrame:
     worker = HdkWorker()
     if len(kwargs) > 0:
         query = _build_query(query, kwargs, worker.import_arrow_table)
-    return from_arrow(worker.executeDML(query))
+    at = worker.executeDML(query)
+    schema = at.schema
+    # HDK returns strings as dictionary. Cast dictionary columns to string.
+    if cast := {i: f for i, f in enumerate(schema) if pa.types.is_dictionary(f.type)}:
+        for i, f in cast.items():
+            schema = schema.set(i, pa.field(f.name, pa.string()))
+        at = at.cast(schema)
+    return from_arrow(at)
 
 
 def _build_query(query: str, frames: dict, import_table: callable) -> str:

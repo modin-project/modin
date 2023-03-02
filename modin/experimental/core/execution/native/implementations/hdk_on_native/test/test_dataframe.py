@@ -437,6 +437,14 @@ class TestMasks:
 
         run_and_compare(filter, data=self.data)
 
+    def test_filter_str_categorical(self):
+        def filter(df, **kwargs):
+            return df[df["A"] != ""]
+
+        data = {"A": ["A", "B", "C"]}
+        run_and_compare(filter, data=data)
+        run_and_compare(filter, data=data, constructor_kwargs={"dtype": "category"})
+
 
 class TestMultiIndex:
     data = {"a": np.arange(24), "b": np.arange(24)}
