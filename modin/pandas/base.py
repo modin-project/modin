@@ -3255,7 +3255,7 @@ class BasePandasDataset(ClassLogger):
         if ExperimentalNumPyAPI.get():
             from ..numpy.arr import array
 
-            return array(_query_compiler=self._query_compiler, _ndim=2)
+            return array(self, copy=copy)
 
         return self._query_compiler.to_numpy(
             dtype=dtype,
