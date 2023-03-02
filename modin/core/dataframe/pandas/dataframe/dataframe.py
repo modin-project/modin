@@ -286,9 +286,24 @@ class PandasDataframe(ClassLogger):
         return [self.row_lengths, self.column_widths]
 
     def has_dtypes_cache(self):
+        """
+        Check if the dtypes cache exists.
+
+        Returns
+        -------
+        bool
+        """
         return self._dtypes is not None
 
     def copy_dtypes_cache(self):
+        """
+        Copy the dtypes cache.
+
+        Returns
+        -------
+        pandas.Series, callable or None
+            If there is an pandas.Series in the cache, then copying occurs.
+        """
         dtypes_cache = self._dtypes
         if dtypes_cache is not None and not callable(dtypes_cache):
             dtypes_cache = dtypes_cache.copy()
