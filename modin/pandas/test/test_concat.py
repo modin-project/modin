@@ -23,10 +23,13 @@ from .utils import (
     generate_multiindex_dfs,
     generate_none_dfs,
     create_test_dfs,
+    default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
 
 NPartitions.put(4)
+
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 def test_df_concat():
@@ -236,3 +239,36 @@ def test_sort_order(sort, join, axis):
         modin_concat,
     )
     assert list(pandas_concat.columns) == list(modin_concat.columns)
+
+
+@pytest.mark.parametrize(
+    "data1, index1, data2, index2",
+    [
+        (None, None, None, None),
+        (None, None, {"A": [1, 2, 3]}, pandas.Index([1, 2, 3], name="Test")),
+        ({"A": [1, 2, 3]}, pandas.Index([1, 2, 3], name="Test"), None, None),
+        ({"A": [1, 2, 3]}, None, None, None),
+        (None, None, {"A": [1, 2, 3]}, None),
+        (None, pandas.Index([1, 2, 3], name="Test"), None, None),
+        (None, None, None, pandas.Index([1, 2, 3], name="Test")),
+    ],
+)
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("join", ["inner", "outer"])
+def test_concat_empty(data1, index1, data2, index2, axis, join):
+    pdf1 = pandas.DataFrame(data1, index=index1)
+    pdf2 = pandas.DataFrame(data2, index=index2)
+    pdf = pandas.concat((pdf1, pdf2), axis=axis, join=join)
+    mdf1 = pd.DataFrame(data1, index=index1)
+    mdf2 = pd.DataFrame(data2, index=index2)
+    mdf = pd.concat((mdf1, mdf2), axis=axis, join=join)
+    df_equals(pdf, mdf)
+
+
+def test_concat_empty_df_series():
+    pdf = pandas.concat((pandas.DataFrame({"A": [1, 2, 3]}), pandas.Series()))
+    mdf = pd.concat((pd.DataFrame({"A": [1, 2, 3]}), pd.Series()))
+    df_equals(pdf, mdf)
+    pdf = pandas.concat((pandas.DataFrame(), pandas.Series([1, 2, 3])))
+    mdf = pd.concat((pd.DataFrame(), pd.Series([1, 2, 3])))
+    df_equals(pdf, mdf)

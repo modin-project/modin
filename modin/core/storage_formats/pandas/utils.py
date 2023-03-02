@@ -100,11 +100,21 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
     length_list = np.insert(length_list, obj=0, values=[0])
 
     sums = np.cumsum(length_list)
+    axis = 0 if isinstance(result, pandas.Series) else axis
     # We do this to restore block partitioning
-    if axis == 0 or isinstance(result, pandas.Series):
-        return [result.iloc[sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
+    if axis == 0:
+        chunked = [result.iloc[sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
     else:
-        return [result.iloc[:, sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
+        chunked = [result.iloc[:, sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
+
+    return [
+        # Sliced MultiIndex still stores all encoded values of the original index, explicitly
+        # asking it to drop unused values in order to save memory.
+        chunk.set_axis(chunk.axes[axis].remove_unused_levels(), axis=axis, copy=False)
+        if isinstance(chunk.axes[axis], pandas.MultiIndex)
+        else chunk
+        for chunk in chunked
+    ]
 
 
 def get_length_list(axis_len: int, num_splits: int) -> list:
