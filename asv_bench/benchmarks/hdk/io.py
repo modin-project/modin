@@ -61,3 +61,6 @@ class TimeReadCsvNames:
             dtype=self.dtype,
         )
         trigger_import(df)
+
+
+from ..utils import setup  # noqa: E402, F401

@@ -1259,6 +1259,12 @@ class DataFrame(BasePandasDataset):
             **kwargs,
         )
 
+    def isin(self, values):  # noqa: PR01, RT01, D200
+        """
+        Whether elements in `DataFrame` are contained in `values`.
+        """
+        return super(DataFrame, self).isin(values)
+
     def iterrows(self):  # noqa: D200
         """
         Iterate over ``DataFrame`` rows as (index, ``Series``) pairs.
@@ -2760,7 +2766,7 @@ class DataFrame(BasePandasDataset):
                 value = value.T.reshape(-1)
                 if len(self) > 0:
                     value = value[: len(self)]
-            if not isinstance(value, (Series, Categorical)):
+            if not isinstance(value, (Series, Categorical, np.ndarray)):
                 value = list(value)
 
         if not self._query_compiler.lazy_execution and len(self.index) == 0:

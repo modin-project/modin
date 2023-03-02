@@ -11,10 +11,20 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses `CSVDispatcher` class, that is used for reading `.csv` files."""
+"""Collection of array utility functions for internal use."""
 
-from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
+import modin.pandas as pd
+import modin.numpy as np
+
+_INTEROPERABLE_TYPES = (pd.DataFrame, pd.Series)
 
 
-class CSVDispatcher(TextFileDispatcher):
-    """Class handles utils for reading `.csv` files."""
+def try_convert_from_interoperable_type(obj):
+    if isinstance(obj, _INTEROPERABLE_TYPES):
+        new_qc = obj._query_compiler.reset_index(drop=True)
+        new_qc.columns = range(len(new_qc.columns))
+        obj = np.array(
+            _query_compiler=new_qc,
+            _ndim=2 if isinstance(obj, pd.DataFrame) else 1,
+        )
+    return obj

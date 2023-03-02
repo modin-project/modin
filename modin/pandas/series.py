@@ -1196,6 +1196,12 @@ class Series(BasePandasDataset):
             **kwargs,
         )
 
+    def isin(self, values):  # noqa: PR01, RT01, D200
+        """
+        Whether elements in `Series` are contained in `values`.
+        """
+        return super(Series, self).isin(values, shape_hint="column")
+
     def item(self):  # noqa: RT01, D200
         """
         Return the first element of the underlying data as a Python scalar.
@@ -1260,6 +1266,14 @@ class Series(BasePandasDataset):
         """
         Map values of Series according to input correspondence.
         """
+        if isinstance(arg, type(self)):
+            # HACK: if we don't cast to pandas, then the execution engine will try to
+            # propagate the distributed Series to workers and most likely would have
+            # some performance problems.
+            # TODO: A better way of doing so could be passing this `arg` as a query compiler
+            # and broadcast accordingly.
+            arg = arg._to_pandas()
+
         if not callable(arg) and hasattr(arg, "get"):
             mapper = arg
 

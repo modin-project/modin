@@ -43,7 +43,9 @@ class Map(Operator):
 
         def caller(query_compiler, *args, **kwargs):
             """Execute Map function against passed query compiler."""
-            shape_hint = call_kwds.pop("shape_hint", None)
+            shape_hint = call_kwds.pop("shape_hint", None) or kwargs.pop(
+                "shape_hint", None
+            )
             return query_compiler.__constructor__(
                 query_compiler._modin_frame.map(
                     lambda x: function(x, *args, **kwargs), *call_args, **call_kwds
