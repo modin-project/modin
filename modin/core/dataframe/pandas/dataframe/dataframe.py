@@ -2215,6 +2215,7 @@ class PandasDataframe(ClassLogger):
         enumerate_partitions: bool = False,
         dtypes=None,
         keep_partitioning=True,
+        num_splits=None,
         sync_labels=True,
         pass_axis_lengths_to_partitions=False,
     ):
@@ -2243,8 +2244,13 @@ class PandasDataframe(ClassLogger):
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
         keep_partitioning : boolean, default: True
-            The flag to keep partition boundaries for Modin Frame.
-            Setting it to True disables shuffling data from one partition to another.
+            The flag to keep partition boundaries for Modin Frame if possible.
+            Setting it to True disables shuffling data from one partition to another in case the resulting
+            number of splits is equal to the initial number of splits.
+        num_splits : int, optional
+            The number of partitions to split the result into across the `axis`. If None, then the number
+            of splits will be infered automatically. If `num_splits` is None and `keep_partitioning=True`
+            then the number of splits is preserved.
         sync_labels : boolean, default: True
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to
@@ -2272,6 +2278,7 @@ class PandasDataframe(ClassLogger):
             dtypes=dtypes,
             other=None,
             keep_partitioning=keep_partitioning,
+            num_splits=num_splits,
             sync_labels=sync_labels,
             pass_axis_lengths_to_partitions=pass_axis_lengths_to_partitions,
         )
@@ -2665,6 +2672,7 @@ class PandasDataframe(ClassLogger):
         enumerate_partitions=False,
         dtypes=None,
         keep_partitioning=True,
+        num_splits=None,
         sync_labels=True,
         pass_axis_lengths_to_partitions=False,
     ):
@@ -2695,8 +2703,13 @@ class PandasDataframe(ClassLogger):
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
         keep_partitioning : boolean, default: True
-            The flag to keep partition boundaries for Modin Frame.
-            Setting it to True disables shuffling data from one partition to another.
+            The flag to keep partition boundaries for Modin Frame if possible.
+            Setting it to True disables shuffling data from one partition to another in case the resulting
+            number of splits is equal to the initial number of splits.
+        num_splits : int, optional
+            The number of partitions to split the result into across the `axis`. If None, then the number
+            of splits will be infered automatically. If `num_splits` is None and `keep_partitioning=True`
+            then the number of splits is preserved.
         sync_labels : boolean, default: True
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to
@@ -2746,6 +2759,7 @@ class PandasDataframe(ClassLogger):
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
             keep_partitioning=keep_partitioning,
+            num_splits=num_splits,
             apply_func_args=apply_func_args,
         )
         kw = {"row_lengths": None, "column_widths": None}

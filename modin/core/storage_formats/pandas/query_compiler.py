@@ -59,7 +59,7 @@ from modin.core.dataframe.algebra import (
     GroupByReduce,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
-from .utils import get_group_names
+from .utils import get_group_names, merge_partitioning
 from .groupby import GroupbyReduceImpl
 
 
@@ -455,9 +455,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort = kwargs.get("sort", False)
 
         if how in ["left", "inner"] and left_index is False and right_index is False:
-            right = right.to_pandas()
+            right_pandas = right.to_pandas()
 
             kwargs["sort"] = False
+
+            def map_func(left, right=right_pandas, kwargs=kwargs):
+                return pandas.merge(left, right_pandas, **kwargs)
 
             # Want to ensure that these are python lists
             if left_on is not None and right_on is not None:
@@ -466,9 +469,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             elif on is not None:
                 on = list(on) if is_list_like(on) else [on]
 
-            def map_func(left, right=right, kwargs=kwargs):
-                return pandas.merge(left, right, **kwargs)
-
             new_self = self.__constructor__(
                 self._modin_frame.apply_full_axis(
                     axis=1,
@@ -476,6 +476,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
                     keep_partitioning=False,
+                    num_splits=merge_partitioning(
+                        self._modin_frame, right._modin_frame, axis=1
+                    ),
                 )
             )
 
@@ -489,25 +492,27 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     keep_index = any(
                         o in self.index.names
                         and o in right_on
-                        and o in right.index.names
+                        and o in right_pandas.index.names
                         for o in left_on
                     )
                 elif on is not None:
                     keep_index = any(
-                        o in self.index.names and o in right.index.names for o in on
+                        o in self.index.names and o in right_pandas.index.names
+                        for o in on
                     )
             else:
                 # Have to trigger columns materialization. Hope they're already available at this point.
                 if left_on is not None and right_on is not None:
                     keep_index = any(
-                        o not in right.columns
+                        o not in right_pandas.columns
                         and o in left_on
                         and o not in self.columns
                         for o in right_on
                     )
                 elif on is not None:
                     keep_index = any(
-                        o not in right.columns and o not in self.columns for o in on
+                        o not in right_pandas.columns and o not in self.columns
+                        for o in on
                     )
 
             if sort:
@@ -534,9 +539,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort = kwargs.get("sort", False)
 
         if how in ["left", "inner"]:
-            right = right.to_pandas()
+            right_pandas = right.to_pandas()
 
-            def map_func(left, right=right, kwargs=kwargs):
+            def map_func(left, right=right_pandas, kwargs=kwargs):
                 return pandas.DataFrame.join(left, right, **kwargs)
 
             new_self = self.__constructor__(
@@ -546,6 +551,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
                     keep_partitioning=False,
+                    num_splits=merge_partitioning(
+                        self._modin_frame, right._modin_frame, axis=1
+                    ),
                 )
             )
             return new_self.sort_rows_by_column_values(on) if sort else new_self
