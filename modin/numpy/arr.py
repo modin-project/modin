@@ -1604,20 +1604,26 @@ class array(object):
                     raise ValueError(
                         f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
-                return fix_dtypes_and_determine_return(result, 1, bool, out, where)
+                return fix_dtypes_and_determine_return(
+                    result, 1, bool, out, where is not False
+                )
             result = result.to_numpy()[0, 0]
             return result if not where else result and where
         if axis is None:
-            result = target.all(axis=1, keepdims=None).all(axis=0, keepdims=None)
+            result = target._query_compiler.all(axis=1).all(axis=0)
             if keepdims:
                 if out is not None and out.shape != (1, 1):
                     raise ValueError(
                         f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
                 return fix_dtypes_and_determine_return(
-                    array(numpy.array([[result]]))._query_compiler, 2, bool, out, where
+                    array(numpy.array([[result]]))._query_compiler,
+                    2,
+                    bool,
+                    out,
+                    where is not False,
                 )
-            return result
+            return result.to_numpy()[0, 0]
         result = target._query_compiler.all(axis=axis)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
@@ -1625,7 +1631,9 @@ class array(object):
             return result if not where else result & where
         if not keepdims and axis != 1:
             result = result.transpose()
-        return fix_dtypes_and_determine_return(result, new_ndim, bool, out, where)
+        return fix_dtypes_and_determine_return(
+            result, new_ndim, bool, out, where is not False
+        )
 
     _all = all
 
@@ -1641,20 +1649,26 @@ class array(object):
                     raise ValueError(
                         f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
-                return fix_dtypes_and_determine_return(result, 1, bool, out, where)
+                return fix_dtypes_and_determine_return(
+                    result, 1, bool, out, where is not False
+                )
             result = result.to_numpy()[0, 0]
             return result if not where else result & where
         if axis is None:
-            result = target.any(axis=1, keepdims=None).any(axis=0, keepdims=None)
+            result = target._query_compiler.any(axis=1).any(axis=0)
             if keepdims:
                 if out is not None and out.shape != (1, 1):
                     raise ValueError(
                         f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
                 return fix_dtypes_and_determine_return(
-                    array(numpy.array([[result]]))._query_compiler, 2, bool, out, where
+                    array(numpy.array([[result]]))._query_compiler,
+                    2,
+                    bool,
+                    out,
+                    where is not False,
                 )
-            return result
+            return result.to_numpy()[0, 0]
         result = target._query_compiler.any(axis=axis)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
@@ -1662,7 +1676,9 @@ class array(object):
             return result if not where else result & where
         if not keepdims and axis != 1:
             result = result.transpose()
-        return fix_dtypes_and_determine_return(result, new_ndim, bool, out, where)
+        return fix_dtypes_and_determine_return(
+            result, new_ndim, bool, out, where is not False
+        )
 
     _any = any
 
@@ -1770,16 +1786,6 @@ class array(object):
                 where,
             )
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
-        # breakpoint()
-        if caller._query_compiler != self._query_compiler:
-            # In this case, we are doing an operation that looks like this 1D_object.op(2D_object).
-            # For Modin to broadcast directly, we have to swap it so that the operation is actually
-            # 2D_object.op(1D_object).
-            caller, callee = callee, caller
-        # If the LHS is 2D and the RHS is 1D, we need to convert the RHS into a dataframe instead of a series
-        # because numpy would otherwise think one of the objects is a series
-        # if caller._ndim == 2 and callee._ndim == 1:
-        #     callee = array(pd.DataFrame(query_compiler=callee._query_compiler).transpose())
         result = getattr(caller._query_compiler, qc_method_name)(
             callee._query_compiler, **kwargs
         )

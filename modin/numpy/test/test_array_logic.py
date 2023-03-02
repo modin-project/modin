@@ -55,10 +55,19 @@ def test_all_any_where():
     result = arr.all(where=where)
     # Result should be np.bool_ True, since where mask isolates the non-zero elements
     assert result
+
+    where = np.array([[True, False], [False, False]])
+    result = arr.all(where=where, axis=1)
+    numpy.testing.assert_array_equal(result, numpy.array([False, True]))
+
     where = np.array([[True, False], [False, True]])
     result = arr.any(where=where)
     # Result should be np.bool_ False, since mask isolates only zero elements
     assert not result
+
+    where = np.array([[False, True], [False, False]])
+    result = arr.any(where=where, axis=1)
+    numpy.testing.assert_array_equal(result, numpy.array([True, False]))
 
 
 @pytest.mark.parametrize("data", [small_arr_c_2d, small_arr_c_1d], ids=["2D", "1D"])
