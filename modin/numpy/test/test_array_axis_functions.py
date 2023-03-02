@@ -420,6 +420,19 @@ def test_mean():
     modin_result = modin_arr.mean(where=modin_where)
     numpy_result = numpy_arr.mean(where=numpy_where)
     assert modin_result == numpy_result
+    # Test NA propagation
+    numpy_arr = numpy.array([[1, 2], [3, 4], [5, numpy.nan]])
+    modin_arr = np.array([[1, 2], [3, 4], [5, np.nan]])
+    assert numpy.isnan(modin_arr.mean())
+    numpy.testing.assert_array_equal(
+        numpy_arr.mean(axis=1), modin_arr.mean(axis=1)._to_numpy()
+    )
+    numpy.testing.assert_array_equal(
+        numpy_arr.mean(axis=0), modin_arr.mean(axis=0)._to_numpy()
+    )
+    numpy_where = numpy.array([[True, True], [True, True], [True, False]])
+    modin_where = np.array(numpy_where)
+    assert modin_arr.mean(where=modin_where) == numpy_arr.mean(where=numpy_where)
 
 
 def test_prod():
