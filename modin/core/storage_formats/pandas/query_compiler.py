@@ -2497,7 +2497,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             return result
 
-        if len(self._modin_frame.column_widths) > 1:
+        if self._modin_frame._partitions.shape[1] > 1:
             # if the number of columns (or column partitions) we are checking for duplicates is larger than 1,
             # we must first hash them to generate a single value that can be compared across rows.
             hashed_modin_frame = self._modin_frame.reduce(
