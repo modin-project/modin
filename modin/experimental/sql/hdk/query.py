@@ -12,6 +12,8 @@
 # governing permissions and limitations under the License.
 
 import pyarrow as pa
+from pandas.core.dtypes.common import get_dtype, is_categorical_dtype
+
 import modin.pandas as pd
 from modin.pandas.utils import from_arrow
 from modin.experimental.core.storage_formats.hdk import DFAlgQueryCompiler
@@ -67,14 +69,34 @@ def hdk_query(query: str, **kwargs) -> pd.DataFrame:
     worker = HdkWorker()
     if len(kwargs) > 0:
         query = _build_query(query, kwargs, worker.import_arrow_table)
-    at = worker.executeDML(query)
+    df = from_arrow(worker.executeDML(query))
+    mdf = df._query_compiler._modin_frame
+    at = mdf._partitions[0][0].get()
     schema = at.schema
-    # HDK returns strings as dictionary. Cast dictionary columns to string.
-    if cast := {i: f for i, f in enumerate(schema) if pa.types.is_dictionary(f.type)}:
-        for i, f in cast.items():
-            schema = schema.set(i, pa.field(f.name, pa.string()))
-        at = at.cast(schema)
-    return from_arrow(at)
+    # HDK returns strings as dictionary. For the proper conversion to
+    # Pandas, we need to replace dtypes of the corresponding columns.
+    if replace := {
+        i: f.name for i, f in enumerate(schema) if pa.types.is_dictionary(f.type)
+    }:
+        dtypes = mdf._dtypes
+        obj_type = get_dtype(object)
+        for i, n in replace.items():
+            n = n[2:]  # Cut the F_ prefix
+            skip = False
+            # Make sure this column is not Categorical. It only works for the
+            # original column names. If a column has been renamed in the query,
+            # then the dtype is changed.
+            for a in kwargs.values():
+                if (
+                    isinstance(a, pd.DataFrame)
+                    and (n in (dt := a.dtypes))
+                    and is_categorical_dtype(dt[n])
+                ):
+                    skip = True
+                    break
+            if not skip:
+                dtypes[i] = obj_type
+    return df
 
 
 def _build_query(query: str, frames: dict, import_table: callable) -> str:
