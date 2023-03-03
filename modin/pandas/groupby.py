@@ -128,13 +128,52 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def ffill(self, limit=None):
-        return self.fillna(limit=limit, method='ffill')
+        return self.fillna(limit=limit, method="ffill")
 
     def sem(self, ddof=1):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_sem,
             agg_kwargs=dict(ddof=ddof),
             numeric_only=True,
+        )
+
+    def value_counts(
+        self,
+        subset=None,
+        normalize: bool = False,
+        sort: bool = True,
+        ascending: bool = False,
+        dropna: bool = True,
+    ):
+        # Compatibility Notes:
+        # dfGroupBy.value_counts nearly semantically
+        # equivalent to df.value_counts([<by>, <other...>]).sort_index()
+        # it returns a MultiIndex Series which needs to be converted to
+        # pandas for sort_index.
+        # 
+        # Semantic Exceptions:
+        # normalize does not work; it will return the normalized results
+        #     across the entire dataframe, not within the sub levels
+        # DataFrame(as_index=False) does not work. The default is True
+        #     calling this function will always result in a Series rather 
+        #     than a DataFrame
+        #
+        if is_list_like(self._by):
+            subset = self._by
+        elif isinstance(self._by, type(self._query_compiler)):
+            subset = self._by.columns.values.tolist()
+        for c in self._columns.values.tolist():
+            if c not in subset:
+                subset.append(c)
+        return (
+            self._df.value_counts(
+                subset=subset,
+                normalize=normalize,
+                sort=sort,
+                ascending=ascending,
+                dropna=dropna,
+            )
+            .sort_index(level=0, sort_remaining=False)
         )
 
     def mean(self, numeric_only=None):
@@ -502,7 +541,7 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def bfill(self, limit=None):
-        return self.fillna(limit=limit, method='bfill')
+        return self.fillna(limit=limit, method="bfill")
 
     def idxmin(self):
         return self._default_to_pandas(lambda df: df.idxmin())
@@ -663,7 +702,7 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.corrwith)
 
     def pad(self, limit=None):
-        return self.fillna(limit=limit, method='pad')
+        return self.fillna(limit=limit, method="pad")
 
     def max(self, numeric_only=False, min_count=-1):
         return self._wrap_aggregation(
@@ -1319,6 +1358,24 @@ class SeriesGroupBy(DataFrameGroupBy):
                 )
                 for k in (sorted(group_ids) if self._sort else group_ids)
             )
+
+    def value_counts(
+        self,
+        normalize: bool = False,
+        sort: bool = True,
+        ascending: bool = False,
+        bins=None,
+        dropna: bool = True,
+    ):
+        return self._default_to_pandas(
+            lambda ser: ser.value_counts(
+                normalize=normalize,
+                sort=sort,
+                ascending=ascending,
+                bins=bins,
+                dropna=dropna,
+            )
+        )
 
     def unique(self):
         return self._check_index(
