@@ -608,6 +608,30 @@ def test_loc_multi_index_with_tuples():
     eval_general(modin_df, pandas_df, lambda df: df.loc[:, ("bar", "two")])
 
 
+def test_loc_multi_index_rows_with_tuples_5721():
+    arrays = [
+        ["bar", "bar", "baz", "baz"],
+        ["one", "two", "one", "two"],
+    ]
+    ncols = 5
+    index = pd.MultiIndex.from_tuples(zip(*arrays), names=["a", "b"])
+    data = np.arange(0, ncols * len(index)).reshape(len(index), ncols)
+    modin_df, pandas_df = create_test_dfs(data, index=index)
+    eval_general(modin_df, pandas_df, lambda df: df.loc[("bar",)])
+    eval_general(modin_df, pandas_df, lambda df: df.loc[("bar", "two")])
+
+
+def test_loc_multi_index_level_two_has_same_name_as_column():
+    eval_general(
+        *create_test_dfs(
+            pandas.DataFrame(
+                [[0]], index=[pd.Index(["foo"]), pd.Index(["bar"])], columns=["bar"]
+            )
+        ),
+        lambda df: df.loc[("foo", "bar")],
+    )
+
+
 def test_loc_multi_index_duplicate_keys():
     modin_df, pandas_df = create_test_dfs([1, 2], index=[["a", "a"], ["b", "b"]])
     eval_general(modin_df, pandas_df, lambda df: df.loc[("a", "b"), 0])
@@ -1772,17 +1796,36 @@ def test_tail(data, n):
 
 
 def test_xs():
-    d = {
+    # example is based on the doctest in the upstream pandas docstring
+    data = {
         "num_legs": [4, 4, 2, 2],
         "num_wings": [0, 0, 2, 2],
         "class": ["mammal", "mammal", "mammal", "bird"],
         "animal": ["cat", "dog", "bat", "penguin"],
         "locomotion": ["walks", "walks", "flies", "walks"],
     }
-    df = pd.DataFrame(data=d)
-    df = df.set_index(["class", "animal", "locomotion"])
-    with warns_that_defaulting_to_pandas():
-        df.xs("mammal")
+    modin_df, pandas_df = create_test_dfs(data)
+
+    def prepare_dataframes(df):
+        # to make several partitions (only for Modin dataframe)
+        df = (pd if isinstance(df, pd.DataFrame) else pandas).concat([df, df], axis=0)
+        # looks like pandas is sorting the index whereas modin is not, performing a join operation.
+        df = df.reset_index(drop=True)
+        df = df.join(df, rsuffix="_y")
+        return df.set_index(["class", "animal", "locomotion"])
+
+    modin_df = prepare_dataframes(modin_df)
+    pandas_df = prepare_dataframes(pandas_df)
+    eval_general(modin_df, pandas_df, lambda df: df.xs("mammal"))
+    eval_general(modin_df, pandas_df, lambda df: df.xs("cat", level=1))
+    eval_general(modin_df, pandas_df, lambda df: df.xs("num_legs", axis=1))
+    eval_general(
+        modin_df, pandas_df, lambda df: df.xs("cat", level=1, drop_level=False)
+    )
+    eval_general(modin_df, pandas_df, lambda df: df.xs(("mammal", "cat")))
+    eval_general(
+        modin_df, pandas_df, lambda df: df.xs(("mammal", "cat"), drop_level=False)
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

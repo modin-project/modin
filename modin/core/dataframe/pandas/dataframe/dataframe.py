@@ -1609,7 +1609,7 @@ class PandasDataframe(ClassLogger):
 
         return _tree_reduce_func
 
-    def _compute_tree_reduce_metadata(self, axis, new_parts):
+    def _compute_tree_reduce_metadata(self, axis, new_parts, dtypes=None):
         """
         Compute the metadata for the result of reduce function.
 
@@ -1619,6 +1619,10 @@ class PandasDataframe(ClassLogger):
             The axis on which reduce function was applied.
         new_parts : NumPy 2D array
             Partitions with the result of applied function.
+        dtypes : str, optional
+            The data types for the result. This is an optimization
+            because there are functions that always result in a particular data
+            type, and this allows us to avoid (re)computing it.
 
         Returns
         -------
@@ -1633,12 +1637,18 @@ class PandasDataframe(ClassLogger):
         new_axes_lengths[axis] = [1]
         new_axes_lengths[axis ^ 1] = self._axes_lengths[axis ^ 1]
 
-        new_dtypes = None
+        if dtypes == "copy":
+            dtypes = self._dtypes
+        elif dtypes is not None:
+            dtypes = pandas.Series(
+                [np.dtype(dtypes)] * len(new_axes[1]), index=new_axes[1]
+            )
+
         result = self.__constructor__(
             new_parts,
             *new_axes,
             *new_axes_lengths,
-            new_dtypes,
+            dtypes,
         )
         return result
 
@@ -1677,7 +1687,7 @@ class PandasDataframe(ClassLogger):
         new_parts = self._partition_mgr_cls.map_axis_partitions(
             axis.value, self._partitions, function
         )
-        return self._compute_tree_reduce_metadata(axis.value, new_parts)
+        return self._compute_tree_reduce_metadata(axis.value, new_parts, dtypes=dtypes)
 
     @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
     def tree_reduce(
@@ -1793,7 +1803,7 @@ class PandasDataframe(ClassLogger):
         pass
 
     @lazy_metadata_decorator(apply_axis="both")
-    def fold(self, axis, func):
+    def fold(self, axis, func, new_columns=None):
         """
         Perform a function across an entire axis.
 
@@ -1803,6 +1813,11 @@ class PandasDataframe(ClassLogger):
             The axis to apply over.
         func : callable
             The function to apply.
+        new_columns : list-like, optional
+            The columns of the result.
+            Must be the same length as the columns' length of `self`.
+            The column labels of `self` may change during an operation so
+            we may want to pass the new column labels in (e.g., see `cat.codes`).
 
         Returns
         -------
@@ -1813,6 +1828,13 @@ class PandasDataframe(ClassLogger):
         -----
         The data shape is not changed (length and width of the table).
         """
+        if new_columns is not None:
+            if self._columns_cache is not None:
+                assert len(self._columns_cache) == len(
+                    new_columns
+                ), "The length of `new_columns` doesn't match the columns' length of `self`"
+            self._columns_cache = new_columns
+
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True
         )
@@ -2203,6 +2225,7 @@ class PandasDataframe(ClassLogger):
         enumerate_partitions: bool = False,
         dtypes=None,
         keep_partitioning=True,
+        num_splits=None,
         sync_labels=True,
         pass_axis_lengths_to_partitions=False,
     ):
@@ -2231,8 +2254,13 @@ class PandasDataframe(ClassLogger):
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
         keep_partitioning : boolean, default: True
-            The flag to keep partition boundaries for Modin Frame.
-            Setting it to True disables shuffling data from one partition to another.
+            The flag to keep partition boundaries for Modin Frame if possible.
+            Setting it to True disables shuffling data from one partition to another in case the resulting
+            number of splits is equal to the initial number of splits.
+        num_splits : int, optional
+            The number of partitions to split the result into across the `axis`. If None, then the number
+            of splits will be infered automatically. If `num_splits` is None and `keep_partitioning=True`
+            then the number of splits is preserved.
         sync_labels : boolean, default: True
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to
@@ -2260,6 +2288,7 @@ class PandasDataframe(ClassLogger):
             dtypes=dtypes,
             other=None,
             keep_partitioning=keep_partitioning,
+            num_splits=num_splits,
             sync_labels=sync_labels,
             pass_axis_lengths_to_partitions=pass_axis_lengths_to_partitions,
         )
@@ -2653,6 +2682,7 @@ class PandasDataframe(ClassLogger):
         enumerate_partitions=False,
         dtypes=None,
         keep_partitioning=True,
+        num_splits=None,
         sync_labels=True,
         pass_axis_lengths_to_partitions=False,
     ):
@@ -2683,8 +2713,13 @@ class PandasDataframe(ClassLogger):
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
         keep_partitioning : boolean, default: True
-            The flag to keep partition boundaries for Modin Frame.
-            Setting it to True disables shuffling data from one partition to another.
+            The flag to keep partition boundaries for Modin Frame if possible.
+            Setting it to True disables shuffling data from one partition to another in case the resulting
+            number of splits is equal to the initial number of splits.
+        num_splits : int, optional
+            The number of partitions to split the result into across the `axis`. If None, then the number
+            of splits will be infered automatically. If `num_splits` is None and `keep_partitioning=True`
+            then the number of splits is preserved.
         sync_labels : boolean, default: True
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to
@@ -2734,6 +2769,7 @@ class PandasDataframe(ClassLogger):
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
             keep_partitioning=keep_partitioning,
+            num_splits=num_splits,
             apply_func_args=apply_func_args,
         )
         kw = {"row_lengths": None, "column_widths": None}
@@ -2755,24 +2791,27 @@ class PandasDataframe(ClassLogger):
                     kw["row_lengths"] = get_length_list(
                         axis_len=len(new_index), num_splits=new_partitions.shape[0]
                     )
-                elif (
-                    axis == 1
-                    and self._row_lengths_cache is not None
-                    and len(new_index) == sum(self._row_lengths_cache)
-                ):
-                    kw["row_lengths"] = self._row_lengths_cache
+                elif axis == 1:
+                    if self._row_lengths_cache is not None and len(new_index) == sum(
+                        self._row_lengths_cache
+                    ):
+                        kw["row_lengths"] = self._row_lengths_cache
+                    elif len(new_index) == 1 and new_partitions.shape[0] == 1:
+                        kw["row_lengths"] = [1]
             if kw["column_widths"] is None and new_columns is not None:
                 if axis == 1:
                     kw["column_widths"] = get_length_list(
                         axis_len=len(new_columns),
                         num_splits=new_partitions.shape[1],
                     )
-                elif (
-                    axis == 0
-                    and self._column_widths_cache is not None
-                    and len(new_columns) == sum(self._column_widths_cache)
-                ):
-                    kw["column_widths"] = self._column_widths_cache
+                elif axis == 0:
+                    if self._column_widths_cache is not None and len(
+                        new_columns
+                    ) == sum(self._column_widths_cache):
+                        kw["column_widths"] = self._column_widths_cache
+                    elif len(new_columns) == 1 and new_partitions.shape[1] == 1:
+                        kw["column_widths"] = [1]
+
         result = self.__constructor__(
             new_partitions, index=new_index, columns=new_columns, **kw
         )

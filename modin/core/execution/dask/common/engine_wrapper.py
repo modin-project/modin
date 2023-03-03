@@ -56,7 +56,7 @@ class DaskWrapper:
 
         Parameters
         ----------
-        func : callable
+        func : callable or distributed.Future
             Function to be deployed in a worker process.
         f_args : list or tuple, optional
             Positional arguments to pass to ``func``.
@@ -75,9 +75,13 @@ class DaskWrapper:
         client = default_client()
         args = [] if f_args is None else f_args
         kwargs = {} if f_kwargs is None else f_kwargs
-        remote_task_future = client.submit(
-            _deploy_dask_func, func, *args, pure=pure, **kwargs
-        )
+        if callable(func):
+            remote_task_future = client.submit(func, *args, pure=pure, **kwargs)
+        else:
+            # for the case where type(func) is distributed.Future
+            remote_task_future = client.submit(
+                _deploy_dask_func, func, *args, pure=pure, **kwargs
+            )
         if num_returns != 1:
             return [
                 client.submit(lambda tup, i: tup[i], remote_task_future, i)

@@ -318,8 +318,6 @@ class DataFrame(BasePandasDataset):
         df = self[subset] if subset is not None else self
         new_qc = df._query_compiler.duplicated(keep=keep)
         duplicates = self._reduce_dimension(new_qc)
-        # remove Series name which was assigned automatically by .apply in QC
-        duplicates.name = None
         return duplicates
 
     @property
@@ -2573,14 +2571,6 @@ class DataFrame(BasePandasDataset):
         )
         return self._create_or_update_from_compiler(query_compiler, inplace)
 
-    def xs(self, key, axis=0, level=None, drop_level=True):  # noqa: PR01, RT01, D200
-        """
-        Return cross-section from the ``DataFrame``.
-        """
-        return self._default_to_pandas(
-            pandas.DataFrame.xs, key, axis=axis, level=level, drop_level=drop_level
-        )
-
     def _getitem_column(self, key):
         """
         Get column specified by `key`.
@@ -2766,7 +2756,7 @@ class DataFrame(BasePandasDataset):
                 value = value.T.reshape(-1)
                 if len(self) > 0:
                     value = value[: len(self)]
-            if not isinstance(value, (Series, Categorical)):
+            if not isinstance(value, (Series, Categorical, np.ndarray)):
                 value = list(value)
 
         if not self._query_compiler.lazy_execution and len(self.index) == 0:

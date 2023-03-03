@@ -211,7 +211,7 @@ class PandasParser(ClassLogger):
         ]
 
     @classmethod
-    def get_dtypes(cls, dtypes_ids):
+    def get_dtypes(cls, dtypes_ids, columns):
         """
         Get common for all partitions dtype for each of the columns.
 
@@ -219,14 +219,19 @@ class PandasParser(ClassLogger):
         ----------
         dtypes_ids : list
             Array with references to the partitions dtypes objects.
+        columns : array-like or Index (1d)
+            The names of the columns in this variable will be used
+            for dtypes creation.
 
         Returns
         -------
-        frame_dtypes : pandas.Series or dtype
+        frame_dtypes : pandas.Series, dtype or None
             Resulting dtype or pandas.Series where column names are used as
             index and types of columns are used as values for full resulting
             frame.
         """
+        if len(dtypes_ids) == 0:
+            return None
         # each element in `partitions_dtypes` is a Series, where column names are
         # used as index and types of columns for different partitions are used as values
         partitions_dtypes = cls.materialize(dtypes_ids)
@@ -250,6 +255,12 @@ class PandasParser(ClassLogger):
                 lambda row: find_common_type_cat(row.values),
                 axis=1,
             ).squeeze(axis=0)
+
+        # Set the index for the dtypes to the column names
+        if isinstance(frame_dtypes, pandas.Series):
+            frame_dtypes.index = columns
+        else:
+            frame_dtypes = pandas.Series(frame_dtypes, index=columns)
 
         return frame_dtypes
 

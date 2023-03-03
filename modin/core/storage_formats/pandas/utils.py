@@ -20,7 +20,8 @@ import contextlib
 import numpy as np
 import pandas
 
-from modin.config import MinPartitionSize
+from modin.config import MinPartitionSize, NPartitions
+from math import ceil
 
 
 @contextlib.contextmanager
@@ -100,11 +101,21 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
     length_list = np.insert(length_list, obj=0, values=[0])
 
     sums = np.cumsum(length_list)
+    axis = 0 if isinstance(result, pandas.Series) else axis
     # We do this to restore block partitioning
-    if axis == 0 or isinstance(result, pandas.Series):
-        return [result.iloc[sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
+    if axis == 0:
+        chunked = [result.iloc[sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
     else:
-        return [result.iloc[:, sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
+        chunked = [result.iloc[:, sums[i] : sums[i + 1]] for i in range(len(sums) - 1)]
+
+    return [
+        # Sliced MultiIndex still stores all encoded values of the original index, explicitly
+        # asking it to drop unused values in order to save memory.
+        chunk.set_axis(chunk.axes[axis].remove_unused_levels(), axis=axis, copy=False)
+        if isinstance(chunk.axes[axis], pandas.MultiIndex)
+        else chunk
+        for chunk in chunked
+    ]
 
 
 def get_length_list(axis_len: int, num_splits: int) -> list:
@@ -180,3 +191,30 @@ def get_group_names(regex: "re.Pattern") -> "List[Hashable]":
     """
     names = {v: k for k, v in regex.groupindex.items()}
     return [names.get(1 + i, i) for i in range(regex.groups)]
+
+
+def merge_partitioning(left, right, axis=1):
+    """
+    Get the number of splits across the `axis` for the two dataframes being concatenated.
+
+    Parameters
+    ----------
+    left : PandasDataframe
+    right : PandasDataframe
+    axis : int, default: 1
+
+    Returns
+    -------
+    int
+    """
+    lshape = left._row_lengths_cache if axis == 0 else left._column_widths_cache
+    rshape = right._row_lengths_cache if axis == 0 else right._column_widths_cache
+
+    if lshape is not None and rshape is not None:
+        res_shape = sum(lshape) + sum(rshape)
+        chunk_size = compute_chunksize(axis_len=res_shape, num_splits=NPartitions.get())
+        return ceil(res_shape / chunk_size)
+    else:
+        lsplits = left._partitions.shape[axis]
+        rsplits = right._partitions.shape[axis]
+        return min(lsplits + rsplits, NPartitions.get())
