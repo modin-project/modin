@@ -56,7 +56,9 @@ def _get_common_dtype(lhs_dtype, rhs_dtype):
         return get_dtype(float)
     if is_integer_dtype(lhs_dtype) and is_integer_dtype(rhs_dtype):
         return get_dtype(int)
-    raise TypeError(f"Cannot perform operation on types: {lhs_dtype}, {rhs_dtype}")
+    raise NotImplementedError(
+        f"Cannot perform operation on types: {lhs_dtype}, {rhs_dtype}"
+    )
 
 
 _aggs_preserving_numeric_type = {"sum", "min", "max"}
