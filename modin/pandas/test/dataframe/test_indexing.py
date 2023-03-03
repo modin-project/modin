@@ -608,6 +608,30 @@ def test_loc_multi_index_with_tuples():
     eval_general(modin_df, pandas_df, lambda df: df.loc[:, ("bar", "two")])
 
 
+def test_loc_multi_index_rows_with_tuples_5721():
+    arrays = [
+        ["bar", "bar", "baz", "baz"],
+        ["one", "two", "one", "two"],
+    ]
+    ncols = 5
+    index = pd.MultiIndex.from_tuples(zip(*arrays), names=["a", "b"])
+    data = np.arange(0, ncols * len(index)).reshape(len(index), ncols)
+    modin_df, pandas_df = create_test_dfs(data, index=index)
+    eval_general(modin_df, pandas_df, lambda df: df.loc[("bar",)])
+    eval_general(modin_df, pandas_df, lambda df: df.loc[("bar", "two")])
+
+
+def test_loc_multi_index_level_two_has_same_name_as_column():
+    eval_general(
+        *create_test_dfs(
+            pandas.DataFrame(
+                [[0]], index=[pd.Index(["foo"]), pd.Index(["bar"])], columns=["bar"]
+            )
+        ),
+        lambda df: df.loc[("foo", "bar")],
+    )
+
+
 def test_loc_multi_index_duplicate_keys():
     modin_df, pandas_df = create_test_dfs([1, 2], index=[["a", "a"], ["b", "b"]])
     eval_general(modin_df, pandas_df, lambda df: df.loc[("a", "b"), 0])
