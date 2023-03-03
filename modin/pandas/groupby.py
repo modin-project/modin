@@ -235,14 +235,35 @@ class DataFrameGroupBy(ClassLogger):
         ascending: bool = False,
         dropna: bool = True,
     ):
-        return self._default_to_pandas(
-            lambda df: df.value_counts(
+        # Compatibility Notes:
+        # dfGroupBy.value_counts nearly semantically
+        # equivalent to df.value_counts([<by>, <other...>]).sort_index()
+        # it returns a MultiIndex Series which needs to be converted to
+        # pandas for sort_index.
+        # 
+        # Semantic Exceptions:
+        # normalize does not work; it will return the normalized results
+        #     across the entire dataframe, not within the sub levels
+        # DataFrame(as_index=False) does not work. The default is True
+        #     calling this function will always result in a Series rather 
+        #     than a DataFrame
+        #
+        if is_list_like(self._by):
+            subset = self._by
+        elif isinstance(self._by, type(self._query_compiler)):
+            subset = self._by.columns.values.tolist()
+        for c in self._columns.values.tolist():
+            if c not in subset:
+                subset.append(c)
+        return (
+            self._df.value_counts(
                 subset=subset,
                 normalize=normalize,
                 sort=sort,
                 ascending=ascending,
                 dropna=dropna,
             )
+            .sort_index(level=0, sort_remaining=False)
         )
 
     def mean(self, numeric_only=None):
