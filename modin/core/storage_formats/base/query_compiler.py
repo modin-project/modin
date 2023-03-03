@@ -3405,7 +3405,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                     if axis_loc.stop is None or not is_number(axis_loc.stop):
                         slice_stop = axis_loc.stop
                     else:
-                        slice_stop = axis_loc.stop - axis_loc.step
+                        slice_stop = axis_loc.stop - (
+                            0 if axis_loc.step is None else axis_loc.step
+                        )
                     axis_lookup = axis_labels.slice_indexer(
                         axis_loc.start,
                         slice_stop,
