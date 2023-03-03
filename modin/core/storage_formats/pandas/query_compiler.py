@@ -2484,35 +2484,44 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def duplicated(self, **kwargs):
         def _compute_hash(df):
-            return df.apply(
+            result = df.apply(
                 lambda s: hashlib.new("md5", str(tuple(s)).encode()).hexdigest(), axis=1
-            ).to_frame()
+            )
+            if isinstance(result, pandas.Series):
+                result = result.to_frame(
+                    result.name
+                    if result.name is not None
+                    else MODIN_UNNAMED_SERIES_LABEL
+                )
+            return result
 
         def _compute_duplicated(df):
-            return df.duplicated(**kwargs).to_frame()
+            result = df.duplicated(**kwargs)
+            if isinstance(result, pandas.Series):
+                result = result.to_frame(
+                    result.name
+                    if result.name is not None
+                    else MODIN_UNNAMED_SERIES_LABEL
+                )
+            return result
 
-        new_index = self._modin_frame.copy_index_cache()
-        new_columns = [MODIN_UNNAMED_SERIES_LABEL]
-        if len(self.columns) > 1:
-            # if the number of columns we are checking for duplicates is larger than 1,
-            # we must hash them to generate a single value that can be compared across rows.
-            hashed_modin_frame = self._modin_frame.apply_full_axis(
-                1,
-                _compute_hash,
-                new_index=new_index,
-                new_columns=new_columns,
-                keep_partitioning=False,
+        if self._modin_frame._partitions.shape[1] > 1:
+            # if the number of columns (or column partitions) we are checking for duplicates is larger than 1,
+            # we must first hash them to generate a single value that can be compared across rows.
+            hashed_modin_frame = self._modin_frame.reduce(
+                axis=1,
+                function=_compute_hash,
                 dtypes=np.dtype("O"),
             )
         else:
             hashed_modin_frame = self._modin_frame
         new_modin_frame = hashed_modin_frame.apply_full_axis(
-            0,
-            _compute_duplicated,
-            new_index=new_index,
-            new_columns=new_columns,
-            keep_partitioning=False,
+            axis=0,
+            func=_compute_duplicated,
+            new_index=self._modin_frame.copy_index_cache(),
+            new_columns=[MODIN_UNNAMED_SERIES_LABEL],
             dtypes=np.bool_,
+            keep_partitioning=False,
         )
         return self.__constructor__(new_modin_frame, shape_hint="column")
 

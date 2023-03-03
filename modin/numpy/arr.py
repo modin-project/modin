@@ -717,6 +717,24 @@ class array(object):
         result = caller._query_compiler.ne(callee._query_compiler, **kwargs)
         return array(_query_compiler=result, _ndim=new_ndim)
 
+    def _compute_masked_mean(self, mask, output_dtype, axis):
+        # By default, pandas ignores NaN values when doing computations.
+        # NumPy; however, propagates the value by default. We use pandas
+        # default behaviour in order to mask values (by replacing them)
+        # with NaN when initially computing the mean, but we need to propagate
+        # NaN values that were not masked to the final output, so we do a
+        # sum along the same axis (where masked values are 0) to see where
+        # NumPy would propagate NaN, and swap out those values in our result
+        # with NaN.
+        target = mask.where(self, numpy.nan)._query_compiler
+        target = target.astype(
+            {col_name: output_dtype for col_name in target.columns}
+        ).mean(axis=axis)
+        na_propagation_mask = mask.where(self, 0)._query_compiler
+        na_propagation_mask = na_propagation_mask.sum(axis=axis, skipna=False)
+        target = target.where(na_propagation_mask.notna(), numpy.nan)
+        return target
+
     def mean(self, axis=None, dtype=None, out=None, keepdims=None, *, where=True):
         out_dtype = (
             dtype
@@ -730,10 +748,12 @@ class array(object):
         if self._ndim == 1:
             if axis == 1:
                 raise numpy.AxisError(1, 1)
-            target = where.where(self, numpy.nan) if isinstance(where, array) else self
-            result = target._query_compiler.astype(
-                {col_name: out_dtype for col_name in target._query_compiler.columns}
-            ).mean(axis=0)
+            if isinstance(where, array):
+                result = self._compute_masked_mean(where, out_dtype, 0)
+            else:
+                result = self._query_compiler.astype(
+                    {col_name: out_dtype for col_name in self._query_compiler.columns}
+                ).mean(axis=0, skipna=False)
             if keepdims:
                 if out is not None and out.shape != (1,):
                     raise ValueError(
@@ -755,9 +775,20 @@ class array(object):
             # we return `numpy.nan`, since that is what NumPy would do.
             return result.to_numpy()[0, 0] if where else numpy.nan
         if axis is None:
-            result = self
-            if isinstance(where, array):
-                result = where.where(self, numpy.nan)
+            # If any of the (non-masked) elements of our array are `NaN`, we know that the
+            # result of `mean` must be `NaN`. This is a fastpath to see if any unmasked elements
+            # are `NaN`.
+            contains_na_check = (
+                where.where(self, 0) if isinstance(where, array) else self
+            )
+            if (
+                contains_na_check._query_compiler.isna()
+                .any(axis=1)
+                .any(axis=0)
+                .to_numpy()[0, 0]
+            ):
+                return numpy.nan
+            result = where.where(self, numpy.nan) if isinstance(where, array) else self
             # Since our current QueryCompiler does not have a mean that reduces 2D objects to
             # a single value, we need to calculate the mean ourselves. First though, we need
             # to figure out how many objects that we are taking the mean over (since any
@@ -796,10 +827,12 @@ class array(object):
                 else:
                     return array([[numpy.nan]], dtype=out_dtype)
             return result if where is not False else numpy.nan
-        target = where.where(self, numpy.nan) if isinstance(where, array) else self
-        result = target._query_compiler.astype(
-            {col_name: out_dtype for col_name in self._query_compiler.columns}
-        ).mean(axis=axis)
+        if isinstance(where, array):
+            result = self._compute_masked_mean(where, out_dtype, axis)
+        else:
+            result = self._query_compiler.astype(
+                {col_name: out_dtype for col_name in self._query_compiler.columns}
+            ).mean(axis=axis, skipna=False)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
             return result.to_numpy()[0, 0] if where is not False else numpy.nan
@@ -1147,7 +1180,7 @@ class array(object):
             return result if where is not False else initial
         target = where.where(self, 1) if isinstance(where, array) else self
         result = target._query_compiler.astype(
-            {col_name: out_dtype for col_name in self._query_compiler.columns}
+            {col_name: out_dtype for col_name in target._query_compiler.columns}
         ).prod(axis=axis, skipna=False)
         result = result.mul(initial)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
@@ -1447,7 +1480,7 @@ class array(object):
             return result if where is not False else initial
         target = where.where(self, 0) if isinstance(where, array) else self
         result = target._query_compiler.astype(
-            {col_name: out_dtype for col_name in self._query_compiler.columns}
+            {col_name: out_dtype for col_name in target._query_compiler.columns}
         ).sum(axis=axis, skipna=False)
         result = result.add(initial)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
