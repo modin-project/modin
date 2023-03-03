@@ -1609,7 +1609,7 @@ class PandasDataframe(ClassLogger):
 
         return _tree_reduce_func
 
-    def _compute_tree_reduce_metadata(self, axis, new_parts):
+    def _compute_tree_reduce_metadata(self, axis, new_parts, dtypes=None):
         """
         Compute the metadata for the result of reduce function.
 
@@ -1619,6 +1619,10 @@ class PandasDataframe(ClassLogger):
             The axis on which reduce function was applied.
         new_parts : NumPy 2D array
             Partitions with the result of applied function.
+        dtypes : str, optional
+            The data types for the result. This is an optimization
+            because there are functions that always result in a particular data
+            type, and this allows us to avoid (re)computing it.
 
         Returns
         -------
@@ -1633,12 +1637,18 @@ class PandasDataframe(ClassLogger):
         new_axes_lengths[axis] = [1]
         new_axes_lengths[axis ^ 1] = self._axes_lengths[axis ^ 1]
 
-        new_dtypes = None
+        if dtypes == "copy":
+            dtypes = self._dtypes
+        elif dtypes is not None:
+            dtypes = pandas.Series(
+                [np.dtype(dtypes)] * len(new_axes[1]), index=new_axes[1]
+            )
+
         result = self.__constructor__(
             new_parts,
             *new_axes,
             *new_axes_lengths,
-            new_dtypes,
+            dtypes,
         )
         return result
 
@@ -1677,7 +1687,7 @@ class PandasDataframe(ClassLogger):
         new_parts = self._partition_mgr_cls.map_axis_partitions(
             axis.value, self._partitions, function
         )
-        return self._compute_tree_reduce_metadata(axis.value, new_parts)
+        return self._compute_tree_reduce_metadata(axis.value, new_parts, dtypes=dtypes)
 
     @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
     def tree_reduce(
@@ -2781,24 +2791,27 @@ class PandasDataframe(ClassLogger):
                     kw["row_lengths"] = get_length_list(
                         axis_len=len(new_index), num_splits=new_partitions.shape[0]
                     )
-                elif (
-                    axis == 1
-                    and self._row_lengths_cache is not None
-                    and len(new_index) == sum(self._row_lengths_cache)
-                ):
-                    kw["row_lengths"] = self._row_lengths_cache
+                elif axis == 1:
+                    if self._row_lengths_cache is not None and len(new_index) == sum(
+                        self._row_lengths_cache
+                    ):
+                        kw["row_lengths"] = self._row_lengths_cache
+                    elif len(new_index) == 1 and new_partitions.shape[0] == 1:
+                        kw["row_lengths"] = [1]
             if kw["column_widths"] is None and new_columns is not None:
                 if axis == 1:
                     kw["column_widths"] = get_length_list(
                         axis_len=len(new_columns),
                         num_splits=new_partitions.shape[1],
                     )
-                elif (
-                    axis == 0
-                    and self._column_widths_cache is not None
-                    and len(new_columns) == sum(self._column_widths_cache)
-                ):
-                    kw["column_widths"] = self._column_widths_cache
+                elif axis == 0:
+                    if self._column_widths_cache is not None and len(
+                        new_columns
+                    ) == sum(self._column_widths_cache):
+                        kw["column_widths"] = self._column_widths_cache
+                    elif len(new_columns) == 1 and new_partitions.shape[1] == 1:
+                        kw["column_widths"] = [1]
+
         result = self.__constructor__(
             new_partitions, index=new_index, columns=new_columns, **kw
         )
