@@ -18,11 +18,16 @@ import warnings
 import modin.numpy as np
 
 
-@pytest.mark.parametrize("size", [100, (2, 100), (100, 2), (1, 100), (100, 1)])
+@pytest.mark.parametrize(
+    "size", [100, (2, 100), (100, 2), (1, 100), (100, 1), (100, 100)]
+)
 def test_repr(size):
+    prev_threshold = numpy.get_printoptions()["threshold"]
+    numpy.set_printoptions(threshold=50)
     numpy_arr = numpy.random.randint(-100, 100, size=size)
     modin_arr = np.array(numpy_arr)
     assert repr(modin_arr) == repr(numpy_arr)
+    numpy.set_printoptions(threshold=prev_threshold)
 
 
 @pytest.mark.parametrize("size", [100, (2, 100), (100, 2), (1, 100), (100, 1)])

@@ -1558,154 +1558,67 @@ class array(object):
             return self
         return array(_query_compiler=result, _ndim=self._ndim)
 
-    def _repr_1dim_obj(self):
-        repr_str = re.sub(
-            ", dtype=.*",
-            "",
-            repr(
-                self._query_compiler.getitem_row_array(
-                    range(numpy.get_printoptions()["edgeitems"])
+    def _build_repr_array(self):
+        # We want to rely on NumPy for creating a string representation of this array; however
+        # we also don't want to materialize all of the data to the head node. Instead, we will
+        # materialize enough data that NumPy can build the summarized representation of the array
+        # (while changing with the NumPy print options so it will format this smaller array as
+        # abridged) and return this smaller array. In the worst case, this array will have
+        # (2*numpy.get_printoptions()["edgeitems"] + 1)^2 items, so 49 items max for the default
+        # value of 3.
+        num_elements = numpy.get_printoptions()["edgeitems"]
+        if self._ndim == 1 or self.shape[1] == 0:
+            if len(self) > num_elements * 2:
+                idxs = list(range(num_elements + 1)) + list(
+                    range(len(self) - num_elements, len(self))
                 )
-                .to_numpy()
-                .flatten()
-            ),
-        ).rstrip(")]")
-        repr_str += ", ..., "
-        repr_str += repr(
-            self._query_compiler.getitem_row_array(
-                range(-1, -1 * (numpy.get_printoptions()["edgeitems"] + 1), -1)
-            )
-            .to_numpy()
-            .flatten()[::-1]
-        ).lstrip("array([")
-        return repr_str
-
-    def _repr_1xN_obj(self):
-        repr_str = re.sub(
-            ", dtype=.*",
-            "",
-            repr(
-                self._query_compiler.getitem_column_array(
-                    range(numpy.get_printoptions()["edgeitems"])
-                ).to_numpy()
-            ),
-        ).rstrip(")]")
-        repr_str += ", ..., "
-        repr_str += repr(
-            self._query_compiler.getitem_column_array(
-                list(range(-1 * numpy.get_printoptions()["edgeitems"], 0)),
-                numeric=True,
-            ).to_numpy()
-        ).lstrip("array([")
-        return repr_str
-
-    def _repr_Nx1_obj(self):
-        repr_str = re.sub(
-            ", dtype=.*",
-            "",
-            repr(
-                self._query_compiler.getitem_row_array(
-                    range(numpy.get_printoptions()["edgeitems"])
-                ).to_numpy()
-            ),
-        ).rstrip(")]")
-        spaces = " " * 7
-        repr_str += f"],\n{spaces}...,\n{spaces}["
-        repr_str += repr(
-            self._query_compiler.getitem_row_array(
-                range(-1, -1 * (numpy.get_printoptions()["edgeitems"] + 1), -1)
-            ).to_numpy()[::-1]
-        ).lstrip("array([")
-        return repr_str
-
-    def _repr_NxN_obj(self):
-        repr_str = re.sub(
-            ", dtype=.*",
-            "",
-            re.sub(
-                "],\\n",
-                ", ...,\n",
-                repr(
-                    self._query_compiler.take_2d_positional(
-                        range(numpy.get_printoptions()["edgeitems"]),
-                        range(numpy.get_printoptions()["edgeitems"]),
-                    ).to_numpy()
-                ),
-            ),
-        ).rstrip(")]")
-        repr_str += ", ...,"
-        right_str = re.sub(
-            ", dtype=.*",
-            "",
-            re.sub(
-                r"\[",
-                " ",
-                repr(
-                    self._query_compiler.take_2d_positional(
-                        range(numpy.get_printoptions()["edgeitems"]),
-                        list(range(-1 * numpy.get_printoptions()["edgeitems"], 0)),
-                    ).to_numpy()
+            elif len(self) == num_elements * 2:
+                idxs = list(range(num_elements * 2))
+            else:
+                idxs = list(range(len(self)))
+            arr = self._query_compiler.getitem_row_array(idxs).to_numpy()
+            if self._ndim == 1:
+                arr = arr.flatten()
+        elif self.shape[0] == 1:
+            if self.shape[1] > num_elements * 2:
+                idxs = list(range(num_elements + 1)) + list(
+                    range(self.shape[1] - num_elements, self.shape[1])
                 )
-                .replace("array([[", "")
-                .rstrip("])"),
-            ),
-        )
-        right_str = right_str.rstrip("]")
-        top_str = []
-        for l_str, r_str in zip(repr_str.split("\n"), right_str.split("\n")):
-            top_str.append(l_str + " " + r_str.lstrip())
-        top_str = "\n".join(top_str)
-        top_str += f'],\n{" "*7}...,\n'
-        left_str = (
-            re.sub(
-                ", dtype=.*",
-                "",
-                re.sub(
-                    "],\\n",
-                    ", ...,\n",
-                    repr(
-                        self._query_compiler.take_2d_positional(
-                            list(range(-1 * numpy.get_printoptions()["edgeitems"], 0)),
-                            range(numpy.get_printoptions()["edgeitems"]),
-                        ).to_numpy()
-                    ),
-                ),
-            )
-            .rstrip(")]")
-            .replace("array([", " " * 7)
-        )
-        left_str += ", ...,"
-        right_str = re.sub(
-            r"\[",
-            " ",
-            repr(
-                self._query_compiler.take_2d_positional(
-                    list(range(-1 * numpy.get_printoptions()["edgeitems"], 0)),
-                    list(range(-1 * numpy.get_printoptions()["edgeitems"], 0)),
-                ).to_numpy()
-            ).replace("array([[", ""),
-        )
-        bottom_str = []
-        for l_str, r_str in zip(left_str.split("\n"), right_str.split("\n")):
-            bottom_str.append(l_str + " " + r_str.lstrip())
-        bottom_str = "\n".join(bottom_str)
-        repr_str = top_str + bottom_str
-        return repr_str
+            elif self.shape[1] == num_elements * 2:
+                idxs = list(range(num_elements * 2))
+            else:
+                idxs = list(range(self.shape[1]))
+            arr = self._query_compiler.getitem_column_array(idxs).to_numpy()
+        else:
+            if len(self) > num_elements * 2:
+                row_idxs = list(range(num_elements + 1)) + list(
+                    range(len(self) - num_elements, len(self))
+                )
+            elif len(self) == num_elements * 2:
+                row_idxs = list(range(num_elements * 2))
+            else:
+                row_idxs = list(range(len(self)))
+            if self.shape[1] > num_elements * 2:
+                col_idxs = list(range(num_elements + 1)) + list(
+                    range(self.shape[1] - num_elements, self.shape[1])
+                )
+            elif self.shape[1] == num_elements * 2:
+                col_idxs = list(range(num_elements * 2))
+            else:
+                col_idxs = list(range(self.shape[1]))
+            arr = self._query_compiler.take_2d_positional(row_idxs, col_idxs).to_numpy()
+        return arr
 
     def __repr__(self):
         # If we are dealing with a small array, we can just collate all the data on the
         # head node and let numpy handle the logic to get a string representation.
-        if self.size < numpy.get_printoptions()["threshold"]:
+        if self.size <= numpy.get_printoptions()["threshold"]:
             return repr(self._to_numpy())
-        repr_str = ""
-        if self._ndim == 1:
-            repr_str = self._repr_1dim_obj()
-        elif self.shape[0] == 1:
-            repr_str = self._repr_1xN_obj()
-        elif self.shape[1] == 1:
-            repr_str = self._repr_Nx1_obj()
-        else:
-            repr_str = self._repr_NxN_obj()
+        arr = self._build_repr_array()
+        prev_threshold = numpy.get_printoptions()["threshold"]
+        numpy.set_printoptions(threshold=arr.size - 1)
+        repr_str = repr(arr)
+        numpy.set_printoptions(threshold=prev_threshold)
         return repr_str
 
     def _to_numpy(self):
