@@ -19,7 +19,7 @@ import modin.numpy as np
 
 
 @pytest.mark.parametrize(
-    "size", [100, (2, 100), (100, 2), (1, 100), (100, 1), (100, 100)]
+    "size", [100, (2, 100), (100, 2), (1, 100), (100, 1), (100, 100), (6, 100), (100, 6), (100, 7), (7, 100)]
 )
 def test_repr(size):
     prev_threshold = numpy.get_printoptions()["threshold"]
