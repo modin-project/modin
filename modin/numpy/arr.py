@@ -18,7 +18,6 @@ import numpy
 from pandas.core.dtypes.common import is_list_like, is_numeric_dtype, is_bool_dtype
 from pandas.api.types import is_scalar
 from inspect import signature
-import re
 
 import modin.pandas as pd
 from modin.error_message import ErrorMessage
