@@ -60,6 +60,13 @@ def test_all_any_where():
     result = arr.all(where=where, axis=1)
     numpy.testing.assert_array_equal(result, numpy.array([False, True]))
 
+    # Results should contain vacuous Trues in the relevant shape
+    result = arr.all(where=False, axis=1)
+    numpy.testing.assert_array_equal(result, numpy.array([True, True]))
+    result = arr.all(where=False, axis=0)
+    numpy.testing.assert_array_equal(result, numpy.array([True, True]))
+    assert bool(arr.all(where=False, axis=None))
+
     where = np.array([[True, False], [False, True]])
     result = arr.any(where=where)
     # Result should be np.bool_ False, since mask isolates only zero elements
@@ -68,6 +75,13 @@ def test_all_any_where():
     where = np.array([[False, True], [False, False]])
     result = arr.any(where=where, axis=1)
     numpy.testing.assert_array_equal(result, numpy.array([True, False]))
+
+    # Results should contain vacuous Falses in the relevant shape
+    result = arr.any(where=False, axis=1)
+    numpy.testing.assert_array_equal(result, numpy.array([False]))
+    result = arr.any(where=False, axis=0)
+    numpy.testing.assert_array_equal(result, numpy.array([False]))
+    assert not bool(arr.any(where=False, axis=None))
 
 
 @pytest.mark.parametrize("data", [small_arr_c_2d, small_arr_c_1d], ids=["2D", "1D"])

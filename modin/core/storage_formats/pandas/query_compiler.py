@@ -1465,25 +1465,32 @@ class PandasQueryCompiler(BaseQueryCompiler):
     invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
     _isfinite = Map.register(
-        lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df)), dtypes=np.bool_
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df, *args, **kwargs)),
+        dtypes=np.bool_,
     )
     _isinf = Map.register(  # Needed for numpy API
-        lambda df, *args, **kwargs: pandas.DataFrame(np.isinf(df)), dtypes=np.bool_
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isinf(df, *args, **kwargs)),
+        dtypes=np.bool_,
     )
     _isnat = Map.register(  # Needed for numpy API
-        lambda df, *args, **kwargs: pandas.DataFrame(np.isnat(df)), dtypes=np.bool_
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isnat(df, *args, **kwargs)),
+        dtypes=np.bool_,
     )
     _isneginf = Map.register(  # Needed for numpy API
-        lambda df, *args, **kwargs: pandas.DataFrame(np.isneginf(df)), dtypes=np.bool_
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isneginf(df, *args, **kwargs)),
+        dtypes=np.bool_,
     )
     _isposinf = Map.register(  # Needed for numpy API
-        lambda df, *args, **kwargs: pandas.DataFrame(np.isposinf(df)), dtypes=np.bool_
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isposinf(df, *args, **kwargs)),
+        dtypes=np.bool_,
     )
     _iscomplex = Map.register(  # Needed for numpy API
-        lambda df, *args, **kwargs: pandas.DataFrame(np.iscomplex(df)), dtypes=np.bool_
+        lambda df, *args, **kwargs: pandas.DataFrame(np.iscomplex(df, *args, **kwargs)),
+        dtypes=np.bool_,
     )
     _isreal = Map.register(  # Needed for numpy API
-        lambda df, *args, **kwargs: pandas.DataFrame(np.isreal(df)), dtypes=np.bool_
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isreal(df, *args, **kwargs)),
+        dtypes=np.bool_,
     )
     _logical_not = Map.register(np.logical_not, dtypes=np.bool_)  # Needed for numpy API
     negative = Map.register(pandas.DataFrame.__neg__)
