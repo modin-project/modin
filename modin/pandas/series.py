@@ -995,7 +995,9 @@ class Series(BasePandasDataset):
         Encode the object as an enumerated type or categorical variable.
         """
         return self.__constructor__(
-            query_compiler=self._query_compiler.factorize(sort, na_sentinel, use_na_sentinel)
+            query_compiler=self._query_compiler.factorize(
+                sort, na_sentinel, use_na_sentinel
+            )
         )
 
     def fillna(
@@ -1983,7 +1985,9 @@ class Series(BasePandasDataset):
         """
         Truncate a Series before and after some index value.
         """
-        return self.__constructor__(self.__query_compiler__.truncate(before, after, axis, copy))
+        return self.__constructor__(
+            self.__query_compiler__.truncate(before, after, axis, copy)
+        )
 
     def unique(self):  # noqa: RT01, D200
         """

@@ -2466,7 +2466,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # UDF (apply and agg) methods
     # There is a wide range of behaviors that are supported, so a lot of the
     # logic can get a bit convoluted.
-    def apply(self, func, axis, raw=False, result_type=None, *args, **kwargs):
+    def apply(
+        self, func, axis, raw=False, result_type=None, output_meta=None, *args, **kwargs
+    ):
         """
         Apply passed function across given axis.
 
@@ -2488,6 +2490,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             - "reduce": keep result into a single cell (opposite of "expand").
             - "broadcast": broadcast result to original data shape (overwrite the existing column/row with the function result).
             - None: use "expand" strategy if Series is returned, "reduce" otherwise.
+        output_meta : pandas.Series, pandas.DataFrame, or scalar
+            Output of apply on one partition of df.
         *args : iterable
             Positional arguments to pass to `func`.
         **kwargs : dict
