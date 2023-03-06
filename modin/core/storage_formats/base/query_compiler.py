@@ -3182,6 +3182,30 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_groupby_method(
+        action="construct DataFrame from group with provided name",
+        result="DataFrame for given group",
+        refer_to="get_group",
+    )
+    def groupby_get_group(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="get_group",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
         action="shift data with the specified settings",
         result="shifted value",
         refer_to="shift",
