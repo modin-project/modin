@@ -19,7 +19,6 @@ on:
 
 jobs:
   lint-black:
-    if: github.event_name == 'pull_request'
     name: lint (black)
     runs-on: ubuntu-latest
     steps:
@@ -36,7 +35,6 @@ jobs:
       - run: black --check --diff modin/ asv_bench/benchmarks scripts/doc_checker.py
 
   lint-mypy:
-    if: github.event_name == 'pull_request'
     name: lint (mypy)
     runs-on: ubuntu-latest
     steps:
@@ -148,7 +146,6 @@ jobs:
       - run: python scripts/doc_checker.py modin/logging
 
   lint-flake8:
-    if: github.event_name == 'pull_request'
     name: lint (flake8)
     runs-on: ubuntu-latest
     steps:
