@@ -592,10 +592,10 @@ class TextFileDispatcher(FileDispatcher):
         return column_widths, num_splits
 
     _parse_func = None
-    _put_time_kwargs = 0
 
     @classmethod
-    def get_parse_func(cls):
+    def get_parse_func(cls):  # noqa: RT01
+        """Prepare a function for transmission to remote workers."""
         if cls._parse_func is None:
             cls._parse_func = cls.put(cls.parse)
         return cls._parse_func
@@ -609,6 +609,8 @@ class TextFileDispatcher(FileDispatcher):
 
         Parameters
         ----------
+        *args : tuple
+            Positional arguments to be passed to the parser function.
         splits : list
             List of tuples with partitions data, which defines
             parser task (start/end read bytes and etc.).
@@ -1122,10 +1124,10 @@ class TextFileDispatcher(FileDispatcher):
             compression=compression_infered,
         )
         fname = partition_kwargs.pop("fname")
-        kw_ref = cls.put(partition_kwargs)
+        kwargs_ref = cls.put(partition_kwargs)
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
             fname,
-            kw_ref,
+            kwargs_ref,
             splits=splits,
             num_splits=num_splits,
         )

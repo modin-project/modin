@@ -86,6 +86,13 @@ list
 _doc_parse_parameters_common = """fname : str or path object
     Name of the file or path to read."""
 
+_doc_common_read_kwargs = """common_read_kwargs : dict
+    Common keyword parameters for read functions.
+"""
+_doc_parse_parameters_common2 = "\n".join(
+    (_doc_parse_parameters_common, _doc_common_read_kwargs)
+)
+
 
 def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
     """
@@ -313,10 +320,13 @@ class PandasParser(ClassLogger):
 @doc(_doc_pandas_parser_class, data_type="CSV files")
 class PandasCSVParser(PandasParser):
     @staticmethod
-    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
-    def parse(fname, kwargs, **rest_kw):
+    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common2)
+    def parse(fname, common_read_kwargs, **kwargs):
         return PandasParser.generic_parse(
-            fname, callback=PandasCSVParser.read_callback, **kwargs, **rest_kw
+            fname,
+            callback=PandasCSVParser.read_callback,
+            **common_read_kwargs,
+            **kwargs,
         )
 
     @staticmethod
@@ -433,10 +443,13 @@ class CustomTextExperimentalParser(PandasParser):
 @doc(_doc_pandas_parser_class, data_type="tables with fixed-width formatted lines")
 class PandasFWFParser(PandasParser):
     @staticmethod
-    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
-    def parse(fname, kwargs, **rest_kw):
+    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common2)
+    def parse(fname, common_read_kwargs, **kwargs):
         return PandasParser.generic_parse(
-            fname, callback=PandasFWFParser.read_callback, **kwargs, **rest_kw
+            fname,
+            callback=PandasFWFParser.read_callback,
+            **common_read_kwargs,
+            **kwargs,
         )
 
     @staticmethod
