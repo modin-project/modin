@@ -2752,7 +2752,7 @@ class BasePandasDataset(ClassLogger):
                 inplace=False,
             )
             if freq is None
-            else self.tshift(periods, freq, axis, fill_value)
+            else self.tshift(periods, freq, axis)
         )
 
     def skew(
