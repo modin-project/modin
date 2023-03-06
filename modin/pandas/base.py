@@ -1874,7 +1874,7 @@ class BasePandasDataset(ClassLogger):
         Replace values where the condition is True.
         """
         return self.__constructor__(
-            self._query_compiler.mask(
+            query_compiler=self._query_compiler.mask(
                 cond,
                 other=other,
                 inplace=inplace,
@@ -1882,6 +1882,7 @@ class BasePandasDataset(ClassLogger):
                 level=level,
                 errors=errors,
                 try_cast=try_cast,
+                squeeze_self=not self._is_dataframe,
             )
         )
 

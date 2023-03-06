@@ -1252,6 +1252,17 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def sum(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.sum)(self, **kwargs)
 
+    @doc_utils.add_refer_to("DataFrame.mask")
+    def mask(self, cond, **kwargs):
+        squeeze_self = kwargs.pop("squeeze_self", False)
+
+        def mask(df, cond, **kwargs):
+            if squeeze_self:
+                df = df.squeeze(axis=1)
+            return df.mask(cond, **kwargs)
+
+        return DataFrameDefault.register(mask)(self, cond, **kwargs)
+
     @doc_utils.add_refer_to("to_datetime")
     def to_datetime(self, *args, **kwargs):
         """
