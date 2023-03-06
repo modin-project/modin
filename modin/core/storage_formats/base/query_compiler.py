@@ -1263,6 +1263,17 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         return DataFrameDefault.register(mask)(self, cond, **kwargs)
 
+    @doc_utils.add_refer_to("DataFrame.pct_change")
+    def pct_change(self, **kwargs):
+        squeeze_self = kwargs.pop("squeeze_self", False)
+
+        def pct_change(df, **kwargs):
+            if squeeze_self:
+                df = df.squeeze(axis=1)
+            return df.pct_change(**kwargs)
+
+        return DataFrameDefault.register(pct_change)(self, **kwargs)
+
     @doc_utils.add_refer_to("to_datetime")
     def to_datetime(self, *args, **kwargs):
         """

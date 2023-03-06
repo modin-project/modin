@@ -2108,7 +2108,12 @@ class BasePandasDataset(ClassLogger):
 
         return self.__constructor__(
             query_compiler=self._query_compiler.pct_change(
-                periods, fill_method, limit, freq, **kwargs
+                periods=periods,
+                fill_method=fill_method,
+                limit=limit,
+                freq=freq,
+                #squeeze_self=not self._is_dataframe,
+                **kwargs,
             )
         )
 
