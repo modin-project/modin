@@ -2475,7 +2475,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # UDF (apply and agg) methods
     # There is a wide range of behaviors that are supported, so a lot of the
     # logic can get a bit convoluted.
-    def apply(self, func, axis, *args, **kwargs):
+    def apply(self, func, axis, *args, output_meta=None, **kwargs):
         # if any of args contain modin object, we should
         # convert it to pandas
         args = try_cast_to_pandas(args)

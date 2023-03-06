@@ -150,12 +150,12 @@ class DataFrameGroupBy(ClassLogger):
         # equivalent to df.value_counts([<by>, <other...>]).sort_index()
         # it returns a MultiIndex Series which needs to be converted to
         # pandas for sort_index.
-        # 
+        #
         # Semantic Exceptions:
         # normalize does not work; it will return the normalized results
         #     across the entire dataframe, not within the sub levels
         # DataFrame(as_index=False) does not work. The default is True
-        #     calling this function will always result in a Series rather 
+        #     calling this function will always result in a Series rather
         #     than a DataFrame
         #
         if is_list_like(self._by):
@@ -165,16 +165,13 @@ class DataFrameGroupBy(ClassLogger):
         for c in self._columns.values.tolist():
             if c not in subset:
                 subset.append(c)
-        return (
-            self._df.value_counts(
-                subset=subset,
-                normalize=normalize,
-                sort=sort,
-                ascending=ascending,
-                dropna=dropna,
-            )
-            .sort_index(level=0, sort_remaining=False)
-        )
+        return self._df.value_counts(
+            subset=subset,
+            normalize=normalize,
+            sort=sort,
+            ascending=ascending,
+            dropna=dropna,
+        ).sort_index(level=0, sort_remaining=False)
 
     def mean(self, numeric_only=None):
         return self._check_index(
@@ -198,6 +195,7 @@ class DataFrameGroupBy(ClassLogger):
 
     def ohlc(self):
         from .dataframe import DataFrame
+
         if isinstance(self._df, DataFrame):
             raise NotImplementedError("groupby.ohlc() not supported for dataframes!")
         else:

@@ -746,7 +746,9 @@ class DataFrame(BasePandasDataset):
         Compute pairwise correlation.
         """
         return self.__constructor__(
-            query_compiler=self._query_compiler.corrwith(other, axis, drop, method, numeric_only)
+            query_compiler=self._query_compiler.corrwith(
+                other, axis, drop, method, numeric_only
+            )
         )
 
     def cov(
