@@ -916,7 +916,11 @@ class BasePandasDataset(ClassLogger):
         """
         return self.__constructor__(
             query_compiler=self._query_compiler.asfreq(
-                freq, method, how, normalize, fill_value
+                freq=freq,
+                method=method,
+                how=how,
+                normalize=normalize,
+                fill_value=fill_value,
             )
         )
 

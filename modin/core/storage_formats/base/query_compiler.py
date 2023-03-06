@@ -809,6 +809,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             **kwargs,
         )
 
+    @doc_utils.add_refer_to("DataFrame.asfreq")
+    def asfreq(self, **kwargs):
+        return DataFrameDefault.register(pandas.DataFrame.asfreq)(self, **kwargs)
+
     @doc_utils.add_refer_to("DataFrame.clip")
     def clip(self, lower, upper, **kwargs):  # noqa: PR02
         """
