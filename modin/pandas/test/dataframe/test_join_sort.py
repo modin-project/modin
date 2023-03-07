@@ -572,6 +572,22 @@ def test_sort_values(
     )
 
 
+def test_sort_overpartitioned_df():
+    # First we test when the final df will have only 1 row and column partition.
+    data = [[1, 2, 3], [4, 5, 6]]
+    modin_df = pd.concat([pd.DataFrame(row).T for row in data]).reset_index(drop=True)
+    pandas_df = pandas.DataFrame(data)
+
+    eval_general(modin_df, pandas_df, lambda df: df.sort_values(by=0))
+
+    # Next we test when the final df will have multiple row partitions.
+    data = np.random.choice(650, 650, replace=False).reshape((65, 10))
+    modin_df = pd.concat([pd.DataFrame(row).T for row in data]).reset_index(drop=True)
+    pandas_df = pandas.DataFrame(data)
+
+    eval_general(modin_df, pandas_df, lambda df: df.sort_values(by=0))
+
+
 def test_sort_values_with_duplicates():
     modin_df = pd.DataFrame({"col": [2, 1, 1]}, index=[1, 1, 0])
     pandas_df = pandas.DataFrame({"col": [2, 1, 1]}, index=[1, 1, 0])

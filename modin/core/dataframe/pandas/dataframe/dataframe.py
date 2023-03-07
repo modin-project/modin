@@ -2051,16 +2051,33 @@ class PandasDataframe(ClassLogger):
         # If this df is empty, we don't want to try and shuffle or sort.
         if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
             return self.copy()
-        # If this df only has one row partition, we don't want to do a shuffle and sort - we can
-        # just do a full-axis sort. Alternatively, if the total amount of data we have is less than
-        # 3x the number of partitions we have, then our new sorting algorithm will try to upsample
-        # the data. In this case, its probably best to do a full axis sort and re-partition, since
-        # our data is probably overpartitioned.
-        if len(self._partitions) == 1 or len(self.index) < 3 * len(self._partitions):
-            return self.apply_full_axis(
-                1,
-                sort_function,
-            )
+
+        ideal_num_new_partitions = len(self._partitions)
+        m = len(self.index) / ideal_num_new_partitions
+        sampling_probability = (1 / m) * np.log(
+            ideal_num_new_partitions * len(self.index)
+        )
+        # If this df is overpartitioned, our we try to sample each partition with probability
+        # greater than 1, which leads to an error. In this case, we can do one of the following
+        # two things. If there is only enough rows for one partition, and we have only 1 column
+        # partition, we can just combine the overpartitioned df into one partition, and sort that
+        # partition. If there is enough data for more than one partition, we can tell the sorting
+        # algorithm how many partitions we want to end up with, so it samples and finds pivots
+        # according to that.
+        if sampling_probability >= 1:
+            from modin.config import MinPartitionSize
+
+            if (
+                len(self.index) < MinPartitionSize.get()
+                and self._partitions.shape[1] == 1
+            ):
+                return self.apply_full_axis(
+                    1,
+                    sort_function,
+                )
+            else:
+                ideal_num_new_partitions = len(self.index) // MinPartitionSize.get()
+                ideal_num_new_partitions = max(ideal_num_new_partitions, 1)
 
         if self.dtypes[columns[0]] == object:
             # This means we are not sorting numbers, so we need our quantiles to not try
@@ -2074,6 +2091,7 @@ class PandasDataframe(ClassLogger):
             columns[0],
             method,
             ascending[0] if is_list_like(ascending) else ascending,
+            ideal_num_new_partitions,
             **kwargs,
         )
         major_col_partition_index = self.columns.get_loc(columns[0])
