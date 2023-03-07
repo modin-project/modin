@@ -1616,8 +1616,7 @@ class array(object):
                     )
                 else:
                     return array([True], dtype=bool)
-            result = result.to_numpy()[0, 0] if truthy_where else True
-            return result if where else True
+            return result.to_numpy()[0, 0] if truthy_where else True
         if axis is None:
             result = target._query_compiler.all(axis=1).all(axis=0)
             if keepdims:
@@ -1671,8 +1670,7 @@ class array(object):
                     )
                 else:
                     return array([False], dtype=bool)
-            result = result.to_numpy()[0, 0] if truthy_where else False
-            return result if where else False
+            return result.to_numpy()[0, 0] if truthy_where else False
         if axis is None:
             result = target._query_compiler.any(axis=1).any(axis=0)
             if keepdims:
@@ -1811,6 +1809,9 @@ class array(object):
                 where,
             )
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
+        kwargs.pop("axis", None)  # Prevents argument from being passed to np function
+        if self._ndim != x2._ndim:
+            raise ValueError("modin.numpy logic operators do not currently support broadcasting between arrays of different dimensions")
         result = getattr(caller._query_compiler, qc_method_name)(
             callee._query_compiler, **kwargs
         )
