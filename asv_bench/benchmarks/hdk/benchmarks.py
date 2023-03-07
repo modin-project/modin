@@ -27,7 +27,6 @@ from ..utils import (
     trigger_import,
     get_benchmark_shapes,
 )
-from ..utils.common import random_state
 import numpy as np
 import pandas
 
@@ -74,7 +73,7 @@ class TimeJoin:
             frame_length = len(self.df1)
             intersect_size = int(frame_length * indices_intersection_rate)
 
-            intersect_part = random_state.choice(
+            intersect_part = np.random.choice(
                 self.df1.index, size=intersect_size, replace=False
             )
             non_intersect_part = np.arange(
@@ -82,7 +81,7 @@ class TimeJoin:
             )
             new_index = np.concatenate([intersect_part, non_intersect_part])
 
-            random_state.shuffle(new_index)
+            np.random.shuffle(new_index)
             self.df1.index = new_index
 
         trigger_import(self.df1, self.df2)
@@ -492,3 +491,6 @@ class TimeGroupByMultiColumn(BaseTimeGroupBy):
                 {col: "mean" for col in self.non_groupby_columns}
             )
         )
+
+
+from ..utils import setup  # noqa: E402, F401

@@ -169,8 +169,9 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         wait([self._data])
 
     # If unidist has not been initialized yet by Modin,
-    # unidist itself handles initialization when calling `unidist.put`.
-    _iloc = unidist.put(PandasDataframePartition._iloc)
+    # unidist itself handles initialization when calling `unidist.put`,
+    # which is called inside of `UnidistWrapper.put`.
+    _iloc = execution_wrapper.put(PandasDataframePartition._iloc)
 
     def mask(self, row_labels, col_labels):
         """
@@ -225,7 +226,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         PandasOnUnidistDataframePartition
             A new ``PandasOnUnidistDataframePartition`` object.
         """
-        return cls(unidist.put(obj), len(obj.index), len(obj.columns))
+        return cls(cls.execution_wrapper.put(obj), len(obj.index), len(obj.columns))
 
     @classmethod
     def preprocess_func(cls, func):
@@ -242,7 +243,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         unidist.ObjectRef
             A reference to `func`.
         """
-        return unidist.put(func)
+        return cls.execution_wrapper.put(func)
 
     def length(self, materialize=True):
         """

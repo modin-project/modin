@@ -49,3 +49,6 @@ class TimeReadParquet:
                 test_filenames[self.shape_id],
             )
         )
+
+
+from ..utils import setup  # noqa: E402, F401
