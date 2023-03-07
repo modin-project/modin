@@ -65,6 +65,9 @@ def test_combine(data):
     )
 
 
+@pytest.mark.xfail(
+    StorageFormat.get() == "Hdk", reason="https://github.com/intel-ai/hdk/issues/264"
+)
 @pytest.mark.parametrize(
     "test_data, test_data2",
     [
