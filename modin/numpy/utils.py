@@ -15,14 +15,20 @@
 
 import modin.pandas as pd
 import modin.numpy as np
+from modin.config import StorageFormat
 
 _INTEROPERABLE_TYPES = (pd.DataFrame, pd.Series)
 
 
 def try_convert_from_interoperable_type(obj):
     if isinstance(obj, _INTEROPERABLE_TYPES):
-        new_qc = obj._query_compiler.reset_index(drop=True)
-        new_qc.columns = range(len(new_qc.columns))
+        if StorageFormat.get() == "Pandas":
+            # If we are dealing with pandas partitions, we need to reset the index
+            # and replace column names in order to broadcast correctly.
+            new_qc = obj._query_compiler.reset_index(drop=True)
+            new_qc.columns = range(len(new_qc.columns))
+        else:
+            new_qc = obj._query_compiler
         obj = np.array(
             _query_compiler=new_qc,
             _ndim=2 if isinstance(obj, pd.DataFrame) else 1,
