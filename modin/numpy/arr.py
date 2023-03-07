@@ -146,7 +146,7 @@ class array(object):
             if not copy:
                 object._add_sibling(self)
             _ndim = object._ndim
-        if isinstance(object, (pd.DataFrame, pd.Series)):
+        elif isinstance(object, (pd.DataFrame, pd.Series)):
             _query_compiler = object._query_compiler.copy()
             if not copy:
                 object._add_sibling(self)
@@ -176,11 +176,7 @@ class array(object):
                     target_kwargs.pop(key)
                 else:
                     target_kwargs[key] = locals()[key]
-            if not isinstance(object, numpy.ndarray):
-                arr = numpy.array(object, **target_kwargs)
-            else:
-                # Avoid creating a second NumPy array in memory before distribution.
-                arr = object
+            arr = numpy.asarray(object)
             assert arr.ndim in (
                 1,
                 2,
