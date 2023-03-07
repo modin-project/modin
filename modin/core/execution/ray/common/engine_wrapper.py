@@ -54,7 +54,7 @@ class RayWrapper:
 
         Parameters
         ----------
-        func : callable
+        func : callable or ray.ObjectID
             The function to perform.
         f_args : list or tuple, optional
             Positional arguments to pass to ``func``.

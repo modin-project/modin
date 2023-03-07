@@ -6,7 +6,6 @@ on:
       # fuzzydata Github Actions in .github/workflows/fuzzydata-test.yml
       - .github/workflows/**
       - '!.github/workflows/push-to-master.yml'
-      - '!.github/workflows/push.yml'
       - asv_bench/**
       - modin/**
       - requirements/**
@@ -16,6 +15,8 @@ on:
       - setup.cfg
       - setup.py
       - versioneer.py
+  push:
+
 jobs:
   lint-black:
     name: lint (black)
@@ -48,6 +49,7 @@ jobs:
       - run: mypy --config-file mypy.ini
 
   build-docs:
+    if: github.event_name == 'pull_request'
     name: build docs
     runs-on: ubuntu-latest
     steps:
@@ -64,6 +66,7 @@ jobs:
       - run: cd docs && sphinx-build -T -E -W -b html . build
 
   lint-pydocstyle:
+    if: github.event_name == 'pull_request'
     name: lint (pydocstyle)
     runs-on: ubuntu-latest
     steps:
@@ -956,7 +959,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.8" ]
+        python-version: ["3.8"]
         engine: ["ray", "dask"]
     env:
       MODIN_EXPERIMENTAL: "True"

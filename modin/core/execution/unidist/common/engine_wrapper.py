@@ -53,7 +53,7 @@ class UnidistWrapper:
 
         Parameters
         ----------
-        func : callable
+        func : callable or unidist.ObjectRef
             The function to perform.
         f_args : list or tuple, optional
             Positional arguments to pass to ``func``.

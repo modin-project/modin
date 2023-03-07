@@ -864,6 +864,48 @@ def test_loc_iloc_slice_indexer(locator_name, slice_indexer):
     eval_general(md_df, pd_df, lambda df: getattr(df, locator_name)[slice_indexer])
 
 
+@pytest.mark.parametrize(
+    "indexer_size",
+    [
+        1,
+        2,
+        NROWS,
+        pytest.param(
+            NROWS + 1,
+            marks=pytest.mark.xfail(
+                reason="https://github.com/modin-project/modin/issues/5739", strict=True
+            ),
+        ),
+    ],
+)
+class TestLocRangeLikeIndexer:
+    """Test cases related to https://github.com/modin-project/modin/issues/5702"""
+
+    def test_range_index_getitem_single_value(self, indexer_size):
+        eval_general(
+            *create_test_dfs(test_data["int_data"]),
+            lambda df: df.loc[pd.RangeIndex(indexer_size)],
+        )
+
+    def test_range_index_getitem_two_values(self, indexer_size):
+        eval_general(
+            *create_test_dfs(test_data["int_data"]),
+            lambda df: df.loc[pd.RangeIndex(indexer_size), :],
+        )
+
+    def test_range_getitem_single_value(self, indexer_size):
+        eval_general(
+            *create_test_dfs(test_data["int_data"]),
+            lambda df: df.loc[range(indexer_size)],
+        )
+
+    def test_range_getitem_two_values_5702(self, indexer_size):
+        eval_general(
+            *create_test_dfs(test_data["int_data"]),
+            lambda df: df.loc[range(indexer_size), :],
+        )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_pop(request, data):
     modin_df = pd.DataFrame(data)
