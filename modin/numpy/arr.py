@@ -490,7 +490,9 @@ class array(object):
                         f"operand was set up as a reduction along axis 1, but the length of the axis is {out.shape[0]} (it has to be 1)"
                     )
                 if initial is not None and out is not None:
-                    out._update_inplace = ((numpy.ones_like(out) * initial)._query_compiler)
+                    out._update_inplace = (
+                        numpy.ones_like(out) * initial
+                    )._query_compiler
                 if truthy_where or out is not None:
                     return fix_dtypes_and_determine_return(
                         array(numpy.array([[result]]))._query_compiler,
