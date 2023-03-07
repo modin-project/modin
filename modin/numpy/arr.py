@@ -135,7 +135,7 @@ class array(object):
             self._query_compiler = _query_compiler
             self._ndim = _ndim
             new_dtype = pandas.core.dtypes.cast.find_common_type(
-                self._query_compiler.dtypes.values
+                list(self._query_compiler.dtypes.values)
             )
         elif is_list_like(object) and not is_list_like(object[0]):
             series = pd.Series(object)
@@ -1527,7 +1527,7 @@ class array(object):
         if self._ndim == 1:
             return dtype[0]
         else:
-            return pandas.core.dtypes.cast.find_common_type(dtype.values)
+            return pandas.core.dtypes.cast.find_common_type(list(dtype.values))
 
     @property
     def size(self):
