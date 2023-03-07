@@ -2057,7 +2057,7 @@ class PandasDataframe(ClassLogger):
         sampling_probability = (1 / m) * np.log(
             ideal_num_new_partitions * len(self.index)
         )
-        # If this df is overpartitioned, our we try to sample each partition with probability
+        # If this df is overpartitioned, we try to sample each partition with probability
         # greater than 1, which leads to an error. In this case, we can do one of the following
         # two things. If there is only enough rows for one partition, and we have only 1 column
         # partition, we can just combine the overpartitioned df into one partition, and sort that

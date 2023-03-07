@@ -199,8 +199,8 @@ def pick_pivots_from_samples_for_sort(
     # We don't want to pick very many quantiles if we have a very small dataframe.
     num_quantiles = ideal_num_new_partitions
     quantiles = [i / num_quantiles for i in range(1, num_quantiles)]
-    # If we only desire 1 partition, we need to ensure that we don't have *no* pivots.
-    # We use `np.nan` as a dummy value.
+    # If we only desire 1 partition, we need to ensure that we're not trying to find quantiles
+    # from an empty list of pivots. We use `np.nan` as a dummy value.
     if len(quantiles) > 0:
         return _find_quantiles(all_pivots, quantiles, method)
     return np.array([np.nan])
