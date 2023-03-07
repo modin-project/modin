@@ -862,25 +862,25 @@ class HdkOnNativeDataframe(PandasDataframe):
         ), "'left_on' and 'right_on' lengths don't match"
 
         def validate(what, df, col_names):
+            # Check if the frame has the specified columns. The names referring to
+            # the index columns are replaced with the actual index column names.
             cols = df.columns
             new_col_names = col_names
             for i, col in enumerate(col_names):
                 if col not in cols:
                     new_name = None
-                    if df._index_cache is not None:
-                        for j, name in enumerate(df._index_cache):
-                            if name == col:
-                                new_name = f"__index__{j}_{name}"
-                                df = df._maybe_materialize_rowid()
-                                break
-                    if (new_name is None) and (df._index_cols is not None):
+                    if df._index_cols is not None:
                         for c in df._index_cols:
                             if col == df._index_name(c):
                                 new_name = c
                                 break
+                    elif df._index_cache is not None:
+                        new_name = f"__index__{0}_{col}"
+                        df = df._maybe_materialize_rowid()
                     if new_name is None:
                         raise ValueError(f"'{what}' references unknown column {col}")
                     if new_col_names is col_names:
+                        # We must not modify the input list, thus, making a copy.
                         new_col_names = col_names.copy()
                     new_col_names[i] = new_name
             return df, new_col_names
@@ -904,6 +904,8 @@ class HdkOnNativeDataframe(PandasDataframe):
                         arrays = [[i] for i in range(len(df._index_cols))]
                         names = [df._index_name(n) for n in df._index_cols]
                         idx = pd.MultiIndex.from_arrays(arrays, names=names)
+                    else:
+                        idx = pd.Index(name=df._index_name(df._index_cols[0]))
                 return pd.DataFrame(columns=df.columns, index=idx)
 
             merged = to_empty_pandas_df(self).merge(
@@ -919,25 +921,37 @@ class HdkOnNativeDataframe(PandasDataframe):
                 index_cols = None
             else:
                 index_cols = left._mangle_index_names(merged.index.names)
-                for n, m in zip(merged.index.names, index_cols):
-                    df = left if m in left._dtypes else right
-                    exprs[n] = df.ref(m)
-                    new_dtypes.append(df._dtypes[m])
+                for orig_name, mangled_name in zip(merged.index.names, index_cols):
+                    df = left if mangled_name in left._dtypes else right
+                    exprs[orig_name] = df.ref(mangled_name)
+                    new_dtypes.append(df._dtypes[mangled_name])
 
-            def append_col(df, col, col_names, sfx):
-                if (name := col) in col_names or (
-                    col.endswith(sfx) and ((name := col[0 : -len(sfx)]) in col_names)
-                ):
-                    new_dtypes.append(df._dtypes[name])
-                    exprs[col] = df.ref(name)
-                    return True
-                return False
-
+            left_col_names = {c for c in left.columns}
+            right_col_names = {c for c in right.columns}
             for col in merged.columns:
-                if not append_col(
-                    left, col, left.columns, suffixes[0]
-                ) and not append_col(right, col, right.columns, suffixes[1]):
+                orig_name = col
+                if orig_name in left_col_names:
+                    df = left
+                elif orig_name in right_col_names:
+                    df = right
+                elif suffixes is None:
                     raise ValueError(f"Unknown column {col}")
+                elif (
+                    col.endswith(suffixes[0])
+                    and (orig_name := col[0 : -len(suffixes[0])]) in left_col_names
+                    and orig_name in right_col_names
+                ):
+                    df = left  # Overlapping column from the left frame
+                elif (
+                    col.endswith(suffixes[1])
+                    and (orig_name := col[0 : -len(suffixes[1])]) in right_col_names
+                    and orig_name in left_col_names
+                ):
+                    df = right  # Overlapping column from the right frame
+                else:
+                    raise ValueError(f"Unknown column {col}")
+                exprs[col] = df.ref(orig_name)
+                new_dtypes.append(df._dtypes[orig_name])
 
             new_columns = merged.columns
             sort = False
