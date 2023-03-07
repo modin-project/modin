@@ -75,29 +75,17 @@ def test_to_df():
     modin_df = pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6]]))
     pandas_df = pandas.DataFrame(numpy.array([[1, 2, 3], [4, 5, 6]]))
     df_equals(pandas_df, modin_df)
-    modin_df = pd.DataFrame(
-        np.array([[1, 2, 3], [4, 5, 6]]),
-        columns=["col 0", "col 1", "col 2"],
-        index=pd.Index([4, 6]),
-    )
-    pandas_df = pandas.DataFrame(
-        numpy.array([[1, 2, 3], [4, 5, 6]]),
-        columns=["col 0", "col 1", "col 2"],
-        index=pandas.Index([4, 6]),
-    )
-    df_equals(pandas_df, modin_df)
-    modin_df = pd.DataFrame(
-        np.array([[1, 2, 3], [4, 5, 6]]),
-        columns=["col 0", "col 1", "col 2"],
-        index=pd.Index([4, 6]),
-        dtype=str,
-    )
-    pandas_df = pandas.DataFrame(
-        numpy.array([[1, 2, 3], [4, 5, 6]]),
-        columns=["col 0", "col 1", "col 2"],
-        index=pandas.Index([4, 6]),
-        dtype=str,
-    )
+    for kw in [{}, {"dtype": str}]:
+        modin_df, pandas_df = [
+            lib.DataFrame(
+                np.array([[1, 2, 3], [4, 5, 6]]),
+                columns=["col 0", "col 1", "col 2"],
+                index=pd.Index([4, 6]),
+                **kw
+            )
+            for lib in (pd, pandas)
+        ]
+        df_equals(pandas_df, modin_df)
     df_equals(pandas_df, modin_df)
 
 
