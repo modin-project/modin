@@ -71,6 +71,7 @@ from .math import (
     amin,
     min,
     sqrt,
+    exp,
 )
 
 from .trigonometry import (
@@ -175,4 +176,5 @@ __all__ = [  # noqa: F405
     "pi",
     "sqrt",
     "tanh",
+    "exp",
 ]

@@ -401,6 +401,13 @@ class array(object):
         self, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=True
     ):
         check_kwargs(keepdims=keepdims, where=where)
+        if axis is not None and axis < 0:
+            new_axis = axis + self._ndim
+            if self._ndim == 1 and new_axis != 0:
+                raise numpy.AxisError(axis, 1)
+            elif self._ndim == 2 and new_axis not in [0, 1]:
+                raise numpy.AxisError(axis, 2)
+            axis = new_axis
         truthy_where = bool(where)
         if initial is None and where is not True:
             raise ValueError(
@@ -458,6 +465,8 @@ class array(object):
                 else:
                     return array([[initial]])
             return result if truthy_where else initial
+        if axis > 1:
+            raise numpy.AxisError(axis, 2)
         target = where.where(self, initial) if isinstance(where, array) else self
         result = target._query_compiler.max(axis=axis)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
@@ -488,6 +497,13 @@ class array(object):
     ):
         check_kwargs(keepdims=keepdims, where=where)
         truthy_where = bool(where)
+        if axis is not None and axis < 0:
+            new_axis = axis + self._ndim
+            if self._ndim == 1 and new_axis != 0:
+                raise numpy.AxisError(axis, 1)
+            elif self._ndim == 2 and new_axis not in [0, 1]:
+                raise numpy.AxisError(axis, 2)
+            axis = new_axis
         if initial is None and where is not True:
             raise ValueError(
                 "reduction operation 'minimum' does not have an identity, so to use a where mask one has to specify 'initial'"
@@ -544,6 +560,8 @@ class array(object):
                 else:
                     return array([[initial]])
             return result if truthy_where else initial
+        if axis > 1:
+            raise numpy.AxisError(axis, 2)
         target = where.where(self, initial) if isinstance(where, array) else self
         result = target._query_compiler.min(axis=axis)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
@@ -805,6 +823,76 @@ class array(object):
 
     def __ne__(self, x2):
         return self._not_equal(x2)
+    
+    def _unary_math_operator(
+        self,
+        opName,
+        *args,
+        out=None,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
+        out_dtype = (
+            dtype
+            if dtype is not None
+            else (out.dtype if out is not None else self.dtype)
+        )
+        check_kwargs(order=order, casting=casting, subok=subok, where=where)
+        result = self._query_compiler.astype(
+            {col_name: out_dtype for col_name in self._query_compiler.columns}
+        )
+        result = getattr(result, opName)(*args)
+        if dtype is not None:
+            result = result.astype({col_name: dtype for col_name in result.columns})
+        if out is not None:
+            out = try_convert_from_interoperable_type(out)
+            check_can_broadcast_to_output(self, out)
+            out._query_compiler = result
+            return out
+        return array(_query_compiler=result, _ndim=self._ndim)
+
+    def tanh(
+        self,
+        out=None,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
+        return self._unary_math_operator(
+            "tanh",
+            out=out,
+            where=where,
+            casting=casting,
+            order=order,
+            dtype=dtype,
+            subok=subok,
+        )
+    
+    def exp(
+        self,
+        out=None,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
+        return self._unary_math_operator(
+            "rpow",
+            numpy.e,
+            out=out,
+            where=where,
+            casting=casting,
+            order=order,
+            dtype=dtype,
+            subok=subok,
+        )
+
 
     def _compute_masked_mean(self, mask, output_dtype, axis):
         # By default, pandas ignores NaN values when doing computations.
@@ -833,6 +921,13 @@ class array(object):
         out_type = getattr(out_dtype, "type", out_dtype)
         if isinstance(where, array) and issubclass(out_type, numpy.integer):
             out_dtype = numpy.float64
+        if axis is not None and axis < 0:
+            new_axis = axis + self._ndim
+            if self._ndim == 1 and new_axis != 0:
+                raise numpy.AxisError(axis, 1)
+            elif self._ndim == 2 and new_axis not in [0, 1]:
+                raise numpy.AxisError(axis, 2)
+            axis = new_axis
         check_kwargs(keepdims=keepdims, where=where)
         truthy_where = bool(where)
         if self._ndim == 1:
@@ -917,6 +1012,8 @@ class array(object):
                 else:
                     return array([[numpy.nan]], dtype=out_dtype)
             return result if truthy_where else numpy.nan
+        if axis > 1:
+            raise numpy.AxisError(axis, 2)
         if isinstance(where, array):
             result = self._compute_masked_mean(where, out_dtype, axis)
         else:
@@ -1207,6 +1304,13 @@ class array(object):
         )
         initial = 1 if initial is None else initial
         check_kwargs(keepdims=keepdims, where=where)
+        if axis is not None and axis < 0:
+            new_axis = axis + self._ndim
+            if self._ndim == 1 and new_axis != 0:
+                raise numpy.AxisError(axis, 1)
+            elif self._ndim == 2 and new_axis not in [0, 1]:
+                raise numpy.AxisError(axis, 2)
+            axis = new_axis
         truthy_where = bool(where)
         if self._ndim == 1:
             if axis == 1:
@@ -1269,6 +1373,8 @@ class array(object):
                 else:
                     return array([[initial]], dtype=out_dtype)
             return result if truthy_where else initial
+        if axis > 1:
+            raise numpy.AxisError(axis, 2)
         target = where.where(self, 1) if isinstance(where, array) else self
         result = target._query_compiler.astype(
             {col_name: out_dtype for col_name in target._query_compiler.columns}
@@ -1510,6 +1616,13 @@ class array(object):
         )
         initial = 0 if initial is None else initial
         check_kwargs(keepdims=keepdims, where=where)
+        if axis is not None and axis < 0:
+            new_axis = axis + self._ndim
+            if self._ndim == 1 and new_axis != 0:
+                raise numpy.AxisError(axis, 1)
+            elif self._ndim == 2 and new_axis not in [0, 1]:
+                raise numpy.AxisError(axis, 2)
+            axis = new_axis
         truthy_where = bool(where)
         if self._ndim == 1:
             if axis == 1:
@@ -1570,6 +1683,8 @@ class array(object):
                 else:
                     return array([[initial]], dtype=out_dtype)
             return result if truthy_where else initial
+        if axis > 1:
+            raise numpy.AxisError(axis, 2)
         target = where.where(self, 0) if isinstance(where, array) else self
         result = target._query_compiler.astype(
             {col_name: out_dtype for col_name in target._query_compiler.columns}
@@ -1597,6 +1712,13 @@ class array(object):
     def all(self, axis=None, out=None, keepdims=None, *, where=True):
         check_kwargs(keepdims=keepdims, where=where)
         truthy_where = bool(where)
+        if axis is not None and axis < 0:
+            new_axis = axis + self._ndim
+            if self._ndim == 1 and new_axis != 0:
+                raise numpy.AxisError(axis, 1)
+            elif self._ndim == 2 and new_axis not in [0, 1]:
+                raise numpy.AxisError(axis, 2)
+            axis = new_axis
         target = where.where(self, True) if isinstance(where, array) else self
         if self._ndim == 1:
             if axis == 1:
@@ -1632,6 +1754,8 @@ class array(object):
                 else:
                     return array([[True]], dtype=bool)
             return result.to_numpy()[0, 0] if truthy_where else True
+        if axis > 1:
+            raise numpy.AxisError(axis, 2)
         result = target._query_compiler.all(axis=axis)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
@@ -1651,6 +1775,13 @@ class array(object):
     def any(self, axis=None, out=None, keepdims=None, *, where=True):
         check_kwargs(keepdims=keepdims, where=where)
         truthy_where = bool(where)
+        if axis is not None and axis < 0:
+            new_axis = axis + self._ndim
+            if self._ndim == 1 and new_axis != 0:
+                raise numpy.AxisError(axis, 1)
+            elif self._ndim == 2 and new_axis not in [0, 1]:
+                raise numpy.AxisError(axis, 2)
+            axis = new_axis
         target = where.where(self, False) if isinstance(where, array) else self
         if self._ndim == 1:
             if axis == 1:
@@ -1686,6 +1817,8 @@ class array(object):
                 else:
                     return array([[False]], dtype=bool)
             return result.to_numpy()[0, 0] if truthy_where else False
+        if axis > 1:
+            raise numpy.AxisError(axis, 2)
         result = target._query_compiler.any(axis=axis)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
