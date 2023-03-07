@@ -1811,7 +1811,9 @@ class array(object):
         caller, callee, new_ndim, kwargs = self._binary_op(x2)
         kwargs.pop("axis", None)  # Prevents argument from being passed to np function
         if self._ndim != x2._ndim:
-            raise ValueError("modin.numpy logic operators do not currently support broadcasting between arrays of different dimensions")
+            raise ValueError(
+                "modin.numpy logic operators do not currently support broadcasting between arrays of different dimensions"
+            )
         result = getattr(caller._query_compiler, qc_method_name)(
             callee._query_compiler, **kwargs
         )
