@@ -15,6 +15,7 @@
 
 from math import prod
 import numpy
+import pandas
 from pandas.core.dtypes.common import is_list_like, is_numeric_dtype, is_bool_dtype
 from pandas.api.types import is_scalar
 from inspect import signature
@@ -101,17 +102,6 @@ def fix_dtypes_and_determine_return(
     return result
 
 
-def find_common_dtype(dtypes):
-    if len(dtypes) == 1:
-        return dtypes[0]
-    elif len(dtypes) == 2:
-        return numpy.promote_types(*dtypes)
-    midpoint = len(dtypes) // 2
-    return numpy.promote_types(
-        find_common_dtype(dtypes[:midpoint]), find_common_dtype(dtypes[midpoint:])
-    )
-
-
 class array(object):
     """
     Modin distributed representation of ``numpy.array``.
@@ -144,7 +134,9 @@ class array(object):
         if _query_compiler is not None:
             self._query_compiler = _query_compiler
             self._ndim = _ndim
-            new_dtype = find_common_dtype(self._query_compiler.dtypes.values)
+            new_dtype = pandas.core.dtypes.cast.find_common_type(
+                self._query_compiler.dtypes.values
+            )
         elif is_list_like(object) and not is_list_like(object[0]):
             series = pd.Series(object)
             self._query_compiler = series._query_compiler
@@ -834,7 +826,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -884,7 +876,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -933,7 +925,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -977,7 +969,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -1042,7 +1034,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -1186,7 +1178,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -1241,7 +1233,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -1298,7 +1290,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -1347,7 +1339,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -1535,7 +1527,7 @@ class array(object):
         if self._ndim == 1:
             return dtype[0]
         else:
-            return find_common_dtype(dtype.values)
+            return pandas.core.dtypes.cast.find_common_type(dtype.values)
 
     @property
     def size(self):
