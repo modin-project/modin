@@ -333,6 +333,16 @@ def mean(x1, axis=None, dtype=None, out=None, keepdims=None, *, where=True):
     return x1.mean(axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype)
 
 
+def var(x1, axis=None, dtype=None, out=None, keepdims=None, *, where=True):
+    x1 = try_convert_from_interoperable_type(x1)
+    if not isinstance(x1, array):
+        ErrorMessage.bad_type_for_numpy_op("var", type(x1))
+        return numpy.var(
+            x1, axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype
+        )
+    return x1.var(axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype)
+
+
 # Maximum and minimum are ufunc's in NumPy, which means that our array's __array_ufunc__
 # implementation will automatically handle this. We still need the function though, so that
 # if the operands are modin.pandas objects, we can convert them to arrays, but after that
@@ -398,16 +408,38 @@ def amin(x1, axis=None, out=None, keepdims=None, initial=None, where=True):
 
 min = amin
 
-def sqrt(x, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+
+def sqrt(
+    x, out=None, *, where=True, casting="same_kind", order="K", dtype=None, subok=True
+):
     x = try_convert_from_interoperable_type(x)
     if not isinstance(x, array):
         ErrorMessage.bad_type_for_numpy_op("sqrt", type(x))
         return numpy.sqrt(x, out, where, casting, order, dtype, subok)
     return x.power(0.5, out, where, casting, order, dtype, subok)
 
-def exp(x, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+
+def exp(
+    x, out=None, *, where=True, casting="same_kind", order="K", dtype=None, subok=True
+):
     x = try_convert_from_interoperable_type(x)
     if not isinstance(x, array):
         ErrorMessage.bad_type_for_numpy_op("exp", type(x))
         return numpy.exp(x, out, where, casting, order, dtype, subok)
     return x.exp(out, where, casting, order, dtype, subok)
+
+
+def argmax(a, axis=None, out=None, *, keepdims=None):
+    a = try_convert_from_interoperable_type(a)
+    if not isinstance(a, array):
+        ErrorMessage.bad_type_for_numpy_op("argmax", type(a))
+        return numpy.argmax(a, axis=axis, out=out, keepdims=keepdims)
+    return a.argmax(axis=axis, out=out, keepdims=keepdims)
+
+
+def argmin(a, axis=None, out=None, *, keepdims=None):
+    a = try_convert_from_interoperable_type(a)
+    if not isinstance(a, array):
+        ErrorMessage.bad_type_for_numpy_op("argmin", type(a))
+        return numpy.argmin(a, axis=axis, out=out, keepdims=keepdims)
+    return a.argmin(axis=axis, out=out, keepdims=keepdims)

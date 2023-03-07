@@ -17,6 +17,7 @@ from .arr import array
 from .utils import try_convert_from_interoperable_type
 from modin.error_message import ErrorMessage
 
+
 def tanh(
     x, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):

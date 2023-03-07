@@ -648,10 +648,12 @@ class array(object):
             if self.shape != other.shape:
                 # In this case, we either have two mismatched objects trying to do an operation
                 # or a nested 1D object that must be broadcasted trying to do an operation.
+                broadcast = True
                 if self.shape[0] == other.shape[0]:
                     matched_dimension = 0
                 elif self.shape[1] == other.shape[1]:
                     matched_dimension = 1
+                    broadcast = False
                 else:
                     raise ValueError(
                         f"operands could not be broadcast together with shapes {self.shape} {other.shape}"
@@ -660,7 +662,12 @@ class array(object):
                     self.shape[matched_dimension ^ 1] == 1
                     or other.shape[matched_dimension ^ 1] == 1
                 ):
-                    return (self, other, self._ndim, {"broadcast": True, "axis": 1})
+                    return (
+                        self,
+                        other,
+                        self._ndim,
+                        {"broadcast": broadcast, "axis": matched_dimension},
+                    )
                 else:
                     raise ValueError(
                         f"operands could not be broadcast together with shapes {self.shape} {other.shape}"
@@ -823,7 +830,7 @@ class array(object):
 
     def __ne__(self, x2):
         return self._not_equal(x2)
-    
+
     def _unary_math_operator(
         self,
         opName,
@@ -872,7 +879,7 @@ class array(object):
             dtype=dtype,
             subok=subok,
         )
-    
+
     def exp(
         self,
         out=None,
@@ -893,6 +900,229 @@ class array(object):
             subok=subok,
         )
 
+    def split(self, indices, axis=0):
+        if axis is not None and axis < 0:
+            new_axis = axis + self._ndim
+            if self._ndim == 1 and new_axis != 0:
+                raise IndexError()
+            elif self._ndim == 2 and new_axis not in [0, 1]:
+                raise IndexError
+            axis = new_axis
+        if self._ndim == 1:
+            if axis != 0:
+                raise IndexError
+        if self._ndim == 2:
+            if axis > 1:
+                raise IndexError
+        arrays = []
+        if is_list_like(indices) or isinstance(indices, array):
+            if not isinstance(indices, array):
+                indices = array(indices)
+            if indices._ndim != 1:
+                raise TypeError(
+                    "only integer scalar arrays can be converted to a scalar index"
+                )
+            prev_index = 0
+            for i in range(len(indices) + 1):
+                if i < len(indices):
+                    end_index = indices._query_compiler.take_2d_positional(
+                        [i]
+                    ).to_numpy()[0, 0]
+                    if end_index == 0:
+                        ErrorMessage.single_warning(
+                            "Defaulting to NumPy for empty arrays."
+                        )
+                        new_shape = list(self.shape)
+                        new_shape[axis] = 0
+                        arrays.append(numpy.empty(new_shape, dtype=self.dtype))
+                        continue
+                    if end_index < 0:
+                        end_index = self.shape[axis] + end_index
+                else:
+                    end_index = self.shape[axis]
+                if prev_index > self.shape[axis] or prev_index == end_index:
+                    ErrorMessage.single_warning("Defaulting to NumPy for empty arrays.")
+                    new_shape = list(self.shape)
+                    new_shape[axis] = 0
+                    arrays.append(numpy.empty(new_shape, dtype=self.dtype))
+                else:
+                    idxs = list(range(prev_index, min(end_index, self.shape[axis])))
+                    if axis == 0:
+                        new_qc = self._query_compiler.take_2d_positional(index=idxs)
+                    else:
+                        new_qc = self._query_compiler.take_2d_positional(columns=idxs)
+                    arrays.append(array(_query_compiler=new_qc, _ndim=self._ndim))
+                prev_index = end_index
+        else:
+            if self.shape[axis] % indices != 0:
+                raise ValueError("array split does not result in an equal division")
+            for i in range(0, self.shape[axis], self.shape[axis] // indices):
+                if axis == 0:
+                    new_qc = self._query_compiler.take_2d_positional(
+                        index=list(range(i, i + self.shape[axis] // indices))
+                    )
+                else:
+                    new_qc = self._query_compiler.take_2d_positional(
+                        columns=list(range(i, i + self.shape[axis] // indices))
+                    )
+                arrays.append(array(_query_compiler=new_qc, _ndim=self._ndim))
+        return arrays
+
+    def _compute_masked_variance(self, mask, output_dtype, axis, ddof):
+        if axis == 0 and self._ndim != 1:
+            # Our broadcasting is wrong, so we can't do the final subtraction at the end.
+            raise NotImplementedError(
+                "Masked variance on 2D arrays along axis = 0 is currently unsupported."
+            )
+        axis_mean = self.mean(axis, output_dtype, keepdims=True, where=mask)
+        target = mask.where(self, numpy.nan)
+        if self._ndim == 1:
+            axis_mean = axis_mean._to_numpy()[0]
+            target = target._query_compiler.sub(axis_mean).pow(2).sum(axis=axis)
+        else:
+            target = (target - axis_mean)._query_compiler.pow(2).sum(axis=axis)
+        num_elems = (
+            mask.where(self, 0)._query_compiler.notna().sum(axis=axis, skipna=False)
+        )
+        num_elems = num_elems.sub(ddof)
+        target = target.truediv(num_elems)
+        na_propagation_mask = mask.where(self, 0)._query_compiler.sum(
+            axis=axis, skipna=False
+        )
+        target = target.where(na_propagation_mask.notna(), numpy.nan)
+        return target
+
+    def var(
+        self, axis=None, dtype=None, out=None, ddof=0, keepdims=None, *, where=True
+    ):
+        out_dtype = (
+            dtype
+            if dtype is not None
+            else (out.dtype if out is not None else self.dtype)
+        )
+        out_type = getattr(out_dtype, "type", out_dtype)
+        if isinstance(where, array) and issubclass(out_type, numpy.integer):
+            out_dtype = numpy.float64
+        if axis is not None and axis < 0:
+            new_axis = axis + self._ndim
+            if self._ndim == 1 and new_axis != 0:
+                raise numpy.AxisError(axis, 1)
+            elif self._ndim == 2 and new_axis not in [0, 1]:
+                raise numpy.AxisError(axis, 2)
+            axis = new_axis
+        check_kwargs(keepdims=keepdims, where=where)
+        truthy_where = bool(where)
+        if self._ndim == 1:
+            if axis == 1:
+                raise numpy.AxisError(1, 1)
+            if isinstance(where, array):
+                result = self._compute_masked_variance(where, out_dtype, 0, ddof)
+            else:
+                result = self._query_compiler.var(axis=0, skipna=False, ddof=ddof)
+            if keepdims:
+                if out is not None and out.shape != (1,):
+                    raise ValueError(
+                        f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
+                    )
+                if out is not None:
+                    out._query_compiler = (
+                        numpy.ones_like(out) * numpy.nan
+                    )._query_compiler
+                if truthy_where or out is not None:
+                    return fix_dtypes_and_determine_return(
+                        result, 1, dtype, out, truthy_where
+                    )
+                else:
+                    return array([numpy.nan], dtype=out_dtype)
+        if axis is None:
+            # If any of the (non-masked) elements of our array are `NaN`, we know that the
+            # result of `mean` must be `NaN`. This is a fastpath to see if any unmasked elements
+            # are `NaN`.
+            contains_na_check = (
+                where.where(self, 0) if isinstance(where, array) else self
+            )
+            if (
+                contains_na_check._query_compiler.isna()
+                .any(axis=1)
+                .any(axis=0)
+                .to_numpy()[0, 0]
+            ):
+                return numpy.nan
+            result = where.where(self, numpy.nan) if isinstance(where, array) else self
+            # Since our current QueryCompiler does not have a variance that reduces 2D objects to
+            # a single value, we need to calculate the variance ourselves. First though, we need
+            # to figure out how many objects that we are taking the variance over (since any
+            # entries in our array that are `numpy.nan` must be ignored when taking the variance,
+            # and so cannot be included in the final division (of the sum over num total elements))
+            num_na_elements = (
+                result._query_compiler.isna().sum(axis=1).sum(axis=0).to_numpy()[0, 0]
+            )
+            num_total_elements = prod(self.shape) - num_na_elements
+            mean = (
+                numpy.array(
+                    [result._query_compiler.sum(axis=1).sum(axis=0).to_numpy()[0, 0]],
+                    dtype=out_dtype,
+                )
+                / num_total_elements
+            )[0]
+            result = (
+                numpy.array(
+                    [
+                        result._query_compiler.sub(mean)
+                        .pow(2)
+                        .sum(axis=1)
+                        .sum(axis=0)
+                        .to_numpy()[0, 0]
+                    ],
+                    dtype=out_dtype,
+                )
+                / (num_total_elements - ddof)
+            )[0]
+            if keepdims:
+                if out is not None and out.shape != (1, 1):
+                    raise ValueError(
+                        f"operand was set up as a reduction along axis 1, but the length of the axis is {out.shape[0]} (it has to be 1)"
+                    )
+                if out is not None:
+                    out._query_compiler = (
+                        numpy.ones_like(out) * numpy.nan
+                    )._query_compiler
+                if truthy_where or out is not None:
+                    return fix_dtypes_and_determine_return(
+                        array(numpy.array([[result]]))
+                        .astype(out_dtype)
+                        ._query_compiler,
+                        2,
+                        dtype,
+                        out,
+                        truthy_where,
+                    )
+                else:
+                    return array([[numpy.nan]], dtype=out_dtype)
+            return result if truthy_where else numpy.nan
+        if axis > 1:
+            raise numpy.AxisError(axis, 2)
+        if isinstance(where, array):
+            result = self._compute_masked_variance(where, out_dtype, axis, ddof)
+        else:
+            result = self._query_compiler.astype(
+                {col_name: out_dtype for col_name in self._query_compiler.columns}
+            ).var(axis=axis, skipna=False)
+        new_ndim = self._ndim - 1 if not keepdims else self._ndim
+        if new_ndim == 0:
+            return result.to_numpy()[0, 0] if truthy_where else numpy.nan
+        if not keepdims and axis != 1:
+            result = result.transpose()
+        if out is not None:
+            out._query_compiler = (numpy.ones_like(out) * numpy.nan)._query_compiler
+        if truthy_where or out is not None:
+            return fix_dtypes_and_determine_return(
+                result, new_ndim, dtype, out, truthy_where
+            )
+        else:
+            return (
+                numpy.ones(array(_query_compiler=result, _ndim=new_ndim).shape)
+            ) * numpy.nan
 
     def _compute_masked_mean(self, mask, output_dtype, axis):
         # By default, pandas ignores NaN values when doing computations.
@@ -1834,6 +2064,144 @@ class array(object):
             return numpy.zeros_like(array(_query_compiler=result, _ndim=new_ndim))
 
     _any = any
+
+    def argmax(self, axis=None, out=None, keepdims=None):
+        check_kwargs(keepdims=keepdims)
+        if axis is not None and axis < 0:
+            new_axis = axis + self._ndim
+            if self._ndim == 1 and new_axis != 0:
+                raise numpy.AxisError(axis, 1)
+            elif self._ndim == 2 and new_axis not in [0, 1]:
+                raise numpy.AxisError(axis, 2)
+            axis = new_axis
+        if self._ndim == 1:
+            if axis == 1:
+                raise numpy.AxisError(1, 1)
+            if self._query_compiler.isna().any(axis=1).any(axis=0).to_numpy()[0, 0]:
+                na_row_map = self._query_compiler.isna().any(axis=1)
+                result = na_row_map.idxmax().to_numpy()[0, 0]
+            else:
+                result = self._query_compiler.idxmax(axis=0)
+            if keepdims:
+                if out is not None and out.shape != (1,):
+                    raise ValueError(
+                        f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
+                    )
+                return fix_dtypes_and_determine_return(
+                    result, 1, numpy.int64, out, True
+                )
+            return result.to_numpy()[0, 0]
+        if axis is None:
+            if self._query_compiler.isna().any(axis=1).any(axis=0).to_numpy()[0, 0]:
+                na_row_map = self._query_compiler.isna().any(axis=1)
+                na_row = self._query_compiler.getitem_array(na_row_map)
+                col_idx = na_row.to_numpy().argmax()
+                final_idxmax = na_row_map.idxmax().to_numpy().flatten()
+            else:
+                inner_idxs = self._query_compiler.idxmax(axis=1)
+                final_idxmax = (
+                    self._query_compiler.max(axis=1).idxmax(axis=0).to_numpy().flatten()
+                )
+                col_idx = inner_idxs.take_2d_positional(final_idxmax, [0]).to_numpy()[
+                    0, 0
+                ]
+            result = (self.shape[1] * final_idxmax[0]) + col_idx
+            if keepdims:
+                if out is not None and out.shape != (1, 1):
+                    raise ValueError(
+                        f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
+                    )
+                return fix_dtypes_and_determine_return(
+                    array(numpy.array([[result]], dtype=bool))._query_compiler,
+                    2,
+                    numpy.int64,
+                    out,
+                    True,
+                )
+            return result
+        if axis > 1:
+            raise numpy.AxisError(axis, 2)
+        result = self._query_compiler.idxmax(axis=axis)
+        na_mask = self._query_compiler.isna().any(axis=axis)
+        if na_mask.any(axis=axis ^ 1).to_numpy()[0, 0]:
+            na_idxs = self._query_compiler.isna().idxmax(axis=axis)
+            result = na_mask.where(na_idxs, result)
+        new_ndim = self._ndim - 1 if not keepdims else self._ndim
+        if new_ndim == 0:
+            result = result.to_numpy()[0, 0]
+            return result
+        if not keepdims and axis != 1:
+            result = result.transpose()
+        return fix_dtypes_and_determine_return(result, new_ndim, numpy.int64, out, True)
+
+    def argmin(self, axis=None, out=None, keepdims=None):
+        check_kwargs(keepdims=keepdims)
+        if axis is not None and axis < 0:
+            new_axis = axis + self._ndim
+            if self._ndim == 1 and new_axis != 0:
+                raise numpy.AxisError(axis, 1)
+            elif self._ndim == 2 and new_axis not in [0, 1]:
+                raise numpy.AxisError(axis, 2)
+            axis = new_axis
+        if self._ndim == 1:
+            if axis == 1:
+                raise numpy.AxisError(1, 1)
+            if self._query_compiler.isna().any(axis=1).any(axis=0).to_numpy()[0, 0]:
+                na_row_map = self._query_compiler.isna().any(axis=1)
+                result = na_row_map.idxmax().to_numpy()[0, 0]
+            else:
+                result = self._query_compiler.idxmin(axis=0)
+            if keepdims:
+                if out is not None and out.shape != (1,):
+                    raise ValueError(
+                        f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
+                    )
+                return fix_dtypes_and_determine_return(
+                    result, 1, numpy.int64, out, True
+                )
+            return result.to_numpy()[0, 0]
+        if axis is None:
+            if self._query_compiler.isna().any(axis=1).any(axis=0).to_numpy()[0, 0]:
+                na_row_map = self._query_compiler.isna().any(axis=1)
+                na_row = self._query_compiler.getitem_array(na_row_map)
+                col_idx = na_row.to_numpy().argmax()
+                final_idxmax = na_row_map.idxmax().to_numpy().flatten()
+            else:
+                inner_idxs = self._query_compiler.idxmin(axis=1)
+                final_idxmax = (
+                    self._query_compiler.min(axis=1).idxmin(axis=0).to_numpy().flatten()
+                )
+                col_idx = inner_idxs.take_2d_positional(final_idxmax, [0]).to_numpy()[
+                    0, 0
+                ]
+            result = (self.shape[1] * final_idxmax[0]) + col_idx
+            if keepdims:
+                if out is not None and out.shape != (1, 1):
+                    raise ValueError(
+                        f"operand was set up as a reduction along axis 0, but the length of the axis is {out.shape[0]} (it has to be 1)"
+                    )
+                return fix_dtypes_and_determine_return(
+                    array(numpy.array([[result]], dtype=bool))._query_compiler,
+                    2,
+                    numpy.int64,
+                    out,
+                    True,
+                )
+            return result
+        if axis > 1:
+            raise numpy.AxisError(axis, 2)
+        result = self._query_compiler.idxmin(axis=axis)
+        na_mask = self._query_compiler.isna().any(axis=axis)
+        if na_mask.any(axis=axis ^ 1).to_numpy()[0, 0]:
+            na_idxs = self._query_compiler.isna().idxmax(axis=axis)
+            result = na_mask.where(na_idxs, result)
+        new_ndim = self._ndim - 1 if not keepdims else self._ndim
+        if new_ndim == 0:
+            result = result.to_numpy()[0, 0]
+            return result
+        if not keepdims and axis != 1:
+            result = result.transpose()
+        return fix_dtypes_and_determine_return(result, new_ndim, numpy.int64, out, True)
 
     def _isfinite(
         self,

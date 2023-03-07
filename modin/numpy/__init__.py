@@ -72,6 +72,9 @@ from .math import (
     min,
     sqrt,
     exp,
+    argmax,
+    argmin,
+    var,
 )
 
 from .trigonometry import (
@@ -107,6 +110,10 @@ def where(condition, x=None, y=None):
     raise NotImplementedError(
         f"np.where for condition of type {type(condition)} is not yet supported in Modin."
     )
+
+
+def split(arr, indices, axis=0):
+    return arr.split(indices, axis)
 
 
 __all__ = [  # noqa: F405
@@ -177,4 +184,8 @@ __all__ = [  # noqa: F405
     "sqrt",
     "tanh",
     "exp",
+    "argmax",
+    "argmin",
+    "var",
+    "split",
 ]
