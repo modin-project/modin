@@ -95,6 +95,14 @@ def divide(
     )
 
 
+def dot(a, b, out=None):
+    a = try_convert_from_interoperable_type(a)
+    if not isinstance(a, array):
+        ErrorMessage.bad_type_for_numpy_op("dot", type(a))
+        return numpy.dot(a, b, out=out)
+    return a.dot(b, out=out)
+
+
 def float_power(
     x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
