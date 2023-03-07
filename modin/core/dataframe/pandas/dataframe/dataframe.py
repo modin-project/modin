@@ -2067,17 +2067,23 @@ class PandasDataframe(ClassLogger):
         if sampling_probability >= 1:
             from modin.config import MinPartitionSize
 
-            if (
-                len(self.index) < MinPartitionSize.get()
-                and self._partitions.shape[1] == 1
-            ):
+            ideal_num_new_partitions = round(len(self.index) / MinPartitionSize.get())
+            if len(self.index) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
+                if self._partitions.shape[1] != 1:
+                    # In this case, we have more than one column partition, so we first need
+                    # to create row-wise partitions with all of the columns, so we don't have
+                    # a KeyError when sorting. This method can be slow if we have very very
+                    # many columns.
+                    new_partitions = self._partition_mgr_cls.row_partitions(
+                        self._partitions
+                    )
+                    self._partitions = np.array(
+                        [[partition] for partition in new_partitions]
+                    )
                 return self.apply_full_axis(
                     1,
                     sort_function,
                 )
-            else:
-                ideal_num_new_partitions = len(self.index) // MinPartitionSize.get()
-                ideal_num_new_partitions = max(ideal_num_new_partitions, 1)
 
         if self.dtypes[columns[0]] == object:
             # This means we are not sorting numbers, so we need our quantiles to not try

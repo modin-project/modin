@@ -580,6 +580,14 @@ def test_sort_overpartitioned_df():
 
     eval_general(modin_df, pandas_df, lambda df: df.sort_values(by=0))
 
+    # Next we test when the final df will only have 1 row, but starts with multiple column
+    # partitions.
+    data = [list(range(100)), list(range(100, 200))]
+    modin_df = pd.concat([pd.DataFrame(row).T for row in data]).reset_index(drop=True)
+    pandas_df = pandas.DataFrame(data)
+
+    eval_general(modin_df, pandas_df, lambda df: df.sort_values(by=0))
+
     # Next we test when the final df will have multiple row partitions.
     data = np.random.choice(650, 650, replace=False).reshape((65, 10))
     modin_df = pd.concat([pd.DataFrame(row).T for row in data]).reset_index(drop=True)
