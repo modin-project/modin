@@ -1550,6 +1550,15 @@ class array(object):
         return array(_query_compiler=result, _ndim=self._ndim)
 
     def _build_repr_array(self):
+        def _generate_indices_for_axis(
+            axis_size, num_elements=numpy.get_printoptions()["edgeitems"]
+        ):
+            if axis_size > num_elements * 2:
+                return list(range(num_elements + 1)) + list(
+                    range(axis_size - num_elements, axis_size)
+                )
+            return list(range(axis_size))
+
         # We want to rely on NumPy for creating a string representation of this array; however
         # we also don't want to materialize all of the data to the head node. Instead, we will
         # materialize enough data that NumPy can build the summarized representation of the array
@@ -1557,46 +1566,17 @@ class array(object):
         # abridged) and return this smaller array. In the worst case, this array will have
         # (2*numpy.get_printoptions()["edgeitems"] + 1)^2 items, so 49 items max for the default
         # value of 3.
-        num_elements = numpy.get_printoptions()["edgeitems"]
         if self._ndim == 1 or self.shape[1] == 0:
-            if len(self) > num_elements * 2:
-                idxs = list(range(num_elements + 1)) + list(
-                    range(len(self) - num_elements, len(self))
-                )
-            elif len(self) == num_elements * 2:
-                idxs = list(range(num_elements * 2))
-            else:
-                idxs = list(range(len(self)))
+            idxs = _generate_indices_for_axis(len(self))
             arr = self._query_compiler.getitem_row_array(idxs).to_numpy()
             if self._ndim == 1:
                 arr = arr.flatten()
         elif self.shape[0] == 1:
-            if self.shape[1] > num_elements * 2:
-                idxs = list(range(num_elements + 1)) + list(
-                    range(self.shape[1] - num_elements, self.shape[1])
-                )
-            elif self.shape[1] == num_elements * 2:
-                idxs = list(range(num_elements * 2))
-            else:
-                idxs = list(range(self.shape[1]))
+            idxs = _generate_indices_for_axis(self.shape[1])
             arr = self._query_compiler.getitem_column_array(idxs).to_numpy()
         else:
-            if len(self) > num_elements * 2:
-                row_idxs = list(range(num_elements + 1)) + list(
-                    range(len(self) - num_elements, len(self))
-                )
-            elif len(self) == num_elements * 2:
-                row_idxs = list(range(num_elements * 2))
-            else:
-                row_idxs = list(range(len(self)))
-            if self.shape[1] > num_elements * 2:
-                col_idxs = list(range(num_elements + 1)) + list(
-                    range(self.shape[1] - num_elements, self.shape[1])
-                )
-            elif self.shape[1] == num_elements * 2:
-                col_idxs = list(range(num_elements * 2))
-            else:
-                col_idxs = list(range(self.shape[1]))
+            row_idxs = _generate_indices_for_axis(len(self))
+            col_idxs = _generate_indices_for_axis(self.shape[1])
             arr = self._query_compiler.take_2d_positional(row_idxs, col_idxs).to_numpy()
         return arr
 
@@ -1608,8 +1588,10 @@ class array(object):
         arr = self._build_repr_array()
         prev_threshold = numpy.get_printoptions()["threshold"]
         numpy.set_printoptions(threshold=arr.size - 1)
-        repr_str = repr(arr)
-        numpy.set_printoptions(threshold=prev_threshold)
+        try:
+            repr_str = repr(arr)
+        finally:
+            numpy.set_printoptions(threshold=prev_threshold)
         return repr_str
 
     def _to_numpy(self):
