@@ -2069,6 +2069,7 @@ class PandasDataframe(ClassLogger):
 
             ideal_num_new_partitions = round(len(self.index) / MinPartitionSize.get())
             if len(self.index) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
+                modin_frame = self
                 if self._partitions.shape[1] != 1:
                     # In this case, we have more than one column partition, so we first need
                     # to create row-wise partitions with all of the columns, so we don't have
@@ -2077,10 +2078,17 @@ class PandasDataframe(ClassLogger):
                     new_partitions = self._partition_mgr_cls.row_partitions(
                         self._partitions
                     )
-                    self._partitions = np.array(
+                    new_partitions = np.array(
                         [[partition] for partition in new_partitions]
                     )
-                return self.apply_full_axis(
+                    modin_frame = self.__constructor__(
+                        new_partitions,
+                        *self.axes,
+                        self._row_lengths_cache,
+                        [len(self.columns)],
+                        self.dtypes,
+                    )
+                return modin_frame.apply_full_axis(
                     1,
                     sort_function,
                 )
