@@ -77,13 +77,13 @@ def test_to_df():
     df_equals(pandas_df, modin_df)
     for kw in [{}, {"dtype": str}]:
         modin_df, pandas_df = [
-            lib.DataFrame(
-                np.array([[1, 2, 3], [4, 5, 6]]),
+            lib[0].DataFrame(
+                lib[1].array([[1, 2, 3], [4, 5, 6]]),
                 columns=["col 0", "col 1", "col 2"],
                 index=pd.Index([4, 6]),
                 **kw
             )
-            for lib in (pd, pandas)
+            for lib in ((pd, np), (pandas, numpy))
         ]
         df_equals(pandas_df, modin_df)
     df_equals(pandas_df, modin_df)
