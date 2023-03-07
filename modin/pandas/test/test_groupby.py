@@ -38,6 +38,7 @@ from .utils import (
     test_data,
     test_data_values,
     modin_df_almost_equals_pandas,
+    try_modin_df_almost_equals_compare,
     generate_multiindex,
     test_groupby_data,
     dict_equals,
@@ -45,6 +46,7 @@ from .utils import (
     default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
+
 
 NPartitions.put(4)
 
@@ -1784,8 +1786,68 @@ def test_unknown_groupby(columns):
         pytest.param(
             lambda grp: grp.agg(
                 {
-                    list(test_data_values[0].keys())[1]: (max, min, sum),
-                    list(test_data_values[0].keys())[-1]: (sum, min, max),
+                    list(test_data_values[0].keys())[1]: [
+                        ("new_sum", "sum"),
+                        ("new_mean", "mean"),
+                    ],
+                    list(test_data_values[0].keys())[-2]: "skew",
+                }
+            ),
+            id="renaming_aggs_at_different_partitions",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: [
+                        ("new_sum", "sum"),
+                        ("new_mean", "mean"),
+                    ],
+                    list(test_data_values[0].keys())[2]: "skew",
+                }
+            ),
+            id="renaming_aggs_at_same_partition",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: "mean",
+                    list(test_data_values[0].keys())[-2]: "skew",
+                }
+            ),
+            id="custom_aggs_at_different_partitions",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: "mean",
+                    list(test_data_values[0].keys())[2]: "skew",
+                }
+            ),
+            id="custom_aggs_at_same_partition",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: "mean",
+                    list(test_data_values[0].keys())[-2]: "sum",
+                }
+            ),
+            id="native_and_custom_aggs_at_different_partitions",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: "mean",
+                    list(test_data_values[0].keys())[2]: "sum",
+                }
+            ),
+            id="native_and_custom_aggs_at_same_partition",
+        ),
+        pytest.param(
+            lambda grp: grp.agg(
+                {
+                    list(test_data_values[0].keys())[1]: (max, "mean", sum),
+                    list(test_data_values[0].keys())[-1]: (sum, "skew", max),
                 }
             ),
             id="Agg_and_by_intersection_TreeReduce_implementation",
@@ -1827,7 +1889,15 @@ def test_multi_column_groupby_different_partitions(
         md_df.groupby(by, as_index=as_index),
         pd_df.groupby(by, as_index=as_index),
     )
-    eval_general(md_grp, pd_grp, func_to_apply)
+    eval_general(
+        md_grp,
+        pd_grp,
+        func_to_apply,
+        # 'skew' and 'mean' results are not 100% equal to pandas as they use
+        # different formulas and so precision errors come into play. Thus
+        # using a custom comparator that allows slight numeric deviations.
+        comparator=try_modin_df_almost_equals_compare,
+    )
     eval___getitem__(md_grp, pd_grp, md_df.columns[1])
     eval___getitem__(md_grp, pd_grp, [md_df.columns[1], md_df.columns[2]])
 
@@ -2112,6 +2182,26 @@ def test_mean_with_datetime(by_func):
     eval_general(modin_df, pandas_df, lambda df: df.groupby(by=by_func(df)).mean())
 
 
+def test_groupby_mad_warn():
+    modin_df, pandas_df = create_test_dfs(test_groupby_data)
+    md_grp = modin_df.groupby(by=modin_df.columns[0])
+    pd_grp = pandas_df.groupby(by=pandas_df.columns[0])
+
+    msg = "The 'mad' method is deprecated and will be removed in a future version."
+    for grp_obj in (md_grp, pd_grp):
+        with pytest.warns(FutureWarning, match=msg):
+            grp_obj.mad()
+
+
+def test_groupby_backfill_warn():
+    modin_df = pd.DataFrame(test_groupby_data)
+    md_grp = modin_df.groupby(by=modin_df.columns[0])
+
+    msg = "backfill is deprecated and will be removed in a future version."
+    with pytest.warns(FutureWarning, match=msg):
+        md_grp.backfill()
+
+
 @pytest.mark.parametrize(
     "modin_df_recipe",
     ["non_lazy_frame", "frame_with_deferred_index", "lazy_frame"],
@@ -2216,3 +2306,27 @@ def test_groupby_on_empty_data(modin_df_recipe):
     # https://github.com/modin-project/modin/issues/5441
     # run_test(eval_transform, func=lambda df: df.mean())
     # run_test(eval_std)
+
+
+def test_skew_corner_cases():
+    """
+    This test was inspired by https://github.com/modin-project/modin/issues/5545.
+
+    The test verifies that modin acts exactly as pandas when the input data is
+    bad for the 'skew' and so some components of the 'skew' formula appears to be invalid:
+        ``(count * (count - 1) ** 0.5 / (count - 2)) * (m3 / m2**1.5)``
+    """
+    # When 'm2 == m3 == 0' thus causing 0 / 0 division in the second multiplier.
+    # Note: mX = 'sum((col - mean(col)) ^ x)'
+    modin_df, pandas_df = create_test_dfs({"col0": [1, 1, 1], "col1": [10, 10, 10]})
+    eval_general(modin_df, pandas_df, lambda df: df.groupby("col0").skew())
+
+    # When 'count < 3' thus causing dividing by zero in the first multiplier
+    # Note: count = group_size
+    modin_df, pandas_df = create_test_dfs({"col0": [1, 1], "col1": [1, 2]})
+    eval_general(modin_df, pandas_df, lambda df: df.groupby("col0").skew())
+
+    # When 'count < 3' and 'm3 / m2 != 0'. The case comes from:
+    # https://github.com/modin-project/modin/issues/5545
+    modin_df, pandas_df = create_test_dfs({"col0": [1, 1], "col1": [171, 137]})
+    eval_general(modin_df, pandas_df, lambda df: df.groupby("col0").skew())

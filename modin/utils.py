@@ -15,15 +15,7 @@
 
 import importlib
 import types
-from typing import (
-    Any,
-    Callable,
-    List,
-    Mapping,
-    Optional,
-    Union,
-    TypeVar,
-)
+from typing import Any, Callable, List, Mapping, Optional, Union, TypeVar
 import re
 import sys
 import json
@@ -44,7 +36,7 @@ from pandas.util._decorators import Appender
 from pandas.util._print_versions import _get_sys_info, _get_dependency_info  # type: ignore[attr-defined]
 from pandas._typing import JSONSerializable
 
-from modin.config import Engine, StorageFormat, IsExperimental
+from modin.config import Engine, StorageFormat, IsExperimental, ExperimentalNumPyAPI
 from modin._version import get_versions
 
 T = TypeVar("T")
@@ -68,6 +60,22 @@ class SupportsPublicToPandas(Protocol):  # noqa: PR01
     """Structural type for objects with a ``to_pandas`` method (without a leading underscore)."""
 
     def to_pandas(self) -> Any:  # noqa: GL08
+        pass
+
+
+@runtime_checkable
+class SupportsPublicToNumPy(Protocol):  # noqa: PR01
+    """Structural type for objects with a ``to_numpy`` method (without a leading underscore)."""
+
+    def to_numpy(self) -> Any:  # noqa: GL08
+        pass
+
+
+@runtime_checkable
+class SupportsPrivateToNumPy(Protocol):  # noqa: PR01
+    """Structural type for objects with a ``_to_numpy`` method (note the leading underscore)."""
+
+    def _to_numpy(self) -> Any:  # noqa: GL08
         pass
 
 
@@ -450,6 +458,30 @@ def to_pandas(modin_obj: SupportsPrivateToPandas) -> Any:
         Converted object with type depending on input.
     """
     return modin_obj._to_pandas()
+
+
+def to_numpy(
+    modin_obj: Union[SupportsPrivateToNumPy, SupportsPublicToNumPy]
+) -> np.ndarray:
+    """
+    Convert a Modin object to a NumPy array.
+
+    Parameters
+    ----------
+    modin_obj : modin.DataFrame, modin.Series, modin.numpy.array
+        The Modin distributed object to convert.
+
+    Returns
+    -------
+    numpy.array
+        Converted object with type depending on input.
+    """
+    if isinstance(modin_obj, SupportsPrivateToNumPy):
+        return modin_obj._to_numpy()
+    array = modin_obj.to_numpy()
+    if ExperimentalNumPyAPI.get():
+        array = array._to_numpy()
+    return array
 
 
 def hashable(obj: bool) -> bool:

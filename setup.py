@@ -47,7 +47,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     install_requires=[
-        "pandas==1.5.2",
+        "pandas==1.5.3",
         "packaging",
         "numpy>=1.18.5",
         "fsspec",

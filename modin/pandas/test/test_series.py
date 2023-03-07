@@ -2070,6 +2070,26 @@ def test_isin(data):
     df_equals(modin_result, pandas_result)
 
 
+def test_isin_with_series():
+    modin_series1, pandas_series1 = create_test_series([1, 2, 3])
+    modin_series2, pandas_series2 = create_test_series([1, 2, 3, 4, 5])
+
+    eval_general(
+        (modin_series1, modin_series2),
+        (pandas_series1, pandas_series2),
+        lambda srs: srs[0].isin(srs[1]),
+    )
+
+    # Verify that Series actualy behaves like Series and ignores unmatched indices on '.isin'
+    modin_series1, pandas_series1 = create_test_series([1, 2, 3], index=[10, 11, 12])
+
+    eval_general(
+        (modin_series1, modin_series2),
+        (pandas_series1, pandas_series2),
+        lambda srs: srs[0].isin(srs[1]),
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_isnull(data):
     modin_series, pandas_series = create_test_series(data)
@@ -2204,12 +2224,13 @@ def test_loc(data):
     data = np.arange(100)
     modin_series = pd.Series(data, index=index).sort_index()
     pandas_series = pandas.Series(data, index=index).sort_index()
+    # Using 'fmt: skip' below as 'black' and 'flake8' can't agree on how this should be formatted
     modin_result = modin_series.loc[
         (slice(None), 1),
-    ]
+    ]  # fmt: skip
     pandas_result = pandas_series.loc[
         (slice(None), 1),
-    ]
+    ]  # fmt: skip
     df_equals(modin_result, pandas_result)
 
 
@@ -4330,6 +4351,21 @@ def test_cat_codes(data):
     pandas_result = pandas_series.cat.codes
     modin_result = modin_series.cat.codes
     df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
+    "set_min_partition_size",
+    [1, 2],
+    ids=["four_partitions", "two_partitions"],
+    indirect=True,
+)
+def test_cat_codes_issue5650(set_min_partition_size):
+    data = {"name": ["abc", "def", "ghi", "jkl"]}
+    pandas_df = pandas.DataFrame(data)
+    pandas_df = pandas_df.astype("category")
+    modin_df = pd.DataFrame(data)
+    modin_df = modin_df.astype("category")
+    eval_general(modin_df, pandas_df, lambda df: df["name"].cat.codes)
 
 
 @pytest.mark.parametrize(

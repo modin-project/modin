@@ -287,20 +287,30 @@ def test_copy(data):
 
     # pandas_df is unused but there so there won't be confusing list comprehension
     # stuff in the pytest.mark.parametrize
-    new_modin_df = modin_df.copy()
+    new_modin_df = modin_df.copy(deep=True)
 
     assert new_modin_df is not modin_df
+    assert new_modin_df.index is not modin_df.index
+    assert new_modin_df.columns is not modin_df.columns
+    assert new_modin_df.dtypes is not modin_df.dtypes
+
     if get_current_execution() != "BaseOnPython":
         assert np.array_equal(
             new_modin_df._query_compiler._modin_frame._partitions,
             modin_df._query_compiler._modin_frame._partitions,
         )
-    assert new_modin_df is not modin_df
     df_equals(new_modin_df, modin_df)
 
     # Shallow copy tests
     modin_df = pd.DataFrame(data)
-    modin_df_cp = modin_df.copy(False)
+    modin_df_cp = modin_df.copy(deep=False)
+
+    assert modin_df_cp is not modin_df
+    assert modin_df_cp.index is modin_df.index
+    assert modin_df_cp.columns is modin_df.columns
+    # FIXME: we're different from pandas here as modin doesn't copy dtypes for a shallow copy
+    # https://github.com/modin-project/modin/issues/5602
+    # assert modin_df_cp.dtypes is not modin_df.dtypes
 
     modin_df[modin_df.columns[0]] = 0
     df_equals(modin_df, modin_df_cp)
@@ -1105,6 +1115,12 @@ def test_insert(data):
         pandas_df,
         col="Different indices",
         value=lambda df: df[[df.columns[0]]].set_index(df.index[::-1]),
+    )
+    eval_insert(
+        modin_df,
+        pandas_df,
+        col="2d list insert",
+        value=lambda df: [[1, 2]] * len(df),
     )
 
     # Bad inserts

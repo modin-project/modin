@@ -484,6 +484,10 @@ class Series(BasePandasDataset):
 
         data = self.to_numpy()
         if isinstance(self.dtype, pd.CategoricalDtype):
+            from modin.config import ExperimentalNumPyAPI
+
+            if ExperimentalNumPyAPI.get():
+                data = data._to_numpy()
             data = pd.Categorical(data, dtype=self.dtype)
         return data
 
@@ -1192,6 +1196,12 @@ class Series(BasePandasDataset):
             **kwargs,
         )
 
+    def isin(self, values):  # noqa: PR01, RT01, D200
+        """
+        Whether elements in `Series` are contained in `values`.
+        """
+        return super(Series, self).isin(values, shape_hint="column")
+
     def item(self):  # noqa: RT01, D200
         """
         Return the first element of the underlying data as a Python scalar.
@@ -1256,6 +1266,14 @@ class Series(BasePandasDataset):
         """
         Map values of Series according to input correspondence.
         """
+        if isinstance(arg, type(self)):
+            # HACK: if we don't cast to pandas, then the execution engine will try to
+            # propagate the distributed Series to workers and most likely would have
+            # some performance problems.
+            # TODO: A better way of doing so could be passing this `arg` as a query compiler
+            # and broadcast accordingly.
+            arg = arg._to_pandas()
+
         if not callable(arg) and hasattr(arg, "get"):
             mapper = arg
 
@@ -1932,15 +1950,22 @@ class Series(BasePandasDataset):
         """
         Return the NumPy ndarray representing the values in this Series or Index.
         """
-        return (
-            super(Series, self)
-            .to_numpy(
-                dtype=dtype,
-                copy=copy,
-                na_value=na_value,
+        from modin.config import ExperimentalNumPyAPI
+
+        if not ExperimentalNumPyAPI.get():
+            return (
+                super(Series, self)
+                .to_numpy(
+                    dtype=dtype,
+                    copy=copy,
+                    na_value=na_value,
+                )
+                .flatten()
             )
-            .flatten()
-        )
+        else:
+            from ..numpy.arr import array
+
+            return array(_query_compiler=self._query_compiler, _ndim=1)
 
     tolist = to_list
 
@@ -2099,14 +2124,6 @@ class Series(BasePandasDataset):
             errors=errors,
             try_cast=try_cast,
         )
-
-    def xs(
-        self, key, axis=0, level=None, drop_level=True
-    ):  # pragma: no cover # noqa: PR01, D200
-        """
-        Return cross-section from the Series/DataFrame.
-        """
-        raise NotImplementedError("Not Yet implemented.")
 
     @property
     def attrs(self):  # noqa: RT01, D200
@@ -2288,6 +2305,12 @@ class Series(BasePandasDataset):
         return self.__constructor__(
             query_compiler=self._query_compiler.to_numeric(**kwargs)
         )
+
+    def _qcut(self, q, **kwargs):  # noqa: PR01, RT01, D200
+        """
+        Quantile-based discretization function.
+        """
+        return self._default_to_pandas(pandas.qcut, q, **kwargs)
 
     def _reduce_dimension(self, query_compiler):
         """

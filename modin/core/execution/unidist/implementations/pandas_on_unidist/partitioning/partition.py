@@ -162,8 +162,9 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         wait([self._data])
 
     # If unidist has not been initialized yet by Modin,
-    # unidist itself handles initialization when calling `unidist.put`.
-    _iloc = unidist.put(PandasDataframePartition._iloc)
+    # unidist itself handles initialization when calling `unidist.put`,
+    # which is called inside of `UnidistWrapper.put`.
+    _iloc = execution_wrapper.put(PandasDataframePartition._iloc)
 
     def mask(self, row_labels, col_labels):
         """
@@ -218,7 +219,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         PandasOnUnidistDataframePartition
             A new ``PandasOnUnidistDataframePartition`` object.
         """
-        return cls(unidist.put(obj), len(obj.index), len(obj.columns))
+        return cls(cls.execution_wrapper.put(obj), len(obj.index), len(obj.columns))
 
     @classmethod
     def preprocess_func(cls, func):
@@ -235,15 +236,22 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         unidist.ObjectRef
             A reference to `func`.
         """
-        return unidist.put(func)
+        return cls.execution_wrapper.put(func)
 
-    def length(self):
+    def length(self, materialize=True):
         """
         Get the length of the object wrapped by this partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or unidist.ObjectRef
             The length of the object.
         """
         if self._length_cache is None:
@@ -254,17 +262,24 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
                     self._length_cache,
                     self._width_cache,
                 ) = _get_index_and_columns_size.remote(self._data)
-        if unidist.is_object_ref(self._length_cache):
+        if unidist.is_object_ref(self._length_cache) and materialize:
             self._length_cache = UnidistWrapper.materialize(self._length_cache)
         return self._length_cache
 
-    def width(self):
+    def width(self, materialize=True):
         """
         Get the width of the object wrapped by the partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or unidist.ObjectRef
             The width of the object.
         """
         if self._width_cache is None:
@@ -275,7 +290,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
                     self._length_cache,
                     self._width_cache,
                 ) = _get_index_and_columns_size.remote(self._data)
-        if unidist.is_object_ref(self._width_cache):
+        if unidist.is_object_ref(self._width_cache) and materialize:
             self._width_cache = UnidistWrapper.materialize(self._width_cache)
         return self._width_cache
 

@@ -158,6 +158,7 @@ class ColumnStoreDataset:
         # Older versions of fsspec doesn't support unstrip_protocol(). It
         # was only added relatively recently:
         # https://github.com/fsspec/filesystem_spec/pull/828
+
         def _unstrip_protocol(protocol, path):
             protos = (protocol,) if isinstance(protocol, str) else protocol
             for protocol in protos:
@@ -215,7 +216,12 @@ class PyArrowDataset(ColumnStoreDataset):
     @property
     def files(self):
         if self._files is None:
-            self._files = self._get_files(self.dataset.files)
+            try:
+                files = self.dataset.files
+            except AttributeError:
+                # compatibility at least with 3.0.0 <= pyarrow < 8.0.0
+                files = self.dataset._dataset.files
+            self._files = self._get_files(files)
         return self._files
 
     def to_pandas_dataframe(
@@ -606,6 +612,13 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
         """
+        if isinstance(path, list):
+            # TODO(https://github.com/modin-project/modin/issues/5723): read all
+            # files in parallel.
+            compilers: list[cls.query_compiler_cls] = [
+                cls._read(p, engine, columns, **kwargs) for p in path
+            ]
+            return compilers[0].concat(axis=0, other=compilers[1:], ignore_index=True)
         if isinstance(path, str):
             if os.path.isdir(path):
                 path_generator = os.walk(path)
@@ -621,7 +634,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             # parquet directories have a unique column at each directory level.
             # Thus, we can use os.walk(), which does a dfs search, to walk
             # through the different columns that the data is partitioned on
-            for (_, dir_names, files) in path_generator:
+            for _, dir_names, files in path_generator:
                 if dir_names:
                     partitioned_columns.add(dir_names[0].split("=")[0])
                 if files:

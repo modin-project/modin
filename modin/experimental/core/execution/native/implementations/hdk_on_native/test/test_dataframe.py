@@ -18,6 +18,8 @@ import pyarrow
 import pytest
 import re
 
+from pandas._testing import ensure_clean
+
 from modin.config import StorageFormat
 from modin.pandas.test.utils import (
     io_ops_bad_exc,
@@ -292,7 +294,6 @@ class TestCSV:
         parse_dates,
         names,
     ):
-
         parse_dates_unsupported = isinstance(parse_dates, dict) or (
             isinstance(parse_dates, list)
             and any(not isinstance(date, str) for date in parse_dates)
@@ -346,6 +347,32 @@ class TestCSV:
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             usecols=usecols,
         )
+
+    @pytest.mark.parametrize(
+        "cols",
+        [
+            "c1,c2,c3",
+            "c1,c1,c2",
+            "c1,c1,c1.1,c1.2,c1",
+            "c1,c1,c1,c1.1,c1.2,c1.3",
+            "c1.1,c1.2,c1.3,c1,c1,c1",
+            "c1.1,c1,c1.2,c1,c1.3,c1",
+            "c1,c1.1,c1,c1.2,c1,c1.3",
+            "c1,c1,c1.1,c1.1,c1.2,c2",
+            "c1,c1,c1.1,c1.1,c1.2,c1.2,c2",
+            "c1.1,c1.1,c1,c1,c1.2,c1.2,c2",
+            "c1.1,c1,c1.1,c1,c1.1,c1.2,c1.2,c2",
+        ],
+    )
+    def test_read_csv_duplicate_cols(self, cols):
+        def test(df, lib, **kwargs):
+            data = f"{cols}\n"
+            with ensure_clean(".csv") as fname:
+                with open(fname, "w") as f:
+                    f.write(data)
+                return lib.read_csv(fname)
+
+        run_and_compare(test, data={})
 
 
 class TestMasks:
@@ -1738,6 +1765,21 @@ class TestBinaryOp:
         run_and_compare(filter_and, data=self.cmp_data)
         run_and_compare(filter_or, data=self.cmp_data)
 
+    def test_string_bin_op(self):
+        def test_bin_op(df, op_name, op_arg, **kwargs):
+            return getattr(df, op_name)(op_arg)
+
+        bin_ops = {
+            "__add__": "_sfx",
+            "__radd__": "pref_",
+            "__mul__": 10,
+        }
+
+        for op, arg in bin_ops.items():
+            run_and_compare(
+                test_bin_op, data={"a": ["a"]}, op_name=op, op_arg=arg, force_lazy=False
+            )
+
 
 class TestDateTime:
     datetime_data = {
@@ -2027,6 +2069,40 @@ class TestBadData:
         with pytest.raises(OverflowError):
             with ForceHdkImport(md_df):
                 pass
+
+    def test_uint_serialization(self):
+        # Tests for CalciteSerializer.serialize_literal()
+        df = pd.DataFrame({"A": [np.nan, 1]})
+        assert (
+            df.fillna(np.uint8(np.iinfo(np.uint8).max)).sum()[0]
+            == np.iinfo(np.uint8).max + 1
+        )
+        assert (
+            df.fillna(np.uint16(np.iinfo(np.uint16).max)).sum()[0]
+            == np.iinfo(np.uint16).max + 1
+        )
+        assert (
+            df.fillna(np.uint32(np.iinfo(np.uint32).max)).sum()[0]
+            == np.iinfo(np.uint32).max + 1
+        )
+        # HDK represents 'uint64' as 'int64' internally due to a lack of support
+        # for unsigned ints, that's why using 'int64.max' here
+        assert (
+            df.fillna(np.uint64(np.iinfo(np.int64).max - 1)).sum()[0]
+            == np.iinfo(np.int64).max
+        )
+
+        # Tests for CalciteSerializer.serialize_dtype()
+        df = pd.DataFrame({"A": [np.iinfo(np.uint8).max, 1]})
+        assert df.astype(np.uint8).sum()[0] == np.iinfo(np.uint8).max + 1
+        df = pd.DataFrame({"A": [np.iinfo(np.uint16).max, 1]})
+        assert df.astype(np.uint16).sum()[0] == np.iinfo(np.uint16).max + 1
+        df = pd.DataFrame({"A": [np.iinfo(np.uint32).max, 1]})
+        assert df.astype(np.uint32).sum()[0] == np.iinfo(np.uint32).max + 1
+        # HDK represents 'uint64' as 'int64' internally due to a lack of support
+        # for unsigned ints, that's why using 'int64.max' here
+        df = pd.DataFrame({"A": [np.iinfo(np.int64).max - 1, 1]})
+        assert df.astype(np.uint64).sum()[0] == np.iinfo(np.int64).max
 
 
 class TestDropna:

@@ -211,7 +211,7 @@ class PandasParser(ClassLogger):
         ]
 
     @classmethod
-    def get_dtypes(cls, dtypes_ids):
+    def get_dtypes(cls, dtypes_ids, columns):
         """
         Get common for all partitions dtype for each of the columns.
 
@@ -219,14 +219,19 @@ class PandasParser(ClassLogger):
         ----------
         dtypes_ids : list
             Array with references to the partitions dtypes objects.
+        columns : array-like or Index (1d)
+            The names of the columns in this variable will be used
+            for dtypes creation.
 
         Returns
         -------
-        frame_dtypes : pandas.Series or dtype
+        frame_dtypes : pandas.Series, dtype or None
             Resulting dtype or pandas.Series where column names are used as
             index and types of columns are used as values for full resulting
             frame.
         """
+        if len(dtypes_ids) == 0:
+            return None
         # each element in `partitions_dtypes` is a Series, where column names are
         # used as index and types of columns for different partitions are used as values
         partitions_dtypes = cls.materialize(dtypes_ids)
@@ -250,6 +255,12 @@ class PandasParser(ClassLogger):
                 lambda row: find_common_type_cat(row.values),
                 axis=1,
             ).squeeze(axis=0)
+
+        # Set the index for the dtypes to the column names
+        if isinstance(frame_dtypes, pandas.Series):
+            frame_dtypes.index = columns
+        else:
+            frame_dtypes = pandas.Series(frame_dtypes, index=columns)
 
         return frame_dtypes
 
@@ -302,7 +313,27 @@ class PandasCSVParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
+        kwargs["callback"] = PandasCSVParser.read_callback
         return PandasParser.generic_parse(fname, **kwargs)
+
+    @staticmethod
+    def read_callback(*args, **kwargs):
+        """
+        Parse data on each partition.
+
+        Parameters
+        ----------
+        *args : list
+            Positional arguments to be passed to the callback function.
+        **kwargs : dict
+            Keyword arguments to be passed to the callback function.
+
+        Returns
+        -------
+        pandas.DataFrame or pandas.io.parsers.TextParser
+            Function call result.
+        """
+        return pandas.read_csv(*args, **kwargs)
 
 
 @doc(_doc_pandas_parser_class, data_type="multiple CSV files simultaneously")
@@ -401,7 +432,27 @@ class PandasFWFParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
+        kwargs["callback"] = PandasFWFParser.read_callback
         return PandasParser.generic_parse(fname, **kwargs)
+
+    @staticmethod
+    def read_callback(*args, **kwargs):
+        """
+        Parse data on each partition.
+
+        Parameters
+        ----------
+        *args : list
+            Positional arguments to be passed to the callback function.
+        **kwargs : dict
+            Keyword arguments to be passed to the callback function.
+
+        Returns
+        -------
+        pandas.DataFrame or pandas.io.parsers.TextFileReader
+            Function call result.
+        """
+        return pandas.read_fwf(*args, **kwargs)
 
 
 @doc(_doc_pandas_parser_class, data_type="excel files")
@@ -585,7 +636,11 @@ class PandasExcelParser(PandasParser):
             **kwargs,
         )
         pandas_df = parser.read()
-        if len(pandas_df) > 1 and pandas_df.isnull().all().all():
+        if (
+            len(pandas_df) > 1
+            and len(pandas_df.columns) != 0
+            and pandas_df.isnull().all().all()
+        ):
             # Drop NaN rows at the end of the DataFrame
             pandas_df = pandas.DataFrame(columns=pandas_df.columns)
 
@@ -786,7 +841,6 @@ read_sql_engine : str
     Underlying engine ('pandas' or 'connectorx') used for fetching query result.""",
     )
     def parse(sql, con, index_col, read_sql_engine, **kwargs):
-
         enable_cx = False
         if read_sql_engine == "Connectorx":
             try:

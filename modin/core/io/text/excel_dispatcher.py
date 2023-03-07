@@ -153,7 +153,7 @@ class ExcelDispatcher(TextFileDispatcher):
             if index_col is not None:
                 column_names = column_names.drop(column_names[index_col])
 
-            if not all(column_names):
+            if not all(column_names) or kwargs.get("usecols"):
                 # some column names are empty, use pandas reader to take the names from it
                 pandas_kw["nrows"] = 1
                 df = pandas.read_excel(io, **pandas_kw)
@@ -221,18 +221,14 @@ class ExcelDispatcher(TextFileDispatcher):
             row_lengths = [len(o) for o in index_objs]
             new_index = index_objs[0].append(index_objs[1:])
 
+        data_ids = cls.build_partition(data_ids, row_lengths, column_widths)
+
         # Compute dtypes by getting collecting and combining all of the partitions. The
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column. The index is set below.
-        dtypes = cls.get_dtypes(dtypes_ids)
+        dtypes = cls.get_dtypes(dtypes_ids, column_names)
 
-        data_ids = cls.build_partition(data_ids, row_lengths, column_widths)
-        # Set the index for the dtypes to the column names
-        if isinstance(dtypes, pandas.Series):
-            dtypes.index = column_names
-        else:
-            dtypes = pandas.Series(dtypes, index=column_names)
         new_frame = cls.frame_cls(
             data_ids,
             new_index,

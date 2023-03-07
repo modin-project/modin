@@ -56,7 +56,9 @@ def _get_common_dtype(lhs_dtype, rhs_dtype):
         return get_dtype(float)
     if is_integer_dtype(lhs_dtype) and is_integer_dtype(rhs_dtype):
         return get_dtype(int)
-    raise TypeError(f"Cannot perform operation on types: {lhs_dtype}, {rhs_dtype}")
+    raise NotImplementedError(
+        f"Cannot perform operation on types: {lhs_dtype}, {rhs_dtype}"
+    )
 
 
 _aggs_preserving_numeric_type = {"sum", "min", "max"}
@@ -669,7 +671,21 @@ class LiteralExpr(BaseExpr):
 
     def __init__(self, val):
         assert val is None or isinstance(
-            val, (int, float, bool, str, np.int8, np.int16, np.int32, np.int64)
+            val,
+            (
+                int,
+                float,
+                bool,
+                str,
+                np.int8,
+                np.int16,
+                np.int32,
+                np.int64,
+                np.uint8,
+                np.uint16,
+                np.uint32,
+                np.uint64,
+            ),
         ), f"unsupported literal value {val} of type {type(val)}"
         self.val = val
         if val is None:

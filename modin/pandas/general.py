@@ -271,6 +271,25 @@ def to_numeric(arg, errors="raise", downcast=None):  # noqa: PR01, RT01, D200
     return arg._to_numeric(errors=errors, downcast=downcast)
 
 
+@_inherit_docstrings(pandas.qcut, apilink="pandas.qcut")
+@enable_logging
+def qcut(
+    x, q, labels=None, retbins=False, precision=3, duplicates="raise"
+):  # noqa: PR01, RT01, D200
+    """
+    Quantile-based discretization function.
+    """
+    kwargs = {
+        "labels": labels,
+        "retbins": retbins,
+        "precision": precision,
+        "duplicates": duplicates,
+    }
+    if not isinstance(x, Series):
+        return pandas.qcut(x, q, **kwargs)
+    return x._qcut(q, **kwargs)
+
+
 @_inherit_docstrings(pandas.unique, apilink="pandas.unique")
 @enable_logging
 def unique(values):  # noqa: PR01, RT01, D200
@@ -342,13 +361,13 @@ def concat(
         )
     axis = pandas.DataFrame()._get_axis_number(axis)
     if isinstance(objs, dict):
-        list_of_objs = list(objs.values())
+        input_list_of_objs = list(objs.values())
     else:
-        list_of_objs = list(objs)
-    if len(list_of_objs) == 0:
+        input_list_of_objs = list(objs)
+    if len(input_list_of_objs) == 0:
         raise ValueError("No objects to concatenate")
 
-    list_of_objs = [obj for obj in list_of_objs if obj is not None]
+    list_of_objs = [obj for obj in input_list_of_objs if obj is not None]
 
     if len(list_of_objs) == 0:
         raise ValueError("All objects passed were None")
@@ -385,7 +404,18 @@ def concat(
                 sort=sort,
             )
         )
-    if join not in ["inner", "outer"]:
+    if join == "outer":
+        # Filter out empties
+        list_of_objs = [
+            obj
+            for obj in list_of_objs
+            if (
+                isinstance(obj, (Series, pandas.Series))
+                or (isinstance(obj, DataFrame) and obj._query_compiler.lazy_execution)
+                or sum(obj.shape) > 0
+            )
+        ]
+    elif join != "inner":
         raise ValueError(
             "Only can inner (intersect) or outer (union) join the other axis"
         )
@@ -393,18 +423,12 @@ def concat(
     # dataframe to a series on axis=0, pandas ignores the name of the series,
     # and this check aims to mirror that (possibly buggy) functionality
     list_of_objs = [
-        obj
-        if isinstance(obj, DataFrame)
-        else DataFrame(obj.rename())
-        if isinstance(obj, (pandas.Series, Series)) and axis == 0
-        else DataFrame(obj)
-        for obj in list_of_objs
-    ]
-    list_of_objs = [
         obj._query_compiler
+        if isinstance(obj, DataFrame)
+        else DataFrame(obj.rename())._query_compiler
+        if isinstance(obj, (pandas.Series, Series)) and axis == 0
+        else DataFrame(obj)._query_compiler
         for obj in list_of_objs
-        if (not obj._query_compiler.lazy_execution and len(obj.index))
-        or len(obj.columns)
     ]
     if keys is not None:
         if all_series:
@@ -435,6 +459,14 @@ def concat(
         ).index
     else:
         new_idx = None
+
+    if len(list_of_objs) == 0:
+        return DataFrame(
+            index=input_list_of_objs[0].index.append(
+                [f.index for f in input_list_of_objs[1:]]
+            )
+        )
+
     new_query_compiler = list_of_objs[0].concat(
         axis,
         list_of_objs[1:],
