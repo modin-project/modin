@@ -351,8 +351,14 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         return self._width_cache
 
     @property
-    def _identity(self):  # noqa: RT01
-        """Identifier calculation on request for debug logging mode."""
+    def _identity(self):
+        """
+        Calculate identifier on request for debug logging mode.
+
+        Returns
+        -------
+        str
+        """
         if self._identity_cache is None:
             self._identity_cache = uuid.uuid4().hex
         return self._identity_cache
@@ -398,7 +404,22 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         return cls.put(pandas.DataFrame(), 0, 0)
 
-    def _is_debug(self, logger=None):  # noqa: GL08
+    def _is_debug(self, logger=None):
+        """
+        Check that the logger is set to debug mode.
+
+        Parameters
+        ----------
+        logger : logging.logger, optional
+            Logger obtained from Modin's `get_logger` utility.
+            Explicit transmission of this parameter can be used in the case
+            when within the context of `_is_debug` call there was already
+            `get_logger` call. This is an optimization.
+
+        Returns
+        -------
+        bool
+        """
         if logger is None:
             logger = get_logger()
         return logger.isEnabledFor(logging.DEBUG)
