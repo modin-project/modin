@@ -397,3 +397,10 @@ def amin(x1, axis=None, out=None, keepdims=None, initial=None, where=True):
 
 
 min = amin
+
+def sqrt(x, out=None, *, where=True, casting='same_kind', order='K', dtype=None, subok=True):
+    x = try_convert_from_interoperable_type(x)
+    if not isinstance(x, array):
+        ErrorMessage.bad_type_for_numpy_op("sqrt", type(x))
+        return numpy.sqrt(x, out, where, casting, order, dtype, subok)
+    return x.power(0.5, out, where, casting, order, dtype, subok)

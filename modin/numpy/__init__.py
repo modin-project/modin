@@ -70,6 +70,11 @@ from .math import (
     minimum,
     amin,
     min,
+    sqrt,
+)
+
+from .trigonometry import (
+    tanh,
 )
 
 from .constants import (
@@ -168,4 +173,6 @@ __all__ = [  # noqa: F405
     "nan",
     "newaxis",
     "pi",
+    "sqrt",
+    "tanh",
 ]
