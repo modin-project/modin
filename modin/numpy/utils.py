@@ -15,6 +15,7 @@
 
 import modin.pandas as pd
 import modin.numpy as np
+from modin.config import StorageFormat
 
 _INTEROPERABLE_TYPES = (pd.DataFrame, pd.Series)
 

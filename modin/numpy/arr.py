@@ -15,6 +15,7 @@
 
 from math import prod
 import numpy
+import pandas
 from pandas.core.dtypes.common import is_list_like, is_numeric_dtype, is_bool_dtype
 from pandas.api.types import is_scalar
 from inspect import signature
@@ -26,6 +27,7 @@ from modin.core.dataframe.algebra import (
     Reduce,
     Binary,
 )
+from modin.config import StorageFormat
 
 from .utils import try_convert_from_interoperable_type
 
@@ -100,17 +102,6 @@ def fix_dtypes_and_determine_return(
     return result
 
 
-def find_common_dtype(dtypes):
-    if len(dtypes) == 1:
-        return dtypes[0]
-    elif len(dtypes) == 2:
-        return numpy.promote_types(*dtypes)
-    midpoint = len(dtypes) // 2
-    return numpy.promote_types(
-        find_common_dtype(dtypes[:midpoint]), find_common_dtype(dtypes[midpoint:])
-    )
-
-
 class array(object):
     """
     Modin distributed representation of ``numpy.array``.
@@ -154,8 +145,8 @@ class array(object):
         if _query_compiler is not None:
             self._query_compiler = _query_compiler
             self._ndim = _ndim
-            new_dtype = find_common_dtype(
-                numpy.unique(self._query_compiler.dtypes.values)
+            new_dtype = pandas.core.dtypes.cast.find_common_type(
+                list(self._query_compiler.dtypes.values)
             )
         elif is_list_like(object) and not is_list_like(object[0]):
             series = pd.Series(object)
@@ -189,17 +180,23 @@ class array(object):
 
             self._query_compiler = pd.DataFrame(arr)._query_compiler
             new_dtype = arr.dtype
-        # These two lines are necessary so that our query compiler does not keep track of indices
-        # and try to map like indices to like indices. (e.g. if we multiply two arrays that used
-        # to be dataframes, and the dataframes had the same column names but ordered differently
-        # we want to do a simple broadcast where we only consider position, as numpy would, rather
-        # than pair columns with the same name and multiply them.)
-        self._query_compiler = self._query_compiler.reset_index(drop=True)
-        self._query_compiler.columns = range(len(self._query_compiler.columns))
+        if StorageFormat.get() == "Pandas":
+            # These two lines are necessary so that our query compiler does not keep track of indices
+            # and try to map like indices to like indices. (e.g. if we multiply two arrays that used
+            # to be dataframes, and the dataframes had the same column names but ordered differently
+            # we want to do a simple broadcast where we only consider position, as numpy would, rather
+            # than pair columns with the same name and multiply them.)
+            self._query_compiler = self._query_compiler.reset_index(drop=True)
+            self._query_compiler.columns = range(len(self._query_compiler.columns))
         new_dtype = new_dtype if dtype is None else dtype
-        self._query_compiler = self._query_compiler.astype(
-            {col_name: new_dtype for col_name in self._query_compiler.columns}
-        )
+        cols_with_wrong_dtype = self._query_compiler.dtypes != new_dtype
+        if cols_with_wrong_dtype.any():
+            self._query_compiler = self._query_compiler.astype(
+                {
+                    col_name: new_dtype
+                    for col_name in self._query_compiler.columns[cols_with_wrong_dtype]
+                }
+            )
 
     def _add_sibling(self, sibling):
         """
@@ -998,7 +995,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -1048,7 +1045,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -1097,7 +1094,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -1141,7 +1138,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -1206,7 +1203,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -1351,7 +1348,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -1406,7 +1403,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -1463,7 +1460,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -1512,7 +1509,7 @@ class array(object):
         operand_dtype = (
             self.dtype
             if not isinstance(x2, array)
-            else find_common_dtype([self.dtype, x2.dtype])
+            else pandas.core.dtypes.cast.find_common_type([self.dtype, x2.dtype])
         )
         out_dtype = (
             dtype
@@ -1971,7 +1968,14 @@ class array(object):
         if self._ndim == 1:
             return dtype[0]
         else:
-            return find_common_dtype(dtype.values)
+            return pandas.core.dtypes.cast.find_common_type(list(dtype.values))
+
+    @property
+    def size(self):
+        return prod(self.shape)
+
+    def __len__(self):
+        return self.shape[0]
 
     def astype(self, dtype, order="K", casting="unsafe", subok=True, copy=True):
         if casting != "unsafe":
@@ -1986,8 +1990,50 @@ class array(object):
             return self
         return array(_query_compiler=result, _ndim=self._ndim)
 
+    def _build_repr_array(self):
+        def _generate_indices_for_axis(
+            axis_size, num_elements=numpy.get_printoptions()["edgeitems"]
+        ):
+            if axis_size > num_elements * 2:
+                return list(range(num_elements + 1)) + list(
+                    range(axis_size - num_elements, axis_size)
+                )
+            return list(range(axis_size))
+
+        # We want to rely on NumPy for creating a string representation of this array; however
+        # we also don't want to materialize all of the data to the head node. Instead, we will
+        # materialize enough data that NumPy can build the summarized representation of the array
+        # (while changing with the NumPy print options so it will format this smaller array as
+        # abridged) and return this smaller array. In the worst case, this array will have
+        # (2*numpy.get_printoptions()["edgeitems"] + 1)^2 items, so 49 items max for the default
+        # value of 3.
+        if self._ndim == 1 or self.shape[1] == 0:
+            idxs = _generate_indices_for_axis(len(self))
+            arr = self._query_compiler.getitem_row_array(idxs).to_numpy()
+            if self._ndim == 1:
+                arr = arr.flatten()
+        elif self.shape[0] == 1:
+            idxs = _generate_indices_for_axis(self.shape[1])
+            arr = self._query_compiler.getitem_column_array(idxs).to_numpy()
+        else:
+            row_idxs = _generate_indices_for_axis(len(self))
+            col_idxs = _generate_indices_for_axis(self.shape[1])
+            arr = self._query_compiler.take_2d_positional(row_idxs, col_idxs).to_numpy()
+        return arr
+
     def __repr__(self):
-        return repr(self._to_numpy())
+        # If we are dealing with a small array, we can just collate all the data on the
+        # head node and let numpy handle the logic to get a string representation.
+        if self.size <= numpy.get_printoptions()["threshold"]:
+            return repr(self._to_numpy())
+        arr = self._build_repr_array()
+        prev_threshold = numpy.get_printoptions()["threshold"]
+        numpy.set_printoptions(threshold=arr.size - 1)
+        try:
+            repr_str = repr(arr)
+        finally:
+            numpy.set_printoptions(threshold=prev_threshold)
+        return repr_str
 
     def _to_numpy(self):
         arr = self._query_compiler.to_numpy()
