@@ -1416,9 +1416,11 @@ class array(object):
         elif self._ndim == 2 and other._ndim == 1:
             result = self._query_compiler.dot(other._query_compiler)
             result_ndim = 1
-        if out is not None:
-            out._update_inplace(result)
-        return array(_query_compiler=result, _ndim=result_ndim)
+        return fix_dtypes_and_determine_return(
+            result,
+            result_ndim,
+            out=out,
+        )
 
     def __matmul__(self, other):
         if numpy.isscalar(other):
@@ -1433,11 +1435,12 @@ class array(object):
         if ord is not None and ord not in ("fro",):  # , numpy.inf, -numpy.inf, 0):
             raise NotImplementedError("unsupported ord argument for norm:", ord)
         if isinstance(axis, int) and axis < 0:
-            axis = self._ndim + axis
-        apply_axis = axis or 0
+            apply_axis = self._ndim + axis
+        else:
+            apply_axis = axis or 0
         if apply_axis >= self._ndim or apply_axis < 0:
-            raise numpy.AxisError(apply_axis, self._ndim)
-        result = self._query_compiler.applymap(lambda x: x**2)
+            raise numpy.AxisError(axis, self._ndim)
+        result = self._query_compiler.pow(2)
         if self._ndim == 2:
             result = result.sum(axis=apply_axis)
             if axis is None:
@@ -1448,7 +1451,7 @@ class array(object):
             # Return a scalar
             return result.pow(0.5).to_numpy()[0, 0]
         else:
-            result = result.applymap(lambda x: x**0.5)
+            result = result.pow(0.5)
             # the DF may be transposed after processing through pandas
             # check query compiler shape to ensure this is a row vector (1xN) not column (Nx1)
             if len(result.index) != 1:
