@@ -198,18 +198,22 @@ class array(object):
                 }
             )
         self.indexer = None
-    
+
     def __getitem__(self, key):
         if isinstance(key, array) and is_bool_dtype(key.dtype) and key._ndim == 2:
-            raise NotImplementedError("Advanced indexing with 2D boolean indexes is not currently supported.")
+            raise NotImplementedError(
+                "Advanced indexing with 2D boolean indexes is not currently supported."
+            )
         if self.indexer is None:
             from .indexing import ArrayIndexer
+
             self.indexer = ArrayIndexer(self)
         return self.indexer.__getitem__(key)
 
     def __setitem__(self, key, item):
         if self.indexer is None:
             from .indexing import ArrayIndexer
+
             self.indexer = ArrayIndexer(self)
         return self.indexer.__setitem__(key, item)
 
@@ -963,7 +967,9 @@ class array(object):
             if is_list_like(values):
                 lengths = [len(a) if is_list_like(a) else None for a in values]
                 if any(numpy.array(lengths[1:]) != lengths[0]):
-                    raise ValueError("setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (2,) + inhomogeneous part.")
+                    raise ValueError(
+                        "setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (2,) + inhomogeneous part."
+                    )
             values = array(values)
         if axis is None:
             return self.flatten().hstack([values.flatten()])

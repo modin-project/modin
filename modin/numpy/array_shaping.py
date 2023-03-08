@@ -51,12 +51,14 @@ def transpose(a, axes=None):
         )
     return a.transpose()
 
+
 def split(arr, indices, axis=0):
     arr = try_convert_from_interoperable_type(arr)
-    if not isinstanc(arr, array):
+    if not isinstance(arr, array):
         ErrorMessage.bad_type_for_numpy_op("split", type(arr))
         return numpy.split(arr, indices, axis=axis)
     return arr.split(indices, axis)
+
 
 def hstack(tup, dtype=None, casting="same_kind"):
     a = try_convert_from_interoperable_type(tup[0])

@@ -39,6 +39,7 @@ from modin.error_message import ErrorMessage
 
 from .arr import array
 from modin.pandas.utils import is_scalar
+from modin.pandas.indexing import compute_sliced_len, is_tuple, is_slice, is_range_like
 
 
 def broadcast_item(
@@ -81,7 +82,6 @@ def broadcast_item(
     -----
     NumPy is memory efficient, there shouldn't be performance issue.
     """
-
     new_row_len = (
         len(obj._query_compiler.index[row_lookup])
         if isinstance(row_lookup, slice)
@@ -128,77 +128,6 @@ def broadcast_item(
             f"could not broadcast input array from shape {from_shape} into shape "
             + f"{to_shape}"
         )
-
-
-def is_slice(x):
-    """
-    Check that argument is an instance of slice.
-
-    Parameters
-    ----------
-    x : object
-        Object to check.
-
-    Returns
-    -------
-    bool
-        True if argument is a slice, False otherwise.
-    """
-    return isinstance(x, slice)
-
-
-def compute_sliced_len(slc, sequence_len):
-    """
-    Compute length of sliced object.
-
-    Parameters
-    ----------
-    slc : slice
-        Slice object.
-    sequence_len : int
-        Length of sequence, to which slice will be applied.
-
-    Returns
-    -------
-    int
-        Length of object after applying slice object on it.
-    """
-    # This will translate slice to a range, from which we can retrieve length
-    return len(range(*slc.indices(sequence_len)))
-
-
-def is_2d(x):
-    """
-    Check that argument is a list or a slice.
-
-    Parameters
-    ----------
-    x : object
-        Object to check.
-
-    Returns
-    -------
-    bool
-        `True` if argument is a list or slice, `False` otherwise.
-    """
-    return is_list_like(x) or is_slice(x)
-
-
-def is_tuple(x):
-    """
-    Check that argument is a tuple.
-
-    Parameters
-    ----------
-    x : object
-        Object to check.
-
-    Returns
-    -------
-    bool
-        True if argument is a tuple, False otherwise.
-    """
-    return isinstance(x, tuple)
 
 
 def is_boolean_array(x):
@@ -259,30 +188,6 @@ def is_integer_slice(x):
         if not ((pos is None) or is_integer(pos)):
             return False  # one position is neither None nor int
     return True
-
-
-def is_range_like(obj):
-    """
-    Check if the object is range-like.
-
-    Objects that are considered range-like have information about the range (start and
-    stop positions, and step) and also have to be iterable. Examples of range-like
-    objects are: Python range, pandas.RangeIndex.
-
-    Parameters
-    ----------
-    obj : object
-
-    Returns
-    -------
-    bool
-    """
-    return (
-        hasattr(obj, "__iter__")
-        and hasattr(obj, "start")
-        and hasattr(obj, "stop")
-        and hasattr(obj, "step")
-    )
 
 
 def boolean_mask_to_numeric(indexer):
@@ -564,7 +469,7 @@ class ArrayIndexer(object):
         else:
             axis = None
         return axis
-    
+
     def _write_items(self, row_lookup, col_lookup, item):
         """
         Perform remote write and replace blocks.
@@ -579,7 +484,7 @@ class ArrayIndexer(object):
             The new item value that needs to be assigned to `self`.
         """
         new_qc = self.arr._query_compiler.write_items(row_lookup, col_lookup, item)
-        self.arr.update_inplace(new_qc)
+        self.arr._update_inplace(new_qc)
 
     def _setitem_positional(self, row_lookup, col_lookup, item, axis=None):
         """
@@ -703,9 +608,9 @@ class ArrayIndexer(object):
                 if isinstance(axis_loc, np.ndarray) and not (axis_loc < 0).any():
                     axis_lookup = axis_loc
                 else:
-                    axis_lookup = pandas.RangeIndex(len(self.arr._query_compiler.get_axis(axis)))[
-                        axis_loc
-                    ]
+                    axis_lookup = pandas.RangeIndex(
+                        len(self.arr._query_compiler.get_axis(axis))
+                    )[axis_loc]
 
             if isinstance(axis_lookup, pandas.Index) and not is_range_like(axis_lookup):
                 axis_lookup = axis_lookup.values

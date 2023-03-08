@@ -114,6 +114,7 @@ def where(condition, x=None, y=None):
         f"np.where for condition of type {type(condition)} is not yet supported in Modin."
     )
 
+
 __all__ = [  # noqa: F405
     "array",
     "zeros_like",
@@ -186,4 +187,6 @@ __all__ = [  # noqa: F405
     "argmin",
     "var",
     "split",
+    "hstack",
+    "append",
 ]
