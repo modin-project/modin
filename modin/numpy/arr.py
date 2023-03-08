@@ -900,6 +900,21 @@ class array(object):
             subok=subok,
         )
 
+    def hstack(self, others, dtype=None, casting='same_kind'):
+        check_kwargs(casting=casting)
+        new_dtype = dtype if dtype is not None else pandas.core.dtypes.cast.find_common_type([self.dtype] + [a.dtype for a in others])
+        for index, i in enumerate([a._ndim for a in others]):
+            if i != self._ndim:
+                raise ValueError(f"all the input arrays must have same number of dimensions, but the array at index 0 has {self._ndim} dimension(s) and the array at index {index} has {i} dimension(s)")
+        if self._ndim == 1:
+            new_qc = self._query_compiler.concat(0, [o._query_compiler for o in others])
+        else:
+            for index, i in enumerate([a.shape[0] for a in others]):
+                if i != self.shape[0]:
+                    raise ValueError(f"all the input array dimensions except for the concatenation axis must match exactly, but along dimension 0, the array at index 0 has size {self.shape[0]} and the array at index {index} has size {i}")
+            new_qc = self._query_compiler.concat(1, [o._query_compiler for o in others])
+        return array(_query_compiler=new_qc, _ndim=self._ndim, dtype=new_dtype)
+
     def split(self, indices, axis=0):
         if axis is not None and axis < 0:
             new_axis = axis + self._ndim

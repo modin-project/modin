@@ -115,6 +115,9 @@ def where(condition, x=None, y=None):
 def split(arr, indices, axis=0):
     return arr.split(indices, axis)
 
+def hstack(tup, dtype=None, casting='same_kind'):
+    return tup[0].hstack(tup[1:], dtype, casting)
+
 
 __all__ = [  # noqa: F405
     "array",
