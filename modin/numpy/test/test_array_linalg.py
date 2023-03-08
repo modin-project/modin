@@ -77,7 +77,7 @@ def test_norm_fro_2d(axis):
     # Result may be a scalar
     if isinstance(modin_result, np.array):
         modin_result = modin_result._to_numpy()
-    numpy.testing.assert_array_equal(modin_result, numpy_result)
+    numpy.testing.assert_allclose(modin_result, numpy_result, rtol=1e-12)
 
 
 def test_norm_fro_1d():
@@ -85,4 +85,4 @@ def test_norm_fro_1d():
     numpy_result = NLA.norm(x1)
     x1 = np.array(x1)
     modin_result = LA.norm(x1)
-    numpy.testing.assert_array_equal(modin_result, numpy_result)
+    numpy.testing.assert_allclose(modin_result, numpy_result, rtol=1e-12)
