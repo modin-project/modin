@@ -900,6 +900,19 @@ class array(object):
             subok=subok,
         )
 
+    def append(self, values, axis=None):
+        if axis is None:
+            return self.flatten().hstack([values.flatten()])
+        elif self._ndim == 1:
+            if values._ndim == 1:
+                return self.hstack([values])
+            raise ValueError(f"all the input arrays must have same number of dimensions, but the array at index 0 has 1 dimension(s) and the array at index 1 has {values._ndim} dimension(s)")
+        if self.shape[axis^1] != values.shape[axis^1]:
+            raise ValueError(f"all the input array dimensions except for the concatenation axis must match exactly, but along dimension {axis ^ 1}, the array at index 0 has size {self.shape[axis^1]} and the array at index 1 has size {values.shape[axis^1]}")
+        new_qc = self._query_compiler.concat(axis, values._query_compiler)
+        return array(_query_compiler=new_qc, _ndim=self._ndim)
+
+
     def hstack(self, others, dtype=None, casting='same_kind'):
         check_kwargs(casting=casting)
         new_dtype = dtype if dtype is not None else pandas.core.dtypes.cast.find_common_type([self.dtype] + [a.dtype for a in others])

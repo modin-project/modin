@@ -118,6 +118,9 @@ def split(arr, indices, axis=0):
 def hstack(tup, dtype=None, casting='same_kind'):
     return tup[0].hstack(tup[1:], dtype, casting)
 
+def append(arr, values, axis=None):
+    return arr.append(values, axis)
+
 
 __all__ = [  # noqa: F405
     "array",
