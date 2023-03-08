@@ -1493,7 +1493,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         dtypes=np.bool_,
     )
     _logical_not = Map.register(np.logical_not, dtypes=np.bool_)  # Needed for numpy API
-    tanh = Map.register(
+    _tanh = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(np.tanh(df, *args, **kwargs))
     )  # Needed for numpy API
     negative = Map.register(pandas.DataFrame.__neg__)

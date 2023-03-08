@@ -22,6 +22,9 @@ from .array_shaping import (
     ravel,
     shape,
     transpose,
+    hstack,
+    split,
+    append,
 )
 
 from .logic import (
@@ -110,19 +113,6 @@ def where(condition, x=None, y=None):
     raise NotImplementedError(
         f"np.where for condition of type {type(condition)} is not yet supported in Modin."
     )
-
-
-def split(arr, indices, axis=0):
-    return arr.split(indices, axis)
-
-
-def hstack(tup, dtype=None, casting="same_kind"):
-    return tup[0].hstack(tup[1:], dtype, casting)
-
-
-def append(arr, values, axis=None):
-    return arr.append(values, axis)
-
 
 __all__ = [  # noqa: F405
     "array",
