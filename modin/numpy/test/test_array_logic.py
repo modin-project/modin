@@ -78,9 +78,9 @@ def test_all_any_where():
 
     # Results should contain vacuous Falses in the relevant shape
     result = arr.any(where=False, axis=1)
-    numpy.testing.assert_array_equal(result, numpy.array([False]))
+    numpy.testing.assert_array_equal(result, numpy.array([False, False]))
     result = arr.any(where=False, axis=0)
-    numpy.testing.assert_array_equal(result, numpy.array([False]))
+    numpy.testing.assert_array_equal(result, numpy.array([False, False]))
     assert not bool(arr.any(where=False, axis=None))
 
 
