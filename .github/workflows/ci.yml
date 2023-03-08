@@ -633,6 +633,7 @@ jobs:
       - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_arithmetic.py
       - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_axis_functions.py
       - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_logic.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_linalg.py
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_io.py --verbose
@@ -728,6 +729,7 @@ jobs:
       - run: python -m pytest -n 2 modin/numpy/test/test_array_arithmetic.py
       - run: python -m pytest -n 2 modin/numpy/test/test_array_axis_functions.py
       - run: python -m pytest -n 2 modin/numpy/test/test_array_logic.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_linalg.py
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
@@ -862,6 +864,7 @@ jobs:
           - modin/numpy/test/test_array_axis_functions.py
           - modin/numpy/test/test_array_arithmetic.py
           - modin/numpy/test/test_array_logic.py
+          - modin/numpy/test/test_array_linalg.py
     env:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-windows
