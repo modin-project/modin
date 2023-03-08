@@ -1218,7 +1218,7 @@ class array(object):
         else:
             result = self._query_compiler.astype(
                 {col_name: out_dtype for col_name in self._query_compiler.columns}
-            ).var(axis=axis, skipna=False)
+            ).var(axis=axis, skipna=False, ddof=ddof)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
             return result.to_numpy()[0, 0] if truthy_where else numpy.nan
@@ -2260,7 +2260,7 @@ class array(object):
                 na_row_map = self._query_compiler.isna().any(axis=1)
                 result = na_row_map.idxmax().to_numpy()[0, 0]
             else:
-                result = self._query_compiler.idxmax(axis=0)
+                result = self._query_compiler.idxmax(axis=1)
             if keepdims:
                 if out is not None and out.shape != (1,):
                     raise ValueError(

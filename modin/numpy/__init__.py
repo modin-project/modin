@@ -16,6 +16,7 @@ from .arr import array
 from .array_creation import (
     zeros_like,
     ones_like,
+    tri,
 )
 
 from .array_shaping import (
@@ -194,4 +195,5 @@ __all__ = [  # noqa: F405
     "split",
     "hstack",
     "append",
+    "tri",
 ]

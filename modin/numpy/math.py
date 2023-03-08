@@ -423,7 +423,15 @@ def sqrt(
     x = try_convert_from_interoperable_type(x)
     if not isinstance(x, array):
         ErrorMessage.bad_type_for_numpy_op("sqrt", type(x))
-        return numpy.sqrt(x, out, where, casting, order, dtype, subok)
+        return numpy.sqrt(
+            x,
+            out=out,
+            where=where,
+            casting=casting,
+            order=order,
+            dtype=dtype,
+            subok=subok,
+        )
     return x.power(0.5, out, where, casting, order, dtype, subok)
 
 
@@ -433,7 +441,15 @@ def exp(
     x = try_convert_from_interoperable_type(x)
     if not isinstance(x, array):
         ErrorMessage.bad_type_for_numpy_op("exp", type(x))
-        return numpy.exp(x, out, where, casting, order, dtype, subok)
+        return numpy.exp(
+            x,
+            out=out,
+            where=where,
+            casting=casting,
+            order=order,
+            dtype=dtype,
+            subok=subok,
+        )
     return x.exp(out, where, casting, order, dtype, subok)
 
 
