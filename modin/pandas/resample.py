@@ -138,8 +138,11 @@ class Resampler(ClassLogger):
         )
 
     def get_group(self, name, obj=None):
-        group = self.__groups.get_group(name)
-        return group if self.axis == 0 else group.T
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_get_group(
+                self.resample_kwargs, name, obj
+            )
+        )
 
     def apply(self, func, *args, **kwargs):
         from .dataframe import DataFrame
