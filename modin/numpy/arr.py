@@ -1417,7 +1417,7 @@ class array(object):
             result = self._query_compiler.dot(other._query_compiler)
             result_ndim = 1
         if out is not None:
-            out._query_compiler = result
+            out._update_inplace(result)
         return array(_query_compiler=result, _ndim=result_ndim)
 
     def __matmul__(self, other):
