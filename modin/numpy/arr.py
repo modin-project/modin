@@ -1432,7 +1432,7 @@ class array(object):
         check_kwargs(keepdims=keepdims)
         if ord is not None and ord not in ("fro",):  # , numpy.inf, -numpy.inf, 0):
             raise NotImplementedError("unsupported ord argument for norm:", ord)
-        if axis < 0:
+        if isinstance(axis, int) and axis < 0:
             axis = self._ndim + axis
         apply_axis = axis or 0
         if apply_axis >= self._ndim or apply_axis < 0:
