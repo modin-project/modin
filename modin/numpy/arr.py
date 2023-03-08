@@ -906,25 +906,38 @@ class array(object):
         elif self._ndim == 1:
             if values._ndim == 1:
                 return self.hstack([values])
-            raise ValueError(f"all the input arrays must have same number of dimensions, but the array at index 0 has 1 dimension(s) and the array at index 1 has {values._ndim} dimension(s)")
-        if self.shape[axis^1] != values.shape[axis^1]:
-            raise ValueError(f"all the input array dimensions except for the concatenation axis must match exactly, but along dimension {axis ^ 1}, the array at index 0 has size {self.shape[axis^1]} and the array at index 1 has size {values.shape[axis^1]}")
+            raise ValueError(
+                f"all the input arrays must have same number of dimensions, but the array at index 0 has 1 dimension(s) and the array at index 1 has {values._ndim} dimension(s)"
+            )
+        if self.shape[axis ^ 1] != values.shape[axis ^ 1]:
+            raise ValueError(
+                f"all the input array dimensions except for the concatenation axis must match exactly, but along dimension {axis ^ 1}, the array at index 0 has size {self.shape[axis^1]} and the array at index 1 has size {values.shape[axis^1]}"
+            )
         new_qc = self._query_compiler.concat(axis, values._query_compiler)
         return array(_query_compiler=new_qc, _ndim=self._ndim)
 
-
-    def hstack(self, others, dtype=None, casting='same_kind'):
+    def hstack(self, others, dtype=None, casting="same_kind"):
         check_kwargs(casting=casting)
-        new_dtype = dtype if dtype is not None else pandas.core.dtypes.cast.find_common_type([self.dtype] + [a.dtype for a in others])
+        new_dtype = (
+            dtype
+            if dtype is not None
+            else pandas.core.dtypes.cast.find_common_type(
+                [self.dtype] + [a.dtype for a in others]
+            )
+        )
         for index, i in enumerate([a._ndim for a in others]):
             if i != self._ndim:
-                raise ValueError(f"all the input arrays must have same number of dimensions, but the array at index 0 has {self._ndim} dimension(s) and the array at index {index} has {i} dimension(s)")
+                raise ValueError(
+                    f"all the input arrays must have same number of dimensions, but the array at index 0 has {self._ndim} dimension(s) and the array at index {index} has {i} dimension(s)"
+                )
         if self._ndim == 1:
             new_qc = self._query_compiler.concat(0, [o._query_compiler for o in others])
         else:
             for index, i in enumerate([a.shape[0] for a in others]):
                 if i != self.shape[0]:
-                    raise ValueError(f"all the input array dimensions except for the concatenation axis must match exactly, but along dimension 0, the array at index 0 has size {self.shape[0]} and the array at index {index} has size {i}")
+                    raise ValueError(
+                        f"all the input array dimensions except for the concatenation axis must match exactly, but along dimension 0, the array at index 0 has size {self.shape[0]} and the array at index {index} has size {i}"
+                    )
             new_qc = self._query_compiler.concat(1, [o._query_compiler for o in others])
         return array(_query_compiler=new_qc, _ndim=self._ndim, dtype=new_dtype)
 
