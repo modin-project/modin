@@ -56,6 +56,7 @@ from .math import (
     abs,
     add,
     divide,
+    dot,
     float_power,
     floor_divide,
     power,
@@ -102,6 +103,8 @@ from .constants import (
     pi,
 )
 
+from . import linalg
+
 
 def where(condition, x=None, y=None):
     if condition is True:
@@ -116,6 +119,7 @@ def where(condition, x=None, y=None):
 
 
 __all__ = [  # noqa: F405
+    "linalg",
     "array",
     "zeros_like",
     "ones_like",
@@ -147,6 +151,7 @@ __all__ = [  # noqa: F405
     "abs",
     "add",
     "divide",
+    "dot",
     "float_power",
     "floor_divide",
     "power",
