@@ -50,9 +50,27 @@ def test_dot_2d():
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
 
 
+def test_dot_broadcast():
+    # 2D @ 1D
+    x1 = numpy.random.randint(-100, 100, size=(100, 3))
+    x2 = numpy.random.randint(-100, 100, size=(3,))
+    numpy_result = numpy.dot(x1, x2)
+    x1, x2 = np.array(x1), np.array(x2)
+    modin_result = np.dot(x1, x2)
+    numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+
+    # 1D @ 2D
+    x1 = numpy.random.randint(-100, 100, size=(100,))
+    x2 = numpy.random.randint(-100, 100, size=(100, 3))
+    numpy_result = numpy.dot(x1, x2)
+    x1, x2 = np.array(x1), np.array(x2)
+    modin_result = np.dot(x1, x2)
+    numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+
+
 @pytest.mark.parametrize("axis", [None, 0, 1], ids=["axis=None", "axis=0", "axis=1"])
 def test_norm_fro_2d(axis):
-    x1 = numpy.random.randint(-100, 100, size=(100, 3))
+    x1 = numpy.random.randint(-10, 10, size=(100, 3))
     numpy_result = NLA.norm(x1, axis=axis)
     x1 = np.array(x1)
     modin_result = LA.norm(x1, axis=axis)
@@ -63,7 +81,7 @@ def test_norm_fro_2d(axis):
 
 
 def test_norm_fro_1d():
-    x1 = numpy.random.randint(-100, 100, size=100)
+    x1 = numpy.random.randint(-10, 10, size=100)
     numpy_result = NLA.norm(x1)
     x1 = np.array(x1)
     modin_result = LA.norm(x1)

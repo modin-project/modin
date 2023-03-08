@@ -1395,6 +1395,7 @@ class array(object):
         if numpy.isscalar(other):
             # other is scalar -- result is an array
             result = self._query_compiler.mul(other)
+            result_ndim = self._ndim
         elif not isinstance(other, array):
             raise TypeError(
                 f"Unsupported operand type(s): '{type(self)}' and '{type(other)}'"
@@ -1408,23 +1409,33 @@ class array(object):
         elif self._ndim == 2 and other._ndim == 2:
             # both 2D arrays -- result is a 2D array
             result = self._query_compiler.dot(other._query_compiler)
+            result_ndim = 2
         elif self._ndim == 1 and other._ndim == 2:
-            result = self._query_compiler.dot(other._query_compiler)
+            result = self._query_compiler.dot(other._query_compiler, squeeze_self=True)
+            result_ndim = 1
         elif self._ndim == 2 and other._ndim == 1:
-            if other.shape[0] == 1:
-                result = self._query_compiler.dot(other._query_compiler.transpose())
-            else:
-                result = self._query_compiler.dot(other._query_compiler)
+            result = self._query_compiler.dot(other._query_compiler)
+            result_ndim = 1
         if out is not None:
             out._query_compiler = result
-        return array(_query_compiler=result)
+        return array(_query_compiler=result, _ndim=result_ndim)
+
+    def __matmul__(self, other):
+        if numpy.isscalar(other):
+            # numpy's original error message is something cryptic about a gufunc signature
+            raise ValueError(
+                "cannot call matmul with a scalar argument (use np.dot instead)"
+            )
+        return self.dot(other)
 
     def _norm(self, ord=None, axis=None, keepdims=False):
         check_kwargs(keepdims=keepdims)
         if ord is not None and ord not in ("fro",):  # , numpy.inf, -numpy.inf, 0):
             raise NotImplementedError("unsupported ord argument for norm:", ord)
+        if axis < 0:
+            axis = self._ndim + axis
         apply_axis = axis or 0
-        if apply_axis >= self._ndim:
+        if apply_axis >= self._ndim or apply_axis < 0:
             raise numpy.AxisError(apply_axis, self._ndim)
         result = self._query_compiler.applymap(lambda x: x**2)
         if self._ndim == 2:
@@ -1435,9 +1446,9 @@ class array(object):
             result = result.sum(axis=0)
         if axis is None:
             # Return a scalar
-            return numpy.sqrt(result.to_numpy()[0, 0])
+            return result.pow(0.5).to_numpy()[0, 0]
         else:
-            result = result.applymap(lambda x: numpy.sqrt(x))
+            result = result.applymap(lambda x: x**0.5)
             # the DF may be transposed after processing through pandas
             # check query compiler shape to ensure this is a row vector (1xN) not column (Nx1)
             if len(result.index) != 1:
