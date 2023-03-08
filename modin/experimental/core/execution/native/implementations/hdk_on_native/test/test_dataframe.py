@@ -2267,6 +2267,7 @@ class TestArrowExecution:
             drop_rename_concat,
             data=self.data1,
             data2=self.data2,
+            force_lazy=False,
             force_arrow_execute=True,
         )
 
