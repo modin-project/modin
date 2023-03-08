@@ -85,6 +85,66 @@ def test_conversion():
     assert pandas_converted.equals(pandas_series)
 
 
+def test_to_df():
+    import modin.pandas as pd
+    from modin.pandas.test.utils import df_equals
+
+    import pandas
+
+    modin_df = pd.DataFrame(np.array([1, 2, 3]))
+    pandas_df = pandas.DataFrame(numpy.array([1, 2, 3]))
+    df_equals(pandas_df, modin_df)
+    modin_df = pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6]]))
+    pandas_df = pandas.DataFrame(numpy.array([[1, 2, 3], [4, 5, 6]]))
+    df_equals(pandas_df, modin_df)
+    for kw in [{}, {"dtype": str}]:
+        modin_df, pandas_df = [
+            lib[0].DataFrame(
+                lib[1].array([[1, 2, 3], [4, 5, 6]]),
+                columns=["col 0", "col 1", "col 2"],
+                index=pd.Index([4, 6]),
+                **kw
+            )
+            for lib in ((pd, np), (pandas, numpy))
+        ]
+        df_equals(pandas_df, modin_df)
+    df_equals(pandas_df, modin_df)
+
+
+def test_to_series():
+    import modin.pandas as pd
+    from modin.pandas.test.utils import df_equals
+
+    import pandas
+
+    with pytest.raises(ValueError, match="Data must be 1-dimensional"):
+        pd.Series(np.array([[1, 2, 3], [4, 5, 6]]))
+    modin_series = pd.Series(np.array([1, 2, 3]), index=pd.Index([-1, -2, -3]))
+    pandas_series = pandas.Series(
+        numpy.array([1, 2, 3]), index=pandas.Index([-1, -2, -3])
+    )
+    df_equals(modin_series, pandas_series)
+    modin_series = pd.Series(
+        np.array([1, 2, 3]), index=pd.Index([-1, -2, -3]), dtype=str
+    )
+    pandas_series = pandas.Series(
+        numpy.array([1, 2, 3]), index=pandas.Index([-1, -2, -3]), dtype=str
+    )
+    df_equals(modin_series, pandas_series)
+
+
+def test_update_inplace():
+    out = np.array([1, 2, 3])
+    arr1 = np.array([1, 2, 3])
+    arr2 = np.array(out, copy=False)
+    np.add(arr1, arr1, out=out)
+    numpy.testing.assert_array_equal(out._to_numpy(), arr2._to_numpy())
+    out = np.array([1, 2, 3])
+    arr2 = np.array(out, copy=False)
+    np.add(arr1, arr1, out=out, where=False)
+    numpy.testing.assert_array_equal(out._to_numpy(), arr2._to_numpy())
+
+
 @pytest.mark.parametrize("size", [100, (2, 100), (100, 2), (1, 100), (100, 1)])
 def test_array_ufunc(size):
     # Test ufunc.__call__
