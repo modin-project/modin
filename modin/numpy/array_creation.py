@@ -55,5 +55,5 @@ def tri(N, M=None, k=0, dtype=float, like=None):
         ErrorMessage.single_warning(
             "Modin NumPy does not support the `like` argument for np.tri. Defaulting to `like=None`."
         )
-    ErrorMessage.single_warning(f"np.tri defaulting to NumPy.")
+    ErrorMessage.single_warning("np.tri defaulting to NumPy.")
     return array(numpy.tri(N, M=M, k=k, dtype=dtype))
