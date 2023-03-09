@@ -2089,7 +2089,7 @@ class PandasDataframe(ClassLogger):
                         self.dtypes,
                     )
                 return modin_frame.apply_full_axis(
-                    1,
+                    0,
                     sort_function,
                 )
 
@@ -2108,6 +2108,30 @@ class PandasDataframe(ClassLogger):
             ideal_num_new_partitions,
             **kwargs,
         )
+        if ideal_num_new_partitions < len(self._partitions):
+            if len(self._partitions) % ideal_num_new_partitions == 0:
+                joining_partitions = np.split(
+                    self._partitions, ideal_num_new_partitions
+                )
+            else:
+                joining_partitions = np.split(
+                    self._partitions,
+                    range(
+                        0,
+                        len(self._partitions),
+                        round(len(self._partitions) / ideal_num_new_partitions),
+                    )[1:],
+                )
+
+            new_partitions = np.array(
+                [
+                    self._partition_mgr_cls.column_partitions(ptn_grp, full_axis=False)
+                    for ptn_grp in joining_partitions
+                ]
+            )
+        else:
+            new_partitions = self._partitions
+
         major_col_partition_index = self.columns.get_loc(columns[0])
         cols_seen = 0
         index = -1
@@ -2117,7 +2141,7 @@ class PandasDataframe(ClassLogger):
                 index = i
                 break
         new_partitions = self._partition_mgr_cls.shuffle_partitions(
-            self._partitions,
+            new_partitions,
             index,
             shuffling_functions,
             sort_function,

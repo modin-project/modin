@@ -574,7 +574,7 @@ def test_sort_values(
 
 def test_sort_overpartitioned_df():
     # First we test when the final df will have only 1 row and column partition.
-    data = [[1, 2, 3], [4, 5, 6]]
+    data = [[4, 5, 6], [1, 2, 3]]
     modin_df = pd.concat([pd.DataFrame(row).T for row in data]).reset_index(drop=True)
     pandas_df = pandas.DataFrame(data)
 
@@ -594,6 +594,42 @@ def test_sort_overpartitioned_df():
     pandas_df = pandas.DataFrame(data)
 
     eval_general(modin_df, pandas_df, lambda df: df.sort_values(by=0))
+
+    old_nptns = NPartitions.get()
+    NPartitions.put(24)
+    try:
+        # Next we test when there's only one row per partition.
+        data = np.random.choice(650, 650, replace=False).reshape((65, 10))
+        modin_df = pd.concat([pd.DataFrame(row).T for row in data]).reset_index(
+            drop=True
+        )
+        pandas_df = pandas.DataFrame(data)
+
+        eval_general(modin_df, pandas_df, lambda df: df.sort_values(by=0))
+
+        # And again, when there's more than one column partition.
+        data = np.random.choice(6500, 6500, replace=False).reshape((65, 100))
+        modin_df = pd.concat([pd.DataFrame(row).T for row in data]).reset_index(
+            drop=True
+        )
+        pandas_df = pandas.DataFrame(data)
+
+        eval_general(modin_df, pandas_df, lambda df: df.sort_values(by=0))
+
+        # Additionally, we should test when we have a number of partitions
+        # that doesn't divide cleanly into our desired number of partitions.
+        # In this case, we start with 17 partitions, and want 2.
+        NPartitions.put(21)
+        data = np.random.choice(6500, 6500, replace=False).reshape((65, 100))
+        modin_df = pd.concat([pd.DataFrame(row).T for row in data]).reset_index(
+            drop=True
+        )
+        pandas_df = pandas.DataFrame(data)
+
+        eval_general(modin_df, pandas_df, lambda df: df.sort_values(by=0))
+
+    finally:
+        NPartitions.put(old_nptns)
 
 
 def test_sort_values_with_duplicates():
