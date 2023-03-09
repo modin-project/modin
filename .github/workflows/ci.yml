@@ -491,6 +491,7 @@ jobs:
       - uses: codecov/codecov-action@v2
 
   test-asv-benchmarks:
+    if: github.event_name == 'pull_request'
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
