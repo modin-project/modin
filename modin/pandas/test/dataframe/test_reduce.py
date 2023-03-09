@@ -15,6 +15,8 @@ import pytest
 import numpy as np
 import pandas
 import matplotlib
+from pandas._testing import assert_series_equal
+
 import modin.pandas as pd
 
 from modin.pandas.test.utils import (
@@ -37,7 +39,7 @@ from modin.pandas.test.utils import (
     test_data_large_categorical_dataframe,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import NPartitions, StorageFormat
 
 NPartitions.put(4)
 
@@ -48,6 +50,9 @@ matplotlib.use("Agg")
 # instances of defaulting to pandas, but some test modules, like this one,
 # have too many such instances.
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+
+# Workaround for #5712
+pd.DataFrame()
 
 
 @pytest.mark.parametrize("method", ["all", "any"])
@@ -319,6 +324,10 @@ def test_prod(
     df_equals(modin_result, pandas_result)
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/intel-ai/hdk/issues/286",
+)
 @pytest.mark.parametrize("is_transposed", [False, True])
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
@@ -434,8 +443,22 @@ def test_value_counts_categorical():
     data = np.array(["a"] * 50000 + ["b"] * 10000 + ["c"] * 1000)
     random_state = np.random.RandomState(seed=42)
     random_state.shuffle(data)
+    modin_series, pandas_series = create_test_dfs(
+        {"col1": data, "col2": data}, dtype="category"
+    )
+
+    if StorageFormat.get() == "Hdk":
+        # The order of HDK categories is different from Pandas
+        # and, thus, index comparison fails.
+        def comparator(df1, df2):
+            assert_series_equal(df1._to_pandas(), df2, check_index=False)
+
+    else:
+        comparator = df_equals
 
     eval_general(
-        *create_test_dfs({"col1": data, "col2": data}, dtype="category"),
+        modin_series,
+        pandas_series,
         lambda df: df.value_counts(),
+        comparator=comparator,
     )
