@@ -16,12 +16,16 @@ from .arr import array
 from .array_creation import (
     zeros_like,
     ones_like,
+    tri,
 )
 
 from .array_shaping import (
     ravel,
     shape,
     transpose,
+    hstack,
+    split,
+    append,
 )
 
 from .logic import (
@@ -71,6 +75,15 @@ from .math import (
     minimum,
     amin,
     min,
+    sqrt,
+    exp,
+    argmax,
+    argmin,
+    var,
+)
+
+from .trigonometry import (
+    tanh,
 )
 
 from .constants import (
@@ -173,4 +186,14 @@ __all__ = [  # noqa: F405
     "nan",
     "newaxis",
     "pi",
+    "sqrt",
+    "tanh",
+    "exp",
+    "argmax",
+    "argmin",
+    "var",
+    "split",
+    "hstack",
+    "append",
+    "tri",
 ]
