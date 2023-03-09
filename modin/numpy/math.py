@@ -432,7 +432,7 @@ def sqrt(
             dtype=dtype,
             subok=subok,
         )
-    return x.power(0.5, out, where, casting, order, dtype, subok)
+    return x.sqrt(out, where, casting, order, dtype, subok)
 
 
 def exp(

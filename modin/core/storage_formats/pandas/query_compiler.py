@@ -1496,6 +1496,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
     _tanh = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(np.tanh(df, *args, **kwargs))
     )  # Needed for numpy API
+    _sqrt = Map.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(np.sqrt(df, *args, **kwargs))
+    )  # Needed for numpy API
+    _exp = Map.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(np.exp(df, *args, **kwargs))
+    )  # Needed for numpy API
     negative = Map.register(pandas.DataFrame.__neg__)
     notna = Map.register(pandas.DataFrame.notna, dtypes=np.bool_)
     round = Map.register(pandas.DataFrame.round)
