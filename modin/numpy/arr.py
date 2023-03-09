@@ -952,8 +952,26 @@ class array(object):
         subok=True,
     ):
         return self._unary_math_operator(
-            "rpow",
-            numpy.e,
+            "_exp",
+            out=out,
+            where=where,
+            casting=casting,
+            order=order,
+            dtype=dtype,
+            subok=subok,
+        )
+
+    def sqrt(
+        self,
+        out=None,
+        where=True,
+        casting="same_kind",
+        order="K",
+        dtype=None,
+        subok=True,
+    ):
+        return self._unary_math_operator(
+            "_sqrt",
             out=out,
             where=where,
             casting=casting,
@@ -1853,9 +1871,9 @@ class array(object):
             result = result.sum(axis=0)
         if axis is None:
             # Return a scalar
-            return result.pow(0.5).to_numpy()[0, 0]
+            return result._sqrt().to_numpy()[0, 0]
         else:
-            result = result.pow(0.5)
+            result = result._sqrt()
             # the DF may be transposed after processing through pandas
             # check query compiler shape to ensure this is a row vector (1xN) not column (Nx1)
             if len(result.index) != 1:
