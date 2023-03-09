@@ -755,3 +755,25 @@ def to_timedelta(arg, unit=None, errors="raise"):  # noqa: PR01, RT01, D200
         query_compiler = arg._query_compiler.to_timedelta(unit=unit, errors=errors)
         return Series(query_compiler=query_compiler)
     return pandas.to_timedelta(arg, unit=unit, errors=errors)
+
+
+def cut(
+    x,
+    bins,
+    right: bool = True,
+    labels=None,
+    retbins: bool = False,
+    precision: int = 3,
+    include_lowest: bool = False,
+    duplicates: str = "raise",
+    ordered: bool = True,
+):
+    if isinstance(x, DataFrame):
+        raise ValueError("Input array must be 1 dimensional")
+    if not isinstance(x, Series):
+        NotImplementedError("cut only supports cutting modin series")
+    return Series(
+        query_compiler=x._query_compiler.cut(
+            bins, right, labels, retbins, precision, include_lowest, duplicates, ordered
+        )
+    )
