@@ -1372,7 +1372,9 @@ class DataFrame(BasePandasDataset):
                 f"Can only merge Series or DataFrame objects, a {type(right)} was passed"
             )
 
-        if left_index and right_index:
+        # If we are joining on the index and we are using
+        # default parameters we can map this to a join
+        if left_index and right_index and not indicator:
             return self.join(
                 right, how=how, lsuffix=suffixes[0], rsuffix=suffixes[1], sort=sort
             )
