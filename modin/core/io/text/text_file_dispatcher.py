@@ -594,7 +594,7 @@ class TextFileDispatcher(FileDispatcher):
     _parse_func = None
 
     @classmethod
-    def get_parse_func(cls):  # noqa: RT01
+    def preprocess_func(cls):  # noqa: RT01
         """Prepare a function for transmission to remote workers."""
         if cls._parse_func is None:
             cls._parse_func = cls.put(cls.parse)
@@ -632,7 +632,7 @@ class TextFileDispatcher(FileDispatcher):
         for idx, (start, end) in enumerate(splits):
             partition_kwargs.update({"start": start, "end": end})
             *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
-                func=cls.get_parse_func(),
+                func=cls.preprocess_func(),
                 f_args=args,
                 f_kwargs=partition_kwargs,
                 num_returns=partition_kwargs.get("num_splits") + 2,
