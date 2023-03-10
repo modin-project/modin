@@ -873,6 +873,15 @@ class BasePandasDataset(ClassLogger):
         Apply a function along an axis of the `BasePandasDataset`.
         """
         import cloudpickle
+        import pickle
+        import sys
+
+        if sys.version_info.major == 3 and sys.version_info.minor != 8:
+            version = ".".join(map(str, sys.version_info[:3]))
+            warnings.warn(
+                f"current Python version is {version}, but expected 3.8. User defined"
+                + " functions may not work as expected due to compatibility issues."
+            )
 
         def error_raiser(msg, exception):
             """Convert passed exception to the same type as pandas do and raise it."""
@@ -909,7 +918,7 @@ class BasePandasDataset(ClassLogger):
             **kwds,
         )
         query_compiler = self._query_compiler.apply(
-            cloudpickle.dumps(func),
+            cloudpickle.dumps(func, protocol=pickle.DEFAULT_PROTOCOL),
             axis,
             args=args,
             raw=raw,

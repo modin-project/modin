@@ -609,6 +609,15 @@ class Series(BasePandasDataset):
         """
         Invoke function on values of Series.
         """
+        import sys
+
+        if sys.version_info.major == 3 and sys.version_info.minor != 8:
+            version = ".".join(map(str, sys.version_info[:3]))
+            warnings.warn(
+                f"current Python version is {version}, but expected 3.8. User defined"
+                + " functions may not work as expected due to compatibility issues."
+            )
+
         self._validate_function(func)
         # apply and aggregate have slightly different behaviors, so we have to use
         # each one separately to determine the correct return type. In the case of
@@ -1203,17 +1212,30 @@ class Series(BasePandasDataset):
         """
         Map values of Series according to input correspondence.
         """
+        import cloudpickle
+        import pickle
+        import sys
+
+        if sys.version_info.major == 3 and sys.version_info.minor != 8:
+            version = ".".join(map(str, sys.version_info[:3]))
+            warnings.warn(
+                f"current Python version is {version}, but expected 3.8. User defined"
+                + " functions may not work as expected due to compatibility issues."
+            )
+
         if not callable(arg) and hasattr(arg, "get"):
             mapper = arg
 
             def arg(s):
                 return mapper.get(s, np.nan)
 
+        output_meta = self._to_pandas().map(arg, na_action)
+
+        func = lambda s: s if pandas.isnull(s) and na_action else arg(s)
         return self.__constructor__(
             query_compiler=self._query_compiler.applymap(
-                lambda s: arg(s)
-                if pandas.isnull(s) is not True or na_action is None
-                else s
+                cloudpickle.dumps(func, protocol=pickle.DEFAULT_PROTOCOL),
+                output_meta=output_meta,
             )
         )
 
