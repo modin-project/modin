@@ -1109,10 +1109,18 @@ class Series(BasePandasDataset):
         """
         Draw histogram of the input series using matplotlib.
         """
-        return self.__constructor__(
-            query_compiler=self._query_compiler.series_hist(
-                by, ax, grid, xlabelsize, xrot, ylabelsize, yrot, figsize, bins, **kwds
-            )
+        return self._default_to_pandas(
+            pandas.Series.hist,
+            by=by,
+            ax=ax,
+            grid=grid,
+            xlabelsize=xlabelsize,
+            xrot=xrot,
+            ylabelsize=ylabelsize,
+            yrot=yrot,
+            figsize=figsize,
+            bins=bins,
+            **kwds
         )
 
     def idxmax(self, axis=0, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
