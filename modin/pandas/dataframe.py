@@ -1036,23 +1036,22 @@ class DataFrame(BasePandasDataset):
         """
         Make a histogram of the ``DataFrame``.
         """
-        return self.__constructor__(
-            query_compiler=self._query_compiler.dataframe_hist(
-                column,
-                by,
-                grid,
-                xlabelsize,
-                xrot,
-                ylabelsize,
-                yrot,
-                ax,
-                sharex,
-                sharey,
-                figsize,
-                layout,
-                bins,
-                **kwds,
-            )
+        return self._default_to_pandas(
+            pandas.DataFrame.hist,
+            column=column,
+            by=by,
+            grid=grid,
+            xlabelsize=xlabelsize,
+            xrot=xrot,
+            ylabelsize=ylabelsize,
+            yrot=yrot,
+            ax=ax,
+            sharex=sharex,
+            sharey=sharey,
+            figsize=figsize,
+            layout=layout,
+            bins=bins,
+            **kwds,
         )
 
     def info(
