@@ -64,7 +64,7 @@ def test_basic_arithmetic_with_broadcast(operand1_shape, operand2_shape, operato
 
 @pytest.mark.parametrize("operator", ["__pow__", "__floordiv__", "__mod__"])
 def test_arithmetic(operator):
-    """Test of operators that do not yet support broadcasting"""
+    """Test of operators that do not yet support broadcasting."""
     for size, textdim in ((100, "1D"), ((10, 10), "2D")):
         operand1 = numpy.random.randint(-100, 100, size=size)
         lower_bound = -100 if operator != "__pow__" else 0
@@ -136,16 +136,18 @@ def test_scalar_arithmetic(size):
     )
 
 
-def test_abs():
+@pytest.mark.parametrize("op_name", ["abs", "exp", "sqrt", "tanh"])
+def test_unary_arithmetic(op_name):
     numpy_flat_arr = numpy.random.randint(-100, 100, size=100)
     modin_flat_arr = np.array(numpy_flat_arr)
     numpy.testing.assert_array_equal(
-        numpy.abs(numpy_flat_arr), np.abs(modin_flat_arr)._to_numpy()
+        getattr(numpy, op_name)(numpy_flat_arr),
+        getattr(np, op_name)(modin_flat_arr)._to_numpy(),
     )
     numpy_arr = numpy_flat_arr.reshape((10, 10))
     modin_arr = np.array(numpy_arr)
     numpy.testing.assert_array_equal(
-        numpy.abs(numpy_arr), np.abs(modin_arr)._to_numpy()
+        getattr(numpy, op_name)(numpy_arr), getattr(np, op_name)(modin_arr)._to_numpy()
     )
 
 

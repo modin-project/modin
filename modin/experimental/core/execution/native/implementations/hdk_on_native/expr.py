@@ -89,7 +89,7 @@ def _agg_dtype(agg, dtype):
     elif agg in _aggs_with_float_result:
         return get_dtype(float)
     else:
-        raise NotImplementedError(f"unsupported aggreagte {agg}")
+        raise NotImplementedError(f"unsupported aggregate {agg}")
 
 
 _cmp_ops = {"eq", "ge", "gt", "le", "lt", "ne"}

@@ -59,6 +59,8 @@ jobs:
           python -m pytest modin/numpy/test/test_array_creation.py
           python -m pytest modin/numpy/test/test_array_arithmetic.py
           python -m pytest modin/numpy/test/test_array_axis_functions.py
+          python -m pytest modin/numpy/test/test_array_logic.py
+          python -m pytest modin/numpy/test/test_array_linalg.py
           python -m pytest modin/pandas/test/test_rolling.py
           python -m pytest modin/pandas/test/test_concat.py
           python -m pytest modin/pandas/test/test_groupby.py
@@ -129,6 +131,8 @@ jobs:
           - modin/numpy/test/test_array_creation.py
           - modin/numpy/test/test_array_arithmetic.py
           - modin/numpy/test/test_array_axis_functions.py
+          - modin/numpy/test/test_array_logic.py
+          - modin/numpy/test/test_array_linalg.py
           - modin/pandas/test/test_rolling.py
           - modin/pandas/test/test_concat.py
           - modin/pandas/test/test_groupby.py

@@ -11,15 +11,28 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Collection of array utility functions for internal use."""
+import numpy
 
-import modin.pandas as pd
-import modin.numpy as np
+from .arr import array
+from .utils import try_convert_from_interoperable_type
+from modin.error_message import ErrorMessage
 
-_INTEROPERABLE_TYPES = (pd.DataFrame, pd.Series)
 
-
-def try_convert_from_interoperable_type(obj, copy=False):
-    if isinstance(obj, _INTEROPERABLE_TYPES):
-        obj = np.array(obj, copy=copy)
-    return obj
+def tanh(
+    x, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
+):
+    x = try_convert_from_interoperable_type(x)
+    if not isinstance(x, array):
+        ErrorMessage.bad_type_for_numpy_op("tanh", type(x))
+        return numpy.tanh(
+            x,
+            out=out,
+            where=where,
+            casting=casting,
+            order=order,
+            dtype=dtype,
+            subok=subok,
+        )
+    return x.tanh(
+        out=out, where=where, casting=casting, order=order, dtype=dtype, subok=subok
+    )

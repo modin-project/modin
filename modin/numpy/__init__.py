@@ -16,12 +16,40 @@ from .arr import array
 from .array_creation import (
     zeros_like,
     ones_like,
+    tri,
 )
 
 from .array_shaping import (
     ravel,
     shape,
     transpose,
+    hstack,
+    split,
+    append,
+)
+
+from .logic import (
+    all,
+    any,
+    isfinite,
+    isinf,
+    isnan,
+    isnat,
+    isneginf,
+    isposinf,
+    iscomplex,
+    isreal,
+    isscalar,
+    logical_not,
+    logical_and,
+    logical_or,
+    logical_xor,
+    greater,
+    greater_equal,
+    less,
+    less_equal,
+    equal,
+    not_equal,
 )
 
 from .math import (
@@ -29,6 +57,7 @@ from .math import (
     abs,
     add,
     divide,
+    dot,
     float_power,
     floor_divide,
     power,
@@ -46,6 +75,15 @@ from .math import (
     minimum,
     amin,
     min,
+    sqrt,
+    exp,
+    argmax,
+    argmin,
+    var,
+)
+
+from .trigonometry import (
+    tanh,
 )
 
 from .constants import (
@@ -66,6 +104,8 @@ from .constants import (
     pi,
 )
 
+from . import linalg
+
 
 def where(condition, x=None, y=None):
     if condition is True:
@@ -80,16 +120,39 @@ def where(condition, x=None, y=None):
 
 
 __all__ = [  # noqa: F405
+    "linalg",
     "array",
     "zeros_like",
     "ones_like",
     "ravel",
     "shape",
     "transpose",
+    "all",
+    "any",
+    "isfinite",
+    "isinf",
+    "isnan",
+    "isnat",
+    "isneginf",
+    "isposinf",
+    "iscomplex",
+    "isreal",
+    "isscalar",
+    "logical_not",
+    "logical_and",
+    "logical_or",
+    "logical_xor",
+    "greater",
+    "greater_equal",
+    "less",
+    "less_equal",
+    "equal",
+    "not_equal",
     "absolute",
     "abs",
     "add",
     "divide",
+    "dot",
     "float_power",
     "floor_divide",
     "power",
@@ -123,4 +186,14 @@ __all__ = [  # noqa: F405
     "nan",
     "newaxis",
     "pi",
+    "sqrt",
+    "tanh",
+    "exp",
+    "argmax",
+    "argmin",
+    "var",
+    "split",
+    "hstack",
+    "append",
+    "tri",
 ]

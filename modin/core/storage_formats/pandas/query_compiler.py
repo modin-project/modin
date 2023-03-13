@@ -418,6 +418,26 @@ class PandasQueryCompiler(BaseQueryCompiler):
         join_type="left",
     )
 
+    # Needed for numpy API
+    _logical_and = Binary.register(
+        lambda df, other, *args, **kwargs: pandas.DataFrame(
+            np.logical_and(df, other, *args, **kwargs)
+        ),
+        infer_dtypes="bool",
+    )
+    _logical_or = Binary.register(
+        lambda df, other, *args, **kwargs: pandas.DataFrame(
+            np.logical_or(df, other, *args, **kwargs)
+        ),
+        infer_dtypes="bool",
+    )
+    _logical_xor = Binary.register(
+        lambda df, other, *args, **kwargs: pandas.DataFrame(
+            np.logical_xor(df, other, *args, **kwargs)
+        ),
+        infer_dtypes="bool",
+    )
+
     def where(self, cond, other, **kwargs):
         assert isinstance(
             cond, type(self)
@@ -1445,8 +1465,43 @@ class PandasQueryCompiler(BaseQueryCompiler):
     invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
     _isfinite = Map.register(
-        lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df))
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df, *args, **kwargs)),
+        dtypes=np.bool_,
     )
+    _isinf = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isinf(df, *args, **kwargs)),
+        dtypes=np.bool_,
+    )
+    _isnat = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isnat(df, *args, **kwargs)),
+        dtypes=np.bool_,
+    )
+    _isneginf = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isneginf(df, *args, **kwargs)),
+        dtypes=np.bool_,
+    )
+    _isposinf = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isposinf(df, *args, **kwargs)),
+        dtypes=np.bool_,
+    )
+    _iscomplex = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.iscomplex(df, *args, **kwargs)),
+        dtypes=np.bool_,
+    )
+    _isreal = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isreal(df, *args, **kwargs)),
+        dtypes=np.bool_,
+    )
+    _logical_not = Map.register(np.logical_not, dtypes=np.bool_)  # Needed for numpy API
+    _tanh = Map.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(np.tanh(df, *args, **kwargs))
+    )  # Needed for numpy API
+    _sqrt = Map.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(np.sqrt(df, *args, **kwargs))
+    )  # Needed for numpy API
+    _exp = Map.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(np.exp(df, *args, **kwargs))
+    )  # Needed for numpy API
     negative = Map.register(pandas.DataFrame.__neg__)
     notna = Map.register(pandas.DataFrame.notna, dtypes=np.bool_)
     round = Map.register(pandas.DataFrame.round)

@@ -124,6 +124,8 @@ class DataFrame(BasePandasDataset):
         copy=None,
         query_compiler=None,
     ):
+        from modin.numpy import array
+
         # Siblings are other dataframes that share the same query compiler. We
         # use this list to update inplace when there is a shallow copy.
         self._siblings = []
@@ -160,7 +162,18 @@ class DataFrame(BasePandasDataset):
                 if columns is None:
                     columns = slice(None)
                 self._query_compiler = data.loc[index, columns]._query_compiler
-
+        elif isinstance(data, array):
+            self._query_compiler = data._query_compiler.copy()
+            if copy is not None and not copy:
+                data._add_sibling(self)
+            if columns is not None and not isinstance(columns, pandas.Index):
+                columns = pandas.Index(columns)
+            if columns is not None:
+                self.set_axis(columns, axis=1, inplace=True)
+            if index is not None:
+                self.set_axis(index, axis=0, inplace=True)
+            if dtype is not None:
+                self.astype(dtype, copy=False)
         # Check type of data and use appropriate constructor
         elif query_compiler is None:
             distributed_frame = from_non_pandas(data, index, columns, dtype)
