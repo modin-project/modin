@@ -15,6 +15,8 @@
 
 from abc import ABC
 from copy import copy
+import logging
+import uuid
 
 import pandas
 from pandas.api.types import is_scalar
@@ -34,6 +36,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
 
     _length_cache = None
     _width_cache = None
+    _identity_cache = None
     _data = None
 
     @cache_readonly
@@ -347,6 +350,19 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             self._width_cache = self.apply(self._width_extraction_fn()).get()
         return self._width_cache
 
+    @property
+    def _identity(self):
+        """
+        Calculate identifier on request for debug logging mode.
+
+        Returns
+        -------
+        str
+        """
+        if self._identity_cache is None:
+            self._identity_cache = uuid.uuid4().hex
+        return self._identity_cache
+
     def split(self, split_func, num_splits, *args):
         """
         Split the object wrapped by the partition into multiple partitions.
@@ -366,14 +382,14 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         list
             A list of partitions.
         """
-        logger = get_logger()
-        logger.debug(f"ENTER::Partition.split::{self._identity}")
+        log = get_logger()
+        self._is_debug(log) and log.debug(f"ENTER::Partition.split::{self._identity}")
 
-        logger.debug(f"SUBMIT::_split_df::{self._identity}")
+        self._is_debug(log) and log.debug(f"SUBMIT::_split_df::{self._identity}")
         outputs = self.execution_wrapper.deploy(
             split_func, [self._data] + list(args), num_returns=num_splits
         )
-        logger.debug(f"EXIT::Partition.split::{self._identity}")
+        self._is_debug(log) and log.debug(f"EXIT::Partition.split::{self._identity}")
         return [self.__constructor__(output) for output in outputs]
 
     @classmethod
@@ -387,3 +403,23 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             New `PandasDataframePartition` object.
         """
         return cls.put(pandas.DataFrame(), 0, 0)
+
+    def _is_debug(self, logger=None):
+        """
+        Check that the logger is set to debug mode.
+
+        Parameters
+        ----------
+        logger : logging.logger, optional
+            Logger obtained from Modin's `get_logger` utility.
+            Explicit transmission of this parameter can be used in the case
+            when within the context of `_is_debug` call there was already
+            `get_logger` call. This is an optimization.
+
+        Returns
+        -------
+        bool
+        """
+        if logger is None:
+            logger = get_logger()
+        return logger.isEnabledFor(logging.DEBUG)
