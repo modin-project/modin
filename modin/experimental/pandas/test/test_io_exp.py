@@ -128,7 +128,6 @@ class TestCsvGlob:
         df_equals(modin_df, pandas_df)
 
     def test_read_csv_without_glob(self):
-        return
         with pytest.warns(UserWarning, match=r"Shell-style wildcard"):
             with pytest.raises(FileNotFoundError):
                 pd.read_csv_glob(
