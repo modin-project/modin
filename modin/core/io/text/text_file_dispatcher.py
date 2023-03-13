@@ -629,6 +629,7 @@ class TextFileDispatcher(FileDispatcher):
         partition_ids = [None] * len(splits)
         index_ids = [None] * len(splits)
         dtypes_ids = [None] * len(splits)
+        # this is done mostly for performance; see PR#5678 for details
         func = cls.preprocess_func()
         for idx, (start, end) in enumerate(splits):
             partition_kwargs.update({"start": start, "end": end})
@@ -1125,6 +1126,7 @@ class TextFileDispatcher(FileDispatcher):
             compression=compression_infered,
         )
         fname = partition_kwargs.pop("fname")
+        # this is done mostly for performance; see PR#5678 for details
         kwargs_ref = cls.put(partition_kwargs)
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
             splits,
