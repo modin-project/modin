@@ -489,6 +489,7 @@ class TestCsv:
                 str_non_unique_cols, unique_filename, mangle_dupe_cols=True
             )
 
+    # Putting this filterwarnings in setup.cfg doesn't seem to catch the error.
     @pytest.mark.filterwarnings(
         "error:.*'mangle_dupe_cols' keyword is deprecated:FutureWarning"
     )
